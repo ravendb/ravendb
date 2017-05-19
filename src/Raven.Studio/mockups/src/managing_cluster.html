@@ -1,0 +1,291 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+{{> head }}
+
+<body>
+
+    {{> spinner }}
+
+    <div class="durandal-wrapper">
+        {{> topbar }}
+
+        <div class="prime-container">
+            {{> menu }}
+
+            <div class="content-container">
+                <div class="cluster flex-vertical absolute-fill content-margin">
+                    <div class="row flex-row flex-grow">
+                        <div class="col-sm-12 col-lg-6 flex-vertical">
+
+                            <div class="flex-header">
+                                <button class="btn btn-primary">
+                                    <i class="icon-plus"></i>
+                                    <span>Add Node to cluster</span>
+                                </button>
+                            </div>
+
+                            <div class="scroll flex-grow">
+                                <div class="panel destination-item">
+                                    <div data-state-text="active" class="state state-success"></div>
+                                    <div class="padding padding-sm destination-info">
+                                        <div class="info-container">
+                                            <div class="flex-horizontal">
+                                                <div class="node flex-grow">
+                                                    <h5>TAG</h5>
+                                                    <div class="flex-horizontal">
+                                                        <div>
+                                                            <h3>
+                                                                <a href="#" title="test" class="destination-name"><i class="icon-dbgroup"></i><span>Node A</span></a>
+                                                            </h3>
+                                                        </div>
+                                                        <div style="display:none;">
+                                                            <span class="label label-warning">LEADER</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="node-type">
+                                                    <h5>TYPE</h5>
+                                                    <h3><i class="icon-member"></i> <span>Member</span></h3>
+                                                </div>
+                                            </div>
+                                            <div class="adress">
+                                                <h5>ADRESS</h5>
+                                                <small>
+                                                    raven-server-4.sdoigsdohs48a8rh948r.us-west.com
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="flex-separator"></div>
+                                        <div class="actions-container">
+                                            <div class="actions">
+                                                <button class="btn btn-default"><i class="icon-arrow-filled-up"></i> <span>Promote</span></button>
+                                                <button class="btn btn-default"><i class="icon-arrow-filled-down"></i> <span>Demote</span></button>
+                                                <button class="btn btn-danger"><i class="icon-disconnected"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="panel destination-item">
+                                    <div data-state-text="active" class="state state-success"></div>
+                                    <div class="padding padding-sm destination-info">
+                                        <div class="info-container">
+                                            <div class="flex-horizontal">
+                                                <div class="node flex-grow">
+                                                    <h5>TAG</h5>
+                                                    <div class="flex-horizontal">
+                                                        <div>
+                                                            <h3>
+                                                                <a href="#" title="test" class="destination-name"><i class="icon-home"></i><span>Node B</span></a>
+                                                            </h3>
+                                                        </div>
+                                                        <div style="display:none;">
+                                                            <span class="label label-warning">LEADER</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="node-type">
+                                                    <h5>TYPE</h5>
+                                                    <h3><i class="icon-watcher"></i> <span>Watcher</span></h3>
+                                                </div>
+                                            </div>
+                                            <div class="adress">
+                                                <h5>ADRESS</h5>
+                                                <small>
+                                                    raven-server-4.sdoigsdohs48a8rh948r.us-west.com
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="flex-separator"></div>
+                                        <div class="actions-container">
+                                            <div class="actions">
+                                                <button class="btn btn-default"><i class="icon-arrow-filled-up"></i> <span>Promote</span></button>
+                                                <button class="btn btn-danger"><i class="icon-disconnected"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="panel destination-item">
+                                    <div data-state-text="active" class="state state-success"></div>
+                                    <div class="padding padding-sm destination-info">
+                                        <div class="info-container">
+                                            <div class="flex-horizontal">
+                                                <div class="node flex-grow">
+                                                    <h5>TAG</h5>
+                                                    <div class="flex-horizontal">
+                                                        <div>
+                                                            <h3>
+                                                                <a href="#" title="test" class="destination-name"><i class="icon-home"></i><span>Node C</span></a>
+                                                            </h3>
+                                                        </div>
+                                                        <div>
+                                                            <span class="label label-warning">LEADER</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="node-type">
+                                                    <h5>TYPE</h5>
+                                                    <h3><i class="icon-member"></i> <span>Member</span></h3>
+                                                </div>
+                                            </div>
+                                            <div class="adress">
+                                                <h5>ADRESS</h5>
+                                                <small>
+                                                    raven-server-4.sdoigsdohs48a8rh948r.us-west.com
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="flex-separator"></div>
+                                        <div class="actions-container">
+                                            <div class="actions">
+                                                <button class="btn btn-default"><i class="icon-arrow-filled-up"></i> <span>Promote</span></button>
+                                                <button class="btn btn-danger"><i class="icon-disconnected"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="panel destination-item">
+                                    <div data-state-text="syncing" class="state"></div>
+                                    <div class="padding padding-sm destination-info">
+                                        <div class="info-container">
+                                            <div class="flex-horizontal">
+                                                <div class="node flex-grow">
+                                                    <h5>TAG</h5>
+                                                    <div class="flex-horizontal">
+                                                        <div>
+                                                            <h3>
+                                                                <a href="#" title="test" class="destination-name"><span class="global-spinner spinner-sm"></span><i class="icon-dbgroup" style="display:none;"></i><span>Node D</span></a>
+                                                            </h3>
+                                                        </div>
+                                                        <div style="display: none">
+                                                            <span class="label label-warning">LEADER</span>
+                                                        </div>
+                                                    </div>
+
+                                                </div>
+                                                <div class="node-type">
+                                                    <h5>TYPE</h5>
+                                                    <h3><i class="icon-promotable"></i><span>Promotable</span></h3>
+                                                </div>
+                                            </div>
+                                            <div class="adress">
+                                                <h5>ADRESS</h5>
+                                                <small>
+                                                    raven-server-4.sdoigsdohs48a8rh948r.us-west.com
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="flex-separator"></div>
+                                        <div class="actions-container">
+                                            <div class="actions">
+                                                <button class="btn btn-default"><i class="icon-arrow-filled-down"></i> <span>Demote</span></button>
+                                                <button class="btn btn-danger"><i class="icon-disconnected"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="panel destination-item">
+                                    <div data-state-text="down" class="state state-danger"></div>
+
+                                    <div class="padding padding-sm destination-info">
+                                        <div class="info-container">
+                                            <div class="flex-horizontal">
+                                                <div class="node flex-grow">
+                                                    <h5>TAG</h5>
+                                                    <div class="flex-horizontal">
+                                                        <div>
+                                                            <h3>
+                                                                <a href="#" title="test" class="destination-name"><i class="icon-home"></i><span>Node E</span></a>
+                                                            </h3>
+                                                        </div>
+                                                        <div style="display: none">
+                                                            <span class="label label-warning">LEADER</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="adress">
+                                                <h5>ADRESS</h5>
+                                                <small>
+                                                    raven-server-4.sdoigsdohs48a8rh948r.us-west.com
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="flex-separator"></div>
+                                        <div class="actions-container">
+                                            <div class="actions">
+                                                <button class="btn btn-default"><i class="icon-stepdown"></i> <span>Step down</span></button>
+                                                <button class="btn btn-danger"><i class="icon-disconnected"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-12 col-lg-6 flex-vertical">
+                            <div class="flex-horizontal flex-header">
+                                <div></div><h3>DB group topology<i class="icon-info text-info"></i></h3>
+                                <div class="flex-separator"></div>
+                                <div class="btn-group dropdown-right">
+                                    <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                        <i class="icon-export"></i><span>Download topology</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                                        <li><a href="#">.zip</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="panel flex-grow">
+                            </div>
+                            <div class="legend">
+                                <div class="row">
+                                    <div class="col-sm-8">
+                                        <h5>Node type</h5>
+                                        <div class="row">
+                                            <div class="col-xs-6">
+                                                <div><i class="icon-circle-filled text-info"></i> <span>CLUSTER NODE</span></div>
+                                                <div><i class="icon-circle-filled text-warning"></i> <span>CLUSTER LEADER</span></div>
+                                            </div>
+                                            <div class="col-xs-6">
+                                                <div><i class="icon-member"></i> <span>Member</span></div>
+                                                <div><i class="icon-watcher"></i> <span>Watcher</span></div>
+                                                <div><i class="icon-promotable"></i> <span>Promotable</span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <h5>Connection status</h5>
+                                        <div><i class="icon-arrow text-success"></i> <span>ACTIVE CONNECTION</span></div>
+                                        <div><i class="icon-arrow-dashed text-warning"></i> <span>DISABLED CONNECTION</span></div>
+                                        <div><i class="icon-arrow-dashed text-danger"></i> <span>BROKEN CONNECTION</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{> notification-center }}
+        </div>{{> footer }}
+    </div>
+    <script type="text/javascript">
+        function changeState(el) {
+            if (el.readOnly) el.checked = el.readOnly = false;
+            else if (!el.checked) el.readOnly = el.indeterminate = true;
+        }
+    </script>
+
+    {{> modals/includeAll }}
+    {{> scripts }}
+    <div class="upcoming-alert bg-upcoming">
+        <i class="icon-hammer-driver pull-left"></i>
+        <p>
+            CAUTION: This is a BETA version of RavenDB 4.0<br />
+            <small>it is not intended for business use.</small>
+        </p>
+    </div>
+</body>
+</html>
