@@ -12,7 +12,7 @@ using static Sparrow.Collections.LockFree.DictionaryImpl;
 
 namespace Sparrow.Collections.LockFree
 {
-    public sealed class ConcurrentDictionary<TKey, TValue> :
+    public abstract class ConcurrentDictionary<TKey, TValue> :
         IDictionary<TKey, TValue>,
         IReadOnlyDictionary<TKey, TValue>,
         IDictionary,
