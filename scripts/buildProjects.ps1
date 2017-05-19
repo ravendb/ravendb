@@ -50,20 +50,34 @@ function BuildSparrow ( $srcDir ) {
     CheckLastExitCode
 }
 
-function BuildStudio ( $srcDir, $projectDir, $version ) {
+function BuildStudio ( $srcDir, $version ) {
     write-host "Building Studio..."
-    cd $srcDir
 
-    & npm install
-    CheckLastExitCode
+    Push-Location
 
-    echo "Update version.json..."
-    $versionJsonPath = [io.path]::combine($srcDir, "wwwroot", "version.json")
-    "{ ""Version"": ""$version"" }" | Out-File $versionJsonPath -Encoding UTF8
+    try {
+        Set-Location $srcDir
 
+        & npm install
+        CheckLastExitCode
 
-    & npm run gulp release
-    CheckLastExitCode
+        echo "Update version.json..."
+        $versionJsonPath = [io.path]::combine($srcDir, "wwwroot", "version.json")
+        "{ ""Version"": ""$version"" }" | Out-File $versionJsonPath -Encoding UTF8
 
-    cd $projectDir
+        & npm run gulp release
+        CheckLastExitCode
+    } 
+    finally {
+        Pop-Location
+    }
+}
+
+function ShouldBuildStudio( $studioOutDir, $dontRebuildStudio ) {
+    $studioZipPath = [io.path]::combine($studioOutDir, "Raven.Studio.zip")
+    if (Test-Path $studioZipPath) {
+        return ! $dontRebuildStudio
+    }
+
+    return $true
 }
