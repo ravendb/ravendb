@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Session.Operations
         {
             var result = _session.PrepareForSaveChanges();
             _sessionCommandsCount = result.SessionCommands.Count;
-            result.SessionCommands.AddRange(result.DeferedCommands);
+            result.SessionCommands.AddRange(result.DeferredCommands);
             if (result.SessionCommands.Count == 0)
                 return null;
 

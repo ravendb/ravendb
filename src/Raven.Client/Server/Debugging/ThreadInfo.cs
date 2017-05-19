@@ -11,7 +11,7 @@ namespace Raven.Client.Server.Debugging
         public ThreadState State { get; set; }
         public ThreadWaitReason? WaitReason { get; set; }
         public TimeSpan TotalProcessorTime { get; set; }
-        public TimeSpan PriviligedProcessorTime { get; set; }
+        public TimeSpan PrivilegedProcessorTime { get; set; }
         public TimeSpan UserProcessorTime { get; set; }
     }
 }

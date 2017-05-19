@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Json
 {
-    internal static class BlittableExtentions
+    internal static class BlittableExtensions
     {
         /// <summary>
         /// 

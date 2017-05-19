@@ -139,10 +139,10 @@ namespace Raven.Client.Documents.Indexes
             }
             if (instance != null)
             {
-                if (ShouldParantesisMemberExpression(instance))
+                if (ShouldParenthesisMemberExpression(instance))
                     Out("(");
                 Visit(instance);
-                if (ShouldParantesisMemberExpression(instance))
+                if (ShouldParenthesisMemberExpression(instance))
                     Out(")");
                 Out("." + name);
             }
@@ -161,7 +161,7 @@ namespace Raven.Client.Documents.Indexes
             }
         }
 
-        private static bool ShouldParantesisMemberExpression(Expression instance)
+        private static bool ShouldParenthesisMemberExpression(Expression instance)
         {
             switch (instance.NodeType)
             {
