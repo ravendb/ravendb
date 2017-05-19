@@ -151,20 +151,41 @@ class databases extends viewModelBase {
         });
     }
 
-    createAllDocumentsUrlObservable(dbInfo: databaseInfo): KnockoutComputed<string> {
+    createManageDbGroupUrlObsevable(dbInfo: databaseInfo): KnockoutComputed<string> {
         const isLocalObservable = this.createIsLocalDatabaseObservable(dbInfo.name);
+        const db = dbInfo.asDatabase();
+
         return ko.pureComputed(() => {
-            const db = dbInfo.asDatabase();
             const isLocal = isLocalObservable();
+            const link = appUrl.forManageDatabaseGroup(db);
             if (isLocal) {
-                return appUrl.forDocuments(null, db);
+                return link;
             } else {
-                // we have to redirect to different node, let's find first member where selected database exists
-                const firstMember = dbInfo.nodes().find(x => x.type() === "Member");
-                const url = firstMember.serverUrl();
-                return appUrl.toExternalUrl(url, appUrl.forDocuments(null, db));
+                return databases.toExternalUrl(dbInfo, link);
             }
         });
+    }
+
+    createAllDocumentsUrlObservable(dbInfo: databaseInfo): KnockoutComputed<string> {
+        const isLocalObservable = this.createIsLocalDatabaseObservable(dbInfo.name);
+        const db = dbInfo.asDatabase();
+
+        return ko.pureComputed(() => {
+            const isLocal = isLocalObservable();
+            const link = appUrl.forDocuments(null, db);
+            if (isLocal) {
+                return link;
+            } else {
+                return databases.toExternalUrl(dbInfo, link);
+            }
+        });
+    }
+
+    private static toExternalUrl(dbInfo: databaseInfo, url: string) {
+        // we have to redirect to different node, let's find first member where selected database exists
+        const firstMember = dbInfo.nodes().find(x => x.type() === "Member");
+        const serverUrl = firstMember.serverUrl();
+        return appUrl.toExternalUrl(serverUrl, url);
     }
 
     indexErrorsUrl(dbInfo: databaseInfo): string {
@@ -185,6 +206,11 @@ class databases extends viewModelBase {
     periodicExportUrl(dbInfo: databaseInfo): string {
         const db = dbInfo.asDatabase();
         return appUrl.forPeriodicExport(db);
+    }
+
+    manageDatabaseGroupUrl(dbInfo: databaseInfo): string {
+        const db = dbInfo.asDatabase();
+        return appUrl.forManageDatabaseGroup(db);
     }
 
     private getSelectedDatabases() {

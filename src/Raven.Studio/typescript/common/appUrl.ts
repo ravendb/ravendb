@@ -29,6 +29,7 @@ class appUrl {
         hasApiKey: ko.pureComputed(() => appUrl.forHasApiKey()),
 
         databases: ko.pureComputed(() => appUrl.forDatabases()),
+        manageDatabaseGroup: ko.pureComputed(() => appUrl.forManageDatabaseGroup(appUrl.currentDatabase())),
         documents: ko.pureComputed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
         conflicts: ko.pureComputed(() => appUrl.forConflicts(appUrl.currentDatabase())),
         patch: ko.pureComputed(() => appUrl.forPatch(appUrl.currentDatabase())),
@@ -462,6 +463,10 @@ class appUrl {
 
     static forDatabaseStudioConfig(db: database): string {
         return "#databases/settings/databaseStudioConfig?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forManageDatabaseGroup(db: database): string {
+        return "#databases/manageDatabaseGroup?" + appUrl.getEncodedDbPart(db);
     }
 
     static forDocuments(collectionName: string, db: database): string {
