@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -7,7 +8,6 @@ using System.Threading.Tasks;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Json;
 using Sparrow;
-using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Logging;
 

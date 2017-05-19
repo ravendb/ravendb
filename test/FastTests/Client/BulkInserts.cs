@@ -1,9 +1,10 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
-using Sparrow.Collections.LockFree;
+
 using Sparrow.Json;
 using Xunit;
 
@@ -18,7 +19,7 @@ namespace FastTests.Client
         {
             if (useSsl)
             {
-                DoNotReuseServer(new ConcurrentDictionary<string, string> { { "Raven/UseSsl", "true" } });
+                DoNotReuseServer(new ConcurrentDictionary<string, string> { ["Raven/UseSsl"] = "true" });
             }
             using (var store = GetDocumentStore())
             {

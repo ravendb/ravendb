@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Concurrent;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
@@ -386,7 +387,7 @@ namespace SlowTests.Server.Replication
         {
             if (useSsl)
             {
-                DoNotReuseServer(new global::Sparrow.Collections.LockFree.ConcurrentDictionary<string, string> { { "Raven/UseSsl", "true" } });
+                DoNotReuseServer(new ConcurrentDictionary<string, string> { ["Raven/UseSsl"] = "true" });
             }
             using (var nodeA = GetDocumentStore())
             using (var nodeB = GetDocumentStore())
