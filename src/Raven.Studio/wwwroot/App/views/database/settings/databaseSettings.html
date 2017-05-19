@@ -6,20 +6,16 @@
         <h4 class="page-header text-info">You are not authorized to view this page!</h4>
     </div>
 
-    <form data-bind="submit: saveChanges, visible: !isForbidden()">
+    <form data-bind="visible: !isForbidden()">
         <div class="panel panel-default">
             <div class="panel-heading">
-                <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled, visible: isEditingEnabled" title="Save Changes (Alt+S)" accesskey="S"><i class="icon-save"></i></button>
-                <button type="button" class="btn btn-default" data-bind="click: editDatabaseSettings, visible: !isEditingEnabled()" title="Edit Database Settings"><i class="icon-edit"></i></button>
                 <button type="button" class="btn btn-default" data-bind="click: refreshFromServer" title="Refresh from server, discarding any unsaved changes">
-                    Refresh
-                </button>
-                <button type="button" class="btn btn-default" data-bind="click: formatDocument" title="Format document (Alt+[)" accesskey="[">
-                    <i class="icon-indent"></i>
+                    <i class="icon-refresh"></i>
+                    <span>Refresh</span>
                 </button>
             </div>
             <div class="panel-body">
-                <pre id="dbDocEditor" class="form-control" data-bind="aceEditor: { code: text, lang: 'ace/mode/json', readOnly: !isEditingEnabled() }" style="height: 500px"></pre>
+                <pre id="dbDocEditor" class="form-control" data-bind="aceEditor: { code: documentText, lang: 'ace/mode/json', readOnly: true }" style="height: 500px"></pre>
             </div>
         </div>
     </form>
