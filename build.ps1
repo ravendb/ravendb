@@ -1,3 +1,31 @@
+param(
+    $TargetPlatform="",
+    [switch]$Windows,
+    [switch]$Ubuntu14,
+    [switch]$Ubuntu16,
+    [switch]$Rpi,
+    [switch]$DontRebuildStudio,
+    [switch]$Help)
+
+if ($Help) {
+    Write-Host -NoNewline -ForegroundColor Cyan "-Windows "
+    Write-Host " - build only Windows artifacts"
+
+    Write-Host -NoNewline -ForegroundColor Cyan "-Ubuntu14"
+    Write-Host " - build only Ubuntu 14.04 artifacts"
+    
+    Write-Host -NoNewline -ForegroundColor Cyan "-Ubuntu16"
+    Write-Host " - build only Ubuntu 16.04 artifacts"
+    
+    Write-Host -NoNewline -ForegroundColor Cyan "-Rpi"
+    Write-Host " - build only Raspberry Pie artifacts"
+
+    Write-Host -NoNewline -ForegroundColor Cyan "-DontRebuildStudio"
+    Write-Host " - skip building studio if it was build before"
+
+    exit 0
+}
+
 $ErrorActionPreference = "Stop"
 
 $DEV_BUILD_NUMBER = 40
@@ -15,6 +43,7 @@ $DEV_BUILD_NUMBER = 40
 . '.\scripts\env.ps1'
 . '.\scripts\updateSourceWithBuildInfo.ps1'
 . '.\scripts\nuget.ps1'
+. '.\scripts\platform.ps1'
 
 CheckPrerequisites
 
@@ -43,32 +72,23 @@ $TYPINGS_GENERATOR_BIN_DIR = [io.path]::combine($TYPINGS_GENERATOR_SRC_DIR, "bin
 $STUDIO_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio")
 $STUDIO_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio", "build")
 
-$SPECS = @(
-    @{
-        "Name" = "windows-x64";
-        "Runtime" = "win10-x64";
-        "PkgType" = "zip";
-        "IsUnix" = $False;
-    },
-    @{
-       "Name" = "ubuntu.14.04-x64";
-       "Runtime" = "ubuntu.14.04-x64";
-       "PkgType" = "tar.bz2";
-       "IsUnix" = $True;
-    },
-    @{
-       "Name" = "ubuntu.16.04-x64";
-       "Runtime" = "ubuntu.16.04-x64";
-       "PkgType" = "tar.bz2";
-       "IsUnix" = $True;
-    },
-    @{
-       "Name" = "raspberry-pi";
-       "Runtime" = "";
-       "PkgType" = "tar.bz2";
-       "IsUnix" = $True;
-    }
-);
+if ($Windows) {
+    $TargetPlatform = "windows";
+}
+
+if ($Ubuntu14) {
+    $TargetPlatform = "ubuntu14";
+} 
+
+if ($Ubuntu16) {
+    $TargetPlatform = "ubuntu16";
+}
+
+if ($Rpi) {
+    $TargetPlatform = "rpi";
+}
+
+$specs = GetTargetPlatforms $TargetPlatform
 
 SetVersionEnvironmentVariableInTeamCity $version
 
@@ -85,8 +105,12 @@ BuildClient $CLIENT_SRC_DIR $CLIENT_OUT_DIR $spec.Name
 
 CreateNugetPackage $CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
 
-BuildTypingsGenerator $TYPINGS_GENERATOR_SRC_DIR
-BuildStudio $STUDIO_SRC_DIR $PROJECT_DIR $version
+if (ShouldBuildStudio $STUDIO_OUT_DIR $DontRebuildStudio) {
+    BuildTypingsGenerator $TYPINGS_GENERATOR_SRC_DIR
+    BuildStudio $STUDIO_SRC_DIR $version
+} else {
+    write-host "Not rebuilding studio..."
+}
 
 Foreach ($spec in $SPECS) {
     $runtime = $spec.Runtime
