@@ -958,7 +958,7 @@ namespace Voron
             {
                 SafePosixOpenFlags &= ~PerPlatformValues.OpenFlags.O_DIRECT;
                 var message = "Path " + BasePath +
-                              " not supporting O_DIRECT writes. As a result - data durability is not guarenteed";
+                              " not supporting O_DIRECT writes. As a result - data durability is not guaranteed";
                 var details = $"Storage type '{PosixHelper.GetFileSystemOfPath(BasePath)}' doesn't support direct write to disk (non durable file system)";
                 InvokeNonDurableFileSystemError(this, message, new NonDurableFileSystemException(message), details);
             }
