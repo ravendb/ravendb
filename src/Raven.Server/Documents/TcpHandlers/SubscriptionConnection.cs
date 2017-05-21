@@ -600,15 +600,15 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 long startEtag = 0;
 
-                subscription.LastEtagReachedPedNode?.TryGetValue(TcpConnection.DocumentDatabase.DbId, out startEtag);
+                subscription.LastEtagReachedInServer?.TryGetValue(TcpConnection.DocumentDatabase.DbId, out startEtag);
 
                 if (subscription.ChangeVector == null || subscription.ChangeVector.Length == 0)
                     return startEtag;
 
                 var globalCV = TcpConnection.DocumentDatabase.DocumentsStorage.GetDatabaseChangeVector(docsContext);
                 var globalVsSubscripitnoConflictStatus = ConflictsStorage.GetConflictStatus(
-                    remote: subscription.ChangeVector,
-                    local: globalCV);
+                    remote: globalCV,
+                    local: subscription.ChangeVector);
 
                 if (globalVsSubscripitnoConflictStatus == ConflictsStorage.ConflictStatus.AlreadyMerged)
                 {
