@@ -36,9 +36,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             var subscripiton = new SubscriptionState();
             subscripiton.FillFromBlittableJson(existingValue);
-            if (subscripiton.LastEtagReachedPedNode == null)
-                subscripiton.LastEtagReachedPedNode = new Dictionary<Guid, long>();
-            subscripiton.LastEtagReachedPedNode[DbId] = this.LastDocumentEtagAckedInNode;
+            if (subscripiton.LastEtagReachedInServer == null)
+                subscripiton.LastEtagReachedInServer = new Dictionary<Guid, long>();
+            subscripiton.LastEtagReachedInServer[DbId] = this.LastDocumentEtagAckedInNode;
             subscripiton.ChangeVector = ChangeVector;
             subscripiton.TimeOfLastClientActivity = DateTime.UtcNow;
 

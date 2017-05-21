@@ -152,7 +152,7 @@ namespace SubscriptionFailoverBenchmark
             using (var store = new DocumentStore
             {
                 Url = Servers[0].WebUrls[0],
-                DefaultDatabase = defaultDatabase
+                Database = defaultDatabase
             }.Initialize())
             {
                 var subscriptionId = await store.AsyncSubscriptions.CreateAsync<User>(
@@ -200,7 +200,7 @@ namespace SubscriptionFailoverBenchmark
             using (var store = new DocumentStore
             {
                 Url = url,
-                DefaultDatabase = defaultDatabase
+                Database = defaultDatabase
             }.Initialize())
             {
                 var j = 0;

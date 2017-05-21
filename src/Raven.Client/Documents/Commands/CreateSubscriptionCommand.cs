@@ -11,10 +11,10 @@ namespace Raven.Client.Documents.Commands
 {
     public class CreateSubscriptionCommand : RavenCommand<CreateSubscriptionResult>
     {
-        private readonly SubscriptionCreationOptions _options;
+        private readonly SubscriptionCreationParams _options;
         private readonly JsonOperationContext _context;
 
-        public CreateSubscriptionCommand(SubscriptionCreationOptions options, JsonOperationContext context)
+        public CreateSubscriptionCommand(SubscriptionCreationParams options, JsonOperationContext context)
         {
             _options = options;
             _context = context;

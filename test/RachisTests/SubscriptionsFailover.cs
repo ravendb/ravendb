@@ -36,7 +36,7 @@ namespace RachisTests
             using (var store = new DocumentStore
             {
                 Url = leader.WebUrls[0],
-                DefaultDatabase = defaultDatabase
+                Database = defaultDatabase
             }.Initialize())
             {
                 var usersCount = new List<User>();
@@ -89,7 +89,7 @@ namespace RachisTests
             var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
 
             foreach (var server in Servers.Where(s =>
-                store.GetRequestExecuter(defaultDatabase).TopologyNodes.Any(x => x.ClusterTag == s.ServerStore.NodeTag)))
+                store.GetRequestExecutor(defaultDatabase).TopologyNodes.Any(x => x.ClusterTag == s.ServerStore.NodeTag)))
 
             {
                 await server.ServerStore.Cluster.WaitForIndexNotification(subscriptionEtag).ConfigureAwait(false);

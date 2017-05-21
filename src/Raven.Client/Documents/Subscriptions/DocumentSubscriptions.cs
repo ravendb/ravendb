@@ -18,12 +18,12 @@ namespace Raven.Client.Documents.Subscriptions
             _innerAsync = new AsyncDocumentSubscriptions(documentStore);
         }
 
-        public string Create(SubscriptionCreationOptions criteria, string database = null)
+        public string Create(SubscriptionCreationParams criteria, string database = null)
         {
             return AsyncHelpers.RunSync(() => _innerAsync.CreateAsync(criteria, database));
         }
 
-        public string Create<T>(SubscriptionCreationOptions<T> criteria, string database = null)
+        public string Create<T>(SubscriptionCreationParams<T> criteria, string database = null)
         {
             return AsyncHelpers.RunSync(() => _innerAsync.CreateAsync(criteria, database));
         }

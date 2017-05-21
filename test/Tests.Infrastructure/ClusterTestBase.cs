@@ -375,7 +375,7 @@ namespace Tests.Infrastructure
             using (var store = new DocumentStore()
             {
                 Url = leasderUrl,
-                DefaultDatabase = databaseName
+                Database = databaseName
             }.Initialize())
             {
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);

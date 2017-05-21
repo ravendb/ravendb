@@ -105,7 +105,7 @@ namespace SubscriptionsBenchmark
             {
                 if (string.IsNullOrEmpty(_subscriptionId))
                 {
-                    var subscriptionCreationParams = new SubscriptionCreationOptions
+                    var subscriptionCreationParams = new SubscriptionCreationParams
                     {
                         Criteria = new SubscriptionCriteria(_collectionName)
                     };

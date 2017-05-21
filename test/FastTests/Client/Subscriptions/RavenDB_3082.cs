@@ -52,7 +52,7 @@ namespace FastTests.Client.Subscriptions
                     await session.SaveChangesAsync();
                 }
 
-                var subscriptionCreationParams = new SubscriptionCreationOptions<PersonWithAddress>()
+                var subscriptionCreationParams = new SubscriptionCreationParams<PersonWithAddress>()
                 {
                     Criteria = new SubscriptionCriteria<PersonWithAddress>
                     {

@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Subscriptions
           
         }
         
-        public async Task<long> CreateSubscription(SubscriptionCreationOptions options)
+        public async Task<long> CreateSubscription(SubscriptionCreationParams options)
         {            
             var command = new CreateSubscriptionCommand(_db.Name)
             {

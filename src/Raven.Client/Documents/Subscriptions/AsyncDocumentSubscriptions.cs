@@ -26,37 +26,37 @@ namespace Raven.Client.Documents.Subscriptions
             _store = store;
         }
 
-        public Task<string> CreateAsync<T>(SubscriptionCreationOptions<T> subscriptionCreationParams, string database = null)
+        public Task<string> CreateAsync<T>(SubscriptionCreationParams<T> subscriptionCreationParams, string database = null)
         {
-            if (options == null)
+            if (subscriptionCreationParams == null)
                 throw new InvalidOperationException("Cannot create a subscription if criteria is null");
             
             var nonGenericCriteria = new SubscriptionCriteria(_store.Conventions.GetCollectionName(typeof(T)))
             {
-                FilterJavaScript = options.Criteria.FilterJavaScript,
+                FilterJavaScript = subscriptionCreationParams.Criteria.FilterJavaScript,
             };
 
-            var subscriptionCreationDto = new SubscriptionCreationOptions
+            var subscriptionCreationDto = new SubscriptionCreationParams
             {
                 Criteria =  nonGenericCriteria,
-                ChangeVector =  options.ChangeVector
+                ChangeVector = subscriptionCreationParams.ChangeVector
             };
 
             return CreateAsync(subscriptionCreationDto, database);
         }
 
-        public async Task<string> CreateAsync(SubscriptionCreationOptions subscriptionCreationParams, string database = null)
+        public async Task<string> CreateAsync(SubscriptionCreationParams subscriptionCreationParams, string database = null)
         {
-            if (options == null)
+            if (subscriptionCreationParams == null)
                 throw new InvalidOperationException("Cannot create a subscription if criteria is null");
 
             var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
             requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);
 
-            var command = new CreateSubscriptionCommand(options, context);
+            var command = new CreateSubscriptionCommand(subscriptionCreationParams, context);
             await requestExecutor.ExecuteAsync(command, context);
 
-            return SubscriptionState.GenerateSubscriptionItemName(database ?? _store.DefaultDatabase,command.Result.Id);
+            return SubscriptionState.GenerateSubscriptionItemName(database ?? _store.Database,command.Result.Id);
         }
 
         public Subscription<dynamic> Open(SubscriptionConnectionOptions options, string database = null)

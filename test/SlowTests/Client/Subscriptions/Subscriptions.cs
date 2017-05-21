@@ -24,7 +24,7 @@ namespace SlowTests.Client.Subscriptions
                 var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).DatabaseChangeVector;
                 await CreateDocuments(store, 5);
 
-                var subscriptionCreationParams = new SubscriptionCreationOptions
+                var subscriptionCreationParams = new SubscriptionCreationParams
                 {
                     Criteria = new SubscriptionCriteria("Things"),
                     ChangeVector = lastChangeVector

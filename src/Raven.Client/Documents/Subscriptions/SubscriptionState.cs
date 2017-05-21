@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Extensions;
+using Raven.Client.Server;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -24,7 +25,7 @@ namespace Raven.Client.Documents.Subscriptions
         public ChangeVectorEntry[] ChangeVector { get; set; }
         public string SubscriptionId { get; set; }
         public DateTime TimeOfLastClientActivity { get; set; }
-        public Dictionary<Guid,long> LastEtagReachedPedNode { get; set; }
+        public Dictionary<Guid,long> LastEtagReachedInServer { get; set; }
         private ulong? taskKey;
 
         public ulong GetTaskKey()

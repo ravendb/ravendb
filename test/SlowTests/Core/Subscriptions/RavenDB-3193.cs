@@ -30,7 +30,7 @@ namespace SlowTests.Core.Subscriptions
                     await session.SaveChangesAsync();
                 }
 
-                var subscriptionCreationParams = new SubscriptionCreationOptions
+                var subscriptionCreationParams = new SubscriptionCreationParams
                 {
                     Criteria = new SubscriptionCriteria("Users")
                 };
