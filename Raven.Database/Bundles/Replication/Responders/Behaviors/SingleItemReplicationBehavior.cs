@@ -111,10 +111,10 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                 return;
             }
             //this is expensive but worth trying if we can avoid conflicts
-            if (TryResolveConflictByCheckingIfIdentical(metadata, incoming, existingItem, out resolvedMetadataToSave))
+            if (TryResolveConflictByCheckingIfIdentical(id, metadata, incoming, existingItem, out resolvedMetadataToSave))
             {
                 //The metadata here is merged (changed), it needs to be pushed.
-                AddWithoutConflict(id,null, resolvedMetadataToSave,incoming);
+                AddWithoutConflict(id, null, resolvedMetadataToSave,incoming);
                 return;
             }
 
@@ -254,7 +254,7 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                     newHistory.Add(currentReplicationEntry);
 
                 //Merge histories
-                ReplicationData.SetHistory(newMetadata, Historian.MergeReplicationHistories(newHistory, existingHistory));
+                ReplicationData.SetHistory(newMetadata, Historian.MergeReplicationHistories(newHistory, existingHistory, id));
                 newMetadata[Constants.RavenReplicationMergedHistory] = true;
                 MarkAsDeleted(id, newMetadata);
 
@@ -333,23 +333,29 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
         /// This is a seperate method since it is expensive and we don't want to 
         /// run this method unless we faield all the other conflict resolvers.
         /// </summary>
+        /// <param name="documentId">The document id</param>
         /// <param name="metadata">The metadata of the incoming object</param>
         /// <param name="document">The incoming object data</param>
         /// <param name="existing">The existing object</param>
         /// <param name="resolvedMetadataToSave">The metadata to save</param>
         /// <returns></returns>
-        protected abstract bool TryResolveConflictByCheckingIfIdentical(RavenJObject metadata, TExternal document,
+        protected abstract bool TryResolveConflictByCheckingIfIdentical(string documentId, RavenJObject metadata, TExternal document,
             TInternal existing, out RavenJObject resolvedMetadataToSave);
 
         /// <summary>
         /// Runs shallow equal on the metadata while ignoring keys starting with '@'
         /// And replication related properties like replication
         /// </summary>
+        /// <param name="documentId"></param>
         /// <param name="origin"></param>
         /// <param name="external"></param>
         /// <param name="result">The output metadata incase the metadata are equal</param>
         /// <returns></returns>
-        protected static bool CheckIfMetadataIsEqualEnoughForReplicationAndMergeHistorires(RavenJObject origin, RavenJObject external, out RavenJObject result)
+        protected static bool CheckIfMetadataIsEqualEnoughForReplicationAndMergeHistorires(
+            string documentId, 
+            RavenJObject origin, 
+            RavenJObject external, 
+            out RavenJObject result)
         {
             result = null;
             var keysToCheck = new HashSet<string>(external.Keys.Where(k => !k.StartsWith("@") && !IgnoreProperties.Contains(k)));
@@ -366,11 +372,11 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
             if(keysToCheck.Any())
                 return false;
             //If we got here the metadata is the same, need to merge histories
-            MergeReplicationHistories(origin, external, ref result);
+            MergeReplicationHistories(documentId, origin, external, ref result);
             return true;
         }
 
-        private static void MergeReplicationHistories(RavenJObject origin, RavenJObject external, ref RavenJObject result)
+        private static void MergeReplicationHistories(string documentId, RavenJObject origin, RavenJObject external, ref RavenJObject result)
         {
             result = (RavenJObject) origin.CloneToken();
             RavenJToken originHistory;
@@ -401,7 +407,7 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
             //need to merge histories
             if (originHasHistory)
             {
-                mergedHistory = Historian.MergeReplicationHistories((RavenJArray) originHistory, (RavenJArray) externalHisotry);
+                mergedHistory = Historian.MergeReplicationHistories((RavenJArray) originHistory, (RavenJArray) externalHisotry, documentId);
                 result[Constants.RavenReplicationMergedHistory] = true;
             }
             else if (externalHasHistory)

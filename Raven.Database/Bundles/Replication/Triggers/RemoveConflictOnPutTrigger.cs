@@ -66,7 +66,7 @@ namespace Raven.Database.Bundles.Replication.Triggers
                             {Constants.RavenReplicationVersion, deletedMetadata[Constants.RavenReplicationVersion]},
                             {Constants.RavenReplicationSource, deletedMetadata[Constants.RavenReplicationSource]}
                         });
-                        Historian.MergeSingleHistory(conflictHistory, conflictHistoryAsDictionary);
+                        Historian.MergeSingleHistory(conflictHistory, conflictHistoryAsDictionary, key);
                     }
                 }
 
