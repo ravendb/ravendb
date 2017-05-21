@@ -24,7 +24,7 @@ namespace Raven.Bundles.Replication.Plugins
 
             var history = ReplicationData.GetHistory(metadata);
             var existingHistory = ReplicationData.GetHistory(existingDoc.Metadata);
-            ReplicationData.SetHistory(metadataToSave, Historian.MergeReplicationHistories(history, existingHistory));
+            ReplicationData.SetHistory(metadataToSave, Historian.MergeReplicationHistories(history, existingHistory, id));
             metadataToSave[Constants.RavenReplicationMergedHistory] = true;
 
             // here we make sure that we keep a deleted document deleted, rather than "reviving" it.

@@ -145,10 +145,10 @@ namespace Raven.Bundles.Replication.Responders
             return false;
         }
 
-        protected override bool TryResolveConflictByCheckingIfIdentical(RavenJObject metadata, byte[] document, Attachment existing, out RavenJObject resolvedMetadataToSave)
+        protected override bool TryResolveConflictByCheckingIfIdentical(string documentId, RavenJObject metadata, byte[] document, Attachment existing, out RavenJObject resolvedMetadataToSave)
         {
             //if the metadata is not equal there is no reason the compare the data
-            if (CheckIfMetadataIsEqualEnoughForReplicationAndMergeHistorires(existing.Metadata, metadata, out resolvedMetadataToSave) == false)
+            if (CheckIfMetadataIsEqualEnoughForReplicationAndMergeHistorires(documentId, existing.Metadata, metadata, out resolvedMetadataToSave) == false)
                 return false;
             var data = existing.Data();
             //It would have been better to check the length of the stream before reading it,

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Raven.Abstractions.Json.Linq;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Database.Bundles.Replication.Impl
 {
@@ -11,6 +12,8 @@ namespace Raven.Database.Bundles.Replication.Impl
 
     internal static class Historian
     {
+        private static readonly ILog log = LogManager.GetCurrentClassLogger();
+
         public static bool IsDirectChildOfCurrent(RavenJObject incomingMetadata, RavenJObject existingMetadata)
         {
             var history = incomingMetadata[Constants.RavenReplicationHistory];
@@ -36,21 +39,31 @@ namespace Raven.Database.Bundles.Replication.Impl
                     && ((RavenJObject) x)[Constants.RavenReplicationVersion].Value<long>() >= existingMetadata[Constants.RavenReplicationVersion].Value<long>());            
         }
 
-        public static RavenJArray MergeReplicationHistories(RavenJArray leftHandHistory, RavenJArray rightHandHistory)
+        public static RavenJArray MergeReplicationHistories(RavenJArray leftHandHistory, RavenJArray rightHandHistory, string documentId)
         {
             var sourcesToVersionEntries = new Dictionary<string, RavenJObject>();
-            MergeSingleHistory(leftHandHistory, sourcesToVersionEntries);
-            MergeSingleHistory(rightHandHistory, sourcesToVersionEntries);
+            MergeSingleHistory(leftHandHistory, sourcesToVersionEntries, documentId);
+            MergeSingleHistory(rightHandHistory, sourcesToVersionEntries, documentId);
             return new RavenJArray(sourcesToVersionEntries.Values); 
         }
 
-        public static void MergeSingleHistory(RavenJArray history, Dictionary<string, RavenJObject> sourcesToVersionEntries)
+        public static void MergeSingleHistory(RavenJArray history, Dictionary<string, RavenJObject> sourcesToVersionEntries, string documentId)
         {
-            foreach (var entry in history.Values())
+            var historyValues = history.Values();
+            foreach (var entry in historyValues)
             {
                 var entryAsObject = (RavenJObject) entry;
                 var sourceAsString = entryAsObject[Constants.RavenReplicationSource].Value<string>();
                 var versionAsLong = entryAsObject[Constants.RavenReplicationVersion].Value<long>();
+
+                if (sourceAsString == null)
+                {
+                    log.Error($"Failed to merge a single history entry for document id: '{documentId}'" +
+                              $"because the raven replication source is null. Replication version: {versionAsLong}." +
+                              $"Full history: {historyValues}");
+                    continue;
+                }
+
                 RavenJObject val;
                 RavenJToken ravenReplicationVersion;
                 if (sourcesToVersionEntries.TryGetValue(sourceAsString, out val) == false || 
