@@ -6,6 +6,7 @@ using FastTests.Server.Documents;
 using FastTests.Server.Documents.Queries;
 using SlowTests.Issues;
 using SlowTests.MailingList;
+using SlowTests.Smuggler;
 using SlowTests.Tests.Faceted;
 
 namespace Tryouts
@@ -21,13 +22,11 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new FastTests.Client.IndexesDeleteByIndexTests())
+                using (var a = new LegacySmugglerTests())
                 {
-                    a.Delete_By_Index_Async().Wait();
+                    a.CanImportIndexesAndTransformers("SlowTests.Smuggler.Indexes_And_Transformers_3.5.ravendbdump").Wait();
                 }
             }
-
-            
         }
     }
 }
