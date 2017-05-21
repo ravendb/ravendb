@@ -6,17 +6,18 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;
 using Voron.Data;
+// ReSharper disable InconsistentNaming
 
 namespace Raven.Server.Rachis
 {
     public abstract class RachisStateMachine : IDisposable
     {
         protected TransactionContextPool ContextPoolForReadOnlyOperations;
-        private RachisConsensus _parent;
+        protected RachisConsensus _parent;
 
         public virtual void Initialize(RachisConsensus parent, TransactionOperationContext context)
         {
-            _parent = parent;
+            _parent = parent;            
             ContextPoolForReadOnlyOperations = _parent.ContextPool;
         }
 
