@@ -41,7 +41,8 @@ namespace Raven.Client.Documents.Subscriptions
 
     public delegate void SubscriptionConnectionInterrupted(Exception ex, bool willReconnect);
 
-    public delegate void ConnectionEstablised();
+    public delegate void ConnectionEstablished();
+
     public class Subscription<T> : IObservable<T>, IAsyncDisposable, IDisposable where T : class
     {
         private readonly Logger _logger;
@@ -73,7 +74,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// <summary>
         /// Task that will be completed when the subscription connection will close and self dispose, or error if subscription connection is entirely interrupted
         /// </summary>
-        public Task SubscriptionLifetimeTask { private set; get; }
+        public Task SubscriptionLifetimeTask { get; }
 
         /// <summary>
         ///     It determines if the subscription connection is closed.
@@ -100,9 +101,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// </summary>
         public event SubscriptionConnectionInterrupted SubscriptionConnectionInterrupted = delegate { };
 
-        public event ConnectionEstablised ConnectionEstablished = delegate { };
-
-
+        public event ConnectionEstablished ConnectionEstablished = delegate { };
 
         internal Subscription(SubscriptionConnectionOptions options, IDocumentStore documentStore,
             DocumentConventions conventions, string dbName)
@@ -115,7 +114,7 @@ namespace Raven.Client.Documents.Subscriptions
                     nameof(options));
             _store = documentStore;
             _conventions = conventions;
-            _dbName = dbName;
+            _dbName = dbName ?? documentStore.Database;
 
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions,
                 entity => throw new InvalidOperationException("Shouldn't be generating new ids here"));
@@ -125,33 +124,17 @@ namespace Raven.Client.Documents.Subscriptions
 
         public string SubscriptionId => _options.SubscriptionId;
 
-        ~Subscription()
-        {
-            if (_disposed) return;
-            try
-            {
-                CloseTcpClient();
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Subscription {_options.SubscriptionId} was not disposed properly");
-            }
-            catch
-            {
-            }
-        }
-
         public void Dispose()
         {
             Dispose(true);
         }
 
-
-
-        public void Dispose(bool waitForSubscriptionTask = true)
+        public void Dispose(bool waitForSubscriptionTask)
         {
             if (_disposed)
                 return;
 
-            AsyncHelpers.RunSync(()=>DisposeAsync(waitForSubscriptionTask));
+            AsyncHelpers.RunSync(() => DisposeAsync(waitForSubscriptionTask));
         }
 
         public Task DisposeAsync()
@@ -159,13 +142,13 @@ namespace Raven.Client.Documents.Subscriptions
             return DisposeAsync(true);
         }
 
-        public async Task DisposeAsync(bool waitForSubscriptionTask = true)
+        public async Task DisposeAsync(bool waitForSubscriptionTask)
         {
             try
             {
                 if (_disposed)
                     return;
-                
+
                 _disposed = true;
 #pragma warning disable 4014
                 _taskCompletionSource.Task.IgnoreUnobservedExceptions();
@@ -201,7 +184,7 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        public IDisposable Subscribe(IObserver<T> observer)
+        public void Subscribe(IObserver<T> observer)
         {
             if (_subscriptionTask != null)
                 throw new InvalidOperationException(
@@ -211,9 +194,13 @@ namespace Raven.Client.Documents.Subscriptions
                 throw new InvalidOperationException(
                     "Subscription encountered errors and stopped. Cannot add any subscriber.");
             _subscribers.Add(observer);
+        }
 
-            // we cannot remove subscriptions dynamically, once we added, it is done
-            return new DisposableAction(() => { });
+        IDisposable IObservable<T>.Subscribe(IObserver<T> observer)
+        {
+            Subscribe(observer);
+
+            return new DisposableAction(() => throw new NotSupportedException("Removing subscription is not possible, create a new subscription if you want to change the subscribers."));
         }
 
         /// <summary>
@@ -221,7 +208,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// get those documents again)
         /// </summary>
         public event AfterAcknowledgment AfterAcknowledgment = delegate { };
-        
+
         public Task StartAsync()
         {
             if (_subscriptionTask != null)
@@ -230,7 +217,7 @@ namespace Raven.Client.Documents.Subscriptions
             if (_subscribers.Count == 0)
                 throw new InvalidOperationException(
                     "No observers has been registered, did you forget to call Subscribe?");
-            
+
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             _subscriptionTask = Task.Run(async () =>
             {
@@ -238,14 +225,20 @@ namespace Raven.Client.Documents.Subscriptions
                 {
                     await RunSubscriptionAsync(tcs);
                 }
+                catch (Exception e) when (e is OperationCanceledException == false)
+                {
+                    tcs.TrySetException(e);
+                }
                 finally
                 {
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                     if (_processingCts.IsCancellationRequested)
                     {
-                        Task.Run(() => tcs.TrySetCanceled());
+                        tcs.TrySetCanceled();
                     }
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                    else
+                    {
+                        tcs.TrySetResult(null);
+                    }
                 }
             });
 
@@ -254,30 +247,41 @@ namespace Raven.Client.Documents.Subscriptions
 
         private ServerNode _redirectNode;
 
-        public string CurrentNodeTag => _redirectNode.ClusterTag;
+        public string CurrentNodeTag => _redirectNode?.ClusterTag;
 
         private async Task<Stream> ConnectToServer()
         {
-            var command = new GetTcpInfoCommand("Subscription/"+_dbName);
+            var command = new GetTcpInfoCommand("Subscription/" + _dbName);
 
             JsonOperationContext context;
-            var requestExecutor = _store.GetRequestExecutor(_dbName ?? _store.Database);
+            var requestExecutor = _store.GetRequestExecutor(_dbName);
 
             using (requestExecutor.ContextPool.AllocateOperationContext(out context))
             {
                 if (_redirectNode != null)
                 {
-                    await requestExecutor.ExecuteAsync(_redirectNode,context, command).ConfigureAwait(false);
+                    try
+                    {
+                        await requestExecutor.ExecuteAsync(_redirectNode, context, command).ConfigureAwait(false);
+
+                    }
+                    catch (Exception)
+                    {
+                        // if we failed to talk to a node, we'll forget about it and let the topology to 
+                        // redirect us to the current node
+                        _redirectNode = null; 
+                        throw;
+                    }
                 }
                 else
                 {
-                    _redirectNode = requestExecutor.TopologyNodes[requestExecutor.CurrentNodeIndex];
                     await requestExecutor.ExecuteAsync(command, context).ConfigureAwait(false);
                 }
-                
+
                 var apiToken = await requestExecutor.GetAuthenticationToken(context, command.RequestedNode).ConfigureAwait(false);
                 var uri = new Uri(command.Result.Url);
 
+                _tcpClient = new TcpClient();
                 await _tcpClient.ConnectAsync(uri.Host, uri.Port).ConfigureAwait(false);
 
                 _tcpClient.NoDelay = true;
@@ -337,12 +341,12 @@ namespace Raven.Client.Documents.Subscriptions
                 case SubscriptionConnectionServerMessage.ConnectionStatus.NotFound:
                     throw new SubscriptionDoesNotExistException(
                         $"Subscription With Id {_options.SubscriptionId} cannot be opened, because it does not exist");
-                    case SubscriptionConnectionServerMessage.ConnectionStatus.Redirect:
-                        throw new SubscriptionDoesNotBelongToNodeException(
-                            $"Subscription With Id {_options.SubscriptionId} cannot be proccessed by current node, it will be redirected to {connectionStatus.Data[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)]}")
-                        {
-                            AppropriateNode = connectionStatus.Data[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag) ].ToString()
-                        };
+                case SubscriptionConnectionServerMessage.ConnectionStatus.Redirect:
+                    throw new SubscriptionDoesNotBelongToNodeException(
+                        $"Subscription With Id {_options.SubscriptionId} cannot be proccessed by current node, it will be redirected to {connectionStatus.Data[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)]}")
+                    {
+                        AppropriateNode = connectionStatus.Data[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)].ToString()
+                    };
                 default:
                     throw new ArgumentException(
                         $"Subscription {_options.SubscriptionId} could not be opened, reason: {connectionStatus.Status}");
@@ -371,15 +375,14 @@ namespace Raven.Client.Documents.Subscriptions
                             if (_processingCts.IsCancellationRequested)
                                 return;
 
-                            AssertConnectionState(connectionStatus);
+                            if (connectionStatus.Type != SubscriptionConnectionServerMessage.MessageType.ConnectionStatus &&
+                                connectionStatus.Status != SubscriptionConnectionServerMessage.ConnectionStatus.Accepted)
+                                AssertConnectionState(connectionStatus);
                         }
 
                         ConnectionEstablished();
 
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                        Task.Run(() => successfullyConnected.TrySetResult(null));
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-
+                        successfullyConnected.TrySetResult(null);
 
                         if (_processingCts.IsCancellationRequested)
                             return;
@@ -396,16 +399,16 @@ namespace Raven.Client.Documents.Subscriptions
                             }
                             catch (Exception)
                             {
-                                incomingBatch.Item2.Dispose();
+                                incomingBatch.returnContext.Dispose();
                                 throw;
                             }
                             notifiedSubscribers = Task.Run(() =>
                             {
                                 ChangeVectorEntry[] lastReceivedChangeVector = null;
                                 // ReSharper disable once AccessToDisposedClosure
-                                using (incomingBatch.Item2)
+                                using (incomingBatch.returnContext)
                                 {
-                                    foreach (var curDoc in incomingBatch.Item1)
+                                    foreach (var curDoc in incomingBatch.messages)
                                     {
                                         NotifySubscribers(curDoc.Data, out lastReceivedChangeVector);
                                     }
@@ -438,7 +441,7 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        private async Task<Tuple<List<SubscriptionConnectionServerMessage>, IDisposable>> ReadSingleSubscriptionBatchFromServer(JsonContextPool contextPool, Stream tcpStream, JsonOperationContext.ManagedPinnedBuffer buffer)
+        private async Task<(List<SubscriptionConnectionServerMessage> messages, IDisposable returnContext)> ReadSingleSubscriptionBatchFromServer(JsonContextPool contextPool, Stream tcpStream, JsonOperationContext.ManagedPinnedBuffer buffer)
         {
             JsonOperationContext context;
             var incomingBatch = new List<SubscriptionConnectionServerMessage>();
@@ -472,31 +475,46 @@ namespace Raven.Client.Documents.Subscriptions
                         incomingBatch.Clear();
                         break;
                     case SubscriptionConnectionServerMessage.MessageType.ConnectionStatus:
-
-                        if (receivedMessage.Status == SubscriptionConnectionServerMessage.ConnectionStatus.Redirect)
-                        {
-                            throw new SubscriptionDoesNotBelongToNodeException(
-                                $"Subscription With Id {_options.SubscriptionId} cannot be proccessed by current node, it will be redirected to {receivedMessage.Data[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)]}")
-                            {
-                                AppropriateNode = receivedMessage.Data[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)].ToString()
-                            };
-                        }
-                        else if (receivedMessage.Status == SubscriptionConnectionServerMessage.ConnectionStatus.Closed)
-                        {
-                            throw new SubscriptionClosedException(receivedMessage.Exception ?? string.Empty);
-                        }
-                        throw new Exception( $"Connection terminated by server. Exception: {receivedMessage.Exception ?? "None"}");
-                        break;                    
+                        ThrowInvalidConnectionStatus(receivedMessage);
+                        break;
                     case SubscriptionConnectionServerMessage.MessageType.Error:
-                        throw new Exception(
-                                    $"Connection terminated by server. Exception: {receivedMessage.Exception ?? "None"}");
-
+                        ThrowSubscriptionError(receivedMessage);
+                        break;
                     default:
-                        throw new ArgumentException(
-                            $"Unrecognized message '{receivedMessage.Type}' type received from server");
+                        ThrowInvalidServerResponse(receivedMessage);
+                        break;
                 }
             }
-            return Tuple.Create(incomingBatch, returnContext);
+            return (incomingBatch, returnContext);
+        }
+
+        private void ThrowInvalidConnectionStatus(SubscriptionConnectionServerMessage receivedMessage)
+        {
+            if (receivedMessage.Status == SubscriptionConnectionServerMessage.ConnectionStatus.Redirect)
+            {
+                throw new SubscriptionDoesNotBelongToNodeException(
+                    $"Subscription With Id {_options.SubscriptionId} cannot be proccessed by current node, it will be redirected to {receivedMessage.Data[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)]}")
+                {
+                    AppropriateNode = receivedMessage.Data[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)].ToString()
+                };
+            }
+            if (receivedMessage.Status == SubscriptionConnectionServerMessage.ConnectionStatus.Closed)
+            {
+                throw new SubscriptionClosedException(receivedMessage.Exception ?? string.Empty);
+            }
+            throw new InvalidOperationException($"Connection terminated by server. Exception: {receivedMessage.Exception ?? "None"}");
+        }
+
+        private static void ThrowInvalidServerResponse(SubscriptionConnectionServerMessage receivedMessage)
+        {
+            throw new ArgumentException(
+                $"Unrecognized message '{receivedMessage.Type}' type received from server");
+        }
+
+        private static void ThrowSubscriptionError(SubscriptionConnectionServerMessage receivedMessage)
+        {
+            throw new InvalidOperationException(
+                $"Connection terminated by server. Exception: {receivedMessage.Exception ?? "None"}");
         }
 
         private async Task<SubscriptionConnectionServerMessage> ReadNextObject(JsonOperationContext context, Stream stream, JsonOperationContext.ManagedPinnedBuffer buffer)
@@ -538,7 +556,7 @@ namespace Raven.Client.Documents.Subscriptions
 
             if (_logger.IsInfoEnabled)
             {
-                _logger.Info($"Got {id} (etag: [{string.Join(",", lastReceivedChangeVector.Select(x => $"{x.DbId.ToString()}:{x.Etag}"))}] on subscription {_options.SubscriptionId}, size {curDoc.Size}");
+                _logger.Info($"Got {id} (change vector: [{string.Join(",", lastReceivedChangeVector.Select(x => $"{x.DbId.ToString()}:{x.Etag}"))}] on subscription {_options.SubscriptionId}, size {curDoc.Size}");
             }
 
             T instance;
@@ -576,6 +594,7 @@ namespace Raven.Client.Documents.Subscriptions
                         LastSubscriberException = ex;
                         SubscriptionConnectionInterrupted(ex, false);
                         _taskCompletionSource.TrySetException(ex);
+                        _processingCts.Cancel();
 
                         try
                         {
@@ -633,8 +652,6 @@ namespace Raven.Client.Documents.Subscriptions
                         _logger.Info($"Subscription #{_options.SubscriptionId}. Connecting to server...");
                     }
 
-                    _tcpClient = new TcpClient();
-
                     await ProcessSubscriptionAsync(firstConnectionCompleted).ConfigureAwait(false);
                 }
                 catch (Exception ex)
@@ -655,8 +672,8 @@ namespace Raven.Client.Documents.Subscriptions
                         if (await TryHandleRejectedConnectionOrDispose(ex, false).ConfigureAwait(false))
                         {
                             if (_logger.IsInfoEnabled)
-                                _logger.Info($"Connection to subscription #{_options.SubscriptionId} have been shut down because of an error",ex);
-                        
+                                _logger.Info($"Connection to subscription #{_options.SubscriptionId} have been shut down because of an error", ex);
+
                             firstConnectionCompleted.TrySetException(ex);
                             return;
                         }
@@ -669,25 +686,6 @@ namespace Raven.Client.Documents.Subscriptions
                         firstConnectionCompleted.TrySetException(new AggregateException(ex, e));
                         await DisposeAsync(false).ConfigureAwait(false);
                         return;
-                    }
-
-                }
-            }
-            if (_processingCts.Token.IsCancellationRequested)
-                return;
-
-            if (IsErroredBecauseOfSubscriber)
-            {
-                try
-                {
-                    // prevent from calling Wait() on this in Dispose because we are already inside this task
-                    await DisposeAsync(false).ConfigureAwait(false);
-                }
-                catch (Exception e)
-                {
-                    if (_logger.IsInfoEnabled)
-                    {
-                        _logger.Info($"Subscription #{_options.SubscriptionId}. Exception happened during an attempt to close subscription after it had become faulted", e);
                     }
                 }
             }
@@ -711,23 +709,23 @@ namespace Raven.Client.Documents.Subscriptions
             }
 
             // ReSharper disable once InvertIf
-            if (ex is SubscriptionDoesNotBelongToNodeException)
+            if (ex is SubscriptionDoesNotBelongToNodeException se)
             {
-                var subscriptionDoesNotbelong = ex as SubscriptionDoesNotBelongToNodeException;
-                var requestExecuter = _store.GetRequestExecutor(_dbName ?? _store.Database);
-                var nodeToRedirectTo = requestExecuter.TopologyNodes.FirstOrDefault(x => x.ClusterTag == subscriptionDoesNotbelong.AppropriateNode);
+                var requestExecuter = _store.GetRequestExecutor(_dbName);
+                var nodeToRedirectTo = requestExecuter.TopologyNodes
+                    .FirstOrDefault(x => x.ClusterTag == se.AppropriateNode);
                 if (nodeToRedirectTo == null)
                 {
                     await requestExecuter.UpdateTopologyAsync();
-                    nodeToRedirectTo = requestExecuter.TopologyNodes.FirstOrDefault(x => x.ClusterTag == subscriptionDoesNotbelong.AppropriateNode);
+                    nodeToRedirectTo = requestExecuter.TopologyNodes.FirstOrDefault(x => x.ClusterTag == se.AppropriateNode);
 
                     if (nodeToRedirectTo == null)
                     {
-                        SubscriptionConnectionInterrupted(new AggregateException(ex, 
-                            new InvalidOperationException($"Could not redirect to {nodeToRedirectTo}, because it was not found in local topology, even after retrying")), false);
+                        SubscriptionConnectionInterrupted(new AggregateException(ex,
+                            new InvalidOperationException($"Could not redirect to {se.AppropriateNode}, because it was not found in local topology, even after retrying")), false);
                         return true;
                     }
-                        
+
                 }
 
                 _redirectNode = nodeToRedirectTo;
