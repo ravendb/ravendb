@@ -139,17 +139,27 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        
-
         public void Dispose()
+        {
+            Dispose(true);
+        }
+
+
+
+        public void Dispose(bool waitForSubscriptionTask = true)
         {
             if (_disposed)
                 return;
 
-            AsyncHelpers.RunSync(DisposeAsync);
+            AsyncHelpers.RunSync(()=>DisposeAsync(waitForSubscriptionTask));
         }
 
-        public async Task DisposeAsync()
+        public Task DisposeAsync()
+        {
+            return DisposeAsync(true);
+        }
+
+        public async Task DisposeAsync(bool waitForSubscriptionTask = true)
         {
             try
             {
@@ -163,7 +173,7 @@ namespace Raven.Client.Documents.Subscriptions
                 _processingCts.Cancel();
                 _disposedTask.TrySetResult(null); // notify the subscription task that we are done
 
-                if (_subscriptionTask != null && Task.CurrentId != _subscriptionTask.Id)
+                if (_subscriptionTask != null && waitForSubscriptionTask)
                 {
                     try
                     {
@@ -257,15 +267,15 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 if (_redirectNode != null)
                 {
-                    await requestExecuter.ExecuteAsync(_redirectNode,context, command).ConfigureAwait(false);
+                    await requestExecutor.ExecuteAsync(_redirectNode,context, command).ConfigureAwait(false);
                 }
                 else
                 {
-                    _redirectNode = requestExecuter.TopologyNodes[requestExecuter.CurrentNodeIndex];
-                    await requestExecuter.ExecuteAsync(command, context).ConfigureAwait(false);
+                    _redirectNode = requestExecutor.TopologyNodes[requestExecutor.CurrentNodeIndex];
+                    await requestExecutor.ExecuteAsync(command, context).ConfigureAwait(false);
                 }
                 
-                var apiToken = await requestExecuter.GetAuthenticationToken(context, command.RequestedNode).ConfigureAwait(false);
+                var apiToken = await requestExecutor.GetAuthenticationToken(context, command.RequestedNode).ConfigureAwait(false);
                 var uri = new Uri(command.Result.Url);
 
                 await _tcpClient.ConnectAsync(uri.Host, uri.Port).ConfigureAwait(false);
@@ -461,7 +471,7 @@ namespace Raven.Client.Documents.Subscriptions
                         AfterBatch(incomingBatch.Count);
                         incomingBatch.Clear();
                         break;
-                    case SubscriptionConnectionServerMessage.MessageType.CoonectionStatus:
+                    case SubscriptionConnectionServerMessage.MessageType.ConnectionStatus:
 
                         if (receivedMessage.Status == SubscriptionConnectionServerMessage.ConnectionStatus.Redirect)
                         {
@@ -631,7 +641,7 @@ namespace Raven.Client.Documents.Subscriptions
                 {
                     try
                     {
-                        if (_proccessingCts.Token.IsCancellationRequested)
+                        if (_processingCts.Token.IsCancellationRequested)
                         {
                             SubscriptionConnectionInterrupted(ex, true);
                             firstConnectionCompleted.TrySetResult(false);
@@ -657,7 +667,7 @@ namespace Raven.Client.Documents.Subscriptions
                     {
                         firstConnectionCompleted.TrySetResult(false);
                         firstConnectionCompleted.TrySetException(new AggregateException(ex, e));
-                        await DisposeAsync().ConfigureAwait(false);
+                        await DisposeAsync(false).ConfigureAwait(false);
                         return;
                     }
 
@@ -671,7 +681,7 @@ namespace Raven.Client.Documents.Subscriptions
                 try
                 {
                     // prevent from calling Wait() on this in Dispose because we are already inside this task
-                    await DisposeAsync().ConfigureAwait(false);
+                    await DisposeAsync(false).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
@@ -693,8 +703,9 @@ namespace Raven.Client.Documents.Subscriptions
                 IsConnectionClosed = true;
                 _taskCompletionSource.TrySetException(ex);
                 SubscriptionConnectionInterrupted(ex, false);
+                _processingCts.Cancel();
 
-                await DisposeAsync().ConfigureAwait(false);
+                await DisposeAsync(false).ConfigureAwait(false);
 
                 return true;
             }
@@ -703,7 +714,7 @@ namespace Raven.Client.Documents.Subscriptions
             if (ex is SubscriptionDoesNotBelongToNodeException)
             {
                 var subscriptionDoesNotbelong = ex as SubscriptionDoesNotBelongToNodeException;
-                var requestExecuter = _store.GetRequestExecuter(_dbName ?? _store.DefaultDatabase);
+                var requestExecuter = _store.GetRequestExecutor(_dbName ?? _store.Database);
                 var nodeToRedirectTo = requestExecuter.TopologyNodes.FirstOrDefault(x => x.ClusterTag == subscriptionDoesNotbelong.AppropriateNode);
                 if (nodeToRedirectTo == null)
                 {
