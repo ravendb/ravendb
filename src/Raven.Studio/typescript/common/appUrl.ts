@@ -608,11 +608,6 @@ class appUrl {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/ongoingTasks?" + databasePart;
     }
-   
-    static forManageDatabaseGroup(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks/ongoingTasks?" + databasePart; // todo...
-    }
 
     static forSampleData(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);

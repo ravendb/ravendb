@@ -22,26 +22,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="wwwroot\App\views\database\settings\customFunctionsEditor.html" />
-    <Content Include="wwwroot\App\views\resources\manageDatabaseGroup.html">
-    <Content Include="wwwroot\App\views\database\tasks\createOngoingTask.html">
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </Content>
-    <Content Include="wwwroot\App\views\database\tasks\ongoingTasks.html">
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </Content>
-    <Content Include="wwwroot\Content\css\feedback.less" />
-    <Content Include="wwwroot\Content\css\notification-center.less" />
-    <Content Include="wwwroot\Content\css\pages\conflicts.less" />
-    <Content Include="wwwroot\Content\css\pages\etl.less" />
-    <Content Include="wwwroot\Content\css\pages\stats.less" />
-    <Content Include="wwwroot\Content\css\pages\styles.less" />
-    <Content Include="wwwroot\Content\css\pages\versioning.less" />
-    <Content Include="wwwroot\Content\css\upcoming.less" />
-    <Content Include="wwwroot\Content\img\beta-license.png" />
-  </ItemGroup>
+  </ItemGroup>  
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics" Version="1.1.1" />
     <PackageReference Include="Microsoft.AspNetCore.Server.IISIntegration" Version="1.1.1" />
