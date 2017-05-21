@@ -91,32 +91,26 @@ namespace FastTests.Client.Subscriptions
                         TimeToWaitBeforeConnectionRetryMilliseconds = 20000
                     }))
                 {
-
                     var acceptedSusbscriptionList = new BlockingCollection<Thing>();
-                    using (acceptedSubscription.Subscribe(x =>
+                    acceptedSubscription.Subscribe(x => { acceptedSusbscriptionList.Add(x); });
+                    await acceptedSubscription.StartAsync();
+
+                    Thing thing;
+
+                    // wait until we know that connection was established
+                    for (var i = 0; i < 5; i++)
                     {
-                        acceptedSusbscriptionList.Add(x);
-                    }))
-                    {
-                        await acceptedSubscription.StartAsync();
-
-                        Thing thing;
-
-                        // wait until we know that connection was established
-                        for (var i = 0; i < 5; i++)
-                        {
-                            Assert.True(acceptedSusbscriptionList.TryTake(out thing, 1000));
-                        }
-
-                        Assert.False(acceptedSusbscriptionList.TryTake(out thing, 50));
+                        Assert.True(acceptedSusbscriptionList.TryTake(out thing, 1000));
                     }
+
+                    Assert.False(acceptedSusbscriptionList.TryTake(out thing, 50));
                     // open second subscription
                     using (var rejectedSusbscription =
-                            store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)
-                            {
-                                Strategy = SubscriptionOpeningStrategy.OpenIfFree,
-                                TimeToWaitBeforeConnectionRetryMilliseconds = 2000
-                            }))
+                        store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)
+                        {
+                            Strategy = SubscriptionOpeningStrategy.OpenIfFree,
+                            TimeToWaitBeforeConnectionRetryMilliseconds = 2000
+                        }))
                     {
                         rejectedSusbscription.Subscribe(thing1 => { });
 
