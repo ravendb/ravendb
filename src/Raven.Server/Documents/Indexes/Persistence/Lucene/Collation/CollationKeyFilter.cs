@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collation
 
             var length = PosixNativeMethods.GetSortKey(sortHandle, text, text.Length, null, 0, CompareOptions.None);
             if (length == 0)
-                throw new Win32Exception();
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to GetSortKey for text=" + text);
 
             var sortKey = new byte[length];
 
@@ -67,8 +67,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collation
             {
                 length = PosixNativeMethods.GetSortKey(sortHandle, text, text.Length, pSortKey, sortKey.Length, CompareOptions.None);
                 if (length == 0)
-                    throw new Win32Exception();
-
+                    throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to GetSortKey for text=" + text);
                 return sortKey;
             }
         }
@@ -77,7 +76,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collation
         {
             var length = Win32NativeMethods.LCMapStringEx(_cultureInfo.CompareInfo.Name, Win32NativeMethods.LCMAP_SORTKEY, text, text.Length, IntPtr.Zero, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
             if (length == 0)
-                throw new Win32Exception();
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to GetSortKey for text=" + text);
 
             var sortKey = new byte[length];
 
@@ -85,7 +84,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collation
             {
                 length = Win32NativeMethods.LCMapStringEx(_cultureInfo.CompareInfo.Name, Win32NativeMethods.LCMAP_SORTKEY, text, text.Length, (IntPtr)pSortKey, sortKey.Length, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
                 if (length == 0)
-                    throw new Win32Exception();
+                    throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to GetSortKey for text=" + text);
 
                 return sortKey;
             }

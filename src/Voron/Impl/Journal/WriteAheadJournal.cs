@@ -575,12 +575,18 @@ namespace Voron.Impl.Journal
                     var unusedJournals = GetUnusedJournalFiles(jrnls, lastProcessedJournal, lastFlushedTransactionId);
 
                     var needImmediateFsync =
-
-                        Interlocked.Exchange(ref _forceDataSync, 0) != 0 ||
-                        _totalWrittenButUnsyncedBytes > 32 * Constants.Size.Megabyte;
+                        _pendingSync.IsCompleted &&
+                        (Interlocked.Exchange(ref _forceDataSync, 0) != 0 ||
+                         _totalWrittenButUnsyncedBytes > 32 * Constants.Size.Megabyte);
 
                     if (needImmediateFsync)
                     {
+                        // will never wait, we ensure that we have completed the task
+                        // we call Wait() here to ensure that if there was an error in 
+                        // the previous sync, we'll propogate it out and mark the env
+                        // as catastrophic failure.
+                        _pendingSync.Wait(token); 
+                        token.ThrowIfCancellationRequested();
                         var operation = new SyncOperation(this);
                         operation.GatherInformationToStartSync();
                         _pendingSync = operation.Task;
