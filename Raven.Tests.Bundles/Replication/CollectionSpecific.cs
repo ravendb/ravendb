@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Client;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
@@ -39,10 +40,7 @@ namespace Raven.Tests.Bundles.Replication
             })
             {
                 store.Initialize();
-                
-                var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
-                replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands)
-                                              .Wait();
+                AsyncHelpers.RunSync(() => ((AsyncServerClient)store.AsyncDatabaseCommands).RequestExecuter.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands, true));
 
                 using (var session = store.OpenSession())
                 {

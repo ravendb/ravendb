@@ -105,12 +105,13 @@ namespace Raven.Tests.Issues
             {
                 store.InitializeProfiling();
                 Guid id;
+                
                 using (var s = store.OpenAsyncSession())
                 {
                     id = ((AsyncDocumentSession)s).Id;
                     var countCute = s.Query<Dog>().Where(x => x.Cute).CountLazilyAsync();
                     var countNotCute = s.Query<Dog>().Where(x => x.Cute == false).CountLazilyAsync();
-
+                    
                     Assert.Equal(0, await countNotCute.Value);
                     Assert.Equal(0, await countCute.Value);
                 }

@@ -25,6 +25,8 @@ using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Implementation;
 using Raven.Client.Extensions;
 using Raven.Client.Metrics;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Connection.Request
 {
@@ -236,7 +238,6 @@ namespace Raven.Client.Connection.Request
 
                 node = LeaderNode;
             }
-
             switch (serverClient.convention.FailoverBehavior)
             {
                 case FailoverBehavior.ReadFromAllWriteToLeader:
@@ -429,8 +430,8 @@ namespace Raven.Client.Connection.Request
                 if (firstTime)
                 {
                     firstTime = false;
-
-                    var nodes = ReplicationInformerLocalCache.TryLoadClusterNodesFromLocalCache(serverHash);
+                    var document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
+                    var nodes = GetNodes(primaryNode, document?.DataAsJson.JsonDeserialization<ReplicationDocumentWithClusterInformation>());
                     if (nodes != null)
                     {
                         Nodes = nodes;
@@ -540,35 +541,12 @@ namespace Raven.Client.Connection.Request
 
                         if (newestTopology != null)
                         {
-                            Nodes = GetNodes(newestTopology.Node, newestTopology.Task.Result);
-                            var newLeader = newestTopology.Task.Result.ClusterInformation.IsLeader ?
-                                Nodes.FirstOrDefault(n => n.Url == newestTopology.Node.Url) : null;
-
-                            ReplicationInformerLocalCache.TrySavingClusterNodesToLocalCache(serverHash, Nodes);
-
-                            if (newestTopology.Task.Result.ClientConfiguration != null)
+                            var replicationDocument = newestTopology.Task.Result;
+                            var node = newestTopology.Node;
+                            if (UpdateTopology(serverClient, node, replicationDocument, serverHash, prevLeader))
                             {
-                                if (newestTopology.Task.Result.ClientConfiguration.FailoverBehavior == null)
-                                {
-                                    if(Log.IsDebugEnabled)
-                                        Log.Debug($"Server side failoever configuration is set to let client decide, client decided on {serverClient.convention.FailoverBehavior}. ");
-                                    newestTopology.Task.Result.ClientConfiguration.FailoverBehavior = serverClient.convention.FailoverBehavior;
-                                }
-                                else if (Log.IsDebugEnabled)
-                                {
-                                    Log.Debug($"Server enforced failoever behavior {newestTopology.Task.Result.ClientConfiguration.FailoverBehavior}. ");
-                                }
-                                serverClient.convention.UpdateFrom(newestTopology.Task.Result.ClientConfiguration);
-                            }                            
-                            if (newLeader != null)
-                            {
-                                SetLeaderNodeToKnownLeader(newLeader);
                                 return;
                             }
-                            //here we try to set leader node to null but we might fail since it was changed.
-                            //We just need to make sure that the leader node is not null and we can stop searching.
-                            if(SetLeaderNodeToNullIfPrevIsTheSame(prevLeader) == false && LeaderNode != null)
-                                return;
                         }
 
                         Thread.Sleep(500);
@@ -581,13 +559,52 @@ namespace Raven.Client.Connection.Request
             }
         }
 
+        internal bool UpdateTopology(AsyncServerClient serverClient, OperationMetadata node, ReplicationDocumentWithClusterInformation replicationDocument, string serverHash, OperationMetadata prevLeader)
+        {
+            Nodes = GetNodes(node, replicationDocument);
+            var newLeader = Nodes.SingleOrDefault(x=>x.ClusterInformation.IsLeader);
+            var document = new JsonDocument
+            {
+                DataAsJson = RavenJObject.FromObject(replicationDocument)
+            };
+
+            ReplicationInformerLocalCache.TrySavingReplicationInformationToLocalCache(serverHash, document);
+
+            if (replicationDocument.ClientConfiguration != null)
+            {
+                if (replicationDocument.ClientConfiguration.FailoverBehavior == null)
+                {
+                    if (Log.IsDebugEnabled)
+                        Log.Debug($"Server side failoever configuration is set to let client decide, client decided on {serverClient.convention.FailoverBehavior}. ");
+                    replicationDocument.ClientConfiguration.FailoverBehavior = serverClient.convention.FailoverBehavior;
+                }
+                else if (Log.IsDebugEnabled)
+                {
+                    Log.Debug($"Server enforced failoever behavior {replicationDocument.ClientConfiguration.FailoverBehavior}. ");
+                }
+                serverClient.convention.UpdateFrom(replicationDocument.ClientConfiguration);
+            }
+            if (newLeader != null)
+            {
+                SetLeaderNodeToKnownLeader(newLeader);
+                return true;
+            }
+            //here we try to set leader node to null but we might fail since it was changed.
+            //We just need to make sure that the leader node is not null and we can stop searching.
+            if (SetLeaderNodeToNullIfPrevIsTheSame(prevLeader) == false && LeaderNode != null)
+                return true;
+            return false;
+        }
+
         private static OperationMetadata GetLeaderNode(IEnumerable<OperationMetadata> nodes)
         {
             return nodes.FirstOrDefault(x => x.ClusterInformation != null && x.ClusterInformation.IsLeader);
         }
 
-        private static List<OperationMetadata> GetNodes(OperationMetadata node, ReplicationDocumentWithClusterInformation replicationDocument)
+        internal static List<OperationMetadata> GetNodes(OperationMetadata node, ReplicationDocumentWithClusterInformation replicationDocument)
         {
+            if (node == null || replicationDocument == null)
+                return null;
             var nodes = replicationDocument.Destinations
                 .Select(x => ConvertReplicationDestinationToOperationMetadata(x, x.ClusterInformation))
                 .Where(x => x != null)

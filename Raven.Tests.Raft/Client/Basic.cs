@@ -136,8 +136,11 @@ namespace Raven.Tests.Raft.Client
                 }
 
                 SetupClusterConfiguration(clusterStores);
-
-                clusterStores.ForEach(store => AsyncHelpers.RunSync(()=>((ServerClient)store.DatabaseCommands).RequestExecuter.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands, force: true)));
+                foreach (var s in clusterStores)
+                {
+                    var re = ((ServerClient) s.DatabaseCommands).RequestExecuter;
+                    AsyncHelpers.RunSync(() => re.UpdateReplicationInformationIfNeededAsync((AsyncServerClient) s.AsyncDatabaseCommands, force: true));
+                }                
 
 
                 var leader = servers.First(x => x.Options.ClusterManager.Value.IsLeader());

@@ -148,7 +148,7 @@ namespace Raven.Client.FileSystem.Connection
                 replicationInformationTaskCopy.Wait();
         }
 
-        protected override void UpdateReplicationInformationFromDocument(JsonDocument document)
+        public override void UpdateReplicationInformationFromDocument(JsonDocument document)
         {
             var destinations = document.DataAsJson.Value<RavenJArray>("Destinations").Select(x => JsonConvert.DeserializeObject<SynchronizationDestination>(x.ToString()));
             ReplicationDestinations = destinations.Select(x =>
