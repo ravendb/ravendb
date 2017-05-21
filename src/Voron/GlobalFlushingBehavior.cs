@@ -178,6 +178,7 @@ namespace Voron
                 if (_log.IsOperationsEnabled)
                     _log.Operations($"Failed to sync data file for {req.Env.Options.BasePath}", e);
                 req.Env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
+                throw;
             }
         }
 
