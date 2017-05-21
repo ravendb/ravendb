@@ -306,7 +306,7 @@ namespace Voron.Platform.Win32
 
             if (startingBaseAddressPtr == (byte*)0) //system didn't succeed in mapping the address where we wanted
             {
-                var innerException = new Win32Exception();
+                var innerException = new Win32Exception(Marshal.GetLastWin32Error(), "Failed to MapView of file " + FileName);
 
                 var errorMessage = string.Format(
                     "Unable to allocate more pages - unsuccessfully tried to allocate continuous block of virtual memory with size = {0:##,###;;0} bytes",
@@ -410,7 +410,7 @@ namespace Voron.Platform.Win32
         public override void ReleaseAllocationInfo(byte* baseAddress, long size)
         {
             if (Win32MemoryMapNativeMethods.UnmapViewOfFile(baseAddress) == false)
-                throw new Win32Exception();
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to UnMapView of file " + FileName);
             NativeMemory.UnregisterFileMapping(_fileInfo.FullName, new IntPtr(baseAddress), size);
         }
 
@@ -457,7 +457,7 @@ namespace Voron.Platform.Win32
 
             if (Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess,
                 (UIntPtr)pagerState.AllocationInfos.Length, entries, 0) == false)
-                throw new Win32Exception();
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to Prefetch Vitrual Memory of file " + FileName);
         }
 
 

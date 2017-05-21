@@ -7,6 +7,7 @@
 using System;
 using System.ComponentModel;
 using System.IO;
+using System.Runtime.InteropServices;
 using Voron.Impl.FileHeaders;
 
 namespace Voron.Platform.Win32
@@ -25,12 +26,12 @@ namespace Voron.Platform.Win32
                 {
                     int written;
                     if (Win32NativeFileMethods.WriteFile(fs.SafeFileHandle, ptr, remaining, out written, null) == false)
-                        throw new Win32Exception();
+                        throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to write to file " + path);
                     ptr += written;
                     remaining -= written;
                 }
                 if(Win32NativeFileMethods.FlushFileBuffers(fs.SafeFileHandle)==false)
-                    throw new Win32Exception();
+                    throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to Flush File Buffers (sync) of file " + path);
             }
         }
 
@@ -47,7 +48,7 @@ namespace Voron.Platform.Win32
                 {
                     int read;
                     if (Win32NativeFileMethods.ReadFile(fs.SafeFileHandle, ptr, remaining, out read, null) == false)
-                        throw new Win32Exception();
+                        throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to read file " + path);
                     if (read == 0)
                         return false; // we should be reading _something_ here, if we can't, then it is an error and we assume corruption
                     ptr += read;
