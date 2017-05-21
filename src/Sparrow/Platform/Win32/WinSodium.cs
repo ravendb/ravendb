@@ -16,8 +16,35 @@ namespace Sparrow.Platform.Win32
         }
 
         [DllImport(LIB_SODIUM)]
+        public static extern UIntPtr crypto_generichash_bytes();
+
+        [DllImport(LIB_SODIUM)]
+        public static extern UIntPtr crypto_generichash_statebytes();
+
+        [DllImport(LIB_SODIUM)]
+        public static extern UIntPtr crypto_generichash_keybytes();
+
+        [DllImport(LIB_SODIUM)]
+        public static extern int crypto_generichash_init(void* /* crypto_generichash_state */ state,
+            byte* key,
+            UIntPtr keylen,
+            UIntPtr outlen);
+
+        [DllImport(LIB_SODIUM)]
+        public static extern int crypto_generichash_update(
+            void* /* crypto_generichash_state */ state,
+            byte* @in,
+            ulong inlen);
+
+        [DllImport(LIB_SODIUM)]
+        public static extern int crypto_generichash_final(
+            void* /* crypto_generichash_state */ state,
+            byte*@out,
+            UIntPtr outlen);
+
+        [DllImport(LIB_SODIUM)]
         public static extern int crypto_kx_keypair(
-            byte* pk, 
+            byte* pk,
             byte* sk);
 
         [DllImport(LIB_SODIUM)]
@@ -28,7 +55,7 @@ namespace Sparrow.Platform.Win32
 
         [DllImport(LIB_SODIUM)]
         public static extern UIntPtr crypto_stream_xchacha20_noncebytes();
-        
+
         [DllImport(LIB_SODIUM)]
         public static extern int sodium_init();
 
@@ -111,17 +138,17 @@ namespace Sparrow.Platform.Win32
 
         [DllImport(LIB_SODIUM)]
         public static extern int crypto_box_seal(
-            byte* b, 
-            byte* b1, 
-            ulong mlen, 
+            byte* b,
+            byte* b1,
+            ulong mlen,
             byte* pk);
 
         [DllImport(LIB_SODIUM)]
         public static extern int crypto_box_seal_open(
-            byte* m, 
-            byte* c, 
-            ulong clen, 
-            byte* pk, 
+            byte* m,
+            byte* c,
+            ulong clen,
+            byte* pk,
             byte* sk);
 
         [DllImport(LIB_SODIUM)]
@@ -129,11 +156,11 @@ namespace Sparrow.Platform.Win32
 
         [DllImport(LIB_SODIUM)]
         public static extern int crypto_generichash(
-            byte* @out, 
-            UIntPtr outlen, 
+            byte* @out,
+            UIntPtr outlen,
             byte* @in,
-            ulong inlen, 
-            byte* key, 
+            ulong inlen,
+            byte* key,
             UIntPtr keylen);
 
         [DllImport(LIB_SODIUM)]
@@ -141,13 +168,13 @@ namespace Sparrow.Platform.Win32
 
         [DllImport(LIB_SODIUM)]
         public static extern int crypto_box_keypair(
-            byte* pk, 
+            byte* pk,
             byte* sk);
 
         [DllImport(LIB_SODIUM)]
         public static extern int sodium_memcmp(
-            byte* b1, 
-            byte* b2, 
+            byte* b1,
+            byte* b2,
             UIntPtr len);
 
         [DllImport(LIB_SODIUM)]
@@ -189,12 +216,12 @@ namespace Sparrow.Platform.Win32
 
         [DllImport(LIB_SODIUM)]
         public static extern int crypto_box_easy(
-           byte* c,
-           byte* m,
-           ulong mlen,
-           byte* n,
-           byte* pk,
-           byte* sk);
+            byte* c,
+            byte* m,
+            ulong mlen,
+            byte* n,
+            byte* pk,
+            byte* sk);
 
         [DllImport(LIB_SODIUM)]
         public static extern int crypto_box_open_easy(
@@ -204,10 +231,10 @@ namespace Sparrow.Platform.Win32
             byte* n,
             byte* pk,
             byte* sk);
-            
+
         [DllImport(LIB_SODIUM)]
         public static extern void sodium_memzero(
-            byte* pnt, 
+            byte* pnt,
             UIntPtr len);
     }
 }

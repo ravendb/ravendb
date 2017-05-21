@@ -12,6 +12,57 @@ namespace Sparrow
                     : Platform.Win32.WinSodium.crypto_kdf_keybytes());
         }
 
+        public static UIntPtr crypto_generichash_bytes()
+        {
+            return Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_generichash_bytes()
+                : Platform.Win32.WinSodium.crypto_generichash_bytes();
+        }
+
+        public static int crypto_generichash_statebytes()
+        {
+            return (int)(Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_generichash_statebytes()
+                : Platform.Win32.WinSodium.crypto_generichash_statebytes());
+        }
+
+        public static int crypto_generichash_keybytes()
+        {
+            return (int)(Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_generichash_keybytes()
+                : Platform.Win32.WinSodium.crypto_generichash_keybytes());
+        }
+
+        public static int crypto_generichash_init(void* /* crypto_generichash_state */ state,
+            byte* key,
+            UIntPtr keylen,
+            UIntPtr outlen)
+        {
+            return Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_generichash_init(state, key, keylen, outlen)
+                : Platform.Win32.WinSodium.crypto_generichash_init(state, key, keylen, outlen);
+        }
+
+        public static int crypto_generichash_update(
+            void* /* crypto_generichash_state */ state,
+            byte* @in,
+            ulong inlen)
+        {
+            return Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_generichash_update(state, @in, inlen)
+                : Platform.Win32.WinSodium.crypto_generichash_update(state, @in, inlen);
+        }
+
+        public static int crypto_generichash_final(
+            void* /* crypto_generichash_state */ state,
+            byte* @out,
+            UIntPtr outlen)
+        {
+            return Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_generichash_final(state, @out, outlen)
+                : Platform.Win32.WinSodium.crypto_generichash_final(state, @out, outlen);
+        }
+
         public static int crypto_kx_keypair(byte* pk, byte* sk)
         {
             return Platform.PlatformDetails.RunningOnPosix
