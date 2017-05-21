@@ -562,7 +562,7 @@ namespace Raven.Server.Documents
             };
         }
 
-        public void DeleteAttachment(DocumentsOperationContext context, string documentId, string name, long? expectedEtag)
+        public long? DeleteAttachment(DocumentsOperationContext context, string documentId, string name, long? expectedEtag)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentException("Argument is null or whitespace", nameof(documentId));
@@ -582,7 +582,7 @@ namespace Raven.Server.Documents
                                                        $"Optimistic concurrency violation, transaction will be aborted.");
 
                     // this basically mean that we tried to delete attachment whose document doesn't exist.
-                    return;
+                    return null;
                 }
 
                 using (DocumentKeyWorker.GetSliceFromKey(context, name, out Slice lowerName))
@@ -591,7 +591,8 @@ namespace Raven.Server.Documents
                     DeleteAttachmentDirect(context, partialKeySlice, true, name, expectedEtag);
                 }
 
-                _documentsStorage.UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, docTvr);
+                var documentPutResult = _documentsStorage.UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, docTvr);
+                return documentPutResult.Etag;
             }
         }
 
