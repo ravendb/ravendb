@@ -45,6 +45,12 @@ namespace Raven.Client.Documents.Subscriptions
             Redirect
         }
 
+        internal class SubscriptionRedirectData
+        {
+            public string CurrentTag;
+            public string RedirectedTag;
+        }
+
         public MessageType Type { get; set; }
         public ConnectionStatus Status { get; set; }
         public BlittableJsonReaderObject Data { get; set; }

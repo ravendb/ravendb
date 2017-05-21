@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Subscriptions
             
             var nonGenericCriteria = new SubscriptionCriteria(_store.Conventions.GetCollectionName(typeof(T)))
             {
-                FilterJavaScript = subscriptionCreationParams.Criteria.FilterJavaScript,
+                FilterJavaScript = subscriptionCreationParams.Criteria?.FilterJavaScript,
             };
 
             var subscriptionCreationDto = new SubscriptionCreationParams

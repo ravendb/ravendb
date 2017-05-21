@@ -339,9 +339,9 @@ namespace Raven.Client.Documents.Subscriptions
                         $"Subscription With Id {_options.SubscriptionId} cannot be opened, because it does not exist");
                     case SubscriptionConnectionServerMessage.ConnectionStatus.Redirect:
                         throw new SubscriptionDoesNotBelongToNodeException(
-                            $"Subscription With Id {_options.SubscriptionId} cannot be proccessed by current node, it will be redirected to {connectionStatus.Data["RedirectedTag"].ToString()}")
+                            $"Subscription With Id {_options.SubscriptionId} cannot be proccessed by current node, it will be redirected to {connectionStatus.Data[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)]}")
                         {
-                            AppropriateNode = connectionStatus.Data["RedirectedTag"].ToString()
+                            AppropriateNode = connectionStatus.Data[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag) ].ToString()
                         };
                 default:
                     throw new ArgumentException(
@@ -476,9 +476,9 @@ namespace Raven.Client.Documents.Subscriptions
                         if (receivedMessage.Status == SubscriptionConnectionServerMessage.ConnectionStatus.Redirect)
                         {
                             throw new SubscriptionDoesNotBelongToNodeException(
-                                $"Subscription With Id {_options.SubscriptionId} cannot be proccessed by current node, it will be redirected to {receivedMessage.Data["RedirectedTag"].ToString()}")
+                                $"Subscription With Id {_options.SubscriptionId} cannot be proccessed by current node, it will be redirected to {receivedMessage.Data[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)]}")
                             {
-                                AppropriateNode = receivedMessage.Data["RedirectedTag"].ToString()
+                                AppropriateNode = receivedMessage.Data[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)].ToString()
                             };
                         }
                         else if (receivedMessage.Status == SubscriptionConnectionServerMessage.ConnectionStatus.Closed)

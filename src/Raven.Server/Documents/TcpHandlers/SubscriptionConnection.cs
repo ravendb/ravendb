@@ -122,9 +122,9 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
                 await WriteJsonAsync(new DynamicJsonValue
                 {
-                    ["Type"] = "ConnectionStatus",
-                    ["Status"] = "NotFound",
-                    ["Exception"] = e.ToString()
+                    [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
+                    [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.NotFound),
+                    [nameof(SubscriptionConnectionServerMessage.Exception)] = e.ToString()
                 });
                 return false;
             }
@@ -140,8 +140,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
                     await WriteJsonAsync(new DynamicJsonValue
                     {
-                        ["Type"] = "ConnectionStatus",
-                        ["Status"] = "Accepted"
+                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
+                        [nameof(SubscriptionConnectionServerMessage.Status)] =nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Accepted)
                     });
 
                     Stats.ConnectedAt = DateTime.UtcNow;
@@ -168,8 +168,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
                     await WriteJsonAsync(new DynamicJsonValue
                     {
-                        ["Type"] = "ConnectionStatus",
-                        ["Status"] = "InUse"
+                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
+                        [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.InUse)
                     });
                     return false;
                 }
@@ -223,13 +223,13 @@ namespace Raven.Server.Documents.TcpHandlers
                         }
                         await connection.WriteJsonAsync(new DynamicJsonValue
                         {
-                            ["Type"] = "CoonectionStatus",
-                            ["Status"] = "Redirect",
-                            ["Data"] = new DynamicJsonValue()
-                            {
-                                ["CurrentTag"] = serverStore.NodeTag,
-                                ["RedirectedTag"] = e.AppropriateNode
-                            }
+                            [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
+                            [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Redirect),
+                            [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue()
+                                {
+                                    [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.CurrentTag)] = serverStore.NodeTag,
+                                    [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)] = e.AppropriateNode
+                                }
                         });
                         return;
                     }
@@ -248,8 +248,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
                             await connection.WriteJsonAsync(new DynamicJsonValue
                             {
-                                ["Type"] = "Error",
-                                ["Exception"] = e.ToString()
+                                [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Error),
+                                [nameof(SubscriptionConnectionServerMessage.Exception)] = e.ToString()
                             });
                         }
                         catch (Exception)
@@ -273,9 +273,9 @@ namespace Raven.Server.Documents.TcpHandlers
                                 {
                                     await connection.WriteJsonAsync(new DynamicJsonValue
                                     {
-                                        ["Type"] = "CoonectionStatus",
-                                        ["Status"] = "Closed",
-                                        ["Exception"] = connection.ConnectionException.ToString()
+                                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
+                                        [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Closed),
+                                        [nameof(SubscriptionConnectionServerMessage.Exception)] = connection.ConnectionException.ToString()
                                     });
                                 }
                                 else if (connection.ConnectionException is SubscriptionDoesNotBelongToNodeException )
@@ -287,12 +287,12 @@ namespace Raven.Server.Documents.TcpHandlers
                                     }
                                     await connection.WriteJsonAsync(new DynamicJsonValue
                                     {
-                                        ["Type"] = "CoonectionStatus",
-                                        ["Status"] = "Redirect",
-                                        ["Data"] = new DynamicJsonValue()
+                                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
+                                        [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Redirect),
+                                        [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue()
                                         {
-                                            ["CurrentTag"] = serverStore.NodeTag,
-                                            ["RedirectedTag"] = subscriptionDoesNotBelonException.AppropriateNode
+                                            [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.CurrentTag)] = serverStore.NodeTag,
+                                            [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)] = subscriptionDoesNotBelonException.AppropriateNode
                                         }
                                     });
                                 }
@@ -300,14 +300,11 @@ namespace Raven.Server.Documents.TcpHandlers
                                 {
                                     await connection.WriteJsonAsync(new DynamicJsonValue
                                     {
-                                        ["Type"] = "Error",
-                                        ["Status"] = "None",
-                                        ["Exception"] = connection.ConnectionException.ToString()
+                                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Error),
+                                        [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.None),
+                                        [nameof(SubscriptionConnectionServerMessage.Exception)] = connection.ConnectionException.ToString()
                                     });
                                 }
-                                    
-
-                                
                             }
                             catch
                             {
@@ -522,7 +519,7 @@ namespace Raven.Server.Documents.TcpHandlers
                             {
                                 context.Write(writer, new DynamicJsonValue
                                 {
-                                    ["Type"] = "EndOfBatch"
+                                    [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.EndOfBatch)
                                 });
 
                                 await FlushDocsToClient(writer, docsToFlush, true);
@@ -575,8 +572,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 Stats.AckRate.Mark();
                                 await WriteJsonAsync(new DynamicJsonValue
                                 {
-                                    ["Type"] = "Confirm",
-                                    ["ChangeVector"] = clientReply.ChangeVector.ToJson() // todo: not sure we use this data anyway
+                                    [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Confirm)
                                 });
 
                                 break;
