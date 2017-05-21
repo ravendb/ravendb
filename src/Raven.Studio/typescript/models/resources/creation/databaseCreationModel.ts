@@ -175,7 +175,7 @@ class databaseCreationModel {
         });
     }
 
-    private topologyToDto(): Raven.Client.Documents.DatabaseTopology {
+    private topologyToDto(): Raven.Client.Server.DatabaseTopology {
         if (this.replication.manualMode()) {
             const nodes = this.replication.nodes();
             return {
@@ -184,12 +184,12 @@ class databaseCreationModel {
                     NodeTag: node.tag(),
                     Url: node.serverUrl()
                 }))
-            } as Raven.Client.Documents.DatabaseTopology;
+            } as Raven.Client.Server.DatabaseTopology;
         }
         return undefined;
     }
 
-    toDto(): Raven.Client.Documents.DatabaseRecord {
+    toDto(): Raven.Client.Server.DatabaseRecord {
         const settings: dictionary<string> = {};
         const securedSettings: dictionary<string> = {};
 
@@ -216,7 +216,7 @@ class databaseCreationModel {
             Disabled: false,
             Encrypted: this.getEncryptionConfigSection().enabled(),
             Topology: this.topologyToDto()
-        } as Raven.Client.Documents.DatabaseRecord;
+        } as Raven.Client.Server.DatabaseRecord;
     }
 
 }
