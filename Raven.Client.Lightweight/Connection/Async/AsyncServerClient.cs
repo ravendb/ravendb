@@ -34,6 +34,7 @@ using Raven.Json.Linq;
 
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Globalization;
@@ -44,6 +45,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Client.Connection.Async
 {
@@ -75,6 +77,12 @@ namespace Raven.Client.Connection.Async
 
         private NameValueCollection operationsHeaders = new NameValueCollection();
 
+#if !DNXCORE50
+        protected readonly ILog Log = LogManager.GetCurrentClassLogger();
+#else
+        protected readonly ILog Log = LogManager.GetLogger(typeof(AsyncServerClient));
+#endif
+
         public string Url
         {
             get { return primaryUrl; }
@@ -92,6 +100,8 @@ namespace Raven.Client.Connection.Async
                 return credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication;
             }
         }
+        private static readonly ConcurrentDictionary<string, Lazy<Tuple<DateTime, Task>>> _topologyUpdate =
+            new ConcurrentDictionary<string, Lazy<Tuple<DateTime, Task>>>();
 
         public AsyncServerClient(
             string url,
@@ -120,7 +130,96 @@ namespace Raven.Client.Connection.Async
             this.requestTimeMetricGetter = requestTimeMetricGetter;
             requestExecuterSelector = new RequestExecuterSelector(() =>
                 requestExecuterGetter(this, databaseName, incrementReadStripe), convention);
-            requestExecuterSelector.Select().UpdateReplicationInformationIfNeededAsync(this);
+
+            Lazy<Tuple<DateTime, Task>> val;
+            try
+            {
+                if (_topologyUpdate.TryGetValue(Url, out val) == false)
+                {
+                    val = _topologyUpdate.GetOrAdd(Url, _ => new Lazy<Tuple<DateTime, Task>>(
+                        () => Tuple.Create(DateTime.UtcNow, UpdateTopologyAsync())
+                        ));
+                }
+                if (val.Value.Item1.Add(convention.TimeToWaitBetweenReplicationTopologyUpdates) <= DateTime.UtcNow)
+                {
+                    _topologyUpdate.TryUpdate(Url,
+                        new Lazy<Tuple<DateTime, Task>>(
+                            () => Tuple.Create(DateTime.UtcNow, UpdateTopologyAsync())
+                    ), val);
+                    _topologyUpdate.TryGetValue(Url, out val); // get the update value, ours or someone elses
+                }
+
+                AsyncHelpers.RunSync(() => val.Value.Item2);
+            }
+            catch (Exception)
+            {
+                _topologyUpdate.TryRemove(Url, out val);
+                // We explicitly ignore errors here, can because node is down, the db does not exists, etc
+                AsyncHelpers.RunSync(() => UpdateTopologyAsync(null));
+            }
+        }
+
+        private async Task UpdateTopologyAsync()
+        {
+            var topology = await DirectGetReplicationDestinationsAsync(new OperationMetadata(Url, PrimaryCredentials, null), null)
+                .ConfigureAwait(false);
+
+            await UpdateTopologyAsync(topology).ConfigureAwait(false);
+        }
+
+        private async Task UpdateTopologyAsync(ReplicationDocumentWithClusterInformation topology)
+        {
+            IRequestExecuter executor;
+            if (topology == null)
+            {
+                topology = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(ServerHash.GetServerHash(Url))?.DataAsJson.JsonDeserialization<ReplicationDocumentWithClusterInformation>();
+                if (topology == null)
+                {
+                    //There is not much we can do at this point but to request an update to the topology.
+                    if (Log.IsWarnEnabled)
+                    {
+                        Log.Warn($"Was unable to fetch topology from primary node {Url} also there is no cached topology");
+                    }
+                    executor = requestExecuterSelector.Select();
+                    await executor.UpdateReplicationInformationIfNeededAsync(this).ConfigureAwait(false);
+                    return;
+                }
+            }
+            if (topology.ClientConfiguration != null)
+                convention.UpdateFrom(topology.ClientConfiguration);
+
+            executor = requestExecuterSelector.Select();
+            if (topology.ClusterInformation.IsInCluster)
+            {
+                var clusterAwareRequestExecuter = executor as ClusterAwareRequestExecuter;
+                //This should never happen.
+                if (clusterAwareRequestExecuter == null)
+                {
+                    Log.Error($"ClusterInformation indicates that we are in a cluster but the request executer selected the wrong executer ({executor.GetType().Name}).");
+                    return;
+                }
+                var serverHash = ServerHash.GetServerHash(Url);
+                var prevLeader = clusterAwareRequestExecuter.LeaderNode;
+                clusterAwareRequestExecuter.UpdateTopology(this, new OperationMetadata(Url, PrimaryCredentials, topology.ClusterInformation), topology, serverHash, prevLeader);
+                //The reason i lunch another topology request is because it will fetch the topology from all nodes, we are assuming 
+                //that our primary is up to date but it may be cut out of the cluster.
+                await clusterAwareRequestExecuter.UpdateReplicationInformationIfNeededAsync(this).ConfigureAwait(false);
+            }
+            else
+            {
+                var replicationAwareRequestExecuter = executor as ReplicationAwareRequestExecuter;
+                //This should never happen.
+                if (replicationAwareRequestExecuter == null)
+                {
+                    Log.Error($"ClusterInformation indicates that we are not in a cluster but the request executer selected the wrong executer ({executor.GetType().Name}).");
+                    return;
+                }
+                var doc = new JsonDocument
+                {
+                    DataAsJson = RavenJObject.FromObject(topology)
+                };
+                replicationAwareRequestExecuter.ReplicationInformer.UpdateReplicationInformationFromDocument(doc);
+            }
         }
 
         public void Dispose()
@@ -3001,9 +3100,9 @@ namespace Raven.Client.Connection.Async
         }
 
         internal async Task<ReplicationDocumentWithClusterInformation> DirectGetReplicationDestinationsAsync(OperationMetadata operationMetadata, IRequestTimeMetric requestTimeMetric, TimeSpan? timeout = null)
-        {            
+        {
             var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/replication/topology", HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric, timeout);
-            using (var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader))
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders)))
             {
                 try
                 {

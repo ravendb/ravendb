@@ -136,7 +136,6 @@ namespace Raven.Tests.Raft
             {
                 var url = node.SystemDatabase.ServerUrl.ForDatabase(databaseName);
                 var serverHash = ServerHash.GetServerHash(url);
-                ReplicationInformerLocalCache.ClearClusterNodesInformationLocalCache(serverHash);
                 ReplicationInformerLocalCache.ClearReplicationInformationFromLocalCache(serverHash);
             }
 

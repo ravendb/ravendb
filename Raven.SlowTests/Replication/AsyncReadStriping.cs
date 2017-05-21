@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Replication;
@@ -63,10 +64,12 @@ namespace Raven.SlowTests.Replication
                     }
                 }
             }
+
             foreach (var ravenDbServer in servers)
             {
                 Assert.True(2 == ravenDbServer.Server.NumberOfRequests, string.Format("Server at port: {0}. Requests: #{1}", ravenDbServer.SystemDatabase.Configuration.Port, ravenDbServer.Server.NumberOfRequests));
             }
+            
         }
 
         [Fact]

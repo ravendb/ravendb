@@ -123,7 +123,7 @@ namespace Raven.Client.Connection
 #endif
         }
 
-        public static List<OperationMetadata> TryLoadClusterNodesFromLocalCache(string serverHash)
+/*        public static List<OperationMetadata> TryLoadClusterNodesFromLocalCache(string serverHash)
         {
 #if !DNXCORE50
             try
@@ -149,9 +149,9 @@ namespace Raven.Client.Connection
 #else
             return null;
 #endif
-        }
+        }*/
 
-        public static void TrySavingClusterNodesToLocalCache(string serverHash, List<OperationMetadata> nodes)
+/*        public static void TrySavingClusterNodesToLocalCache(string serverHash, List<OperationMetadata> nodes)
         {
 #if !DNXCORE50
             try
@@ -170,9 +170,9 @@ namespace Raven.Client.Connection
                 Log.ErrorException("Could not persist the cluster nodes", e);
             }
 #endif
-        }
+        }*/
 
-        public static void ClearClusterNodesInformationLocalCache(string serverHash)
+/*        public static void ClearClusterNodesInformationLocalCache(string serverHash)
         {
 #if !DNXCORE50
             try
@@ -192,6 +192,6 @@ namespace Raven.Client.Connection
                 Log.ErrorException("Could not clear the persisted replication information", e);
             }
 #endif
-        }
+        }*/
     }
 }
