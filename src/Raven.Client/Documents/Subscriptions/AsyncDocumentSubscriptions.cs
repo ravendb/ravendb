@@ -56,7 +56,7 @@ namespace Raven.Client.Documents.Subscriptions
             var command = new CreateSubscriptionCommand(subscriptionCreationOptions, context);
             await requestExecutor.ExecuteAsync(command, context);
 
-            return SubscriptionState.GenerateSubscriptionItemName(database ?? _store.Database,command.Result.Id);
+            return command.Result.Id;
         }
 
         public Subscription<dynamic> Open(SubscriptionConnectionOptions options, string database = null)
