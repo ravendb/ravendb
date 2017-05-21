@@ -62,40 +62,27 @@ namespace Raven.Server.Documents.TcpHandlers
                 CancellationTokenSource.CreateLinkedTokenSource(TcpConnection.DocumentDatabase.DatabaseShutdown);
 
             _waitForMoreDocuments = new AsyncManualResetEvent(CancellationTokenSource.Token);
-            Stats = new SubscriptionConnectionStats();            
-        }       
-
-        private async Task<bool> ParseSubscriptionOptionsAsync()
-        {
-            try
-            {
-                JsonOperationContext context;
-                using (TcpConnection.ContextPool.AllocateOperationContext(out context))
-                using (var subscriptionCommandOptions = await context.ParseToMemoryAsync(
-                    TcpConnection.Stream,
-                    "subscription options",
-                    BlittableJsonDocumentBuilder.UsageMode.None,
-                    TcpConnection.PinnedBuffer))
-                {
-                    _options = JsonDeserializationServer.SubscriptionConnectionOptions(subscriptionCommandOptions);
-                }
-            }
-            catch (Exception ex)
-            {
-                if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info($"Failed to parse subscription options document", ex);
-                }
-                return false;
-            }
-
-            return true;
+            Stats = new SubscriptionConnectionStats();
         }
 
-        public async Task<bool> InitAsync()
+        private async Task ParseSubscriptionOptionsAsync()
         {
-            if (await ParseSubscriptionOptionsAsync() == false)
-                return false;
+            JsonOperationContext context;
+            using (TcpConnection.ContextPool.AllocateOperationContext(out context))
+            using (var subscriptionCommandOptions = await context.ParseToMemoryAsync(
+                TcpConnection.Stream,
+                "subscription options",
+                BlittableJsonDocumentBuilder.UsageMode.None,
+                TcpConnection.PinnedBuffer))
+            {
+                _options = JsonDeserializationServer.SubscriptionConnectionOptions(subscriptionCommandOptions);
+            }
+
+        }
+
+        public async Task InitAsync()
+        {
+            await ParseSubscriptionOptionsAsync();
 
             if (_logger.IsInfoEnabled)
             {
@@ -117,12 +104,11 @@ namespace Raven.Server.Documents.TcpHandlers
                     await WriteJsonAsync(new DynamicJsonValue
                     {
                         [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
-                        [nameof(SubscriptionConnectionServerMessage.Status)] =nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Accepted)
+                        [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Accepted)
                     });
 
                     Stats.ConnectedAt = DateTime.UtcNow;
-
-                    return true;
+                    return;
                 }
                 catch (TimeoutException)
                 {
@@ -131,23 +117,8 @@ namespace Raven.Server.Documents.TcpHandlers
                         _logger.Info(
                             $"Subscription Id {SubscriptionId} from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} starts to wait until previous connection from {_connectionState.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} is released");
                     }
-                    timeout = Math.Max(250, _options.TimeToWaitBeforeConnectionRetryMilliseconds/2);
+                    timeout = Math.Max(250, _options.TimeToWaitBeforeConnectionRetryMilliseconds / 2);
                     await SendHeartBeat();
-                }
-                catch (SubscriptionInUseException)
-                {
-                    if (timeout == 0 && _logger.IsInfoEnabled)
-                    {
-                        _logger.Info(
-                            $"Subscription Id {SubscriptionId} from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} with connection strategy {Strategy} was rejected because previous connection from {_connectionState.Connection.TcpConnection.TcpClient.Client.RemoteEndPoint} has stronger connection strategy ({_connectionState.Connection.Strategy})");
-                    }
-
-                    await WriteJsonAsync(new DynamicJsonValue
-                    {
-                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
-                        [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.InUse)
-                    });
-                    return false;
                 }
             }
         }
@@ -189,8 +160,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     try
                     {
-                        if (await connection.InitAsync() == false)
-                            return;
+                        await connection.InitAsync();
                         await connection.ProcessSubscriptionAysnc();
                     }
                     catch (Exception e)
@@ -323,7 +293,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 return new SubscriptionConnectionClientMessage
                 {
-                    ChangeVector = new ChangeVectorEntry[] {},
+                    ChangeVector = new ChangeVectorEntry[] { },
                     Type = SubscriptionConnectionClientMessage.MessageType.DisposedNotification
                 };
             }
@@ -331,7 +301,7 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 return new SubscriptionConnectionClientMessage
                 {
-                    ChangeVector = new ChangeVectorEntry[] {},
+                    ChangeVector = new ChangeVectorEntry[] { },
                     Type = SubscriptionConnectionClientMessage.MessageType.DisposedNotification
                 };
             }
@@ -354,7 +324,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 var startEtag = GetStartEtagForSubscription(docsContext, subscription);
 
                 ChangeVectorEntry[] lastChangeVector = null;
-                
+
                 var patch = SetupFilterScript(subscription.Criteria);
                 while (CancellationTokenSource.IsCancellationRequested == false)
                 {
@@ -391,7 +361,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                         }
                                         continue;
                                     }
-                                    
+
                                     lastChangeVector = ChangeVectorUtils.MergeVectors(doc.ChangeVector, subscription.ChangeVector);
                                     anyDocumentsSentInCurrentIteration = true;
                                     startEtag = doc.Etag;
@@ -461,7 +431,7 @@ namespace Raven.Server.Documents.TcpHandlers
                             if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
                                 await SendHeartBeat();
 
-                           if (await WaitForChangedDocuments(replyFromClientTask))
+                            if (await WaitForChangedDocuments(replyFromClientTask))
                                 continue;
                         }
 
@@ -471,7 +441,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         {
                             var result = await Task.WhenAny(replyFromClientTask,
                                     TimeoutManager.WaitFor(5000, CancellationTokenSource.Token)).ConfigureAwait(false);
-                                CancellationTokenSource.Token.ThrowIfCancellationRequested();
+                            CancellationTokenSource.Token.ThrowIfCancellationRequested();
                             if (result == replyFromClientTask)
                             {
                                 clientReply = await replyFromClientTask;

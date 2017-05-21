@@ -375,7 +375,7 @@ namespace Raven.Client.Documents.Subscriptions
                             if (_processingCts.IsCancellationRequested)
                                 return;
 
-                            if (connectionStatus.Type != SubscriptionConnectionServerMessage.MessageType.ConnectionStatus &&
+                            if (connectionStatus.Type != SubscriptionConnectionServerMessage.MessageType.ConnectionStatus ||
                                 connectionStatus.Status != SubscriptionConnectionServerMessage.ConnectionStatus.Accepted)
                                 AssertConnectionState(connectionStatus);
                         }
