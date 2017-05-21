@@ -88,6 +88,8 @@ namespace Raven.Server.Rachis
 
         public State CurrentState { get; private set; }
         public TimeoutEvent Timeout { get; private set; }
+        public uint RemoteOperationTimeoutMs { get; private set; }
+
         public string LastStateChangeReason => _lastStateChangeReason;
 
         private string _tag;
@@ -163,12 +165,12 @@ namespace Raven.Server.Rachis
             try
             {
                 _persistentState = env;
+                RemoteOperationTimeoutMs = (uint)configuration.ClusterOperationTimeout.AsTimeSpan.TotalMilliseconds;
                 ElectionTimeoutMs = (int)configuration.ElectionTimeout.AsTimeSpan.TotalMilliseconds * (Debugger.IsAttached ? 10 : 1);
                 ContextPool = new TransactionContextPool(_persistentState);
 
                 ClusterTopology topology;
-                TransactionOperationContext context;
-                using (ContextPool.AllocateOperationContext(out context))
+                using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenWriteTransaction())
                 {
                     var state = tx.InnerTransaction.CreateTree(GlobalStateSlice);
@@ -183,8 +185,7 @@ namespace Raven.Server.Rachis
                     var read = state.Read(CurrentTermSlice);
                     if (read == null || read.Reader.Length != sizeof(long))
                     {
-                        byte* ptr;
-                        using (state.DirectAdd(CurrentTermSlice, sizeof(long), out ptr))
+                        using (state.DirectAdd(CurrentTermSlice, sizeof(long), out byte* ptr))
                             *(long*)ptr = CurrentTerm = 0;
                     }
                     else
@@ -213,8 +214,7 @@ namespace Raven.Server.Rachis
                 CurrentState = State.Follower;
                 if (topology.Members.Count == 1)
                 {
-                    TransactionOperationContext ctx;
-                    using (ContextPool.AllocateOperationContext(out ctx))
+                    using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     using (ctx.OpenWriteTransaction())
                     {
                         SwitchToSingleLeader(ctx);
@@ -294,8 +294,7 @@ namespace Raven.Server.Rachis
             {
                 var task = _topologyChanged.Task;
                 var tag = nodeTag ?? _tag;
-                TransactionOperationContext context;
-                using (ContextPool.AllocateOperationContext(out context))
+                using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     var clusterTopology = GetTopology(context);
@@ -337,8 +336,7 @@ namespace Raven.Server.Rachis
         public void SetNewState(State state, IDisposable disposable, long expectedTerm, string stateChangedReason)
         {
 
-            TransactionOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction()) // we use the write transaction lock here
             {
                 SetNewStateInTx(context, state, disposable, expectedTerm, stateChangedReason);
@@ -397,8 +395,7 @@ namespace Raven.Server.Rachis
 
         public void AppendStateDisposable(IDisposable parentState, IDisposable disposeOnStateChange)
         {
-            TransactionOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction()) // using write tx just for the lock here
             {
                 if (_disposables.Count == 0 || ReferenceEquals(_disposables[0], parentState) == false)
@@ -436,8 +433,7 @@ namespace Raven.Server.Rachis
 
         public void SwitchToCandidateState(string reason, bool forced = false)
         {
-            TransactionOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var clusterTopology = GetTopology(context);
@@ -543,8 +539,7 @@ namespace Raven.Server.Rachis
             BlittableJsonReaderObject topologyJson)
         {
             var state = tx.CreateTree(GlobalStateSlice);
-            byte* ptr;
-            using (state.DirectAdd(TopologySlice, topologyJson.Size, out ptr))
+            using (state.DirectAdd(TopologySlice, topologyJson.Size, out byte* ptr))
             {
                 topologyJson.CopyTo(ptr);
             }
@@ -572,8 +567,7 @@ namespace Raven.Server.Rachis
                 {
                     RachisHello initialMessage;
                     ClusterTopology clusterTopology;
-                    TransactionOperationContext context;
-                    using (ContextPool.AllocateOperationContext(out context))
+                    using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {
                         initialMessage = remoteConnection.InitFollower(context);
                         sayHello?.Invoke(initialMessage);
@@ -616,8 +610,7 @@ namespace Raven.Server.Rachis
                 }
                 catch (Exception e)
                 {
-                    TransactionOperationContext context;
-                    using (ContextPool.AllocateOperationContext(out context))
+                    using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                         remoteConnection.Send(context, e);
                 }
             }
@@ -643,7 +636,6 @@ namespace Raven.Server.Rachis
                 catch (Exception)
                 {
                 }
-
             }
         }
 
@@ -655,21 +647,17 @@ namespace Raven.Server.Rachis
 
             long lastIndex;
 
-            TableValueReader reader;
-            if (table.SeekOnePrimaryKey(Slices.AfterAllKeys, out reader))
+            if (table.SeekOnePrimaryKey(Slices.AfterAllKeys, out TableValueReader reader))
             {
-                int size;
-                lastIndex = Bits.SwapBytes(*(long*)reader.Read(0, out size));
+                lastIndex = Bits.SwapBytes(*(long*)reader.Read(0, out int size));
                 Debug.Assert(size == sizeof(long));
             }
             else
             {
-                long lastIndexTerm;
-                GetLastTruncated(context, out lastIndex, out lastIndexTerm);
+                GetLastTruncated(context, out lastIndex, out long lastIndexTerm);
             }
             lastIndex += 1;
-            TableValueBuilder tvb;
-            using (table.Allocate(out tvb))
+            using (table.Allocate(out TableValueBuilder tvb))
             {
                 tvb.Add(Bits.SwapBytes(lastIndex));
                 tvb.Add(CurrentTerm);
@@ -686,15 +674,13 @@ namespace Raven.Server.Rachis
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
             while (true)
             {
-                TableValueReader reader;
-                if (table.SeekOnePrimaryKey(Slices.BeforeAllKeys, out reader) == false)
+                if (table.SeekOnePrimaryKey(Slices.BeforeAllKeys, out TableValueReader reader) == false)
                     break;
 
                 table.Delete(reader.Id);
             }
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
-            byte* ptr;
-            using (state.DirectAdd(LastTruncatedSlice, sizeof(long) * 2, out ptr))
+            using (state.DirectAdd(LastTruncatedSlice, sizeof(long) * 2, out byte* ptr))
             {
                 var data = (long*)ptr;
                 data[0] = index;
@@ -703,9 +689,7 @@ namespace Raven.Server.Rachis
         }
         public unsafe void TruncateLogBefore(TransactionOperationContext context, long upto)
         {
-            long lastIndex;
-            long lastTerm;
-            GetLastCommitIndex(context, out lastIndex, out lastTerm);
+            GetLastCommitIndex(context, out long lastIndex, out long lastTerm);
 
             long entryTerm;
             long entryIndex;
@@ -732,12 +716,10 @@ namespace Raven.Server.Rachis
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
             while (true)
             {
-                TableValueReader reader;
-                if (table.SeekOnePrimaryKey(Slices.BeforeAllKeys, out reader) == false)
+                if (table.SeekOnePrimaryKey(Slices.BeforeAllKeys, out TableValueReader reader) == false)
                     break;
 
-                int size;
-                entryIndex = Bits.SwapBytes(*(long*)reader.Read(0, out size));
+                entryIndex = Bits.SwapBytes(*(long*)reader.Read(0, out int size));
                 if (entryIndex > upto)
                     break;
                 Debug.Assert(size == sizeof(long));
@@ -748,8 +730,7 @@ namespace Raven.Server.Rachis
                 table.Delete(reader.Id);
             }
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
-            byte* ptr;
-            using (state.DirectAdd(LastTruncatedSlice, sizeof(long) * 2, out ptr))
+            using (state.DirectAdd(LastTruncatedSlice, sizeof(long) * 2, out byte* ptr))
             {
                 var data = (long*)ptr;
                 data[0] = entryIndex;
@@ -768,10 +749,9 @@ namespace Raven.Server.Rachis
 
             BlittableJsonReaderObject lastTopology = null;
 
-            Slice key;
             using (
-                Slice.External(context.Transaction.InnerTransaction.Allocator, (byte*)&reversedEntryIndex, sizeof(long),
-                    out key))
+    Slice.External(context.Transaction.InnerTransaction.Allocator, (byte*)&reversedEntryIndex, sizeof(long),
+        out Slice key))
             {
                 var lastEntryIndex = GetLastEntryIndex(context);
                 GetLastCommitIndex(context, out var lastCommitIndex, out var lastCommitTerm);
@@ -779,7 +759,7 @@ namespace Raven.Server.Rachis
                 foreach (var entry in entries)
                 {
                     var entryTerm = GetTermFor(context, entry.Index);
-                    if (entryTerm!= null && entry.Term != entryTerm)
+                    if (entryTerm != null && entry.Term != entryTerm)
                     {
                         //rewind entries with mismatched term
                         lastEntryIndex = Math.Min(entry.Index - 1, lastEntryIndex);
@@ -818,11 +798,9 @@ namespace Raven.Server.Rachis
                     prevIndex = entry.Index;
                     //In the case where we delete entries reversedEntryIndex will advance forward so we need to keep the origin index.
                     var originalReversedIndex = reversedEntryIndex = Bits.SwapBytes(entry.Index);
-                    TableValueReader reader;
-                    if (table.ReadByKey(key, out reader)) // already exists
+                    if (table.ReadByKey(key, out TableValueReader reader)) // already exists
                     {
-                        int size;
-                        var term = *(long*)reader.Read(1, out size);
+                        var term = *(long*)reader.Read(1, out int size);
                         Debug.Assert(size == sizeof(long));
                         if (term == entry.Term)
                             continue; // same, can skip
@@ -841,8 +819,7 @@ namespace Raven.Server.Rachis
                     }
 
                     var nested = context.ReadObject(entry.Entry, "entry");
-                    TableValueBuilder tableValueBuilder;
-                    using (table.Allocate(out tableValueBuilder))
+                    using (table.Allocate(out TableValueBuilder tableValueBuilder))
                     {
                         tableValueBuilder.Add(originalReversedIndex);
                         tableValueBuilder.Add(entry.Term);
@@ -898,17 +875,14 @@ namespace Raven.Server.Rachis
         {
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
             var reversedIndex = Bits.SwapBytes(index);
-            Slice key;
-            using (Slice.External(context.Allocator, (byte*)&reversedIndex, sizeof(long), out key))
+            using (Slice.External(context.Allocator, (byte*)&reversedIndex, sizeof(long), out Slice key))
             {
-                TableValueReader reader;
-                if (table.ReadByKey(key, out reader) == false)
+                if (table.ReadByKey(key, out TableValueReader reader) == false)
                 {
                     flags = RachisEntryFlags.Invalid;
                     return null;
                 }
-                int size;
-                flags = *(RachisEntryFlags*)reader.Read(3, out size);
+                flags = *(RachisEntryFlags*)reader.Read(3, out int size);
                 Debug.Assert(size == sizeof(RachisEntryFlags));
                 var ptr = reader.Read(2, out size);
                 return new BlittableJsonReaderObject(ptr, size, context);
@@ -967,8 +941,7 @@ namespace Raven.Server.Rachis
                 }
             }
 
-            byte* ptr;
-            using (state.DirectAdd(LastCommitSlice, sizeof(long) * 2, out ptr))
+            using (state.DirectAdd(LastCommitSlice, sizeof(long) * 2, out byte* ptr))
             {
                 var data = (long*)ptr;
                 data[0] = index;
@@ -980,11 +953,11 @@ namespace Raven.Server.Rachis
 
         public async Task WaitForCommitIndexChange(CommitIndexModification modification, long value)
         {
-            while (true)
+            var timeoutTask = TimeoutManager.WaitFor(RemoteOperationTimeoutMs);
+            while (timeoutTask.IsCompleted == false)
             {
                 var task = _commitIndexChanged.Task;
-                TransactionOperationContext context;
-                using (ContextPool.AllocateOperationContext(out context))
+                using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     var commitIndex = GetLastCommitIndex(context);
@@ -1000,8 +973,15 @@ namespace Raven.Server.Rachis
                             throw new ArgumentOutOfRangeException(nameof(modification), modification, null);
                     }
                 }
-                await task;
+
+                if(timeoutTask == await Task.WhenAny(task,timeoutTask))
+                    ThrowTimeoutException();
             }
+        }
+
+        private static void ThrowTimeoutException()
+        {
+            throw new TimeoutException();
         }
 
         public unsafe Tuple<long, long> GetLogEntriesRange(TransactionOperationContext context)
@@ -1009,11 +989,9 @@ namespace Raven.Server.Rachis
             Debug.Assert(context.Transaction != null);
 
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
-            TableValueReader reader;
-            if (table.SeekOnePrimaryKey(Slices.AfterAllKeys, out reader) == false)
+            if (table.SeekOnePrimaryKey(Slices.AfterAllKeys, out TableValueReader reader) == false)
                 return Tuple.Create(0L, 0L);
-            int size;
-            var max = Bits.SwapBytes(*(long*)reader.Read(0, out size));
+            var max = Bits.SwapBytes(*(long*)reader.Read(0, out int size));
             Debug.Assert(size == sizeof(long));
             if (table.SeekOnePrimaryKey(Slices.BeforeAllKeys, out reader) == false)
                 return Tuple.Create(0L, 0L);
@@ -1028,16 +1006,12 @@ namespace Raven.Server.Rachis
             Debug.Assert(context.Transaction != null);
 
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
-            TableValueReader reader;
-            if (table.SeekOnePrimaryKey(Slices.BeforeAllKeys, out reader) == false)
+            if (table.SeekOnePrimaryKey(Slices.BeforeAllKeys, out TableValueReader reader) == false)
             {
-                long lastTruncatedIndex;
-                long _;
-                GetLastTruncated(context, out lastTruncatedIndex, out _);
+                GetLastTruncated(context, out long lastTruncatedIndex, out long _);
                 return lastTruncatedIndex;
             }
-            int size;
-            var max = Bits.SwapBytes(*(long*)reader.Read(0, out size));
+            var max = Bits.SwapBytes(*(long*)reader.Read(0, out int size));
             Debug.Assert(size == sizeof(long));
             return max;
         }
@@ -1047,16 +1021,13 @@ namespace Raven.Server.Rachis
             Debug.Assert(context.Transaction != null);
 
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
-            TableValueReader reader;
-            if (table.SeekOnePrimaryKey(Slices.AfterAllKeys, out reader) == false)
+            if (table.SeekOnePrimaryKey(Slices.AfterAllKeys, out TableValueReader reader) == false)
             {
-                long lastTruncatedIndex;
-                long _;
-                GetLastTruncated(context, out lastTruncatedIndex, out _);
+                GetLastTruncated(context, out long lastTruncatedIndex, out long _);
                 return lastTruncatedIndex;
             }
-            int size;
-            var max = Bits.SwapBytes(*(long*)reader.Read(0, out size));
+
+            var max = Bits.SwapBytes(*(long*)reader.Read(0, out int size));
             Debug.Assert(size == sizeof(long));
             return max;
         }
@@ -1075,17 +1046,13 @@ namespace Raven.Server.Rachis
             Debug.Assert(context.Transaction != null);
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
             var reversedIndex = Bits.SwapBytes(index);
-            Slice key;
             using (
-                Slice.External(context.Transaction.InnerTransaction.Allocator, (byte*)&reversedIndex, sizeof(long),
-                    out key))
+    Slice.External(context.Transaction.InnerTransaction.Allocator, (byte*)&reversedIndex, sizeof(long),
+        out Slice key))
             {
-                TableValueReader reader;
-                if (table.ReadByKey(key, out reader) == false)
+                if (table.ReadByKey(key, out TableValueReader reader) == false)
                 {
-                    long lastIndex;
-                    long lastTerm;
-                    GetLastCommitIndex(context, out lastIndex, out lastTerm);
+                    GetLastCommitIndex(context, out long lastIndex, out long lastTerm);
                     if (lastIndex == index)
                         return lastTerm;
                     GetLastTruncated(context, out lastIndex, out lastTerm);
@@ -1093,8 +1060,7 @@ namespace Raven.Server.Rachis
                         return lastTerm;
                     return null;
                 }
-                int size;
-                var term = *(long*)reader.Read(1, out size);
+                var term = *(long*)reader.Read(1, out int size);
                 Debug.Assert(size == sizeof(long));
                 return term;
             }
@@ -1105,8 +1071,7 @@ namespace Raven.Server.Rachis
             if (term == CurrentTerm)
                 return;
 
-            TransactionOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 using (var tx = context.OpenWriteTransaction())
                 {
@@ -1128,8 +1093,7 @@ namespace Raven.Server.Rachis
                 throw new ConcurrencyException($"The current term {CurrentTerm} is larger than {term}, aborting change " + Environment.StackTrace);
 
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
-            byte* ptr;
-            using (state.DirectAdd(CurrentTermSlice, sizeof(long), out ptr))
+            using (state.DirectAdd(CurrentTermSlice, sizeof(long), out byte* ptr))
             {
                 *(long*)ptr = term;
             }
@@ -1138,7 +1102,7 @@ namespace Raven.Server.Rachis
 
             var size = Encoding.UTF8.GetByteCount(votedFor);
 
-            using (state.DirectAdd(VotedForSlice, size, out ptr))
+            using (state.DirectAdd(VotedForSlice, size, out var ptr))
             {
                 fixed (char* pVotedFor = votedFor)
                 {
@@ -1168,6 +1132,10 @@ namespace Raven.Server.Rachis
 
         public event EventHandler OnDispose;
 
+        public bool IsDisposed => _commitIndexChanged.Task.IsCanceled &&
+                                  _stateChanged.Task.IsCanceled &&
+                                  _topologyChanged.Task.IsCanceled;
+
         public virtual void Dispose()
         {
             OnDispose?.Invoke(this, EventArgs.Empty);
@@ -1184,8 +1152,7 @@ namespace Raven.Server.Rachis
             if (selfUrl == null)
                 throw new ArgumentNullException(nameof(selfUrl));
 
-            TransactionOperationContext ctx;
-            using (ContextPool.AllocateOperationContext(out ctx))
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var tx = ctx.OpenWriteTransaction())
             {
                 if (CurrentState != State.Passive)
@@ -1193,8 +1160,7 @@ namespace Raven.Server.Rachis
 
                 _tag = "A";
 
-                Slice str;
-                using (Slice.From(tx.InnerTransaction.Allocator, _tag, out str))
+                using (Slice.From(tx.InnerTransaction.Allocator, _tag, out Slice str))
                 {
                     var state = tx.InnerTransaction.CreateTree(GlobalStateSlice);
                     state.Add(TagSlice, str);

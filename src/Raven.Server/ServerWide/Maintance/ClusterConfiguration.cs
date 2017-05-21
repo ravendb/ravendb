@@ -39,5 +39,12 @@ namespace Raven.Server.ServerWide.Maintance
         [TimeUnit(TimeUnit.Milliseconds)]
         [ConfigurationEntry("Raven/Cluster/OnErrorDelayTime")]
         public TimeSetting OnErrorDelayTime { get; set; }
+
+        [Description("As a cluster node, how long it takes to timeout operation between two cluster nodes.")]
+        [DefaultValue(5000)]
+        [TimeUnit(TimeUnit.Milliseconds)]
+        [ConfigurationEntry("Raven/Cluster/ClusterOperationTimeout")]
+        public TimeSetting ClusterOperationTimeout { get; set; }
+
     }
 }

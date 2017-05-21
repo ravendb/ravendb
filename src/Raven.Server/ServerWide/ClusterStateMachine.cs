@@ -190,9 +190,9 @@ namespace Raven.Server.ServerWide
         }
 
         private readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
-        public Task WaitForIndexNotification(long index)
+        public async Task WaitForIndexNotification(long index)
         {
-            return _rachisLogIndexNotifications.WaitForIndexNotification(index);
+            await _rachisLogIndexNotifications.WaitForIndexNotification(index, _parent.RemoteOperationTimeoutMs);
         }
 
         private unsafe void RemoveNodeFromDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
@@ -729,18 +729,29 @@ namespace Raven.Server.ServerWide
 
     public class RachisLogIndexNotifications
     {
+        private readonly CancellationToken _token;
         private long _lastModifiedIndex;
         private readonly AsyncManualResetEvent _notifiedListeners;
 
         public RachisLogIndexNotifications(CancellationToken token)
         {
+            _token = token;
             _notifiedListeners = new AsyncManualResetEvent(token);
         }
 
-        public async Task WaitForIndexNotification(long index)
+        public async Task WaitForIndexNotification(long index,uint? timeoutInMs = null)
         {
-            while (index > Volatile.Read(ref _lastModifiedIndex))
-                await _notifiedListeners.WaitAsync();
+            Task timeoutTask = null;
+            if (timeoutInMs.HasValue)
+                timeoutTask = TimeoutManager.WaitFor(timeoutInMs.Value, _token);
+            while (index > Volatile.Read(ref _lastModifiedIndex) && timeoutTask?.IsCompleted == false)
+                if (timeoutTask == await Task.WhenAny(_notifiedListeners.WaitAsync(), timeoutTask))
+                    ThrowTimeoutException();
+        }
+
+        private void ThrowTimeoutException()
+        {
+            throw new TimeoutException();
         }
 
         public void NotifyListenersAbout(long index)
