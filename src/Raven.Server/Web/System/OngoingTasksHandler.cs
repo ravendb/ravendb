@@ -158,7 +158,7 @@ namespace Raven.Server.Web.System
         {
             var json = base.ToJson();
             json[nameof(BackupType)] = BackupType;
-            json[nameof(BackupDestinations)] = new DynamicJsonArray(BackupDestinations.Select(x => x));
+            json[nameof(BackupDestinations)] = new DynamicJsonArray(BackupDestinations);
             return json;
         }
     }

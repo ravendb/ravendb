@@ -111,8 +111,8 @@ class appUrl {
     };
 
     static checkIsAreaActive(routeRoot: string): boolean {
-        var items = router.routes.filter(m => m.isActive() && m.route != null && m.route != '');
-        var isThereAny = items.some(m => (<string>m.route).substring(0, routeRoot.length) === routeRoot);
+        const items = router.routes.filter(m => m.isActive() && m.route != null && m.route != '');
+        const isThereAny = items.some(m => (<string>m.route).substring(0, routeRoot.length) === routeRoot);
         return isThereAny;
     }
 
@@ -240,27 +240,27 @@ class appUrl {
     }
 
     static forEditItem(itemId: string, db: database, itemIndex: number, collectionName?: string): string {
-        var urlPart = appUrl.getEncodedDbPart(db);
-        var itemIdUrlPart = itemId ? "&id=" + encodeURIComponent(itemId) : "";
+        const urlPart = appUrl.getEncodedDbPart(db);
+        const itemIdUrlPart = itemId ? "&id=" + encodeURIComponent(itemId) : "";
 
-        var pagedListInfo = collectionName && itemIndex != null ? "&list=" + encodeURIComponent(collectionName) + "&item=" + itemIndex : "";
-        var databaseTag = "#databases";       
+        const pagedListInfo = collectionName && itemIndex != null ? "&list=" + encodeURIComponent(collectionName) + "&item=" + itemIndex : "";
+        const databaseTag = "#databases";       
         return databaseTag + "/edit?" + itemIdUrlPart + urlPart + pagedListInfo;
     }
 
     static forEditQueryItem(itemNumber: number, res: database, index: string, query?: string, sort?:string): string {
-        var databaseUrlPart = appUrl.getEncodedDbPart(res);
-        var indexUrlPart = "&index=" + index;
-        var itemNumberUrlPart = "&item=" + itemNumber;
-        var queryInfoUrlPart = query? "&query=" + encodeURIComponent(query): "";
-        var sortInfoUrlPart = sort?"&sorts=" + sort:"";
-        var dbTag = "#databases";
+        const databaseUrlPart = appUrl.getEncodedDbPart(res);
+        const indexUrlPart = "&index=" + index;
+        const itemNumberUrlPart = "&item=" + itemNumber;
+        const queryInfoUrlPart = query? "&query=" + encodeURIComponent(query): "";
+        const sortInfoUrlPart = sort?"&sorts=" + sort:"";
+        const dbTag = "#databases";
         return dbTag + "/edit?" + databaseUrlPart + indexUrlPart + itemNumberUrlPart + queryInfoUrlPart + sortInfoUrlPart;
     }
 
     static forNewDoc(db: database, collection: string = null): string {
-        var databaseUrlPart = appUrl.getEncodedDbPart(db);
-        var url = "#databases/edit?" + databaseUrlPart;
+        const databaseUrlPart = appUrl.getEncodedDbPart(db);
+        let url = "#databases/edit?" + databaseUrlPart;
         if (collection) {
             url += "&new=" + encodeURIComponent(collection);
         }
@@ -417,7 +417,7 @@ class appUrl {
     }
 
     static forVisualizer(db: database, index: string = null): string {
-        var url = "#databases/indexes/visualizer?" + appUrl.getEncodedDbPart(db);
+        let url = "#databases/indexes/visualizer?" + appUrl.getEncodedDbPart(db);
         if (index) { 
             url += "&index=" + index;
         }
@@ -453,7 +453,7 @@ class appUrl {
     }
 
     static forEditSqlReplication(sqlReplicationName: string, db: database):string {
-        var databasePart = appUrl.getEncodedDbPart(db);
+        const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/settings/editSqlReplication/" + encodeURIComponent(sqlReplicationName) + "?" + databasePart;
     }
 
@@ -479,7 +479,7 @@ class appUrl {
     }
 
     static forDocumentsByDatabaseName(collection: string, dbName: string): string {
-        var collectionPart = collection ? "collection=" + encodeURIComponent(collection) : "";
+        const collectionPart = collection ? "collection=" + encodeURIComponent(collection) : "";
         return "#/databases/documents?" + collectionPart + "&database=" + encodeURIComponent(dbName);;
     }
 
@@ -490,10 +490,10 @@ class appUrl {
     }
 
     static forPatch(db: database, hashOfRecentPatch?: number): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
+        const databasePart = appUrl.getEncodedDbPart(db);
 
         if (hashOfRecentPatch) {
-            var patchPath = "recentpatch-" + hashOfRecentPatch;
+            const patchPath = "recentpatch-" + hashOfRecentPatch;
             return "#databases/patch/" + encodeURIComponent(patchPath) + "?" + databasePart;
         } else {
             return "#databases/patch?" + databasePart;    
@@ -537,23 +537,23 @@ class appUrl {
             indexToQueryComponent = "recentquery-" + indexNameOrHashToQuery;
         } 
 
-        var indexPart = indexToQueryComponent ? "/" + encodeURIComponent(indexToQueryComponent) : "";
+        const indexPart = indexToQueryComponent ? "/" + encodeURIComponent(indexToQueryComponent) : "";
         return "#databases/query/index" + indexPart + "?" + databasePart;
     }
 
     static forReporting(db: database, indexName?: string): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
-        var indexPart = indexName ? "/" + encodeURIComponent(indexName) : "";
+        const databasePart = appUrl.getEncodedDbPart(db);
+        const indexPart = indexName ? "/" + encodeURIComponent(indexName) : "";
         return "#databases/query/reporting" + indexPart + "?" + databasePart;
     }
 
     static forExploration(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
+        const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/query/exploration?" + databasePart;
     }
 
     static forTasks(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
+        const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks?" + databasePart;
     }
 
@@ -566,7 +566,7 @@ class appUrl {
     }
 
     static forTerms(indexName: string, db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
+        const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/indexes/terms/" + encodeURIComponent(indexName) + "?" + databasePart;
     }
 
@@ -605,17 +605,17 @@ class appUrl {
     }
 
     static forOngoingTasks(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
+        const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/ongoingTasks?" + databasePart;
     }
 
     static forSampleData(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
+        const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/sampleData?" + databasePart;
     }
 
     static forCsvImport(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
+        const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/csvImport?" + databasePart;
     }
 

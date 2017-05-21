@@ -16,27 +16,27 @@ class createOngoingTask extends dialogViewModelBase {
     protected initObservables() {
     }
 
-    NewReplicationTask() {
+    newReplicationTask() {
         alert("NewReplicationTask");
         // ...
     }
 
-    NewEtlTask() {
+    newEtlTask() {
         alert("NewEtlTask");
         // ...
     }
 
-    NewSqlEtlTask() {
+    newSqlEtlTask() {
         alert("NewSqlEtlTask");
         // ...
     }
 
-    NewBackupTask() {
+    newBackupTask() {
         alert("NewBackupTask");
         // ...
     }
 
-    NewSubscriptionTask() {
+    newSubscriptionTask() {
         alert("NewSubscriptionTask");
         // ... 
     }
