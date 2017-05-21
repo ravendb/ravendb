@@ -514,7 +514,7 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 long startEtag = 0;
 
-                if (subscription.LastEtagReachedInServer?.TryGetValue(TcpConnection.DocumentDatabase.DbId, out startEtag) == true)
+                if (subscription.LastEtagReachedInServer?.TryGetValue(TcpConnection.DocumentDatabase.DbId.ToString(), out startEtag) == true)
                     return startEtag;
 
                 if (subscription.ChangeVector == null || subscription.ChangeVector.Length == 0)
