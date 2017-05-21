@@ -99,6 +99,7 @@ namespace Raven.Database.Queries
                 ResultsTransformer = query.ResultsTransformer,
                 TransformerParameters = query.TransformerParameters,
                 ExplainScores = query.ExplainScores,
+                ShowTimings = query.ShowTimings,
                 SortHints = query.SortHints
             };
             if (indexQuery.SortedFields == null)
