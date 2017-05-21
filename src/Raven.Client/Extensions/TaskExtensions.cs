@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Utils;
 
 namespace Raven.Client.Extensions
 {
@@ -22,19 +23,17 @@ namespace Raven.Client.Extensions
         public static Task WithCancellation(this Task task,
             CancellationToken token)
         {
-            if (token == default(CancellationToken))
-                return task;
-
-            return task.ContinueWith(t => t.GetAwaiter().GetResult(), token);
+            return token == default(CancellationToken) ? 
+                task : 
+                task.ContinueWith(t => t.GetAwaiter().GetResult(), token);
         }
 
         public static Task<T> WithCancellation<T>(this Task<T> task,
             CancellationToken token)
         {
-            if (token == default(CancellationToken))
-                return task;
-
-            return task.ContinueWith(t => t.ConfigureAwait(false).GetAwaiter().GetResult(), token);
+            return token == default(CancellationToken) ? 
+                task : 
+                task.ContinueWith(t => t.ConfigureAwait(false).GetAwaiter().GetResult(), token);
         }
 
         public static async Task<bool> WaitWithTimeout(this Task task, TimeSpan? timeout)
@@ -44,9 +43,8 @@ namespace Raven.Client.Extensions
                 await task.ConfigureAwait(false);
                 return true;
             }
-            if (task == await Task.WhenAny(task, Task.Delay(timeout.Value)).ConfigureAwait(false))
-                return true;
-            return false;
+
+            return task == await Task.WhenAny(task, TimeoutManager.WaitFor((uint)timeout.Value.TotalMilliseconds)).ConfigureAwait(false);
         }
 
         public static Task<T> WithResult<T>(this Task task, T result)
