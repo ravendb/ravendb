@@ -21,6 +21,7 @@ using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
+using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Commands.Transformers;
 using Raven.Server.ServerWide.Context;
@@ -106,6 +107,7 @@ namespace Raven.Server.ServerWide
                 case nameof(UpdateTopologyCommand):
                     UpdateDatabase(context, type, cmd, index, leader);
                     break;
+                case nameof(UpdatePeriodicBackupStatusCommand):
                 case nameof(AcknowledgeSubscriptionBatchCommand):
                 case nameof(CreateSubscriptionCommand):
                 case nameof(DeleteSubscriptionCommand):
@@ -117,8 +119,6 @@ namespace Raven.Server.ServerWide
                 case nameof(AddDatabaseCommand):
                     AddDatabase(context, cmd, index, leader);
                     break;
-
-                //case nameof(AddBackup)
             }
         }
 
@@ -177,14 +177,12 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, itemKey, out Slice valueName))
                 using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
                 {
-                    if (existingValue == null)
-                        existingValue = context.ReadObject(djv, updateCommand.GetItemId());
+                    existingValue = context.ReadObject(djv, updateCommand.GetItemId());
 
                     using (var rec = context.ReadObject(existingValue, "inner-val"))
                     {
                         UpdateDatabaseRecord(index, items, valueNameLowered, valueName, rec);
                     }
-                   
                 }
             }
             finally

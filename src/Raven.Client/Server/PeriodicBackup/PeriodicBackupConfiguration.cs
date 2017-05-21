@@ -15,7 +15,7 @@ namespace Raven.Client.Server.PeriodicBackup
 
         public bool Disabled { get; set; }
 
-        public BackupType Type { get; set; }
+        public BackupType BackupType { get; set; }
 
         /// <summary>
         /// Frequency of full backup jobs in cron format
@@ -38,10 +38,38 @@ namespace Raven.Client.Server.PeriodicBackup
         
         public ulong GetTaskKey()
         {
-            //TODO: check this
             Debug.Assert(TaskId != null);
 
             return (ulong)TaskId.Value;
+        }
+
+        public bool Equals(PeriodicBackupConfiguration other)
+        {
+            if (other == null)
+                return false;
+
+            if (other.BackupType.Equals(BackupType) == false)
+                return false;
+
+            if (other.FullBackupFrequency.Equals(FullBackupFrequency) == false)
+                return false;
+
+            if (other.IncrementalBackupFrequency.Equals(IncrementalBackupFrequency) == false)
+                return false;
+
+            if (other.LocalSettings != null && other.LocalSettings.Equals(LocalSettings) == false)
+                return false;
+
+            if (other.S3Settings != null && other.S3Settings.Equals(S3Settings) == false)
+                return false;
+
+            if (other.GlacierSettings != null && other.GlacierSettings.Equals(GlacierSettings) == false)
+                return false;
+
+            if (other.AzureSettings != null && other.AzureSettings.Equals(AzureSettings) == false)
+                return false;
+
+            return true;
         }
     }
 }

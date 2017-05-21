@@ -25,6 +25,8 @@ using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 using System.Collections.Concurrent;
 using System.Linq;
 using NCrontab.Advanced;
+using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.PeriodicBackup
@@ -55,6 +57,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly DocumentDatabase _database;
         private readonly ServerStore _serverStore;
         private readonly CancellationTokenSource _cancellationToken;
+        private readonly PathSetting _tempBackupPath;
         private readonly ConcurrentDictionary<long, PeriodicBackup> _periodicBackups
             = new ConcurrentDictionary<long, PeriodicBackup>();
         private readonly List<Task> _inactiveRunningPeriodicBackupsTasks = new List<Task>();
@@ -64,22 +67,28 @@ namespace Raven.Server.Documents.PeriodicBackup
         public readonly TimeSpan MaxTimerTimeout = TimeSpan.FromMilliseconds(Math.Pow(2, 32) - 2);
 
         private int? _exportLimit; //TODO: do we need this?
-        
+
         public PeriodicBackupRunner(DocumentDatabase database, ServerStore serverStore)
         {
             _database = database;
             _serverStore = serverStore;
             _logger = LoggingSource.Instance.GetLogger<PeriodicBackupRunner>(_database.Name);
             _cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
+
+            _tempBackupPath = _database.Configuration.Core.DataDirectory.Combine("PeriodicBackup-Temp");
+            if (Directory.Exists(_tempBackupPath.FullPath))
+                Directory.Delete(_tempBackupPath.FullPath);
         }
 
-        private Timer GenerateTimer(
+        private Timer GetTimer(
             PeriodicBackupConfiguration configuration,
             PeriodicBackupStatus backupStatus)
         {
             var now = SystemTime.UtcNow;
-            var nextFullBackup = GetNextBackupOccurrence(configuration.FullBackupFrequency, now);
-            var nextIncrementalBackup = GetNextBackupOccurrence(configuration.IncrementalBackupFrequency, now);
+            var lastFullBackup = backupStatus.LastFullBackup ?? now;
+            var lastIncrementalBackup = backupStatus.LastIncrementalBackup ?? backupStatus.LastFullBackup ?? now;
+            var nextFullBackup = GetNextBackupOccurrence(configuration.FullBackupFrequency, lastFullBackup);
+            var nextIncrementalBackup = GetNextBackupOccurrence(configuration.IncrementalBackupFrequency, lastIncrementalBackup);
 
             if (nextFullBackup == null && nextIncrementalBackup == null)
                 return null;
@@ -88,49 +97,56 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             if (backupStatus.LastFullBackup == null || 
                 backupStatus.NodeTag != _serverStore.NodeTag ||
-                backupStatus.BackupType != configuration.Type)
+                backupStatus.BackupType != configuration.BackupType ||
+                backupStatus.LastEtag == null)
             {
                 // Reasons to start a new full backup:
                 // 1. there is no previous full backup, we are going to create one now
                 // 2. the node which is responsible for the backup was replaced
                 // 3. the backup type changed (e.g. from backup to snapshot)
+                // 4. last etag wasn't updated
 
-                return CreateNewTimer(nextFullBackup ?? nextIncrementalBackup.Value, now, null,
-                    new BackupTaskDetails
-                    {
-                        IsFullBackup = true,
-                        TaskId = configuration.TaskId.Value
-                    });
+                return GenerateNewTimer(new BackupTaskDetails
+                {
+                    IsFullBackup = true,
+                    TaskId = configuration.TaskId.Value,
+                    NextBackup = TimeSpan.Zero
+                });
             }
 
             // we do have a full backup, 
             // let's see if the next task is going to be a full or incremental backup
 
             // Reasons  to start a new full backup:
-            // 1. there is a full backup setup and the next full backup is before the incremental
-            // 2. there is a full backup setup but the next incremental backup wasn't setup
+            // 1. there is a full backup setup but the next incremental backup wasn't setup
+            // 2. there is a full backup setup and the next full backup is before the incremental one
             var isFullBackup = nextFullBackup != null && 
-                (nextFullBackup <= nextIncrementalBackup || nextIncrementalBackup == null);
+                (nextIncrementalBackup == null || nextFullBackup <= nextIncrementalBackup);
 
-            var lastBackup = isFullBackup ? backupStatus.LastFullBackup : backupStatus.LastIncrementalBackup;
+            var nextBackupDateTime = isFullBackup ? nextFullBackup.Value : nextIncrementalBackup.Value;
+            var nextBackupTimeSpan =
+                (nextBackupDateTime - now).Ticks <= 0 ?
+                    TimeSpan.Zero :
+                    nextBackupDateTime - now;
 
-            return CreateNewTimer(
-                isFullBackup ? nextFullBackup.Value : nextIncrementalBackup.Value,
-                now,
-                lastBackup,
-                new BackupTaskDetails
-                {
-                    IsFullBackup = isFullBackup,
-                    TaskId = configuration.TaskId.Value
-                });
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"Next {(isFullBackup ? "full" : "incremental")} " +
+                             $"backup is in {nextBackupTimeSpan.TotalMinutes} minutes");
+
+            return GenerateNewTimer(new BackupTaskDetails
+            {
+                IsFullBackup = isFullBackup,
+                TaskId = configuration.TaskId.Value,
+                NextBackup = nextBackupTimeSpan
+            });
         }
 
-        private static DateTime? GetNextBackupOccurrence(string fullBackupFrequency, DateTime now)
+        private static DateTime? GetNextBackupOccurrence(string backupFrequency, DateTime now)
         {
             try
             {
-                var fullBackupParser = CrontabSchedule.Parse(fullBackupFrequency);
-                return fullBackupParser.GetNextOccurrence(now);
+                var backupParser = CrontabSchedule.Parse(backupFrequency);
+                return backupParser.GetNextOccurrence(now);
             }
             catch (Exception e)
             {
@@ -146,42 +162,23 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             public bool IsFullBackup { get; set; }
 
-            public TimeSpan CurrentInterval { get; set; }
+            public TimeSpan NextBackup { get; set; }
         }
 
-        private Timer CreateNewTimer(
-            DateTime nextFullBackupDateTime,
-            DateTime now,
-            DateTime? lastBackup, 
-            BackupTaskDetails backupTaskDetails)
+        private Timer GenerateNewTimer(BackupTaskDetails backupTaskDetails)
         {
-            var interval = nextFullBackupDateTime - now;
-
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Next {(backupTaskDetails.IsFullBackup ? "full" : "incremental")} " +
-                             $"backup is in {interval.TotalMinutes} minutes");
-
-            Timer timer;
-            if (IsValidTimeSpanForTimer(interval))
-            {
-                var timeSinceLastBackup = now - (lastBackup ?? DateTime.MinValue);
-                var nextBackupTimeSpan = timeSinceLastBackup >= interval ? TimeSpan.Zero : interval - timeSinceLastBackup;
-                backupTaskDetails.CurrentInterval = nextBackupTimeSpan;
-                timer = new Timer(TimerCallback, backupTaskDetails, nextBackupTimeSpan, Timeout.InfiniteTimeSpan);
-            }
-            else
-            {
-                backupTaskDetails.CurrentInterval = interval;
-                timer = new Timer(LongPeriodTimerCallback, backupTaskDetails, MaxTimerTimeout, Timeout.InfiniteTimeSpan);
-            }
+            var isValidTimeSpanForTimer = IsValidTimeSpanForTimer(backupTaskDetails.NextBackup);
+            var timer = isValidTimeSpanForTimer ? 
+                new Timer(TimerCallback, backupTaskDetails, backupTaskDetails.NextBackup, Timeout.InfiniteTimeSpan) : 
+                new Timer(LongPeriodTimerCallback, backupTaskDetails, MaxTimerTimeout, Timeout.InfiniteTimeSpan);
 
             return timer;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool IsValidTimeSpanForTimer(TimeSpan timespan)
+        private bool IsValidTimeSpanForTimer(TimeSpan nextBackupTimeSpan)
         {
-            return timespan < MaxTimerTimeout;
+            return nextBackupTimeSpan < MaxTimerTimeout;
         }
 
         private void TimerCallback(object backupTaskDetails)
@@ -189,55 +186,47 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (_cancellationToken.IsCancellationRequested)
                 return;
 
-            var backupInfo = (BackupTaskDetails)backupTaskDetails;
+            var backupDetails = (BackupTaskDetails)backupTaskDetails;
 
             PeriodicBackup periodicBackup;
-            if (_periodicBackups.TryGetValue(backupInfo.TaskId, out periodicBackup) == false)
-            {
-                // periodic backup doesn't exist anymore
-                return;
-            }
-
-            if (periodicBackup.Disposed)
+            if (ShouldRunBackupAfterTimerCallback(backupDetails, out periodicBackup) == false)
                 return;
 
-            if (periodicBackup.Configuration.Disabled)
-                return;
+            CreateBackupTask(periodicBackup, backupDetails);
+        }
 
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var databaseRecord = _serverStore.Cluster.ReadDatabase(context, _database.Name);
-                var whoseTaskIsIt = databaseRecord.Topology.WhoseTaskIsIt(periodicBackup.Configuration);
-                if (whoseTaskIsIt != _serverStore.NodeTag)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Backup job is skipped because it is managed " +
-                                     $"by '{whoseTaskIsIt}' node and not this node ({_serverStore.NodeTag})");
-
-                    return;
-                }
-            }
-
+        private void CreateBackupTask(PeriodicBackup periodicBackup, BackupTaskDetails backupDetails)
+        {
             periodicBackup.RunningTask = Task.Run(async () =>
             {
                 Debug.Assert(periodicBackup.Configuration.TaskId != null);
                 var backupStatus = GetBackupStatus(periodicBackup.Configuration.TaskId.Value);
+                backupStatus.TaskId = periodicBackup.Configuration.TaskId.Value;
+
                 try
                 {
                     await RunPeriodicBackup(periodicBackup.Configuration,
-                        backupStatus, backupInfo.IsFullBackup);
+                        backupStatus, backupDetails.IsFullBackup);
                 }
                 finally
                 {
-                    if (_cancellationToken.IsCancellationRequested == false)
+                    if (_cancellationToken.IsCancellationRequested == false &&
+                        periodicBackup.Disposed == false)
                     {
-                        periodicBackup.BackupTimer?.Dispose();
-
-                        periodicBackup.BackupTimer = GenerateTimer(periodicBackup.Configuration, backupStatus);
+                        periodicBackup.BackupTimer.Dispose();
+                        periodicBackup.BackupTimer = GetTimer(periodicBackup.Configuration, backupStatus);
                     }
                 }
             }, _database.DatabaseShutdown);
+        }
+
+        private DatabaseRecord GetDatabaseRecord()
+        {
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                return _serverStore.Cluster.ReadDatabase(context, _database.Name);
+            }
         }
 
         private void LongPeriodTimerCallback(object backupTaskDetails)
@@ -245,43 +234,42 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (_cancellationToken.IsCancellationRequested)
                 return;
 
-            var backupInfo = (BackupTaskDetails)backupTaskDetails;
+            var backupDetails = (BackupTaskDetails)backupTaskDetails;
 
             PeriodicBackup periodicBackup;
-            if (_periodicBackups.TryGetValue(backupInfo.TaskId, out periodicBackup) == false)
-            {
-                // periodic backup doesn't exist anymore
-                return;
-            }
-
-            if (periodicBackup.Disposed)
+            if (ShouldRunBackupAfterTimerCallback(backupDetails, out periodicBackup) == false)
                 return;
 
-            var remainingInterval = backupInfo.CurrentInterval - MaxTimerTimeout;
+            var remainingInterval = backupDetails.NextBackup - MaxTimerTimeout;
             var shouldExecuteTimer = remainingInterval.TotalMilliseconds <= 0;
             if (shouldExecuteTimer)
             {
-                TimerCallback(backupInfo);
+                CreateBackupTask(periodicBackup, backupDetails);
                 return;
             }
 
-            backupInfo.CurrentInterval = remainingInterval;
+            backupDetails.NextBackup = remainingInterval;
+            var nextBackupTimeSpan = IsValidTimeSpanForTimer(remainingInterval) ? remainingInterval : MaxTimerTimeout;
+            periodicBackup.BackupTimer.Change(nextBackupTimeSpan, Timeout.InfiniteTimeSpan);
+        }
 
-            periodicBackup.BackupTimer?.Dispose();
-            periodicBackup.BackupTimer = new Timer(LongPeriodTimerCallback, 
-                backupInfo,
-                IsValidTimeSpanForTimer(remainingInterval) ? remainingInterval : MaxTimerTimeout, 
-                Timeout.InfiniteTimeSpan);
+        private bool ShouldRunBackupAfterTimerCallback(BackupTaskDetails backupInfo, out PeriodicBackup periodicBackup)
+        {
+            if (_periodicBackups.TryGetValue(backupInfo.TaskId, out periodicBackup) == false)
+            {
+                // periodic backup doesn't exist anymore
+                return false;
+            }
 
+            if (periodicBackup.Disposed)
+            {
+                // this periodic backup was canceled
+                return false;
+            }
 
-
-            //TODO: Maybe this is a better option? :
-
-            /*Debug.Assert(periodicBackup.Configuration.TaskId != null);
-
-            var status = GetBackupStatus(periodicBackup.Configuration.TaskId.Value);
-
-            periodicBackup.BackupTimer = GenerateTimer(periodicBackup.Configuration, status);*/
+            var databaseRecord = GetDatabaseRecord();
+            var taskStatus = GetTaskStatus(databaseRecord, periodicBackup.Configuration);
+            return taskStatus == TaskStatus.ActiveByCurrentNode;
         }
 
         private async Task RunPeriodicBackup(
@@ -298,34 +286,35 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     var backupToLocalFolder = CanBackupUsing(configuration.LocalSettings);
 
+                    var now = SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture);
                     var backupDirectory = backupToLocalFolder
-                        ? new PathSetting(configuration.LocalSettings.FolderPath)
-                        : _database.Configuration.Core.DataDirectory.Combine("PeriodicBackup-Temp");
+                        ? GetLocalFolderPath(configuration, now)
+                        : _tempBackupPath;
 
                     if (Directory.Exists(backupDirectory.FullPath) == false)
                         Directory.CreateDirectory(backupDirectory.FullPath);
 
-                    var now = SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture);
+                    if (status.LocalBackup == null)
+                        status.LocalBackup = new LocalBackup();
 
                     // check if we need to do a new full backup
                     if (isFullBackup ||
+                        status.LastFullBackup == null || // no full backup was previously performed
                         status.NodeTag != _serverStore.NodeTag || // last backup was performed by a different node
-                        status.LocalBackupStatus?.BackupDirectory == null || // no previous backups
-                        DirectoryExistsOrContainsFiles(status.LocalBackupStatus) == false || // folder doesn't contain any backups
-                        status.LastEtag == null) // last document etag wasn't updated
+                        status.BackupType != configuration.BackupType || // backup type has changed
+                        status.LastEtag == null || // last document etag wasn't updated
+                        backupToLocalFolder && DirectoryContainsFullBackupOrSnapshot(status.LocalBackup.BackupDirectory, configuration.BackupType) == false)
+                        // the local folder has a missing full backup
                     {
                         isFullBackup = true;
-                        if (status.LocalBackupStatus == null)
-                            status.LocalBackupStatus = new LocalBackupStatus();
 
-                        status.LocalBackupStatus.BackupDirectory =
-                            backupDirectory.Combine($"{now}.ravendb-{_database.Name}-{_serverStore.NodeTag}-{configuration.Type.ToString().ToLower()}").FullPath;
-                        Directory.CreateDirectory(status.LocalBackupStatus.BackupDirectory);
+                        status.LocalBackup.TempFolderUsed = backupToLocalFolder == false;
+                        status.LocalBackup.BackupDirectory = backupToLocalFolder ? backupDirectory.FullPath : null;
                     }
 
                     if (_logger.IsInfoEnabled)
                     {
-                        var fullBackupText = "a " + (configuration.Type == BackupType.Backup ? "full backup" : "snapshot");
+                        var fullBackupText = "a " + (configuration.BackupType == BackupType.Backup ? "full backup" : "snapshot");
                         _logger.Info($"Creating {(isFullBackup ? fullBackupText : "an incremental backup")}");
                     }
 
@@ -337,9 +326,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                             return;
                     }
 
-                    string backupFilePath;
                     var startDocumentEtag = isFullBackup == false ? status.LastEtag : null;
-                    var fileName = GetFileName(configuration, status, isFullBackup, now, out backupFilePath);
+                    var fileName = GetFileName(isFullBackup, backupDirectory.FullPath, now, configuration.BackupType, out string backupFilePath);
 
                     var lastEtag = CreateLocalBackupOrSnapshot(configuration,
                         isFullBackup, status, backupFilePath, startDocumentEtag, context, tx);
@@ -368,6 +356,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         }
                     }
 
+                    status.BackupType = configuration.BackupType;
                     status.LastEtag = lastEtag;
                 }
 
@@ -375,14 +364,15 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 if (_logger.IsInfoEnabled)
                 {
-                    var fullBackupText = "a " + (configuration.Type == BackupType.Backup ? " full backup" : " snapshot");
+                    var fullBackupText = "a " + (configuration.BackupType == BackupType.Backup ? " full backup" : " snapshot");
                     _logger.Info($"Successfully created {(isFullBackup ? fullBackupText : "an incremental backup")} " +
                                  $"in {totalSw.ElapsedMilliseconds:#,#;;0} ms");
                 }
 
                 status.DurationInMs = totalSw.ElapsedMilliseconds;
                 status.NodeTag = _serverStore.NodeTag;
-                WriteStatus(status);
+                
+                await WriteStatus(status);
 
                 _exportLimit = null;
             }
@@ -410,22 +400,33 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private string GetFileName(PeriodicBackupConfiguration configuration, 
-            PeriodicBackupStatus status, bool isFullBackup, string now, out string backupFilePath)
+        private PathSetting GetLocalFolderPath(PeriodicBackupConfiguration configuration, string now)
+        {
+            var localFolderPath = new PathSetting(configuration.LocalSettings.FolderPath);
+            return localFolderPath
+                .Combine($"{now}.ravendb-{_database.Name}-{_serverStore.NodeTag}-{configuration.BackupType.ToString().ToLower()}");
+        }
+
+        private string GetFileName(
+            bool isFullBackup,
+            string backupFolder,
+            string now,
+            BackupType backupType, 
+            out string backupFilePath)
         {
             string fileName;
             if (isFullBackup)
             {
                 // create filename for full backup/snapshot
-                fileName = $"{now}.ravendb-{GetFullBackupName(configuration.Type)}";
-                backupFilePath = Path.Combine(status.LocalBackupStatus.BackupDirectory, fileName);
+                fileName = $"{now}.ravendb-{GetFullBackupName(backupType)}";
+                backupFilePath = Path.Combine(backupFolder, fileName);
                 if (File.Exists(backupFilePath))
                 {
                     var counter = 1;
                     while (true)
                     {
-                        fileName = $"{now} - {counter}.${GetFullBackupExtension(configuration.Type)}";
-                        backupFilePath = Path.Combine(status.LocalBackupStatus.BackupDirectory, fileName);
+                        fileName = $"{now} - {counter}.${GetFullBackupExtension(backupType)}";
+                        backupFilePath = Path.Combine(backupFolder, fileName);
 
                         if (File.Exists(backupFilePath) == false)
                             break;
@@ -438,14 +439,14 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 // create filename for incremental backup
                 fileName = $"{now}-0.${Constants.Documents.PeriodicBackup.IncrementalBackupExtension}";
-                backupFilePath = Path.Combine(status.LocalBackupStatus.BackupDirectory, fileName);
+                backupFilePath = Path.Combine(backupFolder, fileName);
                 if (File.Exists(backupFilePath))
                 {
                     var counter = 1;
                     while (true)
                     {
                         fileName = $"{now}-{counter}.${Constants.Documents.PeriodicBackup.IncrementalBackupExtension}";
-                        backupFilePath = Path.Combine(status.LocalBackupStatus.BackupDirectory, fileName);
+                        backupFilePath = Path.Combine(backupFolder, fileName);
 
                         if (File.Exists(backupFilePath) == false)
                             break;
@@ -458,17 +459,18 @@ namespace Raven.Server.Documents.PeriodicBackup
             return fileName;
         }
 
-        private long CreateLocalBackupOrSnapshot(PeriodicBackupConfiguration configuration, bool isFullBackup, PeriodicBackupStatus status, string backupFilePath,
+        private long CreateLocalBackupOrSnapshot(PeriodicBackupConfiguration configuration, 
+            bool isFullBackup, PeriodicBackupStatus status, string backupFilePath,
             long? startDocumentEtag, DocumentsOperationContext context, DocumentsTransaction tx)
         {
             long lastEtag;
             var exception = new Reference<Exception>();
-            using (status.LocalBackupStatus.Update(isFullBackup, exception))
+            using (status.LocalBackup.Update(isFullBackup, exception))
             {
                 try
                 {
-                    if (configuration.Type == BackupType.Backup ||
-                        configuration.Type == BackupType.Snapshot && isFullBackup == false)
+                    if (configuration.BackupType == BackupType.Backup ||
+                        configuration.BackupType == BackupType.Snapshot && isFullBackup == false)
                     {
                         // smuggler backup
                         var result = CreateBackup(backupFilePath, startDocumentEtag, context);
@@ -539,32 +541,42 @@ namespace Raven.Server.Documents.PeriodicBackup
             return result;
         }
 
-        public bool DirectoryExistsOrContainsFiles(LocalBackupStatus localStatus)
+        private static bool DirectoryContainsFullBackupOrSnapshot(string fullPath, BackupType backupType)
         {
-            if (Directory.Exists(localStatus.BackupDirectory) == false)
+            if (Directory.Exists(fullPath) == false)
                 return false;
 
-            return Directory.GetFiles(localStatus.BackupDirectory).Length != 0;
+            var files = Directory.GetFiles(fullPath);
+            if (files.Length == 0)
+                return false;
+
+            var backupExtension = GetFullBackupExtension(backupType);
+            var fullBackups = files.Where(file =>
+                {
+                    var extension = Path.GetExtension(file);
+                    return backupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
+                })
+                .ToArray();
+
+            return fullBackups.Length != 0;
         }
 
-        private void WriteStatus(PeriodicBackupStatus status)
+        private async Task WriteStatus(PeriodicBackupStatus status)
         {
             if (_cancellationToken.IsCancellationRequested)
                 return;
 
-            //TODO: write status to raft
-
-            DocumentsOperationContext context;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-            using (var tx = context.OpenWriteTransaction())
+            var command = new UpdatePeriodicBackupStatusCommand(_database.Name)
             {
-                _database
-                    .ConfigurationStorage
-                    .PeriodicBackupStorage
-                    .SetDatabasePeriodicBackupStatus(context, status);
+                PeriodicBackupStatus = status
+            };
 
-                tx.Commit();
-            }
+            var etag = await _serverStore.SendToLeaderAsync(command.ToJson());
+
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"Periodic backup status with task id {status.TaskId} was updated");
+
+            await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, etag);
         }
 
         private async Task UploadToServer(
@@ -581,15 +593,15 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 tasks.Add(Task.Run(async () =>
                 {
-                    if (backupStatus.S3BackupStatus == null)
-                        backupStatus.S3BackupStatus = new S3BackupStatus();
+                    if (backupStatus.UploadToS3 == null)
+                        backupStatus.UploadToS3 = new UploadToS3();
 
                     var exception = new Reference<Exception>();
-                    using (backupStatus.S3BackupStatus.Update(isFullBackup, exception))
+                    using (backupStatus.UploadToS3.Update(isFullBackup, exception))
                     {
                         try
                         {
-                            await UploadToS3(configuration.S3Settings, backupPath, fileName, isFullBackup, configuration.Type);
+                            await UploadToS3(configuration.S3Settings, backupPath, fileName, isFullBackup, configuration.BackupType);
                         }
                         catch (Exception e)
                         {
@@ -604,11 +616,11 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 tasks.Add(Task.Run(async () =>
                 {
-                    if (backupStatus.GlacierBackupStatus == null)
-                        backupStatus.GlacierBackupStatus = new GlacierBackupStatus();
+                    if (backupStatus.UploadToGlacier == null)
+                        backupStatus.UploadToGlacier = new UploadToGlacier();
 
                     var exception = new Reference<Exception>();
-                    using (backupStatus.GlacierBackupStatus.Update(isFullBackup, exception))
+                    using (backupStatus.UploadToGlacier.Update(isFullBackup, exception))
                     {
                         try
                         {
@@ -627,15 +639,15 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 tasks.Add(Task.Run(async () =>
                 {
-                    if (backupStatus.AzureBackupStatus == null)
-                        backupStatus.AzureBackupStatus = new AzureBackupStatus();
+                    if (backupStatus.UploadToAzure == null)
+                        backupStatus.UploadToAzure = new UploadToAzure();
 
                     var exception = new Reference<Exception>();
-                    using (backupStatus.AzureBackupStatus.Update(isFullBackup, exception))
+                    using (backupStatus.UploadToAzure.Update(isFullBackup, exception))
                     {
                         try
                         {
-                            await UploadToAzure(configuration.AzureSettings, backupPath, fileName, isFullBackup, configuration.Type);
+                            await UploadToAzure(configuration.AzureSettings, backupPath, fileName, isFullBackup, configuration.BackupType);
                         }
                         catch (Exception e)
                         {
@@ -787,13 +799,13 @@ namespace Raven.Server.Documents.PeriodicBackup
             Debug.Assert(configuration.TaskId != null);
 
             var periodicBackupStatus = GetBackupStatus(configuration.TaskId.Value);
-            return GenerateTimer(configuration, periodicBackupStatus);
+            return GetTimer(configuration, periodicBackupStatus);
         }
 
         private PeriodicBackupStatus GetBackupStatus(long taskId)
         {
-            //TODO: get this from raft
-            throw new NotImplementedException();
+            var status = _database.ConfigurationStorage.PeriodicBackupStorage.GetPeriodicBackupStatus(taskId);
+            return status ?? new PeriodicBackupStatus();
         }
 
         public void UpdateConfigurations(DatabaseRecord databaseRecord)
@@ -831,25 +843,21 @@ namespace Raven.Server.Documents.PeriodicBackup
                         return newPeriodicBackupState;
                 }, (_, existingBackupState) =>
                     {
-                        var existingFullBackupFrequency = existingBackupState.Configuration.FullBackupFrequency;
-                        var existingIncrementalBackupFrequency = existingBackupState.Configuration.IncrementalBackupFrequency;
-
-                        existingBackupState.Configuration = newConfiguration;
-
                         if (taskState != TaskStatus.ActiveByCurrentNode)
                         {
                             // disable all future backups
                             existingBackupState.DisableFutureBackups();
                             TryAddInactiveRunningPeriodicBackups(existingBackupState.RunningTask);
+                            existingBackupState.Configuration = newConfiguration;
                             return existingBackupState;
                         }
 
-                        if (existingFullBackupFrequency == newConfiguration.FullBackupFrequency ||
-                            existingIncrementalBackupFrequency == newConfiguration.IncrementalBackupFrequency)
+                        if (existingBackupState.Configuration.Equals(newConfiguration))
                         {
-                            // the backup frequency hasn't changed
+                            // the backup configuraion hasn't changed
                             // no need to generate new timers
                             // the new configuration will reload on timer callback
+                            existingBackupState.Configuration = newConfiguration;
                             return existingBackupState;
                         }
 
@@ -897,10 +905,13 @@ namespace Raven.Server.Documents.PeriodicBackup
             DatabaseRecord databaseRecord, 
             PeriodicBackupConfiguration configuration)
         {
-            if (configuration.Disabled == false)
+            if (configuration.Disabled)
                 return TaskStatus.Disabled;
 
             var whoseTaskIsIt = databaseRecord.Topology.WhoseTaskIsIt(configuration);
+            if (whoseTaskIsIt == null)
+                return TaskStatus.Disabled;
+
             if (whoseTaskIsIt == _serverStore.NodeTag)
                 return TaskStatus.ActiveByCurrentNode;
 

@@ -41,7 +41,7 @@ namespace Raven.Client.Server.PeriodicBackup
 
         public virtual DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
+            return new DynamicJsonValue()
             {
                 [nameof(LastFullBackup)] = LastFullBackup,
                 [nameof(LastIncrementalBackup)] = LastIncrementalBackup,
@@ -52,29 +52,32 @@ namespace Raven.Client.Server.PeriodicBackup
         }
     }
 
-    public class LocalBackupStatus : BackupStatus
+    public class LocalBackup : BackupStatus
     {
         public string BackupDirectory { get; set; }
+
+        public bool TempFolderUsed { get; set; }
 
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
-            json[BackupDirectory] = BackupDirectory;
+            json[nameof(BackupDirectory)] = BackupDirectory; //TODO: json[BackupDirectory] = BackupDirectory;
+            json[nameof(TempFolderUsed)] = TempFolderUsed;
             return json;
         }
     }
 
-    public class S3BackupStatus : BackupStatus
+    public class UploadToS3 : BackupStatus
     {
         
     }
 
-    public class GlacierBackupStatus : BackupStatus
+    public class UploadToGlacier : BackupStatus
     {
 
     }
 
-    public class AzureBackupStatus : BackupStatus
+    public class UploadToAzure : BackupStatus
     {
 
     }

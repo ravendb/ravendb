@@ -1,10 +1,9 @@
 // -----------------------------------------------------------------------
-//  <copyright file="PeriodicExportTests.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="PeriodicBackupTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,11 +17,11 @@ using Raven.Tests.Core.Utils.Entities;
 
 namespace FastTests.Server.Documents.PeriodicExport
 {
-    public class PeriodicExportTests : RavenTestBase
+    public class PeriodicBackupTests : RavenTestBase
     {
         private readonly string _exportPath;
 
-        public PeriodicExportTests()
+        public PeriodicBackupTests()
         {
             _exportPath = NewDataPath(suffix: "ExportFolder");
         }
@@ -71,9 +70,8 @@ namespace FastTests.Server.Documents.PeriodicExport
                     await session.SaveChangesAsync();
 
                 }
-                var operation = new GetPeriodicBackupStatusOperation();
+                var operation = new GetPeriodicBackupStatusOperation(1);//TODO
                 SpinWait.SpinUntil(() => store.Admin.Server.Send(operation).Status != null, 10000);
-
             }
 
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))

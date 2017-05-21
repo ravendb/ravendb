@@ -16,7 +16,7 @@ using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Xunit;
 
-namespace SlowTests.PeriodicExport
+namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public class RavenDB_2181 : NoDisposalNeeded
     {

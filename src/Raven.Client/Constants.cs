@@ -243,12 +243,11 @@ namespace Raven.Client
 
             public class PeriodicBackup
             {
-
-                public const string IncrementalBackupExtension = ".ravendb-incremental-backup";
-
                 public const string FullBackupExtension = ".ravendb-full-backup";
 
-                public const string SnapshotExtension = ".ravendb-full-backup";
+                public const string SnapshotExtension = ".ravendb-snaphot";
+
+                public const string IncrementalBackupExtension = ".ravendb-incremental-backup";
             }
 
             public class Expiration

@@ -1,34 +1,32 @@
 ﻿using Raven.Client.Documents;
-using Raven.Client.Server.PeriodicBackup;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.ServerWide
+namespace Raven.Server.ServerWide.Commands.PeriodicBackup
 {
     public class DeletePeriodicBackupCommand : UpdateDatabaseCommand
     {
-        public long BackupTaskId;
+        public long TaskId;
 
         public DeletePeriodicBackupCommand() : base(null)
         {
             // for deserialization
         }
 
-        public DeletePeriodicBackupCommand(long backupTaskId, string databaseName) 
+        public DeletePeriodicBackupCommand(long taskId, string databaseName) 
             : base(databaseName)
         {
-            BackupTaskId = backupTaskId;
+            TaskId = taskId;
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            record.DeletePeriodicBackupConfiguration(BackupTaskId);
+            record.DeletePeriodicBackupConfiguration(TaskId);
         }
 
         public override void FillJson(DynamicJsonValue json)
         {
-            json[nameof(BackupTaskId)] = TypeConverter.ToBlittableSupportedType(BackupTaskId);
+            json[nameof(TaskId)] = TypeConverter.ToBlittableSupportedType(TaskId);
         }
     }
 }

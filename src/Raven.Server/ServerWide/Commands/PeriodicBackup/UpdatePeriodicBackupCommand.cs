@@ -1,10 +1,9 @@
 ﻿using Raven.Client.Documents;
 using Raven.Client.Server.PeriodicBackup;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.ServerWide
+namespace Raven.Server.ServerWide.Commands.PeriodicBackup
 {
     public class UpdatePeriodicBackupCommand : UpdateDatabaseCommand
     {
@@ -23,7 +22,9 @@ namespace Raven.Server.ServerWide
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            Configuration.TaskId = etag;
+            if (Configuration.TaskId == null)
+                Configuration.TaskId = etag;
+
             record.AddPeriodicBackupConfiguration(Configuration);
         }
 

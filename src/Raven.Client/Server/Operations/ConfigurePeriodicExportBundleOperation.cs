@@ -1,36 +1,32 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Text;
-using Raven.Client.Documents;
+﻿using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
-using Raven.Client.Server.Expiration;
 using Raven.Client.Server.PeriodicBackup;
 using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations
 {
-    public class ConfigurePeriodicBackupOperation : IServerOperation<ConfigurePeriodicBackupOperationResult>
+    public class ConfigurePeriodicBackupOperation : IServerOperation<UpdatePeriodicBackupOperationResult>
     {
-        private PeriodicBackupConfiguration _configuration;
-        private string _databaseName;
+        private readonly PeriodicBackupConfiguration _configuration;
+        private readonly string _databaseName;
 
         public ConfigurePeriodicBackupOperation(PeriodicBackupConfiguration configuration, string databaseName)
         {
             _configuration = configuration;
             _databaseName = databaseName;
         }
-        public RavenCommand<ConfigurePeriodicBackupOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+
+        public RavenCommand<UpdatePeriodicBackupOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new ConfigurePeriodicBackupCommand(_configuration, _databaseName, context);
         }
     }
 
-    public class ConfigurePeriodicBackupCommand : RavenCommand<ConfigurePeriodicBackupOperationResult>
+    public class ConfigurePeriodicBackupCommand : RavenCommand<UpdatePeriodicBackupOperationResult>
     {
         private PeriodicBackupConfiguration _configuration;
         private readonly string _databaseName;
@@ -47,14 +43,14 @@ namespace Raven.Client.Server.Operations
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/admin/periodic-backup/config?name={_databaseName}";
+            url = $"{node.Url}/admin/periodic-backup/update?name={_databaseName}";
 
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
                 Content = new BlittableJsonContent(stream =>
                 {
-                    var config = EntityToBlittable.ConvertEntityToBlittable(_configuration,DocumentConventions.Default, _context);
+                    var config = EntityToBlittable.ConvertEntityToBlittable(_configuration, DocumentConventions.Default, _context);
                     _context.Write(stream, config);
                 })
             };
@@ -71,9 +67,11 @@ namespace Raven.Client.Server.Operations
         }
     }
 
-    public class ConfigurePeriodicBackupOperationResult
+    public class UpdatePeriodicBackupOperationResult
     {
-        public long? ETag { get; set; }
+        public long ETag { get; set; }
+
+        public long TaskId { get; set; }
     }
 }
 

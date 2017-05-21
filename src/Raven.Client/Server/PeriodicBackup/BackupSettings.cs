@@ -1,5 +1,3 @@
-using System;
-
 namespace Raven.Client.Server.PeriodicBackup
 {
     public abstract class BackupSettings
@@ -7,13 +5,18 @@ namespace Raven.Client.Server.PeriodicBackup
         public bool Disabled { get; set; }
 
         public abstract bool HasSettings();
+
+        public virtual bool WasEnabled(BackupSettings other)
+        {
+            return Disabled && other.Disabled == false;
+        }
     }
 
     public class LocalSettings : BackupSettings
     {
         /// <summary>
         /// Path to local folder. If not empty, exports will be held in this folder and not deleted. 
-        /// Otherwise, backups will be created in DataDir of a database and deleted after successful upload to Glacier/S3/Azure.
+        /// Otherwise, backups will be created in DataDir of a database and deleted after successful upload to S3/Glacier/Azure.
         /// </summary>
         public string FolderPath { get; set; }
 
@@ -21,14 +24,23 @@ namespace Raven.Client.Server.PeriodicBackup
         {
             return string.IsNullOrWhiteSpace(FolderPath) == false;
         }
+
+        public bool Equals(LocalSettings other)
+        {
+            if (other == null)
+                return false;
+
+            if (WasEnabled(other))
+                return true;
+
+            return other.FolderPath.Equals(FolderPath);
+        }
     }
 
     public abstract class AmazonSettings : BackupSettings
     {
-        //TODO: should be encrypted
         public string AwsAccessKey { get; set; }
 
-        //TODO: should be encrypted
         public string AwsSecretKey { get; set; }
 
         /// <summary>
@@ -53,6 +65,26 @@ namespace Raven.Client.Server.PeriodicBackup
         {
             return string.IsNullOrWhiteSpace(BucketName) == false;
         }
+
+        public bool Equals(S3Settings other)
+        {
+            if (other == null)
+                return false;
+
+            if (WasEnabled(other))
+                return true;
+
+            if (other.AwsRegionName.Equals(AwsRegionName) == false)
+                return false;
+
+            if (other.BucketName.Equals(BucketName) == false)
+                return false;
+
+            if (other.RemoteFolderName.Equals(RemoteFolderName) == false)
+                return false;
+
+            return true;
+        }
     }
 
     public class GlacierSettings : AmazonSettings
@@ -65,6 +97,23 @@ namespace Raven.Client.Server.PeriodicBackup
         public override bool HasSettings()
         {
             return string.IsNullOrWhiteSpace(VaultName) == false;
+        }
+
+        public bool Equals(GlacierSettings other)
+        {
+            if (other == null)
+                return false;
+
+            if (WasEnabled(other))
+                return true;
+
+            if (other.AwsRegionName.Equals(AwsRegionName) == false)
+                return false;
+
+            if (other.VaultName.Equals(VaultName) == false)
+                return false;
+
+            return true;
         }
     }
 
@@ -80,15 +129,24 @@ namespace Raven.Client.Server.PeriodicBackup
         /// </summary>
         public string RemoteFolderName { get; set; }
 
-        //TODO: should be encrypted
         public string StorageAccount { get; set; }
 
-        //TODO: should be encrypted
         public string StorageKey { get; set; }
 
         public override bool HasSettings()
         {
             return string.IsNullOrWhiteSpace(StorageContainer) == false;
+        }
+
+        public bool Equals(AzureSettings other)
+        {
+            if (other == null)
+                return false;
+
+            if (WasEnabled(other))
+                return true;
+
+            return other.RemoteFolderName.Equals(RemoteFolderName);
         }
     }
 }

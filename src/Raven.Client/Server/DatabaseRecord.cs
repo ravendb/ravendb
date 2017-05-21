@@ -175,7 +175,6 @@ namespace Raven.Client.Server
 
         public void DeletePeriodicBackupConfiguration(long backupTaskId)
         {
-            Debug.Assert(backupTaskId != 0);
             PeriodicBackups?.Remove(backupTaskId);
         }
     }

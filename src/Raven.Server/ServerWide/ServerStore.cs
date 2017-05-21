@@ -20,6 +20,7 @@ using Raven.Server.Rachis;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintance;
 using Raven.Server.Utils;
@@ -540,19 +541,32 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public async Task<long> ModifyDatabasePeriodicBackup(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson)
+        public async Task<long> ModifyPeriodicBackup(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson)
         {
             using (var putCmd = context.ReadObject(new DynamicJsonValue
             {
                 ["Type"] = nameof(UpdatePeriodicBackupCommand),
                 [nameof(UpdatePeriodicBackupCommand.DatabaseName)] = name,
-                [nameof(UpdatePeriodicBackupCommand.Configuration)] = configurationJson,
-            }, "periodic-export-cmd"))
+                [nameof(UpdatePeriodicBackupCommand.Configuration)] = configurationJson
+            }, "periodic-backup-cmd"))
             {
                 return await SendToLeaderAsync(putCmd);
             }
         }
-        
+
+        public async Task<long> DeletePeriodicBackup(TransactionOperationContext context, string name, BlittableJsonReaderObject taskId)
+        {
+            using (var putCmd = context.ReadObject(new DynamicJsonValue
+            {
+                ["Type"] = nameof(DeletePeriodicBackupCommand),
+                [nameof(DeletePeriodicBackupCommand.DatabaseName)] = name,
+                [nameof(DeletePeriodicBackupCommand.TaskId)] = taskId,
+            }, "periodic-backup-delete-cmd"))
+            {
+                return await SendToLeaderAsync(putCmd);
+            }
+        }
+
         public async Task<long> ModifyDatabaseVersioning(JsonOperationContext context, string databaseName, BlittableJsonReaderObject val)
         {
             using (var putCmd = context.ReadObject(new DynamicJsonValue

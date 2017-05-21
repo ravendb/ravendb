@@ -6,26 +6,28 @@ namespace Raven.Client.Server.PeriodicBackup
 {
     public class PeriodicBackupStatus
     {
+        public long TaskId { get; set; }
+
         public BackupType BackupType { get; set; }
 
         public string NodeTag { get; set; }
 
-        public LocalBackupStatus LocalBackupStatus { get; set; }
+        public LocalBackup LocalBackup { get; set; }
 
-        public S3BackupStatus S3BackupStatus { get; set; }
+        public UploadToS3 UploadToS3 { get; set; }
 
-        public GlacierBackupStatus GlacierBackupStatus { get; set; }
+        public UploadToGlacier UploadToGlacier { get; set; }
 
-        public AzureBackupStatus AzureBackupStatus { get; set; }
+        public UploadToAzure UploadToAzure { get; set; }
 
         public DateTime? LastFullBackup
         {
             get
             {
-                var lastLocalBackup = LocalBackupStatus?.LastFullBackup ?? DateTime.MinValue;
-                var lastS3Backup = LocalBackupStatus?.LastFullBackup ?? DateTime.MinValue;
-                var lastGlacierBackup = LocalBackupStatus?.LastFullBackup ?? DateTime.MinValue;
-                var lastAzureBackup = LocalBackupStatus?.LastFullBackup ?? DateTime.MinValue;
+                var lastLocalBackup = LocalBackup?.LastFullBackup ?? DateTime.MinValue;
+                var lastS3Backup = LocalBackup?.LastFullBackup ?? DateTime.MinValue;
+                var lastGlacierBackup = LocalBackup?.LastFullBackup ?? DateTime.MinValue;
+                var lastAzureBackup = LocalBackup?.LastFullBackup ?? DateTime.MinValue;
 
                 var minDate = new DateTime(new[]
                 {
@@ -43,10 +45,10 @@ namespace Raven.Client.Server.PeriodicBackup
         {
             get
             {
-                var lastLocalBackup = LocalBackupStatus?.LastIncrementalBackup ?? DateTime.MinValue;
-                var lastS3Backup = LocalBackupStatus?.LastIncrementalBackup ?? DateTime.MinValue;
-                var lastGlacierBackup = LocalBackupStatus?.LastIncrementalBackup ?? DateTime.MinValue;
-                var lastAzureBackup = LocalBackupStatus?.LastIncrementalBackup ?? DateTime.MinValue;
+                var lastLocalBackup = LocalBackup?.LastIncrementalBackup ?? DateTime.MinValue;
+                var lastS3Backup = LocalBackup?.LastIncrementalBackup ?? DateTime.MinValue;
+                var lastGlacierBackup = LocalBackup?.LastIncrementalBackup ?? DateTime.MinValue;
+                var lastAzureBackup = LocalBackup?.LastIncrementalBackup ?? DateTime.MinValue;
 
                 var minDate = new DateTime(new[]
                 {
@@ -66,16 +68,27 @@ namespace Raven.Client.Server.PeriodicBackup
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
-            {
-                [nameof(BackupType)] = BackupType.ToString(),
-                [nameof(LocalBackupStatus)] = LocalBackupStatus.ToJson(),
-                [nameof(S3BackupStatus)] = S3BackupStatus.ToJson(),
-                [nameof(GlacierBackupStatus)] = GlacierBackupStatus.ToJson(),
-                [nameof(AzureBackupStatus)] = AzureBackupStatus.ToJson(),
-                [nameof(LastEtag)] = LastEtag,
-                [nameof(DurationInMs)] = DurationInMs
-            };
+            var json = new DynamicJsonValue();
+            UpdateJson(json);
+            return json;
+        }
+
+        public void UpdateJson(DynamicJsonValue json)
+        {
+            json[nameof(TaskId)] = TaskId;
+            json[nameof(BackupType)] = BackupType;
+            json[nameof(NodeTag)] = NodeTag;
+            json[nameof(LocalBackup)] = LocalBackup?.ToJson();
+            json[nameof(UploadToS3)] = UploadToS3?.ToJson();
+            json[nameof(UploadToGlacier)] = UploadToGlacier?.ToJson();
+            json[nameof(UploadToAzure)] = UploadToAzure?.ToJson();
+            json[nameof(LastEtag)] = LastEtag;
+            json[nameof(DurationInMs)] = DurationInMs;
+        }
+
+        public static string GenerateItemName(string databaseName, long taskId)
+        {
+            return $"periodic-backups/{databaseName}/{taskId}";
         }
     }
 }
