@@ -475,7 +475,7 @@ namespace Raven.Client.Documents.Subscriptions
                         incomingBatch.Clear();
                         break;
                     case SubscriptionConnectionServerMessage.MessageType.ConnectionStatus:
-                        ThrowInvalidConnectionStatus(receivedMessage);
+                        AssertConnectionState(receivedMessage);
                         break;
                     case SubscriptionConnectionServerMessage.MessageType.Error:
                         ThrowSubscriptionError(receivedMessage);
@@ -486,23 +486,6 @@ namespace Raven.Client.Documents.Subscriptions
                 }
             }
             return (incomingBatch, returnContext);
-        }
-
-        private void ThrowInvalidConnectionStatus(SubscriptionConnectionServerMessage receivedMessage)
-        {
-            if (receivedMessage.Status == SubscriptionConnectionServerMessage.ConnectionStatus.Redirect)
-            {
-                throw new SubscriptionDoesNotBelongToNodeException(
-                    $"Subscription With Id {_options.SubscriptionId} cannot be proccessed by current node, it will be redirected to {receivedMessage.Data[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)]}")
-                {
-                    AppropriateNode = receivedMessage.Data[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)].ToString()
-                };
-            }
-            if (receivedMessage.Status == SubscriptionConnectionServerMessage.ConnectionStatus.Closed)
-            {
-                throw new SubscriptionClosedException(receivedMessage.Exception ?? string.Empty);
-            }
-            throw new InvalidOperationException($"Connection terminated by server. Exception: {receivedMessage.Exception ?? "None"}");
         }
 
         private static void ThrowInvalidServerResponse(SubscriptionConnectionServerMessage receivedMessage)

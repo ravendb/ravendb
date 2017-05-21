@@ -138,18 +138,18 @@ namespace Raven.Server.Documents.Subscriptions
             
         }
 
-        public bool DropSubscriptionConnection(string subscriptionId, string reason)
+        public bool DropSubscriptionConnection(string subscriptionId, SubscriptionException ex)
         {
             SubscriptionConnectionState subscriptionConnectionState;
             if (_subscriptionStates.TryGetValue(subscriptionId, out subscriptionConnectionState) == false)
                 return false;
 
-            subscriptionConnectionState.Connection.ConnectionException = new SubscriptionClosedException(reason);
-            subscriptionConnectionState.RegisterRejectedConnection(subscriptionConnectionState.Connection, new SubscriptionClosedException(reason));
+            subscriptionConnectionState.Connection.ConnectionException = ex;
+            subscriptionConnectionState.RegisterRejectedConnection(subscriptionConnectionState.Connection, ex);
             subscriptionConnectionState.Connection.CancellationTokenSource.Cancel();
 
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Subscription with id {subscriptionId} connection was dropped. Reason: {reason}");
+                _logger.Info($"Subscription with id {subscriptionId} connection was dropped. Reason: {ex.Message}");
 
             return true;
         }
@@ -327,7 +327,7 @@ namespace Raven.Server.Documents.Subscriptions
                     var subscriptionBlittable = _serverStore.Cluster.Read(context, subscripitonStateKvp.Key);
                     if (subscriptionBlittable== null)
                     {
-                        DropSubscriptionConnection(subscripitonStateKvp.Key, "Deleted");
+                        DropSubscriptionConnection(subscripitonStateKvp.Key, new SubscriptionDoesNotExistException("Deleted"));
                         continue;
                     }
                     var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);

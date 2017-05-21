@@ -244,6 +244,15 @@ namespace Raven.Server.Documents.TcpHandlers
                         [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
                     });
                 }
+                else if (ex is SubscriptionInUseException)
+                {
+                    await connection.WriteJsonAsync(new DynamicJsonValue
+                    {
+                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
+                        [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.InUse),
+                        [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
+                    });
+                }
                 else if (ex is SubscriptionDoesNotBelongToNodeException subscriptionDoesNotBelonException)
                 {
                     if (connection._logger.IsInfoEnabled)

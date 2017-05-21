@@ -9,6 +9,7 @@ using Sparrow.Json;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Conventions;
 using System.Linq;
+using Raven.Client.Documents.Exceptions.Subscriptions;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -132,7 +133,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var subscriptionId = GetStringQueryString("id");
             
-            if (Database.SubscriptionStorage.DropSubscriptionConnection(subscriptionId, "Dropped by API request") == false)
+            if (Database.SubscriptionStorage.DropSubscriptionConnection(subscriptionId, new SubscriptionClosedException("Dropped by API request")) == false)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 return Task.CompletedTask;

@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Subscriptions
 
                             if (_currentConnection != null)
                                 _storage.DropSubscriptionConnection(_currentConnection.SubscriptionId,
-                                    "Closed by TakeOver");
+                                    new SubscriptionInUseException("Closed by TakeOver"));
 
                             throw new TimeoutException();
                         
