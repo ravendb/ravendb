@@ -58,7 +58,7 @@ namespace SubscriptionFailoverBenchmark
         public async Task RunsSubscriptionSimple(DocumentStore store)
         {
             var subscriptionId = await store.AsyncSubscriptions.CreateAsync<User>(
-                new SubscriptionCreationParams<User>());
+                new SubscriptionCreationOptions<User>());
 
             var subscripiton = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
             {
@@ -156,7 +156,7 @@ namespace SubscriptionFailoverBenchmark
             }.Initialize())
             {
                 var subscriptionId = await store.AsyncSubscriptions.CreateAsync<User>(
-                    new SubscriptionCreationParams<User>());
+                    new SubscriptionCreationOptions<User>());
 
                 var subscripiton = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
                 {

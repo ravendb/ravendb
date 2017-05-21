@@ -83,7 +83,7 @@ namespace RachisTests
             {
                 MaxId = 0
             };
-            var subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCreationParams<User>()).ConfigureAwait(false);
+            var subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCreationOptions<User>()).ConfigureAwait(false);
             var subscriptionEtag = long.Parse(subscriptionId.Substring(subscriptionId.LastIndexOf("/") + 1));
 
             var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
