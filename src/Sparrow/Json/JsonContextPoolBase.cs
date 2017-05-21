@@ -12,111 +12,27 @@ namespace Sparrow.Json
         /// Indexing thread will adjust their contexts to their needs, and request processing threads will tend to
         /// average to the same overall type of contexts
         /// </summary>
-        private readonly ThreadLocal<MutliReaderSingleWriterStack> _contextPool;
+        private readonly ThreadLocal<StackHeader> _contextPool;
         private readonly Timer _timer;
         private bool _disposed;
         protected LowMemoryFlag LowMemoryFlag = new LowMemoryFlag();
 
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
-        /// <summary>
-        /// This class is meant to be read from the timer callback
-        /// It is safe to read from another thread, although you may
-        /// get a stale view of the data
-        /// </summary>
-        private class MutliReaderSingleWriterStack 
+        private class StackHeader
         {
-            private CancellationToken _token;
-            private T _fastPath;
-            private T[] _stack;
-            private int _stackUsage;
-            public int Count;
+            public StackNode Head;
+        }
 
-            public MutliReaderSingleWriterStack(CancellationToken token)
-            {
-                _token = token;
-            }
-
-            public T Pop()
-            {
-                _token.ThrowIfCancellationRequested();
-                if (Count == 0)
-                    ThrowEmptyStack();
-
-                Count--;
-                if (_fastPath != null)
-                {
-                    var ctx = _fastPath;
-                    _fastPath = null;
-                    return ctx;
-                }
-                return _stack[--_stackUsage];
-            }
-
-            private static void ThrowEmptyStack()
-            {
-                throw new InvalidOperationException("Attempt to pop an empty stack");
-            }
-
-            public void Push(T context)
-            {
-                if (_token.IsCancellationRequested)
-                {
-                    context.Dispose();
-                    return;
-                }
-                Count++;
-                if (Count == 1)
-                {
-                    _fastPath = context;
-                    return;
-                }
-                if (_stack == null)
-                {
-                    _stack = new T[4];
-                    _stack[0] = context;
-                    _stackUsage = 1;
-
-                    return;
-                }
-
-                if (_stackUsage >= _stack.Length)
-                {
-                    var old = _stack;
-                    _stack = new T[old.Length * 2];
-                    Array.Copy(old, _stack, old.Length);
-                }
-                _stack[_stackUsage++] = context;
-            }
-
-
-            public void Clear()
-            {
-                _token.ThrowIfCancellationRequested();
-                _stackUsage = 0;
-                _fastPath = null;
-                Count = 0;
-            }
-
-            public ArraySegment<T> Snapshot 
-            {
-                get
-                {
-                    var array = _stack;
-
-                    if(array == null)
-                        return new ArraySegment<T>(Array.Empty<T>());
-
-                    var min = Math.Min(_stackUsage, array.Length);
-
-                    return new ArraySegment<T>(array, 0, min);
-                }
-            }
+        private class StackNode
+        {
+            public T Value;
+            public StackNode Next;
         }
 
         protected JsonContextPoolBase()
         {
-            _contextPool = new ThreadLocal<MutliReaderSingleWriterStack>(() => new MutliReaderSingleWriterStack(_cts.Token), trackAllValues: true);
+            _contextPool = new ThreadLocal<StackHeader>(() => new StackHeader(), trackAllValues: true);
             _timer = new Timer(CleanNativeMemoryTimer, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
             LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
         }
@@ -125,7 +41,8 @@ namespace Sparrow.Json
         {
             if (_disposed)
                 return;
-            bool lockTaken = false;
+
+            var lockTaken = false;
             try
             {
                 Monitor.TryEnter(this, ref lockTaken);
@@ -136,13 +53,12 @@ namespace Sparrow.Json
                     return;
 
                 var now = DateTime.UtcNow;
-                foreach (var treahdStack in _contextPool.Values)
+                foreach (var header in _contextPool.Values)
                 {
-                    var items = treahdStack.Snapshot;
-                    for (int i = items.Offset; i < items.Count; i++)
+                    var current = header.Head;
+                    while (current != null)
                     {
-                        var ctx = items.Array[i];
-                        // note that this is a racy call, need to be careful here
+                        var ctx = current.Value;
                         if (ctx == null)
                             continue;
 
@@ -160,8 +76,9 @@ namespace Sparrow.Json
                             continue;
 
                         ctx.Dispose();
+                        current.Value = null;
 
-                        items.Array[i] = null;
+                        current = current.Next;
                     }
                 }
             }
@@ -181,7 +98,6 @@ namespace Sparrow.Json
             return disposable;
         }
 
-
         public void Clean()
         {
             // we are expecting to be called here when there is no
@@ -189,43 +105,68 @@ namespace Sparrow.Json
             // to the system
 
             var stack = _contextPool.Value;
-
-            if (stack.Count == 0)
-                return; // nothing to do;
-            var items = stack.Snapshot;
-            for (int i = items.Offset; i < items.Count; i++)
+            var current = Interlocked.Exchange(ref stack.Head, null);
+            while (current != null)
             {
-                items.Array[i].Dispose();
+                current.Value?.Dispose();
+                current = current.Next;
             }
-            stack.Clear();
-
         }
 
         public IDisposable AllocateOperationContext(out T context)
         {
             _cts.Token.ThrowIfCancellationRequested();
-            var stack = _contextPool.Value;
-            while (stack.Count > 0)
+            var currentThread = _contextPool.Value;
+            IDisposable returnContext;
+            if (TryReuseExistingContextFrom(currentThread, out context, out returnContext))
+                return returnContext;
+
+            // couldn't find it on our own thread, let us try and steal from other threads
+            foreach (var otherThread in _contextPool.Values)
             {
-                context = stack.Pop();
-                if (context == null)
+                if (otherThread == currentThread)
                     continue;
-                if (Interlocked.CompareExchange(ref context.InUse, 1, 0) != 0)
-                    continue;
-                context.Renew();
-                return new ReturnRequestContext
-                {
-                    Parent = this,
-                    Context = context
-                };
+                if (TryReuseExistingContextFrom(otherThread, out context, out returnContext))
+                    return returnContext;
             }
 
+            // no choice, got to create it
             context = CreateContext();
             return new ReturnRequestContext
             {
                 Parent = this,
                 Context = context
             };
+        }
+
+        private bool TryReuseExistingContextFrom(StackHeader stack, out T context, out IDisposable disposable)
+        {
+            while (true)
+            {
+                var current = stack.Head;
+                if (current == null)
+                    break;
+                if (Interlocked.CompareExchange(ref stack.Head, current.Next, current) != current)
+                    continue;
+                context = current.Value;
+                if (context == null)
+                    continue;
+                if (Interlocked.CompareExchange(ref context.InUse, 1, 0) != 0)
+                    continue;
+                context.Renew();
+                {
+                    disposable = new ReturnRequestContext
+                    {
+                        Parent = this,
+                        Context = context
+                    };
+                    return true;
+                }
+            }
+
+            context = default(T);
+            disposable = null;
+            return false;
         }
 
         protected abstract T CreateContext();
@@ -237,28 +178,24 @@ namespace Sparrow.Json
 
             public void Dispose()
             {
-                var stack = GetCurrentThreadStack();
-                if (stack == null)
-                {
-                    Context.Dispose();
-                    return;
-                }
                 Context.Reset();
                 Interlocked.Exchange(ref Context.InUse, 0);
                 Context.InPoolSince = DateTime.UtcNow;
-                stack.Push(Context);
+
+                Parent.Push(Context);
             }
 
-            private MutliReaderSingleWriterStack GetCurrentThreadStack()
+        }
+
+        private void Push(T context)
+        {
+            var threadHeader = _contextPool.Value;
+            while (true)
             {
-                try
-                {
-                    return Parent._contextPool.Value;
-                }
-                catch (ObjectDisposedException)
-                {
-                    return null;
-                }
+                var current = threadHeader.Head;
+                var newHead = new StackNode { Value = context, Next = current };
+                if (Interlocked.CompareExchange(ref threadHeader.Head, newHead, current) == current)
+                    return;
             }
         }
 
@@ -275,15 +212,16 @@ namespace Sparrow.Json
                 _timer.Dispose();
                 foreach (var stack in _contextPool.Values)
                 {
-                    var items = stack.Snapshot;
-                    for (int i = items.Offset; i < items.Count; i++)
+                    var current = stack.Head;
+                    while (current != null)
                     {
-                        var ctx = items.Array[i];
-                        if(ctx == null)
+                        var ctx = current.Value;
+                        if (ctx == null)
                             continue;
                         if (Interlocked.CompareExchange(ref ctx.InUse, 1, 0) != 0)
                             continue;
                         ctx.Dispose();
+                        current = current.Next;
                     }
                 }
                 _contextPool.Dispose();
