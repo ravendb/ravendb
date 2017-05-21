@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Subscriptions
         public ChangeVectorEntry[] ChangeVector { get; set; }
         public string SubscriptionId { get; set; }
         public DateTime TimeOfLastClientActivity { get; set; }
-        public Dictionary<Guid, long> LastEtagReachedInServer { get; set; }
+        public Dictionary<string, long> LastEtagReachedInServer { get; set; }
         private ulong? _taskKey;
 
         public ulong GetTaskKey()

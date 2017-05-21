@@ -43,6 +43,11 @@ namespace Raven.Client.Documents.Replication.Messages
         public Guid DbId;
         public long Etag;
 
+        public override string ToString()
+        {
+            return DbId.ToString().Substring(0, 4) + "... " + Etag;
+        }
+
         public bool Equals(ChangeVectorEntry other)
         {
             return DbId.Equals(other.DbId) && Etag == other.Etag;

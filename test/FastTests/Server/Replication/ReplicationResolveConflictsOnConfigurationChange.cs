@@ -111,7 +111,7 @@ namespace FastTests.Server.Replication
                 await SetupReplicationAsync(store1);
                 await SetupReplicationAsync(store2);
                 await GenerateConflicts(store1, store2, "users/2");
-                var storage1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result;
+                var storage1 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
                 await UpdateConflictResolver(store1, storage1.DbId.ToString());
 
                 Assert.True(WaitForDocument<User>(store1, "users/1", u => u.Name == "Store1"));
