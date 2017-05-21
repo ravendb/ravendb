@@ -64,6 +64,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="1.1.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="1.1.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="1.1.1" />
+    <PackageReference Include="NCrontab.Advanced" Version="1.2.3.3" />
     <PackageReference Include="Npgsql" Version="3.2.2" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.8.1.2" />
     <PackageReference Include="System.ComponentModel" Version="4.3.0" />

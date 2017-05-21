@@ -2,9 +2,10 @@
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Operations;
-using Raven.Server.Documents.PeriodicExport;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.NotificationCenter;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Voron;
 
@@ -24,7 +25,7 @@ namespace Raven.Server.Documents
 
         public EtlStorage EtlStorage { get; }
 
-        public ConfigurationStorage(DocumentDatabase db)
+        public ConfigurationStorage(DocumentDatabase db, ServerStore serverStore)
         {
             var path = db.Configuration.Core.DataDirectory.Combine("Configuration");
 
@@ -49,7 +50,7 @@ namespace Raven.Server.Documents
 
             EtlStorage = new EtlStorage(db.Name);
 
-            PeriodicBackupStorage = new PeriodicBackupStore();
+            PeriodicBackupStorage = new PeriodicBackupStore(db, serverStore);
 
             _contextPool = new TransactionContextPool(Environment);
         }

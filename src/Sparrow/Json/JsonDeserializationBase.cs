@@ -152,7 +152,7 @@ namespace Sparrow.Json
                     else
                     {
                         var converterExpression = Expression.Constant(GetConverterFromCache(valueType));
-                        var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionary), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType);
+                        var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionary), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(propertyType.GenericTypeArguments[0], valueType);
                         return Expression.Call(methodToCall, json, Expression.Constant(propertyName), converterExpression);
                     }
                 }
@@ -245,23 +245,31 @@ namespace Sparrow.Json
             return dic;
         }
 
-        private static Dictionary<string, T> ToDictionary<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter)
+        private static Dictionary<TK, TV> ToDictionary<TK, TV>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, TV> converter)
         {
-            var dic = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
+            var isStringKey = typeof(TK) == typeof(string);
+            var dictionary = isStringKey ? 
+                new Dictionary<TK, TV>((IEqualityComparer<TK>)StringComparer.OrdinalIgnoreCase) :
+                new Dictionary<TK, TV>();
 
             BlittableJsonReaderObject obj;
             if (json.TryGet(name, out obj) == false || obj == null)
-                return dic;
+                return dictionary;
 
             foreach (var propertyName in obj.GetPropertyNames())
             {
                 object val;
                 if (obj.TryGetMember(propertyName, out val))
-                {                   
-                    dic[propertyName] = converter((BlittableJsonReaderObject)val);
+                {
+                    dynamic key;
+                    if (isStringKey)
+                        key = propertyName;
+                    else
+                        key = (TK)Convert.ChangeType(propertyName, typeof(TK));
+                    dictionary[key] = converter((BlittableJsonReaderObject)val);
                 }
             }
-            return dic;
+            return dictionary;
         }
 
         private static Dictionary<string, TEnum> ToDictionaryOfEnum<TEnum>(BlittableJsonReaderObject json, string name)

@@ -3,7 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Server.Operations;
-using Raven.Client.Server.PeriodicExport;
+using Raven.Client.Server.PeriodicBackup;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -121,8 +121,12 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/periodic-backup/status", "GET")]
-        public Task GetPeriodicExportBundleStatus()
+        public Task GetPeriodicBackupBundleStatus()
         {
+            var taskId = GetLongQueryString("taskId");
+            if (taskId == null)
+                throw new ArgumentNullException(nameof(taskId));
+
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -130,7 +134,7 @@ namespace Raven.Server.Documents.Handlers
                 context.OpenReadTransaction();
                 writer.WriteStartObject();
                 writer.WritePropertyName(nameof(GetPeriodicBackupStatusOperationResult.Status));
-                writer.WriteObject(Database.ConfigurationStorage.PeriodicBackupStorage.GetDatabasePeriodicBackupStatus(context));
+                writer.WriteObject(Database.ConfigurationStorage.PeriodicBackupStorage.GetPeriodicBackupStatusAsBlittable(taskId.Value));
                 writer.WriteEndObject();
                 writer.Flush();
             }

@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -16,6 +17,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Server;
 using Raven.Client.Server.Commands;
+using Raven.Client.Server.PeriodicBackup;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
@@ -31,7 +33,6 @@ namespace Raven.Server.Web.System
 {
     public class AdminDatabasesHandler : RequestHandler
     {
-
         [RavenAction("/admin/databases/is-loaded", "GET", "/admin/databases/is-loaded?name={databaseName:string}")]
         public Task IsDatabaseLoaded()
         {
@@ -289,13 +290,33 @@ namespace Raven.Server.Web.System
             await DatabaseConfigurations(ServerStore.ModifyDatabaseVersioning, "read-versioning-config");
         }
 
-        [RavenAction("/admin/periodic-backup/config", "POST", "/admin/config-periodic-backup?name={databaseName:string}")]
-        public async Task ConfigPeriodicBackup()
+        [RavenAction("/admin/periodic-backup/update", "POST", "/admin/config-periodic-backup?name={databaseName:string}")]
+        public async Task UpdatePeriodicBackup()
         {
-            await DatabaseConfigurations(ServerStore.ModifyDatabasePeriodicBackup, "read-periodic-backup-config");
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            string errorMessage;
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            await DatabaseConfigurations(ServerStore.ModifyPeriodicBackup, 
+                "update-periodic-backup-config",
+                fillJson: (json, readerObject, index) =>
+                {
+                    readerObject.TryGet("TaskId", out long? taskId);
+                    json[nameof(PeriodicBackupStatus.TaskId)] = taskId ?? index;
+                });
         }
 
-        private async Task DatabaseConfigurations(Func<TransactionOperationContext, string, BlittableJsonReaderObject, Task<long>> setupConfigurationFunc, string debug)
+        [RavenAction("/admin/periodic-backup/delete", "DELETE", "/admin/delete-periodic-backup?name={databaseName:string}")]
+        public async Task DeletePeriodicBackup()
+        {
+            await DatabaseConfigurations(ServerStore.DeletePeriodicBackup, "delete-periodic-backup-config");
+        }
+
+        private async Task DatabaseConfigurations(
+            Func<TransactionOperationContext, string, BlittableJsonReaderObject, Task<long>> setupConfigurationFunc, 
+            string debug,
+            Action<DynamicJsonValue, BlittableJsonReaderObject, long> fillJson = null)
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             string errorMessage;
@@ -328,10 +349,12 @@ namespace Raven.Server.Web.System
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    context.Write(writer, new DynamicJsonValue
+                    var json = new DynamicJsonValue
                     {
                         ["ETag"] = index
-                    });
+                    };
+                    fillJson?.Invoke(json, configurationJson, index);
+                    context.Write(writer, json);
                     writer.Flush();
                 }
             }
