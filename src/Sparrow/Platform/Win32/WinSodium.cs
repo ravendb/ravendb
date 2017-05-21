@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Runtime.InteropServices;
 
 namespace Sparrow.Platform.Win32
@@ -10,9 +11,23 @@ namespace Sparrow.Platform.Win32
 
         static WinSodium()
         {
-            var rc = sodium_init();
-            if (rc != 0)
-                throw new InvalidOperationException("Unable to initialize sodium, error code: " + rc);
+            try
+            {
+                var rc = sodium_init();
+                if (rc != 0)
+                    throw new InvalidOperationException("Unable to initialize sodium, error code: " + rc);
+            }
+            catch (DllNotFoundException dllNotFoundEx)
+            {
+                // make sure the lib file is not there (this exception might pop when incorrect libsodium lib is does exists)
+                if (File.Exists(LIB_SODIUM))
+                {
+                    if (PlatformDetails.RunningOnPosix == false)
+                        throw new IncorrectDllExecption(
+                            $"{LIB_SODIUM} probably contains the wrong version or not usable on the current platform. Make sure that this machine has the appropriate C runtime for {LIB_SODIUM}.",
+                            dllNotFoundEx);
+                }
+            }
         }
 
         [DllImport(LIB_SODIUM)]
