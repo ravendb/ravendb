@@ -7,7 +7,7 @@ namespace Raven.Client.Documents.Operations.Indexes
 {
     public class StartIndexingOperation : IAdminOperation
     {
-        public RavenCommand<object> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new StartIndexingCommand();
         }
@@ -23,8 +23,6 @@ namespace Raven.Client.Documents.Operations.Indexes
                     Method = HttpMethod.Post
                 };
             }
-
-            public override bool IsReadRequest => false;
         }
     }
 }

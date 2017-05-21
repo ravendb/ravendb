@@ -18,7 +18,7 @@ namespace SlowTests.Bugs.Indexing
             const string name = "CreateIndexesOnRemoteServer_1";
             var doc = MultiDatabase.CreateDatabaseDocument(name);
 
-            using (var store = new DocumentStore { Url = UseFiddler(Server.WebUrls[0]), DefaultDatabase = name })
+            using (var store = new DocumentStore { Url = UseFiddler(Server.WebUrls[0]), Database = name })
             {
                 store.Initialize();
 

@@ -76,9 +76,7 @@ namespace Sparrow.Collections.LockFree
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int MixAndMask(uint h, int lenMask)
         {
-            // Fast rotation combiner with fixed seed. 
-            uint rol5 = (h << 5) | (h >> 27);
-            h = (rol5 + h) ^ 0xbeefbeef;
+            h = Hashing.Mix(h);
 
             h &= (uint)lenMask;
 

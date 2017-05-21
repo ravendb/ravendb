@@ -5,7 +5,7 @@
 @import "animations.less";
 @import "modals.less";
 @import "main-menu.less";
-@import "prerelease.less";
+@import "upcoming.less";
 @import "basic-layout.less";
 @import "notification-center.less";
 @import "virtual-grid.less";
@@ -218,16 +218,16 @@ a {
     .dropdown-menu {
         &.max-height, .max-height {
             max-height: 40vh;
-            overflow:auto;
+            overflow: auto;
         }
 
         &.has-info {
             padding-bottom: 0;
 
             .bg-primary, .bg-success, .bg-info, .bg-warning, .bg-danger {
-                padding:2px;
-                font-size:12px;
-                text-align:center;
+                padding: 2px;
+                font-size: 12px;
+                text-align: center;
             }
         }
 
@@ -332,8 +332,8 @@ a {
 }
 
 .text-elipsis {
-    overflow:hidden;
-    text-overflow:ellipsis;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .padding {
@@ -482,7 +482,7 @@ hr {
 }
 
 .file-input input[type='file'] {
-    width:100%;
+    width: 100%;
     visibility: hidden;
     height: 0;
 }
@@ -622,9 +622,9 @@ hr {
             color: @gray-lighter;
             padding: 2px 5px;
             background-color: @brand-primary;
-            opacity:.6;
+            opacity: .6;
         }
-        
+
         [class*=" icon-"],
         [class^="icon-"] {
             color: inherit;
@@ -638,7 +638,7 @@ hr {
             background-color: @gray-darker;
 
             .badge {
-                opacity:1;
+                opacity: 1;
             }
         }
 
@@ -822,6 +822,10 @@ input[type=file] + .form-control {
         display: none;
     }
 
+    span {
+        margin-left: 9px;
+    }
+
     &:before {
         width: 17px;
         height: 17px;
@@ -832,6 +836,17 @@ input[type=file] + .form-control {
         margin-top: -5px;
         position: relative;
         top: 4px;
+    }
+
+    &.btn-xs:before {
+        width: 11px;
+        height: 11px;
+        border-width: 2px;
+        top: 1px;
+    }
+
+    &.btn-lg {
+        top: 1px;
     }
 }
 
@@ -867,7 +882,7 @@ input[type=file] + .form-control {
     }
 
     .btn-default {
-        background-color:@gray;
+        background-color: @gray;
     }
 }
 
@@ -1177,9 +1192,9 @@ pre {
                 line-height: 22px;
 
                 span {
-                    white-space:nowrap;
-                    overflow:hidden;
-                    text-overflow:ellipsis;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
                 }
             }
         }
@@ -1235,7 +1250,7 @@ pre {
                     text-align: left;
                     overflow: hidden;
                     text-overflow: ellipsis;
-                    white-space:nowrap;
+                    white-space: nowrap;
 
                     .caret {
                         margin-top: 11px;
@@ -1256,7 +1271,7 @@ pre {
 .panel {
 
     .panel {
-        background-color:@gray-dark;
+        background-color: @gray-dark;
     }
 
     .panel-heading {
@@ -1318,13 +1333,13 @@ pre {
     bottom: 0;
     width: 30px;
     background-color: @gray;
-    color:@gray-lighter;
+    color: @gray-lighter;
     display: flex;
     align-items: center;
     justify-content: center;
 
     i:before {
-        top:0;
+        top: 0;
     }
 
     &.state-primary {

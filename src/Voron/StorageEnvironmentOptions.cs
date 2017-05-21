@@ -25,6 +25,8 @@ namespace Voron
 {
     public abstract class StorageEnvironmentOptions : IDisposable
     {
+        public const string PendingRecycleFileNamePrefix = "pending-recycle";
+
         private ExceptionDispatchInfo _catastrophicFailure;
         private CatastrophicFailureNotification _catastrophicFailureNotification;
 
@@ -303,7 +305,7 @@ namespace Voron
             {
                 try
                 {
-                    return Directory.GetFiles(_journalPath, "pending-recycle.*");
+                    return Directory.GetFiles(_journalPath, $"{PendingRecycleFileNamePrefix}.*");
                 }
                 catch (Exception)
                 {
@@ -471,6 +473,20 @@ namespace Voron
                     if (journal.Value.IsValueCreated)
                         journal.Value.Value.Dispose();
                 }
+
+                lock (_journalsForReuse)
+                {
+                    foreach (var reusableFile in _journalsForReuse.Values)
+                    {
+                        try
+                        {
+                            File.Delete(reusableFile);
+                        }
+                        catch (Exception)
+                        {
+                        }
+                    }
+                }
             }
 
             public override bool TryDeleteJournal(long number)
@@ -485,8 +501,6 @@ namespace Voron
                 if (File.Exists(file) == false)
                     return false;
 
-                TryStoreJournalForReuse(file);
-
                 return File.Exists(file) == false;
             }
 
@@ -497,9 +511,15 @@ namespace Voron
                 {
                     return false;
                 }
-                if (RunningOnPosix)
-                    return PosixHelper.TryReadFileHeader(header, path);
-                return Win32Helper.TryReadFileHeader(header, path);
+
+                var success = RunningOnPosix ? 
+                    PosixHelper.TryReadFileHeader(header, path) : 
+                    Win32Helper.TryReadFileHeader(header, path);
+
+                if (!success)
+                    return false;
+
+                return header->Hash == HeaderAccessor.CalculateFileHeaderHash(header);
             }
 
 
@@ -737,7 +757,8 @@ namespace Voron
                     return false;
                 }
                 *header = *((FileHeader*)ptr);
-                return true;
+
+                return header->Hash == HeaderAccessor.CalculateFileHeaderHash(header);
             }
 
             public override unsafe void WriteHeader(string filename, FileHeader* header)
@@ -835,7 +856,7 @@ namespace Voron
 
         public static string PendingRecycleName(long number)
         {
-            return string.Format("pending-recycle.{0:D19}", number);
+            return $"{PendingRecycleFileNamePrefix}.{number:D19}";
         }
 
         public static string JournalRecoveryName(long number)
@@ -937,7 +958,7 @@ namespace Voron
             {
                 SafePosixOpenFlags &= ~PerPlatformValues.OpenFlags.O_DIRECT;
                 var message = "Path " + BasePath +
-                              " not supporting O_DIRECT writes. As a result - data durability is not guarenteed";
+                              " not supporting O_DIRECT writes. As a result - data durability is not guaranteed";
                 var details = $"Storage type '{PosixHelper.GetFileSystemOfPath(BasePath)}' doesn't support direct write to disk (non durable file system)";
                 InvokeNonDurableFileSystemError(this, message, new NonDurableFileSystemException(message), details);
             }

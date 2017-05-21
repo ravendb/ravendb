@@ -4,7 +4,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
-using Raven.Client.Server.Expiration;
 using Raven.Client.Server.Versioning;
 using Sparrow.Json;
 
@@ -13,7 +12,7 @@ namespace Raven.Client.Server.Operations
     public class ConfigureVersioningOperation : IServerOperation<ConfigureVersioningOperationResult>
     {
         private readonly VersioningConfiguration _configuration;
-        private string _databaseName;
+        private readonly string _databaseName;
 
         public ConfigureVersioningOperation(VersioningConfiguration configuration, string databaseName)
         {

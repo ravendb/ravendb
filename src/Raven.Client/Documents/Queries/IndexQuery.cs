@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
@@ -148,9 +147,6 @@ namespace Raven.Client.Documents.Queries
                 path.AppendFormat("&highlighterKeyName={0}", Uri.EscapeDataString(HighlighterKeyName));
             }
 
-            if (DebugOptionGetIndexEntries)
-                path.Append("&debug=entries");
-
             if (ExplainScores)
                 path.Append("&explainScores=true");
         }
@@ -200,11 +196,6 @@ namespace Raven.Client.Documents.Queries
         /// <para>called just once for each document in the result set</para>
         /// </summary>
         public bool AllowMultipleIndexEntriesForSameDocumentToResultTransformer { get; set; }
-
-        /// <summary>
-        /// Whether we should get the raw index entries.
-        /// </summary>
-        public bool DebugOptionGetIndexEntries { get; set; }
 
         /// <summary>
         /// Array of fields containing highlighting information.
@@ -274,7 +265,6 @@ namespace Raven.Client.Documents.Queries
 
             return base.Equals(other) &&
                    EnumerableExtension.ContentEquals(SortedFields, other.SortedFields) &&
-                   DebugOptionGetIndexEntries.Equals(other.DebugOptionGetIndexEntries) &&
                    EnumerableExtension.ContentEquals(HighlightedFields, other.HighlightedFields) &&
                    EnumerableExtension.ContentEquals(HighlighterPreTags, other.HighlighterPreTags) &&
                    EnumerableExtension.ContentEquals(HighlighterPostTags, other.HighlighterPostTags) &&
@@ -299,7 +289,6 @@ namespace Raven.Client.Documents.Queries
                 var hashCode = base.GetHashCode();
                 hashCode = (hashCode * 397) ^ (TransformerParameters != null ? TransformerParameters.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (SortedFields?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ DebugOptionGetIndexEntries.GetHashCode();
                 hashCode = (hashCode * 397) ^ (HighlightedFields?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (HighlighterPreTags?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (HighlighterPostTags?.GetHashCode() ?? 0);
@@ -389,8 +378,8 @@ namespace Raven.Client.Documents.Queries
         /// <para>However, when used to query map/reduce indexes, it does NOT guarantee that the document that this</para>
         /// <para>etag belong to is actually considered for the results. </para>
         /// <para>What it does it guarantee that the document has been mapped, but not that the mapped values has been reduced. </para>
-        /// <para>Since map/reduce queries, by their nature,vtend to be far less susceptible to issues with staleness, this is </para>
-        /// <para>considered to be an acceptable tradeoff.</para>
+        /// <para>Since map/reduce queries, by their nature, tend to be far less susceptible to issues with staleness, this is </para>
+        /// <para>considered to be an acceptable trade-off.</para>
         /// <para>If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and </para>
         /// <para>use the Cutoff date option, instead.</para>
         /// </summary>

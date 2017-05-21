@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Net.Http;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
@@ -39,12 +38,10 @@ namespace Raven.Client.Server.Operations
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));
-                if (context == null)
-                    throw new ArgumentNullException(nameof(context));
                 if (databaseRecord == null)
                     throw new ArgumentNullException(nameof(databaseRecord));
 
-                _context = context;
+                _context = context ?? throw new ArgumentNullException(nameof(context));
                 _createDatabaseOperation = createDatabaseOperation;
                 _databaseName = databaseRecord.DatabaseName;
                 _databaseDocument = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, conventions, context);

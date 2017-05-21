@@ -7,9 +7,16 @@ namespace Raven.Client.Server.Commands
 {
     public class GetTcpInfoCommand : RavenCommand<TcpConnectionInfo>
     {
+        private readonly string _tag;
+
+        public GetTcpInfoCommand(string tag)
+        {
+            _tag = tag;
+        }
+
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/info/tcp";
+            url = $"{node.Url}/info/tcp?tag={_tag}";
             RequestedNode = node;
             var request = new HttpRequestMessage
             {

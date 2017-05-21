@@ -111,7 +111,6 @@ namespace Raven.Client.Json
                                         {
                                             case BlittableJsonToken.Integer:
                                                 _manualBlittableJsonDocumentBuilder.WriteValue((long)propDetails.Value);
-                                                ;
                                                 break;
                                             case BlittableJsonToken.String:
                                                 _manualBlittableJsonDocumentBuilder.WriteValue(propDetails.Value.ToString());

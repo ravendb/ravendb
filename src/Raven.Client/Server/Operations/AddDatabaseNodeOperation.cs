@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
-using Raven.Client.Json;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
 
@@ -23,7 +21,7 @@ namespace Raven.Client.Server.Operations
 
         public RavenCommand<CreateDatabaseResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new AddDatabaseNodeCommand(_databaseName, _node, this);
+            return new AddDatabaseNodeCommand(_databaseName, _node);
         }
 
         private class AddDatabaseNodeCommand : RavenCommand<CreateDatabaseResult>
@@ -31,8 +29,7 @@ namespace Raven.Client.Server.Operations
             private readonly string _databaseName;
             private readonly string _node;
 
-            public AddDatabaseNodeCommand(string databaseName,
-                string node, AddDatabaseNodeOperation addDatabaseNodeOperation)
+            public AddDatabaseNodeCommand(string databaseName, string node)
             {
                 if (string.IsNullOrEmpty(databaseName))
                     throw new ArgumentNullException(databaseName);

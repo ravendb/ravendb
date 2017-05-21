@@ -10,7 +10,7 @@ class getIndexesErrorCommand extends commandBase {
 
     execute(): JQueryPromise<Raven.Client.Documents.Indexes.IndexErrors[]> {
         const url = endpoints.databases.index.indexesErrors;
-        return this.query<Raven.Client.Documents.Indexes.IndexErrors[]>(url, null, this.db)
+        return this.query<Raven.Client.Documents.Indexes.IndexErrors[]>(url, null, this.db, x => x.Results)
             .fail((result: JQueryXHR) => this.reportError("Failed to get index errors", result.responseText, result.statusText));
     }
 }

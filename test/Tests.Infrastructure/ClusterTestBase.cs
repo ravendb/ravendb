@@ -17,6 +17,7 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Sparrow.Platform;
 using Xunit;
@@ -74,7 +75,7 @@ namespace Tests.Infrastructure
 
         protected async Task<bool> WaitUntilDatabaseHasState(DocumentStore store, TimeSpan timeout, bool isLoaded, string databaseName = null)
         {
-            var requestExecutor = store.GetRequestExecuter();
+            var requestExecutor = store.GetRequestExecutor();
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 var shouldContinue = true;
@@ -98,31 +99,39 @@ namespace Tests.Infrastructure
             }
         }
 
-        protected async Task<T> WaitForValueOnGroupAsync<T>(DatabaseTopology topology, Func<IDocumentStore, T> func, T excpected)
+        protected async Task<T> WaitForValueOnGroupAsync<T>(DatabaseTopology topology, Func<ServerStore, T> func, T excpected)
         {
-            var stores = GetDocumentStores(topology);
-            var tasks = new List<Task<T>>();
-            foreach (var store in stores)
+            var nodes = topology.AllReplicationNodes();
+            var servers = new List<ServerStore>();
+            var tasks = new Dictionary<string,Task<T>>();
+            foreach (var node in nodes)
             {
-                var task = WaitForValueAsync(() => func(store), excpected);
-                tasks.Add(task);
+                var server = Servers.Single(s => s.ServerStore.NodeTag == node.NodeTag);
+                servers.Add(server.ServerStore);
+               
+            }
+            foreach (var server in servers)
+            {
+                var task = WaitForValueAsync(() => func(server), excpected);
+                tasks.Add(server.NodeTag, task);
             }
 
-            var res = await Task.WhenAll(tasks);
+            var res = await Task.WhenAll(tasks.Values);
             var hasExpectedVals = res.Where(t => t?.Equals(excpected) ?? false);
            
-            if(hasExpectedVals.Count() == stores.Count)
+            if(hasExpectedVals.Count() == servers.Count)
                 return excpected;
 
-            var others = res.Except(hasExpectedVals).GroupBy(x=>1).Select(g=>new
-            {
-                Count = g.Count(),
-                g.Key
-            });
+            var lookup = tasks.ToLookup(key => key.Value.Result, val => val.Key);
+
             var otherValues = "";
-            foreach (var other in others)
+            foreach (var val in lookup)
             {
-                otherValues += $"{other.Key} appears {other.Count} times, ";
+                otherValues += $"\n the value {val.Key} appears on ";
+                foreach (string str in val)
+                {
+                    otherValues += str + ", ";
+                }
             }
             throw new Exception($"Not all node in the group have the expected value of {excpected}. {otherValues}");
         }
@@ -159,7 +168,7 @@ namespace Tests.Infrastructure
                 stores.Add(new DocumentStore
                 {
                     Url = node.Url,
-                    DefaultDatabase = node.Database
+                    Database = node.Database
                 });
             }
             return stores;
@@ -225,7 +234,7 @@ namespace Tests.Infrastructure
 
                 var store = new DocumentStore
                 {
-                    DefaultDatabase = node.Database,
+                    Database = node.Database,
                     Url = url
                 };
 
@@ -327,8 +336,8 @@ namespace Tests.Infrastructure
         {
             //var index = FindStoreIndex(store);
             //Assert.False(index == -1, "Didn't find store index, most likely it doesn't belong to the cluster. Did you setup Raft cluster properly?");
-            //return Servers[index].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
-            return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
+            //return Servers[index].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
         }
 
         public async Task WaitForRaftIndexToBeAppliedInCluster(long index,  TimeSpan timeout)
@@ -367,7 +376,7 @@ namespace Tests.Infrastructure
 
             foreach (var server in Servers)
             {
-                server.Dispose();
+                server?.Dispose();
             }
 
             base.Dispose();

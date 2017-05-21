@@ -8,7 +8,6 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Transformers;
-using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Sparrow.Json;
 using Sparrow.Logging;

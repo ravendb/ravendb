@@ -39,7 +39,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
             }
         }
 
-        public DynamicJsonArray Content { get; set; }
+        public DynamicJsonValue Content { get; set; }
 
         public GetRequest()
         {

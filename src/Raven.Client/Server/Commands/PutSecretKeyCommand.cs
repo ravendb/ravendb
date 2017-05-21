@@ -1,15 +1,10 @@
-﻿using System.IO;
-using System.Net.Http;
-using System.Text;
+﻿using System.Net.Http;
 using Raven.Client.Http;
-using Raven.Client.Json;
-using Raven.Client.Json.Converters;
-using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Client.Server.Commands
 {
-    public class PutSecretKeyCommand : RavenCommand<PutSecretKeyCommand.CommandResult>
+    public class PutSecretKeyCommand : RavenCommand
     {
         private readonly string _name;
         private readonly string _base64Key;
@@ -27,9 +22,9 @@ namespace Raven.Client.Server.Commands
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/admin/secrets/&name={_name}";
+            url = $"{node.Url}/admin/secrets?name={_name}";
 
-            if (_overwrite == true)
+            if (_overwrite)
             {
                 url += $"&overwrite={_overwrite}";
             }
@@ -49,9 +44,5 @@ namespace Raven.Client.Server.Commands
         }
         
         public override bool IsReadRequest => false;
-
-        public class CommandResult
-        {
-        }
     }
 }

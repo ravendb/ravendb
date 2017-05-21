@@ -5,7 +5,6 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Server.Kestrel.Internal.Networking;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
@@ -16,7 +15,6 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Util;
 using Raven.Server.Documents.Indexes.Static;
-using Raven.Server.ServerWide.Maintance;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -39,12 +37,9 @@ namespace FastTests
 
             public DatabaseCommands(IDocumentStore store, string databaseName)
             {
-                if (store == null)
-                    throw new ArgumentNullException(nameof(store));
+                _store = store ?? throw new ArgumentNullException(nameof(store));
 
-                _store = store;
-
-                RequestExecutor = store.GetRequestExecuter(databaseName);
+                RequestExecutor = store.GetRequestExecutor(databaseName);
 
                 _returnContext = RequestExecutor.ContextPool.AllocateOperationContext(out Context);
             }
@@ -111,13 +106,7 @@ namespace FastTests
                     }
 
 
-                    var command = new PutDocumentCommand
-                    {
-                        Id = id,
-                        Etag = etag,
-                        Context = Context,
-                        Document = documentJson
-                    };
+                    var command = new PutDocumentCommand(id, etag, documentJson, Context);
 
                     await RequestExecutor.ExecuteAsync(command, Context, cancellationToken);
 
@@ -175,11 +164,7 @@ namespace FastTests
                 if (id == null)
                     throw new ArgumentNullException(nameof(id));
 
-                var command = new GetDocumentCommand
-                {
-                    Id = id,
-                    MetadataOnly = metadataOnly
-                };
+                var command = new GetDocumentCommand(id, includes: null, transformer: null, transformerParameters: null, metadataOnly: metadataOnly);
 
                 await RequestExecutor.ExecuteAsync(command, Context);
 
@@ -195,10 +180,7 @@ namespace FastTests
                 if (ids == null)
                     throw new ArgumentNullException(nameof(ids));
 
-                var command = new GetDocumentCommand
-                {
-                    Ids = ids
-                };
+                var command = new GetDocumentCommand(ids, includes: null, transformer: null, transformerParameters: null, metadataOnly: false, context: Context);
 
                 await RequestExecutor.ExecuteAsync(command, Context);
 
@@ -207,11 +189,7 @@ namespace FastTests
 
             public async Task<DynamicArray> GetAsync(int start, int pageSize)
             {
-                var command = new GetDocumentCommand
-                {
-                    Start = start,
-                    PageSize = pageSize
-                };
+                var command = new GetDocumentCommand(start, pageSize);
 
                 await RequestExecutor.ExecuteAsync(command, Context);
 
@@ -278,7 +256,7 @@ namespace FastTests
                 {
                     var payloadJson = EntityToBlittable.ConvertEntityToBlittable(payload, session.Advanced.DocumentStore.Conventions, session.Advanced.Context);
 
-                    var command = new JsonCommandWithPayload<TResult>(url, Context, HttpMethod.Delete, payloadJson, RavenCommandResponseType.Object);
+                    var command = new JsonCommandWithPayload<TResult>(url, Context, HttpMethod.Delete, payloadJson);
 
                     await RequestExecutor.ExecuteAsync(command, Context);
 
@@ -294,7 +272,7 @@ namespace FastTests
                     if (payload != null)
                         payloadJson = EntityToBlittable.ConvertEntityToBlittable(payload, session.Advanced.DocumentStore.Conventions, session.Advanced.Context);
 
-                    var command = new JsonCommandWithPayload<BlittableJsonReaderObject>(url, Context, method, payloadJson, RavenCommandResponseType.Empty);
+                    var command = new JsonCommandWithPayload<BlittableJsonReaderObject>(url, Context, method, payloadJson);
 
                     await RequestExecutor.ExecuteAsync(command, Context);
                 }
@@ -321,7 +299,7 @@ namespace FastTests
                     _url = url;
 
                     if (typeof(TResult) == typeof(BlittableJsonReaderArray))
-                        ResponseType = RavenCommandResponseType.Array;
+                        throw new NotSupportedException("Use object insetad");
                 }
 
                 public override bool IsReadRequest => true;
@@ -342,11 +320,6 @@ namespace FastTests
                 {
                     Result = (TResult)(object)response;
                 }
-
-                public override void SetResponse(BlittableJsonReaderArray response, bool fromCache)
-                {
-                    Result = (TResult)(object)response;
-                }
             }
 
             private class JsonCommandWithPayload<TResult> : RavenCommand<TResult>
@@ -357,7 +330,7 @@ namespace FastTests
                 private readonly JsonOperationContext _context;
                 private readonly BlittableJsonReaderObject _payload;
 
-                public JsonCommandWithPayload(string url, JsonOperationContext context, HttpMethod method, BlittableJsonReaderObject payload, RavenCommandResponseType response)
+                public JsonCommandWithPayload(string url, JsonOperationContext context, HttpMethod method, BlittableJsonReaderObject payload)
                 {
                     if (url == null)
                         throw new ArgumentNullException(nameof(url));
@@ -369,7 +342,9 @@ namespace FastTests
                     _context = context;
                     _method = method;
                     _payload = payload;
-                    ResponseType = response;
+
+                    if (typeof(TResult) == typeof(BlittableJsonReaderArray))
+                        throw new NotSupportedException("Use object instead");
                 }
 
                 public override bool IsReadRequest => false;
@@ -392,11 +367,6 @@ namespace FastTests
                 }
 
                 public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-                {
-                    Result = (TResult)(object)response;
-                }
-
-                public override void SetResponse(BlittableJsonReaderArray response, bool fromCache)
                 {
                     Result = (TResult)(object)response;
                 }

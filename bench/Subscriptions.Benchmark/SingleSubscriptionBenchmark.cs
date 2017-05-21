@@ -79,7 +79,7 @@ namespace SubscriptionsBenchmark
             _collectionName = collectionName;
             _store = new DocumentStore()
             {
-                DefaultDatabase = databaseName,
+                Database = databaseName,
                 Url = url,
                 Conventions = new DocumentConventions()
             };
@@ -105,7 +105,7 @@ namespace SubscriptionsBenchmark
             {
                 if (_subscriptionId.HasValue == false)
                 {
-                    var subscriptionCreationParams = new SubscriptionCreationParams
+                    var subscriptionCreationParams = new SubscriptionCreationOptions
                     {
                         Criteria = new SubscriptionCriteria(_collectionName)
                     };

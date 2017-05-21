@@ -40,7 +40,7 @@ namespace SlowTests.Tests.Faceted
                     {
                         var facetResults = s.Query<Camera, CameraCostIndex>()
                             .Where(exp)
-                            .ToFacets(facets);
+                            .ToFacets(facets.Facets);
 
                         var filteredData = cameras.Where(exp.Compile()).ToList();
 
@@ -77,7 +77,7 @@ namespace SlowTests.Tests.Faceted
                     {
                         var facetResults = s.Query<Camera, CameraCostIndex>()
                             .Where(exp)
-                            .ToFacets(facets);
+                            .ToFacets(facets.Facets);
 
                         var filteredData = cameras.Where(exp.Compile()).ToList();
 

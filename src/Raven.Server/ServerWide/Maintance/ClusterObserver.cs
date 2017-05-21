@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Server;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
+using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Utils;
 
@@ -78,25 +78,32 @@ namespace Raven.Server.ServerWide.Maintance
             Dictionary<string, ClusterNodeStatusReport> newStats,
             Dictionary<string, ClusterNodeStatusReport> prevStats)
         {
-            foreach (var database in GetDatabases())
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var (topology, etag) = GetTopology(database);
+                var updateCommands = new List<BlittableJsonReaderObject>();
 
-                if (UpdateDatabaseTopology(database, topology, newStats, prevStats))
+                using (context.OpenReadTransaction())
                 {
-                    await UpdateTopology(database, topology, etag);
+                    foreach (var database in _engine.StateMachine.GetDatabaseNames(context))
+                    {
+                        var databaseRecord = _engine.StateMachine.ReadDatabase(context, database, out long etag);
+
+                        if (UpdateDatabaseTopology(database, databaseRecord.Topology, newStats, prevStats))
+                        {
+                            var cmd = new UpdateTopologyCommand(database)
+                            {
+                                Topology = databaseRecord.Topology,
+                                Etag = etag
+                            };
+
+                            updateCommands.Add(context.ReadObject(cmd.ToJson(), "update-topology"));
+                        }
+                    }
                 }
-            }
-        }
 
-        private IEnumerable<string> GetDatabases()
-        {
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-            {
-                foreach (var db in _engine.StateMachine.GetDatabaseNames(ctx))
+                foreach (var command in updateCommands)
                 {
-                    yield return db;
+                    await UpdateTopology(command);
                 }
             }
         }
@@ -252,31 +259,14 @@ namespace Raven.Server.ServerWide.Maintance
             return true;
         }
 
-        private Task<long> UpdateTopology(string databaseName, DatabaseTopology topology, long etag)
+        private Task<long> UpdateTopology(BlittableJsonReaderObject cmd)
         {
-            var cmd = new UpdateTopologyCommand(databaseName)
+            
+            if (_engine.LeaderTag != _server.NodeTag)
             {
-                Topology = topology,
-                Etag = etag
-            };
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            {
-                if (_engine.LeaderTag != _server.NodeTag)
-                {
-                    throw new NotLeadingException("This node is no longer the leader, so we abort updating the database topology");
-                }
-                return _engine.PutAsync(ctx.ReadObject(cmd.ToJson(), "update-topology"));
+                throw new NotLeadingException("This node is no longer the leader, so we abort updating the database topology");
             }
-        }
-
-        private (DatabaseTopology topology, long etag) GetTopology(string database)
-        {
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-            {
-                var rec = _engine.StateMachine.ReadDatabase(ctx, database, out long etag);
-                return (rec.Topology, etag);
-            }
+            return _engine.PutAsync(cmd);
         }
 
         public void Dispose()

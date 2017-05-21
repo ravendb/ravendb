@@ -192,7 +192,7 @@ namespace Voron.Impl.Journal
             fixed (byte* mk = options.MasterKey)
             fixed (byte* ctx = Sodium.Context)
             {
-                if (Sodium.crypto_kdf_derive_from_key(subKey, 32, num, ctx, mk) != 0)
+                if (Sodium.crypto_kdf_derive_from_key(subKey, (UIntPtr)32, (ulong)num, ctx, mk) != 0)
                     throw new InvalidOperationException("Unable to generate derived key");
             }
 

@@ -46,19 +46,18 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                JsonOperationContext jsonOperationContext;
-                var requestExecuter = store.GetRequestExecuter(store.DefaultDatabase);
-                requestExecuter.ContextPool.AllocateOperationContext(out jsonOperationContext);
+                var requestExecuter = store.GetRequestExecutor(store.Database);
+                requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context);
                 var getStatsCommand = new GetStatisticsCommand();
                 if (getStatsCommand != null)
                 {
-                    requestExecuter.Execute(getStatsCommand, jsonOperationContext);
+                    requestExecuter.Execute(getStatsCommand, context);
                 }
                 var databaseStatistics = getStatsCommand.Result;
                 while (databaseStatistics.StaleIndexes.Any())
                 {
                     Thread.Sleep(10);
-                    requestExecuter.Execute(getStatsCommand, jsonOperationContext);
+                    requestExecuter.Execute(getStatsCommand, context);
                     databaseStatistics = getStatsCommand.Result;
                 }
 

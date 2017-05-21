@@ -13,58 +13,98 @@ namespace Raven.Client.Documents.Commands
 {
     public class GetDocumentCommand : RavenCommand<GetDocumentResult>
     {
-        public string Id;
+        private readonly string _id;
 
-        public string[] Ids;
-        public string[] Includes;
+        private readonly string[] _ids;
+        private readonly string[] _includes;
 
-        public string Transformer;
-        public Dictionary<string, object> TransformerParameters;
+        private readonly string _transformer;
+        private readonly Dictionary<string, object> _transformerParameters;
 
-        public bool MetadataOnly;
+        private readonly bool _metadataOnly;
 
-        public string StartWith;
-        public string Matches;
-        public int Start;
-        public int PageSize;
-        public string Exclude;
-        public string StartAfter;
+        private readonly string _startWith;
+        private readonly string _matches;
+        private readonly int _start;
+        private readonly int _pageSize;
+        private readonly string _exclude;
+        private readonly string _startAfter;
 
-        public JsonOperationContext Context;
+        private readonly JsonOperationContext _context;
+
+        public GetDocumentCommand(int start, int pageSize)
+        {
+            _start = start;
+            _pageSize = pageSize;
+        }
+
+        public GetDocumentCommand(string id, string[] includes, string transformer, Dictionary<string, object> transformerParameters, bool metadataOnly)
+        {
+            _id = id;
+            _includes = includes;
+            _transformer = transformer;
+            _transformerParameters = transformerParameters;
+            _metadataOnly = metadataOnly;
+        }
+
+        public GetDocumentCommand(string[] ids, string[] includes, string transformer, Dictionary<string, object> transformerParameters, bool metadataOnly, JsonOperationContext context)
+        {
+            if (ids == null || ids.Length == 0)
+                throw new ArgumentNullException(nameof(ids));
+
+            _ids = ids;
+            _includes = includes;
+            _transformer = transformer;
+            _transformerParameters = transformerParameters;
+            _metadataOnly = metadataOnly;
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+        }
+
+        public GetDocumentCommand(string startWith, string startAfter, string matches, string exclude, string transformer, Dictionary<string, object> transformerParameters, int start, int pageSize)
+        {
+            _startWith = startWith ?? throw new ArgumentNullException(nameof(startWith));
+            _startAfter = startAfter;
+            _matches = matches;
+            _exclude = exclude;
+            _transformer = transformer;
+            _transformerParameters = transformerParameters;
+            _start = start;
+            _pageSize = pageSize;
+        }
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
             var pathBuilder = new StringBuilder("docs?");
-            
-            if (MetadataOnly)
+
+            if (_metadataOnly)
                 pathBuilder.Append("&metadata-only=true");
 
-            if (StartWith != null)
+            if (_startWith != null)
             {
-                pathBuilder.Append($"startsWith={Uri.EscapeDataString(StartWith)}&start={Start.ToInvariantString()}&pageSize={PageSize.ToInvariantString()}");
+                pathBuilder.Append($"startsWith={Uri.EscapeDataString(_startWith)}&start={_start.ToInvariantString()}&pageSize={_pageSize.ToInvariantString()}");
 
-                if (Matches != null)
-                    pathBuilder.Append($"&matches={Matches}");
-                if (Exclude != null)
-                    pathBuilder.Append($"&exclude={Exclude}");
-                if (StartAfter != null)
-                    pathBuilder.Append($"&startAfter={Uri.EscapeDataString(StartAfter)}");
+                if (_matches != null)
+                    pathBuilder.Append($"&matches={_matches}");
+                if (_exclude != null)
+                    pathBuilder.Append($"&exclude={_exclude}");
+                if (_startAfter != null)
+                    pathBuilder.Append($"&startAfter={Uri.EscapeDataString(_startAfter)}");
             }
 
-            if (Includes != null)
+            if (_includes != null)
             {
-                foreach (var include in Includes)
+                foreach (var include in _includes)
                 {
                     pathBuilder.Append($"&include={include}");
                 }
             }
 
-            if (string.IsNullOrEmpty(Transformer) == false)
-                pathBuilder.Append($"&transformer={Transformer}");
+            if (string.IsNullOrEmpty(_transformer) == false)
+                pathBuilder.Append($"&transformer={_transformer}");
 
-            if (TransformerParameters != null)
+            if (_transformerParameters != null)
             {
-                foreach (var tp in TransformerParameters)
+                foreach (var tp in _transformerParameters)
                 {
                     pathBuilder.Append($"&tp-{tp.Key}={tp.Value}");
                 }
@@ -75,13 +115,13 @@ namespace Raven.Client.Documents.Commands
                 Method = HttpMethod.Get,
             };
 
-            if (Id != null)
+            if (_id != null)
             {
-                pathBuilder.Append($"&id={Uri.EscapeDataString(Id)}");
+                pathBuilder.Append($"&id={Uri.EscapeDataString(_id)}");
             }
-            else if (Ids != null)
+            else if (_ids != null)
             {
-                PrepareRequestWithMultipleIds(pathBuilder, request, Ids, Context);
+                PrepareRequestWithMultipleIds(pathBuilder, request, _ids, _context);
             }
 
             url = $"{node.Url}/databases/{node.Database}/" + pathBuilder;
@@ -106,16 +146,9 @@ namespace Raven.Client.Documents.Commands
                 {
                     using (var writer = new BlittableJsonTextWriter(context, stream))
                     {
-                            writer.WriteStartArray();
-                            bool first = true;
-                            foreach (var id in uniqueIds)
-                            {
-                                if(!first)
-                                    writer.WriteComma();
-                                first = false;
-                                writer.WriteString(id);
-                            }
-                            writer.WriteEndArray();
+                        writer.WriteStartObject();
+                        writer.WriteArray("Ids", uniqueIds);
+                        writer.WriteEndObject();
                     }
                 });
             }

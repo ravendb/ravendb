@@ -155,7 +155,7 @@ namespace Raven.Client.Documents.Session
         protected QueryStatistics QueryStats = new QueryStatistics();
 
         /// <summary>
-        /// Holds the query highlightings
+        /// Holds the query highlights
         /// </summary>
         protected QueryHighlightings Highlightings = new QueryHighlightings();
 
@@ -396,6 +396,8 @@ namespace Raven.Client.Documents.Session
 
         protected TSelf GenerateSpatialQueryData(string fieldName, string shapeWkt, SpatialRelation relation, double distanceErrorPct = 0.025, SpatialUnits? radiusUnits = null)
         {
+            throw new NotImplementedException("This feature is not yet implemented");
+
             IsSpatialQuery = true;
             SpatialFieldName = fieldName;
             QueryShape = new WktSanitizer().Sanitize(shapeWkt);
@@ -407,7 +409,7 @@ namespace Raven.Client.Documents.Session
 
         protected TSelf GenerateSpatialQueryData(string fieldName, SpatialCriteria criteria)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("This feature is not yet implemented");
             //var wkt = criteria.Shape as string;
             //if (wkt == null && criteria.Shape != null)
             //{
@@ -666,17 +668,20 @@ namespace Raven.Client.Documents.Session
 
         public void Highlight(string fieldName, int fragmentLength, int fragmentCount, string fragmentsField)
         {
+            throw new NotImplementedException("This feature is not yet implemented");
             HighlightedFields.Add(new HighlightedField(fieldName, fragmentLength, fragmentCount, fragmentsField));
         }
 
         public void Highlight(string fieldName, int fragmentLength, int fragmentCount, out FieldHighlightings fieldHighlightings)
         {
+            throw new NotImplementedException("This feature is not yet implemented");
             HighlightedFields.Add(new HighlightedField(fieldName, fragmentLength, fragmentCount, null));
             fieldHighlightings = Highlightings.AddField(fieldName);
         }
 
         public void Highlight(string fieldName, string fieldKeyName, int fragmentLength, int fragmentCount, out FieldHighlightings fieldHighlightings)
         {
+            throw new NotImplementedException("This feature is not yet implemented");
             HighlighterKeyName = fieldKeyName;
             HighlightedFields.Add(new HighlightedField(fieldName, fragmentLength, fragmentCount, null));
             fieldHighlightings = Highlightings.AddField(fieldName);
@@ -684,6 +689,7 @@ namespace Raven.Client.Documents.Session
 
         public void SetHighlighterTags(string[] preTags, string[] postTags)
         {
+            throw new NotImplementedException("This feature is not yet implemented");
             HighlighterPreTags = preTags;
             HighlighterPostTags = postTags;
         }
@@ -1587,7 +1593,7 @@ If you really want to do in memory filtering on the data returned from the query
                 return RavenQuery.Escape(result(whereParams.Value), whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
             }
 
-            throw new NotImplementedException();
+            throw new NotImplementedException("This feature is not yet implemented");
             /*
             var jsonSerializer = _conventions.CreateSerializer();
             var ravenJTokenWriter = new RavenJTokenWriter();
@@ -1733,7 +1739,7 @@ If you really want to do in memory filtering on the data returned from the query
             ContainsAnyAllProcessor(fieldName, values, "AND");
         }
 
-        private void ContainsAnyAllProcessor(string fieldName, IEnumerable<object> values, string seperator)
+        private void ContainsAnyAllProcessor(string fieldName, IEnumerable<object> values, string separator)
         {
             AppendSpaceIfNeeded(QueryText.Length > 0 && char.IsWhiteSpace(QueryText[QueryText.Length - 1]) == false);
             NegateIfNeeded();
@@ -1751,7 +1757,7 @@ If you really want to do in memory filtering on the data returned from the query
             {
                 if (first == false)
                 {
-                    QueryText.Append(" " + seperator + " ");
+                    QueryText.Append(" " + separator + " ");
                 }
                 first = false;
                 var whereParams = new WhereParams

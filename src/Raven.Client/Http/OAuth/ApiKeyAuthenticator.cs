@@ -1,14 +1,13 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Json;
 using Sparrow;
-using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -19,17 +18,17 @@ namespace Raven.Client.Http.OAuth
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ApiKeyAuthenticator>("Client");
         private static readonly HttpClient Client = new HttpClient();
 
-        private readonly ConcurrentDictionary<string, byte[]> _ServersPublicKeys = new ConcurrentDictionary<string, byte[]>();
+        private readonly ConcurrentDictionary<string, byte[]> _serverPublicKeys = new ConcurrentDictionary<string, byte[]>();
 
         public async Task<string> GetAuthenticationTokenAsync(string apiKey, string serverUrl, JsonOperationContext context)
         {
             if (string.IsNullOrEmpty(apiKey))
                 return null;
 
-            if (_ServersPublicKeys.TryGetValue(serverUrl, out var serverPk) == false)
+            if (_serverPublicKeys.TryGetValue(serverUrl, out var serverPk) == false)
             {
                 serverPk = await GetServerPublicKey(context, serverUrl);
-                _ServersPublicKeys.TryAdd(serverUrl, serverPk);
+                _serverPublicKeys.TryAdd(serverUrl, serverPk);
             }
 
             try
@@ -46,7 +45,7 @@ namespace Raven.Client.Http.OAuth
 
                     var oldServerPk = serverPk;
                     serverPk = await GetServerPublicKey(context, serverUrl);
-                    _ServersPublicKeys.TryUpdate(serverUrl, serverPk, oldServerPk);
+                    _serverPublicKeys.TryUpdate(serverUrl, serverPk, oldServerPk);
                     request = BuildGetTokenRequest(context, apiKey, serverUrl, serverPk, privateKey, publicKey);
                     response = await Client.SendAsync(request);
                 }
@@ -87,7 +86,7 @@ namespace Raven.Client.Http.OAuth
                         fixed (byte* input = cryptTokenBytes)
                         fixed (byte* n = nonceBytes)
                         {
-                            if (Sodium.crypto_box_open_easy(input, input, cryptTokenBytes.Length, n, server_pk, client_sk) != 0)
+                            if (Sodium.crypto_box_open_easy(input, input, (ulong)cryptTokenBytes.Length, n, server_pk, client_sk) != 0)
                                 throw new AuthenticationException(
                                     @"Unable to authenticate api key (message corrupted or not intended for this recipient");
 
@@ -129,16 +128,16 @@ namespace Raven.Client.Http.OAuth
             fixed (byte* bytes = apiSecretBytes)
             {
                 Sodium.crypto_box_keypair(client_pk, client_sk);
-                Sodium.randombytes_buf(n, nonce.Length);
+                Sodium.randombytes_buf(n, (UIntPtr)nonce.Length);
 
 
-                if (Sodium.crypto_generichash(c, (IntPtr)hashLen, bytes, (ulong)apiSecretBytes.Length, client_pk, (IntPtr)publicKey.Length) != 0)
-                    throw new InvalidOperationException("Unable ot generate hash");
+                if (Sodium.crypto_generichash(c, (UIntPtr)hashLen, bytes, (ulong)apiSecretBytes.Length, client_pk, (UIntPtr)publicKey.Length) != 0)
+                    throw new InvalidOperationException("Unable to generate hash");
 
                 if (Sodium.crypto_box_easy(
                         c,
                         c,
-                        hashLen,
+                        (ulong)hashLen,
                         n,
                         server_pk,
                         client_sk

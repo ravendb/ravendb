@@ -47,7 +47,10 @@ namespace Raven.Client.Server.Operations
             public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
                 if (response == null)
+                {
                     ThrowInvalidResponse();
+                    return;
+                }
 
                 BlittableJsonReaderArray names;
                 if (response.TryGet(nameof(DatabasesInfo.Databases), out names) == false)

@@ -148,12 +148,15 @@ namespace Raven.Server.Documents.Indexes
         private volatile bool _hadRealIndexingWorkToDo;
         private Func<bool> _indexValidationStalenessCheck = () => true;
 
+        private string IndexingThreadName => "Indexing of " + Name + " of " + _indexStorage.DocumentDatabase.Name;
+
         private readonly WarnIndexOutputsPerDocument _indexOutputsPerDocumentWarning = new WarnIndexOutputsPerDocument
         {
             MaxNumberOutputsPerDocument = int.MinValue,
             Suggestion = "Please verify this index definition and consider a re-design of your entities or index for better indexing performance"
         };
-        
+
+
         protected Index(long etag, IndexType type, IndexDefinitionBase definition)
         {
             if (etag <= 0)
@@ -446,10 +449,10 @@ namespace Raven.Server.Documents.Indexes
                 SetState(IndexState.Normal);
 
                 _cts = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown);
-
+                
                 _indexingThread = new Thread(ExecuteIndexing)
                 {
-                    Name = "Indexing of " + Name + " of " + _indexStorage.DocumentDatabase.Name,
+                    Name = IndexingThreadName,
                     IsBackground = true
                 };
 
@@ -579,6 +582,9 @@ namespace Raven.Server.Documents.Indexes
             if (_isCompactionInProgress)
                 return true;
 
+            if (Type == IndexType.Faulty)
+                return true;
+
             TransactionOperationContext indexContext;
             using (_contextPool.AllocateOperationContext(out indexContext))
             using (indexContext.OpenReadTransaction())
@@ -590,6 +596,9 @@ namespace Raven.Server.Documents.Indexes
         public virtual (bool isStale, long lastProcessedEtag) GetIndexStats(DocumentsOperationContext databaseContext)
         {
             Debug.Assert(databaseContext.Transaction != null);
+
+            if (Type == IndexType.Faulty)
+                return (true, -1);
 
             if (_isCompactionInProgress)
                 return (true, -1);
@@ -616,6 +625,9 @@ namespace Raven.Server.Documents.Indexes
         protected virtual bool IsStale(DocumentsOperationContext databaseContext,
             TransactionOperationContext indexContext, long? cutoff = null)
         {
+            if (Type == IndexType.Faulty)
+                return true;
+
             foreach (var collection in Collections)
             {
                 var lastDocEtag = GetLastDocumentEtagInCollection(databaseContext, collection);
@@ -687,7 +699,7 @@ namespace Raven.Server.Documents.Indexes
         protected void ExecuteIndexing()
         {
             _priorityChanged = true;
-
+            NativeMemory.EnsureRegistered();
             using (CultureHelper.EnsureInvariantCulture())
             {
                 // if we are starting indexing e.g. manually after failure
@@ -1177,6 +1189,9 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_isCompactionInProgress)
                 return 0;
+
+            if (Type == IndexType.Faulty)
+                return 1;
 
             return _indexStorage.ReadErrorsCount();
         }

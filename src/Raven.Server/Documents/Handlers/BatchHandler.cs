@@ -214,7 +214,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var indexesToCheck = new List<Index>();
 
-            var specifiedIndexesQueryString = HttpContext.Request.Query["waitForSpecificIndexs"];
+            var specifiedIndexesQueryString = HttpContext.Request.Query["waitForSpecificIndex"];
 
             if (specifiedIndexesQueryString.Count > 0)
             {

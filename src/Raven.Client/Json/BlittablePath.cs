@@ -153,7 +153,6 @@ namespace Raven.Client.Json
                         if (errorWhenNoMatch)
                             string.Format(CultureInfo.InvariantCulture, "Property '{0}' not valid on {1}.", current.GetType().Name);
 
-
                         return null;
                     }
                 }
@@ -179,7 +178,6 @@ namespace Raven.Client.Json
                     else
                     {
                         var b = current as BlittableJsonReaderObject;
-
 
                         if (a.Length <= index)
                         {

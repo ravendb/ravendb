@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -9,26 +10,32 @@ namespace Raven.Client.Documents.Commands
 {
     public class PutDocumentCommand : RavenCommand<PutResult>
     {
-        public string Id;
-        public long? Etag;
-        public BlittableJsonReaderObject Document;
-        public JsonOperationContext Context;
+        private readonly string _id;
+        private readonly long? _etag;
+        private readonly BlittableJsonReaderObject _document;
+        private readonly JsonOperationContext _context;
+
+        public PutDocumentCommand(string id, long? etag, BlittableJsonReaderObject document, JsonOperationContext context)
+        {
+            _id = id ?? throw new ArgumentNullException(nameof(id));
+            _etag = etag;
+            _document = document ?? throw new ArgumentNullException(nameof(document));
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+        }
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            EnsureIsNotNullOrEmpty(Id, nameof(Id));
-
-            url = $"{node.Url}/databases/{node.Database}/docs?id={UrlEncode(Id)}";
+            url = $"{node.Url}/databases/{node.Database}/docs?id={UrlEncode(_id)}";
 
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Put,
                 Content = new BlittableJsonContent(stream =>
                 {
-                    Context.Write(stream, Document);
+                    _context.Write(stream, _document);
                 }),
             };
-            AddEtagIfNotNull(Etag, request);
+            AddEtagIfNotNull(_etag, request);
             return request;
         }
 

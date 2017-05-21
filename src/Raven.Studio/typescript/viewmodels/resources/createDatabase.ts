@@ -5,7 +5,7 @@ import databasesManager = require("common/shell/databasesManager");
 import createDatabaseCommand = require("commands/resources/createDatabaseCommand");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 import generateSecretCommand = require("commands/database/secrets/generateSecretCommand");
-import putSecretCommand = require("commands/database/secrets/putSecretCommand");
+import distributeSecretCommand = require("commands/database/secrets/distributeSecretCommand");
 import clusterTopology = require("models/database/cluster/clusterTopology");
 import clusterNode = require("models/database/cluster/clusterNode");
 import copyToClipboard = require("common/copyToClipboard");
@@ -90,11 +90,16 @@ class createDatabase extends dialogViewModelBase {
         // hide advanced if respononding bundle was unchecked
         this.databaseModel.configurationSections.forEach(section => {
             section.enabled.subscribe(enabled => {
-                if (!enabled && this.currentAdvancedSection() === section.name) {
-                    this.currentAdvancedSection(createDatabase.defaultSection);
+                if (section.alwaysEnabled && !enabled) {
+                    // can't disable section which is always enabled
+                    section.enabled(true);
+                    return;
                 }
-                if (enabled) {
+
+                if (section.alwaysEnabled || enabled) {
                     this.currentAdvancedSection(section.name);
+                } else if (!enabled && this.currentAdvancedSection() === section.name) {
+                    this.currentAdvancedSection(createDatabase.defaultSection);
                 }
             });
         });
@@ -158,8 +163,10 @@ class createDatabase extends dialogViewModelBase {
             this.createDatabaseInternal();
         } else {
             const firstInvalidSection = sectionsValidityList.indexOf(false);
-            const sectionToShow = this.databaseModel.configurationSections[firstInvalidSection].name;
-            this.showAdvancedConfigurationFor(sectionToShow);
+            if (firstInvalidSection !== -1) {
+                const sectionToShow = this.databaseModel.configurationSections[firstInvalidSection].name;
+                this.showAdvancedConfigurationFor(sectionToShow);
+            }
         }
     }
 
@@ -180,7 +187,7 @@ class createDatabase extends dialogViewModelBase {
             });
     }
 
-    private createDatabaseInternal(): JQueryPromise<void> {
+    private createDatabaseInternal(): JQueryPromise<Raven.Server.Web.System.DatabasePutResult> {
         this.spinners.create(true);
 
         const databaseDocument = this.databaseModel.toDto();
@@ -203,7 +210,8 @@ class createDatabase extends dialogViewModelBase {
     private configureEncryptionIfNeeded(databaseName: string, encryptionKey: string): JQueryPromise<void> {
         const encryptionSection = this.databaseModel.configurationSections.find(x => x.name === "Encryption");
         if (encryptionSection.enabled()) {
-            return new putSecretCommand(databaseName, encryptionKey, false)
+            const nodeTags = this.databaseModel.replication.nodes().map(x => x.tag());
+            return new distributeSecretCommand(databaseName, encryptionKey, nodeTags)
                 .execute();
         } else {
             return $.Deferred<void>().resolve();

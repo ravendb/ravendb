@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Threading;
 
 namespace Raven.Client.Util
 {
@@ -14,7 +13,7 @@ namespace Raven.Client.Util
         private static readonly SystemTime Instance = new SystemTime();
 
         /// <summary>
-        /// Tests now run in parallel so this is no longer static to mitigate the possibility of getting incorrent results. Use DocumentDatabase.Time instead.
+        /// Tests now run in parallel so this is no longer static to mitigate the possibility of getting incorrect results. Use DocumentDatabase.Time instead.
         /// </summary>
         public Func<DateTime> UtcDateTime;
 

@@ -46,8 +46,8 @@ namespace Raven.Client.Documents.Identity
 
         protected RangeValue Range
         {
-            get { return _range; }
-            set { _range = value; }
+            get => _range;
+            set => _range = value;
         }
 
         [System.Diagnostics.DebuggerDisplay("[{Min}-{Max}]: {Current}")]
@@ -105,16 +105,9 @@ namespace Raven.Client.Documents.Identity
 
         private async Task GetNextRangeAsync()
         {
-            var hiloCommand = new NextHiLoCommand
-            {
-                Tag = _tag,
-                LastBatchSize = _lastBatchSize,
-                LastRangeAt = _lastRangeDate,
-                IdentityPartsSeparator = _identityPartsSeparator,
-                LastRangeMax = Range.Max
-            };
+            var hiloCommand = new NextHiLoCommand(_tag, _lastBatchSize, _lastRangeDate, _identityPartsSeparator, Range.Max);
 
-            var re = _store.GetRequestExecuter(_dbName);
+            var re = _store.GetRequestExecutor(_dbName);
             JsonOperationContext context;
             using (re.ContextPool.AllocateOperationContext(out context))
             {
@@ -129,14 +122,9 @@ namespace Raven.Client.Documents.Identity
 
         public async Task ReturnUnusedRangeAsync()
         {
-            var returnCommand = new HiLoReturnCommand()
-            {
-                Tag = _tag,
-                End = Range.Max,
-                Last = Range.Current
-            };
+            var returnCommand = new HiLoReturnCommand(_tag, Range.Current, Range.Max);
 
-            var re = _store.GetRequestExecuter(_dbName);
+            var re = _store.GetRequestExecutor(_dbName);
             JsonOperationContext context;
             using (re.ContextPool.AllocateOperationContext(out context))
             {

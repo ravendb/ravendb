@@ -643,7 +643,7 @@ namespace FastTests.Server.Replication
 
                 await SetScriptResolutionAsync(store2, "return {Name:docs[0].Name + '123'};", "Users");
                 await SetupReplicationAsync(store1, store2);
-                var db2 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.DefaultDatabase).Result.NotificationCenter;
+                var db2 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database).Result.NotificationCenter;
 
                 Assert.Equal(1, WaitForValue(() => db2.GetAlertCount(), 1));
 

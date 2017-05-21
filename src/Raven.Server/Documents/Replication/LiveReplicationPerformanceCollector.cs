@@ -291,8 +291,7 @@ namespace Raven.Server.Documents.Replication
                 writer.WriteString(Type.ToString());
                 writer.WriteComma();
 
-                writer.WritePropertyName(nameof(Performance));
-                writer.WriteArray(context, Performance, (w, c, p) =>
+                writer.WriteArray(context, nameof(Performance), Performance, (w, c, p) =>
                 {
                     var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(p);
                     w.WriteObject(c.ReadObject(djv, "incoming/replication/performance"));

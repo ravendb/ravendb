@@ -17,12 +17,10 @@ namespace Raven.Client.Documents.Operations
 
         public DeleteByIndexOperation(string indexName, IndexQuery queryToDelete, QueryOperationOptions options = null)
         {
-            if (indexName == null)
-                throw new ArgumentNullException(nameof(indexName));
             if (queryToDelete == null)
                 throw new ArgumentNullException(nameof(queryToDelete));
 
-            _indexName = indexName;
+            _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
             _queryToDelete = queryToDelete;
             _options = options;
         }
@@ -40,12 +38,10 @@ namespace Raven.Client.Documents.Operations
 
             public DeleteByIndexCommand(string indexName, IndexQuery queryToDelete, QueryOperationOptions options = null)
             {
-                if (indexName == null)
-                    throw new ArgumentNullException(nameof(indexName));
                 if (queryToDelete == null)
                     throw new ArgumentNullException(nameof(queryToDelete));
 
-                _indexName = indexName;
+                _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
                 _queryToDelete = queryToDelete;
                 _options = options ?? new QueryOperationOptions();
             }

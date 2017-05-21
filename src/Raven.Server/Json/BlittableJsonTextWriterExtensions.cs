@@ -52,7 +52,8 @@ namespace Raven.Server.Json
 
         public static void WritePerformanceStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<IndexPerformanceStats> stats)
         {
-            writer.WriteArray(context, stats, (w, c, stat) =>
+            writer.WriteStartObject();
+            writer.WriteArray(context, "Results", stats, (w, c, stat) =>
             {
                 w.WriteStartObject();
 
@@ -64,22 +65,22 @@ namespace Raven.Server.Json
                 w.WriteInteger(stat.Etag);
                 w.WriteComma();
 
-                w.WritePropertyName(nameof(stat.Performance));
-                w.WriteArray(c, stat.Performance, (wp, cp, performance) => { wp.WriteIndexingPerformanceStats(context, performance); });
+                w.WriteArray(c, nameof(stat.Performance), stat.Performance, (wp, cp, performance) => { wp.WriteIndexingPerformanceStats(context, performance); });
 
                 w.WriteEndObject();
             });
+            writer.WriteEndObject();
         }
 
         public static void WriteChangeVectorEntry(this BlittableJsonTextWriter writer, ChangeVectorEntry entry)
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName((nameof(entry.Etag)));
+            writer.WritePropertyName(nameof(entry.Etag));
             writer.WriteInteger(entry.Etag);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(entry.DbId)));
+            writer.WritePropertyName(nameof(entry.DbId));
             writer.WriteString(entry.DbId.ToString());
 
             writer.WriteEndObject();
@@ -90,12 +91,12 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName((nameof(explanation.Index)));
-            writer.WriteString((explanation.Index));
+            writer.WritePropertyName(nameof(explanation.Index));
+            writer.WriteString(explanation.Index);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(explanation.Reason)));
-            writer.WriteString((explanation.Reason));
+            writer.WritePropertyName(nameof(explanation.Reason));
+            writer.WriteString(explanation.Reason);
 
             writer.WriteEndObject();
         }
@@ -317,19 +318,19 @@ namespace Raven.Server.Json
             else
                 throw new NotSupportedException($"Cannot write query result of '{type.Name}' type.");
 
-            writer.WritePropertyName((nameof(result.IndexTimestamp)));
-            writer.WriteString((result.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite)));
+            writer.WritePropertyName(nameof(result.IndexTimestamp));
+            writer.WriteString(result.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite));
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(result.LastQueryTime)));
-            writer.WriteString((result.LastQueryTime.ToString(Default.DateTimeFormatsToWrite)));
+            writer.WritePropertyName(nameof(result.LastQueryTime));
+            writer.WriteString(result.LastQueryTime.ToString(Default.DateTimeFormatsToWrite));
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(result.IsStale)));
+            writer.WritePropertyName(nameof(result.IsStale));
             writer.WriteBool(result.IsStale);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(result.ResultEtag)));
+            writer.WritePropertyName(nameof(result.ResultEtag));
             writer.WriteInteger(result.ResultEtag);
 
             if (partial == false)
@@ -348,19 +349,7 @@ namespace Raven.Server.Json
             writer.WriteInteger(queryResult.ResultEtag);
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(queryResult.Terms));
-            var first = true;
-            writer.WriteStartArray();
-            foreach (var term in queryResult.Terms)
-            {
-                if (first == false)
-                    writer.WriteComma();
-
-                first = false;
-
-                writer.WriteString(term);
-            }
-            writer.WriteEndArray();
+            writer.WriteArray(nameof(queryResult.Terms), queryResult.Terms);
 
             writer.WriteEndObject();
         }
@@ -417,97 +406,93 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName((nameof(query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer)));
+            writer.WritePropertyName(nameof(query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer));
             writer.WriteBool(query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(query.CutoffEtag)));
+            writer.WritePropertyName(nameof(query.CutoffEtag));
             if (query.CutoffEtag.HasValue)
                 writer.WriteInteger(query.CutoffEtag.Value);
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(query.DebugOptionGetIndexEntries)));
-            writer.WriteBool(query.DebugOptionGetIndexEntries);
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(query.DefaultField)));
+            writer.WritePropertyName(nameof(query.DefaultField));
             if (query.DefaultField != null)
-                writer.WriteString((query.DefaultField));
+                writer.WriteString(query.DefaultField);
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(query.DefaultOperator)));
-            writer.WriteString((query.DefaultOperator.ToString()));
+            writer.WritePropertyName(nameof(query.DefaultOperator));
+            writer.WriteString(query.DefaultOperator.ToString());
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(query.DisableCaching)));
+            writer.WritePropertyName(nameof(query.DisableCaching));
             writer.WriteBool(query.DisableCaching);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(query.ExplainScores)));
+            writer.WritePropertyName(nameof(query.ExplainScores));
             writer.WriteBool(query.ExplainScores);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(query.HighlighterKeyName)));
+            writer.WritePropertyName(nameof(query.HighlighterKeyName));
             if (query.HighlighterKeyName != null)
-                writer.WriteString((query.HighlighterKeyName));
+                writer.WriteString(query.HighlighterKeyName);
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(query.IsDistinct)));
+            writer.WritePropertyName(nameof(query.IsDistinct));
             writer.WriteBool(query.IsDistinct);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(query.PageSize)));
+            writer.WritePropertyName(nameof(query.PageSize));
             writer.WriteInteger(query.PageSize);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(query.Query)));
+            writer.WritePropertyName(nameof(query.Query));
             if (query.Query != null)
-                writer.WriteString((query.Query));
+                writer.WriteString(query.Query);
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(query.Transformer)));
+            writer.WritePropertyName(nameof(query.Transformer));
             if (query.Transformer != null)
-                writer.WriteString((query.Transformer));
+                writer.WriteString(query.Transformer);
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(query.ShowTimings)));
+            writer.WritePropertyName(nameof(query.ShowTimings));
             writer.WriteBool(query.ShowTimings);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(query.SkipDuplicateChecking)));
+            writer.WritePropertyName(nameof(query.SkipDuplicateChecking));
             writer.WriteBool(query.SkipDuplicateChecking);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(query.Start)));
+            writer.WritePropertyName(nameof(query.Start));
             writer.WriteInteger(query.Start);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(query.WaitForNonStaleResults)));
+            writer.WritePropertyName(nameof(query.WaitForNonStaleResults));
             writer.WriteBool(query.WaitForNonStaleResults);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(query.WaitForNonStaleResultsAsOfNow)));
+            writer.WritePropertyName(nameof(query.WaitForNonStaleResultsAsOfNow));
             writer.WriteBool(query.WaitForNonStaleResultsAsOfNow);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(query.WaitForNonStaleResultsTimeout)));
+            writer.WritePropertyName(nameof(query.WaitForNonStaleResultsTimeout));
             if (query.WaitForNonStaleResultsTimeout.HasValue)
                 writer.WriteString(query.WaitForNonStaleResultsTimeout.Value.ToString());
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(query.DynamicMapReduceFields)));
+            writer.WritePropertyName(nameof(query.DynamicMapReduceFields));
             writer.WriteStartArray();
             var isFirstInternal = true;
             foreach (var field in query.DynamicMapReduceFields)
@@ -519,16 +504,16 @@ namespace Raven.Server.Json
 
                 writer.WriteStartObject();
 
-                writer.WritePropertyName((nameof(field.Name)));
-                writer.WriteString((field.Name));
+                writer.WritePropertyName(nameof(field.Name));
+                writer.WriteString(field.Name);
                 writer.WriteComma();
 
-                writer.WritePropertyName((nameof(field.IsGroupBy)));
+                writer.WritePropertyName(nameof(field.IsGroupBy));
                 writer.WriteBool(field.IsGroupBy);
                 writer.WriteComma();
 
-                writer.WritePropertyName((nameof(field.OperationType)));
-                writer.WriteString((field.OperationType.ToString()));
+                writer.WritePropertyName(nameof(field.OperationType));
+                writer.WriteString(field.OperationType.ToString());
                 writer.WriteComma();
 
                 writer.WriteEndObject();
@@ -536,7 +521,7 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(query.FieldsToFetch)));
+            writer.WritePropertyName(nameof(query.FieldsToFetch));
             if (query.FieldsToFetch != null)
             {
                 writer.WriteStartArray();
@@ -548,7 +533,7 @@ namespace Raven.Server.Json
 
                     isFirstInternal = false;
 
-                    writer.WriteString((field));
+                    writer.WriteString(field);
                 }
 
                 writer.WriteEndArray();
@@ -557,7 +542,7 @@ namespace Raven.Server.Json
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(query.HighlightedFields)));
+            writer.WritePropertyName(nameof(query.HighlightedFields));
             writer.WriteStartArray();
             if (query.HighlightedFields != null)
             {
@@ -571,20 +556,20 @@ namespace Raven.Server.Json
 
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName((nameof(field.Field)));
-                    writer.WriteString((field.Field));
+                    writer.WritePropertyName(nameof(field.Field));
+                    writer.WriteString(field.Field);
                     writer.WriteComma();
 
-                    writer.WritePropertyName((nameof(field.FragmentCount)));
+                    writer.WritePropertyName(nameof(field.FragmentCount));
                     writer.WriteInteger(field.FragmentCount);
                     writer.WriteComma();
 
-                    writer.WritePropertyName((nameof(field.FragmentLength)));
+                    writer.WritePropertyName(nameof(field.FragmentLength));
                     writer.WriteInteger(field.FragmentLength);
                     writer.WriteComma();
 
-                    writer.WritePropertyName((nameof(field.FragmentsField)));
-                    writer.WriteString((field.FragmentsField));
+                    writer.WritePropertyName(nameof(field.FragmentsField));
+                    writer.WriteString(field.FragmentsField);
 
                     writer.WriteEndObject();
                 }
@@ -592,7 +577,7 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(query.HighlighterPostTags)));
+            writer.WritePropertyName(nameof(query.HighlighterPostTags));
             writer.WriteStartArray();
             if (query.HighlighterPostTags != null)
             {
@@ -604,13 +589,13 @@ namespace Raven.Server.Json
 
                     isFirstInternal = false;
 
-                    writer.WriteString((tag));
+                    writer.WriteString(tag);
                 }
             }
             writer.WriteEndArray();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(query.HighlighterPreTags)));
+            writer.WritePropertyName(nameof(query.HighlighterPreTags));
             writer.WriteStartArray();
             if (query.HighlighterPreTags != null)
             {
@@ -622,13 +607,13 @@ namespace Raven.Server.Json
 
                     isFirstInternal = false;
 
-                    writer.WriteString((tag));
+                    writer.WriteString(tag);
                 }
             }
             writer.WriteEndArray();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(query.SortedFields)));
+            writer.WritePropertyName(nameof(query.SortedFields));
             writer.WriteStartArray();
             if (query.SortedFields != null)
             {
@@ -642,11 +627,11 @@ namespace Raven.Server.Json
 
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName((nameof(field.Field)));
-                    writer.WriteString((field.Field));
+                    writer.WritePropertyName(nameof(field.Field));
+                    writer.WriteString(field.Field);
                     writer.WriteComma();
 
-                    writer.WritePropertyName((nameof(field.Descending)));
+                    writer.WritePropertyName(nameof(field.Descending));
                     writer.WriteBool(field.Descending);
                     writer.WriteComma();
 
@@ -656,7 +641,7 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(query.TransformerParameters)));
+            writer.WritePropertyName(nameof(query.TransformerParameters));
             writer.WriteStartObject();
             if (query.TransformerParameters != null)
                 writer.WriteObject(query.TransformerParameters);
@@ -669,57 +654,57 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName((nameof(statistics.CountOfIndexes)));
+            writer.WritePropertyName(nameof(statistics.CountOfIndexes));
             writer.WriteInteger(statistics.CountOfIndexes);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(statistics.CountOfDocuments)));
+            writer.WritePropertyName(nameof(statistics.CountOfDocuments));
             writer.WriteInteger(statistics.CountOfDocuments);
             writer.WriteComma();
 
             if (statistics.CountOfRevisionDocuments.HasValue)
             {
-                writer.WritePropertyName((nameof(statistics.CountOfRevisionDocuments)));
+                writer.WritePropertyName(nameof(statistics.CountOfRevisionDocuments));
                 writer.WriteInteger(statistics.CountOfRevisionDocuments.Value);
                 writer.WriteComma();
             }
 
-            writer.WritePropertyName((nameof(statistics.CountOfAttachments)));
+            writer.WritePropertyName(nameof(statistics.CountOfAttachments));
             writer.WriteInteger(statistics.CountOfAttachments);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(statistics.CountOfUniqueAttachments)));
+            writer.WritePropertyName(nameof(statistics.CountOfUniqueAttachments));
             writer.WriteInteger(statistics.CountOfUniqueAttachments);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(statistics.CountOfTransformers)));
+            writer.WritePropertyName(nameof(statistics.CountOfTransformers));
             writer.WriteInteger(statistics.CountOfTransformers);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(statistics.DatabaseChangeVector)));
+            writer.WritePropertyName(nameof(statistics.DatabaseChangeVector));
             writer.WriteChangeVector(statistics.DatabaseChangeVector);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(statistics.DatabaseId)));
-            writer.WriteString((statistics.DatabaseId.ToString()));
+            writer.WritePropertyName(nameof(statistics.DatabaseId));
+            writer.WriteString(statistics.DatabaseId.ToString());
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(statistics.Is64Bit)));
+            writer.WritePropertyName(nameof(statistics.Is64Bit));
             writer.WriteBool(statistics.Is64Bit);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(statistics.Pager)));
+            writer.WritePropertyName(nameof(statistics.Pager));
             writer.WriteString(statistics.Pager);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(statistics.LastDocEtag)));
+            writer.WritePropertyName(nameof(statistics.LastDocEtag));
             if (statistics.LastDocEtag.HasValue)
                 writer.WriteInteger(statistics.LastDocEtag.Value);
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(statistics.LastChangeVector)));
+            writer.WritePropertyName(nameof(statistics.LastChangeVector));
             if (statistics.LastChangeVector != null)
                 context.Write(writer, statistics.LastChangeVector.ToJson());
             else
@@ -733,7 +718,7 @@ namespace Raven.Server.Json
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(statistics.Indexes)));
+            writer.WritePropertyName(nameof(statistics.Indexes));
             writer.WriteStartArray();
             var isFirstInternal = true;
             foreach (var index in statistics.Indexes)
@@ -745,24 +730,24 @@ namespace Raven.Server.Json
 
                 writer.WriteStartObject();
 
-                writer.WritePropertyName((nameof(index.IsStale)));
+                writer.WritePropertyName(nameof(index.IsStale));
                 writer.WriteBool(index.IsStale);
                 writer.WriteComma();
 
-                writer.WritePropertyName((nameof(index.Name)));
-                writer.WriteString((index.Name));
+                writer.WritePropertyName(nameof(index.Name));
+                writer.WriteString(index.Name);
                 writer.WriteComma();
 
-                writer.WritePropertyName((nameof(index.Etag)));
+                writer.WritePropertyName(nameof(index.Etag));
                 writer.WriteInteger(index.Etag);
                 writer.WriteComma();
 
-                writer.WritePropertyName((nameof(index.LockMode)));
-                writer.WriteString((index.LockMode.ToString()));
+                writer.WritePropertyName(nameof(index.LockMode));
+                writer.WriteString(index.LockMode.ToString());
                 writer.WriteComma();
 
-                writer.WritePropertyName((nameof(index.Priority)));
-                writer.WriteString((index.Priority.ToString()));
+                writer.WritePropertyName(nameof(index.Priority));
+                writer.WriteString(index.Priority.ToString());
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(index.State));
@@ -791,15 +776,15 @@ namespace Raven.Server.Json
             writer.WriteStartObject();
 
             writer.WritePropertyName(nameof(transformerDefinition.Name));
-            writer.WriteString((transformerDefinition.Name));
+            writer.WriteString(transformerDefinition.Name);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(transformerDefinition.TransformResults));
-            writer.WriteString((transformerDefinition.TransformResults));
+            writer.WriteString(transformerDefinition.TransformResults);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(transformerDefinition.LockMode));
-            writer.WriteString((transformerDefinition.LockMode.ToString()));
+            writer.WriteString(transformerDefinition.LockMode.ToString());
 
             writer.WriteEndObject();
         }
@@ -808,16 +793,16 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName((nameof(indexDefinition.Name)));
-            writer.WriteString((indexDefinition.Name));
+            writer.WritePropertyName(nameof(indexDefinition.Name));
+            writer.WriteString(indexDefinition.Name);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(indexDefinition.Etag)));
+            writer.WritePropertyName(nameof(indexDefinition.Etag));
             writer.WriteInteger(indexDefinition.Etag);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(indexDefinition.Type)));
-            writer.WriteString((indexDefinition.Type.ToString()));
+            writer.WritePropertyName(nameof(indexDefinition.Type));
+            writer.WriteString(indexDefinition.Type.ToString());
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(indexDefinition.LockMode));
@@ -834,8 +819,8 @@ namespace Raven.Server.Json
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(indexDefinition.OutputReduceToCollection)));
-            writer.WriteString((indexDefinition.OutputReduceToCollection));
+            writer.WritePropertyName(nameof(indexDefinition.OutputReduceToCollection));
+            writer.WriteString(indexDefinition.OutputReduceToCollection);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(indexDefinition.Configuration));
@@ -854,18 +839,18 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(indexDefinition.IsTestIndex)));
+            writer.WritePropertyName(nameof(indexDefinition.IsTestIndex));
             writer.WriteBool(indexDefinition.IsTestIndex);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(indexDefinition.Reduce)));
+            writer.WritePropertyName(nameof(indexDefinition.Reduce));
             if (string.IsNullOrWhiteSpace(indexDefinition.Reduce) == false)
-                writer.WriteString((indexDefinition.Reduce));
+                writer.WriteString(indexDefinition.Reduce);
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(indexDefinition.Maps)));
+            writer.WritePropertyName(nameof(indexDefinition.Maps));
             writer.WriteStartArray();
             isFirstInternal = true;
             foreach (var map in indexDefinition.Maps)
@@ -874,12 +859,12 @@ namespace Raven.Server.Json
                     writer.WriteComma();
 
                 isFirstInternal = false;
-                writer.WriteString((map));
+                writer.WriteString(map);
             }
             writer.WriteEndArray();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(indexDefinition.Fields)));
+            writer.WritePropertyName(nameof(indexDefinition.Fields));
             writer.WriteStartObject();
             isFirstInternal = true;
             foreach (var kvp in indexDefinition.Fields)
@@ -888,7 +873,7 @@ namespace Raven.Server.Json
                     writer.WriteComma();
 
                 isFirstInternal = false;
-                writer.WritePropertyName((kvp.Key));
+                writer.WritePropertyName(kvp.Key);
                 if (kvp.Value != null)
                     writer.WriteIndexFieldOptions(context, kvp.Value, removeAnalyzers);
                 else
@@ -978,88 +963,88 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName((nameof(options.Analyzer)));
+            writer.WritePropertyName(nameof(options.Analyzer));
             if (string.IsNullOrWhiteSpace(options.Analyzer) == false && !removeAnalyzers)
-                writer.WriteString((options.Analyzer));
+                writer.WriteString(options.Analyzer);
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(options.Indexing)));
+            writer.WritePropertyName(nameof(options.Indexing));
             if (options.Indexing.HasValue)
-                writer.WriteString((options.Indexing.ToString()));
+                writer.WriteString(options.Indexing.ToString());
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(options.Sort)));
+            writer.WritePropertyName(nameof(options.Sort));
             if (options.Sort.HasValue)
-                writer.WriteString((options.Sort.ToString()));
+                writer.WriteString(options.Sort.ToString());
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(options.Storage)));
+            writer.WritePropertyName(nameof(options.Storage));
             if (options.Storage.HasValue)
-                writer.WriteString((options.Storage.ToString()));
+                writer.WriteString(options.Storage.ToString());
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(options.Suggestions)));
+            writer.WritePropertyName(nameof(options.Suggestions));
             if (options.Suggestions.HasValue)
                 writer.WriteBool(options.Suggestions.Value);
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(options.TermVector)));
+            writer.WritePropertyName(nameof(options.TermVector));
             if (options.TermVector.HasValue)
-                writer.WriteString((options.TermVector.ToString()));
+                writer.WriteString(options.TermVector.ToString());
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(options.Spatial)));
+            writer.WritePropertyName(nameof(options.Spatial));
             if (options.Spatial != null)
             {
                 writer.WriteStartObject();
 
-                writer.WritePropertyName((nameof(options.Spatial.Type)));
-                writer.WriteString((options.Spatial.Type.ToString()));
+                writer.WritePropertyName(nameof(options.Spatial.Type));
+                writer.WriteString(options.Spatial.Type.ToString());
                 writer.WriteComma();
 
-                writer.WritePropertyName((nameof(options.Spatial.MaxTreeLevel)));
+                writer.WritePropertyName(nameof(options.Spatial.MaxTreeLevel));
                 writer.WriteInteger(options.Spatial.MaxTreeLevel);
                 writer.WriteComma();
 
-                writer.WritePropertyName((nameof(options.Spatial.MaxX)));
+                writer.WritePropertyName(nameof(options.Spatial.MaxX));
                 LazyStringValue lazyStringValue;
                 using (lazyStringValue = context.GetLazyString(CharExtensions.ToInvariantString(options.Spatial.MaxX)))
                     writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
                 writer.WriteComma();
 
-                writer.WritePropertyName((nameof(options.Spatial.MaxY)));
+                writer.WritePropertyName(nameof(options.Spatial.MaxY));
                 using (lazyStringValue = context.GetLazyString(CharExtensions.ToInvariantString(options.Spatial.MaxY)))
                     writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
                 writer.WriteComma();
 
-                writer.WritePropertyName((nameof(options.Spatial.MinX)));
+                writer.WritePropertyName(nameof(options.Spatial.MinX));
                 using (lazyStringValue = context.GetLazyString(CharExtensions.ToInvariantString(options.Spatial.MinX)))
                     writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
                 writer.WriteComma();
 
-                writer.WritePropertyName((nameof(options.Spatial.MinY)));
+                writer.WritePropertyName(nameof(options.Spatial.MinY));
                 using (lazyStringValue = context.GetLazyString(CharExtensions.ToInvariantString(options.Spatial.MinY)))
                     writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
                 writer.WriteComma();
 
-                writer.WritePropertyName((nameof(options.Spatial.Strategy)));
-                writer.WriteString((options.Spatial.Strategy.ToString()));
+                writer.WritePropertyName(nameof(options.Spatial.Strategy));
+                writer.WriteString(options.Spatial.Strategy.ToString());
                 writer.WriteComma();
 
-                writer.WritePropertyName((nameof(options.Spatial.Units)));
-                writer.WriteString((options.Spatial.Units.ToString()));
+                writer.WritePropertyName(nameof(options.Spatial.Units));
+                writer.WriteString(options.Spatial.Units.ToString());
 
                 writer.WriteEndObject();
             }
@@ -1295,6 +1280,9 @@ namespace Raven.Server.Json
 
         public static void WriteReduceTrees(this BlittableJsonTextWriter writer, IEnumerable<ReduceTree> trees)
         {
+            writer.WriteStartObject();
+            writer.WritePropertyName("Results");
+
             writer.WriteStartArray();
 
             var first = true;
@@ -1335,6 +1323,8 @@ namespace Raven.Server.Json
             }
 
             writer.WriteEndArray();
+
+            writer.WriteEndObject();
         }
 
         public static void WriteTreePagesRecursively(this BlittableJsonTextWriter writer, IEnumerable<ReduceTreePage> pages)
@@ -1404,44 +1394,5 @@ namespace Raven.Server.Json
                 first = false;
             }
         }
-
-        public static void WriteResults<T>(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<T> items, Action<BlittableJsonTextWriter, JsonOperationContext, T> onWrite)
-        {
-            writer.WritePropertyName("Results");
-            writer.WriteArray(context, items, onWrite);
-        }
-
-        public static void WriteArray<T>(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<T> items, Action<BlittableJsonTextWriter, JsonOperationContext, T> onWrite)
-        {
-            writer.WriteStartArray();
-            var first = true;
-            foreach (var item in items)
-            {
-                if (first == false)
-                    writer.WriteComma();
-
-                first = false;
-
-                onWrite(writer, context, item);
-            }
-
-            writer.WriteEndArray();
-        }
-
-        public static void WriteArray(this BlittableJsonTextWriter writer, IEnumerable<LazyStringValue> items)
-        {
-            writer.WriteStartArray();
-            var first = true;
-            foreach (var item in items)
-            {
-                if (first == false)
-                    writer.WriteComma();
-                first = false;
-
-                writer.WriteString(item);
-            }
-            writer.WriteEndArray();
-        }
-
     }
 }

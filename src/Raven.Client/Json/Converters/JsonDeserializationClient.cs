@@ -1,20 +1,17 @@
 ﻿using System;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.MoreLikeThis;
-using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Http.OAuth;
-using Raven.Client.Server;
 using Raven.Client.Server.Commands;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.Tcp;
@@ -52,7 +49,7 @@ namespace Raven.Client.Json.Converters
         public static readonly Func<BlittableJsonReaderObject, ModifyDatabaseWatchersResult> ModifyDatabaseWatchersResult = GenerateJsonDeserializationRoutine<ModifyDatabaseWatchersResult>();
         public static readonly Func<BlittableJsonReaderObject, ModifySolverResult> ModifySolverResult = GenerateJsonDeserializationRoutine<ModifySolverResult>();
 
-        public static readonly Func<BlittableJsonReaderObject, DisableDatabaseToggleResult> DisableResoureceToggleResult = GenerateJsonDeserializationRoutine<DisableDatabaseToggleResult>();
+        public static readonly Func<BlittableJsonReaderObject, DisableDatabaseToggleResult> DisableResourceToggleResult = GenerateJsonDeserializationRoutine<DisableDatabaseToggleResult>();
 
         public static readonly Func<BlittableJsonReaderObject, BlittableArrayResult> BlittableArrayResult = GenerateJsonDeserializationRoutine<BlittableArrayResult>();
 

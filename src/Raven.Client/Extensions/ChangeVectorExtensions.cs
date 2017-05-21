@@ -61,11 +61,11 @@ namespace Raven.Client.Extensions
             return false;
         }
 
-        private static int IndexOf(Guid DbId, ChangeVectorEntry[] v)
+        private static int IndexOf(Guid dbId, ChangeVectorEntry[] v)
         {
             for (int i = 0; i < v.Length; i++)
             {
-                if (v[i].DbId == DbId)
+                if (v[i].DbId == dbId)
                     return i;
             }
             return -1;

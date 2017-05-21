@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Xunit;
@@ -16,7 +17,7 @@ namespace SlowTests.Server.Replication
         {
             if (useSsl)
             {
-                DoNotReuseServer(new global::Sparrow.Collections.LockFree.ConcurrentDictionary<string, string> { { "Raven/UseSsl", "true" } });
+                DoNotReuseServer(new ConcurrentDictionary<string, string> { ["Raven/UseSsl"] = "true" });
             }
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";

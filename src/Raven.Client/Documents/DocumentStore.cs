@@ -4,14 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Threading.Tasks;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
@@ -20,6 +14,11 @@ using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Server;
 using Raven.Client.Util;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace Raven.Client.Documents
 {
@@ -32,13 +31,13 @@ namespace Raven.Client.Documents
 
         private readonly ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges> _observeChangesAndEvictItemsFromCacheForDatabases = new ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges>();
 
-        private readonly ConcurrentDictionary<string, Lazy<RequestExecutor>> _requestExecuters = new ConcurrentDictionary<string, Lazy<RequestExecutor>>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, Lazy<RequestExecutor>> _requestExecutors = new ConcurrentDictionary<string, Lazy<RequestExecutor>>(StringComparer.OrdinalIgnoreCase);
 
         private AsyncMultiDatabaseHiLoKeyGenerator _asyncMultiDbHiLo;
 
-        private AdminOperationExecuter _adminOperationExecuter;
+        private AdminOperationExecutor _adminOperationExecutor;
 
-        private OperationExecuter _operationExecuter;
+        private OperationExecutor _operationExecutor;
 
         private DatabaseSmuggler _smuggler;
 
@@ -56,11 +55,11 @@ namespace Raven.Client.Documents
                     return _identifier;
                 if (Url == null)
                     return null;
-                if (DefaultDatabase != null)
-                    return Url + " (DB: " + DefaultDatabase + ")";
+                if (Database != null)
+                    return Url + " (DB: " + Database + ")";
                 return Url;
             }
-            set { _identifier = value; }
+            set => _identifier = value;
         }
 
         /// <summary>
@@ -81,8 +80,8 @@ namespace Raven.Client.Documents
         {
             if (string.IsNullOrEmpty(options.Url) == false)
                 Url = options.Url;
-            if (string.IsNullOrEmpty(options.DefaultDatabase) == false)
-                DefaultDatabase = options.DefaultDatabase;
+            if (string.IsNullOrEmpty(options.Database) == false)
+                Database = options.Database;
             if (string.IsNullOrEmpty(options.ApiKey) == false)
                 ApiKey = options.ApiKey;
             if (options.FailoverServers != null)
@@ -103,18 +102,9 @@ namespace Raven.Client.Documents
                 observeChangesAndEvictItemsFromCacheForDatabase.Value.Dispose();
 
             var tasks = new List<Task>();
-            foreach (var databaseChange in _databaseChanges)
+            foreach (var changes in _databaseChanges)
             {
-                //var remoteDatabaseChanges = databaseChange.Value as RemoteDatabaseChanges;
-                //TODO iftah
-                /*if (remoteDatabaseChanges != null)
-                {
-                    tasks.Add(remoteDatabaseChanges.DisposeAsync());
-                }
-                else
-                {
-                    using (databaseChange.Value as IDisposable) { }
-                }*/
+                using (changes.Value) { }
             }
 
             // try to wait until all the async disposables are completed
@@ -141,11 +131,11 @@ namespace Raven.Client.Documents
             WasDisposed = true;
             AfterDispose?.Invoke(this, EventArgs.Empty);
 
-            foreach (var kvp in _requestExecuters)
+            foreach (var kvp in _requestExecutors)
             {
                 if(kvp.Value.IsValueCreated == false)
                     continue;
-                ;
+                
                 kvp.Value.Value.Dispose();
             }
         }
@@ -176,59 +166,49 @@ namespace Raven.Client.Documents
             EnsureNotClosed();
 
             var sessionId = Guid.NewGuid();
-            var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
-            var requestExecuter = GetRequestExecuter(databaseName);
-            var session = new DocumentSession(databaseName, this, sessionId, requestExecuter);
+            var databaseName = options.Database ?? Database ?? MultiDatabase.GetDatabaseName(Url);
+            var requestExecutor = GetRequestExecutor(databaseName);
+            var session = new DocumentSession(databaseName, this, sessionId, requestExecutor);
             RegisterEvents(session);
             // AfterSessionCreated(session);
             return session;
         }
 
-        public async Task ForceUpdateTopologyFor(string databaseName = null)
+        public Task ForceUpdateTopologyFor(string databaseName = null)
         {
-            var requestExecutor = GetRequestExecuter(databaseName);
-            await requestExecutor.UpdateTopologyAsync();
+            var requestExecutor = GetRequestExecutor(databaseName);
+            return requestExecutor.UpdateTopologyAsync();
         }
 
-        public override RequestExecutor GetRequestExecuter(string databaseName = null)
+        public override RequestExecutor GetRequestExecutor(string database = null)
         {
-            if (databaseName == null)
-                databaseName = DefaultDatabase;
+            if (database == null)
+                database = Database;
 
             Lazy<RequestExecutor> lazy;
-            if (_requestExecuters.TryGetValue(databaseName, out lazy))
+            if (_requestExecutors.TryGetValue(database, out lazy))
                 return lazy.Value;
 
-            lazy = new Lazy<RequestExecutor>(() => RequestExecutor.Create(Url, databaseName, ApiKey));
+            lazy = new Lazy<RequestExecutor>(() => RequestExecutor.Create(Url, database, ApiKey));
 
-            lazy = _requestExecuters.GetOrAdd(databaseName, lazy);
+            lazy = _requestExecutors.GetOrAdd(database, lazy);
 
             return lazy.Value;
-        }
-
-        public override IDocumentStore Initialize()
-        {
-            return Initialize(true);
         }
 
         /// <summary>
         /// Initializes this instance.
         /// </summary>
         /// <returns></returns>
-        public IDocumentStore Initialize(bool ensureDatabaseExists)
+        public override IDocumentStore Initialize()
         {
             if (Initialized)
                 return this;
 
             AssertValidConfiguration();
 
-            //jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandlerFactory, Conventions.AcceptGzipContent, Conventions.AuthenticationScheme);
-
             try
             {
-                // TODO iftah
-                //SecurityExtensions.InitializeSecurity(Conventions, jsonRequestFactory, Url, Credentials);
-
                 if (Conventions.AsyncDocumentIdGenerator == null) // don't overwrite what the user is doing
                 {
                     var generator = new AsyncMultiDatabaseHiLoKeyGenerator(this, Conventions);
@@ -247,19 +227,16 @@ namespace Raven.Client.Documents
             return this;
         }
 
-        public Task<string> Generate(string dbName, DocumentConventions conventions,
-                                                     object entity)
-        {
-            throw new NotImplementedException();
-        }
-
         /// <summary>
         /// validate the configuration for the document store
         /// </summary>
         protected virtual void AssertValidConfiguration()
         {
             if (string.IsNullOrEmpty(Url))
-                throw new ArgumentException("Document store URL cannot be empty", nameof(Url));
+                throw new ArgumentException($"Document store {nameof(Url)} cannot be empty", nameof(Url));
+
+            if (string.IsNullOrEmpty(Database))
+                throw new ArgumentException($"Document store {nameof(Database)} cannot be empty", nameof(Database));
         }
 
         /// <summary>
@@ -274,7 +251,7 @@ namespace Raven.Client.Documents
         {
             //WIP
             AssertInitialized();
-            var re = GetRequestExecuter(DefaultDatabase);
+            var re = GetRequestExecutor(Database);
             if (re.AggressiveCaching.Value != null)
             {
                 var old = re.AggressiveCaching.Value.Duration;
@@ -291,30 +268,12 @@ namespace Raven.Client.Documents
         {
             AssertInitialized();
 
-            return _databaseChanges.GetOrAdd(database ?? DefaultDatabase, CreateDatabaseChanges);
+            return _databaseChanges.GetOrAdd(database ?? Database, CreateDatabaseChanges);
         }
 
         protected virtual IDatabaseChanges CreateDatabaseChanges(string database)
         {
-            throw new NotImplementedException();
-            /* if (string.IsNullOrEmpty(Url))
-                 throw new InvalidOperationException("Changes API requires usage of server/client");
-
-             database = database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
-
-             var dbUrl = MultiDatabase.GetRootDatabaseUrl(Url);
-             if (string.IsNullOrEmpty(database) == false)
-                 dbUrl = dbUrl + "/databases/" + database;
-
-             using (NoSynchronizationContext.Scope())
-             {
-                 return new RemoteDatabaseChanges(dbUrl,
-                     ApiKey,
-                     Credentials,
-                     Conventions,
-                     () => databaseChanges.Remove(database),
-                     (key, etag, conflictIds, metadata) => ((AsyncServerClient) AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync(key, etag, conflictIds, metadata));
-             }*/
+            return new DatabaseChanges(GetRequestExecutor(database), Conventions, database, () => _databaseChanges.Remove(database));
         }
 
         /// <summary>
@@ -328,7 +287,7 @@ namespace Raven.Client.Documents
         /// </remarks>
         public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("This feature is not yet implemented");
 
             /*AssertInitialized();
 
@@ -346,37 +305,15 @@ namespace Raven.Client.Documents
             });*/
         }
 
-        /// <summary>
-        /// Setup the WebRequest timeout for the session
-        /// </summary>
-        /// <param name="timeout">Specify the timeout duration</param>
-        /// <remarks>
-        /// Sets the timeout for the JsonRequest.  Scoped to the Current Thread.
-        /// </remarks>
-        public override IDisposable SetRequestsTimeoutFor(TimeSpan timeout)
-        {
-            throw new NotImplementedException();
-
-            /*AssertInitialized();
-
-            var old = jsonRequestFactory.RequestTimeout;
-            jsonRequestFactory.RequestTimeout = timeout;
-
-            return new DisposableAction(() =>
-            {
-                jsonRequestFactory.RequestTimeout = old;
-            });*/
-        }
-
         private AsyncDocumentSession OpenAsyncSessionInternal(SessionOptions options)
         {
             AssertInitialized();
             EnsureNotClosed();
 
             var sessionId = Guid.NewGuid();
-            var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
-            var requestExecuter = GetRequestExecuter(databaseName);
-            var session = new AsyncDocumentSession(databaseName, this, requestExecuter, sessionId);
+            var databaseName = options.Database ?? Database ?? MultiDatabase.GetDatabaseName(Url);
+            var requestExecutor = GetRequestExecutor(databaseName);
+            var session = new AsyncDocumentSession(databaseName, this, requestExecutor, sessionId);
             //AfterSessionCreated(session);
             return session;
         }
@@ -385,11 +322,11 @@ namespace Raven.Client.Documents
         /// Opens the async session.
         /// </summary>
         /// <returns></returns>
-        public override IAsyncDocumentSession OpenAsyncSession(string databaseName)
+        public override IAsyncDocumentSession OpenAsyncSession(string database)
         {
             return OpenAsyncSession(new SessionOptions
             {
-                Database = databaseName
+                Database = database
             });
         }
 
@@ -412,18 +349,18 @@ namespace Raven.Client.Documents
 
         public DatabaseSmuggler Smuggler => _smuggler ?? (_smuggler = new DatabaseSmuggler(this));
 
-        public override AdminOperationExecuter Admin => _adminOperationExecuter ?? (_adminOperationExecuter = new AdminOperationExecuter(this));
+        public override AdminOperationExecutor Admin => _adminOperationExecutor ?? (_adminOperationExecutor = new AdminOperationExecutor(this));
 
-        public override OperationExecuter Operations => _operationExecuter ?? (_operationExecuter = new OperationExecuter(this));
+        public override OperationExecutor Operations => _operationExecutor ?? (_operationExecutor = new OperationExecutor(this));
 
         public override BulkInsertOperation BulkInsert(string database = null)
         {
-            return new BulkInsertOperation(database ?? DefaultDatabase, this);
+            return new BulkInsertOperation(database ?? Database, this);
         }
 
         protected override void AfterSessionCreated(InMemoryDocumentSessionOperations session)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("This feature is not yet implemented");
             /*if (Conventions.ShouldAggressiveCacheTrackChanges && aggressiveCachingUsed)
             {
                 var databaseName = session.DatabaseName ?? Constants.SystemDatabase;
@@ -436,9 +373,9 @@ namespace Raven.Client.Documents
             base.AfterSessionCreated(session);*/
         }
 
-        public Task GetObserveChangesAndEvictItemsFromCacheTask(string database = null)
+        internal Task GetObserveChangesAndEvictItemsFromCacheTask(string database = null)
         {
-            var databaseName = database ?? MultiDatabase.GetDatabaseName(Url) ?? Constants.Documents.SystemDatabase;
+            var databaseName = database ?? Database ?? MultiDatabase.GetDatabaseName(Url);
             var changes = _observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(databaseName);
 
             return changes == null ? Task.CompletedTask : changes.ConnectionTask;

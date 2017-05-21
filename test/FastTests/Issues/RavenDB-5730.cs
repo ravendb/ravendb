@@ -3,6 +3,7 @@ using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
+using Raven.Client.Server;
 using Xunit;
 
 namespace FastTests.Issues
@@ -54,7 +55,7 @@ namespace FastTests.Issues
             {
                 new DatabaseWatcher
                 {
-                    Database = storeB.DefaultDatabase,
+                    Database = storeB.Database,
                     Url = url,
                 }
             };

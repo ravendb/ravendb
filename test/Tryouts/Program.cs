@@ -2,7 +2,11 @@
 using System.Diagnostics;
 using FastTests.Client.Indexing;
 using FastTests.Client.Subscriptions;
+using FastTests.Server.Documents;
 using FastTests.Server.Documents.Queries;
+using SlowTests.Issues;
+using SlowTests.MailingList;
+using SlowTests.Tests.Faceted;
 
 namespace Tryouts
 {
@@ -13,42 +17,17 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
 
-            for (int i = 0; i < 199; i++)
+            for (int i = 0; i < 800; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new FastTests.Server.Documents.Queries.WaitingForNonStaleResults())
+
+                using (var a = new FastTests.Client.IndexesDeleteByIndexTests())
                 {
-                    a.Throws_if_exceeds_timeout();
+                    a.Delete_By_Index_Async().Wait();
                 }
             }
-            /*using (var a = new AttachmentsSession())
-            {
-                a.PutAttachmentAndDeleteShouldThrow();
-            }
-            using (var a = new CRUD())
-            {
-                a.CRUD_Operations_with_what_changed();
-            }
-            using (var a = new AttachmentsReplication())
-            {
-                a.PutSameAttachmentsDifferentContentTypeShouldConflict().Wait();
-            }
-            using (var a = new ReplicationOfConflicts())
-            {
-                a.ReplicateTombstoneConflict().Wait();
-            }
-            using (var a = new AttachmentsSession())
-            {
-                a.PutAttachments();
-            }
-            using (var a = new FirstClassPatch())
-            {
-                a.CanPatchAndModify();
-            }
-            using (var a = new Advanced())
-            {
-                a.CanUseDefer();
-            }*/
+
+            
         }
     }
 }

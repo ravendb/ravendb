@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
@@ -10,7 +11,6 @@ using Raven.Client.Server.Commands;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Json;
 using Raven.Server.Utils;
-using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Utils;
@@ -40,10 +40,10 @@ namespace Raven.Server.ServerWide.Maintance
 
         public async Task AddToCluster(string clusterTag, string url)
         {
-            var connectionInfo = await ReplicationUtils.GetTcpInfoAsync(MultiDatabase.GetRootDatabaseUrl(url), null, null);
+            var connectionInfo = await ReplicationUtils.GetTcpInfoAsync(MultiDatabase.GetRootDatabaseUrl(url), null, null, "Supervisor");
 
             var clusterNode = new ClusterNode(clusterTag, connectionInfo, _contextPool, this, _cts.Token);
-            _clusterNodes.Add(clusterTag, clusterNode);
+            _clusterNodes[clusterTag] = clusterNode;
             var task = clusterNode.StartListening();
             GC.KeepAlive(task); // we are explicitly not waiting on this task
         }

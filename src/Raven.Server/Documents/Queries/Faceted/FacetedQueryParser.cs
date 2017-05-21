@@ -11,6 +11,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Server.Json;
+using Raven.Server.Web;
 using Sparrow;
 using Sparrow.Json;
 using Constants = Raven.Client.Constants;
@@ -182,23 +183,21 @@ namespace Raven.Server.Documents.Queries.Faceted
         {
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(facetsArrayAsString)))
             {
-                var jsonParseResult = await context.ParseArrayToMemoryAsync(stream, "facets", BlittableJsonDocumentBuilder.UsageMode.None);
-
-                using (jsonParseResult.Item2)
-                {
-                    return ParseFromJson(jsonParseResult.Item1);
-                }
+                var input = await context.ReadForMemoryAsync(stream, "facets");
+                if (input.TryGet("Facets", out BlittableJsonReaderArray array) == false)
+                    RequestHandler.ThrowRequiredPropertyNameInRequset("Facets");
+                return ParseFromJson(array);
             }
         }
 
-        public static unsafe KeyValuePair<List<Facet>, long> ParseFromJson(BlittableJsonReaderArray json)
+        public static unsafe KeyValuePair<List<Facet>, long> ParseFromJson(BlittableJsonReaderArray array)
         {
             var results = new List<Facet>();
 
-            foreach (BlittableJsonReaderObject facetAsJson in json)
+            foreach (BlittableJsonReaderObject facetAsJson in array)
                 results.Add(JsonDeserializationServer.Facet(facetAsJson));
 
-            return new KeyValuePair<List<Facet>, long>(results, Hashing.XXHash32.Calculate(json.Parent.BasePointer, json.Parent.Size));
+            return new KeyValuePair<List<Facet>, long>(results, Hashing.XXHash32.Calculate(array.Parent.BasePointer, array.Parent.Size));
         }
     }
 }

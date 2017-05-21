@@ -2,16 +2,12 @@
 using System.Collections.Generic;
 using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Replication;
-using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Server.Expiration;
 using Raven.Client.Server.PeriodicExport;
 using Raven.Client.Server.Versioning;
 
-
-namespace Raven.Client.Documents
+namespace Raven.Client.Server
 {
     // The DatabaseRecord resides in EVERY server/node inside the cluster regardless if the db is actually within the node 
     public class DatabaseRecord

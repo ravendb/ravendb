@@ -28,24 +28,23 @@ namespace Raven.Client.Documents.Indexes
         private static readonly string[] LiteralEscapedSymbols = { @"\'", @"\""", @"\\", @"\a", @"\b", @"\f", @"\n", @"\r", @"\t", @"\v" };
 
         private readonly StringBuilder _out = new StringBuilder();
-        private readonly DocumentConventions convention;
-        private readonly Type queryRoot;
-        private readonly string queryRootName;
-        private readonly bool translateIdentityProperty;
+        private readonly DocumentConventions _convention;
+        private readonly Type _queryRoot;
+        private readonly string _queryRootName;
+        private readonly bool _translateIdentityProperty;
         private ExpressionOperatorPrecedence _currentPrecedence;
         private Dictionary<object, int> _ids;
         private readonly Dictionary<string, object> _duplicatedParams = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-        private bool castLambdas;
-
+        private bool _castLambdas;
 
         // Methods
         private ExpressionStringBuilder(DocumentConventions convention, bool translateIdentityProperty, Type queryRoot,
                                         string queryRootName)
         {
-            this.convention = convention;
-            this.translateIdentityProperty = translateIdentityProperty;
-            this.queryRoot = queryRoot;
-            this.queryRootName = queryRootName;
+            _convention = convention;
+            _translateIdentityProperty = translateIdentityProperty;
+            _queryRoot = queryRoot;
+            _queryRootName = queryRootName;
         }
 
         private int GetLabelId(LabelTarget label)
@@ -116,7 +115,7 @@ namespace Raven.Client.Documents.Indexes
 
         internal string MemberBindingToString(MemberBinding node)
         {
-            var builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot, queryRootName);
+            var builder = new ExpressionStringBuilder(_convention, _translateIdentityProperty, _queryRoot, _queryRootName);
             builder.VisitMemberBinding(node);
             return builder.ToString();
         }
@@ -140,10 +139,10 @@ namespace Raven.Client.Documents.Indexes
             }
             if (instance != null)
             {
-                if (ShouldParantesisMemberExpression(instance))
+                if (ShouldParenthesisMemberExpression(instance))
                     Out("(");
                 Visit(instance);
-                if (ShouldParantesisMemberExpression(instance))
+                if (ShouldParenthesisMemberExpression(instance))
                     Out(")");
                 Out("." + name);
             }
@@ -162,7 +161,7 @@ namespace Raven.Client.Documents.Indexes
             }
         }
 
-        private static bool ShouldParantesisMemberExpression(Expression instance)
+        private static bool ShouldParenthesisMemberExpression(Expression instance)
         {
             switch (instance.NodeType)
             {
@@ -176,17 +175,17 @@ namespace Raven.Client.Documents.Indexes
 
         private bool TranslateToDocumentId(Expression instance, MemberInfo member, Type exprType)
         {
-            if (translateIdentityProperty == false)
+            if (_translateIdentityProperty == false)
                 return false;
 
-            if (convention.GetIdentityProperty(member.DeclaringType) != member)
+            if (_convention.GetIdentityProperty(member.DeclaringType) != member)
                 return false;
 
             // only translate from the root type or derivatives
-            if (queryRoot != null && (exprType.IsAssignableFrom(queryRoot) == false))
+            if (_queryRoot != null && (exprType.IsAssignableFrom(_queryRoot) == false))
                 return false;
 
-            if (queryRootName == null)
+            if (_queryRootName == null)
                 return true; // just in case, shouldn't really happen
 
             // only translate from the root alias
@@ -209,7 +208,7 @@ namespace Raven.Client.Documents.Indexes
                         {
                             memberName = parameterExpression.Name;
                         }
-                        return memberName == queryRootName;
+                        return memberName == _queryRootName;
                     default:
                         return false;
                 }
@@ -247,7 +246,7 @@ namespace Raven.Client.Documents.Indexes
                         default:
                             continue;
                     }
-                    if (keywordsInCSharp.Contains(propName))
+                    if (KeywordsInCSharp.Contains(propName))
                         return '@' + propName;
                     return propName ?? name;
                 }
@@ -266,7 +265,7 @@ namespace Raven.Client.Documents.Indexes
 
         internal string SwitchCaseToString(SwitchCase node)
         {
-            var builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot, queryRootName);
+            var builder = new ExpressionStringBuilder(_convention, _translateIdentityProperty, _queryRoot, _queryRootName);
             builder.VisitSwitchCase(node);
             return builder.ToString();
         }
@@ -610,7 +609,7 @@ namespace Raven.Client.Documents.Indexes
                     }
                     else
                     {
-                        right = convention.SaveEnumsAsIntegers
+                        right = _convention.SaveEnumsAsIntegers
                                     ? Expression.Constant(Convert.ToInt32(constantExpression.Value))
                                     : Expression.Constant(Enum.ToObject(enumType, constantExpression.Value).ToString());
 
@@ -758,7 +757,7 @@ namespace Raven.Client.Documents.Indexes
                     Out(s);
                     return node;
                 }
-                if (convention.SaveEnumsAsIntegers)
+                if (_convention.SaveEnumsAsIntegers)
                     Out((Convert.ToInt32(node.Value)).ToString());
                 else
                 {
@@ -1165,7 +1164,7 @@ namespace Raven.Client.Documents.Indexes
             }
             Out(" => ");
             var body = node.Body;
-            if (castLambdas)
+            if (_castLambdas)
             {
                 switch (body.NodeType)
                 {
@@ -1398,7 +1397,7 @@ namespace Raven.Client.Documents.Indexes
                     if (methodInfo.Name == nameof(AbstractIndexCreationTask.LoadDocument))
                     {
                         var type = methodInfo.GetGenericArguments()[0];
-                        var collection = convention.GetCollectionName(type);
+                        var collection = _convention.GetCollectionName(type);
 
                         Out($"k1 => {methodInfo.Name}(k1, \"{collection}\")");
                     }
@@ -1502,7 +1501,7 @@ namespace Raven.Client.Documents.Indexes
                 {
                     Out(", ");
                 }
-                var old = castLambdas;
+                var old = _castLambdas;
                 try
                 {
                     switch (node.Method.Name)
@@ -1511,10 +1510,10 @@ namespace Raven.Client.Documents.Indexes
                         case "Average":
                         case "Min":
                         case "Max":
-                            castLambdas = true;
+                            _castLambdas = true;
                             break;
                         default:
-                            castLambdas = false;
+                            _castLambdas = false;
                             break;
                     }
                     var oldAvoidDuplicateParameters = _avoidDuplicatedParameters;
@@ -1527,7 +1526,7 @@ namespace Raven.Client.Documents.Indexes
                 }
                 finally
                 {
-                    castLambdas = old;
+                    _castLambdas = old;
                 }
                 num2++;
             }
@@ -1545,7 +1544,7 @@ namespace Raven.Client.Documents.Indexes
             if (node.Method.Name == nameof(AbstractIndexCreationTask.LoadDocument))
             {
                 var type = node.Method.GetGenericArguments()[0];
-                var collection = convention.GetCollectionName(type);
+                var collection = _convention.GetCollectionName(type);
                 Out($", \"{collection}\"");
             }
 
@@ -1818,7 +1817,7 @@ namespace Raven.Client.Documents.Indexes
                 && type.GetTypeInfo().Attributes.HasFlag(TypeAttributes.NotPublic);
         }
 
-        public static readonly HashSet<string> keywordsInCSharp = new HashSet<string>(new[]
+        public static readonly HashSet<string> KeywordsInCSharp = new HashSet<string>(new[]
         {
             "abstract",
             "as",
@@ -1937,7 +1936,7 @@ namespace Raven.Client.Documents.Indexes
                 }
             }
             name = name.StartsWith("$VB$") ? name.Substring(4) : name;
-            if (keywordsInCSharp.Contains(name))
+            if (KeywordsInCSharp.Contains(name))
                 Out('@');
             Out(name);
             return node;

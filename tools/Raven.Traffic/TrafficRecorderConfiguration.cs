@@ -130,7 +130,7 @@ namespace Raven.Traffic
             }
 
             config.ConnectionString.Url = args[1];
-            config.ConnectionString.DefaultDatabase = args[2];
+            config.ConnectionString.Database = args[2];
             config.ResourceName = args[2];
             config.RecordFilePath = args[3];
             InitOptionsSetObject(config).Parse(args);

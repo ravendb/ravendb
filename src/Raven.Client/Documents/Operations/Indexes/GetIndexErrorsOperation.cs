@@ -25,14 +25,13 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new GetIndexErrorsCommand(_indexNames);
         }
 
-        public class GetIndexErrorsCommand : RavenCommand<IndexErrors[]>
+        private class GetIndexErrorsCommand : RavenCommand<IndexErrors[]>
         {
             private readonly string[] _indexNames;
 
             public GetIndexErrorsCommand(string[] indexNames)
             {
                 _indexNames = indexNames;
-                ResponseType = RavenCommandResponseType.Array;
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
@@ -53,18 +52,17 @@ namespace Raven.Client.Documents.Operations.Indexes
 
             public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
-                ThrowInvalidResponse();
-            }
-
-            public override void SetResponse(BlittableJsonReaderArray response, bool fromCache)
-            {
-                if (response == null)
-                    ThrowInvalidResponse();
-
-                var indexErrors = new IndexErrors[response.Length];
-                for (int i = 0; i < response.Length; i++)
+                if (response == null ||
+                    response.TryGet("Results", out BlittableJsonReaderArray results) == false)
                 {
-                    indexErrors[i] = JsonDeserializationClient.IndexErrors((BlittableJsonReaderObject)response[i]);
+                    ThrowInvalidResponse();
+                    return; // never hit
+                }
+
+                var indexErrors = new IndexErrors[results.Length];
+                for (int i = 0; i < results.Length; i++)
+                {
+                    indexErrors[i] = JsonDeserializationClient.IndexErrors((BlittableJsonReaderObject)results[i]);
                 }
 
                 Result = indexErrors;

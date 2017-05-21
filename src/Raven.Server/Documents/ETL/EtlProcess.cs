@@ -303,16 +303,17 @@ namespace Raven.Server.Documents.ETL
             if (Transformation.Disabled)
                 return;
 
+            var threadName = $"{Tag} process: {Name}";
             _thread = new Thread(() =>
             {
                 // This has lower priority than request processing, so we let the OS
                 // schedule this appropriately
                 Threading.TrySettingCurrentThreadPriority(ThreadPriority.BelowNormal);
-
+                NativeMemory.EnsureRegistered();
                 Run();
             })
             {
-                Name = $"{Tag} process: {Name}",
+                Name = threadName,
                 IsBackground = true
             };
 

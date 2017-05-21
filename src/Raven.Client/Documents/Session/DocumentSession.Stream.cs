@@ -118,7 +118,7 @@ namespace Raven.Client.Documents.Session
             var etag = metadata.GetEtag();
             var id = metadata.GetId();
 
-            //TODO - Investagate why ConvertToEntity fails if we don't call ReadObject before
+            //TODO - Investigate why ConvertToEntity fails if we don't call ReadObject before
             json = Context.ReadObject(json, id);
             var entity = QueryOperation.Deserialize<T>(id, json, metadata, projectionFields, true, this);
 

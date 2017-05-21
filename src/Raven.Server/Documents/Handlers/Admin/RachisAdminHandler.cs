@@ -24,8 +24,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 var command = await context.ReadForMemoryAsync(RequestBodyStream(), "ExternalRachisCommand");
 
-                string type;
-                if(command.TryGet("Type",out type) == false)
+                if (command.TryGet("Type", out string type) == false)
                 {
                     // TODO: maybe add further validation?
                     throw new ArgumentException("Received command must contain a Type field");
@@ -53,6 +52,8 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 
                 var topology = ServerStore.GetClusterTopology(context);
+                var nodeTag = ServerStore.NodeTag;
+
                 if (topology.Members.Count == 0)
                 {
                     var serverUrl = GetStringQueryString("url");
@@ -67,6 +68,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         new Dictionary<string, string>(),
                         "A"
                     );
+                    nodeTag = "A";
                 }
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                 
@@ -79,7 +81,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         ["Topology"] = blit,
                         ["Leader"] = ServerStore.LeaderTag,
                         ["CurrentState"] = ServerStore.CurrentState,
-                        ["NodeTag"] = ServerStore.NodeTag
+                        ["NodeTag"] = nodeTag
                     });
                     writer.Flush();
                 }

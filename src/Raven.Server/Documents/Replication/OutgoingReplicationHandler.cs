@@ -26,6 +26,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -104,11 +105,13 @@ namespace Raven.Server.Documents.Replication
         {
             _sendingThread = new Thread(ReplicateToDestination)
             {
-                Name = $"Outgoing replication {FromToString}",
+                Name = OutgoingReplicationThreadName,
                 IsBackground = true
             };
             _sendingThread.Start();
         }
+
+        public string OutgoingReplicationThreadName => $"Outgoing replication {FromToString}";
 
         private string GetApiKey()
         {
@@ -118,9 +121,10 @@ namespace Raven.Server.Documents.Replication
 
         private void ReplicateToDestination()
         {
+            NativeMemory.EnsureRegistered();
             try
             {
-                var connectionInfo = ReplicationUtils.GetTcpInfo(MultiDatabase.GetRootDatabaseUrl(Destination.Url), Destination.NodeTag, GetApiKey());
+                var connectionInfo = ReplicationUtils.GetTcpInfo(MultiDatabase.GetRootDatabaseUrl(Destination.Url), Destination.NodeTag, GetApiKey(), "Replication");
 
                 if (_log.IsInfoEnabled)
                     _log.Info($"Will replicate to {Destination.NodeTag} @ {Destination.Url} via {connectionInfo.Url}");

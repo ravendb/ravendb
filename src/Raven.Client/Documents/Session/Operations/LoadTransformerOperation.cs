@@ -33,14 +33,7 @@ namespace Raven.Client.Documents.Session.Operations
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Requesting the following ids '{string.Join(", ", _idsToCheckOnServer)}' from {_session.StoreIdentifier}");
 
-            return new GetDocumentCommand
-            {
-                Ids = _idsToCheckOnServer.ToArray(),
-                Includes = _includes,
-                Transformer = _transformer,
-                TransformerParameters = _transformerParameters,
-                Context = _session.Context
-            };
+            return new GetDocumentCommand(_idsToCheckOnServer.ToArray(), _includes, _transformer, _transformerParameters, metadataOnly: false, context: _session.Context);
         }
 
         public void WithIncludes(string[] includes)

@@ -11,6 +11,7 @@ using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.Operations.ApiKeys;
 using Raven.Server.Config.Attributes;
+using Sparrow.Logging;
 using Xunit;
 
 namespace RachisTests.DatabaseCluster
@@ -26,7 +27,7 @@ namespace RachisTests.DatabaseCluster
             using (var store = new DocumentStore()
             {
                 Url = leader.WebUrls[0],
-                DefaultDatabase = databaseName
+                Database = databaseName
             }.Initialize())
             {
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
@@ -62,13 +63,22 @@ namespace RachisTests.DatabaseCluster
             using (var store = new DocumentStore()
             {
                 Url = leader.WebUrls[0],
-                DefaultDatabase = databaseName
+                Database = databaseName
             }.Initialize())
             {
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
                 var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                 var topology = databaseResult.Topology;
                 Assert.Equal(clusterSize, topology.AllReplicationNodes().Count());
+
+                await WaitForValueOnGroupAsync(topology,  s =>
+                {
+                    var db = s.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
+                    return db.ReplicationLoader?.OutgoingConnections.Count();
+                }, clusterSize - 1);
+
+                WaitForUserToContinueTheTest((DocumentStore)store);
+
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -82,16 +92,15 @@ namespace RachisTests.DatabaseCluster
                     TimeSpan.FromSeconds(clusterSize + 5)));
 
                 topology.RemoveFromTopology(leader.ServerStore.NodeTag);
-
+                await Task.Delay(200); // twice the heartbeat
                 await Assert.ThrowsAsync<Exception>(async () =>
                 {
                     await WaitForValueOnGroupAsync(topology, (s) =>
                     {
-                        var replicationPerformance = s.Admin.Send(new GetReplicationPerformanceStatisticsOperation());
-                        return replicationPerformance.Outgoing.Any(o=>o.Performance.Any(p=> p.SendLastEtag > 0));
+                        var db = s.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
+                        return db.ReplicationLoader?.OutgoingHandlers.Any(o=>o.GetReplicationPerformance().Any(p=>p.Network.DocumentOutputCount > 0)) ?? false;
                     }, true);
                 });
-
             }
         }
 
@@ -105,7 +114,7 @@ namespace RachisTests.DatabaseCluster
             using (var store = new DocumentStore()
             {
                 Url = leader.WebUrls[0],
-                DefaultDatabase = databaseName,
+                Database = databaseName,
                 
             }.Initialize())
             {
@@ -135,7 +144,7 @@ namespace RachisTests.DatabaseCluster
             using (var store = new DocumentStore()
             {
                 Url = Servers[1].WebUrls[0],
-                DefaultDatabase = databaseName
+                Database = databaseName
             }.Initialize())
             {
                 using (var session = store.OpenAsyncSession())
@@ -169,8 +178,8 @@ namespace RachisTests.DatabaseCluster
             using (var store1 = GetDocumentStore(apiKey: "super/" + _apiKey.Secret))
             using (var store2 = GetDocumentStore(apiKey: "super/" + _apiKey.Secret))
             {
-                _apiKey.ResourcesAccessMode[store1.DefaultDatabase] = AccessModes.Admin;
-                _apiKey.ResourcesAccessMode[store2.DefaultDatabase] = AccessModes.ReadWrite;
+                _apiKey.ResourcesAccessMode[store1.Database] = AccessModes.Admin;
+                _apiKey.ResourcesAccessMode[store2.Database] = AccessModes.ReadWrite;
                 store2.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
                 var doc = store2.Admin.Server.Send(new GetApiKeyOperation("super"));
                 Assert.NotNull(doc);
@@ -180,7 +189,7 @@ namespace RachisTests.DatabaseCluster
                 {
                     new DatabaseWatcher
                     {
-                        Database = store2.DefaultDatabase,
+                        Database = store2.Database,
                         Url = store2.Url,
                         ApiKey = "super/" + api
                     }

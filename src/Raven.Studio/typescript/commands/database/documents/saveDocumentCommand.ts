@@ -14,7 +14,7 @@ class saveDocumentCommand extends commandBase {
 
         const commands: Array<Raven.Server.Documents.Handlers.BatchRequestParser.CommandData> = [this.document.toBulkDoc("PUT")];
 
-        const args = ko.toJSON(commands);
+        const args = ko.toJSON({ Commands: commands });
         const url = endpoints.databases.batch.bulk_docs;
         const saveTask = this.post<saveDocumentResponseDto>(url, args, this.db);
 

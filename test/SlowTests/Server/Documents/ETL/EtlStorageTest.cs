@@ -11,7 +11,7 @@ namespace SlowTests.Server.Documents.ETL
         {
             using (var store = GetDocumentStore())
             {
-                var database = GetDatabase(store.DefaultDatabase).Result;
+                var database = GetDatabase(store.Database).Result;
 
                 var dest = new RavenDestination
                 {

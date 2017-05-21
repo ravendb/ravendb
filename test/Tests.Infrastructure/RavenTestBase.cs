@@ -36,7 +36,7 @@ namespace FastTests
 
         protected virtual Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store)
         {
-            return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
+            return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
         }
 
         private readonly object _getDocumentStoreSync = new object();
@@ -105,7 +105,7 @@ namespace FastTests
                 var store = new DocumentStore
                 {
                     Url = UseFiddler(defaultServer.WebUrls[0]),
-                    DefaultDatabase = name,
+                    Database = name,
                     ApiKey = apiKey
                 };
                 ModifyStore(store);
@@ -317,7 +317,7 @@ namespace FastTests
 
             string url = documentStore.Url;
 
-            var databaseNameEncoded = Uri.EscapeDataString(documentStore.DefaultDatabase);
+            var databaseNameEncoded = Uri.EscapeDataString(documentStore.Database);
             var documentsPage = url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
 
             OpenBrowser(documentsPage);// start the server

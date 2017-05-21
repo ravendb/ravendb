@@ -34,8 +34,6 @@ namespace Raven.Client.Server.Operations
             {
                 _databaseName = databaseName;
                 _ifDisableRequest = ifDisableRequest;
-
-                ResponseType = RavenCommandResponseType.Array;
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
@@ -43,29 +41,23 @@ namespace Raven.Client.Server.Operations
                 var toggle = _ifDisableRequest ? "disable" : "enable";
                 url = $"{node.Url}/admin/databases/{toggle}?name={_databaseName}";
 
-                var request = new HttpRequestMessage
+                return new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
                 };
-
-                return request;
             }
         
             public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
-                if (response == null)
+                if (response == null ||
+                    response.TryGet("Status", out BlittableJsonReaderArray databases) == false)
+                {
                     ThrowInvalidResponse();
-               
-            }
+                    return; // never hit
+                }
 
-            public override void SetResponse(BlittableJsonReaderArray response, bool fromCache)
-            {
-                if (response == null)
-                    ThrowInvalidResponse();
-
-                var resultObject = response[0] as BlittableJsonReaderObject;
-                Result = JsonDeserializationClient.DisableResoureceToggleResult(resultObject);
-
+                var resultObject = databases[0] as BlittableJsonReaderObject;
+                Result = JsonDeserializationClient.DisableResourceToggleResult(resultObject);
             }
 
             public override bool IsReadRequest => false;

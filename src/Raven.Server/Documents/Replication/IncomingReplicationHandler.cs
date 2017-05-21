@@ -17,6 +17,7 @@ using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.TcpHandlers;
+using Sparrow.Utils;
 using Voron;
 using ThreadState = System.Threading.ThreadState;
 
@@ -77,6 +78,8 @@ namespace Raven.Server.Documents.Replication
             return _lastStats;
         }
 
+        private string IncomingReplicationThreadName => $"Incoming replication {FromToString}";
+
         public void Start()
         {
             if (_incomingThread != null)
@@ -85,7 +88,7 @@ namespace Raven.Server.Documents.Replication
             var result = Interlocked.CompareExchange(ref _incomingThread, new Thread(ReceiveReplicationBatches)
             {
                 IsBackground = true,
-                Name = $"Incoming replication {FromToString}"
+                Name = IncomingReplicationThreadName
             }, null);
 
             if (result != null)
@@ -112,6 +115,7 @@ namespace Raven.Server.Documents.Replication
 
         private void ReceiveReplicationBatches()
         {
+            NativeMemory.EnsureRegistered();
             try
             {
                 using (_connectionOptions.ConnectionProcessingInProgress("Replication"))

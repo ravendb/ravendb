@@ -7,6 +7,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Http;
+using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -41,20 +42,19 @@ namespace Raven.Server.Web.System
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-                    writer.WritePropertyName(nameof(DatabasesInfo.Databases));
 
                     var items = ServerStore.Cluster.ItemsStartingWith(context, Constants.Documents.Prefix, GetStart(), GetPageSize());
-                    writer.WriteArray(context, items, (w, c, dbDoc) =>
-                                                        {
-                                                            var databaseName = dbDoc.Item1.Substring(Constants.Documents.Prefix.Length);
-                                                            if (namesOnly)
-                                                            {
-                                                                w.WriteString(databaseName);
-                                                                return;
-                                                            }
+                    writer.WriteArray(context, nameof(DatabasesInfo.Databases), items, (w, c, dbDoc) =>
+                    {
+                        var databaseName = dbDoc.Item1.Substring(Constants.Documents.Prefix.Length);
+                        if (namesOnly)
+                        {
+                            w.WriteString(databaseName);
+                            return;
+                        }
 
-                                                            WriteDatabaseInfo(databaseName, dbDoc.Item2, context, w);
-                                                        });
+                        WriteDatabaseInfo(databaseName, dbDoc.Item2, context, w);
+                    });
                     writer.WriteEndObject();
                 }
             }
@@ -186,22 +186,10 @@ namespace Raven.Server.Web.System
 
             data.TryGet("Disabled", out bool disabled);
 
-            if (online == false)
-            {
-                // If state of database is found in the cache we can continue
-                if (ServerStore.DatabaseInfoCache.TryWriteOfflineDatabaseStatustoRequest(
-                    context, writer, databaseName, disabled, indexingStatus))
-                {
-                    return;
-                }
-                // We won't find it if it is a new database or after a dirty shutdown, so just report empty values then
-            }
-
-            var size = new Size(GetTotalSize(db));
-
+            data.TryGet("Topology", out BlittableJsonReaderObject topology);
             NodesTopology nodesTopology = new NodesTopology();
 
-            if (data.TryGet("Topology", out BlittableJsonReaderObject topology))
+            if (topology != null)
             {
                 if (topology.TryGet("Members", out BlittableJsonReaderArray members))
                 {
@@ -214,17 +202,33 @@ namespace Raven.Server.Web.System
                 {
                     foreach (BlittableJsonReaderObject promotable in promotables)
                     {
-                        nodesTopology.Members.Add(GetNodeId(promotable));
+                        nodesTopology.Promotables.Add(GetNodeId(promotable));
                     }
                 }
                 if (data.TryGet("Watchers", out BlittableJsonReaderArray watchers))
                 {
                     foreach (BlittableJsonReaderObject watcher in watchers)
                     {
-                        nodesTopology.Members.Add(GetNodeId(watcher));
+                        nodesTopology.Watchers.Add(GetNodeId(watcher));
                     }
                 }
             }
+
+
+            if (online == false)
+            {
+                // If state of database is found in the cache we can continue
+                if (ServerStore.DatabaseInfoCache.TryWriteOfflineDatabaseStatusToRequest(
+                    context, writer, databaseName, disabled, indexingStatus, nodesTopology))
+                {
+                    return;
+                }
+                // We won't find it if it is a new database or after a dirty shutdown, so just report empty values then
+            }
+
+            var size = new Size(GetTotalSize(db));
+
+           
 
             DatabaseInfo databaseInfo = new DatabaseInfo
             {

@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Threading;
 using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
 
@@ -29,7 +28,7 @@ namespace Raven.Client.Documents.Subscriptions
         internal enum MessageType
         {
             None,
-            CoonectionStatus,
+            ConnectionStatus,
             EndOfBatch,
             Data,
             Confirm,

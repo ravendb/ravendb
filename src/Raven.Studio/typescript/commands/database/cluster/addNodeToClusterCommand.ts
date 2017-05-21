@@ -3,7 +3,6 @@ import endpoints = require("endpoints");
 
 class addNodeToClusterCommand extends commandBase {
 
-
     constructor(private serverUrl: string) {
         super();
     }

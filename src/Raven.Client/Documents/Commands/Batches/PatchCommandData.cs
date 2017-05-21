@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -12,14 +10,9 @@ namespace Raven.Client.Documents.Commands.Batches
     {
         public PatchCommandData(string id, long? etag, PatchRequest patch, PatchRequest patchIfMissing)
         {
-            if (id == null)
-                throw new ArgumentNullException(nameof(id));
-            if (patch == null)
-                throw new ArgumentNullException(nameof(patch));
-
-            Key = id;
+            Key = id ?? throw new ArgumentNullException(nameof(id));
             Etag = etag;
-            Patch = patch;
+            Patch = patch ?? throw new ArgumentNullException(nameof(patch));
             PatchIfMissing = patchIfMissing;
         }
 

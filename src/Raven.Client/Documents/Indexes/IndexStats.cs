@@ -124,7 +124,7 @@ namespace Raven.Client.Documents.Indexes
         public bool IsTestIndex { get; set; }
 
         /// <summary>
-        /// Determines if index is invalid. If more than 15% of attemps (map or reduce) are errors then value will be <c>true</c>.
+        /// Determines if index is invalid. If more than 15% of attempts (map or reduce) are errors then value will be <c>true</c>.
         /// </summary>
         public bool IsInvalidIndex => IndexFailureInformation.CheckIndexInvalid(MapAttempts, MapErrors, ReduceAttempts, ReduceErrors, () => IsStale);
 

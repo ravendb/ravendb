@@ -46,7 +46,7 @@ namespace Indexing.Benchmark
                 //    } while ((result != null && result.IsStale == false) || sw.Elapsed > stalenessTimeout);
                 //}, TaskCreationOptions.LongRunning);
 
-                var requestExecuter = _store.GetRequestExecuter();
+                var requestExecuter = _store.GetRequestExecutor();
                 JsonOperationContext context;
                 using (requestExecuter.ContextPool.AllocateOperationContext(out context))
                 {

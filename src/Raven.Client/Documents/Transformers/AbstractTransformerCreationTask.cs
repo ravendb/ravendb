@@ -8,7 +8,6 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Transformers;
 using Raven.Client.Util;
-using Sparrow.Json;
 
 namespace Raven.Client.Documents.Transformers
 {

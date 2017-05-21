@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Smuggler
         {
             _store = store;
             _databaseName = databaseName;
-            _requestExecutor = store.GetRequestExecuter(databaseName);
+            _requestExecutor = store.GetRequestExecutor(databaseName);
         }
 
         public DatabaseSmuggler ForDatabase(string databaseName)
@@ -141,20 +141,15 @@ namespace Raven.Client.Documents.Smuggler
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));
-                if (context == null)
-                    throw new ArgumentNullException(nameof(context));
                 if (options == null)
                     throw new ArgumentNullException(nameof(options));
-                if (handleStreamResponse == null)
-                    throw new ArgumentNullException(nameof(handleStreamResponse));
 
-                _context = context;
-                _handleStreamResponse = handleStreamResponse;
+                _context = context ?? throw new ArgumentNullException(nameof(context));
+                _handleStreamResponse = handleStreamResponse ?? throw new ArgumentNullException(nameof(handleStreamResponse));
                 _options = EntityToBlittable.ConvertEntityToBlittable(options, conventions, _context);
+
                 ResponseType = RavenCommandResponseType.Raw;
             }
-
-            public override bool IsReadRequest => false;
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
@@ -183,16 +178,9 @@ namespace Raven.Client.Documents.Smuggler
 
             public ImportCommand(DatabaseSmugglerOptions options, Stream stream)
             {
-                if (options == null)
-                    throw new ArgumentNullException(nameof(options));
-                if (stream == null)
-                    throw new ArgumentNullException(nameof(stream));
-
-                _options = options;
-                _stream = stream;
+                _options = options ?? throw new ArgumentNullException(nameof(options));
+                _stream = stream ?? throw new ArgumentNullException(nameof(stream));
             }
-
-            public override bool IsReadRequest => false;
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {

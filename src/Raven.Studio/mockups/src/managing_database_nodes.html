@@ -1,0 +1,376 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+{{> head }}
+
+<body>
+
+    {{> spinner }}
+
+    <div class="durandal-wrapper">
+        {{> topbar }}
+
+        <div class="prime-container">
+            {{> menu }}
+
+            <div class="content-container">
+                <div class="destinations flex-vertical absolute-fill content-margin">
+                    <div class="row flex-row flex-grow">
+                        <div class="col-sm-12 col-lg-6 flex-vertical">
+                            <div class="flex-header flex-horizontal">
+                                <div class="dropdown flex-grow">
+                                    <input class="form-control dropdown-toggle" placeholder="Select cluster node" data-toggle="dropdown" />
+                                    <span class="caret"></span>
+                                    <ul class="dropdown-menu">
+                                        <li><a href="#">Node E</a></li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <button class="btn btn-primary" data-toggle="modal" data-target="#destinationModal">
+                                        <i class="icon-plus"></i>
+                                        <span>Add node to group</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="scroll flex-grow">
+                                <div class="panel destination-item">
+                                    <div data-state-text="enabled" class="state state-success"></div>
+                                    <div class="padding padding-sm destination-info">
+                                        <div class="info-container flex-horizontal flex-grow">
+                                            <div class="node flex-grow">
+                                                <h5>NODE</h5>
+                                                <h3>
+                                                    <a href="#" title="test" class="destination-name"><i class="icon-dbgroup"></i><span>Node A</span></a>
+                                                </h3>
+                                            </div>
+                                            <div class="status">
+                                                <h5>STATUS</h5>
+                                                <div class="btn-group dropdown-right">
+                                                    <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                                        <span>Partialy disabled</span> <span class="caret"></span>
+                                                    </button>
+                                                    <div class="dropdown-menu settings-menu">
+                                                        <div class="settings-item">
+                                                            <div class="col-xs-8">
+                                                                <div class="control-label">Transform Cars to car parts</div>
+                                                            </div>
+                                                            <div class="col-xs-4">
+                                                                <div class="toggle">
+                                                                    <input type="checkbox" class="styled">
+                                                                    <label></label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="settings-item">
+                                                            <div class="col-xs-8 settings-item-label">
+                                                                <div class="control-label">Transform old machines to parts</div>
+                                                            </div>
+                                                            <div class="col-xs-4">
+                                                                <div class="toggle">
+                                                                    <input type="checkbox" class="styled">
+                                                                    <label></label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="actions-container">
+                                            <div class="actions">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                                        <i class="icon-play"></i> <span>Actions</span>
+                                                        <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a href="#">Action?</a></li>
+                                                    </ul>
+                                                </div>
+                                                <div class="dropdown dropdown-right">
+                                                    <button class="btn btn-danger dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                                        <i class="icon-disconnected"></i> <span>Delete from group</span>
+                                                        <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a href="#"><i class="icon-trash"></i> <span>Soft Delete</span>&nbsp;&nbsp;<small>(stop replication and keep database files on the node)</small></a></li>
+                                                        <li><a href="#"><i class="icon-alerts text-danger"></i> <span class="text-danger">Hard Delete</span>&nbsp;&nbsp;<small>(stop replication and remove database files on the node)</small></a></li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="panel destination-item">
+                                    <div data-state-text="disabled" class="state state-warning"></div>
+                                    <div class="padding padding-sm destination-info">
+                                        <div class="info-container flex-horizontal flex-grow">
+                                            <div class="node flex-grow">
+                                                <h5>NODE</h5>
+                                                <h3>
+                                                    <a href="#" title="test" class="destination-name"><i class="icon-home"></i><span>Node C</span></a>
+                                                </h3>
+                                            </div>
+                                            
+                                            <div class="status">
+                                                <h5>STATUS</h5>
+                                                <div class="btn-group dropdown-right">
+                                                    <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                                        <span>Partialy disabled</span> <span class="caret"></span>
+                                                    </button>
+                                                    <div class="dropdown-menu settings-menu">
+                                                        <div class="settings-item">
+                                                            <div class="col-xs-8">
+                                                                <div class="control-label">Transform Cars to car parts</div>
+                                                            </div>
+                                                            <div class="col-xs-4">
+                                                                <div class="toggle">
+                                                                    <input type="checkbox" class="styled">
+                                                                    <label></label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="settings-item">
+                                                            <div class="col-xs-8 settings-item-label">
+                                                                <div class="control-label">Transform old machines to parts</div>
+                                                            </div>
+                                                            <div class="col-xs-4">
+                                                                <div class="toggle">
+                                                                    <input type="checkbox" class="styled">
+                                                                    <label></label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="actions-container">
+                                            <div class="actions">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                                        <i class="icon-play"></i> <span>Actions</span>
+                                                        <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a href="#">Action?</a></li>
+                                                    </ul>
+                                                </div>
+                                                <div class="dropdown dropdown-right">
+                                                    <button class="btn btn-danger dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                                        <i class="icon-disconnected"></i> <span>Delete from group</span>
+                                                        <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a href="#"><i class="icon-trash"></i> <span>Soft Delete</span>&nbsp;&nbsp;<small>(stop replication and keep database files on the node)</small></a></li>
+                                                        <li><a href="#"><i class="icon-alerts text-danger"></i> <span class="text-danger">Hard Delete</span>&nbsp;&nbsp;<small>(stop replication and remove database files on the node)</small></a></li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="panel destination-item">
+                                    <div data-state-text="enabled" class="state state-success"></div>
+                                    <div class="padding padding-sm destination-info">
+                                        <div class="info-container flex-horizontal flex-grow">
+                                            <div class="node flex-grow">
+                                                <h5>NODE</h5>
+                                                <h3>
+                                                    <a href="#" title="test" class="destination-name"><span class="global-spinner spinner-sm"></span><i class="icon-dbgroup" style="display:none;"></i><span>Node D</span></a>
+                                                </h3>
+                                                <small>Creating Northwind on node...</small>
+                                            </div>
+                                            <div class="status">
+                                                <h5>STATUS</h5>
+                                                <div class="btn-group dropdown-right">
+                                                    <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                                        <span>Partialy disabled</span> <span class="caret"></span>
+                                                    </button>
+                                                    <div class="dropdown-menu settings-menu">
+                                                        <div class="settings-item">
+                                                            <div class="col-xs-8">
+                                                                <div class="control-label">Transform Cars to car parts</div>
+                                                            </div>
+                                                            <div class="col-xs-4">
+                                                                <div class="toggle">
+                                                                    <input type="checkbox" class="styled">
+                                                                    <label></label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="settings-item">
+                                                            <div class="col-xs-8 settings-item-label">
+                                                                <div class="control-label">Transform old machines to parts</div>
+                                                            </div>
+                                                            <div class="col-xs-4">
+                                                                <div class="toggle">
+                                                                    <input type="checkbox" class="styled">
+                                                                    <label></label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="actions-container">
+                                            <div class="actions">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                                        <i class="icon-play"></i> <span>Actions</span>
+                                                        <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a href="#">Action?</a></li>
+                                                    </ul>
+                                                </div>
+                                                <div class="dropdown dropdown-right">
+                                                    <button class="btn btn-danger dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                                        <i class="icon-disconnected"></i> <span>Delete from group</span>
+                                                        <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a href="#"><i class="icon-trash"></i> <span>Soft Delete</span>&nbsp;&nbsp;<small>(stop replication and keep database files on the node)</small></a></li>
+                                                        <li><a href="#"><i class="icon-alerts text-danger"></i> <span class="text-danger">Hard Delete</span>&nbsp;&nbsp;<small>(stop replication and remove database files on the node)</small></a></li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="panel destination-item">
+                                    <div data-state-text="down" class="state state-danger"></div>
+
+                                    <div class="padding padding-sm destination-info">
+                                        <div class="info-container flex-horizontal flex-grow">
+                                            <div class="node flex-grow">
+                                                <h5>NODE</h5>
+                                                <h3>
+                                                    <a href="#" title="test" class="destination-name"><i class="icon-home"></i><span>Node D</span></a>
+                                                </h3>
+                                            </div>
+                                            <div class="status">
+                                                <h5>STATUS</h5>
+                                                <div class="btn-group dropdown-right">
+                                                    <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                                        <span>Partialy disabled</span> <span class="caret"></span>
+                                                    </button>
+                                                    <div class="dropdown-menu settings-menu">
+                                                        <div class="settings-item">
+                                                            <div class="col-xs-8">
+                                                                <div class="control-label">Transform Cars to car parts</div>
+                                                            </div>
+                                                            <div class="col-xs-4">
+                                                                <div class="toggle">
+                                                                    <input type="checkbox" class="styled">
+                                                                    <label></label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="settings-item">
+                                                            <div class="col-xs-8 settings-item-label">
+                                                                <div class="control-label">Transform old machines to parts</div>
+                                                            </div>
+                                                            <div class="col-xs-4">
+                                                                <div class="toggle">
+                                                                    <input type="checkbox" class="styled">
+                                                                    <label></label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="actions-container">
+                                            <div class="actions">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                                        <i class="icon-play"></i> <span>Actions</span>
+                                                        <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a href="#">Action?</a></li>
+                                                    </ul>
+                                                </div>
+                                                <div class="dropdown dropdown-right">
+                                                    <button class="btn btn-danger dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                                        <i class="icon-disconnected"></i> <span>Delete from node</span>
+                                                        <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a href="#"><i class="icon-trash"></i> <span>Soft Delete</span>&nbsp;&nbsp;<small>(stop replication and keep database files on the node)</small></a></li>
+                                                        <li><a href="#"><i class="icon-alerts text-danger"></i> <span class="text-danger">Hard Delete</span>&nbsp;&nbsp;<small>(stop replication and remove database files on the node)</small></a></li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-12 col-lg-6 flex-vertical">
+                            <div class="flex-horizontal flex-header">
+                                <div></div><h3>Database group topology<i class="icon-info text-info"></i></h3>
+                                <div class="flex-separator"></div>
+                                <div class="btn-group dropdown-right">
+                                    <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                        <i class="icon-export"></i><span>Download topology</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                                        <li><a href="#">.zip</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="panel flex-grow">
+                            </div>
+                            <div class="legend">
+                                <div class="row">
+                                    <div class="col-sm-4">
+                                        <h5>Task type</h5>
+                                        
+                                            <div><i class="icon-circle-filled here"></i> <span>YOU ARE HERE</span></div>
+                                            <div><i class="icon-circle-filled db-group-node"></i> <span>DB GROUP NODE</span></div>
+                                            
+                                        
+                                    </div>
+                                    <div class="col-sm-8">
+                                        <h5>Connection status</h5>
+                                        <div class="row">
+                                            <div class="col-xs-6"><i class="icon-arrow text-success"></i> <span>CONNECTION</span></div>
+                                            <div class="col-xs-6"><i class="icon-arrow-dashed text-warning"></i> <span>DISABLED CONNECTION</span></div>
+                                            <div class="col-xs-6"><i class="icon-arrow-dashed text-danger"></i> <span>BROKEN CONNECTION</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{> notification-center }}
+        </div>{{> footer }}
+    </div>
+    <script type="text/javascript">
+        function changeState(el) {
+            if (el.readOnly) el.checked = el.readOnly = false;
+            else if (!el.checked) el.readOnly = el.indeterminate = true;
+        }
+    </script>
+
+    {{> modals/includeAll }}
+    {{> scripts }}
+    <div class="upcoming-alert bg-upcoming">
+        <i class="icon-hammer-driver pull-left"></i>
+        <p>
+            CAUTION: This is a BETA version of RavenDB 4.0<br />
+            <small>it is not intended for business use.</small>
+        </p>
+    </div>
+</body>
+</html>

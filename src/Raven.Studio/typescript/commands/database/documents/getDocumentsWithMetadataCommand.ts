@@ -11,7 +11,11 @@ class getDocumentsWithMetadataCommand extends commandBase {
 
     execute(): JQueryPromise<document[]> {
         const documentResult = $.Deferred<document[]>();
-        this.post<queryResultDto<documentDto>>(endpoints.databases.document.docs, JSON.stringify(this.ids), this.db)
+
+        const payload = {
+            Ids: this.ids
+        };
+        this.post<queryResultDto<documentDto>>(endpoints.databases.document.docs, JSON.stringify(payload), this.db)
             .fail((xhr: JQueryXHR) => {
                 if (xhr.status === 404 && this.ids.length === 1) {
                     documentResult.resolve([null]);

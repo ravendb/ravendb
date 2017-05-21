@@ -60,35 +60,39 @@ namespace SlowTests
                 WaitForIndexing(store);
         }
 
-        public static List<Facet> GetFacets()
+        public static FacetsRequest GetFacets()
         {
-            return new List<Facet>
+            var facets = new List<Facet>
             {
                 new Facet<Camera> {Name = x => x.Manufacturer},
                 new Facet<Camera>
                 {
                     Name = x => x.Cost,
                     Ranges =
-                        {
-                            x => x.Cost < 200m,
-                            x => x.Cost > 200m && x.Cost < 400m,
-                            x => x.Cost > 400m && x.Cost < 600m,
-                            x => x.Cost > 600m && x.Cost < 800m,
-                            x => x.Cost > 800m
-                        }
+                    {
+                        x => x.Cost < 200m,
+                        x => x.Cost > 200m && x.Cost < 400m,
+                        x => x.Cost > 400m && x.Cost < 600m,
+                        x => x.Cost > 600m && x.Cost < 800m,
+                        x => x.Cost > 800m
+                    }
                 },
                 new Facet<Camera>
                 {
                     Name = x => x.Megapixels,
                     Ranges =
-                        {
-                            x => x.Megapixels < 3.0m,
-                            x => x.Megapixels > 3.0m && x.Megapixels < 7.0m,
-                            x => x.Megapixels > 7.0m && x.Megapixels < 10.0m,
-                            x => x.Megapixels > 10.0m
-                                        }
-                                }
-                        };
+                    {
+                        x => x.Megapixels < 3.0m,
+                        x => x.Megapixels > 3.0m && x.Megapixels < 7.0m,
+                        x => x.Megapixels > 7.0m && x.Megapixels < 10.0m,
+                        x => x.Megapixels > 10.0m
+                    }
+                }
+            };
+            return new FacetsRequest
+            {
+                Facets = facets
+            };
         }
 
         private static readonly List<string> Features = new List<string>
@@ -206,5 +210,10 @@ namespace SlowTests
                 return (int)(Megapixels * 100) ^ (int)(Cost * 100) ^ (int)DateOfListing.Ticks ^ Id.Length;
             }
         }
+    }
+
+    public class FacetsRequest
+    {
+        public List<Facet> Facets { get; set; }
     }
 }

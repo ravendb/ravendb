@@ -20,7 +20,7 @@ namespace FastTests.Client.Subscriptions
         {
             if (useSsl)
             {
-                DoNotReuseServer(new global::Sparrow.Collections.LockFree.ConcurrentDictionary<string, string> { { "Raven/UseSsl", "true" } });
+                DoNotReuseServer(new ConcurrentDictionary<string, string> { ["Raven/UseSsl"] = "true" });
             }
             using (var store = GetDocumentStore())
             using (var subscriptionManager = new DocumentSubscriptions(store))
@@ -30,7 +30,7 @@ namespace FastTests.Client.Subscriptions
                 var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastChangeVector;
                 await CreateDocuments(store, 5);
 
-                var subscriptionCreationParams = new SubscriptionCreationParams()
+                var subscriptionCreationParams = new SubscriptionCreationOptions()
                 {
                     Criteria = new SubscriptionCriteria("Things")
                     {
@@ -63,8 +63,9 @@ namespace FastTests.Client.Subscriptions
         {
             if (useSsl)
             {
-                DoNotReuseServer(new global::Sparrow.Collections.LockFree.ConcurrentDictionary<string, string> { { "Raven/UseSsl", "true" } });
+                DoNotReuseServer(new ConcurrentDictionary<string, string> { ["Raven/UseSsl"] = "true" });
             }
+
             using (var store = GetDocumentStore())
             using (var subscriptionManager = new DocumentSubscriptions(store))
             {
@@ -73,7 +74,7 @@ namespace FastTests.Client.Subscriptions
                 var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastChangeVector;
                 await CreateDocuments(store, 6);
 
-                var subscriptionCreationParams = new SubscriptionCreationParams()
+                var subscriptionCreationParams = new SubscriptionCreationOptions()
                 {
                     Criteria = new SubscriptionCriteria("Things")
                     {
@@ -96,8 +97,7 @@ namespace FastTests.Client.Subscriptions
                 var subsId = subscriptionManager.Create(subscriptionCreationParams);
                 using (var subscription = subscriptionManager.Open<BlittableJsonReaderObject>(new SubscriptionConnectionOptions(subsId)))
                 {
-                    JsonOperationContext context;
-                    using (store.GetRequestExecuter().ContextPool.AllocateOperationContext(out context))
+                    using (store.GetRequestExecutor().ContextPool.AllocateOperationContext(out JsonOperationContext context))
                     {
                         var list = new BlockingCollection<BlittableJsonReaderObject>();
                         subscription.Subscribe(x =>

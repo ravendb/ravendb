@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Handlers
             var key = new byte[256 / 8];
             fixed (byte* pKey = key)
             {
-                Sodium.randombytes_buf(pKey, key.Length);
+                Sodium.randombytes_buf(pKey, (UIntPtr)key.Length);
 
                 var base64 = Convert.ToBase64String(key);
                 Sodium.ZeroMemory(pKey, key.Length);
@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/secrets", "PUT", "/admin/secrets?name={name:string}&overwrite={overwrite:bool|optional(false)}")]
+        [RavenAction("/admin/secrets", "POST", "/admin/secrets?name={name:string}&overwrite={overwrite:bool|optional(false)}")]
         public unsafe Task PutKey()
         {
             var name = GetStringQueryString("name");
@@ -110,7 +110,10 @@ namespace Raven.Server.Documents.Handlers
                 var base64 = reader.ReadToEnd();
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 {
-                    var clusterTopology = ServerStore.GetClusterTopology(ctx);
+                    ClusterTopology clusterTopology;
+                    using (ctx.OpenReadTransaction())
+                        clusterTopology = ServerStore.GetClusterTopology(ctx);
+
                     foreach (var node in nodes)
                     {
                         if (string.IsNullOrEmpty(node))

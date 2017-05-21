@@ -11,6 +11,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Server;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
@@ -589,7 +590,7 @@ namespace Raven.Server.Documents.Replication
             TaskCompletionSource<object> result;
             while (_waitForReplicationTasks.TryDequeue(out result))
             {
-                TaskExecuter.Complete(result);
+                TaskExecutor.Complete(result);
             }
 
         }

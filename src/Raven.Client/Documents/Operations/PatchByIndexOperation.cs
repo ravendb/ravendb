@@ -20,16 +20,12 @@ namespace Raven.Client.Documents.Operations
 
         public PatchByIndexOperation(string indexName, IndexQuery queryToUpdate, PatchRequest patch, QueryOperationOptions options = null)
         {
-            if (indexName == null)
-                throw new ArgumentNullException(nameof(indexName));
             if (queryToUpdate == null)
                 throw new ArgumentNullException(nameof(queryToUpdate));
-            if (patch == null)
-                throw new ArgumentNullException(nameof(patch));
 
-            _indexName = indexName;
+            _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
             _queryToUpdate = queryToUpdate;
-            _patch = patch;
+            _patch = patch ?? throw new ArgumentNullException(nameof(patch));
             _options = options;
         }
 
@@ -50,17 +46,13 @@ namespace Raven.Client.Documents.Operations
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));
-                if (context == null)
-                    throw new ArgumentNullException(nameof(context));
-                if (indexName == null)
-                    throw new ArgumentNullException(nameof(indexName));
                 if (queryToUpdate == null)
                     throw new ArgumentNullException(nameof(queryToUpdate));
                 if (patch == null)
                     throw new ArgumentNullException(nameof(patch));
 
-                _context = context;
-                _indexName = indexName;
+                _context = context ?? throw new ArgumentNullException(nameof(context));
+                _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
                 _queryToUpdate = queryToUpdate;
                 _patch = EntityToBlittable.ConvertEntityToBlittable(patch, conventions, _context);
                 _options = options ?? new QueryOperationOptions();

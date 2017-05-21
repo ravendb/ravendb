@@ -1,58 +1,48 @@
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
-using Raven.Client.Util.Helpers;
 using Sparrow.Json;
-using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Operations
 {
     public class Operation : IObserver<OperationStatusChange>
     {
         private readonly RequestExecutor _requestExecutor;
+        private readonly Func<IDatabaseChanges> _changes;
         private readonly DocumentConventions _conventions;
         private readonly long _id;
         private readonly TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public Action<IOperationProgress> OnProgressChanged;
-        private bool _work;
         private JsonOperationContext _context;
+        private IDisposable _subscription;
 
         internal long Id => _id;
 
-        public Operation(RequestExecutor requestExecutor, DocumentConventions conventions, long id)
+        public Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, long id)
         {
-            DevelopmentHelper.TimeBomb(); // use changes API
-
             _requestExecutor = requestExecutor;
+            _changes = changes;
             _conventions = conventions;
             _id = id;
-            _work = true;
         }
 
         private async Task Initialize()
         {
             try
             {
-                //await _asyncServerClient.changes.Value.ConnectionTask.ConfigureAwait(false);
-                //var observableWithTask = _asyncServerClient.changes.Value.ForOperationId(_id);
-                //_subscription = observableWithTask.Subscribe(this);
-                //await FetchOperationStatus().ConfigureAwait(false);
-
-                while (_work)
-                {
-                    await FetchOperationStatus().ConfigureAwait(false);
-                    if (_work == false)
-                        break;
-
-                    await TimeoutManager.WaitFor(500).ConfigureAwait(false);
-                }
+                var changes = await _changes().EnsureConnectedNow();
+                _subscription = changes
+                    .ForOperationId(_id)
+                    .Subscribe(this);
+                await FetchOperationStatus().ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -92,17 +82,17 @@ namespace Raven.Client.Documents.Operations
                     }
                     break;
                 case OperationStatus.Completed:
-                    _work = false;
+                    _subscription?.Dispose();
                     _result.TrySetResult(change.State.Result);
                     break;
                 case OperationStatus.Faulted:
-                    _work = false;
+                    _subscription?.Dispose();
                     var exceptionResult = (OperationExceptionResult)change.State.Result;
-                    Debug.Assert(exceptionResult!=null);
+                    Debug.Assert(exceptionResult != null);
                     _result.TrySetException(ExceptionDispatcher.Get(exceptionResult.Message, exceptionResult.Error, exceptionResult.Type, exceptionResult.StatusCode));
                     break;
                 case OperationStatus.Canceled:
-                    _work = false;
+                    _subscription?.Dispose();
                     _result.TrySetCanceled();
                     break;
             }

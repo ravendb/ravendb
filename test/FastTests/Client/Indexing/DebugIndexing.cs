@@ -47,7 +47,6 @@ namespace FastTests.Client.Indexing
                     Start = q.Start,
                     AllowMultipleIndexEntriesForSameDocumentToResultTransformer = q.AllowMultipleIndexEntriesForSameDocumentToResultTransformer,
                     CutoffEtag = q.CutoffEtag,
-                    DebugOptionGetIndexEntries = q.DebugOptionGetIndexEntries,
                     DefaultField = q.DefaultField,
                     DefaultOperator = q.DefaultOperator,
                     DisableCaching = q.DisableCaching,
@@ -75,7 +74,7 @@ namespace FastTests.Client.Indexing
                     DocumentId = "docs/1"
                 };
 
-                var query3 = new FacetQuery()
+                var query3 = new FacetQuery
                 {
                     FacetSetupDoc = "setup/1"
                 };
@@ -83,7 +82,7 @@ namespace FastTests.Client.Indexing
                 var database = await Server
                     .ServerStore
                     .DatabasesLandlord
-                    .TryGetOrCreateResourceStore(new StringSegment(store.DefaultDatabase));
+                    .TryGetOrCreateResourceStore(new StringSegment(store.Database));
 
                 var index = database.IndexStore.GetIndexes().First();
 
@@ -98,8 +97,7 @@ namespace FastTests.Client.Indexing
                 {
                     var json = commands.RawGetJson<BlittableJsonReaderObject>("/debug/queries/running");
 
-                    BlittableJsonReaderArray array;
-                    Assert.True(json.TryGet(index.Name, out array));
+                    Assert.True(json.TryGet(index.Name, out BlittableJsonReaderArray array));
 
                     Assert.Equal(3, array.Length);
 

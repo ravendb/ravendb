@@ -1,6 +1,5 @@
 ﻿using System.Net.Http;
 using Raven.Client.Http;
-using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
@@ -23,7 +22,5 @@ namespace Raven.Client.Documents.Commands
             };
             return request;
         }
-
-        public override bool IsReadRequest => false;
     }
 }

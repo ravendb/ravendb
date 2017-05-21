@@ -5,27 +5,13 @@
 // -----------------------------------------------------------------------
 
 using System;
-using Newtonsoft.Json;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Changes
 {
-    public class BulkInsertChange : DocumentChange
-    {
-        /// <summary>
-        /// BulkInsert operation Id.
-        /// </summary>
-        public Guid OperationId { get; set; }
-    }
-
     public class DocumentChange : DatabaseChange
     {
-        private string _key;
-
-        [JsonIgnore]
-        public Func<object, string> MaterializeKey;
-
-        public object MaterializeKeyState;
-
         /// <summary>
         /// Type of change that occurred on document.
         /// </summary>
@@ -34,20 +20,7 @@ namespace Raven.Client.Documents.Changes
         /// <summary>
         /// Identifier of document for which notification was created.
         /// </summary>
-        public string Key
-        {
-            get
-            {
-                if (_key == null && MaterializeKey != null)
-                {
-                    _key = MaterializeKey(MaterializeKeyState);
-                    MaterializeKey = null;
-                    MaterializeKeyState = null;
-                }
-                return _key;
-            }
-            set { _key = value; }
-        }
+        public string Key { get; set; }
 
         /// <summary>
         /// Document collection name.
@@ -71,6 +44,37 @@ namespace Raven.Client.Documents.Changes
         public override string ToString()
         {
             return string.Format("{0} on {1}", Type, Key);
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Type)] = Type.ToString(),
+                [nameof(Key)] = Key,
+                [nameof(CollectionName)] = CollectionName,
+                [nameof(TypeName)] = TypeName,
+                [nameof(Etag)] = Etag
+            };
+        }
+
+        internal static DocumentChange FromJson(BlittableJsonReaderObject value)
+        {
+            value.TryGet(nameof(CollectionName), out string collectionName);
+            value.TryGet(nameof(Etag), out long? etag);
+            value.TryGet(nameof(TypeName), out string typeName);
+            value.TryGet(nameof(Key), out string key);
+            value.TryGet(nameof(Type), out string type);
+
+            return new DocumentChange
+            {
+                CollectionName = collectionName,
+                Etag = etag,
+                IsSystemDocument = false,
+                Key = key,
+                TypeName = typeName,
+                Type = (DocumentChangeTypes)Enum.Parse(typeof(DocumentChangeTypes), type, ignoreCase: true)
+            };
         }
     }
 
@@ -144,6 +148,30 @@ namespace Raven.Client.Documents.Changes
         {
             return string.Format("{0} on {1}", Type, Name);
         }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Etag)] = Etag,
+                [nameof(Name)] = Name,
+                [nameof(Type)] = Type.ToString()
+            };
+        }
+
+        internal static IndexChange FromJson(BlittableJsonReaderObject value)
+        {
+            value.TryGet(nameof(Etag), out long? etag);
+            value.TryGet(nameof(Name), out string name);
+            value.TryGet(nameof(Type), out string type);
+
+            return new IndexChange
+            {
+                Etag = etag,
+                Type = (IndexChangeTypes)Enum.Parse(typeof(IndexChangeTypes), type, ignoreCase: true),
+                Name = name
+            };
+        }
     }
 
     public class IndexRenameChange : IndexChange
@@ -172,56 +200,30 @@ namespace Raven.Client.Documents.Changes
         {
             return string.Format("{0} on {1}", Type, Name);
         }
-    }
 
-    public class ReplicationConflictChange : DatabaseChange
-    {
-        /// <summary>
-        /// Type of conflict that occurred (None, DocumentReplicationConflict).
-        /// </summary>
-        public ReplicationConflictTypes ItemType { get; set; }
-
-        /// <summary>
-        /// Identifier of a document on which replication conflict occurred.
-        /// </summary>
-        public string Id { get; set; }
-
-        /// <summary>
-        /// Current conflict document Etag.
-        /// </summary>
-        public long? Etag { get; set; }
-
-        /// <summary>
-        /// Operation type on which conflict occurred (Put, Delete).
-        /// </summary>
-        public ReplicationOperationTypes OperationType { get; set; }
-
-        /// <summary>
-        /// Array of conflict document Ids.
-        /// </summary>
-        public string[] Conflicts { get; set; }
-
-        public override string ToString()
+        public DynamicJsonValue ToJson()
         {
-            return string.Format("{0} on {1} because of {2} operation", ItemType, Id, OperationType);
+            return new DynamicJsonValue
+            {
+                [nameof(Etag)] = Etag,
+                [nameof(Name)] = Name,
+                [nameof(Type)] = Type.ToString()
+            };
         }
-    }
 
-    [Flags]
-    public enum ReplicationConflictTypes
-    {
-        None = 0,
+        internal static TransformerChange FromJson(BlittableJsonReaderObject value)
+        {
+            value.TryGet(nameof(Etag), out long etag);
+            value.TryGet(nameof(Name), out string name);
+            value.TryGet(nameof(Type), out string type);
 
-        DocumentReplicationConflict = 1,
-    }
-
-    [Flags]
-    public enum ReplicationOperationTypes
-    {
-        None = 0,
-
-        Put = 1,
-        Delete = 2,
+            return new TransformerChange
+            {
+                Etag = etag,
+                Type = (TransformerChangeTypes)Enum.Parse(typeof(TransformerChangeTypes), type, ignoreCase: true),
+                Name = name
+            };
+        }
     }
 
     internal class TrafficWatchChange : DatabaseChange
@@ -237,26 +239,5 @@ namespace Raven.Client.Documents.Changes
         public string CustomInfo { get; set; }
         public int InnerRequestsCount { get; set; }
         public object QueryTimings { get; set; } // TODO: fix this
-    }
-
-    public class DataSubscriptionChange : EventArgs
-    {
-        /// <summary>
-        /// Subscription identifier for which a notification was created
-        /// </summary>
-        public long Id { get; set; }
-
-        /// <summary>
-        /// Type of subscription change
-        /// </summary>
-        public DataSubscriptionChangeTypes Type { get; set; }
-    }
-
-    public enum DataSubscriptionChangeTypes
-    {
-        None = 0,
-
-        SubscriptionOpened = 1,
-        SubscriptionReleased = 2
     }
 }

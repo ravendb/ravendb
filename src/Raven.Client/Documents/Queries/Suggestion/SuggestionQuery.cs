@@ -3,6 +3,9 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
+using System;
+
 namespace Raven.Client.Documents.Queries.Suggestion
 {
     /// <summary>

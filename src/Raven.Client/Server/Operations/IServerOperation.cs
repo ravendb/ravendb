@@ -11,6 +11,6 @@ namespace Raven.Client.Server.Operations
 
     public interface IServerOperation
     {
-        RavenCommand<object> GetCommand(DocumentConventions conventions, JsonOperationContext context);
+        RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context);
     }
 }

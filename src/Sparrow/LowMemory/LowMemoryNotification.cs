@@ -22,6 +22,7 @@ namespace Sparrow.LowMemory
 
     public class LowMemoryNotification
     {
+        private const string NotificationThreadName = "Low memory notification thread";
         private readonly Logger _logger;
         private readonly ConcurrentSet<WeakReference<ILowMemoryHandler>> _lowMemoryHandlers = new ConcurrentSet<WeakReference<ILowMemoryHandler>>();
 
@@ -97,15 +98,18 @@ namespace Sparrow.LowMemory
 
             _lowMemoryThreshold = lowMemoryThreshold;
             _physicalRatioForLowMemDetection = physicalRatioForLowMemDetection;
-            new Thread(MonitorMemoryUsage)
+            var thread = new Thread(MonitorMemoryUsage)
             {
                 IsBackground = true,
-                Name = "Low memory notification thread"
-            }.Start();
+                Name = NotificationThreadName
+            };
+            
+            thread.Start();
         }
 
         private void MonitorMemoryUsage()
         {
+            NativeMemory.EnsureRegistered();
             int clearInactiveHandlersCounter = 0;
             var memoryAvailableHandles = new WaitHandle[] { _simulatedLowMemory, _shutdownRequested };
             var paranoidModeHandles = new WaitHandle[] { _simulatedLowMemory, _shutdownRequested, _warnAllocation };

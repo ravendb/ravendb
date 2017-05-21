@@ -39,7 +39,7 @@ namespace FastTests.Server.OAuth
 
             using (var store = GetDocumentStore(apiKey: "super/" + _apiKey.Secret))
             {
-                _apiKey.ResourcesAccessMode[store.DefaultDatabase] = AccessModes.ReadWrite;
+                _apiKey.ResourcesAccessMode[store.Database] = AccessModes.ReadWrite;
 
                 store.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
                 var doc = store.Admin.Server.Send(new GetApiKeyOperation("super"));
@@ -114,7 +114,7 @@ namespace FastTests.Server.OAuth
                 Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
                 var client = new HttpClient();
 
-                var baseUrl = $"{store.Url}/databases/{store.DefaultDatabase}";
+                var baseUrl = $"{store.Url}/databases/{store.Database}";
 
                 var result = await client.GetAsync(baseUrl + "/docs?id=test/1");
                 Assert.Equal(HttpStatusCode.PreconditionFailed, result.StatusCode);
@@ -129,7 +129,7 @@ namespace FastTests.Server.OAuth
 
                 // Admin should be able to save apiKey
                 Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
-                _apiKey.ResourcesAccessMode[store.DefaultDatabase] = AccessModes.ReadWrite;
+                _apiKey.ResourcesAccessMode[store.Database] = AccessModes.ReadWrite;
                 store.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
                 var doc = store.Admin.Server.Send(new GetApiKeyOperation("super"));
                 Assert.NotNull(doc);

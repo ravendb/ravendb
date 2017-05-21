@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Session
             };
 
             if (_operations == null)
-                _operations = new OperationExecuter(_documentStore, _requestExecutor, Context);
+                _operations = new OperationExecutor(_documentStore, _requestExecutor, Context);
 
             return _operations.Send(new DeleteByIndexOperation(indexName, indexQuery, options));
         }
@@ -53,7 +53,7 @@ namespace Raven.Client.Documents.Session
             };
 
             if (_operations == null)
-                _operations = new OperationExecuter(_documentStore, _requestExecutor, Context);
+                _operations = new OperationExecutor(_documentStore, _requestExecutor, Context);
 
             return _operations.Send(new PatchByIndexOperation(indexName, indexQuery, patch, options));
         }

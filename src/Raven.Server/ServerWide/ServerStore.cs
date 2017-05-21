@@ -5,12 +5,11 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Sockets;
-using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
 using Raven.Client.Util;
-using Raven.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Server;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Server.Commercial;
@@ -63,8 +62,7 @@ namespace Raven.Server.ServerWide
 
         public ServerStore(RavenConfiguration configuration, RavenServer ravenServer)
         {
-            if (configuration == null) throw new ArgumentNullException(nameof(configuration));
-            Configuration = configuration;
+            Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _ravenServer = ravenServer;
 
             DatabasesLandlord = new DatabasesLandlord(this);
@@ -210,7 +208,7 @@ namespace Raven.Server.ServerWide
 
             options.OnNonDurableFileSystemError += (obj, e) =>
             {
-                var alert = AlertRaised.Create("Non Durable File System - System Database",
+                var alert = AlertRaised.Create("Non Durable File System - System Storage",
                     e.Message,
                     AlertType.NonDurableFileSystem,
                     NotificationSeverity.Warning,
@@ -228,7 +226,7 @@ namespace Raven.Server.ServerWide
 
             options.OnRecoveryError += (obj, e) =>
             {
-                var alert = AlertRaised.Create("Database Recovery Error - System Database",
+                var alert = AlertRaised.Create("Recovery Error - System Storage",
                     e.Message,
                     AlertType.NonDurableFileSystem,
                     NotificationSeverity.Error,
@@ -255,7 +253,7 @@ namespace Raven.Server.ServerWide
                 }
                 catch (Exception e)
                 {
-                    throw new DatabaseLoadFailureException("Failed to load system database " + Environment.NewLine + $"At {options.BasePath}", e);
+                    throw new ServerLoadFailureException("Failed to load system storage " + Environment.NewLine + $"At {options.BasePath}", e);
                 }
             }
             catch (Exception e)
@@ -375,7 +373,7 @@ namespace Raven.Server.ServerWide
             {
                 try
                 {
-                    if (Sodium.crypto_generichash(pHash, (IntPtr)hashLen, pKey, (ulong)key.Length, null, IntPtr.Zero) != 0)
+                    if (Sodium.crypto_generichash(pHash, (UIntPtr)hashLen, pKey, (ulong)key.Length, null, UIntPtr.Zero) != 0)
                         throw new InvalidOperationException("Failed to hash key");
 
                     Sparrow.Memory.Copy(pHash + hashLen, pKey, key.Length);
@@ -426,10 +424,10 @@ namespace Raven.Server.ServerWide
             {
                 try
                 {
-                    if (Sodium.crypto_generichash(pHash, (IntPtr)hashLen, pData + hashLen, (ulong)(data.Length - hashLen), null, IntPtr.Zero) != 0)
+                    if (Sodium.crypto_generichash(pHash, (UIntPtr)hashLen, pData + hashLen, (ulong)(data.Length - hashLen), null, UIntPtr.Zero) != 0)
                         throw new InvalidOperationException($"Unable to compute hash for {name}");
 
-                    if (Sodium.sodium_memcmp(pData, pHash, (IntPtr)hashLen) != 0)
+                    if (Sodium.sodium_memcmp(pData, pHash, (UIntPtr)hashLen) != 0)
                         throw new InvalidOperationException($"Unable to validate hash after decryption for {name}, user store changed?");
 
                     var buffer = new byte[data.Length - hashLen];

@@ -11,8 +11,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/info/tcp", "GET", "tcp-connections-state", NoAuthorizationRequired = true)]
         public async Task Get()
         {
-            JsonOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var tcpListenerStatus = await Server.GetTcpServerStatusAsync();
@@ -22,7 +21,7 @@ namespace Raven.Server.Web.System
                 {
                     Uri uri;
                     short shortPort;
-                    if(short.TryParse(Server.Configuration.Core.TcpServerUrl, out shortPort) == false &&
+                    if (short.TryParse(Server.Configuration.Core.TcpServerUrl, out shortPort) == false &&
                         Uri.TryCreate(Server.Configuration.Core.TcpServerUrl, UriKind.RelativeOrAbsolute, out uri))
                         host = uri.Host;
                 }

@@ -38,8 +38,8 @@ namespace Raven.Client.Documents.Commands.MultiGet
             var commands = new List<DynamicJsonValue>();
             foreach (var command in _commands)
             {
-                var cacheKey = GetCacheKey(command, out string requestUrl);
-                using (_cache.Get(_context, cacheKey, out long cachedEtag, out BlittableJsonReaderObject cachedResponse))
+                var cacheKey = GetCacheKey(command, out string _);
+                using (_cache.Get(_context, cacheKey, out long cachedEtag, out BlittableJsonReaderObject _))
                 {
                     var headers = new DynamicJsonValue();
                     if (cachedEtag != 0)
@@ -62,16 +62,9 @@ namespace Raven.Client.Documents.Commands.MultiGet
             {
                 using (var writer = new BlittableJsonTextWriter(_context, stream))
                 {
-                    writer.WriteStartArray();
-                    var first = true;
-                    foreach (var command in commands)
-                    {
-                        if (first == false)
-                            writer.WriteComma();
-                        first = false;
-                        _context.Write(writer, command);
-                    }
-                    writer.WriteEndArray();
+                    writer.WriteStartObject();
+                    writer.WriteArray("Requests", commands, _context);
+                    writer.WriteEndObject();
                 }
             });
 
@@ -224,8 +217,8 @@ namespace Raven.Client.Documents.Commands.MultiGet
             if (getResponse.StatusCode != HttpStatusCode.NotModified)
                 return;
 
-            var cacheKey = GetCacheKey(command, out string requestUrl);
-            using (_cache.Get(_context, cacheKey, out long cachedEtag, out BlittableJsonReaderObject cachedResponse))
+            var cacheKey = GetCacheKey(command, out string _);
+            using (_cache.Get(_context, cacheKey, out long _, out BlittableJsonReaderObject cachedResponse))
             {
                 getResponse.Result = cachedResponse;
             }
@@ -236,7 +229,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
             if (getResponse.StatusCode == HttpStatusCode.NotModified)
                 return;
 
-            var cacheKey = GetCacheKey(command, out string requestUrl);
+            var cacheKey = GetCacheKey(command, out string _);
 
             var result = getResponse.Result as BlittableJsonReaderObject;
             if (result == null)

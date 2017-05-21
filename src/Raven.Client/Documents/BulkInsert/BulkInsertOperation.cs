@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -129,7 +128,7 @@ namespace Raven.Client.Documents.BulkInsert
                 throw new NotImplementedException();
             }
         }
-        private readonly RequestExecutor _requestExecuter;
+        private readonly RequestExecutor _requestExecutor;
         private Task _bulkInsertExecuteTask;
 
         private readonly JsonOperationContext _context;
@@ -148,8 +147,8 @@ namespace Raven.Client.Documents.BulkInsert
             _token = token;
             database = database ?? MultiDatabase.GetDatabaseName(store.Url);
             _conventions = store.Conventions;
-            _requestExecuter = store.GetRequestExecuter(database);
-            _resetContext = _requestExecuter.ContextPool.AllocateOperationContext(out _context);
+            _requestExecutor = store.GetRequestExecutor(database);
+            _resetContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);
             _streamExposerContent = new StreamExposerContent();
 
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(store.Conventions, entity =>
@@ -162,7 +161,7 @@ namespace Raven.Client.Documents.BulkInsert
                 return;
 
             var bulkInsertGetIdRequest = new GetNextOperationIdCommand();
-            await _requestExecuter.ExecuteAsync(bulkInsertGetIdRequest, _context, _token).ConfigureAwait(false);
+            await _requestExecutor.ExecuteAsync(bulkInsertGetIdRequest, _context, _token).ConfigureAwait(false);
             _operationId = bulkInsertGetIdRequest.Result;
         }
 
@@ -192,7 +191,7 @@ namespace Raven.Client.Documents.BulkInsert
             }
 
             JsonOperationContext tempContext;
-            using (_requestExecuter.ContextPool.AllocateOperationContext(out tempContext))
+            using (_requestExecutor.ContextPool.AllocateOperationContext(out tempContext))
             using (var doc = EntityToBlittable.ConvertEntityToBlittable(entity, _conventions, tempContext, new DocumentInfo
             {
                 Collection = _conventions.GetCollectionName(entity)
@@ -230,7 +229,7 @@ namespace Raven.Client.Documents.BulkInsert
         private async Task<BulkInsertAbortedException> GetExceptionFromOperation()
         {
             var stateRequest = new GetOperationStateCommand(_conventions, _operationId);
-            await _requestExecuter.ExecuteAsync(stateRequest, _context, _token).ConfigureAwait(false);
+            await _requestExecutor.ExecuteAsync(stateRequest, _context, _token).ConfigureAwait(false);
             var error = stateRequest.Result.Result as OperationExceptionResult;
 
             if (error == null)
@@ -241,7 +240,7 @@ namespace Raven.Client.Documents.BulkInsert
         private async Task EnsureStream()
         {
             var bulkCommand = new BulkInsertCommand(_operationId, _streamExposerContent);
-            _bulkInsertExecuteTask = _requestExecuter.ExecuteAsync(bulkCommand, _context, _token);
+            _bulkInsertExecuteTask = _requestExecutor.ExecuteAsync(bulkCommand, _context, _token);
 
             _stream = await _streamExposerContent.OutputStream.ConfigureAwait(false);
             _jsonWriter = new BlittableJsonTextWriter(_context, _stream);
@@ -262,7 +261,7 @@ namespace Raven.Client.Documents.BulkInsert
             await WaitForId().ConfigureAwait(false);
             try
             {
-                await _requestExecuter.ExecuteAsync(new KillOperationCommand(_operationId), _context, _token).ConfigureAwait(false);
+                await _requestExecutor.ExecuteAsync(new KillOperationCommand(_operationId), _context, _token).ConfigureAwait(false);
             }
             catch (RavenException)
             {

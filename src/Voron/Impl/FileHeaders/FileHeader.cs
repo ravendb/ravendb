@@ -14,6 +14,7 @@ namespace Voron.Impl.FileHeaders
         /// to be written to a single sector, because we assume atomic sector writes.
         /// </summary>
         private static readonly unsafe byte[] AssertTransactionHeaderSize = new byte[sizeof(FileHeader) < 512 ? 0 : -1];
+        public static int HashOffset = (int)Marshal.OffsetOf<FileHeader>(nameof(Hash));
 
         /// <summary>
         /// Just a value chosen to mark our files headers, this is used to 
@@ -68,5 +69,11 @@ namespace Voron.Impl.FileHeaders
         /// </summary>
         [FieldOffset(150)]
         public int PageSize;
+
+        /// <summary>
+        /// Hash of the header used for validation
+        /// </summary>
+        [FieldOffset(154)]
+        public ulong Hash;
     }
 }

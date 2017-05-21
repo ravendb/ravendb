@@ -15,13 +15,8 @@ namespace Raven.Client.Documents.Commands
 
         public GetFacetsCommand(JsonOperationContext context, FacetQuery query)
         {
-            if (context == null)
-                throw new ArgumentNullException(nameof(context));
-            if (query == null)
-                throw new ArgumentNullException(nameof(query));
-
-            _context = context;
-            _query = query;
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _query = query ?? throw new ArgumentNullException(nameof(query));
 
             if (_query.WaitForNonStaleResultsTimeout.HasValue && _query.WaitForNonStaleResultsTimeout != TimeSpan.MaxValue)
                 Timeout = _query.WaitForNonStaleResultsTimeout.Value.Add(TimeSpan.FromSeconds(10)); // giving the server an opportunity to finish the response

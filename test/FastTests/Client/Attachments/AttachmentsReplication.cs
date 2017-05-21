@@ -377,7 +377,7 @@ namespace FastTests.Client.Attachments
         private async Task SetupAttachmentReplicationAsync(DocumentStore store1, DocumentStore store2, bool waitOnMarker = true)
         {
             //var database1 = GetDocumentDatabaseInstanceFor(store1).Result;
-            var database1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.DefaultDatabase).Result;
+            var database1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result;
             database1.Configuration.Replication.MaxItemsCount = null;
             database1.Configuration.Replication.MaxSizeToSend = null;
             await SetupReplicationAsync(store1, store2);
@@ -450,8 +450,8 @@ namespace FastTests.Client.Attachments
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store1.DefaultDatabase, false, 4);
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store2.DefaultDatabase, false, 4);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, store1.Database, false, 4);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, store2.Database, false, 4);
 
                 using (var session = store1.OpenSession())
                 {
@@ -931,7 +931,7 @@ namespace FastTests.Client.Attachments
         private async Task SetDatabaseId(DocumentStore store, Guid dbId)
         {
             //var database = await GetDocumentDatabaseInstanceFor(store);
-            var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
+            var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
             var type = database.GetAllStoragesEnvironment().Single(t => t.Type == StorageEnvironmentWithType.StorageEnvironmentType.Documents);
             type.Environment.DbId = dbId;
         }

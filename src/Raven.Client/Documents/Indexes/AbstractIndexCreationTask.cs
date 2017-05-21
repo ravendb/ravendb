@@ -345,7 +345,7 @@ namespace Raven.Client.Documents.Indexes
         }
 
         /// <summary>
-        /// Loads the specifed document during the indexing process
+        /// Loads the specified document during the indexing process
         /// </summary>
         public T LoadDocument<T>(string key)
         {
@@ -353,7 +353,7 @@ namespace Raven.Client.Documents.Indexes
         }
 
         /// <summary>
-        /// Loads the specifed document during the indexing process
+        /// Loads the specified document during the indexing process
         /// </summary>
         public T[] LoadDocument<T>(IEnumerable<string> keys)
         {

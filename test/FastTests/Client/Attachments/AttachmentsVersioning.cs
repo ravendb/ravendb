@@ -20,7 +20,7 @@ namespace FastTests.Client.Attachments
         {
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.DefaultDatabase, false, 4);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database, false, 4);
                 var names = CreateDocumentWithAttachments(store);
                 AssertRevisions(store, names, (session, revisions) =>
                 {

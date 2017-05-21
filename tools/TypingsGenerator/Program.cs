@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
@@ -13,6 +12,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Transformers;
+using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.PeriodicExport;
 using Raven.Client.Server.Versioning;
@@ -25,7 +25,6 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.Versioning;
 using Raven.Server.Documents.Studio;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Replication;
@@ -41,9 +40,9 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using TypeScripter;
 using TypeScripter.TypeScript;
+using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 using Voron.Data.BTrees;
 using Voron.Debugging;
-using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace TypingsGenerator
 {
@@ -105,6 +104,7 @@ namespace TypingsGenerator
 
             scripter.AddType(typeof(BatchRequestParser.CommandData));
 
+            scripter.AddType(typeof(DatabasePutResult));
             scripter.AddType(typeof(DatabaseRecord));
             scripter.AddType(typeof(DatabaseStatistics));
             scripter.AddType(typeof(FooterStatistics));

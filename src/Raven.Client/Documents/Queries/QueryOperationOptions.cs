@@ -27,10 +27,7 @@ namespace Raven.Client.Documents.Queries
         /// </summary>
         public int? MaxOpsPerSecond
         {
-            get
-            {
-                return _maxOpsPerSecond;
-            }
+            get => _maxOpsPerSecond;
 
             set
             {

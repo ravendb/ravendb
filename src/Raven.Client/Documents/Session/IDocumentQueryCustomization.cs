@@ -27,41 +27,41 @@ namespace Raven.Client.Documents.Session
         ///     Adds matches highlighting for the specified field.
         /// </summary>
         /// <remarks>
-        ///     The specified field should be analysed and stored for highlighter to work.
+        ///     The specified field should be analyzed and stored for highlighter to work.
         ///     For each match it creates a fragment that contains matched text surrounded by highlighter tags.
         /// </remarks>
         /// <param name="fieldName">The field name to highlight.</param>
         /// <param name="fragmentLength">The fragment length.</param>
         /// <param name="fragmentCount">The maximum number of fragments for the field.</param>
-        /// <param name="fragmentsField">The field in query results item to put highlightings into.</param>
+        /// <param name="fragmentsField">The field in query results item to put highlights into.</param>
         IDocumentQueryCustomization Highlight(string fieldName, int fragmentLength, int fragmentCount, string fragmentsField);
 
         /// <summary>
         ///     Adds matches highlighting for the specified field.
         /// </summary>
         /// <remarks>
-        ///     The specified field should be analysed and stored for highlighter to work.
+        ///     The specified field should be analyzed and stored for highlighter to work.
         ///     For each match it creates a fragment that contains matched text surrounded by highlighter tags.
         /// </remarks>
         /// <param name="fieldName">The field name to highlight.</param>
         /// <param name="fragmentLength">The fragment length.</param>
         /// <param name="fragmentCount">The maximum number of fragments for the field.</param>
-        /// <param name="highlightings">Field highlightings for all results.</param>
+        /// <param name="highlightings">Field highlights for all results.</param>
         IDocumentQueryCustomization Highlight(string fieldName, int fragmentLength, int fragmentCount, out FieldHighlightings highlightings);
 
         /// <summary>
         ///     Adds matches highlighting for the specified field on a Map/Reduce Index.
         /// </summary>
         /// <remarks>
-        ///     This is only valid for Map/Reduce Index querys.
-        ///     The specified field and key should be analysed and stored for highlighter to work.
+        ///     This is only valid for Map/Reduce Index queries.
+        ///     The specified field and key should be analyzed and stored for highlighter to work.
         ///     For each match it creates a fragment that contains matched text surrounded by highlighter tags.
         /// </remarks>
         /// <param name="fieldName">The field name to highlight.</param>
         /// <param name="fieldKeyName">The field key to associate highlights with.</param>
         /// <param name="fragmentLength">The fragment length.</param>
         /// <param name="fragmentCount">The maximum number of fragments for the field.</param>
-        /// <param name="highlightings">Field highlightings for all results.</param>
+        /// <param name="highlightings">Field highlights for all results.</param>
         IDocumentQueryCustomization Highlight(string fieldName, string fieldKeyName, int fragmentLength, int fragmentCount, out FieldHighlightings highlightings);
 
         /// <summary>
@@ -156,7 +156,7 @@ namespace Raven.Client.Documents.Session
         /// <param name="shapeWKT">WKT formatted shape</param>
         /// <param name="rel">Spatial relation to check (Within, Contains, Disjoint, Intersects, Nearby)</param>
         /// <param name="distErrorPercent">"Gets the error distance that specifies how precise the query shape is."</param>
-        IDocumentQueryCustomization RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel, double distErrorPercent=0.025);
+        IDocumentQueryCustomization RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel, double distErrorPercent = 0.025);
 
         /// <summary>
         ///     If set to true, this property will send multiple index entries from the same document (assuming the index project
@@ -227,8 +227,8 @@ namespace Raven.Client.Documents.Session
         ///     <para>However, when used to query map/reduce indexes, it does NOT guarantee that the document that this</para>
         ///     <para>etag belong to is actually considered for the results. </para>
         ///     <para>What it does it guarantee that the document has been mapped, but not that the mapped values has been reduced. </para>
-        ///     <para>Since map/reduce queries, by their nature,vtend to be far less susceptible to issues with staleness, this is </para>
-        ///     <para>considered to be an acceptable tradeoff.</para>
+        ///     <para>Since map/reduce queries, by their nature, tend to be far less susceptible to issues with staleness, this is </para>
+        ///     <para>considered to be an acceptable trade-off.</para>
         ///     <para>If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and </para>
         ///     <para>use the Cutoff date option, instead.</para>
         /// </param>
@@ -245,8 +245,8 @@ namespace Raven.Client.Documents.Session
         ///     <para>However, when used to query map/reduce indexes, it does NOT guarantee that the document that this</para>
         ///     <para>etag belong to is actually considered for the results. </para>
         ///     <para>What it does it guarantee that the document has been mapped, but not that the mapped values has been reduced. </para>
-        ///     <para>Since map/reduce queries, by their nature,vtend to be far less susceptible to issues with staleness, this is </para>
-        ///     <para>considered to be an acceptable tradeoff.</para>
+        ///     <para>Since map/reduce queries, by their nature, tend to be far less susceptible to issues with staleness, this is </para>
+        ///     <para>considered to be an acceptable trade-off.</para>
         ///     <para>If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and </para>
         ///     <para>use the Cutoff date option, instead.</para>
         /// </param>
@@ -269,8 +269,8 @@ namespace Raven.Client.Documents.Session
         ///     spatial field name: __spatial
         /// </summary>
         /// <param name="radius">Radius (in kilometers) in which matches should be found.</param>
-        /// <param name="latitude">Latitude poiting to a circle center.</param>
-        /// <param name="longitude">Longitude poiting to a circle center.</param>
+        /// <param name="latitude">Latitude pointing to a circle center.</param>
+        /// <param name="longitude">Longitude pointing to a circle center.</param>
         /// <param name="distErrorPercent">"Gets the error distance that specifies how precise the query shape is."</param>
         IDocumentQueryCustomization WithinRadiusOf(double radius, double latitude, double longitude, double distErrorPercent = 0.025);
 
@@ -279,17 +279,17 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="fieldName">Spatial field name.</param>
         /// <param name="radius">Radius (in kilometers) in which matches should be found.</param>
-        /// <param name="latitude">Latitude poiting to a circle center.</param>
-        /// <param name="longitude">Longitude poiting to a circle center.</param>
+        /// <param name="latitude">Latitude pointing to a circle center.</param>
+        /// <param name="longitude">Longitude pointing to a circle center.</param>
         /// <param name="distErrorPercent">"Gets the error distance that specifies how precise the query shape is."</param>
-        IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distErrorPercent=0.025);
+        IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distErrorPercent = 0.025);
 
         /// <summary>
         ///     Filter matches to be inside the specified radius
         /// </summary>
         /// <param name="radius">Radius (measured in units passed to radiusUnits parameter) in which matches should be found.</param>
-        /// <param name="latitude">Latitude poiting to a circle center.</param>
-        /// <param name="longitude">Longitude poiting to a circle center.</param>
+        /// <param name="latitude">Latitude pointing to a circle center.</param>
+        /// <param name="longitude">Longitude pointing to a circle center.</param>
         /// <param name="radiusUnits">Units that will be used to measure distances (Kilometers, Miles).</param>
         /// <param name="distErrorPercent">"Gets the error distance that specifies how precise the query shape is."</param>
         IDocumentQueryCustomization WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distErrorPercent = 0.025);
@@ -299,11 +299,11 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="fieldName">Spatial field name.</param>
         /// <param name="radius">Radius (measured in units passed to radiusUnits parameter) in which matches should be found.</param>
-        /// <param name="latitude">Latitude poiting to a circle center.</param>
-        /// <param name="longitude">Longitude poiting to a circle center.</param>
+        /// <param name="latitude">Latitude pointing to a circle center.</param>
+        /// <param name="longitude">Longitude pointing to a circle center.</param>
         /// <param name="radiusUnits">Units that will be used to measure distances (Kilometers, Miles).</param>
         /// <param name="distErrorPercent">"Gets the error distance that specifies how precise the query shape is."</param>
-        IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distErrorPercent=0.025);
+        IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distErrorPercent = 0.025);
 
         /// <summary>
         /// When using spatial queries, instruct the query to sort by the distance from the origin point

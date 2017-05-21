@@ -18,6 +18,8 @@ namespace Raven.Client.Http
         {
             ResponseType = RavenCommandResponseType.Empty;
         }
+
+        public override bool IsReadRequest { get; } = false;
     }
 
     public abstract class RavenCommand<TResult>
@@ -28,21 +30,23 @@ namespace Raven.Client.Http
         public TResult Result;
         public int AuthenticationRetries;
         public abstract bool IsReadRequest { get; }
-        public HttpStatusCode StatusCode;
+        public HttpStatusCode StatusCode;      
 
-        public bool AvoidFailover;        
-
-        public RavenCommandResponseType ResponseType { get; protected set; } = RavenCommandResponseType.Object;
+        public RavenCommandResponseType ResponseType { get; protected set; }
 
         public TimeSpan? Timeout { get; protected set; }
+
+        protected RavenCommand()
+        {
+            ResponseType = RavenCommandResponseType.Object;
+        }
 
         public abstract HttpRequestMessage CreateRequest(ServerNode node, out string url);
 
         public virtual void SetResponse(BlittableJsonReaderObject response, bool fromCache)
         {
             if (ResponseType == RavenCommandResponseType.Empty ||
-                ResponseType == RavenCommandResponseType.Raw ||
-                ResponseType == RavenCommandResponseType.Array)
+                ResponseType == RavenCommandResponseType.Raw)
                 ThrowInvalidResponse();
 
             throw new InvalidOperationException($"'{GetType()}' command must override the SetResponse method which expects response with the following type: {ResponseType}.");
@@ -53,11 +57,6 @@ namespace Raven.Client.Http
             // We must use HttpCompletionOption.ResponseHeadersRead otherwise the client will buffer the response
             // and we'll get OutOfMemoryException in huge responses (> 2GB).
             return client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
-        }
-
-        public virtual void SetResponse(BlittableJsonReaderArray response, bool fromCache)
-        {
-            throw new NotSupportedException($"When {nameof(ResponseType)} is set to Array then please override this method to handle the response.");
         }
 
         public virtual void SetResponseRaw(HttpResponseMessage response, Stream stream, JsonOperationContext context)
@@ -107,19 +106,6 @@ namespace Raven.Client.Http
                         return;
                     }
 
-                    if (ResponseType == RavenCommandResponseType.Array)
-                    {
-                        var contentLength = response.Content.Headers.ContentLength;
-                        if (contentLength.HasValue && contentLength == 0)
-                            return;
-
-                        var array = await context.ParseArrayToMemoryAsync(stream, "response/array", BlittableJsonDocumentBuilder.UsageMode.None);
-                        // TODO: Either cache also arrays or the better way is to remove all array respones by converting them to objects.
-                        SetResponse(array.Item1, fromCache: false);
-                        return;
-                    }
-
-
                     // We do not cache the stream response.
                     var uncompressedStream = await RequestExecutor.ReadAsStreamUncompressedAsync(response);
 
@@ -148,7 +134,7 @@ namespace Raven.Client.Http
             if (IsReadRequest)
             {
                 if (ResponseType != RavenCommandResponseType.Raw)
-                    throw new InvalidOperationException("No need to add the etag for Get requests as the request executer will add it.");
+                    throw new InvalidOperationException("No need to add the etag for Get requests as the request executor will add it.");
 
                 throw new InvalidOperationException("Stream responses are not cached so not etag should be used.");
             }
@@ -163,7 +149,6 @@ namespace Raven.Client.Http
     {
         Empty,
         Object,
-        Array,
         Raw
     }
 }

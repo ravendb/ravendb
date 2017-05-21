@@ -12,7 +12,7 @@ namespace SlowTests.Tests.Faceted
     {
         public static HttpStatusCode PerformGet(DocumentStore store, string url, long? requestEtag, out long? responseEtag)
         {
-            var requestExecuter = store.GetRequestExecuter();
+            var requestExecuter = store.GetRequestExecutor();
 
             JsonOperationContext context;
             using (requestExecuter.ContextPool.AllocateOperationContext(out context))
@@ -28,7 +28,7 @@ namespace SlowTests.Tests.Faceted
 
         public static HttpStatusCode PerformPost(DocumentStore store, string url, string payload, long? requestEtag, out long? responseEtag)
         {
-            var requestExecuter = store.GetRequestExecuter();
+            var requestExecuter = store.GetRequestExecutor();
 
             JsonOperationContext context;
             using (requestExecuter.ContextPool.AllocateOperationContext(out context))

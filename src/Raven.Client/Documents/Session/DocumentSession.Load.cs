@@ -12,7 +12,6 @@ using System.Linq;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Transformers;
-using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
@@ -31,18 +30,18 @@ namespace Raven.Client.Documents.Session
         {
             if (id == null)
                 return default(T);
-            var loadOeration = new LoadOperation(this);
-            loadOeration.ById(id);
+            var loadOperation = new LoadOperation(this);
+            loadOperation.ById(id);
 
-            var command = loadOeration.CreateRequest();
+            var command = loadOperation.CreateRequest();
 
             if (command != null)
             {
                 RequestExecutor.Execute(command, Context);
-                loadOeration.SetResult(command.Result);
+                loadOperation.SetResult(command.Result);
             }
 
-            return loadOeration.GetDocument<T>();
+            return loadOperation.GetDocument<T>();
         }
 
         /// <summary>
@@ -180,19 +179,19 @@ namespace Raven.Client.Documents.Session
             if (ids.Length == 0)
                 return new Dictionary<string, T>();
 
-            var loadTransformerOeration = new LoadTransformerOperation(this);
-            loadTransformerOeration.ByIds(ids);
-            loadTransformerOeration.WithTransformer(transformer, transformerParameters);
-            loadTransformerOeration.WithIncludes(includes);
+            var loadTransformerOperation = new LoadTransformerOperation(this);
+            loadTransformerOperation.ByIds(ids);
+            loadTransformerOperation.WithTransformer(transformer, transformerParameters);
+            loadTransformerOperation.WithIncludes(includes);
 
-            var command = loadTransformerOeration.CreateRequest();
+            var command = loadTransformerOperation.CreateRequest();
             if (command != null)
             {
                 RequestExecutor.Execute(command, Context);
-                loadTransformerOeration.SetResult(command.Result);
+                loadTransformerOperation.SetResult(command.Result);
             }
 
-            return loadTransformerOeration.GetTransformedDocuments<T>(command?.Result);
+            return loadTransformerOperation.GetTransformedDocuments<T>(command?.Result);
         }
 
         public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null,

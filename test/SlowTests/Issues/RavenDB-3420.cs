@@ -20,14 +20,14 @@ namespace SlowTests.Issues
                 var shard1 = new DocumentStore
                 {
                     Url = server1.WebUrls[0],
-                    DefaultDatabase = databaseName1
+                    Database = databaseName1
                 };
                 shard1.Initialize();
 
                 var shard2 = new DocumentStore
                 {
                     Url = server2.WebUrls[0],
-                    DefaultDatabase = databaseName2
+                    Database = databaseName2
                 };
                 shard2.Initialize();
 
@@ -40,8 +40,8 @@ namespace SlowTests.Issues
                 //var shardStrategy = new ShardStrategy(shards);
                 //shardStrategy.ShardingOn<Profile>(x => x.Location);
 
-                //CreateDatabase(shard1, shard1.DefaultDatabase);
-                //CreateDatabase(shard2, shard2.DefaultDatabase);
+                //CreateDatabase(shard1, shard1.Database);
+                //CreateDatabase(shard2, shard2.Database);
 
                 //using (var shardedDocumentStore = new ShardedDocumentStore(shardStrategy))
                 //{
@@ -58,7 +58,7 @@ namespace SlowTests.Issues
                 //    }
                 //}
 
-                using (var store1 = new DocumentStore { Url = server1.WebUrls[0], DefaultDatabase = databaseName1 }.Initialize())
+                using (var store1 = new DocumentStore { Url = server1.WebUrls[0], Database = databaseName1 }.Initialize())
                 {
                     using (var session = store1.OpenSession())
                     {
@@ -73,7 +73,7 @@ namespace SlowTests.Issues
                         Assert.Equal(2, totalDocs.Count);
                     }
                 }
-                using (var store2 = new DocumentStore { Url = server2.WebUrls[0], DefaultDatabase = databaseName2 }.Initialize())
+                using (var store2 = new DocumentStore { Url = server2.WebUrls[0], Database = databaseName2 }.Initialize())
                 {
                     using (var session = store2.OpenSession())
                     {
@@ -100,14 +100,14 @@ namespace SlowTests.Issues
                 var shard1 = new DocumentStore
                 {
                     Url = server1.WebUrls[0],
-                    DefaultDatabase = store.DefaultDatabase
+                    Database = store.Database
                 };
                 shard1.Initialize();
 
                 var shard2 = new DocumentStore
                 {
                     Url = server2.WebUrls[0],
-                    DefaultDatabase = store.DefaultDatabase
+                    Database = store.Database
                 };
                 shard2.Initialize();
 
@@ -138,7 +138,7 @@ namespace SlowTests.Issues
                 //    }
                 //}
 
-                using (var store1 = new DocumentStore { Url = server1.WebUrls[0], DefaultDatabase = databaseName }.Initialize())
+                using (var store1 = new DocumentStore { Url = server1.WebUrls[0], Database = databaseName }.Initialize())
                 {
                     using (var session = store1.OpenSession())
                     {
@@ -154,7 +154,7 @@ namespace SlowTests.Issues
                     }
                 }
 
-                using (var store2 = new DocumentStore { Url = server2.WebUrls[0], DefaultDatabase = databaseName }.Initialize())
+                using (var store2 = new DocumentStore { Url = server2.WebUrls[0], Database = databaseName }.Initialize())
                 {
                     using (var session = store2.OpenSession())
                     {

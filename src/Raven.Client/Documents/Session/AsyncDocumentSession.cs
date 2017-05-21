@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Session
     public partial class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
     {
         private AsyncDocumentKeyGeneration _asyncDocumentKeyGeneration;
-        private OperationExecuter _operations;
+        private OperationExecutor _operations;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
@@ -37,12 +37,16 @@ namespace Raven.Client.Documents.Session
 
         public string GetDocumentUrl(object entity)
         {
-            throw new NotImplementedException();
+            DocumentInfo document;
+            if (DocumentsByEntity.TryGetValue(entity, out document) == false)
+                throw new InvalidOperationException("Could not figure out identifier for transient instance");
+
+            return RequestExecutor.UrlFor(document.Id);
         }
 
         public async Task<bool> ExistsAsync(string id)
         {
-            if(id == null)
+            if (id == null)
                 throw new ArgumentNullException(nameof(id));
 
             if (DocumentsById.TryGetValue(id, out _))
@@ -61,11 +65,7 @@ namespace Raven.Client.Documents.Session
                 throw new InvalidOperationException("Cannot refresh a transient instance");
             IncrementRequestCount();
 
-            var command = new GetDocumentCommand
-            {
-                Ids = new[] { documentInfo.Id },
-                Context = Context
-            };
+            var command = new GetDocumentCommand(new[] { documentInfo.Id }, includes: null, transformer: null, transformerParameters: null, metadataOnly: false, context: Context);
             await RequestExecutor.ExecuteAsync(command, Context, token);
 
             RefreshInternal(entity, command, documentInfo);
@@ -130,6 +130,6 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-       
+
     }
 }

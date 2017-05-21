@@ -17,17 +17,17 @@ namespace Raven.Client.Documents.Linq
         /// <summary>
         /// Gets the full path of the member being referred to by this node
         /// </summary>
-        public string Path { get; private set; }
+        public string Path { get; }
 
         /// <summary>
         /// Gets the actual type being referred to
         /// </summary>
-        public Type Type { get; private set; }
+        public Type Type { get; }
 
         /// <summary>
         /// Whether the expression is of a nested path
         /// </summary>
-        public bool IsNestedPath { get; private set; }
+        public bool IsNestedPath { get; }
         /// <summary>
         /// Maybe contain the relevant property
         /// </summary>

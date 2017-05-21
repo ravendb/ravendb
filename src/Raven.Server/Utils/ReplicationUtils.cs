@@ -115,25 +115,25 @@ namespace Raven.Server.Utils
             return false;
         }
 
-        public static TcpConnectionInfo GetTcpInfo(string url, string databaseName, string apiKey)
+        public static TcpConnectionInfo GetTcpInfo(string url, string databaseName, string apiKey, string tag)
         {
             JsonOperationContext context;
             using (var requestExecuter = RequestExecutor.CreateForSingleNode(url, databaseName, apiKey))
             using (requestExecuter.ContextPool.AllocateOperationContext(out context))
             {
-                var getTcpInfoCommand = new GetTcpInfoCommand();
+                var getTcpInfoCommand = new GetTcpInfoCommand(tag + "/" + databaseName);
                 requestExecuter.Execute(getTcpInfoCommand, context);
 
                 return getTcpInfoCommand.Result;
             }
         }
 
-        public static async Task<TcpConnectionInfo> GetTcpInfoAsync(string url, string databaseName, string apiKey)
+        public static async Task<TcpConnectionInfo> GetTcpInfoAsync(string url, string databaseName, string apiKey, string tag)
         {
             using (var requestExecuter = RequestExecutor.CreateForSingleNode(url, databaseName, apiKey))
             using (requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {                
-                var getTcpInfoCommand = new GetTcpInfoCommand();
+                var getTcpInfoCommand = new GetTcpInfoCommand(tag + "/" + databaseName);
                 await requestExecuter.ExecuteAsync(getTcpInfoCommand, context);
 
                 return getTcpInfoCommand.Result;

@@ -511,26 +511,67 @@ namespace Sparrow
 
         public static class HashCombiner
         {
+            /// <summary>
+            /// The combine function will perform the mixing of 2 hash values into a single one.
+            /// It is important that the parameters are hash functions. If they are not the statistical properties of the output will be quite bad.
+            /// For non hashes use <see cref="Hashing.Combine"/> instead
+            /// </summary>
+            /// <param name="x">The first hash value</param>
+            /// <param name="y">The second hash value</param>
+            /// <returns>The combined hash value</returns>
             public static int Combine(int x, int y)
             {
                 return CombineInline(x, y);
             }
 
+            /// <summary>
+            /// The combine function will perform the mixing of 2 hash values into a single one.
+            /// It is important that the parameters are hash functions. If they are not the statistical properties of the output will be quite bad.
+            /// For non hashes use <see cref="Hashing.Combine"/> instead
+            /// </summary>
+            /// <param name="x">The first hash value</param>
+            /// <param name="y">The second hash value</param>
+            /// <returns>The combined hash value</returns>
             public static uint Combine(uint x, uint y)
             {
                 return CombineInline(x, y);
             }
 
+            /// <summary>
+            /// The combine function will perform the mixing of 2 hash values into a single one.
+            /// It is important that the parameters are hash functions. If they are not the statistical properties of the output will be quite bad.
+            /// For non hashes use <see cref="Hashing.Combine"/> instead
+            /// </summary>
+            /// <param name="x">The first hash value</param>
+            /// <param name="y">The second hash value</param>
+            /// <returns>The combined hash value</returns>
             public static long Combine(long x, long y)
             {
                 return CombineInline(x, y);
             }
 
+            /// <summary>
+            /// The combine function will perform the mixing of 2 hash values into a single one.
+            /// It is important that the parameters are hash functions. If they are not the statistical properties of the output will be quite bad.
+            /// For non hashes use <see cref="Hashing.Combine"/> instead
+            /// </summary>
+            /// <param name="x">The first hash value</param>
+            /// <param name="y">The second hash value</param>
+            /// <returns>The combined hash value</returns>
             public static ulong Combine(ulong x, ulong y)
             {
                 return CombineInline(x, y);
             }
 
+            /// <summary>
+            /// The combine function will perform the mixing of 2 hash values into a single one.
+            /// It is important that the parameters are hash functions. If they are not the statistical properties of the output will be quite bad.
+            /// For non hashes use <see cref="Hashing.Combine"/> instead
+            /// </summary>
+            /// <remarks>This version will force inlining on the call-site</remarks>
+            /// <param name="x">The first hash value</param>
+            /// <param name="y">The second hash value</param>
+            /// <returns>The combined hash value</returns>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static int CombineInline(int x, int y)
             {
@@ -540,6 +581,15 @@ namespace Sparrow
                 return ((int)shift5 + x) ^ y;
             }
 
+            /// <summary>
+            /// The combine function will perform the mixing of 2 hash values into a single one.
+            /// It is important that the parameters are hash functions. If they are not the statistical properties of the output will be quite bad.
+            /// For non hashes use <see cref="Hashing.Combine"/> instead
+            /// </summary>
+            /// <remarks>This version will force inlining on the call-site</remarks>
+            /// <param name="x">The first hash value</param>
+            /// <param name="y">The second hash value</param>
+            /// <returns>The combined hash value</returns>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static uint CombineInline(uint x, uint y)
             {
@@ -549,6 +599,15 @@ namespace Sparrow
                 return (shift5 + x) ^ y;
             }
 
+            /// <summary>
+            /// The combine function will perform the mixing of 2 hash values into a single one.
+            /// It is important that the parameters are hash functions. If they are not the statistical properties of the output will be quite bad.
+            /// For non hashes use <see cref="Hashing.Combine"/> instead
+            /// </summary>
+            /// <remarks>This version will force inlining on the call-site</remarks>
+            /// <param name="x">The first hash value</param>
+            /// <param name="y">The second hash value</param>
+            /// <returns>The combined hash value</returns>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static long CombineInline(long x, long y)
             {
@@ -559,6 +618,15 @@ namespace Sparrow
                 return (long) (shift5 + ux) ^ y;
             }
 
+            /// <summary>
+            /// The combine function will perform the mixing of 2 hash values into a single one.
+            /// It is important that the parameters are hash functions. If they are not the statistical properties of the output will be quite bad.
+            /// For non hashes use <see cref="Hashing.Combine"/> instead
+            /// </summary>
+            /// <remarks>This version will force inlining on the call-site</remarks>
+            /// <param name="x">The first hash value</param>
+            /// <param name="y">The second hash value</param>
+            /// <returns>The combined hash value</returns>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static ulong CombineInline(ulong x, ulong y)
             {
@@ -569,8 +637,8 @@ namespace Sparrow
             }
         }
 
-
         private static readonly ulong kMul = 0x9ddfea08eb382d69UL;
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ulong Combine(ulong x, ulong y)
@@ -607,6 +675,24 @@ namespace Sparrow
             b *= kMul;
 
             return (long)b;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint Mix(uint key)
+        {
+            key = ~key + (key << 15); // key = (key << 15) - key - 1;
+            key = key ^ (key >> 12);
+            key = key + (key << 2);
+            key = key ^ (key >> 4);
+            key = key * 2057; // key = (key + (key << 3)) + (key << 11);
+            key = key ^ (key >> 16);
+            return key;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int Mix(int key)
+        {
+            return (int)Mix((uint)key);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

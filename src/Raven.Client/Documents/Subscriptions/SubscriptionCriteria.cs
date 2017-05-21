@@ -5,9 +5,9 @@
 // -----------------------------------------------------------------------
 
 using System;
-using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Extensions;
+using Raven.Client.Server;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -15,11 +15,6 @@ namespace Raven.Client.Documents.Subscriptions
 {
     public class SubscriptionRaftState:IFillFromBlittableJson, IDatabaseTask
     {
-        public SubscriptionRaftState()
-        {
-
-        }
-
         public SubscriptionCriteria Criteria { get; set; } 
         public ChangeVectorEntry[] ChangeVector { get; set; }
         public long SubscriptionId { get; set; }
@@ -34,7 +29,7 @@ namespace Raven.Client.Documents.Subscriptions
         {
             return new DynamicJsonValue
             {
-                [nameof(this.Criteria)] = new DynamicJsonValue
+                [nameof(Criteria)] = new DynamicJsonValue
                 {
                     [nameof(SubscriptionCriteria.Collection)] = Criteria.Collection,
                     [nameof(SubscriptionCriteria.FilterJavaScript)] = Criteria.FilterJavaScript
@@ -83,21 +78,18 @@ namespace Raven.Client.Documents.Subscriptions
         }
     }
 
-    public class SubscriptionCreationParams
+    public class SubscriptionCreationOptions
     {
         public SubscriptionCriteria Criteria { get; set; }
         public ChangeVectorEntry[] ChangeVector { get; set; }
     }
 
-    public class SubscriptionCreationParams<T>
+    public class SubscriptionCreationOptions<T>
     {
-        public SubscriptionCreationParams()
-        {
-            
-        }
         public SubscriptionCriteria<T> Criteria { get; set; }
         public ChangeVectorEntry[] ChangeVector { get; set; }
     }
+
     public class SubscriptionCriteria : IFillFromBlittableJson
     {
         public SubscriptionCriteria()
@@ -107,10 +99,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         public SubscriptionCriteria(string collection)
         {
-            if (collection == null)
-                throw new ArgumentNullException(nameof(collection));
-
-            Collection = collection;
+            Collection = collection ?? throw new ArgumentNullException(nameof(collection));
         }
 
         public string Collection { get; private set; }

@@ -34,7 +34,7 @@
                     </div>
 
                     <div class="btn-group">
-                        <button type="button" class="btn btn-prerelease" disabled="disabled" data-toggle="button">
+                        <button type="button" class="btn btn-upcoming" disabled="disabled" data-toggle="button">
                             <span class="icon-export"></span> <span>Export</span>
                         </button>
                     </div>
@@ -104,7 +104,7 @@
     </div>
     <div class="col-md-10 id="documents-page-right-container">
         <div class="btn-toolbar" role="toolbar">
-            <div class="btn-group" style="display: none"> <!-- TODO: hidden for prerelease --
+            <div class="btn-group" style="display: none"> <!-- TODO: hidden for BETA --
                 <button data-bind="visible: isRegularCollection, click: exportCsv" class="btn btn-default" title="Export CSV">
                     <i class="fa fa-file-excel-o"></i>
                 </button>
@@ -121,7 +121,7 @@
                 <button type="button" class="btn btn-default" data-bind="click: editSelectedDoc, enable: selectedDocumentIndices().length == 1" title="Edit selected document (F2)">
                     <i class="fa fa-pencil"></i>
                 </button>
-                <button type="button" class="btn btn-default" data-bind="click: generateDocCode, enable: selectedDocumentIndices().length == 1" title="Generate Class" style="display: none">  TODO: hidden for prerelease 
+                <button type="button" class="btn btn-default" data-bind="click: generateDocCode, enable: selectedDocumentIndices().length == 1" title="Generate Class" style="display: none">  TODO: hidden for BETA 
                     <i class="fa">C#</i>
                 </button>
             </div>

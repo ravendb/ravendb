@@ -11,33 +11,33 @@ namespace Raven.Client.Documents.Changes
 {
     internal class EvictItemsFromCacheBasedOnChanges : IObserver<DocumentChange>, IObserver<IndexChange>, IDisposable
     {
-        private readonly string databaseName;
-        private readonly IDatabaseChanges changes;
-        private readonly Action<string> evictCacheOldItems;
-        private readonly IDisposable documentsSubscription;
-        private readonly IDisposable indexesSubscription;
-        private readonly Task connectionTask;
+        private readonly string _databaseName;
+        private readonly IDatabaseChanges _changes;
+        private readonly Action<string> _evictCacheOldItems;
+        private readonly IDisposable _documentsSubscription;
+        private readonly IDisposable _indexesSubscription;
+        private readonly Task _connectionTask;
 
         public EvictItemsFromCacheBasedOnChanges(string databaseName, IDatabaseChanges changes, Action<string> evictCacheOldItems)
         {
-            this.databaseName = databaseName;
-            this.changes = changes;
-            this.evictCacheOldItems = evictCacheOldItems;
+            _databaseName = databaseName;
+            _changes = changes;
+            _evictCacheOldItems = evictCacheOldItems;
             var docSub = changes.ForAllDocuments();
-            documentsSubscription = docSub.Subscribe(this);
+            _documentsSubscription = docSub.Subscribe(this);
             var indexSub = changes.ForAllIndexes();
-            indexesSubscription = indexSub.Subscribe(this);
+            _indexesSubscription = indexSub.Subscribe(this);
 
-            connectionTask = Task.Factory.ContinueWhenAll(new Task[] { docSub.Task, indexSub.Task }, tasks => { }, TaskContinuationOptions.RunContinuationsAsynchronously);
+            //connectionTask = Task.Factory.ContinueWhenAll(new Task[] { docSub.Task, indexSub.Task }, tasks => { }, TaskContinuationOptions.RunContinuationsAsynchronously);
         }
 
-        public Task ConnectionTask => connectionTask;
+        public Task ConnectionTask => _connectionTask;
 
         public void OnNext(DocumentChange change)
         {
             if (change.Type == DocumentChangeTypes.Put || change.Type == DocumentChangeTypes.Delete)
             {
-                evictCacheOldItems(databaseName);
+                _evictCacheOldItems(_databaseName);
             }
         }
 
@@ -45,7 +45,7 @@ namespace Raven.Client.Documents.Changes
         {
             if (change.Type == IndexChangeTypes.BatchCompleted || change.Type == IndexChangeTypes.IndexRemoved)
             {
-                evictCacheOldItems(databaseName);
+                _evictCacheOldItems(_databaseName);
             }
         }
 
@@ -59,9 +59,9 @@ namespace Raven.Client.Documents.Changes
 
         public void Dispose()
         {
-            documentsSubscription.Dispose();
-            indexesSubscription.Dispose();
-            using (changes as IDisposable)
+            _documentsSubscription.Dispose();
+            _indexesSubscription.Dispose();
+            using (_changes as IDisposable)
             {
                 //var remoteDatabaseChanges = changes as RemoteDatabaseChanges;
                 //if (remoteDatabaseChanges != null)

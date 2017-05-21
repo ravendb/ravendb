@@ -14,8 +14,7 @@ namespace Sparrow.Utils
 {
     public static class TimeoutManager
     {
-        private static readonly ConcurrentDictionary<uint, TimerTaskHolder> Values 
-            = new ConcurrentDictionary<uint, TimerTaskHolder>(NumericEqualityComparer.Instance);
+        private static readonly ConcurrentDictionary<uint, TimerTaskHolder> Values = new ConcurrentDictionary<uint, TimerTaskHolder>();
 
         private class TimerTaskHolder  : IDisposable
         {
@@ -96,6 +95,11 @@ namespace Sparrow.Utils
                 value = Values.GetOrAdd(duration, d => new TimerTaskHolder(d));
             }
             return value;
+        }
+
+        public static Task WaitFor(TimeSpan duration, CancellationToken token)
+        {
+            return WaitFor((uint)duration.TotalMilliseconds, token);
         }
 
         public static async Task WaitFor(uint duration, CancellationToken token)

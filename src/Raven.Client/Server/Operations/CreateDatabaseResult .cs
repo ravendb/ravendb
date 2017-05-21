@@ -4,9 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Collections.Generic;
-using Raven.Client.Documents;
-
 namespace Raven.Client.Server.Operations
 {
     /// <summary>
@@ -29,20 +26,5 @@ namespace Raven.Client.Server.Operations
 
     public class ModifyDatabaseWatchersResult : CreateDatabaseResult
     {
-    }
-
-    public class ModifySolverResult
-    {
-        /// <summary>
-        /// Key of the database .
-        /// </summary>
-        public string Key { get; set; }
-
-        /// <summary>
-        /// long? of the database after PUT operation.
-        /// </summary>
-        public long? ETag { get; set; }
-
-        public ConflictSolver Solver { get; set; }
     }
 }

@@ -5,7 +5,6 @@ using System.Runtime.CompilerServices;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Server.Versioning;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -16,6 +15,7 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using System.Linq;
+using Raven.Client.Server.Versioning;
 
 namespace Raven.Server.Documents
 {
@@ -161,9 +161,9 @@ namespace Raven.Server.Documents
                 _documentDatabase.BundleLoader.ExpiredDocumentsCleaner?.Put(context, lowerKey, document);
             }
 
+            _documentDatabase.DocumentsStorage.SetDatabaseChangeVector(context,changeVector);
             _documentDatabase.Metrics.DocPutsPerSecond.MarkSingleThreaded(1);
             _documentDatabase.Metrics.BytesPutsPerSecond.MarkSingleThreaded(document.Size);
-
 
             context.Transaction.AddAfterCommitNotification(new DocumentChange
             {

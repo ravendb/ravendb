@@ -15,6 +15,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
 using Raven.Client.Http.OAuth;
+using Raven.Client.Server;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
@@ -422,7 +423,7 @@ namespace Raven.Server.ServerWide
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
             {
                 if (transaction is LowLevelTransaction llt && llt.Committed)
-                    TaskExecuter.Execute(_ =>
+                    TaskExecutor.Execute(_ =>
                     {
                         try
                         {
@@ -541,8 +542,7 @@ namespace Raven.Server.ServerWide
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
             var dbKey = "db/";
-            Slice loweredPrefix;
-            using (Slice.From(context.Allocator, dbKey, out loweredPrefix))
+            using (Slice.From(context.Allocator, dbKey, out Slice loweredPrefix))
             {
                 foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
                 {
@@ -556,8 +556,7 @@ namespace Raven.Server.ServerWide
 
         private static unsafe string GetCurrentItemKey(TransactionOperationContext context, Table.TableValueHolder result)
         {
-            int size;
-            return Encoding.UTF8.GetString(result.Reader.Read(1, out size), size);
+            return Encoding.UTF8.GetString(result.Reader.Read(1, out int size), size);
         }
 
         private static unsafe Tuple<string, BlittableJsonReaderObject> GetCurrentItem(TransactionOperationContext context, Table.TableValueHolder result)
@@ -661,7 +660,7 @@ namespace Raven.Server.ServerWide
 
         public override async Task<Stream> ConnectToPeer(string url, string apiKey)
         {
-            var info = await ReplicationUtils.GetTcpInfoAsync(url, "Rachis.Server", apiKey);
+            var info = await ReplicationUtils.GetTcpInfoAsync(url, "Rachis.Server", apiKey, "Cluster");
             var authenticator = new ApiKeyAuthenticator();
 
             var tcpInfo = new Uri(info.Url);
@@ -720,7 +719,7 @@ namespace Raven.Server.ServerWide
             if (onDatabaseChanged != null)
             {
                 _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex);
-                TaskExecuter.Execute(_ =>
+                TaskExecutor.Execute(_ =>
                 {
                     foreach (var db in listOfDatabaseName)
                         onDatabaseChanged.Invoke(this, (db, lastIncludedIndex));

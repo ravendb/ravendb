@@ -214,8 +214,7 @@ namespace Tests.Infrastructure
         protected async Task<long> IssueCommandsAndWaitForCommit(RachisConsensus<CountingStateMachine> leader, int numberOfCommands, String Name, int value)
         {
             Assert.True(leader.CurrentState == RachisConsensus.State.Leader || leader.CurrentState == RachisConsensus.State.LeaderElect, "Can't append commands from non leader");
-            TransactionOperationContext context;
-            using (leader.ContextPool.AllocateOperationContext(out context))
+            using (leader.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 for (var i = 0; i < 3; i++)
                 {
