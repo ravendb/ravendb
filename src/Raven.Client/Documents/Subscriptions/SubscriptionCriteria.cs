@@ -47,15 +47,15 @@ namespace Raven.Client.Documents.Subscriptions
         public string FilterJavaScript { get; set; }
     }
 
-    public class SubscriptionCreationParams
+    public class SubscriptionCreationOptions
     {
         public SubscriptionCriteria Criteria { get; set; }
         public ChangeVectorEntry[] ChangeVector { get; set; }
     }
 
-    public class SubscriptionCreationParams<T>
+    public class SubscriptionCreationOptions<T>
     {
-        public SubscriptionCreationParams()
+        public SubscriptionCreationOptions()
         {
 
         }

@@ -16,13 +16,13 @@ namespace Raven.Client.Documents.Subscriptions
         /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription criteria for a given type.
         /// </summary>
         /// <returns>Created subscription identifier.</returns>
-        Task<string> CreateAsync<T>(SubscriptionCreationParams<T> subscriptionCreationParams, string database = null);
+        Task<string> CreateAsync<T>(SubscriptionCreationOptions<T> subscriptionCreationOptions, string database = null);
 
         /// <summary>
         /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription criteria.
         /// </summary>
         /// <returns>Created subscription identifier.</returns>
-        Task<string> CreateAsync(SubscriptionCreationParams subscriptionCreationParams, string database = null);
+        Task<string> CreateAsync(SubscriptionCreationOptions subscriptionCreationOptions, string database = null);
 
         /// <summary>
         /// It opens a subscription and starts pulling documents since a last processed document for that subscription (in document's long? order).

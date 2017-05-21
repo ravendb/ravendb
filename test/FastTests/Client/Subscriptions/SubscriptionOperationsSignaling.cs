@@ -19,7 +19,7 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionCreationParams = new SubscriptionCreationParams<User>
+                var subscriptionCreationParams = new SubscriptionCreationOptions<User>
                 {
                     Criteria = new SubscriptionCriteria<User>()
                 };
@@ -68,7 +68,7 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionCreationParams = new SubscriptionCreationParams<User>
+                var subscriptionCreationParams = new SubscriptionCreationOptions<User>
                 {
                     Criteria = new SubscriptionCriteria<User>()
                 };
@@ -113,7 +113,7 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionCreationParams = new SubscriptionCreationParams<User>
+                var subscriptionCreationParams = new SubscriptionCreationOptions<User>
                 {
                     Criteria = new SubscriptionCriteria<User>()
                 };
@@ -153,7 +153,7 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionCriteria = new SubscriptionCreationParams<User>
+                var subscriptionCriteria = new SubscriptionCreationOptions<User>
                 {
                     Criteria = new SubscriptionCriteria<User>()
                 };
@@ -195,7 +195,7 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionCreationParams = new SubscriptionCreationParams<User>
+                var subscriptionCreationParams = new SubscriptionCreationOptions<User>
                 {
                     Criteria = new SubscriptionCriteria<User>()
                 };
@@ -229,7 +229,7 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionCreationParams = new SubscriptionCreationParams<User>
+                var subscriptionCreationParams = new SubscriptionCreationOptions<User>
                 {
                     Criteria = new SubscriptionCriteria<User>()
                 };
