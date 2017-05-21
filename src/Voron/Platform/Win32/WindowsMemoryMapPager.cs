@@ -13,6 +13,7 @@ using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Win32;
 using Sparrow.Utils;
+using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
@@ -365,13 +366,19 @@ namespace Voron.Platform.Win32
                         if (
                             Win32MemoryMapNativeMethods.FlushViewOfFile(allocationInfo.BaseAddress,
                                 new IntPtr(allocationInfo.Size)) == false)
-                            throw new Win32Exception();
+                        {
+                            var lasterr = Marshal.GetLastWin32Error();
+                            throw new Win32Exception(lasterr);
+                        }
                     }
 
                     metric.IncrementSize(totalUnsynced);
 
                     if (Win32MemoryMapNativeMethods.FlushFileBuffers(_handle) == false)
-                        throw new Win32Exception();
+                    {
+                        var lasterr = Marshal.GetLastWin32Error();
+                        throw new Win32Exception(lasterr);
+                    }
                 }
             }
             finally

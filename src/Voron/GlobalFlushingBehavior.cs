@@ -3,8 +3,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Sparrow.Logging;
 using Sparrow.Utils;
+using Voron.Exceptions;
 using Voron.Impl.Journal;
 
 namespace Voron
@@ -174,6 +176,7 @@ namespace Voron
                 if (_log.IsOperationsEnabled)
                     _log.Operations($"Failed to sync data file for {req.Env.Options.BasePath}", e);
                 req.Env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
+                throw;
             }
         }
 
