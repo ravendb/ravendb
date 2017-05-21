@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="....\\src\Raven.Server\Raven.Server.csproj" />
+    <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />
     <ProjectReference Include="..\..\test\FastTests\FastTests.csproj" />
     <ProjectReference Include="..\..\test\Tests.Infrastructure\Tests.Infrastructure.csproj" />
   </ItemGroup>
