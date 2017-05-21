@@ -13,6 +13,8 @@ import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import ongoingTask = require("models/database/tasks/ongoingTask");
 import createOngoingTask = require("viewmodels/database/tasks/createOngoingTask");
 
+type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "Backup" | "Subscription";
+
 class ongoingTasks extends viewModelBase {
     
     // Todo: Get info for db group topology ! members & promotable list..
@@ -27,7 +29,7 @@ class ongoingTasks extends viewModelBase {
     backupTasks = ko.observableArray<ongoingTaskBackup>();
 
     existingTasksArray = ko.observableArray<string>(); // Used in the Filter by Type drop down
-    existingTasksSet = new Set<string>();
+    private existingTasksSet = new Set<TasksNamesInUI>();
     selectedTaskType = ko.observable<string>();
     
     subscriptionsCount = ko.observable<number>();
@@ -45,10 +47,6 @@ class ongoingTasks extends viewModelBase {
         this.subsCountText = ko.pureComputed(() => { return `(${this.subscriptionsCount()})`; });
         this.urlForSubscriptions = ko.pureComputed(() => appUrl.forSubscriptions(this.activeDatabase()));
         this.selectedTaskType("All");
-    }
-    
-    canActivate(args: any): any {
-        return true;
     }
 
     activate(args: any): JQueryPromise < Raven.Server.Web.System.OngoingTasksResult> {

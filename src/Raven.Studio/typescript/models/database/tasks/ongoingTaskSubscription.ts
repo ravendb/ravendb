@@ -1,8 +1,8 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
-import OngoingTask = require("./ongoingTask");
+import ongoingTask = require("models/database/tasks/ongoingTask"); 
 
-class ongoingTaskSubscription extends OngoingTask {
+class ongoingTaskSubscription extends ongoingTask {
 
    // Todo...   
 

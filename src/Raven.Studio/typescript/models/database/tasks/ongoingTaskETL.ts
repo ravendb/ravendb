@@ -1,8 +1,8 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
-import OngoingTask = require("./ongoingTask");
+import ongoingTask = require("models/database/tasks/ongoingTask"); 
 
-class ongoingTaskETL extends OngoingTask {
+class ongoingTaskETL extends ongoingTask {
 
     apiKey = ko.observable<string>();
     destinationDB = ko.observable<string>();
