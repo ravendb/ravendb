@@ -59,7 +59,10 @@ namespace Raven.Client.Documents.Replication.Messages
         // we use it to sort change vectors by the ID.
         public int CompareTo(ChangeVectorEntry other)
         {
-            return DbId.CompareTo(other.DbId);
+            var rc = DbId.CompareTo(other.DbId);
+            if (rc != 0)
+                return rc;
+            return Etag.CompareTo(other.Etag);
         }
 
         public DynamicJsonValue ToJson()

@@ -20,8 +20,9 @@ namespace Raven.Server.Documents.Handlers
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var json = await context.ReadForDiskAsync(RequestBodyStream(), null);
-                var subscriptionId = await Database.SubscriptionStorage.CreateSubscription(JsonDeserializationServer.SubscriptionCreationParams(json));
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
+                var options = JsonDeserializationServer.SubscriptionCreationParams(json);
+                var subscriptionId = await Database.SubscriptionStorage.CreateSubscription(options);
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created; // Created
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -44,7 +45,7 @@ namespace Raven.Server.Documents.Handlers
             await NoContent();
         }
 
-        [RavenAction("/databases/*/subscriptions", "GET", "/databases/{databaseName:string}/subscriptions/running")]
+        [RavenAction("/databases/*/subscriptions", "GET", "/databases/{databaseName:string}/subscriptions?[running=true|history=true|id=<subscription id>]")]
         public Task GetAll()
         {
             var start = GetStart();
@@ -103,7 +104,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         // TODO: do we need this?
-        [RavenAction("/databases/*/subscriptions/count", "GET", "/databases/{databaseName:string}/subscriptions/running/count")]
+        [RavenAction("/databases/*/subscriptions/count", "GET", "/databases/{databaseName:string}/subscriptions/count")]
         public Task GetRunningSubscriptionsCount()
         {
             DocumentsOperationContext context;
@@ -130,8 +131,8 @@ namespace Raven.Server.Documents.Handlers
         public Task DropSubscriptionConnection()
         {
             var subscriptionId = GetStringQueryString("id");
-
-            if (Database.SubscriptionStorage.DropSubscriptionConnection(subscriptionId, "Dropped by api request") == false)
+            
+            if (Database.SubscriptionStorage.DropSubscriptionConnection(subscriptionId, "Dropped by API request") == false)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 return Task.CompletedTask;

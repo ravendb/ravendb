@@ -796,9 +796,6 @@ namespace Raven.Server.Documents
             Array.Sort(remote); // todo: check if we need this
             Array.Sort(local); // todo: check if we need this
 
-
-            int remoteEntriesTakenIntoAccount = 0;
-
             var localIndex = 0;
             var remoteIndex = 0;
 
@@ -809,7 +806,6 @@ namespace Raven.Server.Documents
                 {
                     remoteHasLargerEntries |= remote[remoteIndex].Etag > local[localIndex].Etag;
                     localHasLargerEntries |= local[localIndex].Etag > remote[remoteIndex].Etag;
-                    remoteEntriesTakenIntoAccount++;
                     remoteIndex++;
                     localIndex++;
                 }
@@ -832,7 +828,6 @@ namespace Raven.Server.Documents
             {
                 remoteHasLargerEntries = true;
             }
-
 
             if (localIndex < local.Length)
             {

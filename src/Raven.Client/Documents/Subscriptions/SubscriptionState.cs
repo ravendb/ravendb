@@ -14,31 +14,31 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Subscriptions
 {
-    public class SubscriptionState:IFillFromBlittableJson, IDatabaseTask
+    public class SubscriptionState : IDatabaseTask
     {
         public SubscriptionState()
         {
 
         }
 
-        public SubscriptionCriteria Criteria { get; set; } 
+        public SubscriptionCriteria Criteria { get; set; }
         public ChangeVectorEntry[] ChangeVector { get; set; }
         public string SubscriptionId { get; set; }
         public DateTime TimeOfLastClientActivity { get; set; }
-        public Dictionary<Guid,long> LastEtagReachedInServer { get; set; }
-        private ulong? taskKey;
+        public Dictionary<Guid, long> LastEtagReachedInServer { get; set; }
+        private ulong? _taskKey;
 
         public ulong GetTaskKey()
         {
-            if (taskKey.HasValue == false)
+            if (_taskKey.HasValue == false)
             {
-                var lastSlashIndex = SubscriptionId.LastIndexOf("/");
-                taskKey = ulong.Parse(SubscriptionId.Substring(lastSlashIndex + 1));
-                return taskKey.Value;
+                var lastSlashIndex = SubscriptionId.LastIndexOf("/", StringComparison.OrdinalIgnoreCase);
+                _taskKey = ulong.Parse(SubscriptionId.Substring(lastSlashIndex + 1));
+                return _taskKey.Value;
             }
-            return taskKey.Value;
+            return _taskKey.Value;
         }
-    
+
 
         public DynamicJsonValue ToJson()
         {
@@ -53,33 +53,6 @@ namespace Raven.Client.Documents.Subscriptions
                 [nameof(SubscriptionId)] = SubscriptionId,
                 [nameof(TimeOfLastClientActivity)] = TimeOfLastClientActivity
             };
-        }
-
-        public void FillFromBlittableJson(BlittableJsonReaderObject json)
-        {
-            if (json == null)
-                return;
-
-            string subscriptionId;
-            if (json.TryGet(nameof(SubscriptionId), out subscriptionId))
-                SubscriptionId = subscriptionId;
-
-
-            if (json.TryGet(nameof(ChangeVector), out BlittableJsonReaderArray changeVector))
-            {
-                ChangeVector = changeVector.ToVector();
-            }
-
-            DateTime timeOfLastClientActivity;
-            if (json.TryGet(nameof(TimeOfLastClientActivity), out timeOfLastClientActivity))
-                TimeOfLastClientActivity = timeOfLastClientActivity;
-
-            BlittableJsonReaderObject criteria;
-            if (json.TryGet(nameof(Criteria), out criteria))
-            {
-                Criteria = new SubscriptionCriteria(Constants.Documents.Collections.AllDocumentsCollection);
-                Criteria.FillFromBlittableJson(criteria);
-            }
         }
 
         public static string GenerateSubscriptionItemName(string databaseName, long subscriptionId)

@@ -8,7 +8,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Subscriptions
 {
-    public class SubscriptionCriteria : IFillFromBlittableJson
+    public class SubscriptionCriteria 
     {
         public SubscriptionCriteria()
         {
@@ -20,22 +20,8 @@ namespace Raven.Client.Documents.Subscriptions
             Collection = collection ?? throw new ArgumentNullException(nameof(collection));
         }
 
-        public string Collection { get; private set; }
+        public string Collection { get;  set; }
         public string FilterJavaScript { get; set; }
-
-        public void FillFromBlittableJson(BlittableJsonReaderObject json)
-        {
-            if (json == null)
-                return;
-
-            string collection;
-            if (json.TryGet(nameof(Collection), out collection))
-                Collection = collection;
-
-            string filterJavaScript;
-            if (json.TryGet(nameof(FilterJavaScript), out filterJavaScript))
-                FilterJavaScript = filterJavaScript;
-        }
     }
 
     public class SubscriptionCriteria<T>

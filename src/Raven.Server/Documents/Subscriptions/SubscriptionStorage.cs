@@ -1,28 +1,16 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
 using System.Linq;
 using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Util;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
-using Sparrow.Binary;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Voron;
-using Voron.Data.Tables;
-using Voron.Impl;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Client.Documents.Replication.Messages;
 using System.Threading.Tasks;
-using Raven.Client.Documents;
 using Raven.Client.Json.Converters;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
@@ -47,11 +35,12 @@ namespace Raven.Server.Documents.Subscriptions
 
         public void Dispose()
         {
-            var aggregator = new ExceptionAggregator(_logger, "Error disposing subscripiton");
+            var aggregator = new ExceptionAggregator(_logger, "Error disposing SubscriptionStorage");
             foreach (var state in _subscriptionStates.Values)
             {
                 aggregator.Execute(state.Dispose);                
-            }            
+            }
+            aggregator.ThrowIfNeeded();
         }
 
         public void Initialize()
@@ -59,7 +48,7 @@ namespace Raven.Server.Documents.Subscriptions
           
         }
         
-        public async Task<long> CreateSubscription(SubscriptionCreationOptions options)
+        public async Task<string> CreateSubscription(SubscriptionCreationOptions options)
         {            
             var command = new CreateSubscriptionCommand(_db.Name)
             {
@@ -70,16 +59,16 @@ namespace Raven.Server.Documents.Subscriptions
             var etag = await _serverStore.SendToLeaderAsync(command.ToJson());
 
             if (_logger.IsInfoEnabled)
-                _logger.Info($"New Subscription With ID {etag} was created");
+                _logger.Info($"New Subscription with index {etag} was created");
             
             await _db.WaitForIndexNotification(etag);
-            return etag;
+            return SubscriptionState.GenerateSubscriptionItemName(_db.Name, etag); ;
         }
 
         public SubscriptionConnectionState OpenSubscription(SubscriptionConnection connection)
         {
             var subscriptionState = _subscriptionStates.GetOrAdd(connection.SubscriptionId,
-                _ => new SubscriptionConnectionState(this));
+                subscriptionId => new SubscriptionConnectionState(subscriptionId, this));
             return subscriptionState;
         }
 
@@ -109,9 +98,9 @@ namespace Raven.Server.Documents.Subscriptions
             }            
         }
 
-        public async Task AssertSubscriptionIdExists(string id, TimeSpan timeout)
+        public async Task AssertSubscriptionIdIsApplicable(string id, TimeSpan timeout)
         {
-            var index = long.Parse(id.Substring(id.LastIndexOf("/") + 1));
+            var index = long.Parse(id.Substring(id.LastIndexOf("/",StringComparison.OrdinalIgnoreCase) + 1));
             await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index);
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
@@ -119,7 +108,7 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 var subscription = GetSubscriptionFromServerStore(serverStoreContext, id);
 
-                var dbRecord = _serverStore.Cluster.ReadDatabase(serverStoreContext, _db.Name, out long etag);
+                var dbRecord = _serverStore.Cluster.ReadDatabase(serverStoreContext, _db.Name, out var _);
                 var whoseTaskIsIt = dbRecord.Topology.WhoseTaskIsIt(subscription);
                 if (whoseTaskIsIt != _serverStore.NodeTag)
                 {
@@ -278,8 +267,6 @@ namespace Raven.Server.Documents.Subscriptions
             if (subscriptionConnection == null)
                 return null;
 
-            var databaseRecord = _serverStore.Cluster.ReadDatabase(context, _db.Name);
-
             var subscriptionData = GetSubscriptionFromServerStore(context, subscriptionId);
             subscriptionData.Connection = subscriptionConnectionState.Connection;
             SetSubscriptionHistory(subscriptionConnectionState, subscriptionData);
@@ -311,7 +298,7 @@ namespace Raven.Server.Documents.Subscriptions
         private void GetRunningSubscriptionInternal(bool history, SubscriptionGeneralDataAndStats subscriptionData, SubscriptionConnectionState subscriptionConnectionState)
         {
             subscriptionData.Connection = subscriptionConnectionState.Connection;
-            if (history)
+            if (history) // TODO: Only valid for this node
                 SetSubscriptionHistory(subscriptionConnectionState, subscriptionData);            
         }
 
@@ -322,7 +309,7 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 subscriptionData.Connection = subscriptionConnectionState.Connection;                
 
-                if (history)
+                if (history)//TODO: Only valid if this is my subscription
                     SetSubscriptionHistory(subscriptionConnectionState, subscriptionData);
             }                        
         }

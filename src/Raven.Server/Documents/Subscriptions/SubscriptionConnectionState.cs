@@ -12,13 +12,20 @@ namespace Raven.Server.Documents.Subscriptions
 {
     public class SubscriptionConnectionState:IDisposable
     {
+        private readonly string _subscriptionId;
         private readonly SubscriptionStorage _storage;
         internal readonly AsyncManualResetEvent ConnectionInUse = new AsyncManualResetEvent();
 
-        public SubscriptionConnectionState(SubscriptionStorage storage)
+        public SubscriptionConnectionState(string subscriptionId, SubscriptionStorage storage)
         {
+            _subscriptionId = subscriptionId;
             _storage = storage;
             ConnectionInUse.Set();
+        }
+
+        public override string ToString()
+        {
+            return $"{nameof(_subscriptionId)}: {_subscriptionId}";
         }
 
         private SubscriptionConnection _currentConnection;
@@ -54,23 +61,16 @@ namespace Raven.Server.Documents.Subscriptions
                                 $"Subscription {incomingConnection.SubscriptionId} is occupied, connection cannot be opened");
 
                         case SubscriptionOpeningStrategy.TakeOver:
-                            if (_currentConnection?.Strategy == SubscriptionOpeningStrategy.ForceAndKeep)
+                            if (_currentConnection?.Strategy == SubscriptionOpeningStrategy.TakeOver)
                                 throw  new SubscriptionInUseException(
-                                    $"Subscription {incomingConnection.SubscriptionId} is occupied by a ForceAndKeep connection, connectionId cannot be opened");
+                                    $"Subscription {incomingConnection.SubscriptionId} is already occupied by a TakeOver connection, connection cannot be opened");
 
                             if (_currentConnection != null)
                                 _storage.DropSubscriptionConnection(_currentConnection.SubscriptionId,
                                     "Closed by TakeOver");
 
                             throw new TimeoutException();
-
-                        case SubscriptionOpeningStrategy.ForceAndKeep:
-
-                            if (_currentConnection != null)
-                                _storage.DropSubscriptionConnection(_currentConnection.SubscriptionId,
-                                    "Closed by ForceAndKeep");
-
-                            throw new TimeoutException();
+                        
                         default:
                             throw new InvalidOperationException("Unknown subscription open strategy: " +
                                                                 incomingConnection.Strategy);

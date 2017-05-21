@@ -772,38 +772,36 @@ namespace Raven.Server.ServerWide
             {
                 ServerShutdown.ThrowIfCancellationRequested();
 
-                var logChange = _engine.WaitForHeartbeat();
-
                 if (_engine.CurrentState == RachisConsensus.State.Leader)
                 {
                     return await _engine.PutAsync(cmdJson);
                 }
 
-                var engineLeaderTag = _engine.LeaderTag; // not actually working
+                var logChange = _engine.WaitForHeartbeat();
+             
+
+                var cachedLeaderTag = _engine.LeaderTag; // not actually working
                 try
                 {
-                    return await SendToNodeAsync(context, engineLeaderTag, cmdJson);
+                    if(cachedLeaderTag == null)
+                    {
+                        var completed = await Task.WhenAny(logChange, TimeoutManager.WaitFor(10000, ServerShutdown));
+
+                        if(completed != logChange)
+                            throw new TimeoutException("Could not send command to leader because there is no leader, and we timed out waiting for one");
+
+                        continue;
+                    }
+
+                    return await SendToNodeAsync(context, cachedLeaderTag, cmdJson);
                 }
                 catch (Exception ex)
                 {
                     if (Logger.IsInfoEnabled)
                         Logger.Info("Tried to send message to leader, retrying", ex);
 
-                    if (_engine.LeaderTag != engineLeaderTag)
-                        continue;
-
-                }
-
-                ServerShutdown.ThrowIfCancellationRequested();
-                while (true)
-                {
-                    var result = await Task.WhenAny(logChange,
-                        TimeoutManager.WaitFor(5000, ServerShutdown)).ConfigureAwait(false);
-
-                    if (result == logChange)
-                        break;
-
-                    ServerShutdown.ThrowIfCancellationRequested();
+                    if (_engine.LeaderTag == cachedLeaderTag)
+                        throw; // if the leader changed, let's try again
                 }
             }
             

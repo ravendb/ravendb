@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication.Messages;
@@ -10,14 +11,14 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
-    public class CreateSubscriptionCommand: UpdateValueForDatabaseCommand
+    public class CreateSubscriptionCommand : UpdateValueForDatabaseCommand
     {
         public SubscriptionCriteria Criteria;
         public ChangeVectorEntry[] InitialChangeVector;
 
         private long? _subscriptionId;
         // for serialization
-        private CreateSubscriptionCommand():base(null){}
+        private CreateSubscriptionCommand() : base(null) { }
 
         public CreateSubscriptionCommand(string databaseName) : base(databaseName)
         {
@@ -27,13 +28,15 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
             if (_subscriptionId.HasValue)
                 return SubscriptionState.GenerateSubscriptionItemName(DatabaseName, _subscriptionId.Value);
-            return $"noValue";
+            return "does/not/exists/" + Guid.NewGuid(); // missing value
         }
 
         public override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
         {
+            Debug.Assert(existingValue == null);
+
             _subscriptionId = index;
-            var rafValue = new SubscriptionState()
+            var rafValue = new SubscriptionState
             {
                 Criteria = Criteria,
                 ChangeVector = InitialChangeVector,

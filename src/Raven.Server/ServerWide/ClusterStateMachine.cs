@@ -147,7 +147,6 @@ namespace Raven.Server.ServerWide
                         itemBlittable = new BlittableJsonReaderObject(ptr, size, context);
                     }
 
-
                     try
                     {
                         itemBlittable = updateCommand.GetUpdatedValue(index, record, context , itemBlittable);
@@ -173,7 +172,7 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, itemKey, out Slice valueName))
                 using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
                 {
-                    UpdateDatabaseRecord(index, items, valueNameLowered, valueName, itemBlittable);
+                    UpdateValue(index, items, valueNameLowered, valueName, itemBlittable);
                 }
             }
             finally
@@ -233,13 +232,13 @@ namespace Raven.Server.ServerWide
 
                 var updated = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
-                UpdateDatabaseRecord(index, items, loweredKey, key, updated);
+                UpdateValue(index, items, loweredKey, key, updated);
 
                 NotifyDatabaseChanged(context, databaseName, index);
             }
         }
 
-        private static unsafe void UpdateDatabaseRecord(long index, Table items, Slice loweredKey, Slice key, BlittableJsonReaderObject updated)
+        private static unsafe void UpdateValue(long index, Table items, Slice loweredKey, Slice key, BlittableJsonReaderObject updated)
         {
             TableValueBuilder builder;
             using (items.Allocate(out builder))
@@ -303,7 +302,7 @@ namespace Raven.Server.ServerWide
                 
                 using (var updated = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context))
                 {
-                    UpdateDatabaseRecord(index, items, loweredKey, key, updated);
+                    UpdateValue(index, items, loweredKey, key, updated);
                 }
 
                 NotifyDatabaseChanged(context, databaseName, index);
@@ -343,7 +342,7 @@ namespace Raven.Server.ServerWide
                         }
                     }
 
-                    UpdateDatabaseRecord(index, items, valueNameLowered, valueName, rec);
+                    UpdateValue(index, items, valueNameLowered, valueName, rec);
                 }
             }
             finally
@@ -392,7 +391,7 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, putVal.Name.ToLowerInvariant(), out valueNameLowered))
                 using (var rec = context.ReadObject(putVal.Value, "inner-val"))
                 {
-                    UpdateDatabaseRecord(index, items, valueNameLowered, valueName, rec);
+                    UpdateValue(index, items, valueNameLowered, valueName, rec);
                 }
             }
             finally
@@ -477,7 +476,7 @@ namespace Raven.Server.ServerWide
                     }
                     
                     var updatedDatabaseBlittable = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
-                    UpdateDatabaseRecord(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
+                    UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
                     
                 }
             }
