@@ -1336,6 +1336,21 @@ namespace Raven.Server.Rachis
 
             _leadershipTimeChanged.SetInAsyncMannerFireAndForget();
         }
+
+        public DynamicJsonArray GetClusterErrorsFromLeader()
+        {
+            var dja = new DynamicJsonArray();
+            while(_currentLeader.ErrorsList.TryDequeue(out var entry))
+            {
+                var djv = new DynamicJsonValue
+                {
+                    ["Node"] = entry.node,
+                    ["Error"] = entry.error.ToJson()
+                };
+                dja.Add(djv);
+            }
+            return dja;
+        }
     }
 
     public class TopologyMismatchException : Exception

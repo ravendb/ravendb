@@ -204,16 +204,6 @@ namespace Raven.Server.Rachis
                             }
                         }
                     }
-                    catch (TopologyMismatchException e)
-                    {
-                        Status = "Failed - " + e.Message;
-                        var removed = _leader.TryModifyTopology(_tag, _url, Leader.TopologyModification.Remove, out var task);
-                        if (removed && _engine.Log.IsInfoEnabled)
-                        {
-                            _engine.Log.Info($"Connection to {_tag} was rejected due to topology id mismatch, so we remove from topology");
-                        }
-                        _leader.WaitForNewEntries().Wait(_engine.ElectionTimeoutMs / 2);
-                    }
                     catch (Exception e)
                     {
                         Status = "Failed - " + e.Message;
@@ -221,6 +211,8 @@ namespace Raven.Server.Rachis
                         {
                             _engine.Log.Info("Failed to talk to remote follower: " + _tag, e);
                         }
+                        // notify leader about an error
+                        _leader.NotifyAboutException(this,e);
                         _leader.WaitForNewEntries().Wait(_engine.ElectionTimeoutMs / 2);
                     }
                     finally
