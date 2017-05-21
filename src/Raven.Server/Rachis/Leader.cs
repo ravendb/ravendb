@@ -7,6 +7,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Extensions;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -536,6 +538,18 @@ namespace Raven.Server.Rachis
             return tcs.Task;
         }
         
+        public ConcurrentQueue<(string node,AlertRaised error)> ErrorsList = new ConcurrentQueue<(string,AlertRaised)>();
+
+        public void NotifyAboutException(FollowerAmbassador node, Exception e)
+        {
+            var alert = AlertRaised.Create($"Node {node.Tag} encountered an error",
+                node.Status,
+                AlertType.ClusterTopologyWarning,
+                NotificationSeverity.Warning,
+                details: new ExceptionDetails(e));
+            ErrorsList.Enqueue((node.Tag,alert));
+        }
+
         public void Dispose()
         {
             bool lockTaken = false;

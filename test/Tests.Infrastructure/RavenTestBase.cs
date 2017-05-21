@@ -310,6 +310,22 @@ namespace FastTests
             } while (true);
         }
 
+        public static void WaitForUserToContinueTheTest(string url, bool debug = true, int port = 8079)
+        {
+            if (debug && Debugger.IsAttached == false)
+                return;
+
+
+            var documentsPage = url + "/studio/index.html";
+
+            OpenBrowser(documentsPage);// start the server
+
+            do
+            {
+                Thread.Sleep(500);
+            } while (debug == false || Debugger.IsAttached);
+        }
+
         public static void WaitForUserToContinueTheTest(DocumentStore documentStore, bool debug = true, int port = 8079)
         {
             if (debug && Debugger.IsAttached == false)

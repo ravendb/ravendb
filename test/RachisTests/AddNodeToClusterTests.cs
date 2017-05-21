@@ -21,7 +21,7 @@ namespace RachisTests
             
             var url = raft2.WebUrls[0];
             await raft1.ServerStore.AddNodeToClusterAsync(url);
-            Assert.False(await raft1.ServerStore.WaitForNodeBecomeMember(url));
+            Assert.True(await WaitForValueAsync(() => raft1.ServerStore.GetClusterErrors().Count > 0,true));
         }
     }
 }

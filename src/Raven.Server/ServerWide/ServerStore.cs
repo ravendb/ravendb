@@ -762,6 +762,11 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public DynamicJsonArray GetClusterErrors()
+        {
+            return _engine.GetClusterErrorsFromLeader();
+        }
+
         private async Task<long> SendToLeaderAsyncInternal(BlittableJsonReaderObject cmdJson, TransactionOperationContext context)
         {
             //I think it is reasonable to expect timeout twice of error retry
@@ -879,33 +884,6 @@ namespace Raven.Server.ServerWide
         public class PutRaftCommandResult
         {
             public long ETag { get; set; }
-        }
-
-        public async Task<bool> WaitForNodeBecomeMember(string url)
-        {
-            while (true)
-            {
-                await _engine.GetTopologyChanged();
-                using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                using (ctx.OpenReadTransaction())
-                {
-                    var topology = GetClusterTopology(ctx); // topology can't be null
-                    if (topology.AllNodes.ContainsValue(url))
-                    {
-                        if (topology.Members.ContainsValue(url))
-                            return true;
-                        continue;
-                    }
-                    //TODO: once implemented, move this notification to cluster wide notification-center 
-                    var alert = AlertRaised.Create("Node wasn't added to cluster",
-                        "",
-                        AlertType.ClusterTopologyWarning,
-                        NotificationSeverity.Warning,
-                        "This could happend when you try to add a node of an another cluster");
-                    NotificationCenter.Add(alert);
-                    return false;
-                }
-            }
         }
 
         public Task WaitForTopology(Leader.TopologyModification state)
