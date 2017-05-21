@@ -5,9 +5,9 @@ namespace Raven.Client.Documents.Commands
 {
     public class DeleteSubscriptionCommand : RavenCommand
     {
-        private readonly long _id;
+        private readonly string _id;
 
-        public DeleteSubscriptionCommand(long id)
+        public DeleteSubscriptionCommand(string id)
         {
             _id = id;
         }

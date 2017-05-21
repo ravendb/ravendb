@@ -27,10 +27,10 @@ namespace FastTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastChangeVector;
+                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).DatabaseChangeVector;
                 await CreateDocuments(store, 5);
 
-                var subscriptionCreationParams = new SubscriptionCreationOptions()
+                var subscriptionCreationParams = new SubscriptionCreationParams()
                 {
                     Criteria = new SubscriptionCriteria("Things")
                     {
@@ -71,10 +71,10 @@ namespace FastTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastChangeVector;
+                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).DatabaseChangeVector;
                 await CreateDocuments(store, 6);
 
-                var subscriptionCreationParams = new SubscriptionCreationOptions()
+                var subscriptionCreationParams = new SubscriptionCreationParams()
                 {
                     Criteria = new SubscriptionCriteria("Things")
                     {

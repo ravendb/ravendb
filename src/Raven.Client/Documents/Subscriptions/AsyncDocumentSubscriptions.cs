@@ -26,37 +26,37 @@ namespace Raven.Client.Documents.Subscriptions
             _store = store;
         }
 
-        public Task<long> CreateAsync<T>(SubscriptionCreationOptions<T> options, string database = null)
+        public Task<string> CreateAsync<T>(SubscriptionCreationParams<T> subscriptionCreationParams, string database = null)
         {
-            if (options == null)
+            if (subscriptionCreationParams == null)
                 throw new InvalidOperationException("Cannot create a subscription if criteria is null");
             
             var nonGenericCriteria = new SubscriptionCriteria(_store.Conventions.GetCollectionName(typeof(T)))
             {
-                FilterJavaScript = options.Criteria.FilterJavaScript,
+                FilterJavaScript = subscriptionCreationParams.Criteria?.FilterJavaScript,
             };
 
-            var subscriptionCreationDto = new SubscriptionCreationOptions
+            var subscriptionCreationDto = new SubscriptionCreationParams
             {
                 Criteria =  nonGenericCriteria,
-                ChangeVector =  options.ChangeVector
+                ChangeVector = subscriptionCreationParams.ChangeVector
             };
 
             return CreateAsync(subscriptionCreationDto, database);
         }
 
-        public async Task<long> CreateAsync(SubscriptionCreationOptions options, string database = null)
+        public async Task<string> CreateAsync(SubscriptionCreationParams subscriptionCreationParams, string database = null)
         {
-            if (options == null)
+            if (subscriptionCreationParams == null)
                 throw new InvalidOperationException("Cannot create a subscription if criteria is null");
 
             var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
             requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);
 
-            var command = new CreateSubscriptionCommand(options, context);
+            var command = new CreateSubscriptionCommand(subscriptionCreationParams, context);
             await requestExecutor.ExecuteAsync(command, context);
 
-            return command.Result.Id;
+            return SubscriptionState.GenerateSubscriptionItemName(database ?? _store.Database,command.Result.Id);
         }
 
         public Subscription<dynamic> Open(SubscriptionConnectionOptions options, string database = null)
@@ -80,7 +80,7 @@ namespace Raven.Client.Documents.Subscriptions
             return subscription;
         }
 
-        public async Task<List<SubscriptionRaftState>> GetSubscriptionsAsync(int start, int take, string database = null)
+        public async Task<List<SubscriptionState>> GetSubscriptionsAsync(int start, int take, string database = null)
         {
             JsonOperationContext jsonOperationContext;
             var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
@@ -92,7 +92,7 @@ namespace Raven.Client.Documents.Subscriptions
             return command.Result.ToList();
         }
 
-        public async Task DeleteAsync(long id, string database = null)
+        public async Task DeleteAsync(string id, string database = null)
         {
             JsonOperationContext jsonOperationContext;
             var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);

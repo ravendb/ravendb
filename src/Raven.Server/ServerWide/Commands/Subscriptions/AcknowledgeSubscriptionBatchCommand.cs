@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Subscriptions;
@@ -11,8 +12,10 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
     public class AcknowledgeSubscriptionBatchCommand: UpdateValueForDatabaseCommand, IDatabaseTask
     {
         public ChangeVectorEntry[] ChangeVector;
-        public long SubscriptionId;
+        public string SubscriptionId;
         public string NodeTag;
+        public Guid DbId;
+        public long LastDocumentEtagAckedInNode;
 
         // for serializtion
         private AcknowledgeSubscriptionBatchCommand() : base(null){}
@@ -21,9 +24,8 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
         }
 
-        public override string GetItemId() => SubscriptionRaftState.GenerateSubscriptionItemName(DatabaseName, SubscriptionId);
-        
-        public override DynamicJsonValue GetUpdatedValue(long index, DatabaseRecord record, BlittableJsonReaderObject existingValue)
+        public override string GetItemId() => SubscriptionId;
+        public override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
         {
             if (existingValue == null)
                 throw new InvalidOperationException($"Subscription with id {SubscriptionId} does not exist");
@@ -31,13 +33,18 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             if (record.Topology.WhoseTaskIsIt(this) != NodeTag)
                 throw new InvalidOperationException($"Can't update subscription with id {SubscriptionId} by node {NodeTag}, because it's not it's task to update this subscription");
-            
+
+            var subscripiton = new SubscriptionState();
+            subscripiton.FillFromBlittableJson(existingValue);
+            if (subscripiton.LastEtagReachedInServer == null)
+                subscripiton.LastEtagReachedInServer = new Dictionary<Guid, long>();
+            subscripiton.LastEtagReachedInServer[DbId] = this.LastDocumentEtagAckedInNode;
+            subscripiton.ChangeVector = ChangeVector;
+            subscripiton.TimeOfLastClientActivity = DateTime.UtcNow;
+
             // todo: implement change vector comparison here, need to move some extention methods from server to client first
-            return new DynamicJsonValue(existingValue)
-            {
-                [nameof(SubscriptionRaftState.ChangeVector)] = ChangeVector.ToJson(),
-                [nameof(SubscriptionRaftState.TimeOfLastClientActivity)] = DateTime.UtcNow
-            };
+            
+            return context.ReadObject(subscripiton.ToJson(), GetItemId());
         }
 
         public override void FillJson(DynamicJsonValue json)
@@ -47,9 +54,17 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(NodeTag)] = NodeTag;
         }
 
+        private ulong? taskKey;
+
         public ulong GetTaskKey()
         {
-            return (ulong)SubscriptionId;
+            if (taskKey.HasValue == false)
+            {
+                var lastSlashIndex = SubscriptionId.LastIndexOf("/");
+                taskKey = ulong.Parse(SubscriptionId.Substring(lastSlashIndex + 1));
+                return taskKey.Value;
+            }
+            return taskKey.Value;
         }
     }
 }

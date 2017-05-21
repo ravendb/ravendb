@@ -18,7 +18,7 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionCreationParams = new SubscriptionCreationOptions
+                var subscriptionCreationParams = new SubscriptionCreationParams
                 {
                     Criteria = new SubscriptionCriteria("People")
                 };  
@@ -41,10 +41,10 @@ namespace FastTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastChangeVector;
+                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).DatabaseChangeVector;
                 await CreateDocuments(store, 5);
 
-                var subscriptionCreationParams = new SubscriptionCreationOptions()
+                var subscriptionCreationParams = new SubscriptionCreationParams()
                 {
                     Criteria = new SubscriptionCriteria("Things"),
                     ChangeVector = lastChangeVector
@@ -76,10 +76,10 @@ namespace FastTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastChangeVector ?? null;
+                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).DatabaseChangeVector ?? null;
                 await CreateDocuments(store, 5);
 
-                var subscriptionCreationParams = new SubscriptionCreationOptions()
+                var subscriptionCreationParams = new SubscriptionCreationParams()
                 {
                     Criteria = new SubscriptionCriteria("Things"),
                     ChangeVector = lastChangeVector
@@ -143,14 +143,15 @@ namespace FastTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastChangeVector;
-                await CreateDocuments(store, 5);
+                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).DatabaseChangeVector;
 
-                var subscriptionCreationParams = new SubscriptionCreationOptions()
+                var subscriptionCreationParams = new SubscriptionCreationParams()
                 {
                     Criteria = new SubscriptionCriteria("Things"),
                     ChangeVector = lastChangeVector
                 };
+
+                await CreateDocuments(store, 5);
                 var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCreationParams);
                 using (
                     var acceptedSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
@@ -223,10 +224,10 @@ namespace FastTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastChangeVector ?? null;
+                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).DatabaseChangeVector ?? null;
                 await CreateDocuments(store, 5);
 
-                var subscriptionCreationParams = new SubscriptionCreationOptions()
+                var subscriptionCreationParams = new SubscriptionCreationParams()
                 {
                     Criteria = new SubscriptionCriteria("Things"),
                     ChangeVector = lastChangeVector
