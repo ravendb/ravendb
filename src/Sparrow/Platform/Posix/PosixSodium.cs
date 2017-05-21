@@ -22,7 +22,7 @@ namespace Sparrow.Platform.Posix
                 // make sure the lib file is not there (this exception might pop when incorrect libsodium lib is does exists)
                 if (File.Exists(LIB_SODIUM))
                 {
-                    throw new IncorrectDllExecption(
+                    throw new IncorrectDllException(
                         $"{LIB_SODIUM} probably contains the wrong version or not usable on the current platform. Make sure that this machine has the appropriate C runtime for {LIB_SODIUM}.",
                         dllNotFoundEx);
 
