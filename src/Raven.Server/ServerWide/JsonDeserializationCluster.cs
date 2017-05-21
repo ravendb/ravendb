@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Raven.Client.Documents;
+using Raven.Client.Server;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;

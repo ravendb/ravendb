@@ -1,4 +1,4 @@
-using Raven.Client.Documents;
+using Raven.Client.Server;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
