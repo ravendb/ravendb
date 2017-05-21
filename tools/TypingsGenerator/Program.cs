@@ -222,6 +222,19 @@ namespace TypingsGenerator
             scripter.AddType(typeof(GetConflictsResult));
             scripter.AddType(typeof(ConflictResolverAdvisor.MergeResult));
 
+            // ongoing tasks
+            scripter.AddType(typeof(OngoingTasksResult));
+            scripter.AddType(typeof(OngoingTask));
+            scripter.AddType(typeof(OngoingTaskReplication)); 
+            scripter.AddType(typeof(OngoingTaskETL));
+            scripter.AddType(typeof(OngoingTaskSQL)); 
+            scripter.AddType(typeof(OngoingTaskBackup)); 
+            scripter.AddType(typeof(OngoingTaskType));
+            scripter.AddType(typeof(OngoingTaskState));
+            scripter.AddType(typeof(OngoingTaskConnectionStatus));
+            scripter.AddType(typeof(BackupType));
+            scripter.AddType(typeof(NodeId));
+
             return scripter;
         }
     }

@@ -1,0 +1,44 @@
+<div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
+            <h4 class="modal-title" id="myModalLabel">Choose a Task:</h4>
+        </div>
+        <div class="modal-body">
+            <div class="padding padding-sm text-center">
+                <div class="row row-sm flex-row">
+                    <div class="col-sm-4 margin-bottom" data-bind="click: newReplicationTask">
+                        <a href="#" class="external-replication">
+                            <i class="icon-external-replication"></i><br/>External Replication
+                        </a>
+                    </div>
+                    <div class="col-sm-4 margin-bottom" data-bind="click: newEtlTask">
+                        <a href="#" class="ravendb-etl">
+                            <i class="icon-ravendb-etl"></i><br/>RavenDB ETL
+                        </a>
+                    </div>
+                    <div class="col-sm-4 margin-bottom" data-bind="click: newSqlEtlTask">
+                        <a href="#" class="sql-etl">
+                            <i class="icon-sql-etl"></i><br/>SQL ETL
+                        </a>
+                    </div>
+                    <div class="col-sm-4 col-sm-offset-2 margin-bottom" data-bind="click: newBackupTask">
+                        <a href="#" class="periodic-backup">
+                            <i class="icon-raven-backup"></i><br/>Backup
+                        </a>
+                    </div>
+                    <div class="col-sm-4 margin-bottom" data-bind="click: newSubscriptionTask">
+                        <a href="#" class="subscription" >
+                            <i class="icon-subscription"></i><br/>Subscription
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <div class="padding text-center">
+                <a href="#">Which one should I choose?</a>
+            </div>
+        </div>
+    </div>
+</div>
