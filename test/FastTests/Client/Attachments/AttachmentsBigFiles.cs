@@ -6,7 +6,7 @@ namespace FastTests.Client.Attachments
     public class AttachmentsBigFiles : RavenTestBase
     {
         [Theory]
-        [InlineData(10, "JSQotERdt/PFZDB+eYlyf4cZVDLsYG33")]
+        [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=")]
         public void BatchRequestWithLongMultiPartSections(long size, string hash)
         {
             using (var store = GetDocumentStore())
@@ -41,7 +41,7 @@ namespace FastTests.Client.Attachments
         }
 
         [Theory]
-        [InlineData(10, "JSQotERdt/PFZDB+eYlyf4cZVDLsYG33")]
+        [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=")]
         public void SupportHugeAttachment(long size, string hash)
         {
             using (var store = GetDocumentStore())

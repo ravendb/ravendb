@@ -88,7 +88,7 @@ namespace Raven.Server.Documents
             _logger = LoggingSource.Instance.GetLogger<AttachmentsStorage>(documentDatabase.Name);
 
             tx.CreateTree(AttachmentsSlice);
-            AttachmentsSchema.Create(tx, AttachmentsMetadataSlice, 32);
+            AttachmentsSchema.Create(tx, AttachmentsMetadataSlice, 44);
             DocumentsStorage.TombstonesSchema.Create(tx, AttachmentsTombstonesSlice, 16);
         }
 
@@ -146,7 +146,7 @@ namespace Raven.Server.Documents
             using (Slice.From(context.Allocator, hash, out Slice base64Hash)) // Hash is a base64 string, so this is a special case that we do not need to escape
             using (GetAttachmentKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Document, null, out Slice keySlice))
             {
-                Debug.Assert(base64Hash.Size == 32, $"Hash size should be 32 but was: {keySlice.Size}");
+                Debug.Assert(base64Hash.Size == 44, $"Hash size should be 44 but was: {keySlice.Size}");
 
                 var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
                 using (table.Allocate(out TableValueBuilder tbv))
@@ -210,7 +210,7 @@ namespace Raven.Server.Documents
         /// </summary>
         public void PutDirect(DocumentsOperationContext context, Slice key, Slice name, Slice contentType, Slice base64Hash)
         {
-            Debug.Assert(base64Hash.Size == 32, $"Hash size should be 32 but was: {key.Size}");
+            Debug.Assert(base64Hash.Size == 44, $"Hash size should be 44 but was: {key.Size}");
 
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             using (table.Allocate(out TableValueBuilder tbv))
