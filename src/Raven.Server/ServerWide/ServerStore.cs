@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Lucene.Net.Search;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Server;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Server.Commercial;
@@ -65,9 +66,9 @@ namespace Raven.Server.ServerWide
         {
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _ravenServer = ravenServer;
-
+            
             DatabasesLandlord = new DatabasesLandlord(this);
-
+            
             _notificationsStorage = new NotificationsStorage(ResourceName);
 
             NotificationCenter = new NotificationCenter.NotificationCenter(_notificationsStorage, ResourceName, ServerShutdown);
@@ -124,7 +125,8 @@ namespace Raven.Server.ServerWide
                 {
                     if (_engine.LeaderTag != NodeTag)
                     {
-                        await _engine.WaitForState(RachisConsensus.State.Leader);
+                        await _engine.WaitForState(RachisConsensus.State.Leader)
+                                     .WithCancellation(_shutdownNotification.Token);
                         continue;
                     }
                     using (_clusterMaintenanceSupervisor = new ClusterMaintenanceSupervisor(this,_engine.Tag, _engine.CurrentTerm))
@@ -158,7 +160,8 @@ namespace Raven.Server.ServerWide
                             }
 
                             var leaderChanged = _engine.WaitForLeaveState(RachisConsensus.State.Leader);
-                            if (await Task.WhenAny(topologyChangedTask, leaderChanged) == leaderChanged)
+                            if (await Task.WhenAny(topologyChangedTask, leaderChanged)
+                                          .WithCancellation(_shutdownNotification.Token) == leaderChanged)
                                 break;
                         }
                     }
@@ -181,12 +184,12 @@ namespace Raven.Server.ServerWide
 
         public async Task AddNodeToClusterAsync(string nodeUrl)
         {
-            await _engine.AddToClusterAsync(nodeUrl);
+            await _engine.AddToClusterAsync(nodeUrl).WithCancellation(_shutdownNotification.Token);
         }
 
         public async Task RemoveFromClusterAsync(string nodeTag)
         {
-            await _engine.RemoveFromClusterAsync(nodeTag);
+            await _engine.RemoveFromClusterAsync(nodeTag).WithCancellation(_shutdownNotification.Token);
         }
 
         public void Initialize()
@@ -199,9 +202,7 @@ namespace Raven.Server.ServerWide
                 Logger.Info("Starting to open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory.FullPath));
 
             var path = Configuration.Core.DataDirectory.Combine("System");
-
-
-            List<AlertRaised> storeAlertForLateRaise = new List<AlertRaised>();
+            var storeAlertForLateRaise = new List<AlertRaised>();
 
             var options = Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly()
@@ -288,17 +289,15 @@ namespace Raven.Server.ServerWide
             }
             LicenseManager.Initialize(_env, ContextPool);
 
-            TransactionOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 context.OpenReadTransaction();
-
                 foreach (var db in _engine.StateMachine.ItemsStartingWith(context, "db/", 0, int.MaxValue))
                 {
                     DatabasesLandlord.ClusterOnDatabaseChanged(this, (db.Item1, 0));
                 }
             }
-            
+
             Task.Run(ClusterMaintanceSetupTask, ServerShutdown);
         }
 
@@ -736,8 +735,7 @@ namespace Raven.Server.ServerWide
 
         public async Task<long> SendToLeaderAsync(UpdateDatabaseCommand cmd)
         {
-            TransactionOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var djv = cmd.ToJson();
                 var cmdJson = context.ReadObject(djv, "raft/command");
@@ -748,8 +746,7 @@ namespace Raven.Server.ServerWide
 
         public async Task<long> SendToLeaderAsync(BlittableJsonReaderObject cmd)
         {
-            TransactionOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 return await SendToLeaderAsyncInternal(cmd, context);
             }
@@ -757,8 +754,7 @@ namespace Raven.Server.ServerWide
 
         public async Task<long> SendToLeaderAsync(DynamicJsonValue cmd)
         {
-            TransactionOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var cmdJson = context.ReadObject(cmd, "raft/command");
 
@@ -768,6 +764,9 @@ namespace Raven.Server.ServerWide
 
         private async Task<long> SendToLeaderAsyncInternal(BlittableJsonReaderObject cmdJson, TransactionOperationContext context)
         {
+            //I think it is reasonable to expect timeout twice of error retry
+            var timeout = (uint)Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan.TotalMilliseconds;
+            var timeoutTask = TimeoutManager.WaitFor(timeout, _shutdownNotification.Token);
             while (true)
             {
                 ServerShutdown.ThrowIfCancellationRequested();
@@ -803,8 +802,16 @@ namespace Raven.Server.ServerWide
                     if (_engine.LeaderTag == cachedLeaderTag)
                         throw; // if the leader changed, let's try again
                 }
+                
+                if (await Task.WhenAny(logChange, timeoutTask) == timeoutTask)
+                    ThrowTimeoutException();
             }
             
+        }
+
+        private static void ThrowTimeoutException()
+        {
+            throw new TimeoutException();
         }
 
         private async Task<long> SendToNodeAsync(TransactionOperationContext context, string engineLeaderTag, BlittableJsonReaderObject cmd)
@@ -812,8 +819,7 @@ namespace Raven.Server.ServerWide
             using (context.OpenReadTransaction())
             {
                 var clusterTopology = _engine.GetTopology(context);
-                string leaderUrl;
-                if (clusterTopology.Members.TryGetValue(engineLeaderTag, out leaderUrl) == false)
+                if (clusterTopology.Members.TryGetValue(engineLeaderTag, out string leaderUrl) == false)
                     throw new InvalidOperationException("Leader " + engineLeaderTag + " was not found in the topology members");
                 var command = new PutRaftCommand(context, cmd);
 

@@ -75,8 +75,7 @@ namespace Raven.Server.Rachis
         {
             Running = true;
             ClusterTopology clusterTopology;
-            TransactionOperationContext context;
-            using (_engine.ContextPool.AllocateOperationContext(out context))
+            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 clusterTopology = _engine.GetTopology(context);
@@ -137,8 +136,7 @@ namespace Raven.Server.Rachis
                     if (voter.Key == _engine.Tag)
                         continue; // we obviously won't be applying to ourselves
 
-                    FollowerAmbassador existingInstance;
-                    if (old.TryGetValue(voter.Key, out existingInstance))
+                    if (old.TryGetValue(voter.Key, out FollowerAmbassador existingInstance))
                     {
                         existingInstance.UpdateLeaderWake(_voterResponded);
                         _voters.Add(voter.Key, existingInstance);
@@ -158,8 +156,7 @@ namespace Raven.Server.Rachis
 
                 foreach (var promotable in clusterTopology.Promotables)
                 {
-                    FollowerAmbassador existingInstance;
-                    if (old.TryGetValue(promotable.Key, out existingInstance))
+                    if (old.TryGetValue(promotable.Key, out FollowerAmbassador existingInstance))
                     {
                         existingInstance.UpdateLeaderWake(_promotableUpdated);
                         _promotables.Add(promotable.Key, existingInstance);
@@ -179,8 +176,7 @@ namespace Raven.Server.Rachis
 
                 foreach (var nonVoter in clusterTopology.Watchers)
                 {
-                    FollowerAmbassador existingInstance;
-                    if (_nonVoters.TryGetValue(nonVoter.Key, out existingInstance))
+                    if (_nonVoters.TryGetValue(nonVoter.Key, out FollowerAmbassador existingInstance))
                     {
                         existingInstance.UpdateLeaderWake(_noop);
 
@@ -232,8 +228,7 @@ namespace Raven.Server.Rachis
                 {
                     ["Command"] = "noop"
                 };
-                TransactionOperationContext context;
-                using (_engine.ContextPool.AllocateOperationContext(out context))
+                using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenWriteTransaction())
                 using (var cmd = context.ReadObject(noopCmd, "noop-cmd"))
                 {
@@ -274,7 +269,7 @@ namespace Raven.Server.Rachis
                     var lowestIndexInEntireCluster = GetLowestIndexInEntireCluster();
                     if (lowestIndexInEntireCluster != LowestIndexInEntireCluster)
                     {
-                        using (_engine.ContextPool.AllocateOperationContext(out context))
+                        using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                         using (context.OpenWriteTransaction())
                         {
                             _engine.TruncateLogBefore(context, lowestIndexInEntireCluster);
@@ -386,8 +381,7 @@ namespace Raven.Server.Rachis
                 if (kvp.Key > _lastCommit)
                     continue;
 
-                CommandState value;
-                if (_entries.TryRemove(kvp.Key, out value))
+                if (_entries.TryRemove(kvp.Key, out CommandState value))
                 {
                     TaskExecutor.Execute(o =>
                     {
@@ -449,8 +443,7 @@ namespace Raven.Server.Rachis
         protected long GetLowestIndexInEntireCluster()
         {
             long lowestIndex;
-            TransactionOperationContext context;
-            using (_engine.ContextPool.AllocateOperationContext(out context))
+            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 lowestIndex = _engine.GetLastEntryIndex(context);
@@ -477,8 +470,7 @@ namespace Raven.Server.Rachis
         protected long GetMaxIndexOnQuorum(int minSize)
         {
             _nodesPerIndex.Clear();
-            TransactionOperationContext context;
-            using (_engine.ContextPool.AllocateOperationContext(out context))
+            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 _nodesPerIndex[_engine.GetLastEntryIndex(context)] = 1;
@@ -486,9 +478,8 @@ namespace Raven.Server.Rachis
 
             foreach (var voter in _voters.Values)
             {
-                int count;
                 var voterIndex = voter.FollowerMatchIndex;
-                _nodesPerIndex.TryGetValue(voterIndex, out count);
+                _nodesPerIndex.TryGetValue(voterIndex, out int count);
                 _nodesPerIndex[voterIndex] = count + 1;
             }
             var votesSoFar = 0;
@@ -505,8 +496,7 @@ namespace Raven.Server.Rachis
         private void CheckPromotables()
         {
             long lastIndex;
-            TransactionOperationContext context;
-            using (_engine.ContextPool.AllocateOperationContext(out context))
+            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 lastIndex = _engine.GetLastEntryIndex(context);
@@ -517,8 +507,7 @@ namespace Raven.Server.Rachis
                 if (ambasaddor.Value.FollowerMatchIndex != lastIndex)
                     continue;
 
-                Task task;
-                TryModifyTopology(ambasaddor.Key, ambasaddor.Value.Url, TopologyModification.Voter, out task);
+                TryModifyTopology(ambasaddor.Key, ambasaddor.Value.Url, TopologyModification.Voter, out Task task);
 
                 _promotableUpdated.Set();
                 break;
@@ -641,8 +630,7 @@ namespace Raven.Server.Rachis
 
         public bool TryModifyTopology(string nodeTag, string nodeUrl, TopologyModification modification, out Task task, bool validateNotInTopology = false)
         {
-            TransactionOperationContext context;
-            using (_engine.ContextPool.AllocateOperationContext(out context))
+            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction())
             {
                 var existing = Interlocked.CompareExchange(ref _topologyModification, null, null);
@@ -747,8 +735,7 @@ namespace Raven.Server.Rachis
 
         public void SetStateOf(long index, Action<TaskCompletionSource<long>> onNotify)
         {
-            CommandState value;
-            if (_entries.TryGetValue(index, out value))
+            if (_entries.TryGetValue(index, out CommandState value))
             {
                 value.OnNotify = onNotify;
             }
