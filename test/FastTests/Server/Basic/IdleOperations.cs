@@ -19,7 +19,7 @@ namespace FastTests.Server.Basic
         {
             using (var store = GetDocumentStore())
             {
-                var db = GetDatabase(store.DefaultDatabase).Result;
+                var db = GetDatabase(store.Database).Result;
 
                 var lastIdleTime = db.LastIdleTime;
 

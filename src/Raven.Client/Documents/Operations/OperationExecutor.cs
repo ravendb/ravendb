@@ -2,73 +2,70 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Http;
-using Raven.Client.Server.Operations;
 using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public partial class AdminOperationExecuter
+    public partial class OperationExecutor
     {
         private readonly DocumentStoreBase _store;
         private readonly string _databaseName;
         private readonly RequestExecutor _requestExecutor;
         private readonly JsonOperationContext _context;
-        private ServerOperationExecuter _serverOperationExecuter;
 
-        public AdminOperationExecuter(DocumentStoreBase store, string databaseName = null)
+        public OperationExecutor(DocumentStoreBase store, string databaseName = null)
         {
             _store = store;
-            _databaseName = databaseName ?? store.DefaultDatabase;
-            _requestExecutor = store.GetRequestExecuter(databaseName);
+            _databaseName = databaseName ?? store.Database;
+            _requestExecutor = store.GetRequestExecutor(databaseName);
         }
 
-        internal AdminOperationExecuter(DocumentStoreBase store, RequestExecutor requestExecutor, JsonOperationContext context)
+        internal OperationExecutor(DocumentStoreBase store, RequestExecutor requestExecutor, JsonOperationContext context)
         {
             _store = store;
             _requestExecutor = requestExecutor;
             _context = context;
         }
 
-        public ServerOperationExecuter Server => _serverOperationExecuter ?? (_serverOperationExecuter = new ServerOperationExecuter(_store));
-
-        public AdminOperationExecuter ForDatabase(string databaseName)
+        public OperationExecutor ForDatabase(string databaseName)
         {
             if (string.Equals(_databaseName, databaseName, StringComparison.OrdinalIgnoreCase))
                 return this;
 
-            return new AdminOperationExecuter(_store, databaseName);
+            return new OperationExecutor(_store, databaseName);
         }
 
-        public void Send(IAdminOperation operation)
+        public void Send(IOperation operation)
         {
             AsyncHelpers.RunSync(() => SendAsync(operation));
         }
 
-        public TResult Send<TResult>(IAdminOperation<TResult> operation)
+        public TResult Send<TResult>(IOperation<TResult> operation)
         {
             return AsyncHelpers.RunSync(() => SendAsync(operation));
         }
 
-        public async Task SendAsync(IAdminOperation operation, CancellationToken token = default(CancellationToken))
+        public Task SendAsync(IOperation operation, CancellationToken token = default(CancellationToken))
         {
             JsonOperationContext context;
             using (GetContext(out context))
             {
-                var command = operation.GetCommand(_store.Conventions, context);
+                var command = operation.GetCommand(_store.Conventions, context, _requestExecutor.Cache);
 
-                await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
+                return _requestExecutor.ExecuteAsync(command, context, token);
             }
         }
 
-        public async Task<TResult> SendAsync<TResult>(IAdminOperation<TResult> operation, CancellationToken token = default(CancellationToken))
+        public async Task<TResult> SendAsync<TResult>(IOperation<TResult> operation, CancellationToken token = default(CancellationToken))
         {
             JsonOperationContext context;
             using (GetContext(out context))
             {
-                var command = operation.GetCommand(_store.Conventions, context);
+                var command = operation.GetCommand(_store.Conventions, context, _requestExecutor.Cache);
 
                 await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
+
                 return command.Result;
             }
         }

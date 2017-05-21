@@ -23,6 +23,7 @@ namespace Sparrow.Utils
         {
             public string Name;
             public int Id;
+            public int UnmanagedThreadId;
             public long Allocations;
             public long ReleasesFromOtherThreads;
             public Thread ThreadInstance;
@@ -32,8 +33,12 @@ namespace Sparrow.Utils
                 ThreadInstance = Thread.CurrentThread;
                 Name = ThreadInstance.Name;
                 Id = ThreadInstance.ManagedThreadId;
+                UnmanagedThreadId = PlatformDetails.RunningOnPosix ? 
+                    Syscall.gettid() : 
+                    (int)Win32ThreadsMethods.GetCurrentThreadId();
             }
         }
+
         public static void Free(byte* ptr, long size, ThreadStats stats)
         {
             var currentThreadValue = ThreadAllocations.Value;
@@ -169,6 +174,11 @@ namespace Sparrow.Utils
         private static void ThrowFailedToFree()
         {
             throw new Win32Exception("Failed to free memory");
+        }
+
+        public static void EnsureRegistered()
+        {
+            GC.KeepAlive(ThreadAllocations.Value); // side affecty
         }
     }
 }

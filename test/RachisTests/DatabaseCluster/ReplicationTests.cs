@@ -27,7 +27,7 @@ namespace RachisTests.DatabaseCluster
             using (var store = new DocumentStore()
             {
                 Url = leader.WebUrls[0],
-                DefaultDatabase = databaseName
+                Database = databaseName
             }.Initialize())
             {
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
@@ -63,7 +63,7 @@ namespace RachisTests.DatabaseCluster
             using (var store = new DocumentStore()
             {
                 Url = leader.WebUrls[0],
-                DefaultDatabase = databaseName
+                Database = databaseName
             }.Initialize())
             {
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
@@ -114,7 +114,7 @@ namespace RachisTests.DatabaseCluster
             using (var store = new DocumentStore()
             {
                 Url = leader.WebUrls[0],
-                DefaultDatabase = databaseName,
+                Database = databaseName,
                 
             }.Initialize())
             {
@@ -144,7 +144,7 @@ namespace RachisTests.DatabaseCluster
             using (var store = new DocumentStore()
             {
                 Url = Servers[1].WebUrls[0],
-                DefaultDatabase = databaseName
+                Database = databaseName
             }.Initialize())
             {
                 using (var session = store.OpenAsyncSession())
@@ -178,8 +178,8 @@ namespace RachisTests.DatabaseCluster
             using (var store1 = GetDocumentStore(apiKey: "super/" + _apiKey.Secret))
             using (var store2 = GetDocumentStore(apiKey: "super/" + _apiKey.Secret))
             {
-                _apiKey.ResourcesAccessMode[store1.DefaultDatabase] = AccessModes.Admin;
-                _apiKey.ResourcesAccessMode[store2.DefaultDatabase] = AccessModes.ReadWrite;
+                _apiKey.ResourcesAccessMode[store1.Database] = AccessModes.Admin;
+                _apiKey.ResourcesAccessMode[store2.Database] = AccessModes.ReadWrite;
                 store2.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
                 var doc = store2.Admin.Server.Send(new GetApiKeyOperation("super"));
                 Assert.NotNull(doc);
@@ -189,7 +189,7 @@ namespace RachisTests.DatabaseCluster
                 {
                     new DatabaseWatcher
                     {
-                        Database = store2.DefaultDatabase,
+                        Database = store2.Database,
                         Url = store2.Url,
                         ApiKey = "super/" + api
                     }

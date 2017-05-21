@@ -14,7 +14,7 @@ namespace Raven.Client.Server.PeriodicExport
         public bool Active { get; set; }
 
         /// <summary>
-        /// Amazon Glacier Vaul name.
+        /// Amazon Glacier Vault name.
         /// </summary>
         public string GlacierVaultName { get; set; }
 

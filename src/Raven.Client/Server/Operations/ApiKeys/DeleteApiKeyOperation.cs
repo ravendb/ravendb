@@ -15,7 +15,7 @@ namespace Raven.Client.Server.Operations.ApiKeys
             _name = name ?? throw new ArgumentNullException(nameof(name));
         }
 
-        public RavenCommand<object> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new DeleteApiKeyCommand(_name);
         }
@@ -29,18 +29,14 @@ namespace Raven.Client.Server.Operations.ApiKeys
                 _name = name ?? throw new ArgumentNullException(nameof(name));
             }
 
-            public override bool IsReadRequest => false;
-
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/api-keys?name=" + Uri.EscapeDataString(_name);
 
-                var request = new HttpRequestMessage
+                return new HttpRequestMessage
                 {
                     Method = HttpMethod.Delete
                 };
-
-                return request;
             }
         }
     }

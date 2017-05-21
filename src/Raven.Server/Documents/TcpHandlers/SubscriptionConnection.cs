@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
                 await WriteJsonAsync(new DynamicJsonValue
                 {
-                    ["Type"] = "CoonectionStatus",
+                    ["Type"] = "ConnectionStatus",
                     ["Status"] = "NotFound",
                     ["FreeText"] = e.ToString()
                 });
@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                     await WriteJsonAsync(new DynamicJsonValue
                     {
-                        ["Type"] = "CoonectionStatus",
+                        ["Type"] = "ConnectionStatus",
                         ["Status"] = "Accepted"
                     });
 
@@ -166,7 +166,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                     await WriteJsonAsync(new DynamicJsonValue
                     {
-                        ["Type"] = "CoonectionStatus",
+                        ["Type"] = "ConnectionStatus",
                         ["Status"] = "InUse"
                     });
                     return false;

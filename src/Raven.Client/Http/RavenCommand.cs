@@ -18,6 +18,8 @@ namespace Raven.Client.Http
         {
             ResponseType = RavenCommandResponseType.Empty;
         }
+
+        public override bool IsReadRequest { get; } = false;
     }
 
     public abstract class RavenCommand<TResult>
@@ -132,7 +134,7 @@ namespace Raven.Client.Http
             if (IsReadRequest)
             {
                 if (ResponseType != RavenCommandResponseType.Raw)
-                    throw new InvalidOperationException("No need to add the etag for Get requests as the request executer will add it.");
+                    throw new InvalidOperationException("No need to add the etag for Get requests as the request executor will add it.");
 
                 throw new InvalidOperationException("Stream responses are not cached so not etag should be used.");
             }

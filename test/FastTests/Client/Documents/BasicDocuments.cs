@@ -1,11 +1,8 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Basic.Entities;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
-using Raven.Client.Documents.Transformers;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
@@ -46,15 +43,12 @@ namespace FastTests.Client.Documents
                 }
 
                 var requestExecuter = store
-                    .GetRequestExecuter();
+                    .GetRequestExecutor();
 
-                JsonOperationContext context;
-                using (requestExecuter.ContextPool.AllocateOperationContext(out context))
+                using (requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var getDocumentCommand = new GetDocumentCommand
-                    {
-                        Ids = new[] { "users/1", "users/2" }
-                    };
+                    var getDocumentCommand = new GetDocumentCommand(new[] { "users/1", "users/2" }, includes: null, transformer: null,
+                        transformerParameters: null, metadataOnly: false, context: context);
 
                     requestExecuter
                         .Execute(getDocumentCommand, context);
@@ -86,11 +80,8 @@ namespace FastTests.Client.Documents
                         Assert.Equal("Arek", user2.Name);
                     }
 
-                    getDocumentCommand = new GetDocumentCommand
-                    {
-                        Ids = new[] { "users/1", "users/2" },
-                        MetadataOnly = true
-                    };
+                    getDocumentCommand = new GetDocumentCommand(new[] {"users/1", "users/2"}, includes: null, transformer: null, transformerParameters: null,
+                        metadataOnly: true, context: context);
 
                     requestExecuter
                         .Execute(getDocumentCommand, context);

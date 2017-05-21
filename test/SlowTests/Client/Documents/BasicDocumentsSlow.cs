@@ -33,16 +33,12 @@ namespace SlowTests.Client.Documents
                 }
 
                 var requestExecuter = store
-                    .GetRequestExecuter();
+                    .GetRequestExecutor();
 
-                JsonOperationContext context;
-                using (requestExecuter.ContextPool.AllocateOperationContext(out context))
+                using (requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var getDocumentCommand = new GetDocumentCommand
-                    {
-                        Ids = new[] { "users/1", "users/2" },
-                        Transformer = transformer.TransformerName
-                    };
+                    var getDocumentCommand = new GetDocumentCommand(new[] {"users/1", "users/2"}, includes: null, transformer: transformer.TransformerName,
+                        transformerParameters: null, metadataOnly: false, context: context);
 
                     requestExecuter
                         .Execute(getDocumentCommand, context);
@@ -80,12 +76,8 @@ namespace SlowTests.Client.Documents
                         Assert.Equal("Arek", user2.Name);
                     }
 
-                    getDocumentCommand = new GetDocumentCommand
-                    {
-                        Ids = new[] { "users/1", "users/2" },
-                        Transformer = transformer.TransformerName,
-                        MetadataOnly = true
-                    };
+                    getDocumentCommand = new GetDocumentCommand(new[] { "users/1", "users/2" }, includes: null, transformer: transformer.TransformerName,
+                        transformerParameters: null, metadataOnly: true, context: context);
 
                     requestExecuter
                         .Execute(getDocumentCommand, context);

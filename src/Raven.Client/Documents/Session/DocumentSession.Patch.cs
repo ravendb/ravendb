@@ -23,7 +23,8 @@ namespace Raven.Client.Documents.Session
     {
         private class CustomMethods : JavascriptConversionExtension
         {
-            public Dictionary<string, object> Parameters = new Dictionary<string, object>();
+            public readonly Dictionary<string, object> Parameters = new Dictionary<string, object>();
+
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 var methodCallExpression = context.Node as MethodCallExpression;
@@ -90,7 +91,7 @@ namespace Raven.Client.Documents.Session
         {
             var pathScript = path.CompileToJavascript();
 
-            Advanced.Defer(new PatchCommandData(key , null, new PatchRequest
+            Advanced.Defer(new PatchCommandData(key, null, new PatchRequest
             {
                 Script = $"this.{pathScript} += val;",
                 Values = { ["val"] = valToAdd }
@@ -108,7 +109,7 @@ namespace Raven.Client.Documents.Session
         {
             var pathScript = path.CompileToJavascript();
 
-            Advanced.Defer(new PatchCommandData(key, null , new PatchRequest
+            Advanced.Defer(new PatchCommandData(key, null, new PatchRequest
             {
                 Script = $"this.{pathScript} = val;",
                 Values = { ["val"] = value }
@@ -135,7 +136,7 @@ namespace Raven.Client.Documents.Session
 
             var script = $"this.{pathScript}{adderScript}";
 
-            Advanced.Defer(new PatchCommandData(key , null , new PatchRequest
+            Advanced.Defer(new PatchCommandData(key, null, new PatchRequest
             {
                 Script = script,
                 Values = extension.Parameters

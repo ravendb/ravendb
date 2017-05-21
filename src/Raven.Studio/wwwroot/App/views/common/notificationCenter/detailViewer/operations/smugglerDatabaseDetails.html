@@ -62,10 +62,24 @@
                         <div class="errors" data-bind="text: erroredCount, css: { 'text-muted': !hasErroredCount }">
                         </div>
                     </div>
+                    <div class="attachments export-item" data-bind="with: attachments, visible: hasAttachments">
+                        <div class="name">
+                            <h4>Attachments</h4>
+                        </div>
+                        <div class="status">
+                        </div>
+                        <div class="read" data-bind="text: readCount, css: { 'text-muted': !$parent.hasReadCount }">
+                        </div>
+                        <div class="skipped text-muted">
+                            -
+                        </div>
+                        <div class="errors" data-bind="text: erroredCount, css: { 'text-muted': !$parent.hasErroredCount }">
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="clearfix" data-bind="visible: !operationFailed()">
-                <div class="pull-right">
+                <div class="pull-right margin-top">
                     <button class="btn btn-default btn-sm" data-bind="click: toggleDetails, text: detailsVisible() ? 'Hide details':'Show details', clickBubble: false">
                     </button>
                 </div>

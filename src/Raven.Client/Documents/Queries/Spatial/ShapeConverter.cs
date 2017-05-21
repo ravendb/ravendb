@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Queries.Spatial
 
         public virtual bool TryConvert(object value, out string result)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("This feature is not yet implemented");
 
             /*var s = value as string;
             if (s != null)
@@ -77,7 +77,7 @@ namespace Raven.Client.Documents.Queries.Spatial
 
         private bool IsNumber(object obj)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("This feature is not yet implemented");
 
             /*var rValue = obj as RavenJValue;
             return obj is double
@@ -91,7 +91,7 @@ namespace Raven.Client.Documents.Queries.Spatial
 
         private double GetDouble(object obj)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("This feature is not yet implemented");
 
             /*if (obj is double || obj is float || obj is int || obj is long || obj is short || obj is decimal)
                 return Convert.ToDouble(obj);

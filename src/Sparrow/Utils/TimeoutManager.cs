@@ -14,8 +14,7 @@ namespace Sparrow.Utils
 {
     public static class TimeoutManager
     {
-        private static readonly ConcurrentDictionary<uint, TimerTaskHolder> Values 
-            = new ConcurrentDictionary<uint, TimerTaskHolder>(NumericEqualityComparer.Instance);
+        private static readonly ConcurrentDictionary<uint, TimerTaskHolder> Values = new ConcurrentDictionary<uint, TimerTaskHolder>();
 
         private class TimerTaskHolder  : IDisposable
         {

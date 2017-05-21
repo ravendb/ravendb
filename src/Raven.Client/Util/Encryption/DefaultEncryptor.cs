@@ -21,9 +21,9 @@ namespace Raven.Client.Util.Encryption
 
         internal class DefaultHashEncryptor : HashEncryptorBase, IHashEncryptor
         {
-            private readonly ObjectPool<MD5> md5Pool = new ObjectPool<MD5>(MD5.Create, 16);
-            private readonly ObjectPool<SHA1> sha1Pool = new ObjectPool<SHA1>(SHA1.Create, 16);
-            private readonly ObjectPool<SHA256> sha256Pool = new ObjectPool<SHA256>(SHA256.Create, 16);
+            private readonly ObjectPool<MD5> _md5Pool = new ObjectPool<MD5>(MD5.Create, 16);
+            private readonly ObjectPool<SHA1> _sha1Pool = new ObjectPool<SHA1>(SHA1.Create, 16);
+            private readonly ObjectPool<SHA256> _sha256Pool = new ObjectPool<SHA256>(SHA256.Create, 16);
 
             public DefaultHashEncryptor()
                 : this(true)
@@ -46,14 +46,14 @@ namespace Raven.Client.Util.Encryption
                 SHA256 algorithm = null;
                 try
                 {
-                    algorithm = sha256Pool.Allocate();
+                    algorithm = _sha256Pool.Allocate();
                     return ComputeHashInternal(algorithm, bytes);
                 }
                 finally
                 {
                     if (algorithm != null)
-                        sha256Pool.Free(algorithm);
-                }                
+                        _sha256Pool.Free(algorithm);
+                }
             }
 
             public byte[] ComputeForStorage(byte[] bytes, int offset, int length)
@@ -61,13 +61,13 @@ namespace Raven.Client.Util.Encryption
                 SHA256 algorithm = null;
                 try
                 {
-                    algorithm = sha256Pool.Allocate();
+                    algorithm = _sha256Pool.Allocate();
                     return ComputeHashInternal(algorithm, bytes, offset, length);
                 }
                 finally
                 {
                     if (algorithm != null)
-                        sha256Pool.Free(algorithm);
+                        _sha256Pool.Free(algorithm);
                 }
             }
 
@@ -76,13 +76,13 @@ namespace Raven.Client.Util.Encryption
                 SHA1 algorithm = null;
                 try
                 {
-                    algorithm = sha1Pool.Allocate();
+                    algorithm = _sha1Pool.Allocate();
                     return ComputeHashInternal(algorithm, bytes);
                 }
                 finally
                 {
                     if (algorithm != null)
-                        sha1Pool.Free(algorithm);
+                        _sha1Pool.Free(algorithm);
                 }
             }
 
@@ -94,13 +94,13 @@ namespace Raven.Client.Util.Encryption
                 MD5 algorithm = null;
                 try
                 {
-                    algorithm = md5Pool.Allocate();
+                    algorithm = _md5Pool.Allocate();
                     return ComputeHashInternal(algorithm, bytes);
                 }
                 finally
                 {
                     if (algorithm != null)
-                        md5Pool.Free(algorithm);
+                        _md5Pool.Free(algorithm);
                 }
             }
 
@@ -109,13 +109,13 @@ namespace Raven.Client.Util.Encryption
                 MD5 algorithm = null;
                 try
                 {
-                    algorithm = md5Pool.Allocate();
+                    algorithm = _md5Pool.Allocate();
                     return algorithm.ComputeHash(stream);
                 }
                 finally
                 {
                     if (algorithm != null)
-                        md5Pool.Free(algorithm);
+                        _md5Pool.Free(algorithm);
                 }
             }
 
@@ -127,13 +127,13 @@ namespace Raven.Client.Util.Encryption
                 MD5 algorithm = null;
                 try
                 {
-                    algorithm = md5Pool.Allocate();
+                    algorithm = _md5Pool.Allocate();
                     return ComputeHashInternal(algorithm, bytes, offset, length);
                 }
                 finally
                 {
                     if (algorithm != null)
-                        md5Pool.Free(algorithm);
+                        _md5Pool.Free(algorithm);
                 }
             }
 
@@ -142,13 +142,13 @@ namespace Raven.Client.Util.Encryption
                 SHA1 algorithm = null;
                 try
                 {
-                    algorithm = sha1Pool.Allocate();
+                    algorithm = _sha1Pool.Allocate();
                     return ComputeHashInternal(algorithm, bytes);
                 }
                 finally
                 {
                     if (algorithm != null)
-                        sha1Pool.Free(algorithm);
+                        _sha1Pool.Free(algorithm);
                 }
             }
 
@@ -157,13 +157,13 @@ namespace Raven.Client.Util.Encryption
                 SHA1 algorithm = null;
                 try
                 {
-                    algorithm = sha1Pool.Allocate();
+                    algorithm = _sha1Pool.Allocate();
                     return ComputeHashInternal(algorithm, bytes, offset, length);
                 }
                 finally
                 {
                     if (algorithm != null)
-                        sha1Pool.Free(algorithm);
+                        _sha1Pool.Free(algorithm);
                 }
             }
         }

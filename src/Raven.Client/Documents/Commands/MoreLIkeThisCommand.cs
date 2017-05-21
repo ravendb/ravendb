@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Commands
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
             var requestUrl = _query.GetRequestUri();
-            EnsureIsNotNullOrEmpty(requestUrl, "url");
+            EnsureIsNotNullOrEmpty(requestUrl, nameof(url));
 
             var request = new HttpRequestMessage
             {

@@ -6,7 +6,7 @@ using Raven.Client.Documents.Replication;
 using Sparrow;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Client.Documents
+namespace Raven.Client.Server
 {
     public class ConflictSolver
     {
@@ -111,7 +111,7 @@ namespace Raven.Client.Documents
     {
         public List<DatabaseTopologyNode> Members = new List<DatabaseTopologyNode>(); // Member of the master to master replication inside cluster
         public List<DatabaseTopologyNode> Promotables = new List<DatabaseTopologyNode>(); // Promotable is in a receive state until Leader decides it can become a Member
-        public List<DatabaseWatcher> Watchers = new List<DatabaseWatcher>(); // Watcher only recieves (slave)
+        public List<DatabaseWatcher> Watchers = new List<DatabaseWatcher>(); // Watcher only receives (slave)
 
         public bool RelevantFor(string nodeTag)
         {
@@ -179,8 +179,8 @@ namespace Raven.Client.Documents
                             hasNewValues = newEnum.MoveNext();
                             hasOldValues = oldEnum.MoveNext();
                             break;
-                        default:// should never happend
-                            throw new InvalidDataException($"{res} is an invalid comperison result between {oldEnum.Current.Humane} and {newEnum.Current.Humane}");
+                        default:// should never happen
+                            throw new InvalidDataException($"{res} is an invalid comparison result between {oldEnum.Current.Humane} and {newEnum.Current.Humane}");
                     }
                 }
 

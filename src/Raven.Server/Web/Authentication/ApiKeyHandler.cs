@@ -118,7 +118,7 @@ namespace Raven.Server.Web.Authentication
             fixed (byte* pLocalSecret = localSecretAsBytes)
             {
                 if (Server.PublicKey.Length != serverKey.Length ||
-                    Sodium.sodium_memcmp(serverKeyFromClient, server_pk, (IntPtr)Server.PublicKey.Length) != 0)
+                    Sodium.sodium_memcmp(serverKeyFromClient, server_pk, (UIntPtr)Server.PublicKey.Length) != 0)
                 {
                     GenerateError("The server public key is not valid", context, (int)HttpStatusCode.ExpectationFailed);
                     return Task.CompletedTask;
@@ -130,19 +130,19 @@ namespace Raven.Server.Web.Authentication
                     return Task.CompletedTask;
                 }
 
-                if (Sodium.crypto_box_open_easy(m, m, remoteCryptedSecret.Length, n, client_pk, server_sk) != 0)
+                if (Sodium.crypto_box_open_easy(m, m, (ulong)remoteCryptedSecret.Length, n, client_pk, server_sk) != 0)
                 {
                     GenerateError("Unable to authenticate api key. Cannot open box", context, (int)HttpStatusCode.Forbidden);
                     return Task.CompletedTask;
                 }
 
-                if (Sodium.crypto_generichash(hash, (IntPtr)hashBuffer.Length, pLocalSecret, (ulong)localSecretAsBytes.Length, client_pk, (IntPtr)clientPublicKey.Length) != 0)
+                if (Sodium.crypto_generichash(hash, (UIntPtr)hashBuffer.Length, pLocalSecret, (ulong)localSecretAsBytes.Length, client_pk, (UIntPtr)clientPublicKey.Length) != 0)
                 {
                     GenerateError("Unable to authenticate api key. Cannot generate hash", context, (int)HttpStatusCode.Forbidden);
                     return Task.CompletedTask;
                 }
 
-                if (Sodium.sodium_memcmp(hash, m, (IntPtr)hashLen) != 0)
+                if (Sodium.sodium_memcmp(hash, m, (UIntPtr)hashLen) != 0)
                 {
                     GenerateError("Unable to authenticate api key. Cannot verify hash", context, (int)HttpStatusCode.Forbidden);
                     return Task.CompletedTask;
@@ -165,8 +165,8 @@ namespace Raven.Server.Web.Authentication
                 var tokenLen = Encoding.UTF8.GetBytes(accessToken.Token, 0, accessToken.Token.Length, token, 0);
                 fixed (byte* c = token)
                 {
-                    Sodium.randombytes_buf(n, remoteNonce.Length);
-                    if (Sodium.crypto_box_easy(c, c, tokenLen, n, client_pk, server_sk) != 0)
+                    Sodium.randombytes_buf(n, (UIntPtr)remoteNonce.Length);
+                    if (Sodium.crypto_box_easy(c, c, (ulong)tokenLen, n, client_pk, server_sk) != 0)
                     {
                         GenerateError("Unable to crypt token", context, (int)HttpStatusCode.Forbidden);
                         return Task.CompletedTask;

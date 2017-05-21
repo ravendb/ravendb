@@ -8,15 +8,15 @@ using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations
 {
-    public class ServerOperationExecuter
+    public class ServerOperationExecutor
     {
         private readonly DocumentStoreBase _store;
         private readonly RequestExecutor _requestExecutor;
 
-        public ServerOperationExecuter(DocumentStoreBase store)
+        public ServerOperationExecutor(DocumentStoreBase store)
         {
             _store = store;
-            _requestExecutor = store.GetRequestExecuter();
+            _requestExecutor = store.GetRequestExecutor();
         }
 
         public void Send(IServerOperation operation)

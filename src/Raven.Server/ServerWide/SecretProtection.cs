@@ -73,7 +73,7 @@ namespace Raven.Server.ServerWide
                         }
                         else // we assume that if the size isn't a key size, then it was never valid and regenerate the key
                         {
-                            Sodium.randombytes_buf(pBuf, keySize);
+                            Sodium.randombytes_buf(pBuf, (UIntPtr)keySize);
                           
                             if (Syscall.ftruncate(fd, IntPtr.Zero) != 0)
                             {

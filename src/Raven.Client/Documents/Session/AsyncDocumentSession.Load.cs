@@ -100,47 +100,47 @@ namespace Raven.Client.Documents.Session
         /// Begins the async load operation
         /// </summary>
         /// <param name="id">The id.</param>
-        /// <param name="token">The canecllation token.</param>
+        /// <param name="token">The cancellation token.</param>
         /// <returns></returns>
         public async Task<T> LoadAsync<T>(string id, CancellationToken token = default(CancellationToken))
         {
-            var loadOeration = new LoadOperation(this);
-            loadOeration.ById(id);
+            var loadOperation = new LoadOperation(this);
+            loadOperation.ById(id);
 
-            var command = loadOeration.CreateRequest();
+            var command = loadOperation.CreateRequest();
             if (command != null)
             {
                 await RequestExecutor.ExecuteAsync(command, Context, token).ConfigureAwait(false);
-                loadOeration.SetResult(command.Result);
+                loadOperation.SetResult(command.Result);
             }
 
-            return loadOeration.GetDocument<T>();
+            return loadOperation.GetDocument<T>();
         }
 
         public async Task<Dictionary<string, T>> LoadAsync<T>(IEnumerable<string> ids,
             CancellationToken token = default(CancellationToken))
         {
-            var loadOeration = new LoadOperation(this);
-            await LoadAsyncInternal(ids.ToArray(), null, loadOeration, token).ConfigureAwait(false);
+            var loadOperation = new LoadOperation(this);
+            await LoadAsyncInternal(ids.ToArray(), null, loadOperation, token).ConfigureAwait(false);
 
-            return loadOeration.GetDocuments<T>();
+            return loadOperation.GetDocuments<T>();
         }
 
         public async Task<Dictionary<string, T>> LoadAsyncInternal<T>(string[] ids, string[] includes,
             CancellationToken token = new CancellationToken())
         {
-            var loadOeration = new LoadOperation(this);
-            loadOeration.ByIds(ids);
-            loadOeration.WithIncludes(includes?.ToArray());
+            var loadOperation = new LoadOperation(this);
+            loadOperation.ByIds(ids);
+            loadOperation.WithIncludes(includes?.ToArray());
 
-            var command = loadOeration.CreateRequest();
+            var command = loadOperation.CreateRequest();
             if (command != null)
             {
                 await RequestExecutor.ExecuteAsync(command, Context, token).ConfigureAwait(false);
-                loadOeration.SetResult(command.Result);
+                loadOperation.SetResult(command.Result);
             }
 
-            return loadOeration.GetDocuments<T>();
+            return loadOperation.GetDocuments<T>();
         }
 
         private async Task<GetDocumentCommand> LoadUsingTransformerInternalAsync(string[] ids, Stream stream, LoadTransformerOperation operation, string transformer,

@@ -7,6 +7,7 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Transformers;
+using Raven.Client.Server;
 using Raven.Client.Server.Commands;
 using Raven.Client.Server.Expiration;
 using Raven.Client.Server.PeriodicExport;
@@ -78,7 +79,7 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, SqlDestination> SqlReplicationConfiguration = GenerateJsonDeserializationRoutine<SqlDestination>();
         public static readonly Func<BlittableJsonReaderObject, SimulateSqlEtl> SimulateSqlReplication = GenerateJsonDeserializationRoutine<SimulateSqlEtl>();
 
-        public static readonly Func<BlittableJsonReaderObject, SubscriptionCreationParams> SubscriptionCreationParams = GenerateJsonDeserializationRoutine<SubscriptionCreationParams>();
+        public static readonly Func<BlittableJsonReaderObject, SubscriptionCreationOptions> SubscriptionCreationParams = GenerateJsonDeserializationRoutine<SubscriptionCreationOptions>();
 
         public static readonly Func<BlittableJsonReaderObject, VersioningConfiguration> VersioningConfiguration = GenerateJsonDeserializationRoutine<VersioningConfiguration>();
     

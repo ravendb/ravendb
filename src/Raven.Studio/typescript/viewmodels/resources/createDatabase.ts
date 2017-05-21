@@ -90,11 +90,16 @@ class createDatabase extends dialogViewModelBase {
         // hide advanced if respononding bundle was unchecked
         this.databaseModel.configurationSections.forEach(section => {
             section.enabled.subscribe(enabled => {
-                if (!enabled && this.currentAdvancedSection() === section.name) {
-                    this.currentAdvancedSection(createDatabase.defaultSection);
+                if (section.alwaysEnabled && !enabled) {
+                    // can't disable section which is always enabled
+                    section.enabled(true);
+                    return;
                 }
-                if (enabled) {
+
+                if (section.alwaysEnabled || enabled) {
                     this.currentAdvancedSection(section.name);
+                } else if (!enabled && this.currentAdvancedSection() === section.name) {
+                    this.currentAdvancedSection(createDatabase.defaultSection);
                 }
             });
         });
@@ -182,7 +187,7 @@ class createDatabase extends dialogViewModelBase {
             });
     }
 
-    private createDatabaseInternal(): JQueryPromise<void> {
+    private createDatabaseInternal(): JQueryPromise<Raven.Server.Web.System.DatabasePutResult> {
         this.spinners.create(true);
 
         const databaseDocument = this.databaseModel.toDto();

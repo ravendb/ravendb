@@ -28,11 +28,6 @@ namespace Raven.Client.Documents.Session.Loaders
         /// <returns></returns>
         public AsyncMultiLoaderWithInclude<T> Include(string path)
         {
-            return Include(path, typeof(object));
-        }
-
-        AsyncMultiLoaderWithInclude<T> Include(string path, Type type)
-        {
             _includes.Add(path);
             return this;
         }
@@ -53,7 +48,7 @@ namespace Raven.Client.Documents.Session.Loaders
         /// <param name="path">The path.</param>
         public AsyncMultiLoaderWithInclude<T> Include<TInclude>(Expression<Func<T, string>> path)
         {
-            return Include(path.ToPropertyPath(), typeof(TInclude));
+            return Include(path.ToPropertyPath());
         }
 
         /// <summary>
@@ -72,7 +67,7 @@ namespace Raven.Client.Documents.Session.Loaders
         /// <param name="path">The path.</param>
         public AsyncMultiLoaderWithInclude<T> Include<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
         {
-            return Include(path.ToPropertyPath(), typeof(TInclude));
+            return Include(path.ToPropertyPath());
         }
 
         /// <summary>

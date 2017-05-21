@@ -22,7 +22,5 @@ namespace Raven.Client.Documents.Commands
             };
             return request;
         }
-
-        public override bool IsReadRequest => false;
     }
 }

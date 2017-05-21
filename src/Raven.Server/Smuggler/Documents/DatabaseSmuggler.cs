@@ -67,9 +67,9 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 EnsureStepProcessed(result.Documents);
-                EnsureStepProcessed(result.Documents.Attachemnts);
+                EnsureStepProcessed(result.Documents.Attachments);
                 EnsureStepProcessed(result.RevisionDocuments);
-                EnsureStepProcessed(result.RevisionDocuments.Attachemnts);
+                EnsureStepProcessed(result.RevisionDocuments.Attachments);
                 EnsureStepProcessed(result.Indexes);
                 EnsureStepProcessed(result.Transformers);
                 EnsureStepProcessed(result.Identities);
@@ -121,6 +121,11 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             counts.Processed = true;
+
+            var countsWithEtag = counts as SmugglerProgressBase.CountsWithLastEtag;
+            if (countsWithEtag != null)
+                countsWithEtag.Attachments.Processed = true;
+
             result.AddInfo($"Finished processing {type}. {counts}");
             _onProgress.Invoke(result.Progress);
         }
@@ -358,8 +363,8 @@ namespace Raven.Server.Smuggler.Documents
                     if (result.Documents.ReadCount % 1000 == 0)
                     {
                         var message = $"Read {result.Documents.ReadCount:#,#;;0} documents.";
-                        if (result.Documents.Attachemnts.ReadCount > 0)
-                            message += $" Read {result.Documents.Attachemnts.ReadCount:#,#;;0} attachments.";
+                        if (result.Documents.Attachments.ReadCount > 0)
+                            message += $" Read {result.Documents.Attachments.ReadCount:#,#;;0} attachments.";
                         result.AddInfo(message);
                         _onProgress.Invoke(result.Progress);
                     }

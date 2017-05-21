@@ -12,8 +12,6 @@ namespace Raven.Client.Server.Commands
             _id = id;
         }
 
-        public override bool IsReadRequest => false;
-
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/tcp?id={_id}";

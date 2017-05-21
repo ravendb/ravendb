@@ -47,12 +47,14 @@ namespace Raven.Server.Documents
         public DatabasePerformanceMetrics TransactionPerformanceMetrics = new DatabasePerformanceMetrics(MetricType.Transaction, 256, 8);
 
 
+        private string TransactionMergerThreadName => _parent.Name + " transaction merging thread";
+
         public void Start()
         {
             _txMergingThread = new Thread(MergeOperationThreadProc)
             {
                 IsBackground = true,
-                Name = _parent.Name + " transaction merging thread"
+                Name = TransactionMergerThreadName
             };
             _txMergingThread.Start();
         }
@@ -95,6 +97,7 @@ namespace Raven.Server.Documents
 
         private void MergeOperationThreadProc()
         {
+            NativeMemory.EnsureRegistered();
             try
             {
                 while (_runTransactions)
@@ -559,13 +562,13 @@ namespace Raven.Server.Documents
 
         private void NotifyOnThreadPool(MergedTransactionCommand cmd)
         {
-            TaskExecuter.Execute(DoCommandNotification, cmd);
+            TaskExecutor.Execute(DoCommandNotification, cmd);
         }
 
 
         private void NotifyOnThreadPool(List<MergedTransactionCommand> cmds)
         {
-            TaskExecuter.Execute(DoCommandsNotification, cmds);
+            TaskExecutor.Execute(DoCommandsNotification, cmds);
         }
 
 

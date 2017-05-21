@@ -131,12 +131,12 @@ namespace FastTests.Server.Replication
             var source = new DocumentStore
             {
                 Url = leader.WebUrls[0],
-                DefaultDatabase = caller
+                Database = caller
             };
             var destination = new DocumentStore
             {
                 Url = follower.WebUrls[0],
-                DefaultDatabase = caller
+                Database = caller
             };
 
             var res  = CreateClusterDatabase(caller, source, 2);

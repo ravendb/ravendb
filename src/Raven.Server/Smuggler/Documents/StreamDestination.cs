@@ -188,13 +188,13 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     if (attachment.TryGet(nameof(AttachmentResult.Hash), out LazyStringValue hash) == false)
                     {
-                        progress.Attachemnts.ErroredCount++;
+                        progress.Attachments.ErroredCount++;
 
                         // TODO: How should we handle errors here?
                         throw new ArgumentException($"Hash field is mandatory in attachment's metadata: {attachment}");
                     }
 
-                    progress.Attachemnts.ReadCount++;
+                    progress.Attachments.ReadCount++;
 
                     if (_attachmentStreamsAlreadyExported.Add(hash))
                     {

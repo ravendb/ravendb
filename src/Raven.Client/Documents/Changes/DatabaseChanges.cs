@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Changes;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Sparrow.Json;
@@ -40,8 +41,7 @@ namespace Raven.Client.Documents.Changes
 
             var url = $"{requestExecutor.Url}/databases/{databaseName}/changes"
                 .ToLower()
-                .Replace("http://", "ws://")
-                .Replace("https://", "wss://");
+                .ToWebSocketPath();
 
             _url = new Uri(url, UriKind.Absolute);
 
@@ -281,7 +281,7 @@ namespace Raven.Client.Documents.Changes
                     catch (WebSocketException)
                     {
                         // if we are not connected then we unsubscribed already
-                        // because connections drops with all subscribtions
+                        // because connections drops with all subscriptions
                     }
 
                     _counters.Remove(s);

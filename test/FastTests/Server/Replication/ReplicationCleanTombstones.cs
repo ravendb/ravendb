@@ -17,7 +17,7 @@ namespace FastTests.Server.Replication
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                var storage1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.DefaultDatabase).Result;
+                var storage1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result;
 
                 using (var session = store1.OpenSession())
                 {

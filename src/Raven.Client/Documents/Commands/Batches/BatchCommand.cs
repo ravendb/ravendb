@@ -123,7 +123,7 @@ namespace Raven.Client.Documents.Commands.Batches
                 {
                     foreach (var specificIndex in _options.WaitForSpecificIndexes)
                     {
-                        sb.Append("&waitForSpecificIndexs=").Append(specificIndex);
+                        sb.Append("&waitForSpecificIndex=").Append(specificIndex);
                     }
                 }
             }

@@ -92,15 +92,15 @@ namespace SlowTests.Issues
 
                     var database = await GetDocumentDatabaseInstanceFor(store);
                     Assert.Equal(path1, database.Configuration.Core.DataDirectory.FullPath);
-                    Assert.Equal(Path.Combine(path2, "Databases", store.DefaultDatabase), database.Configuration.Indexing.StoragePath.FullPath);
-                    Assert.Equal(Path.Combine(path3, "Databases", store.DefaultDatabase), database.Configuration.Indexing.TempPath.FullPath);
-                    Assert.Equal(Path.Combine(path4, "Databases", store.DefaultDatabase), database.Configuration.Indexing.JournalsStoragePath.FullPath);
+                    Assert.Equal(Path.Combine(path2, "Databases", store.Database), database.Configuration.Indexing.StoragePath.FullPath);
+                    Assert.Equal(Path.Combine(path3, "Databases", store.Database), database.Configuration.Indexing.TempPath.FullPath);
+                    Assert.Equal(Path.Combine(path4, "Databases", store.Database), database.Configuration.Indexing.JournalsStoragePath.FullPath);
 
                     var indexInstance = database.IndexStore.GetIndex(index.IndexName);
                     var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(indexInstance.Name);
-                    var storagePath = Path.Combine(path2, "Databases", store.DefaultDatabase, safeName);
-                    var tempPath = Path.Combine(path3, "Databases", store.DefaultDatabase, safeName);
-                    var journalsStoragePath = Path.Combine(path4, "Databases", store.DefaultDatabase, safeName);
+                    var storagePath = Path.Combine(path2, "Databases", store.Database, safeName);
+                    var tempPath = Path.Combine(path3, "Databases", store.Database, safeName);
+                    var journalsStoragePath = Path.Combine(path4, "Databases", store.Database, safeName);
 
                     Assert.True(Directory.Exists(storagePath));
                     Assert.True(Directory.Exists(tempPath));

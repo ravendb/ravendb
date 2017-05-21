@@ -45,7 +45,7 @@ namespace FastTests.Client
 
                     session.SaveChanges();
 
-                    var hiLoKeyGenerator = new AsyncHiLoKeyGenerator("users", store, store.DefaultDatabase,
+                    var hiLoKeyGenerator = new AsyncHiLoKeyGenerator("users", store, store.Database,
                         store.Conventions.IdentityPartsSeparator);
 
                     var generateDocumentKey = hiLoKeyGenerator.GenerateDocumentKeyAsync(new User()).GetAwaiter().GetResult();
@@ -68,7 +68,7 @@ namespace FastTests.Client
                     session.Store(hiloDoc, "Raven/Hilo/users");
                     session.SaveChanges();
 
-                    var hiLoKeyGenerator = new AsyncHiLoKeyGenerator("users", store, store.DefaultDatabase,
+                    var hiLoKeyGenerator = new AsyncHiLoKeyGenerator("users", store, store.Database,
                         store.Conventions.IdentityPartsSeparator);
 
                     var ids = new HashSet<long> { hiLoKeyGenerator.NextIdAsync().GetAwaiter().GetResult() };
@@ -135,7 +135,7 @@ namespace FastTests.Client
         {
             using (var store = GetDocumentStore())
             {
-                var hiLoKeyGenerator = new AsyncHiLoKeyGenerator("users", store, store.DefaultDatabase,
+                var hiLoKeyGenerator = new AsyncHiLoKeyGenerator("users", store, store.Database,
                     store.Conventions.IdentityPartsSeparator);
 
                 using (var session = store.OpenSession())
@@ -178,7 +178,7 @@ namespace FastTests.Client
                 var newStore = new DocumentStore()
                 {
                     Url = store.Url,
-                    DefaultDatabase = store.DefaultDatabase,
+                    Database = store.Database,
                     ApiKey = store.ApiKey
                 };
                 newStore.Initialize();
@@ -202,7 +202,7 @@ namespace FastTests.Client
                 newStore = new DocumentStore()
                 {
                     Url = store.Url,
-                    DefaultDatabase = store.DefaultDatabase,
+                    Database = store.Database,
                     ApiKey = store.ApiKey
                 };
                 newStore.Initialize();
@@ -247,7 +247,7 @@ namespace FastTests.Client
 
                 WaitForMarkerDocumentAndAllPrecedingDocumentsToReplicate(store2);
 
-                var nextId = new AsyncHiLoKeyGenerator("users", store2, store2.DefaultDatabase,
+                var nextId = new AsyncHiLoKeyGenerator("users", store2, store2.Database,
                     store2.Conventions.IdentityPartsSeparator).NextIdAsync().GetAwaiter().GetResult();
                 Assert.Equal(nextId, 129);
             }
@@ -280,7 +280,7 @@ namespace FastTests.Client
             using (var store = GetDocumentStore())
             {
                 var gen = new AsyncHiLoKeyGenerator("When_generating_lots_of_keys_concurrently_there_are_no_clashes", store,
-                    store.DefaultDatabase, store.Conventions.IdentityPartsSeparator);
+                    store.Database, store.Conventions.IdentityPartsSeparator);
                 ConcurrencyTester(() => gen.NextIdAsync().GetAwaiter().GetResult(), ThreadCount, GeneratedIdCount);
             }
         }
@@ -291,7 +291,7 @@ namespace FastTests.Client
             using (var store = GetDocumentStore())
             {
                 var gen = new AsyncHiLoKeyGenerator("When_generating_lots_of_keys_concurrently_there_are_no_clashes", store,
-                    store.DefaultDatabase, store.Conventions.IdentityPartsSeparator);
+                    store.Database, store.Conventions.IdentityPartsSeparator);
                 ConcurrencyTester(() => gen.NextIdAsync().GetAwaiter().GetResult(), 1, GeneratedIdCount);
             }
         }

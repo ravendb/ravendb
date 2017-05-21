@@ -50,8 +50,8 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         public HashSet<string> Maps
         {
-            get { return _maps ?? (_maps = new HashSet<string>()); }
-            set { _maps = value; }
+            get => _maps ?? (_maps = new HashSet<string>());
+            set => _maps = value;
         }
 
         /// <summary>
@@ -61,14 +61,14 @@ namespace Raven.Client.Documents.Indexes
 
         public Dictionary<string, IndexFieldOptions> Fields
         {
-            get { return _fields ?? (_fields = new Dictionary<string, IndexFieldOptions>()); }
-            set { _fields = value; }
+            get => _fields ?? (_fields = new Dictionary<string, IndexFieldOptions>());
+            set => _fields = value;
         }
 
         public IndexConfiguration Configuration
         {
-            get { return _configuration ?? (_configuration = new IndexConfiguration()); }
-            set { _configuration = value; }
+            get => _configuration ?? (_configuration = new IndexConfiguration());
+            set => _configuration = value;
         }
 
         public IndexDefinitionCompareDifferences Compare(IndexDefinition other)
@@ -149,7 +149,7 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         /// <param name="other">The other.</param>
         /// <param name="compareIndexEtags">allow caller to choose whether to include the index Id in the comparison</param>
-        /// <param name="ignoreFormatting">Comparision ignores formatting in both of the definitions</param>
+        /// <param name="ignoreFormatting">Comparison ignores formatting in both of the definitions</param>
         public bool Equals(IndexDefinition other, bool compareIndexEtags = true, bool ignoreFormatting = false)
         {
             if (ReferenceEquals(null, other))
@@ -262,10 +262,7 @@ namespace Raven.Client.Documents.Indexes
 
                 return _indexType.Value;
             }
-            internal set
-            {
-                _indexType = value;
-            }
+            internal set => _indexType = value;
         }
 
 

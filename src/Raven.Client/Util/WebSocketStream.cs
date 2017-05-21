@@ -34,10 +34,7 @@ namespace Raven.Client.Util
             _cancellationToken = cancellationToken;
         }
 
-        public override long Length
-        {
-            get { throw new NotSupportedException(); }
-        }
+        public override long Length => throw new NotSupportedException();
 
         public override long Position { get; set; }
 
@@ -67,8 +64,6 @@ namespace Raven.Client.Util
                 WebSocketMessageType.Text,
                 false, cancellationToken).ConfigureAwait(false);
         }
-
-        private static readonly ArraySegment<byte> emptyBuffer = new ArraySegment<byte>(new byte[0]);
 
         public override void SetLength(long value)
         {

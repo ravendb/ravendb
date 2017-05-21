@@ -80,15 +80,6 @@ namespace Raven.Client.Documents
         IDisposable DisableAggressiveCaching();
 
         /// <summary>
-        /// Setup the WebRequest timeout for the session
-        /// </summary>
-        /// <param name="timeout">Specify the timeout duration</param>
-        /// <remarks>
-        /// Sets the timeout for the JsonRequest.  Scoped to the Current Thread.
-        /// </remarks>
-        IDisposable SetRequestsTimeoutFor(TimeSpan timeout);
-
-        /// <summary>
         /// Gets or sets the identifier for this store.
         /// </summary>
         /// <value>The identifier.</value>
@@ -143,7 +134,6 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Executes the index creation.
         /// </summary>
-        /// <param name="task"></param>
         Task ExecuteIndexAsync(AbstractIndexCreationTask task, CancellationToken token = default(CancellationToken));
 
         Task ExecuteIndexesAsync(IEnumerable<AbstractIndexCreationTask> tasks, CancellationToken token = default(CancellationToken));
@@ -178,12 +168,12 @@ namespace Raven.Client.Documents
         /// </summary>
         IReliableSubscriptions Subscriptions { get; }
 
-        string DefaultDatabase { get; set; }
+        string Database { get; set; }
 
-        RequestExecutor GetRequestExecuter(string databaseName = null);
+        RequestExecutor GetRequestExecutor(string database = null);
 
-        AdminOperationExecuter Admin { get; }
+        AdminOperationExecutor Admin { get; }
 
-        OperationExecuter Operations { get; }
+        OperationExecutor Operations { get; }
     }
 }

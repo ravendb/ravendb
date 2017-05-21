@@ -65,11 +65,11 @@ namespace SlowTests.Core.Session
                     Assert.Equal("def/Bob", user.Id);
                 }
 
-                Assert.Equal("def/", store.Conventions.GenerateDocumentId(store.DefaultDatabase, new User()));
-                Assert.Equal("def/", await store.Conventions.GenerateDocumentIdAsync(store.DefaultDatabase, new User()));
+                Assert.Equal("def/", store.Conventions.GenerateDocumentId(store.Database, new User()));
+                Assert.Equal("def/", await store.Conventions.GenerateDocumentIdAsync(store.Database, new User()));
 
-                Assert.Equal("addresses/1", store.Conventions.GenerateDocumentId(store.DefaultDatabase, new Address()));
-                Assert.Equal("companies/1", await store.Conventions.GenerateDocumentIdAsync(store.DefaultDatabase, new Company()));
+                Assert.Equal("addresses/1", store.Conventions.GenerateDocumentId(store.Database, new Address()));
+                Assert.Equal("companies/1", await store.Conventions.GenerateDocumentIdAsync(store.Database, new Company()));
             }
         }
 

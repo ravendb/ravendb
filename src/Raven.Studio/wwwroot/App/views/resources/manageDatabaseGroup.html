@@ -1,0 +1,115 @@
+<div class="destinations flex-vertical absolute-fill content-margin">
+    <div class="row flex-row flex-grow">
+        <div class="col-sm-12 col-lg-6 flex-vertical">
+            <div class="flex-header flex-horizontal">
+                <div class="dropdown flex-grow">
+                    <button class="btn btn-default btn-block dropdown-toggle" data-toggle="dropdown" data-bind="enable: additionalNodes().length">
+                        <span data-bind="text: selectedClusterNode() ? 'Node ' + selectedClusterNode() : 'Select cluster node'"></span>
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" data-bind="foreach: additionalNodes">
+                        <li><a href="#" data-bind="text: 'Node ' + $data, click: $root.selectedClusterNode"></a></li>
+                    </ul>
+                </div>
+                <div>
+                    <button class="btn btn-primary" data-bind="enable: addNodeEnabled, click: addNode, css: { 'btn-spinner': $root.spinners.addNode }">
+                        <i class="icon-plus"></i>
+                        <span>Add node to group</span>
+                    </button>
+                   <button class="btn btn-default" data-bind="click: refresh">
+                       <i class="icon-refresh"></i>
+                       <span>Refresh</span>
+                   </button>
+                </div>
+            </div>
+            <div class="scroll flex-grow" data-bind="foreach: nodes">
+                <div class="panel destination-item">
+                    <div data-state-text="enabled" class="state state-success"></div> <!-- TODO: different statuses -->
+                    <div class="padding padding-sm destination-info">
+                        <div class="info-container flex-horizontal flex-grow">
+                            <div class="node flex-grow">
+                                <h5>NODE</h5>
+                                <h3 class="destination-name">
+                                    <i data-bind="attr: { class: cssIcon }"></i><span data-bind="text: 'Node ' + tag()"></span>
+                                </h3>
+                            </div>
+                            <div class="status">
+                                <!-- TODO 
+                                <h5>STATUS</h5>
+                                <div class="btn-group dropdown-right">
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                        <span>Enabled</span> <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a href="#">Enable</a></li>
+                                        <li><a href="#">Disable</a></li>
+                                    </ul>
+                                </div>-->
+                            </div>
+                        </div>
+
+                        <div class="actions-container">
+                            <div class="actions">
+                                <!-- TODO: 
+                                <div class="dropdown">
+                                    <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                        <i class="icon-play"></i> <span>Actions</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a href="#">Promote node immediately</a></li>
+                                    </ul>
+                                </div>-->
+                                <!--TODO 
+                                <div class="dropdown dropdown-right">
+                                    <button class="btn btn-danger dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                        <i class="icon-disconnected"></i> <span>Delete from group</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a href="#"><i class="icon-trash"></i> <span>Soft Delete</span>&nbsp;&nbsp;<small>(stop replication and keep database files on the node)</small></a></li>
+                                        <li><a href="#"><i class="icon-alerts text-danger"></i> <span class="text-danger">Hard Delete</span>&nbsp;&nbsp;<small>(stop replication and remove database files on the node)</small></a></li>
+                                    </ul>
+                                </div>-->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-12 col-lg-6 flex-vertical">
+            <div class="flex-horizontal flex-header">
+                <div></div><h3>Database group topology <i class="icon-info text-info"></i></h3>
+                <div class="flex-separator"></div>
+                <div class="btn-group dropdown-right">
+                    <button class="btn btn-default dropdown-toggle btn-upcoming" disabled="disabled" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                        <i class="icon-export"></i><span>Download topology</span>
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                        <li><a href="#">.zip</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="panel flex-grow">
+            </div>
+            <div class="legend">
+                <div class="row">
+                    <div class="col-sm-4">
+                        <h5>Task type</h5>
+                        <div><i class="icon-circle-filled here"></i> <span>YOU ARE HERE</span></div>
+                        <div><i class="icon-circle-filled db-group-node"></i> <span>DB GROUP NODE</span></div>
+                    </div>
+                    <div class="col-sm-8">
+                        <h5>Connection status</h5>
+                        <div class="row">
+                            <div class="col-xs-6"><i class="icon-arrow text-success"></i> <span>CONNECTION</span></div>
+                            <div class="col-xs-6"><i class="icon-arrow-dashed text-warning"></i> <span>DISABLED CONNECTION</span></div>
+                            <div class="col-xs-6"><i class="icon-arrow-dashed text-danger"></i> <span>BROKEN CONNECTION</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -58,7 +58,7 @@ select new
 
                 WaitForIndexing(store);
 
-                var database = await GetDatabase(store.DefaultDatabase);
+                var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndex("test");
                 TransactionOperationContext context;
                 using (index._contextPool.AllocateOperationContext(out context))
@@ -89,7 +89,7 @@ select new
 
                 WaitForIndexing(store);
 
-                var database = await GetDatabase(store.DefaultDatabase);
+                var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndex("test");
                 TransactionOperationContext context;
                 using (index._contextPool.AllocateOperationContext(out context))
@@ -134,7 +134,7 @@ select new
 
                 WaitForIndexing(store);
 
-                var database = await GetDatabase(store.DefaultDatabase);
+                var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndex("test");
                 TransactionOperationContext context;
                 using (index._contextPool.AllocateOperationContext(out context))
@@ -194,7 +194,7 @@ select new
 
                 WaitForIndexing(store);
 
-                var database = await GetDatabase(store.DefaultDatabase);
+                var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndex("test");
                 TransactionOperationContext context;
                 using (index._contextPool.AllocateOperationContext(out context))
@@ -221,7 +221,7 @@ select new
 
                 WaitForIndexing(store);
 
-                var database = await GetDatabase(store.DefaultDatabase);
+                var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndex("test");
                 TransactionOperationContext context;
                 using (index._contextPool.AllocateOperationContext(out context))
@@ -247,7 +247,7 @@ select new
 
                 WaitForIndexing(store);
 
-                var database = await GetDatabase(store.DefaultDatabase);
+                var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndex("test");
                 TransactionOperationContext context;
                 using (index._contextPool.AllocateOperationContext(out context))
@@ -274,7 +274,7 @@ select new
 
                 WaitForIndexing(store);
 
-                var database = await GetDatabase(store.DefaultDatabase);
+                var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndex("test");
                 TransactionOperationContext context;
                 using (index._contextPool.AllocateOperationContext(out context))

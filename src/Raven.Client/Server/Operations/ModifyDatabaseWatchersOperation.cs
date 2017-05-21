@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -12,12 +11,12 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Server.Operations
 {
-    public class ModifyDatabaseWatchers : IServerOperation<ModifyDatabaseWatchersResult>
+    public class ModifyDatabaseWatchersOperation : IServerOperation<ModifyDatabaseWatchersResult>
     {
         private readonly List<DatabaseWatcher> _newWatchers;
         private readonly string _database;
 
-        public ModifyDatabaseWatchers(string database, List<DatabaseWatcher> newWatchers = null)
+        public ModifyDatabaseWatchersOperation(string database, List<DatabaseWatcher> newWatchers = null)
         {
             MultiDatabase.AssertValidName(database);
             _database = database;

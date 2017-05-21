@@ -43,7 +43,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                var db = GetDatabase(src.DefaultDatabase).Result;
+                var db = GetDatabase(src.Database).Result;
 
                 var etlProcess = db.EtlLoader.Processes[0];
 
@@ -92,7 +92,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                var db = GetDatabase(src.DefaultDatabase).Result;
+                var db = GetDatabase(src.Database).Result;
 
                 var etlProcess = db.EtlLoader.Processes[0];
 

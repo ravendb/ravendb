@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Subscriptions
         internal enum MessageType
         {
             None,
-            CoonectionStatus,
+            ConnectionStatus,
             EndOfBatch,
             Data,
             Confirm,

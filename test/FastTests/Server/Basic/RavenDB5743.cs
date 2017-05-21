@@ -12,7 +12,7 @@ namespace FastTests.Server.Basic
         {
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.DefaultDatabase);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database);
 
                 using (var session = store.OpenAsyncSession())
                 {

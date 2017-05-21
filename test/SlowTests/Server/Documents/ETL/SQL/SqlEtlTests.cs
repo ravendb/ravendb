@@ -208,13 +208,13 @@ DROP DATABASE [SqlReplication-{dbName}]";
 
                 using (var dbCommand = con.CreateCommand())
                 {
-                    _dbNames.Add(store.DefaultDatabase);
+                    _dbNames.Add(store.Database);
                     dbCommand.CommandText = $@"
 USE master
-IF EXISTS(select * from sys.databases where name='SqlReplication-{store.DefaultDatabase}')
-DROP DATABASE [SqlReplication-{store.DefaultDatabase}]
+IF EXISTS(select * from sys.databases where name='SqlReplication-{store.Database}')
+DROP DATABASE [SqlReplication-{store.Database}]
 
-CREATE DATABASE [SqlReplication-{store.DefaultDatabase}]
+CREATE DATABASE [SqlReplication-{store.Database}]
 ";
                     dbCommand.ExecuteNonQuery();
                 }
@@ -608,7 +608,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                     await session.SaveChangesAsync();
                 }
 
-                var database = GetDatabase(store.DefaultDatabase).Result;
+                var database = GetDatabase(store.Database).Result;
 
                 DocumentsOperationContext context;
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
@@ -998,7 +998,7 @@ loadToOrders(orderData);
 
         private static string GetConnectionString(DocumentStore store)
         {
-            return _masterDatabaseConnection.Value + $";Initial Catalog=SqlReplication-{store.DefaultDatabase};";
+            return _masterDatabaseConnection.Value + $";Initial Catalog=SqlReplication-{store.Database};";
         }
 
         private class Order

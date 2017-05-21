@@ -28,12 +28,12 @@ namespace Raven.Client.Documents.Identity
         public Task<string> GenerateDocumentKeyAsync(string dbName,
                                                      object entity)
         {
-            var db = dbName ?? _store.DefaultDatabase;
-            var generator = _generators.GetOrAdd(db, GenrateAsyncMultiTypeHiLoFunc);
+            var db = dbName ?? _store.Database;
+            var generator = _generators.GetOrAdd(db, GenerateAsyncMultiTypeHiLoFunc);
             return generator.GenerateDocumentKeyAsync(entity);
         }
 
-        public AsyncMultiTypeHiLoKeyGenerator GenrateAsyncMultiTypeHiLoFunc(string dbName)
+        public AsyncMultiTypeHiLoKeyGenerator GenerateAsyncMultiTypeHiLoFunc(string dbName)
         {
             return new AsyncMultiTypeHiLoKeyGenerator(_store, dbName, _conventions);
         }

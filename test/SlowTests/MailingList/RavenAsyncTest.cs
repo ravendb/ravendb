@@ -87,12 +87,12 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.LoadAsync<Dummy>("dummies/1");
-                    Assert.Equal(1, store.GetRequestExecuter().Cache.NumberOfItems);
+                    Assert.Equal(1, store.GetRequestExecutor().Cache.NumberOfItems);
                 }
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.LoadAsync<Dummy>("dummies/1");
-                    Assert.Equal(1, store.GetRequestExecuter().Cache.NumberOfItems);
+                    Assert.Equal(1, store.GetRequestExecutor().Cache.NumberOfItems);
                 }
             }
         }

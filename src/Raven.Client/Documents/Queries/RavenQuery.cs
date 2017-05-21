@@ -139,7 +139,7 @@ namespace Raven.Client.Documents.Queries
             return buffer.ToString();
         }
 
-        private static readonly HashSet<char> fieldChars = new HashSet<char>
+        private static readonly HashSet<char> FieldChars = new HashSet<char>
         {
             '*',
             '?',
@@ -186,13 +186,13 @@ namespace Raven.Client.Documents.Queries
 
                 if (ch == '\\')
                 {
-                    if (i + 1 < length && fieldChars.Contains(field[i + 1]))
+                    if (i + 1 < length && FieldChars.Contains(field[i + 1]))
                     {
                         i++; // skip next, since it was escaped
                         continue;
                     }
                 }
-                else if (!fieldChars.Contains(ch))
+                else if (!FieldChars.Contains(ch))
                     continue;
 
                 if (buffer == null)

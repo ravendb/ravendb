@@ -57,7 +57,7 @@ namespace Raven.Client.Server.Operations
                 }
 
                 var resultObject = databases[0] as BlittableJsonReaderObject;
-                Result = JsonDeserializationClient.DisableResoureceToggleResult(resultObject);
+                Result = JsonDeserializationClient.DisableResourceToggleResult(resultObject);
             }
 
             public override bool IsReadRequest => false;

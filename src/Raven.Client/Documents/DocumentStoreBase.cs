@@ -13,7 +13,6 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Http;
 using Raven.Client.Util;
-using Raven.Client.Util.Encryption;
 
 namespace Raven.Client.Documents
 {
@@ -25,8 +24,6 @@ namespace Raven.Client.Documents
     {
         protected DocumentStoreBase()
         {
-            InitializeEncryptor();
-
             AsyncSubscriptions = new AsyncDocumentSubscriptions(this);
             Subscriptions = new DocumentSubscriptions(this);
         }
@@ -52,8 +49,6 @@ namespace Raven.Client.Documents
         public abstract IDatabaseChanges Changes(string database = null);
 
         public abstract IDisposable DisableAggressiveCaching();
-
-        public abstract IDisposable SetRequestsTimeoutFor(TimeSpan timeout);
 
         public abstract string Identifier { get; set; }
         public abstract IDocumentStore Initialize();
@@ -137,8 +132,8 @@ namespace Raven.Client.Documents
         /// </summary>
         public string Url
         {
-            get { return _url; }
-            set { _url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value; }
+            get => _url;
+            set => _url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
         }
 
         /// <summary>
@@ -146,11 +141,6 @@ namespace Raven.Client.Documents
         /// destinations if a master server is down.
         /// </summary>
         public FailoverServers FailoverServers { get; set; }
-
-        /// <summary>
-        /// Whenever or not we will use FIPS compliant encryption algorithms (must match server settings).
-        /// </summary>
-        public bool UseFipsEncryptionAlgorithms { get; set; }
 
         protected bool Initialized;
 
@@ -191,7 +181,7 @@ namespace Raven.Client.Documents
         /// Gets or sets the default database name.
         /// </summary>
         /// <value>The default database name.</value>
-        public string DefaultDatabase { get; set; }
+        public string Database { get; set; }
 
         /// <summary>
         /// The API Key to use when authenticating against a RavenDB server that
@@ -199,7 +189,7 @@ namespace Raven.Client.Documents
         /// </summary>
         public string ApiKey { get; set; }
 
-        public abstract RequestExecutor GetRequestExecuter(string databaseName = null);
+        public abstract RequestExecutor GetRequestExecutor(string database = null);
 
         /// <summary>
         /// Setup the context for aggressive caching.
@@ -207,17 +197,6 @@ namespace Raven.Client.Documents
         public IDisposable AggressivelyCache()
         {
             return AggressivelyCacheFor(TimeSpan.FromDays(1));
-        }
-
-        protected void InitializeEncryptor()
-        {
-            var setting = ConfigurationManager.GetAppSetting("Raven/Encryption/FIPS");
-
-            bool fips;
-            if (string.IsNullOrEmpty(setting) || !bool.TryParse(setting, out fips))
-                fips = UseFipsEncryptionAlgorithms;
-
-            Encryptor.Initialize(fips);
         }
 
         protected void RegisterEvents(InMemoryDocumentSessionOperations session)
@@ -228,8 +207,8 @@ namespace Raven.Client.Documents
             session.OnBeforeQueryExecuted += OnBeforeQueryExecuted;
         }
 
-        public abstract AdminOperationExecuter Admin { get; }
-        public abstract OperationExecuter Operations { get; }
+        public abstract AdminOperationExecutor Admin { get; }
+        public abstract OperationExecutor Operations { get; }
 
         protected void OnTopologyUpdatedInternal(string databaseName)
         {

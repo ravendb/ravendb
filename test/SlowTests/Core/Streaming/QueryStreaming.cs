@@ -146,9 +146,6 @@ namespace SlowTests.Core.Streaming
                 }
                 using (var session = store.OpenSession())
                 {
-                    JsonOperationContext context;
-                    store.GetRequestExecuter(store.DefaultDatabase).ContextPool.AllocateOperationContext(out context);
-
                     var indexDef = new IndexDefinitionBuilder<MyClass>()
                     {
                         Map = docs => from doc in docs select new { Index = doc.Index }

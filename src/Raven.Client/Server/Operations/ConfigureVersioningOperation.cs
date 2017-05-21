@@ -12,7 +12,7 @@ namespace Raven.Client.Server.Operations
     public class ConfigureVersioningOperation : IServerOperation<ConfigureVersioningOperationResult>
     {
         private readonly VersioningConfiguration _configuration;
-        private string _databaseName;
+        private readonly string _databaseName;
 
         public ConfigureVersioningOperation(VersioningConfiguration configuration, string databaseName)
         {

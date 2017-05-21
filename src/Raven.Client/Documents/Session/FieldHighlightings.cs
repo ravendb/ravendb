@@ -5,7 +5,7 @@ using Raven.Client.Documents.Queries;
 namespace Raven.Client.Documents.Session
 {
     /// <summary>
-    ///     Query highlightings for the documents.
+    ///     Query highlights for the documents.
     /// </summary>
     public class FieldHighlightings
     {
