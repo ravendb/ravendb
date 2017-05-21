@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Suggestion accuracy. If <c>null</c> then default accuracy is used (0.5f).
         /// </summary>
-        public float Accuracy { get; set; }
+        public double Accuracy { get; set; }
 
         protected bool Equals(SuggestionOptions other)
         {
