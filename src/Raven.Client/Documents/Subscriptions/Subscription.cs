@@ -669,7 +669,7 @@ namespace Raven.Client.Documents.Subscriptions
                             _logger.Info(
                                 $"Subscription #{_options.SubscriptionId}. Pulling task threw the following exception", ex);
                         }
-                        if (await TryHandleRejectedConnectionOrDispose(ex, false).ConfigureAwait(false))
+                        if (await TryHandleRejectedConnectionOrDispose(ex).ConfigureAwait(false))
                         {
                             if (_logger.IsInfoEnabled)
                                 _logger.Info($"Connection to subscription #{_options.SubscriptionId} have been shut down because of an error", ex);
@@ -691,12 +691,11 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        private async Task<bool> TryHandleRejectedConnectionOrDispose(Exception ex, bool reopenTried)
+        private async Task<bool> TryHandleRejectedConnectionOrDispose(Exception ex)
         {
             if (ex is SubscriptionInUseException || // another client has connected to the subscription
                 ex is SubscriptionDoesNotExistException || // subscription has been deleted meanwhile
-                ex is SubscriptionClosedException && reopenTried)
-            // someone forced us to drop the connection by calling Subscriptions.Release
+                ex is SubscriptionClosedException) // subscription has been booted by another subscription
             {
                 IsConnectionClosed = true;
                 _taskCompletionSource.TrySetException(ex);
