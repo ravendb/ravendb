@@ -23,7 +23,7 @@ namespace Sparrow.Platform.Posix
                 if (File.Exists(LIB_SODIUM))
                 {
                     if (PlatformDetails.RunningOnPosix == false)
-                        throw new IncorrectDllExecption(
+                        throw new IncorrectDllException(
                             $"{LIB_SODIUM} probably contains the wrong version or not usable on the current platform. Make sure that this machine has the appropriate C runtime for {LIB_SODIUM}.",
                             dllNotFoundEx);
 
