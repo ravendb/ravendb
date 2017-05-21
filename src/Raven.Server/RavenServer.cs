@@ -506,7 +506,7 @@ namespace Raven.Server
             {
 
                 case TcpConnectionHeaderMessage.OperationTypes.Subscription:
-                    SubscriptionConnection.SendSubscriptionDocuments(tcp, ServerStore);
+                    SubscriptionConnection.SendSubscriptionDocuments(tcp);
                     break;
                 case TcpConnectionHeaderMessage.OperationTypes.Replication:
                     var documentReplicationLoader = tcp.DocumentDatabase.ReplicationLoader;

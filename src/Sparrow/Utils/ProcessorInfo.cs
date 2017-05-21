@@ -6,22 +6,7 @@ namespace Sparrow.Utils
 {
     public class ProcessorInfo
     {
-        private static readonly ProcessorInfo Instance = new ProcessorInfo {_lastReadTime = DateTime.MinValue};
-        private int _processorCount;
-        private DateTime _lastReadTime;
-
-        public static int ProcessorCount
-        {
-            get
-            {
-                if (DateTime.UtcNow - Instance._lastReadTime > TimeSpan.FromSeconds(15))
-                {
-                    Instance._lastReadTime = DateTime.UtcNow;
-                    Instance._processorCount = GetProcessorCount();
-                }
-                return Instance._processorCount;
-            }
-        }
+        public readonly static int ProcessorCount = GetProcessorCount();
 
         public static int GetProcessorCount()
         {

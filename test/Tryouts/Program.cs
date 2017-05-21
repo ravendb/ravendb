@@ -1,12 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
-using FastTests.Client.Indexing;
-using FastTests.Client.Subscriptions;
-using FastTests.Server.Documents;
-using FastTests.Server.Documents.Queries;
-using SlowTests.Issues;
-using SlowTests.MailingList;
-using SlowTests.Tests.Faceted;
+using System.Linq;
+using Orders;
+using Raven.Client.Documents;
+using SlowTests.Smuggler;
 
 namespace Tryouts
 {
@@ -17,17 +15,32 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
 
-            for (int i = 0; i < 800; i++)
+            using (var store = new DocumentStore
             {
-                Console.WriteLine(i);
-
-                using (var a = new FastTests.Client.IndexesDeleteByIndexTests())
+                Database = "Northwind",
+                Url = "http://localhost:8080"
+            }.Initialize())
+            {
+                using (var session = store.OpenSession())
                 {
-                    a.Delete_By_Index_Async().Wait();
+                    var q = 
+                        from order in session.Query<Order>()
+                        group order by order.Company
+                        into g
+                        select new
+                        {
+                            Company = g.Key,
+                            TotalAmountPaid = g.Sum(o => o.Lines.Sum(ol => ol.Quantity * ol.PricePerUnit * (1 - ol.Discount))),
+                            NumberOfOrders = g.Count()
+                        };
+
+                    foreach (var r in q.Where(x=>x.Company == "companies/1"))
+                    {
+                        Console.WriteLine(r);
+                    }
+
                 }
             }
-
-            
         }
     }
 }

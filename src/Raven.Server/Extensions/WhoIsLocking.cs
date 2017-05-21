@@ -34,7 +34,8 @@ namespace Raven.Server.Extensions
 
             // Create a restart manager session
             int rv = RmStartSession(out sessionHandle, 0, Guid.NewGuid().ToString());
-            if (rv != 0) throw new Win32Exception();
+            if (rv != 0)
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to RmStartSession");
             try
             {
                 // Let the restart manager know what files we’re interested in
@@ -42,7 +43,8 @@ namespace Raven.Server.Extensions
                 rv = RmRegisterResources(sessionHandle,
                                          (uint) pathStrings.Length, pathStrings,
                                          0, null, 0, null);
-                if (rv != 0) throw new Win32Exception();
+                if (rv != 0)
+                    throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to RmRegisterResources (sessionHandle=" + sessionHandle + ")");
 
                 // Ask the restart manager what other applications 
                 // are using those files
@@ -77,11 +79,11 @@ namespace Raven.Server.Extensions
                             }
                         }
                     }
-                    else 
-                        throw new Win32Exception();
+                    else
+                        throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to RmGetList (sessionHandle=" + sessionHandle + ")");
                 }
-                else if (rv != 0) 
-                    throw new Win32Exception();
+                else if (rv != 0)
+                    throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to RmGetList (sessionHandle=" + sessionHandle + ")");
             }
             finally
             {

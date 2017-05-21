@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Runtime.InteropServices;
 using Sparrow.Platform.Win32;
 
 namespace Sparrow.Platform
@@ -15,18 +16,18 @@ namespace Sparrow.Platform
             var virtualAlloc = Win32MemoryProtectMethods.VirtualAlloc(null, (UIntPtr)allocatedSize, Win32MemoryProtectMethods.AllocationType.COMMIT,
                 Win32MemoryProtectMethods.MemoryProtection.READWRITE);
             if (virtualAlloc == null)
-                throw new Win32Exception();
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to VirtualAlloc (ElectricFence) size=" + size);
 
             *(int*)virtualAlloc = allocatedSize;
 
             Win32MemoryProtectMethods.MemoryProtection protect;
             if (Win32MemoryProtectMethods.VirtualProtect(virtualAlloc, (UIntPtr)(4096), Win32MemoryProtectMethods.MemoryProtection.NOACCESS,
                     out protect) == false)
-                throw new Win32Exception();
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to VirtualProtect (ElectricFence) at address=" + new IntPtr(virtualAlloc));
 
             if (Win32MemoryProtectMethods.VirtualProtect(virtualAlloc + (sizeInPages + 1) * 4096, (UIntPtr)(4096), Win32MemoryProtectMethods.MemoryProtection.NOACCESS,
                     out protect) == false)
-                throw new Win32Exception();
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to VirtualProtect (ElectricFence) at address=" + new IntPtr(virtualAlloc + (sizeInPages + 1) * 4096));
 
             var firstWritablePage = virtualAlloc + 4096;
 
@@ -52,13 +53,13 @@ namespace Sparrow.Platform
             // this will access the memory, which will error if this was already freed
             if (Win32MemoryProtectMethods.VirtualProtect(address, (UIntPtr)4096, Win32MemoryProtectMethods.MemoryProtection.READWRITE, out protect) ==
                 false)
-                throw new Win32Exception();
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to VirtualProtect (ElectricFence) at address=" + new IntPtr(address));
             var dwSize = *(int*)address;
 
             // decommit, not release, they are not available for reuse again, any 
             // future access will throw
             if (Win32MemoryProtectMethods.VirtualFree(address, (UIntPtr)dwSize, Win32MemoryProtectMethods.FreeType.MEM_DECOMMIT) == false)
-                throw new Win32Exception();
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to VirtualFree (ElectricFence) at address=" + new IntPtr(address));
         }
     }
 }

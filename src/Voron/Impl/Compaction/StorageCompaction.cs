@@ -6,6 +6,8 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Runtime.ExceptionServices;
+using Sparrow.Logging;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
@@ -51,7 +53,15 @@ namespace Voron.Impl.Compaction
 
                 using (var op = new WriteAheadJournal.JournalApplicator.SyncOperation(compactedEnv.Journal.Applicator))
                 {
-                    op.SyncDataFile();
+                    try
+                    {
+                        op.SyncDataFile();
+                    }
+                    catch (Exception e)
+                    {
+                        existingEnv.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
+                        throw;
+                    }
                 }
                 compactedEnv.Journal.Applicator.DeleteCurrentAlreadyFlushedJournal();
 

@@ -534,6 +534,31 @@ namespace Raven.Server.Documents
             }
         }
 
+        public IEnumerable<(ChangeVectorEntry[], long)> GetChangeVectorsFrom(DocumentsOperationContext context, string collection, long etag, int start, int take)
+        {
+            var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+            if (collectionName == null)
+                yield break;
+
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
+                collectionName.GetTableName(CollectionTableType.Documents));
+
+            if (table == null)
+                yield break;
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], etag, start))
+            {
+                if (take-- <= 0)
+                    yield break;
+
+                var curEtag = TableValueToEtag((int)DocumentsTable.Etag, ref result.Reader);
+                var curChangeVector = GetChangeVectorEntriesFromTableValueReader(ref result.Reader, (int)DocumentsTable.ChangeVector);
+
+                yield return (curChangeVector,curEtag);
+            }
+        }
+
         public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, List<string> collections, long etag, int take)
         {
             foreach (var collection in collections)

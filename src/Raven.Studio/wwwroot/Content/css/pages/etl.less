@@ -112,7 +112,7 @@
     }
 }
 
-.destinations {
+.destinations, .cluster {
     .legend {
         background-color: @gray-darker;
         font-size: 12px;
@@ -156,6 +156,11 @@
 
     .settings-menu {
         width: 300px !important;
+    }
+
+    .adress {
+        margin-top:@grid-gutter-width/4;
+        line-height:13px;
     }
 
     .destination-item {
@@ -204,6 +209,10 @@
         }
     }
 
+    .node-type {
+        width:120px;
+    }
+
     .destination-name {
         font-size: 18px;
         margin-bottom: 0;
@@ -231,6 +240,7 @@
 
         h5 {
             margin-top: 0;
+            margin-bottom:3px;
         }
 
         .location {
@@ -249,6 +259,13 @@
 
     .actions-container {
         flex-shrink: 0;
+    }
+}
+
+.cluster {
+    .info-container {
+        flex-grow: 0 !important;
+        width: 420px;
     }
 }
 

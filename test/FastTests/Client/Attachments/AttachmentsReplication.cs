@@ -50,7 +50,7 @@ namespace FastTests.Client.Attachments
                     Assert.Equal(names[0], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("image/png", result.ContentType);
-                    Assert.Equal("JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", result.Hash);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
                 }
                 using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
                 {
@@ -59,7 +59,7 @@ namespace FastTests.Client.Attachments
                     Assert.Equal(names[1], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("ImGgE/jPeG", result.ContentType);
-                    Assert.Equal("mpqSy7Ky+qPhkBwhLiiM2no82Wvo9gQw", result.Hash);
+                    Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", result.Hash);
                 }
                 using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                 {
@@ -68,7 +68,7 @@ namespace FastTests.Client.Attachments
                     Assert.Equal(names[2], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("", result.ContentType);
-                    Assert.Equal("PN5EZXRY470m7BLxu9MsOi/WwIRIq4WN", result.Hash);
+                    Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", result.Hash);
                 }
 
                 using (var session = store1.OpenSession())
@@ -98,15 +98,15 @@ namespace FastTests.Client.Attachments
                         var hash = attachment.GetString(nameof(AttachmentResult.Hash));
                         if (i == 0)
                         {
-                            Assert.Equal("mpqSy7Ky+qPhkBwhLiiM2no82Wvo9gQw", hash);
+                            Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", hash);
                         }
                         else if (i == 1)
                         {
-                            Assert.Equal("PN5EZXRY470m7BLxu9MsOi/WwIRIq4WN", hash);
+                            Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", hash);
                         }
                         else if (i == 2)
                         {
-                            Assert.Equal("JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", hash);
+                            Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", hash);
                         }
                     }
                 }
@@ -148,19 +148,19 @@ namespace FastTests.Client.Attachments
                             {
                                 Assert.Equal(new byte[] { 1, 2, 3 }, readBuffer.Take(3));
                                 Assert.Equal("image/png", attachment.ContentType);
-                                Assert.Equal("JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", attachment.Hash);
+                                Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Hash);
                             }
                             else if (i == 1)
                             {
                                 Assert.Equal(new byte[] { 10, 20, 30, 40, 50 }, readBuffer.Take(5));
                                 Assert.Equal("ImGgE/jPeG", attachment.ContentType);
-                                Assert.Equal("mpqSy7Ky+qPhkBwhLiiM2no82Wvo9gQw", attachment.Hash);
+                                Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", attachment.Hash);
                             }
                             else if (i == 2)
                             {
                                 Assert.Equal(new byte[] { 1, 2, 3, 4, 5 }, readBuffer.Take(5));
                                 Assert.Equal("", attachment.ContentType);
-                                Assert.Equal("PN5EZXRY470m7BLxu9MsOi/WwIRIq4WN", attachment.Hash);
+                                Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", attachment.Hash);
                             }
                         }
                     }
@@ -261,9 +261,9 @@ namespace FastTests.Client.Attachments
                     var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
                     Assert.Equal(2, attachments.Length);
                     Assert.Equal("file1", attachments[0].GetString(nameof(AttachmentResult.Name)));
-                    Assert.Equal("JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", attachments[0].GetString(nameof(AttachmentResult.Hash)));
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[0].GetString(nameof(AttachmentResult.Hash)));
                     Assert.Equal("file3", attachments[1].GetString(nameof(AttachmentResult.Name)));
-                    Assert.Equal("5VAt5Ayu6fKD6IGJimMLj73IlN8kgtGd", attachments[1].GetString(nameof(AttachmentResult.Hash)));
+                    Assert.Equal("NRQuixiqj+xvEokF6MdQq1u+uH1dk/gk2PLChJQ58Vo=", attachments[1].GetString(nameof(AttachmentResult.Hash)));
                 }
 
                 using (var session = store2.OpenSession())
@@ -274,7 +274,7 @@ namespace FastTests.Client.Attachments
                         var attachment = session.Advanced.GetAttachment("users/1", "file1", (result, stream) => stream.CopyTo(attachmentStream));
                         Assert.Equal(1, attachment.Etag);
                         Assert.Equal("file1", attachment.Name);
-                        Assert.Equal("JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", attachment.Hash);
+                        Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Hash);
                         Assert.Equal(3, attachmentStream.Position);
                         Assert.Equal(new byte[] { 1, 2, 3 }, readBuffer.Take(3));
                     }
@@ -283,7 +283,7 @@ namespace FastTests.Client.Attachments
                         var attachment = session.Advanced.GetAttachment("users/1", "file3", (result, stream) => stream.CopyTo(attachmentStream));
                         Assert.Equal(2, attachment.Etag);
                         Assert.Equal("file3", attachment.Name);
-                        Assert.Equal("5VAt5Ayu6fKD6IGJimMLj73IlN8kgtGd", attachment.Hash);
+                        Assert.Equal("NRQuixiqj+xvEokF6MdQq1u+uH1dk/gk2PLChJQ58Vo=", attachment.Hash);
                         Assert.Equal(9, attachmentStream.Position);
                         Assert.Equal(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }, readBuffer.Take(9));
                     }
@@ -343,7 +343,7 @@ namespace FastTests.Client.Attachments
                         var attachment = session.Advanced.GetAttachment("users/3", "file3", (result, stream) => stream.CopyTo(attachmentStream));
                         Assert.Equal(4, attachment.Etag);
                         Assert.Equal("file3", attachment.Name);
-                        Assert.Equal("fLtSLG1vPKEedr7AfTOgijyIw3ppa4h6", attachment.Hash);
+                        Assert.Equal("uuBtr5rVX6NAXzdW2DhuG04MGGyUzFzpS7TelHw3fJQ=", attachment.Hash);
                         Assert.Equal(128 * 1024, attachmentStream.Position);
                         var expected = Enumerable.Range(1, 128 * 1024).Select(x => (byte)x);
                         var actual = readBuffer.Take((int)attachmentStream.Position);
@@ -354,7 +354,7 @@ namespace FastTests.Client.Attachments
                         var attachment = session.Advanced.GetAttachment("users/1", "big-file", (result, stream) => stream.CopyTo(attachmentStream));
                         Assert.Equal(6, attachment.Etag);
                         Assert.Equal("big-file", attachment.Name);
-                        Assert.Equal("OLSEi3K4Iio9JV3ymWJeF12Nlkjakwer", attachment.Hash);
+                        Assert.Equal("zKHiLyLNRBZti9DYbzuqZ/EDWAFMgOXB+SwKvjPAINk=", attachment.Hash);
                         Assert.Equal(999 * 1024, attachmentStream.Position);
                         Assert.Equal(Enumerable.Range(1, 999 * 1024).Select(x => (byte)x), readBuffer.Take((int)attachmentStream.Position));
                     }
@@ -472,7 +472,7 @@ namespace FastTests.Client.Attachments
                     Assert.Equal(names[0], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("image/png", result.ContentType);
-                    Assert.Equal("JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", result.Hash);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
                 }
                 using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
                 {
@@ -481,7 +481,7 @@ namespace FastTests.Client.Attachments
                     Assert.Equal(names[1], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("ImGgE/jPeG", result.ContentType);
-                    Assert.Equal("mpqSy7Ky+qPhkBwhLiiM2no82Wvo9gQw", result.Hash);
+                    Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", result.Hash);
                 }
                 using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                 {
@@ -490,7 +490,7 @@ namespace FastTests.Client.Attachments
                     Assert.Equal(names[2], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("", result.ContentType);
-                    Assert.Equal("PN5EZXRY470m7BLxu9MsOi/WwIRIq4WN", result.Hash);
+                    Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", result.Hash);
                 }
                 await SetupAttachmentReplicationAsync(store1, store2);
 
@@ -613,15 +613,15 @@ namespace FastTests.Client.Attachments
                 var hash = attachment.GetString(nameof(AttachmentResult.Hash));
                 if (name == names[1])
                 {
-                    Assert.Equal("mpqSy7Ky+qPhkBwhLiiM2no82Wvo9gQw", hash);
+                    Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", hash);
                 }
                 else if (name == names[2])
                 {
-                    Assert.Equal("PN5EZXRY470m7BLxu9MsOi/WwIRIq4WN", hash);
+                    Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", hash);
                 }
                 else if (name == names[0])
                 {
-                    Assert.Equal("JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", hash);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", hash);
                 }
             }
 
@@ -653,7 +653,7 @@ namespace FastTests.Client.Attachments
                         Assert.Equal(new byte[] { 1, 2, 3 }, readBuffer.Take(3));
                         Assert.Equal("image/png", attachment.ContentType);
                         Assert.Equal(3, attachmentStream.Position);
-                        Assert.Equal("JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", attachment.Hash);
+                        Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Hash);
                     }
                     else if (name == names[1])
                     {
@@ -666,7 +666,7 @@ namespace FastTests.Client.Attachments
                         Assert.Equal(new byte[] { 10, 20, 30, 40, 50 }, readBuffer.Take(5));
                         Assert.Equal("ImGgE/jPeG", attachment.ContentType);
                         Assert.Equal(5, attachmentStream.Position);
-                        Assert.Equal("mpqSy7Ky+qPhkBwhLiiM2no82Wvo9gQw", attachment.Hash);
+                        Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", attachment.Hash);
                     }
                     else if (name == names[2])
                     {
@@ -677,7 +677,7 @@ namespace FastTests.Client.Attachments
                         Assert.Equal(new byte[] { 1, 2, 3, 4, 5 }, readBuffer.Take(5));
                         Assert.Equal("", attachment.ContentType);
                         Assert.Equal(5, attachmentStream.Position);
-                        Assert.Equal("PN5EZXRY470m7BLxu9MsOi/WwIRIq4WN", attachment.Hash);
+                        Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", attachment.Hash);
                     }
                 }
             }
@@ -870,13 +870,13 @@ namespace FastTests.Client.Attachments
 
                 var conflicts = WaitUntilHasConflict(store1, "users/1");
                 Assert.Equal(2, conflicts.Results.Length);
-                AssertConflict(conflicts.Results[0], "a1", "JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", "a1/png", 3);
-                AssertConflict(conflicts.Results[1], "a1", "JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", "a2/jpeg", 3);
+                AssertConflict(conflicts.Results[0], "a1", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "a1/png", 3);
+                AssertConflict(conflicts.Results[1], "a1", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "a2/jpeg", 3);
 
                 conflicts = WaitUntilHasConflict(store2, "users/1");
                 Assert.Equal(2, conflicts.Results.Length);
-                AssertConflict(conflicts.Results[0], "a1", "JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", "a1/png", 3);
-                AssertConflict(conflicts.Results[1], "a1", "JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", "a2/jpeg", 3);
+                AssertConflict(conflicts.Results[0], "a1", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "a1/png", 3);
+                AssertConflict(conflicts.Results[1], "a1", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "a2/jpeg", 3);
             }
         }
 
@@ -913,8 +913,8 @@ namespace FastTests.Client.Attachments
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);
 
-                var hash1 = "JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50";
-                var hash2 = "PN5EZXRY470m7BLxu9MsOi/WwIRIq4WN";
+                var hash1 = "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=";
+                var hash2 = "Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=";
 
                 var conflicts = WaitUntilHasConflict(store1, "users/1");
                 Assert.Equal(2, conflicts.Results.Length);

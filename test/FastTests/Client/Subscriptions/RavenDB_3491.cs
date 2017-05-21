@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
 using FastTests.Server.Documents.Notifications;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -186,7 +187,8 @@ namespace FastTests.Client.Subscriptions
                 var us4 = new User { Id = "users/4", Name = "Hila", Age = 29 };
                 var us5 = new User { Id = "users/5", Name = "Revital", Age = 34 };
 
-                long subscriptionId;
+                string subscriptionId;
+                var subscriptionReleasedAwaiter = Task.CompletedTask;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(us1);
@@ -205,19 +207,28 @@ namespace FastTests.Client.Subscriptions
                     subscriptionId = await store.AsyncSubscriptions.CreateAsync(subscriptionCreationParams);
 
                     var users = new List<dynamic>();
-
+                    
                     using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(subscriptionId)))
                     {
                         var docs = new BlockingCollection<dynamic>();
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
 
+                        
+                            
                         subscription.Subscribe(x => keys.Add(x.Id));
                         subscription.Subscribe(x => ages.Add(x.Age));
 
                         subscription.Subscribe(docs.Add);
 
                         await subscription.StartAsync();
+
+
+                        var db = await this.GetDatabase(store.Database);
+                        using (this.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        {
+                            subscriptionReleasedAwaiter = db.SubscriptionStorage.GetSusbscriptionConnectionInUseAwaiter(subscriptionId);
+                        }
 
                         dynamic doc;
                         Assert.True(docs.TryTake(out doc, _waitForDocTimeout));
@@ -251,6 +262,8 @@ namespace FastTests.Client.Subscriptions
                     }
                 }
 
+                Assert.True(Task.WaitAll(new[] {subscriptionReleasedAwaiter}, 250));
+                
                 using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(subscriptionId)))
                 {
                     var docs = new BlockingCollection<dynamic>();

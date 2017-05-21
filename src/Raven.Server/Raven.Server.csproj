@@ -31,6 +31,9 @@
     <EmbeddedResource Include="Documents\Patch\*.js;Web\Studio\EmbeddedData\*.ravendbdump;Web\Studio\EmbeddedData\*.cs;Commercial\RavenDB.public.json" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Remove="Web\Studio\EmbeddedData\NorthwindModel.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="..\..\libs\libsodium\x64\libsodium.dll" Link="libsodium.dll" Condition="($(Platform) == 'x64' OR $(Platform) == 'AnyCPU') AND $(ARM) == ''">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -46,6 +49,7 @@
     <None Include="..\..\libs\libsodium\x86\libsodium.arm.so" Link="libsodium.so" Condition="$(Platform) == 'AnyCPU' AND $(ARM) == 'true'">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="Web\Studio\EmbeddedData\NorthwindModel.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Sparrow\Sparrow.csproj" />

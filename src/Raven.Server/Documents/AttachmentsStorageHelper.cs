@@ -13,9 +13,13 @@ namespace Raven.Server.Documents
         public static async Task<string> CopyStreamToFileAndCalculateHash(DocumentsOperationContext context, Stream requestStream, Stream file, CancellationToken cancellationToken)
         {
             using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
+            using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer cryptoState))
             {
-                var metroCtx = Hashing.Streamed.Metro128.BeginProcess();
-                var xxhas64Ctx = Hashing.Streamed.XXHash64.BeginProcess();
+                if(cryptoState.Length < Sodium.crypto_generichash_statebytes())
+                    throw new InvalidOperationException("BUG: shouldn't happen, the size of a generic hash state was too large!");
+
+                InitComputeHash(cryptoState);
+
                 var bufferRead = 0;
                 while (true)
                 {
@@ -27,39 +31,41 @@ namespace Raven.Server.Documents
 
                     if (bufferRead == buffer.Buffer.Count)
                     {
-                        PartialComputeHash(metroCtx, xxhas64Ctx, buffer, bufferRead);
+                        PartialComputeHash(cryptoState, buffer, bufferRead);
                         await file.WriteAsync(buffer.Buffer.Array, buffer.Buffer.Offset, bufferRead, cancellationToken);
                         bufferRead = 0;
                     }
                 }
                 await file.WriteAsync(buffer.Buffer.Array, buffer.Buffer.Offset, bufferRead, cancellationToken);
                 file.Position = 0;
-                PartialComputeHash(metroCtx, xxhas64Ctx, buffer, bufferRead);
-                var hash = FinalizeGetHash(metroCtx, xxhas64Ctx);
+                PartialComputeHash(cryptoState, buffer, bufferRead);
+                var hash = FinalizeGetHash(cryptoState, buffer);
                 return hash;
             }
         }
 
-        private static unsafe string FinalizeGetHash(Hashing.Streamed.Metro128Context metroCtx, Hashing.Streamed.XXHash64Context xxhas64Ctx)
+        private static unsafe void InitComputeHash(JsonOperationContext.ManagedPinnedBuffer cryptoState)
         {
-            var metro128Hash = Hashing.Streamed.Metro128.EndProcess(metroCtx);
-            var xxHash64 = Hashing.Streamed.XXHash64.EndProcess(xxhas64Ctx);
-
-            var hash = new byte[sizeof(ulong) * 3];
-            fixed (byte* pHash = hash)
-            {
-                var longs = (ulong*)pHash;
-                longs[0] = metro128Hash.H1;
-                longs[1] = metro128Hash.H2;
-                longs[2] = xxHash64;
-            }
-            return Convert.ToBase64String(hash);
+            var rc = Sodium.crypto_generichash_init(cryptoState.Pointer, null, UIntPtr.Zero, Sodium.crypto_generichash_bytes());
+            if (rc != 0)
+                throw new InvalidOperationException("Unable to hash attachment: " + rc);
         }
 
-        private static unsafe void PartialComputeHash(Hashing.Streamed.Metro128Context metroCtx, Hashing.Streamed.XXHash64Context xxHash64Context, JsonOperationContext.ManagedPinnedBuffer buffer, int bufferRead)
+        private static unsafe string FinalizeGetHash(JsonOperationContext.ManagedPinnedBuffer cryptoState, JsonOperationContext.ManagedPinnedBuffer buffer)
         {
-            Hashing.Streamed.Metro128.Process(metroCtx, buffer.Pointer, bufferRead);
-            Hashing.Streamed.XXHash64.Process(xxHash64Context, buffer.Pointer, bufferRead);
+            var size = Sodium.crypto_generichash_bytes();
+            var rc = Sodium.crypto_generichash_final(cryptoState.Pointer, buffer.Pointer, size);
+            if (rc != 0)
+                throw new InvalidOperationException("Unable to hash attachment: " + rc);
+
+            return Convert.ToBase64String(buffer.Buffer.Array, buffer.Buffer.Offset, (int)size);
+        }
+
+        private static unsafe void PartialComputeHash(JsonOperationContext.ManagedPinnedBuffer cryptoState, JsonOperationContext.ManagedPinnedBuffer buffer, int bufferRead)
+        {
+            var rc = Sodium.crypto_generichash_update(cryptoState.Pointer,buffer.Pointer,(ulong)bufferRead);
+            if(rc !=0)
+                throw new InvalidOperationException("Unable to hash attachment: " + rc);
         }
     }
 }

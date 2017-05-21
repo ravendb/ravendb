@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Queries.Suggestion
     /// </summary>
     public class SuggestionQuery
     {
-        public static float DefaultAccuracy = 0.5f;
+        public static double DefaultAccuracy = 0.5;
 
         public static int DefaultMaxSuggestions = 15;
 
@@ -53,7 +53,7 @@ namespace Raven.Client.Documents.Queries.Suggestion
         /// <summary>
         /// Suggestion accuracy. If <c>null</c> then default accuracy is used (0.5f).
         /// </summary>
-        public float? Accuracy { get; set; }
+        public double? Accuracy { get; set; }
 
         /// <summary>
         /// Whether to return the terms in order of popularity

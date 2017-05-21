@@ -704,9 +704,9 @@ namespace Raven.Server.Json
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(statistics.LastChangeVector));
-            if (statistics.LastChangeVector != null)
-                context.Write(writer, statistics.LastChangeVector.ToJson());
+            writer.WritePropertyName((nameof(statistics.DatabaseChangeVector)));
+            if (statistics.DatabaseChangeVector != null)
+                context.Write(writer, statistics.DatabaseChangeVector.ToJson());
             else
                 writer.WriteNull();
             writer.WriteComma();

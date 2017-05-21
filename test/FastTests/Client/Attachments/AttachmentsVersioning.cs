@@ -116,7 +116,7 @@ namespace FastTests.Client.Attachments
                 Assert.Equal(names[0], result.Name);
                 Assert.Equal("users/1", result.DocumentId);
                 Assert.Equal("image/png", result.ContentType);
-                Assert.Equal("JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", result.Hash);
+                Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
             }
             using (var backgroundStream = new MemoryStream(new byte[] {10, 20, 30, 40, 50}))
             {
@@ -125,7 +125,7 @@ namespace FastTests.Client.Attachments
                 Assert.Equal(names[1], result.Name);
                 Assert.Equal("users/1", result.DocumentId);
                 Assert.Equal("ImGgE/jPeG", result.ContentType);
-                Assert.Equal("mpqSy7Ky+qPhkBwhLiiM2no82Wvo9gQw", result.Hash);
+                Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", result.Hash);
             }
             using (var fileStream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
             {
@@ -134,7 +134,7 @@ namespace FastTests.Client.Attachments
                 Assert.Equal(names[2], result.Name);
                 Assert.Equal("users/1", result.DocumentId);
                 Assert.Equal("", result.ContentType);
-                Assert.Equal("PN5EZXRY470m7BLxu9MsOi/WwIRIq4WN", result.Hash);
+                Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", result.Hash);
             }
             return names;
         }
@@ -180,15 +180,15 @@ namespace FastTests.Client.Attachments
                 var hash = attachment.GetString(nameof(AttachmentResult.Hash));
                 if (name == names[1])
                 {
-                    Assert.Equal("mpqSy7Ky+qPhkBwhLiiM2no82Wvo9gQw", hash);
+                    Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", hash);
                 }
                 else if (name == names[2])
                 {
-                    Assert.Equal("PN5EZXRY470m7BLxu9MsOi/WwIRIq4WN", hash);
+                    Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", hash);
                 }
                 else if (name == names[0])
                 {
-                    Assert.Equal("JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", hash);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", hash);
                 }
             }
 
@@ -220,7 +220,7 @@ namespace FastTests.Client.Attachments
                         Assert.Equal(new byte[] {1, 2, 3}, readBuffer.Take(3));
                         Assert.Equal("image/png", attachment.ContentType);
                         Assert.Equal(3, attachmentStream.Position);
-                        Assert.Equal("JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", attachment.Hash);
+                        Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Hash);
                     }
                     else if (name == names[1])
                     {
@@ -233,7 +233,7 @@ namespace FastTests.Client.Attachments
                         Assert.Equal(new byte[] {10, 20, 30, 40, 50}, readBuffer.Take(5));
                         Assert.Equal("ImGgE/jPeG", attachment.ContentType);
                         Assert.Equal(5, attachmentStream.Position);
-                        Assert.Equal("mpqSy7Ky+qPhkBwhLiiM2no82Wvo9gQw", attachment.Hash);
+                        Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", attachment.Hash);
                     }
                     else if (name == names[2])
                     {
@@ -244,7 +244,7 @@ namespace FastTests.Client.Attachments
                         Assert.Equal(new byte[] {1, 2, 3, 4, 5}, readBuffer.Take(5));
                         Assert.Equal("", attachment.ContentType);
                         Assert.Equal(5, attachmentStream.Position);
-                        Assert.Equal("PN5EZXRY470m7BLxu9MsOi/WwIRIq4WN", attachment.Hash);
+                        Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", attachment.Hash);
                     }
                 }
             }

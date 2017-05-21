@@ -116,13 +116,13 @@ namespace Raven.Server.Documents.Operations
                 State = operationState
             };
 
-            Action<IOperationProgress> action = progress =>
+            void ProgressNotification(IOperationProgress progress)
             {
                 notification.State.Progress = progress;
                 RaiseNotifications(notification, operation);
-            };
+            }
 
-            operation.Task = taskFactory(action);
+            operation.Task = taskFactory(ProgressNotification);
             
             operation.Task.ContinueWith(taskResult =>
             {
@@ -188,16 +188,13 @@ namespace Raven.Server.Documents.Operations
         public void KillRunningOperation(long id)
         {
             Operation value;
-            if (_active.TryGetValue(id, out value))
+            if (_active.TryGetValue(id, out value) && value.Task.IsCompleted == false)
             {
-                if (value.Task.IsCompleted == false)
-                {
-                    value.Token?.Cancel();
+                value.Token?.Cancel();
 
-                    // add to completed items before removing from active ones to ensure an operation status is accessible all the time
-                    _completed.TryAdd(id, value);
-                    _active.TryRemove(id, out value);
-                }
+                // add to completed items before removing from active ones to ensure an operation status is accessible all the time
+                _completed.TryAdd(id, value);
+                _active.TryRemove(id, out value);
             }
         }
 

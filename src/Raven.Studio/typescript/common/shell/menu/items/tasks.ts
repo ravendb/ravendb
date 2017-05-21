@@ -7,12 +7,13 @@ export = getTasksMenuItem;
 
 function getTasksMenuItem(appUrls: computedAppUrls) {
     let activeDatabase = activeDatabaseTracker.default.database;
-    var importDatabaseUrl = ko.pureComputed(() => appUrl.forImportDatabase(activeDatabase()));
-    var exportDatabaseUrl = ko.pureComputed(() => appUrl.forExportDatabase(activeDatabase()));
-    var sampleDataUrl = ko.pureComputed(() => appUrl.forSampleData(activeDatabase()));
-    var csvImportUrl = ko.pureComputed(() => appUrl.forCsvImport(activeDatabase()));
+    const importDatabaseUrl = ko.pureComputed(() => appUrl.forImportDatabase(activeDatabase()));
+    const exportDatabaseUrl = ko.pureComputed(() => appUrl.forExportDatabase(activeDatabase()));
+    const sampleDataUrl = ko.pureComputed(() => appUrl.forSampleData(activeDatabase()));
+    const ongoingTasksUrl = ko.pureComputed(() => appUrl.forOngoingTasks(activeDatabase()));
+    const csvImportUrl = ko.pureComputed(() => appUrl.forCsvImport(activeDatabase()));
 
-    var submenu: leafMenuItem[] = [
+    const submenu: leafMenuItem[] = [
         new leafMenuItem({
             route: [
                 'databases/tasks',
@@ -39,6 +40,14 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-create-sample-data',
             dynamicHash: sampleDataUrl
+        }),
+        new leafMenuItem({
+            route: 'databases/tasks/ongoingTasks',
+            moduleId: 'viewmodels/database/tasks/ongoingTasks',
+            title: 'Manage Ongoing Tasks',
+            nav: true,
+            css: 'icon-manage-ongoing-tasks', 
+            dynamicHash: ongoingTasksUrl
         }),
         /* TODO:
         new leafMenuItem({

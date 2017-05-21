@@ -33,6 +33,9 @@ namespace Raven.Client.Server
         
         public DatabaseTopology Topology;
 
+        // public OnGoingTasks tasks;  tasks for this node..
+        // list backup.. list sub .. list etl.. list repl(watchers).. list sql
+
         public ConflictSolver ConflictSolverConfig = new ConflictSolver();
 
         public Dictionary<string, IndexDefinition> Indexes;

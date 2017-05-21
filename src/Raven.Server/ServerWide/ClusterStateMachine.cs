@@ -71,8 +71,7 @@ namespace Raven.Server.ServerWide
 
         protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
-            string type;
-            if (cmd.TryGet("Type", out type) == false)
+            if (cmd.TryGet("Type", out string type) == false)
                 return;
 
             switch (type)
@@ -134,9 +133,8 @@ namespace Raven.Server.ServerWide
                     NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot set typed value of type {type} for database {updateCommand.DatabaseName}, because does not exist"));
                     return;
                 }
-
-                DynamicJsonValue djv;
-                BlittableJsonReaderObject existingValue = null;
+                
+                BlittableJsonReaderObject itemBlittable = null;
 
                 var itemKey = updateCommand.GetItemId();
                 using (Slice.From(context.Allocator, itemKey, out Slice valueName))
@@ -145,16 +143,15 @@ namespace Raven.Server.ServerWide
                     if (items.ReadByKey(valueNameLowered, out TableValueReader reader))
                     {
                         var ptr = reader.Read(2, out int size);
-                        existingValue = new BlittableJsonReaderObject(ptr, size, context);
+                        itemBlittable = new BlittableJsonReaderObject(ptr, size, context);
                     }
-
 
                     try
                     {
-                        djv = updateCommand.GetUpdatedValue(index, record, existingValue);
+                        itemBlittable = updateCommand.GetUpdatedValue(index, record, context , itemBlittable);
 
                         // if returned null, means, there is nothing to update and we just wanted to delete the value
-                        if (djv == null)
+                        if (itemBlittable == null)
                         {
                             items.DeleteByKey(valueNameLowered);
                             return;
@@ -174,14 +171,7 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, itemKey, out Slice valueName))
                 using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
                 {
-                    if (existingValue==null)
-                        existingValue = context.ReadObject(djv, updateCommand.GetItemId());
-
-                    using (var rec = context.ReadObject(existingValue, "inner-val"))
-                    {
-                        UpdateDatabaseRecord(index, items, valueNameLowered, valueName, rec);
-                    }
-                   
+                    UpdateValue(index, items, valueNameLowered, valueName, itemBlittable);
                 }
             }
             finally
@@ -191,34 +181,29 @@ namespace Raven.Server.ServerWide
         }
 
         private readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
-        public Task WaitForIndexNotification(long index)
+        public async Task WaitForIndexNotification(long index)
         {
-            return _rachisLogIndexNotifications.WaitForIndexNotification(index);
+            await _rachisLogIndexNotifications.WaitForIndexNotification(index, _parent.RemoteOperationTimeoutMs);
         }
 
         private unsafe void RemoveNodeFromDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             var remove = JsonDeserializationCluster.RemoveNodeFromDatabaseCommand(cmd);
-            Slice loweredKey;
-            Slice key;
             var databaseName = remove.DatabaseName;
-            using (Slice.From(context.Allocator, "db/" + databaseName.ToLowerInvariant(), out loweredKey))
-            using (Slice.From(context.Allocator, "db/" + databaseName, out key))
+            using (Slice.From(context.Allocator, "db/" + databaseName.ToLowerInvariant(), out Slice loweredKey))
+            using (Slice.From(context.Allocator, "db/" + databaseName, out Slice key))
             {
-                TableValueReader reader;
-                if (items.ReadByKey(loweredKey, out reader) == false)
+                if (items.ReadByKey(loweredKey, out TableValueReader reader) == false)
                 {
                     NotifyLeaderAboutError(index, leader, new InvalidOperationException($"The database {databaseName} does not exists"));
                     return;
                 }
-                int size;
-                var doc = new BlittableJsonReaderObject(reader.Read(2, out size), size, context);
+                var doc = new BlittableJsonReaderObject(reader.Read(2, out int size), size, context);
 
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
 
-                BlittableJsonReaderObject topology;
-                if (doc.TryGet(nameof(DatabaseRecord.Topology), out topology) == false)
+                if (doc.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject topology) == false)
                 {
                     items.DeleteByKey(loweredKey);
                     NotifyDatabaseChanged(context, databaseName, index);
@@ -241,16 +226,15 @@ namespace Raven.Server.ServerWide
 
                 var updated = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
-                UpdateDatabaseRecord(index, items, loweredKey, key, updated);
+                UpdateValue(index, items, loweredKey, key, updated);
 
                 NotifyDatabaseChanged(context, databaseName, index);
             }
         }
 
-        private static unsafe void UpdateDatabaseRecord(long index, Table items, Slice loweredKey, Slice key, BlittableJsonReaderObject updated)
+        private static unsafe void UpdateValue(long index, Table items, Slice loweredKey, Slice key, BlittableJsonReaderObject updated)
         {
-            TableValueBuilder builder;
-            using (items.Allocate(out builder))
+            using (items.Allocate(out TableValueBuilder builder))
             {
                 builder.Add(loweredKey);
                 builder.Add(key);
@@ -265,24 +249,20 @@ namespace Raven.Server.ServerWide
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             var delDb = JsonDeserializationCluster.DeleteDatabaseCommand(cmd);
-            Slice loweredKey;
-            Slice key;
             var databaseName = delDb.DatabaseName;
-            using (Slice.From(context.Allocator, "db/" + databaseName.ToLowerInvariant(), out loweredKey))
-            using (Slice.From(context.Allocator, "db/" + databaseName, out key))
+            using (Slice.From(context.Allocator, "db/" + databaseName.ToLowerInvariant(), out Slice loweredKey))
+            using (Slice.From(context.Allocator, "db/" + databaseName, out Slice key))
             {
-                TableValueReader reader;
-                if (items.ReadByKey(loweredKey, out reader) == false)
+                if (items.ReadByKey(loweredKey, out TableValueReader reader) == false)
                 {
                     NotifyLeaderAboutError(index, leader, new DatabaseDoesNotExistException($"The database {databaseName} does not exists, cannot delete it"));
                     return;
                 }
 
-                int size;
                 var deletionInProgressStatus = delDb.HardDelete
-                    ? DeletionInProgressStatus.HardDelete
-                    : DeletionInProgressStatus.SoftDelete;
-                var doc = new BlittableJsonReaderObject(reader.Read(2, out size), size, context);
+    ? DeletionInProgressStatus.HardDelete
+    : DeletionInProgressStatus.SoftDelete;
+                var doc = new BlittableJsonReaderObject(reader.Read(2, out int size), size, context);
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
                 if (databaseRecord.DeletionInProgress == null)
                     databaseRecord.DeletionInProgress = new Dictionary<string, DeletionInProgressStatus>();
@@ -311,7 +291,7 @@ namespace Raven.Server.ServerWide
                 
                 using (var updated = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context))
                 {
-                    UpdateDatabaseRecord(index, items, loweredKey, key, updated);
+                    UpdateValue(index, items, loweredKey, key, updated);
                 }
 
                 NotifyDatabaseChanged(context, databaseName, index);
@@ -324,23 +304,19 @@ namespace Raven.Server.ServerWide
             try
             {
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-
-                Slice valueName, valueNameLowered;
-                using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name, out valueName))
-                using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name.ToLowerInvariant(), out valueNameLowered))
+                using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name, out Slice valueName))
+                using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name.ToLowerInvariant(), out Slice valueNameLowered))
                 using (var rec = context.ReadObject(addDatabaseCommand.Value, "inner-val"))
                 {
                     if (addDatabaseCommand.Etag != null)
                     {
-                        TableValueReader reader;
-                        if (items.ReadByKey(valueNameLowered, out reader) == false && addDatabaseCommand.Etag != 0)
+                        if (items.ReadByKey(valueNameLowered, out TableValueReader reader) == false && addDatabaseCommand.Etag != 0)
                         {
                             NotifyLeaderAboutError(index, leader, new ConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " does not exists, but had a non zero etag"));
                             return;
                         }
 
-                        int size;
-                        var actualEtag = Bits.SwapBytes(*(long*)reader.Read(3, out size));
+                        var actualEtag = Bits.SwapBytes(*(long*)reader.Read(3, out int size));
                         Debug.Assert(size == sizeof(long));
 
                         if (actualEtag != addDatabaseCommand.Etag.Value)
@@ -351,7 +327,7 @@ namespace Raven.Server.ServerWide
                         }
                     }
 
-                    UpdateDatabaseRecord(index, items, valueNameLowered, valueName, rec);
+                    UpdateValue(index, items, valueNameLowered, valueName, rec);
                 }
             }
             finally
@@ -371,8 +347,7 @@ namespace Raven.Server.ServerWide
                     NotifyLeaderAboutError(index, leader, new InvalidOperationException("Cannot set " + delCmd.Name + " using DeleteValueCommand, only via dedicated Database calls"));
                     return;
                 }
-                Slice str;
-                using (Slice.From(context.Allocator, delCmd.Name, out str))
+                using (Slice.From(context.Allocator, delCmd.Name, out Slice str))
                 {
                     items.DeleteByKey(str);
                 }
@@ -395,12 +370,11 @@ namespace Raven.Server.ServerWide
                     return;
                 }
 
-                Slice valueName, valueNameLowered;
-                using (Slice.From(context.Allocator, putVal.Name, out valueName))
-                using (Slice.From(context.Allocator, putVal.Name.ToLowerInvariant(), out valueNameLowered))
+                using (Slice.From(context.Allocator, putVal.Name, out Slice valueName))
+                using (Slice.From(context.Allocator, putVal.Name.ToLowerInvariant(), out Slice valueNameLowered))
                 using (var rec = context.ReadObject(putVal.Value, "inner-val"))
                 {
-                    UpdateDatabaseRecord(index, items, valueNameLowered, valueName, rec);
+                    UpdateValue(index, items, valueNameLowered, valueName, rec);
                 }
             }
             finally
@@ -441,8 +415,7 @@ namespace Raven.Server.ServerWide
 
         private void UpdateDatabase(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
-            string databaseName;
-            if (cmd.TryGet(DatabaseName, out databaseName) == false)
+            if (cmd.TryGet(DatabaseName, out string databaseName) == false)
                 throw new ArgumentException("Update database command must contain a DatabaseName property");
 
             try
@@ -450,20 +423,17 @@ namespace Raven.Server.ServerWide
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 var dbKey = "db/" + databaseName;
 
-                Slice valueName;
-                Slice valueNameLowered;
-                using (Slice.From(context.Allocator, dbKey, out valueName))
-                using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out valueNameLowered))
+                using (Slice.From(context.Allocator, dbKey, out Slice valueName))
+                using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
                 {
-                    long etag;
-                    var doc = ReadInternal(context, out etag, valueNameLowered);
-                    
+                    var doc = ReadInternal(context, out long etag, valueNameLowered);
+
                     if (doc == null)
                     {
                         NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute update command of type {type} for {databaseName} because it does not exists"));
                         return;
                     }
-                    
+
                     var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
                     var updateCommand = JsonDeserializationCluster.UpdateDatabaseCommands[type](cmd);
 
@@ -483,10 +453,10 @@ namespace Raven.Server.ServerWide
                         NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute command of type {type} for database {databaseName}", e));
                         return;
                     }
-                    
+
                     var updatedDatabaseBlittable = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
-                    UpdateDatabaseRecord(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
-                    
+
+                    UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
                 }
             }
             finally
@@ -524,8 +494,7 @@ namespace Raven.Server.ServerWide
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
             var dbKey = prefix.ToLowerInvariant();
-            Slice loweredPrefix;
-            using (Slice.From(context.Allocator, dbKey, out loweredPrefix))
+            using (Slice.From(context.Allocator, dbKey, out Slice loweredPrefix))
             {
                 foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, start))
                 {
@@ -561,8 +530,7 @@ namespace Raven.Server.ServerWide
 
         private static unsafe Tuple<string, BlittableJsonReaderObject> GetCurrentItem(TransactionOperationContext context, Table.TableValueHolder result)
         {
-            int size;
-            var ptr = result.Reader.Read(2, out size);
+            var ptr = result.Reader.Read(2, out int size);
             var doc = new BlittableJsonReaderObject(ptr, size, context);
 
             var key = Encoding.UTF8.GetString(result.Reader.Read(1, out size), size);
@@ -572,8 +540,7 @@ namespace Raven.Server.ServerWide
 
         public DatabaseRecord ReadDatabase(TransactionOperationContext context, string name)
         {
-            long etag;
-            return ReadDatabase(context, name, out etag);
+            return ReadDatabase(context, name, out long etag);
         }
 
         public DatabaseRecord ReadDatabase(TransactionOperationContext context, string name, out long etag)
@@ -585,16 +552,14 @@ namespace Raven.Server.ServerWide
         }
         public BlittableJsonReaderObject Read(TransactionOperationContext context, string name)
         {
-            long etag;
-            return Read(context, name, out etag);
+            return Read(context, name, out long etag);
         }
 
         public BlittableJsonReaderObject Read(TransactionOperationContext context, string name, out long etag)
         {
 
             var dbKey = name.ToLowerInvariant();
-            Slice key;
-            using (Slice.From(context.Allocator, dbKey, out key))
+            using (Slice.From(context.Allocator, dbKey, out Slice key))
             {
                 return ReadInternal(context, out etag, key);
             }
@@ -603,15 +568,13 @@ namespace Raven.Server.ServerWide
         private static unsafe BlittableJsonReaderObject ReadInternal(TransactionOperationContext context, out long etag, Slice key)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-            TableValueReader reader;
-            if (items.ReadByKey(key, out reader) == false)
+            if (items.ReadByKey(key, out TableValueReader reader) == false)
             {
                 etag = 0;
                 return null;
             }
 
-            int size;
-            var ptr = reader.Read(2, out size);
+            var ptr = reader.Read(2, out int size);
             var doc = new BlittableJsonReaderObject(ptr, size, context);
 
             etag = Bits.SwapBytes(*(long*)reader.Read(3, out size));
@@ -623,8 +586,7 @@ namespace Raven.Server.ServerWide
         public static IEnumerable<(long, BlittableJsonReaderObject)> ReadValuesStartingWith(TransactionOperationContext context, string startsWithKey)
         {
             var startsWithKeyLower = startsWithKey.ToLowerInvariant();
-            Slice startsWithSlice;
-            using (Slice.From(context.Allocator, startsWithKeyLower, out startsWithSlice))
+            using (Slice.From(context.Allocator, startsWithKeyLower, out Slice startsWithSlice))
             {
                 return ReadValuesStartingWith(context, startsWithSlice);
             }
@@ -637,10 +599,7 @@ namespace Raven.Server.ServerWide
             foreach (var holder in items.SeekByPrimaryKeyPrefix(startsWithKey, Slices.Empty, 0))
             {
                 var reader = holder.Reader;
-                int size;
-                BlittableJsonReaderObject doc;
-                long etag;
-                size = GetDataAndEtagTupleFromReader(context, reader, out doc, out etag);
+                int size = GetDataAndEtagTupleFromReader(context, reader, out BlittableJsonReaderObject doc, out long etag);
                 Debug.Assert(size == sizeof(long));
 
                 yield return (etag, doc);
@@ -650,11 +609,11 @@ namespace Raven.Server.ServerWide
 
         private static unsafe int GetDataAndEtagTupleFromReader(TransactionOperationContext context, TableValueReader reader, out BlittableJsonReaderObject doc, out long etag)
         {
-            int size;
-            var ptr = reader.Read(2, out size);
+            var ptr = reader.Read(2, out int size);
             doc = new BlittableJsonReaderObject(ptr, size, context);
 
             etag = Bits.SwapBytes(*(long*)reader.Read(3, out size));
+            Debug.Assert(size == sizeof(long));
             return size;
         }
 
@@ -671,8 +630,7 @@ namespace Raven.Server.ServerWide
                 await tcpClient.ConnectAsync(tcpInfo.Host, tcpInfo.Port);
                 stream = tcpClient.GetStream();
 
-                JsonOperationContext context;
-                using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out context))
+                using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out JsonOperationContext context))
                 {
                     var apiToken = await authenticator.GetAuthenticationTokenAsync(apiKey, url, context);
                     var msg = new DynamicJsonValue
@@ -762,18 +720,32 @@ namespace Raven.Server.ServerWide
 
     public class RachisLogIndexNotifications
     {
+        private readonly CancellationToken _token;
         private long _lastModifiedIndex;
         private readonly AsyncManualResetEvent _notifiedListeners;
 
         public RachisLogIndexNotifications(CancellationToken token)
         {
+            _token = token;
             _notifiedListeners = new AsyncManualResetEvent(token);
         }
 
-        public async Task WaitForIndexNotification(long index)
+        public async Task WaitForIndexNotification(long index,uint? timeoutInMs = null)
         {
-            while (index > Volatile.Read(ref _lastModifiedIndex))
-                await _notifiedListeners.WaitAsync();
+            Task timeoutTask = null;
+            if (timeoutInMs.HasValue)
+                timeoutTask = TimeoutManager.WaitFor(timeoutInMs.Value, _token);
+            while (index > Volatile.Read(ref _lastModifiedIndex) && 
+                    (timeoutInMs.HasValue == false || timeoutTask.IsCompleted == false))
+                if (timeoutInMs.HasValue == false)
+                    await _notifiedListeners.WaitAsync();
+                else if(timeoutTask == await Task.WhenAny(_notifiedListeners.WaitAsync(),timeoutTask))
+                    ThrowTimeoutException();
+        }
+
+        private static void ThrowTimeoutException()
+        {
+            throw new TimeoutException();
         }
 
         public void NotifyListenersAbout(long index)

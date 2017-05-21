@@ -398,13 +398,13 @@ namespace Raven.Client.Documents.Session
         {
             throw new NotImplementedException("This feature is not yet implemented");
 
-            IsSpatialQuery = true;
-            SpatialFieldName = fieldName;
-            QueryShape = new WktSanitizer().Sanitize(shapeWkt);
-            SpatialRelation = relation;
-            DistanceErrorPct = distanceErrorPct;
-            SpatialUnits = radiusUnits;
-            return (TSelf)this;
+            //IsSpatialQuery = true;
+            //SpatialFieldName = fieldName;
+            //QueryShape = new WktSanitizer().Sanitize(shapeWkt);
+            //SpatialRelation = relation;
+            //DistanceErrorPct = distanceErrorPct;
+            //SpatialUnits = radiusUnits;
+            //return (TSelf)this;
         }
 
         protected TSelf GenerateSpatialQueryData(string fieldName, SpatialCriteria criteria)
@@ -669,29 +669,29 @@ namespace Raven.Client.Documents.Session
         public void Highlight(string fieldName, int fragmentLength, int fragmentCount, string fragmentsField)
         {
             throw new NotImplementedException("This feature is not yet implemented");
-            HighlightedFields.Add(new HighlightedField(fieldName, fragmentLength, fragmentCount, fragmentsField));
+            //HighlightedFields.Add(new HighlightedField(fieldName, fragmentLength, fragmentCount, fragmentsField));
         }
 
         public void Highlight(string fieldName, int fragmentLength, int fragmentCount, out FieldHighlightings fieldHighlightings)
         {
             throw new NotImplementedException("This feature is not yet implemented");
-            HighlightedFields.Add(new HighlightedField(fieldName, fragmentLength, fragmentCount, null));
-            fieldHighlightings = Highlightings.AddField(fieldName);
+            //HighlightedFields.Add(new HighlightedField(fieldName, fragmentLength, fragmentCount, null));
+            //fieldHighlightings = Highlightings.AddField(fieldName);
         }
 
         public void Highlight(string fieldName, string fieldKeyName, int fragmentLength, int fragmentCount, out FieldHighlightings fieldHighlightings)
         {
             throw new NotImplementedException("This feature is not yet implemented");
-            HighlighterKeyName = fieldKeyName;
-            HighlightedFields.Add(new HighlightedField(fieldName, fragmentLength, fragmentCount, null));
-            fieldHighlightings = Highlightings.AddField(fieldName);
+            //HighlighterKeyName = fieldKeyName;
+            //HighlightedFields.Add(new HighlightedField(fieldName, fragmentLength, fragmentCount, null));
+            //fieldHighlightings = Highlightings.AddField(fieldName);
         }
 
         public void SetHighlighterTags(string[] preTags, string[] postTags)
         {
             throw new NotImplementedException("This feature is not yet implemented");
-            HighlighterPreTags = preTags;
-            HighlighterPostTags = postTags;
+            //HighlighterPreTags = preTags;
+            //HighlighterPostTags = postTags;
         }
 
         /// <summary>

@@ -793,34 +793,46 @@ namespace Raven.Server.Documents
             var remoteHasLargerEntries = local.Length < remote.Length;
             var localHasLargerEntries = remote.Length < local.Length;
 
-            int remoteEntriesTakenIntoAccount = 0;
-            for (int index = 0; index < local.Length; index++)
+            Array.Sort(remote); // todo: check if we need this
+            Array.Sort(local); // todo: check if we need this
+
+            var localIndex = 0;
+            var remoteIndex = 0;
+
+            while (localIndex < local.Length && remoteIndex < remote.Length)
             {
-                if (remote.Length < index && remote[index].DbId == local[index].DbId)
+                var compareResult = remote[remoteIndex].DbId.CompareTo(local[localIndex].DbId);
+                if (compareResult == 0)
                 {
-                    remoteHasLargerEntries |= remote[index].Etag > local[index].Etag;
-                    localHasLargerEntries |= local[index].Etag > remote[index].Etag;
-                    remoteEntriesTakenIntoAccount++;
+                    remoteHasLargerEntries |= remote[remoteIndex].Etag > local[localIndex].Etag;
+                    localHasLargerEntries |= local[localIndex].Etag > remote[remoteIndex].Etag;
+                    remoteIndex++;
+                    localIndex++;
+                }
+                else if (compareResult > 0)
+                {
+                    localIndex++;
+                    localHasLargerEntries = true;
                 }
                 else
                 {
-                    var updated = false;
-                    for (var remoteIndex = 0; remoteIndex < remote.Length; remoteIndex++)
-                    {
-                        if (remote[remoteIndex].DbId == local[index].DbId)
-                        {
-                            remoteHasLargerEntries |= remote[remoteIndex].Etag > local[index].Etag;
-                            localHasLargerEntries |= local[index].Etag > remote[remoteIndex].Etag;
-                            remoteEntriesTakenIntoAccount++;
-                            updated = true;
-                        }
-                    }
-
-                    if (!updated)
-                        localHasLargerEntries = true;
+                    remoteIndex++;
+                    remoteHasLargerEntries = true;
                 }
+
+                if (localHasLargerEntries && remoteHasLargerEntries)
+                    break;
             }
-            remoteHasLargerEntries |= remoteEntriesTakenIntoAccount < remote.Length;
+
+            if (remoteIndex < remote.Length)
+            {
+                remoteHasLargerEntries = true;
+            }
+
+            if (localIndex < local.Length)
+            {
+                localHasLargerEntries = true;
+            }
 
             if (remoteHasLargerEntries && localHasLargerEntries)
                 return ConflictStatus.Conflict;
