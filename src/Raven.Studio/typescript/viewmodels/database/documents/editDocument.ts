@@ -516,7 +516,7 @@ class editDocument extends viewModelBase {
         const metadata = localDoc['@metadata'];
         for (let prop in savedDocumentDto) {
             if (savedDocumentDto.hasOwnProperty(prop)) {
-                if (prop === "Method")
+                if (prop === "Type")
                     continue;
                 metadata[prop] = (savedDocumentDto as any)[prop];
             }
