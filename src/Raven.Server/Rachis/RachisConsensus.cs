@@ -535,7 +535,7 @@ namespace Raven.Server.Rachis
 
             return topologyJson;
         }
-        
+
         public static unsafe void SetTopology(RachisConsensus engine, Transaction tx,
             BlittableJsonReaderObject topologyJson)
         {
@@ -587,7 +587,24 @@ namespace Raven.Server.Rachis
                     }
 
                     if (_tag == "?")
-                        _tag = initialMessage.DebugDestinationIdentifier;
+                    {
+                        using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (context.OpenWriteTransaction())
+                        {
+                            if (_tag == "?")// double checked locking under tx write lock
+                            {
+                                UpdateNodeTag(context, initialMessage.DebugDestinationIdentifier);
+                                context.Transaction.Commit();
+                            }
+                        }
+
+                        if (_tag != initialMessage.DebugDestinationIdentifier)
+                        {
+                            throw new TopologyMismatchException(
+                                $"{initialMessage.DebugSourceIdentifier} attempted to connect to us with tag {initialMessage.DebugDestinationIdentifier} but our tag is already set ({_tag}). " +
+                                $"Rejecting connection from confused server, this is likely an old server trying to connect to us, or bad network configuration.");
+                        }
+                    }
 
                     switch (initialMessage.InitialMessageType)
                     {
@@ -975,7 +992,7 @@ namespace Raven.Server.Rachis
                     }
                 }
 
-                if(timeoutTask == await Task.WhenAny(task,timeoutTask))
+                if (timeoutTask == await Task.WhenAny(task, timeoutTask))
                     ThrowTimeoutException();
             }
         }
@@ -1158,13 +1175,7 @@ namespace Raven.Server.Rachis
                 if (CurrentState != State.Passive)
                     return;
 
-                _tag = "A";
-
-                using (Slice.From(tx.InnerTransaction.Allocator, _tag, out Slice str))
-                {
-                    var state = tx.InnerTransaction.CreateTree(GlobalStateSlice);
-                    state.Add(TagSlice, str);
-                }
+                UpdateNodeTag(ctx, "A");
 
                 var topology = new ClusterTopology(
                     Guid.NewGuid().ToString(),
@@ -1305,11 +1316,11 @@ namespace Raven.Server.Rachis
 
         public DynamicJsonArray GetClusterErrorsFromLeader()
         {
-            if (_currentLeader == null) 
+            if (_currentLeader == null)
                 return new DynamicJsonArray();
 
             var dja = new DynamicJsonArray();
-            while(_currentLeader.ErrorsList.TryDequeue(out var entry))
+            while (_currentLeader.ErrorsList.TryDequeue(out var entry))
             {
                 var djv = new DynamicJsonValue
                 {
@@ -1319,6 +1330,18 @@ namespace Raven.Server.Rachis
                 dja.Add(djv);
             }
             return dja;
+        }
+
+        public void UpdateNodeTag(TransactionOperationContext context, string newTag)
+        {
+            _tag = newTag;
+
+            using (Slice.From(context.Transaction.InnerTransaction.Allocator, _tag, out Slice str))
+            {
+                var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
+                state.Add(TagSlice, str);
+            }
+
         }
     }
 
