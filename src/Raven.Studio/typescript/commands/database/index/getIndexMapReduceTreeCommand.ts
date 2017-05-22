@@ -16,7 +16,7 @@ class getIndexMapReduceTreeCommand extends commandBase {
             name: this.indexName,
             op: "map-reduce-tree"
         };
-        return this.query(url, args, this.db);
+        return this.query(url, args, this.db, x => x.Results);
     }
 } 
 

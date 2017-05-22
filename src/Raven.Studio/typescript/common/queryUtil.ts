@@ -57,7 +57,7 @@ class queryUtil {
                     .execute()
                     .done((fields) => {
                         //TODO: self.isTestIndex(result.IsTestIndex);
-                        outputFields(fields);
+                        outputFields(fields.Results);
                     });
             }
         }
