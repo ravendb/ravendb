@@ -90,12 +90,6 @@ class createDatabase extends dialogViewModelBase {
         // hide advanced if respononding bundle was unchecked
         this.databaseModel.configurationSections.forEach(section => {
             section.enabled.subscribe(enabled => {
-                if (section.alwaysEnabled && !enabled) {
-                    // can't disable section which is always enabled
-                    section.enabled(true);
-                    return;
-                }
-
                 if (section.alwaysEnabled || enabled) {
                     this.currentAdvancedSection(section.name);
                 } else if (!enabled && this.currentAdvancedSection() === section.name) {
