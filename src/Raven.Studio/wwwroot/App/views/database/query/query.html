@@ -258,12 +258,16 @@
             </div>
             <div class="scroll-stretch">
                 <div class="panel-body">
-                    <virtual-grid class="resizable" params="controller: gridController"></virtual-grid>
+                    <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-query-template'"></virtual-grid>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script type="text/html" id="empty-query-template">
+    No results found.
+</script>
 
 <div class="backdrop" data-bind="click: closeAddFilter"></div>
 
