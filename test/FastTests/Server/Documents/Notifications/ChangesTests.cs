@@ -20,8 +20,9 @@ namespace FastTests.Server.Documents.Notifications
                 var taskObservable = store.Changes();
                 await taskObservable.EnsureConnectedNow();
                 var observableWithTask = taskObservable.ForDocument("users/1");
-                //await observableWithTask.Task;
+
                 observableWithTask.Subscribe(list.Add);
+                await observableWithTask.EnsureSubscribedNow();
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -47,8 +48,9 @@ namespace FastTests.Server.Documents.Notifications
                 var taskObservable = store.Changes();
                 await taskObservable.EnsureConnectedNow();
                 var observableWithTask = taskObservable.ForAllDocuments();
-                //await observableWithTask.Task;
+
                 observableWithTask.Subscribe(list.Add);
+                await observableWithTask.EnsureSubscribedNow();
 
                 const int docsCount = 10000;
 
@@ -80,10 +82,11 @@ namespace FastTests.Server.Documents.Notifications
                 var taskObservable = store.Changes();
                 await taskObservable.EnsureConnectedNow();
                 var observableWithTask = taskObservable.ForDocument("users/1");
-                //await observableWithTask.Task;
+
                 observableWithTask
                     .Where(x => x.Type == DocumentChangeTypes.Delete)
                     .Subscribe(list.Add);
+                await observableWithTask.EnsureSubscribedNow();
 
                 using (var session = store.OpenSession())
                 {
@@ -115,8 +118,9 @@ namespace FastTests.Server.Documents.Notifications
                 var taskObservable = store.Changes();
                 await taskObservable.EnsureConnectedNow();
                 var observableWithTask = taskObservable.ForDocument("users/1");
-                //await observableWithTask.Task;
+
                 observableWithTask.Subscribe(list.Add);
+                await observableWithTask.EnsureSubscribedNow();
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -128,8 +132,8 @@ namespace FastTests.Server.Documents.Notifications
                 Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(15)));
 
                 observableWithTask = taskObservable.ForDocument("users/2");
-                //await observableWithTask.Task;
                 observableWithTask.Subscribe(list.Add);
+                await observableWithTask.EnsureSubscribedNow();
 
                 using (var session = store.OpenAsyncSession())
                 {
