@@ -535,8 +535,7 @@ namespace Raven.Server.Documents
                 {
                     var lazyCollectionName = CollectionName.GetLazyCollectionNameFrom(context, existingDoc.Data);
 
-                    TableValueBuilder tbv;
-                    using (conflictsTable.Allocate(out tbv))
+                    using (conflictsTable.Allocate(out TableValueBuilder tbv))
                     {
                         tbv.Add(lowerKey);
                         tbv.Add(SpecialChars.RecordSeparator);
@@ -567,8 +566,7 @@ namespace Raven.Server.Documents
 
                 fixed (ChangeVectorEntry* pChangeVector = existingTombstone.ChangeVector)
                 {
-                    TableValueBuilder tableValueBuilder;
-                    using (conflictsTable.Allocate(out tableValueBuilder))
+                    using (conflictsTable.Allocate(out TableValueBuilder tableValueBuilder))
                     {
                         tableValueBuilder.Add(lowerKey);
                         tableValueBuilder.Add(SpecialChars.RecordSeparator);
@@ -595,8 +593,7 @@ namespace Raven.Server.Documents
             {
                 collectionName = _documentsStorage.ExtractCollectionName(context, key, incomingDoc);
 
-                Slice prefixSlice;
-                using (GetConflictsKeyPrefix(context, lowerKey, out prefixSlice))
+                using (GetConflictsKeyPrefix(context, lowerKey, out Slice prefixSlice))
                 {
                     var conflicts = GetConflictsFor(context, prefixSlice);
                     foreach (var conflict in conflicts)

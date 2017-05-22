@@ -144,48 +144,86 @@ namespace Raven.Server.Documents
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr);
 
             using (Slice.From(context.Allocator, hash, out Slice base64Hash)) // Hash is a base64 string, so this is a special case that we do not need to escape
-            using (GetAttachmentKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Document, null, out Slice keySlice))
+            using (GetAttachmentKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash, 
+                lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Document, null, out Slice keySlice))
             {
                 Debug.Assert(base64Hash.Size == 44, $"Hash size should be 44 but was: {keySlice.Size}");
 
                 var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-                using (table.Allocate(out TableValueBuilder tbv))
                 {
-                    tbv.Add(keySlice.Content.Ptr, keySlice.Size);
-                    tbv.Add(Bits.SwapBytes(attachmenEtag));
-                    tbv.Add(namePtr);
-                    tbv.Add(contentTypePtr);
-                    tbv.Add(base64Hash.Content.Ptr, base64Hash.Size);
-                    tbv.Add(context.GetTransactionMarker());
+                    void SetTableValue(TableValueBuilder tbv)
+                    {
+                        tbv.Add(keySlice.Content.Ptr, keySlice.Size);
+                        tbv.Add(Bits.SwapBytes(attachmenEtag));
+                        tbv.Add(namePtr);
+                        tbv.Add(contentTypePtr);
+                        tbv.Add(base64Hash.Content.Ptr, base64Hash.Size);
+                        tbv.Add(context.GetTransactionMarker());
+                    }
 
                     if (table.ReadByKey(keySlice, out TableValueReader oldValue))
                     {
-                        // TODO: Support overwrite
-                        throw new NotImplementedException("Cannot overwrite an existing attachment.");
+                        // This is an update to the attachment with the same stream and content type
+                        // Just updating the etag and casing of the name and the content type.
 
-                        /*
-                        var oldEtag = TableValueToEtag(context, 1, ref oldValue);
-                        if (expectedEtag != null && oldEtag != expectedEtag)
-                            throw new ConcurrencyException($"Attachment {name} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
-                            {
-                                ActualETag = oldEtag,
-                                ExpectedETag = expectedEtag ?? -1
-                            };
+                        if (expectedEtag != null)
+                        {
+                            var oldEtag = DocumentsStorage.TableValueToEtag(1, ref oldValue);
+                            if (oldEtag != expectedEtag)
+                                throw new ConcurrencyException($"Attachment {name} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                                {
+                                    ActualETag = oldEtag,
+                                    ExpectedETag = expectedEtag ?? -1
+                                };
+                        }
 
-                        table.Update(oldValue.Id, tbv);*/
+                        using (table.Allocate(out TableValueBuilder tbv))
+                        {
+                            SetTableValue(tbv);
+                            table.Update(oldValue.Id, tbv);
+                        }
                     }
                     else
                     {
+                        // TODO: RavenDB-7160 Decide how to resolve attachment's conflicts.
+                        // Once we do so, make sure to adjust the code here,
+                        // as in case of conflict we might have a few partial keys here...
+                        using (GetAttachmentPartialKey(context, keySlice, base64Hash.Size, lowerContentType.Size, out Slice partialKeySlice))
+                        {
+                            if (table.SeekOnePrimaryKeyPrefix(partialKeySlice, out TableValueReader partialTvr))
+                            {
+                                // Delete the attachment stream only if we have a different hash
+                                using (DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.Hash, ref partialTvr, out Slice existingHash))
+                                {
+                                    if (existingHash.Content.Match(base64Hash.Content) == false)
+                                    {
+                                        using (DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.LoweredDocumentIdAndLoweredNameAndType,
+                                            ref partialTvr, out Slice existingKey))
+                                        {
+                                            var existingEtag = DocumentsStorage.TableValueToEtag((int)AttachmentsTable.Etag, ref partialTvr);
+                                            DeleteInternal(context, existingKey, existingEtag, existingHash);
+                                        }
+                                    }
+                                }
+
+                                table.Delete(partialTvr.Id);
+                            }
+                        }
+
                         if (expectedEtag.HasValue && expectedEtag.Value != 0)
                         {
                             ThrowConcurrentExceptionOnMissingAttacment(documentId, name, expectedEtag.Value);
                         }
 
-                        table.Insert(tbv);
+                        using (table.Allocate(out TableValueBuilder tbv))
+                        {
+                            SetTableValue(tbv);
+                            table.Insert(tbv);
+                        }
+
+                        PutAttachmentStream(context, keySlice, base64Hash, stream);
                     }
                 }
-
-                PutAttachmentStream(context, keySlice, base64Hash, stream);
 
                 _documentDatabase.Metrics.AttachmentPutsPerSecond.MarkSingleThreaded(1);
 
@@ -425,13 +463,20 @@ namespace Raven.Server.Documents
             return GetAttachmentKeyInternal(context, lowerKey, lowerKeySize, lowerName, lowerNameSize, base64Hash, lowerContentTypePtr, lowerContentTypeSize, KeyType.Key, type, changeVector, out keySlice);
         }
 
-        // NOTE: This should be called only when the document's that hold the attachment does not have a conflict.
+        // NOTE: GetAttachmentPartialKey should be called only when the document's that hold the attachment does not have a conflict.
         // In this specific case it is ensured that we have a uniuqe partial keys.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ByteStringContext.InternalScope GetAttachmentPartialKey(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, byte* lowerName, int lowerNameSize,
             AttachmentType type, ChangeVectorEntry[] changeVector, out Slice partialKeySlice)
         {
             return GetAttachmentKeyInternal(context, lowerKey, lowerKeySize, lowerName, lowerNameSize, default(Slice), null, 0, KeyType.PartialKey, type, changeVector, out partialKeySlice);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ByteStringContext<ByteStringMemoryCache>.ExternalScope GetAttachmentPartialKey(DocumentsOperationContext context, Slice key,
+            int base64HashSize, int lowerContentTypeSize, out Slice partialKeySlice)
+        {
+            return Slice.External(context.Allocator, key.Content, 0, key.Size - base64HashSize - 1 - lowerContentTypeSize, out partialKeySlice);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -616,6 +661,7 @@ namespace Raven.Server.Documents
             var etag = DocumentsStorage.TableValueToEtag((int)AttachmentsTable.Etag, ref tvr);
 
             using (isPartialKey ? DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.LoweredDocumentIdAndLoweredNameAndType, ref tvr, out key) : default(ByteStringContext<ByteStringMemoryCache>.ExternalScope))
+            using (DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out Slice hash))
             {
                 if (expectedEtag != null && etag != expectedEtag)
                 {
@@ -626,23 +672,20 @@ namespace Raven.Server.Documents
                     };
                 }
 
-                DeleteInternal(context, key, etag, ref tvr);
+                DeleteInternal(context, key, etag, hash);
             }
 
             table.Delete(tvr.Id);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void DeleteInternal(DocumentsOperationContext context, Slice key, long etag, ref TableValueReader tvr)
+        private void DeleteInternal(DocumentsOperationContext context, Slice key, long etag, Slice hash)
         {
             CreateTombstone(context, key, etag);
-
-            using (DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out Slice hashSlice))
-            {
-                // we are running just before the delete, so we may still have 1 entry there, the one just
-                // about to be deleted
-                DeleteAttachmentStream(context, hashSlice);
-            }
+            
+            // we are running just before the delete, so we may still have 1 entry there, the one just
+            // about to be deleted
+            DeleteAttachmentStream(context, hash);
         }
 
         private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long attachmentEtag)
@@ -673,9 +716,10 @@ namespace Raven.Server.Documents
                 table.DeleteByPrimaryKeyPrefix(prefixSlice, before =>
                 {
                     using (DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.LoweredDocumentIdAndLoweredNameAndType, ref before.Reader, out Slice key))
+                    using (DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.Hash, ref before.Reader, out Slice hash))
                     {
                         var etag = DocumentsStorage.TableValueToEtag((int)AttachmentsTable.Etag, ref before.Reader);
-                        DeleteInternal(context, key, etag, ref before.Reader);
+                        DeleteInternal(context, key, etag, hash);
                     }
                 });
             }

@@ -1126,15 +1126,13 @@ namespace Raven.Server.Documents
 
             fixed (ChangeVectorEntry* pChangeVector = changeVector)
             {
-                Slice collectionSlice;
-                using (Slice.From(context.Allocator, collectionName.Name, out collectionSlice))
+                using (Slice.From(context.Allocator, collectionName.Name, out Slice collectionSlice))
                 {
                     var modifiedTicks = lastModifiedTicks ?? _documentDatabase.Time.GetUtcNow().Ticks;
 
                     var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                         collectionName.GetTableName(CollectionTableType.Tombstones));
-                    TableValueBuilder tbv;
-                    using (table.Allocate(out tbv))
+                    using (table.Allocate(out TableValueBuilder tbv))
                     {
                         tbv.Add(lowerKey);
                         tbv.Add(Bits.SwapBytes(newEtag));
