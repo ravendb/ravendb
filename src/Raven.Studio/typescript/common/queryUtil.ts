@@ -39,7 +39,7 @@ class queryUtil {
 
         // Fetch the index definition so that we get an updated list of fields to be used as sort by options.
         // Fields don't show for All Documents.
-        const isAllDocumentsDynamicQuery = indexName === "All Documents";
+        const isAllDocumentsDynamicQuery = indexName === "All Documents" || indexName === "dynamic";
         if (!isAllDocumentsDynamicQuery) {
 
             //if index is not dynamic, get columns using index definition, else get it using first index result
