@@ -79,15 +79,6 @@ gulp.task('z_generate-typings', function (cb) {
     });
 });
 
-gulp.task('z_compile:test', ['z_generate-ts'], function() {
-     return gulp.src([PATHS.test.tsSource])
-        .pipe(plugins.sourcemaps.init())
-        .pipe(tsProject())
-        .js
-        .pipe(plugins.sourcemaps.write("."))
-        .pipe(gulp.dest(PATHS.test.tsOutput));
-});
-
 gulp.task('z_compile:app', ['z_generate-ts'], function () {
     return gulp.src([PATHS.tsSource])
         .pipe(plugins.naturalSort())
@@ -202,47 +193,11 @@ gulp.task('z_release:durandal', function () {
    .pipe(gulp.dest(PATHS.releaseTargetApp));
 });
 
-gulp.task('z_generate-test-list', function () {
-    var reduceFiles = plugins.reduceFile('tests.js',
-        function (file, memo) {
-            memo.push(file.relative.replace(/\\/g, '/'));
-            return memo;
-        }, function (memo) {
-            return 'var tests = ' + JSON.stringify(memo, null , 2) + ';';
-        }, [])
-
-    return gulp.src([
-        '**/*.spec.js'
-    ], {
-        cwd: PATHS.test.tsOutput,
-        base: PATHS.test.dir
-    })
-    .pipe(reduceFiles)
-    .pipe(gulp.dest(PATHS.test.setup));
-});
-
-gulp.task('z_mochaTests', function () {
-    var mocha = plugins.mochaPhantomjs({
-        reporter: 'spec' //use json for debugging
-    });
-
-    return gulp.src(PATHS.test.html).pipe(mocha);
-});
-
-gulp.task('test', [ 'z_compile:test' ], function (cb) {
-    return runSequence('z_generate-test-list', 'z_mochaTests', cb);
-});
-
-gulp.task('z_watch:test', ['test'], function () {
-    gulp.watch(PATHS.tsSource, ['z_mochaTests']);
-    gulp.watch(PATHS.test.tsSource, ['test']);
-});
 
 gulp.task('compile', ['less', 'z_compile:app'], function() { });
 
 gulp.task('watch', ['compile'], function () {
     gulp.watch(PATHS.tsSource, ['z_compile:app-changed']);
-    gulp.watch(PATHS.test.tsSource, ['z_compile:test']);
     gulp.watch(PATHS.lessSourcesToWatch, ['less']);
 });
 
