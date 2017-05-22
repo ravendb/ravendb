@@ -95,6 +95,8 @@ namespace Raven.Server.Documents.Handlers.Admin
             var serverUrl = GetStringQueryString("url");
             ServerStore.EnsureNotPassive();
             await ServerStore.AddNodeToClusterAsync(serverUrl);
+
+            NoContentStatus();
         }
 
         [RavenAction("/admin/cluster/remove-node", "DELETE", "/admin/cluster/remove-node?nodeTag={nodeTag:string}")]
@@ -103,6 +105,8 @@ namespace Raven.Server.Documents.Handlers.Admin
             var serverUrl = GetStringQueryString("nodeTag");
             ServerStore.EnsureNotPassive();
             await ServerStore.RemoveFromClusterAsync(serverUrl);
+
+            NoContentStatus();
         }
     }
 }
