@@ -14,6 +14,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
+using Voron.Impl.Extensions;
 
 namespace Raven.Server.Rachis
 {
@@ -552,6 +553,8 @@ namespace Raven.Server.Rachis
         
         public ConcurrentQueue<(string node,AlertRaised error)> ErrorsList = new ConcurrentQueue<(string,AlertRaised)>();
 
+        
+
         public void NotifyAboutException(FollowerAmbassador node, Exception e)
         {
             var alert = AlertRaised.Create($"Node {node.Tag} encountered an error",
@@ -560,6 +563,7 @@ namespace Raven.Server.Rachis
                 NotificationSeverity.Warning,
                 details: new ExceptionDetails(e));
             ErrorsList.Enqueue((node.Tag,alert));
+            ErrorsList.Reduce(25);
         }
 
         public void Dispose()
