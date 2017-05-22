@@ -224,10 +224,14 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ms))
             {
+                writer.WriteStartObject();
+
                 writer.WriteArray(context, "Results", tuple.Item2, (w, c, p) =>
                 {
                     p.Write(c, w);
                 });
+
+                writer.WriteEndObject();
             }
 
             ms.TryGetBuffer(out ArraySegment<byte> bytes);
