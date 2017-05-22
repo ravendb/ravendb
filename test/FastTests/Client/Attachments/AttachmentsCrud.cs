@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
@@ -558,6 +559,165 @@ namespace FastTests.Client.Attachments
 
                     user.Country = "Israel";
                     session.SaveChanges();
+                }
+            }
+        }
+
+        [Fact]
+        public void OverwriteAttachment()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Fitzchak" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/png"));
+                }
+
+                using (var profileStream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
+                {
+                    store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/jpeg"));
+                }
+
+                /*using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
+                    var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
+                    var attachment = attachments.Single();
+                    Assert.Equal(name, attachment.GetString(nameof(AttachmentResult.Name)));
+                    var hash = attachment.GetString(nameof(AttachmentResult.Hash));
+                    if (i == 0)
+                    {
+                        Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", hash);
+                        Assert.Equal(5, attachment.GetNumber(nameof(AttachmentResult.Size)));
+                    }
+                    else if (i == 1)
+                    {
+                        Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", hash);
+                        Assert.Equal(5, attachment.GetNumber(nameof(AttachmentResult.Size)));
+                    }
+                    else if (i == 2)
+                    {
+                        Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", hash);
+                        Assert.Equal(3, attachment.GetNumber(nameof(AttachmentResult.Size)));
+                    }
+                }*/
+            }
+        }
+
+        [Fact]
+        public void PutSameAttachmentTwice_AlsoMakeSureThatTheStreamIsNotDisposedAfterCallingPutAttachment()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Fitzchak" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    var result = store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "IMAGE/png"));
+                    Assert.Equal(2, result.Etag);
+                    Assert.Equal("Profile", result.Name);
+                    Assert.Equal("users/1", result.DocumentId);
+                    Assert.Equal("IMAGE/png", result.ContentType);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
+                    Assert.Equal(3, result.Size);
+                    Assert.Equal(3, profileStream.Position);
+
+                    profileStream.Position = 0;
+                    result = store.Operations.Send(new PutAttachmentOperation("users/1", "PROFILE", profileStream, "image/PNG"));
+                    Assert.Equal(4, result.Etag);
+                    Assert.Equal("PROFILE", result.Name);
+                    Assert.Equal("users/1", result.DocumentId);
+                    Assert.Equal("image/PNG", result.ContentType);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
+                    Assert.Equal(3, result.Size);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
+                    var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
+                    var attachment = attachments.Single();
+                    Assert.Equal("PROFILE", attachment.GetString(nameof(AttachmentResult.Name)));
+                    Assert.Equal("image/PNG", attachment.GetString(nameof(AttachmentResult.ContentType)));
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.GetString(nameof(AttachmentResult.Hash)));
+                    Assert.Equal(3, attachment.GetNumber(nameof(AttachmentResult.Size)));
+                }
+            }
+        }
+
+        [Fact]
+        public void PutSameAttachmentTwiceDifferentContentType()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Fitzchak" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/png"));
+                    Assert.Equal(3, profileStream.Position);
+                    profileStream.Position = 0;
+                    store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/jpeg"));
+                }
+            }
+        }
+
+        [Fact]
+        public void ThrowNotReadableStream()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Fitzchak" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    profileStream.Dispose();
+                    var exceptoin = Assert.Throws<InvalidOperationException>(
+                        () => store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/png")));
+                    Assert.Equal("ff", exceptoin.Message);
+                }
+            }
+        }
+
+        [Fact]
+        public void ThrowIfStreamWithPositionNotZero()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Fitzchak" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/png"));
+                    var exceptoin = Assert.Throws<InvalidOperationException>(
+                        () => store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/jpeg")));
+                    Assert.Equal("ff", exceptoin.Message);
                 }
             }
         }
