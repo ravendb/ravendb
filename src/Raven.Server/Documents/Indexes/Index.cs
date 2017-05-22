@@ -1332,8 +1332,8 @@ namespace Raven.Server.Documents.Indexes
                 if (State == IndexState.Disabled)
                     return;
 
-                SetState(IndexState.Disabled);
                 Stop();
+                SetState(IndexState.Disabled);
             }
         }
 
