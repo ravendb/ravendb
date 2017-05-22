@@ -1305,6 +1305,9 @@ namespace Raven.Server.Rachis
 
         public DynamicJsonArray GetClusterErrorsFromLeader()
         {
+            if (_currentLeader == null) 
+                return new DynamicJsonArray();
+
             var dja = new DynamicJsonArray();
             while(_currentLeader.ErrorsList.TryDequeue(out var entry))
             {

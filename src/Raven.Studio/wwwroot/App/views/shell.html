@@ -12,7 +12,7 @@
                 <div class="form-control btn-toggle database-switcher">
                     <span class="database" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().name:''"></span>
                 </div>
-                <a data-bind="attr: { href: $root.appUrls.databases }" class="resources-link"><i class="icon-resources"></i></a>
+                <a data-bind="attr: { href: $root.appUrls.databases }" title="View all databases" class="resources-link"><i class="icon-resources"></i></a>
                 <div class="box-container">
                     <div class="database-filter-container">
                         <input type="search" class="database-filter form-control" data-bind="textInput: filter" placeholder="filter" />

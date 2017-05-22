@@ -764,9 +764,6 @@ namespace Raven.Server.ServerWide
 
         public DynamicJsonArray GetClusterErrors()
         {
-            if (_engine.LeaderTag == null)
-                return new DynamicJsonArray();
-
             return _engine.GetClusterErrorsFromLeader();
         }
 
