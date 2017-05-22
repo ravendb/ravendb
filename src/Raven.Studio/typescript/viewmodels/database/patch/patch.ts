@@ -24,6 +24,7 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
 import executeBulkDocsCommand = require("commands/database/documents/executeBulkDocsCommand");
 import popoverUtils = require("common/popoverUtils");
+import documentMetadata = require("models/database/documents/documentMetadata");
 import deleteDocumentsCommand = require("commands/database/documents/deleteDocumentsCommand");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
@@ -756,7 +757,10 @@ class patch extends viewModelBase {
                 new getDocumentWithMetadataCommand(this.patchDocument().selectedItem(), this.activeDatabase())
                     .execute()
                     .done((doc: document) => {
-                        const text = JSON.stringify(doc, null, 4);
+                        const docDto = doc.toDto(true);
+                        const metaDto = docDto["@metadata"];
+                        documentMetadata.filterMetadata(metaDto);
+                        const text = JSON.stringify(docDto, null, 4);
                         app.showBootstrapDialog(new showDataDialog("Document: " + doc.getId(), text, "javascript"));
                     })
                     .always(() => this.spinners.preview(false));
