@@ -14,7 +14,7 @@
                         </div>
 
                         <div class="settings-group" data-bind="foreach: getAvailableSections()">
-                            <div class="checkbox settings-item" data-bind="css: { 'active': $root.currentAdvancedSection() === name, 'hide-check': alwaysEnabled }">
+                            <div class="checkbox settings-item" data-bind="css: { 'active': $root.currentAdvancedSection() === name, 'nocheck': alwaysEnabled }">
                                 <input class="styled" type="checkbox" data-bind="checked: enabled, attr: { id: 'section_' + $index() }">
                                 <label data-bind="text: name, attr: { 'for': 'section_' + $index() }"></label>
                                 <button type="button" class="btn pull-right btn-toggle"

@@ -333,8 +333,15 @@
         padding-top: 0;
     }
 
-    &.hide-check {
+    &.nocheck {
+        padding-left: @grid-gutter-width/2 !important;
+        input {
+            display: none;
+        }
+
         label {
+            padding-left: 29px;
+
             &::before, &::after {
                 content: none !important;
             }
