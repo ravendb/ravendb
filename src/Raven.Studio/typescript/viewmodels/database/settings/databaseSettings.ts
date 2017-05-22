@@ -1,13 +1,9 @@
-import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
-import saveDatabaseSettingsCommand = require("commands/resources/saveDatabaseSettingsCommand");
 import document = require("models/database/documents/document");
 import database = require("models/resources/database");
-import jsonUtil = require("common/jsonUtil");
 import viewModelBase = require("viewmodels/viewModelBase");
-import viewSystemDatabaseConfirm = require("viewmodels/common/viewSystemDatabaseConfirm");
 import messagePublisher = require("common/messagePublisher");
 import accessHelper = require("viewmodels/shell/accessHelper");
 import eventsCollector = require("common/eventsCollector");
@@ -29,9 +25,9 @@ class databaseSettings extends viewModelBase {
 
         this.document.subscribe(doc => {
             if (doc) {
-                var docDto: any = doc.toDto();
+                const docDto: any = doc.toDto();
                 this.securedSettings = ko.toJSON(docDto.SecuredSettings);
-                var docText = this.stringify(doc.toDto());
+                const docText = this.stringify(doc.toDto());
                 this.documentText(docText);
             }
         });
@@ -49,7 +45,7 @@ class databaseSettings extends viewModelBase {
             this.fetchDatabaseSettings(db)
                 .done(() => deferred.resolve({ can: true }))
                 .fail((response: JQueryXHR) => {
-                    messagePublisher.reportError("Error fetching database document!", response.responseText, response.statusText);
+                    messagePublisher.reportError("Error fetching database settings!", response.responseText, response.statusText);
                     deferred.resolve({ redirect: appUrl.forStatus(db) });
                 });
         }
@@ -97,7 +93,10 @@ class databaseSettings extends viewModelBase {
 
     private stringify(obj: any) {
         const prettifySpacing = 4;
-        return JSON.stringify(obj, null, prettifySpacing);
+        return JSON.stringify(obj, (key, val) => {
+            // strip out null properties
+            return _.isNull(val) || _.isEqual(val, {}) ? undefined : val;
+        }, prettifySpacing);
     }
 }
 
