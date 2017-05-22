@@ -59,6 +59,9 @@ namespace Sparrow.Json
                     while (current != null)
                     {
                         var ctx = current.Value;
+                        var parent = current;
+                        current = current.Next;
+
                         if (ctx == null)
                             continue;
 
@@ -76,9 +79,7 @@ namespace Sparrow.Json
                             continue;
 
                         ctx.Dispose();
-                        current.Value = null;
-
-                        current = current.Next;
+                        parent.Value = null;
                     }
                 }
             }
@@ -154,14 +155,12 @@ namespace Sparrow.Json
                 if (Interlocked.CompareExchange(ref context.InUse, 1, 0) != 0)
                     continue;
                 context.Renew();
+                disposable = new ReturnRequestContext
                 {
-                    disposable = new ReturnRequestContext
-                    {
-                        Parent = this,
-                        Context = context
-                    };
-                    return true;
-                }
+                    Parent = this,
+                    Context = context
+                };
+                return true;
             }
 
             context = default(T);
@@ -216,12 +215,12 @@ namespace Sparrow.Json
                     while (current != null)
                     {
                         var ctx = current.Value;
+                        current = current.Next;
                         if (ctx == null)
                             continue;
                         if (Interlocked.CompareExchange(ref ctx.InUse, 1, 0) != 0)
                             continue;
                         ctx.Dispose();
-                        current = current.Next;
                     }
                 }
                 _contextPool.Dispose();
