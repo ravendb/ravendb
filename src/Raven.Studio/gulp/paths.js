@@ -1,7 +1,5 @@
 var path = require('path');
 
-var STUDIO_TEST_DIR = '../../test/Studio';
-
 var paths = {
     handlersToParse: [
         '../Raven.Server/**/*Handler.cs'
@@ -18,13 +16,6 @@ var paths = {
 
     aceDir: './wwwroot/Content/ace/',
 
-    test: {
-        dir: STUDIO_TEST_DIR,
-        tsSource: path.join(STUDIO_TEST_DIR, 'typescript/**/*.ts'),
-        tsOutput: path.join(STUDIO_TEST_DIR, 'js'),
-        setup: path.join(STUDIO_TEST_DIR, 'setup'),
-        html: path.join(STUDIO_TEST_DIR, 'test.html')
-    },
 
     lessSource: [
         './wwwroot/Content/css/styles.less',
