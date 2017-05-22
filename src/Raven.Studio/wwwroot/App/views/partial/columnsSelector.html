@@ -37,7 +37,7 @@
             <div class="form">
                 <div class="binding" data-bind="validationOptions: { errorsAsTitle: false, insertMessages: false }">
                     <input class="form-control input-sm" id="custom_column_binding" data-toggle="tooltip" title="Enter binding expression. Ex. this.ShipTo.City" 
-                           data-bind="textInput: customColumnForm.expression"  placeholder="Binding" />
+                           data-bind="textInput: customColumnForm.expression, hasFocus: customColumnForm.expressionHasFocus"  placeholder="Binding" />
                 </div>
                 <div class="alias">
                     <input class="form-control input-sm" data-bind="textInput: customColumnForm.header" placeholder="Alias" />
@@ -51,7 +51,6 @@
                     </button>
                 </div>
             </div>
-
             
             <hr />
         </div>
