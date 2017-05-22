@@ -401,18 +401,6 @@ class databases extends viewModelBase {
             });
     }
 
-    toggleRejectDatabaseClients(db: databaseInfo) {
-        const rejectClients = !db.rejectClients();
-
-        const message = rejectClients ? "reject clients mode" : "accept clients mode";
-        this.confirmationMessage("Are you sure?", "Switch to " + message)
-            .done(result => {
-                if (result.can) {
-                    //TODO: progress (this.spinners.toggleRejectMode), command, update db object, etc
-                }
-            });
-    }
-
     newDatabase() {
         const createDbView = new createDatabase();
         app.showBootstrapDialog(createDbView);
