@@ -1,10 +1,11 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Raven.Client.Util;
 using Sparrow.Collections;
 
 namespace Raven.Client.Documents.Changes
 {
-    internal class ChangesObservable<T, TConnectionState> : IObservable<T> where TConnectionState : IChangesConnectionState
+    internal class ChangesObservable<T, TConnectionState> : IChangesObservable<T> where TConnectionState : IChangesConnectionState
     {
         private readonly TConnectionState _connectionState;
         private readonly Func<T, bool> _filter;
@@ -54,6 +55,11 @@ namespace Raven.Client.Documents.Changes
             {
                 subscriber.OnError(e);
             }
+        }
+
+        public Task EnsureSubscribedNow()
+        {
+            return _connectionState.EnsureSubscribedNow();
         }
     }
 }

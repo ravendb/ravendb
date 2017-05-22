@@ -38,10 +38,11 @@ namespace Raven.Client.Documents.Operations
         {
             try
             {
-                var changes = await _changes().EnsureConnectedNow();
-                _subscription = changes
-                    .ForOperationId(_id)
-                    .Subscribe(this);
+                var changes = await _changes().EnsureConnectedNow().ConfigureAwait(false);
+                var observable = changes.ForOperationId(_id);
+                _subscription = observable.Subscribe(this);
+                await observable.EnsureSubscribedNow().ConfigureAwait(false);
+
                 await FetchOperationStatus().ConfigureAwait(false);
             }
             catch (Exception e)
