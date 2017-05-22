@@ -4,6 +4,7 @@ using System.IO;
 using System.Net.Http;
 using System.Text;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
@@ -67,7 +68,7 @@ namespace Raven.Client.Documents.Commands.Batches
                 var multipartContent = new MultipartContent {request.Content};
                 foreach (var stream in _attachmentStreams)
                 {
-                    var streamContent = new StreamContent(stream);
+                    var streamContent = new AttachmentStreamContent(stream, CancellationToken);
                     streamContent.Headers.TryAddWithoutValidation("Command-Type", "AttachmentStream");
                     multipartContent.Add(streamContent);
                 }
