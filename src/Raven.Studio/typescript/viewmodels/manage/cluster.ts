@@ -40,6 +40,8 @@ class cluster extends viewModelBase {
     }
 
     addAnotherServerToCluster() {
+        eventsCollector.default.reportEvent("cluster", "add-server");
+
         const serverUrl = prompt("Enter server URL:");
         if (serverUrl) {
             new addNodeToClusterCommand(serverUrl)
@@ -151,7 +153,7 @@ class cluster extends viewModelBase {
     }
 
     addAnotherServerToCluster(forcedAdd: boolean) {
-        eventsCollector.default.reportEvent("cluster", "add-server");
+        
 
         var newNode = nodeConnectionInfo.empty();
         var dialog = new editNodeConnectionInfoDialog(newNode, false);

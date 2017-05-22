@@ -1,89 +1,109 @@
-<section class="content-margin">
-    
-    <button data-bind="click: addAnotherServerToCluster" class="btn btn-default"><i class="icon-plus"></i> <span>Add another server to cluster</span></button>
-    
-    <button data-bind="click: refresh" class="btn btn-default"><i class="icon-refresh"></i> <span>Refresh</span></button>
-    
-    
-    <table class="table table-condensed table-striped">
-        <thead>
-            <tr>
-                <th>Tag</th>
-                <th>Server Url</th>
-                <th>Type</th>
-                <th>Delete</th>
-            </tr>
-        </thead>
-        <tbody data-bind="foreach: topology().nodes">
-            <tr>
-                <td>
-                    <div data-bind="text: tag"></div>
-                </td>
-                <td>
-                    <div data-bind="text: serverUrl"></div>
-                </td>
-                <td data-bind="text: type"></td>
-                <td><button class="btn btn-default" data-bind="click: _.partial($parent.deleteNode, $data)">Delete</button></td>
-            </tr>
-        </tbody>
-    </table>
+<div class="cluster flex-vertical absolute-fill content-margin">
+    <div class="row flex-row flex-grow">
+        <div class="col-sm-12 col-lg-6 flex-vertical">
 
-    <!-- TODO:
-    <div data-bind="visible: settingsAccess.isForbidden" class="text-center">
-        <h4 class="page-header text-info">You are not authorized to view this page!</h4>
+            <div class="flex-header">
+                <button data-bind="click: addAnotherServerToCluster" class="btn btn-primary"><i class="icon-plus"></i> <span>Add Node to cluster</span></button>
+                <button data-bind="click: refresh" class="btn btn-default"><i class="icon-refresh"></i> <span>Refresh</span></button>
+            </div>
+
+            <div class="scroll flex-grow" data-bind="foreach: topology().nodes">
+                <div class="panel destination-item">
+                    <div data-state-text="active" class="state state-success"></div>
+                    <div class="padding padding-sm destination-info">
+                        <div class="info-container">
+                            <div class="flex-horizontal">
+                                <div class="node flex-grow">
+                                    <h5>TAG</h5>
+                                    <div class="flex-horizontal">
+                                        <div>
+                                            <h3>
+                                                <a class="destination-name" data-bind="attr: { href: serverUrl }" target="_blank">
+                                                    <i data-bind="attr : { class: $root.topology().nodeTag() === tag() ? 'icon-home' : 'icon-dbgroup' }"></i>
+                                                    <span data-bind="text: 'Node ' + tag()"></span>
+                                                </a>
+                                            </h3>
+                                        </div>
+                                        <div data-bind="visible: $root.topology().leader() === tag()">
+                                            <span class="label label-warning">LEADER</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="node-type">
+                                    <h5>TYPE</h5>
+                                    <h3><i data-bind="attr: { class: cssIcon }" ></i> <span data-bind="text: type"></span></h3>
+                                </div>
+                            </div>
+                            <div class="adress">
+                                <h5>ADRESS</h5>
+                                <small data-bind="text: serverUrl">
+                                </small>
+                            </div>
+                        </div>
+                        <div class="flex-separator"></div>
+                        <div class="actions-container">
+                            <div class="actions">
+                                <!-- TODO 
+                                <button class="btn btn-default"><i class="icon-arrow-filled-up"></i> <span>Promote</span></button>
+                                <button class="btn btn-default"><i class="icon-arrow-filled-down"></i> <span>Demote</span></button>
+                                    <button class="btn btn-default"><i class="icon-stepdown"></i> <span>Step down</span></button>
+                                    -->
+                                <button class="btn btn-danger" data-bind="click: _.partial($parent.deleteNode, $data)"><i class="icon-disconnected"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-12 col-lg-6 flex-vertical">
+            <div class="flex-horizontal flex-header">
+                <div></div><h3>DB group topology<i class="icon-info text-info"></i></h3>
+                <div class="flex-separator"></div>
+                <div class="btn-group dropdown-right">
+                    <button class="btn btn-default dropdown-toggle btn-upcoming" disabled="disabled" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                        <i class="icon-export"></i><span>Download topology</span>
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                        <li><a href="#">.zip</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="panel flex-grow">
+                <div class="row">
+                    <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
+                        <br /><br /><br />
+                        <i class="icon-xl icon-hammer-driver text-warning"></i>
+                        <h2 class="text-center text-warning">
+                            Graph is under development
+                        </h2>
+                    </div>
+                </div>
+            </div>
+            <div class="legend">
+                <div class="row">
+                    <div class="col-sm-8">
+                        <h5>Node type</h5>
+                        <div class="row">
+                            <div class="col-xs-6">
+                                <div><i class="icon-circle-filled text-info"></i> <span>CLUSTER NODE</span></div>
+                                <div><i class="icon-circle-filled text-warning"></i> <span>CLUSTER LEADER</span></div>
+                            </div>
+                            <div class="col-xs-6">
+                                <div><i class="icon-member"></i> <span>Member</span></div>
+                                <div><i class="icon-watcher"></i> <span>Watcher</span></div>
+                                <div><i class="icon-promotable"></i> <span>Promotable</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <h5>Connection status</h5>
+                        <div><i class="icon-arrow text-success"></i> <span>ACTIVE CONNECTION</span></div>
+                        <div><i class="icon-arrow-dashed text-warning"></i> <span>DISABLED CONNECTION</span></div>
+                        <div><i class="icon-arrow-dashed text-danger"></i> <span>BROKEN CONNECTION</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <div data-bind="if: !settingsAccess.isForbidden()">
-        <div data-bind="if: !clusterMode()">
-            <div class="panel panel-default" data-bind="visible: $root.canCreateCluster()">
-                <div class="panel-heading">
-                    <div class="pull-right text-warning text-height-fix" data-bind="visible: developerLicense">Enterprise feature</div>
-                    <span class="text-height-fix">Cluster configuration</span>
-                </div>
-                <div class="panel-body">
-                    <div class="text-center">
-                        <h3 class="text-info">
-                            This server is not part of cluster. <small data-bind="visible: !settingsAccess.isReadOnly()">Go ahead and <a href="#" data-bind="click: createCluster">create cluster</a>.</small>
-                        </h3>
-                    </div>
-                    
-                </div>
-            </div>
-            <div class="panel panel-default" data-bind="visible: !$root.canCreateCluster()">
-                <div class="panel-heading">
-                    Cluster configuration
-                </div>
-                <div class="panel-body">
-                    <div class="text-center">
-                        <h3 class="text-info">
-                            Enterprise feature. <a href="http://ravendb.net/buy" target="_blank">Upgrade your license</a>.
-                        </h3>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div data-bind="if: clusterMode()">
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    
-                    <button class="btn btn-default" data-bind="autoRefresh: { duration: 5000, onRefresh: $root.refresh.bind($root), active:false }"></button>
-                    <div class="btn-group">
-                        <button id="operationType" type="button" class="btn btn-danger dropdown-toggle" data-bind="visible: !settingsAccess.isReadOnly()" data-toggle="dropdown">
-                            <span>Emergency cluster operations</span>
-                            <span class="caret"></span>
-                        </button>
-                        <ul class="dropdown-menu" role="menu">
-                            <li><a href="#" data-bind="click: initializeNewCluster">Secede from cluster - rude step down into a single node cluster</a></li>
-                            <li><a href="#" data-bind="click: addAnotherServerToCluster.bind($root, true)">Kidnap node into cluster - force a node to the current cluster</a></li>
-                            <li><a href="#" data-bind="click: removeClustering.bind($root)">Remove cluster entirely and perform cleanup.</a></li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="panel-body">
-                    
-                </div>
-            </div>
-        </div>
-    </div>-->
-    
-</section>
+</div>
