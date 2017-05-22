@@ -89,9 +89,13 @@
                             z-index: 1;
                             position: relative;
                             border-left-color: darken(@gray-darker,2%);
-                            background-color: @gray-dark;
+
+                            &:not(.btn-danger) {
+                                background-color: @gray-dark;
+                            }
                         }
                     }
+
                     &.active {
                         .btn:not(.btn-danger) {
                             .btn.active;
@@ -99,7 +103,7 @@
                     }
                 }
 
-                .btn:hover {
+                .btn:not(.btn-danger):hover {
                     background-color: @gray-dark;
                 }
             }
@@ -198,7 +202,6 @@
 
     .modal-body {
         overflow: hidden;
-
     }
 
     .form-container {
@@ -209,7 +212,6 @@
         -ms-transition: all .3s ease-in-out;
         -o-transition: all .3s ease-in-out;
         transition: all .3s ease-in-out;
-
         -moz-transform: translateX(0);
         -webkit-transform: translateX(0);
         -o-transform: translateX(0);
@@ -250,7 +252,6 @@
             }
         }
     }
-
 }
 
 #index-performance-operation-details {
@@ -264,7 +265,6 @@
         margin-left: 10px;
         font-size: 20px;
     }
-
 }
 
 .modal-details {
