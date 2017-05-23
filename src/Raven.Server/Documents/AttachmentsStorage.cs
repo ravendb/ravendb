@@ -135,10 +135,10 @@ namespace Raven.Server.Documents
 
             DocumentKeyWorker.GetSliceFromKey(context, documentId, out Slice lowerDocumentId);
 
+            // This will validate that we cannot put an attachment on a conflicted document
             var hasDoc = TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out TableValueReader tvr);
             if (hasDoc == false)
                 throw new InvalidOperationException($"Cannot put attachment {name} on a non existent document '{documentId}'.");
-
 
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, name, out Slice lowerName, out Slice namePtr);
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr);
@@ -185,9 +185,9 @@ namespace Raven.Server.Documents
                     }
                     else
                     {
-                        // TODO: RavenDB-7160 Decide how to resolve attachment's conflicts.
-                        // Once we do so, make sure to adjust the code here,
-                        // as in case of conflict we might have a few partial keys here...
+                        var putStream = true;
+
+                        // We already asserted that the document is not in conflict, so we might have just one partial key, not more.
                         using (GetAttachmentPartialKey(context, keySlice, base64Hash.Size, lowerContentType.Size, out Slice partialKeySlice))
                         {
                             if (table.SeekOnePrimaryKeyPrefix(partialKeySlice, out TableValueReader partialTvr))
@@ -195,7 +195,8 @@ namespace Raven.Server.Documents
                                 // Delete the attachment stream only if we have a different hash
                                 using (DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.Hash, ref partialTvr, out Slice existingHash))
                                 {
-                                    if (existingHash.Content.Match(base64Hash.Content) == false)
+                                    putStream = existingHash.Content.Match(base64Hash.Content) == false;
+                                    if (putStream)
                                     {
                                         using (DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.LoweredDocumentIdAndLoweredNameAndType,
                                             ref partialTvr, out Slice existingKey))
@@ -221,7 +222,10 @@ namespace Raven.Server.Documents
                             table.Insert(tbv);
                         }
 
-                        PutAttachmentStream(context, keySlice, base64Hash, stream);
+                        if (putStream)
+                        {
+                            PutAttachmentStream(context, keySlice, base64Hash, stream);
+                        }
                     }
                 }
 
