@@ -376,12 +376,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             var rewrittenExpression = (CSharpSyntaxNode)mapRewriter.Visit(expression);
 
-            var ravenLinqOptimizer = new RavenLinqOptimizer
-            {
-                FieldNamesValidator = fieldValidator
-            };
-
-            var optimized = ravenLinqOptimizer.Visit(new RavenLinqPrettifier().Visit(rewrittenExpression))
+            var optimized = new RavenLinqOptimizer(fieldValidator).Visit(new RavenLinqPrettifier().Visit(rewrittenExpression))
                 as StatementSyntax;
 
             var collectionName = string.IsNullOrWhiteSpace(mapRewriter.CollectionName) ? Constants.Documents.Collections.AllDocumentsCollection : mapRewriter.CollectionName;

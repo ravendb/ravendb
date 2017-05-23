@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using System.Linq;
 using System.Linq.Expressions;
+using Raven.Client.Util;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
@@ -223,7 +224,27 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
     internal class RavenLinqOptimizer : CSharpSyntaxRewriter
     {
-        public FieldNamesValidator FieldNamesValidator { get; set; }
+        private readonly FieldNamesValidator _validator;
+
+        public RavenLinqOptimizer(FieldNamesValidator validator)
+        {
+            if (validator.Fields == null || validator.Fields.Length == 0)
+                throw new InvalidOperationException("Validator should have been validating original indexing func");
+
+            _validator = validator;
+        }
+
+        private int _recursiveCallCounter = 0;
+
+        public IDisposable RecursiveCall()
+        {
+            _recursiveCallCounter++;
+
+            return new DisposableAction(() =>
+            {
+                _recursiveCallCounter--;
+            });
+        }
 
         public override SyntaxNode VisitQueryExpression(QueryExpressionSyntax node)
         {
@@ -237,8 +258,11 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (queryExpressionSyntax != null &&
                 StripExpressionParentParenthesis(queryExpressionSyntax) is QueryExpressionSyntax)
             {
-                parent = VisitQueryExpression(queryExpressionSyntax) as ForEachStatementSyntax;
-
+                using (RecursiveCall())
+                {
+                    parent = VisitQueryExpression(queryExpressionSyntax) as ForEachStatementSyntax;
+                }
+                
                 if (parent != null)
                     node =
                         node.WithFromClause(
@@ -309,8 +333,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
             if (parent == null)
             {
-                if (FieldNamesValidator != null && FieldNamesValidator.Validate(stmt.ToFullString(), selectClauseSyntax.Expression, throwOnError: false) == false)
-                    ThrowIndexRewritingException(node, stmt, FieldNamesValidator);
+                if (_recursiveCallCounter == 0 && _validator.Validate(stmt.ToFullString(), selectClauseSyntax.Expression, throwOnError: false) == false)
+                    ThrowIndexRewritingException(node, stmt);
 
                 return stmt;
             }
@@ -339,11 +363,11 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             );
         }
 
-        private void ThrowIndexRewritingException(QueryExpressionSyntax node, ForEachStatementSyntax stmt, FieldNamesValidator validator)
+        private void ThrowIndexRewritingException(QueryExpressionSyntax node, ForEachStatementSyntax stmt)
         {
             throw new InvalidOperationException("Rewriting the function to an optimized version resulted in creating invalid indexing outputs. " +
-                                                $"The output needs to have the following fields: [{string.Join(", ", validator.Fields)}] " +
-                                                $"while after the optimization it has: [{string.Join(", ", validator.ExtractedFields)}].{Environment.NewLine}" +
+                                                $"The output needs to have the following fields: [{string.Join(", ", _validator.Fields)}] " +
+                                                $"while after the optimization it has: [{string.Join(", ", _validator.ExtractedFields)}].{Environment.NewLine}" +
                                                 $"Original indexing func:{Environment.NewLine}{node.ToFullString()}{Environment.NewLine}{Environment.NewLine}" +
                                                 $"Optimized indexing func:{Environment.NewLine}{stmt.ToFullString()}");
         }
