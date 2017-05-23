@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -173,6 +174,7 @@ namespace Raven.Server.Web.System
         public async Task Put()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var nodesAddedTo = new List<string>();
 
             string errorMessage;
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
@@ -206,7 +208,7 @@ namespace Raven.Server.Web.System
                 else
                 {
                     var factor = Math.Max(1, GetIntValueQueryString("replication-factor", required: false) ?? 0);
-                    topology = AssignNodesToDatabase(context, factor, name, json);
+                    topology = AssignNodesToDatabase(context, factor, name, json, out nodesAddedTo);
                 }
 
 
@@ -223,14 +225,15 @@ namespace Raven.Server.Web.System
                     {
                         [nameof(DatabasePutResult.ETag)] = index,
                         [nameof(DatabasePutResult.Key)] = name,
-                        [nameof(DatabasePutResult.Topology)] = topology.ToJson()
+                        [nameof(DatabasePutResult.Topology)] = topology.ToJson(),
+                        [nameof(DatabasePutResult.NodesAddedTo)] = nodesAddedTo
                     });
                     writer.Flush();
                 }
             }
         }
 
-        private DatabaseTopology AssignNodesToDatabase(TransactionOperationContext context, int factor, string name, BlittableJsonReaderObject json)
+        private DatabaseTopology AssignNodesToDatabase(TransactionOperationContext context, int factor, string name, BlittableJsonReaderObject json, out List<string> nodesAddedTo)
         {
             var topology = new DatabaseTopology();
 
@@ -242,16 +245,19 @@ namespace Raven.Server.Web.System
                 .ToArray();
 
             var offset = new Random().Next();
+            nodesAddedTo = new List<string>();
 
             for (int i = 0; i < Math.Min(allNodes.Length, factor); i++)
             {
                 var selectedNode = allNodes[(i + offset) % allNodes.Length];
+                var url = clusterTopology.GetUrlFromTag(selectedNode);
                 topology.Members.Add(new DatabaseTopologyNode
                 {
                     Database = name,
                     NodeTag = selectedNode,
-                    Url = clusterTopology.GetUrlFromTag(selectedNode)
+                    Url = url
                 });
+                nodesAddedTo.Add(url);
             }
 
             var topologyJson = EntityToBlittable.ConvertEntityToBlittable(topology, DocumentConventions.Default, context);
@@ -321,7 +327,7 @@ namespace Raven.Server.Web.System
                 }
                 else
                 {
-                    await ServerStore.Cluster.WaitForIndexNotification(index);;
+                    await ServerStore.Cluster.WaitForIndexNotification(index);
                 }        
                 ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Update));
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
@@ -554,6 +560,7 @@ namespace Raven.Server.Web.System
         public long ETag { get; set; }
         public string Key { get; set; }
         public DatabaseTopology Topology { get; set; }
+        public List<string> NodesAddedTo { get; set; }
     }
 
     public class DatabaseDeleteResult
