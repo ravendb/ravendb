@@ -51,7 +51,10 @@ namespace Raven.Client.Documents.Session
                 throw new InvalidOperationException($"Can't store attachment {name} of document {documentId}, there is a deferred command registered for this document to be deleted.");
 
             if (_deferredCommands.OfType<PutAttachmentCommandData>().Any(c => c.Key == documentId && c.Name == name))
-                throw new InvalidOperationException($"Can't store attachment {name} of document {documentId}, there is a deferred command registered for this document to be deleted.");
+                throw new InvalidOperationException($"Can't store attachment {name} of document {documentId}, there is a deferred command registered to create an attachment with the same name.");
+
+            if (_deferredCommands.OfType<DeleteAttachmentCommandData>().Any(c => c.Key == documentId && c.Name == name))
+                throw new InvalidOperationException($"Can't store attachment {name} of document {documentId}, there is a deferred command registered to delete an attachment with the same name.");
 
             if (DocumentsById.TryGetValue(documentId, out DocumentInfo documentInfo) &&
                 DeletedEntities.Contains(documentInfo.Entity))
@@ -93,7 +96,10 @@ namespace Raven.Client.Documents.Session
                 throw new InvalidOperationException($"Can't delete attachment {name} of document {documentId}, there is a deferred command registered for this document to be deleted.");
 
             if (_deferredCommands.OfType<PutAttachmentCommandData>().Any(c => c.Key == documentId && c.Name == name))
-                throw new InvalidOperationException($"Can't delete attachment {name} of document {documentId}, there is a deferred command registered for this document to be deleted.");
+                throw new InvalidOperationException($"Can't delete attachment {name} of document {documentId}, there is a deferred command registered to create an attachment with the same name.");
+
+            if (_deferredCommands.OfType<DeleteAttachmentCommandData>().Any(c => c.Key == documentId && c.Name == name))
+                throw new InvalidOperationException($"Can't delete attachment {name} of document {documentId}, there is a deferred command registered to delete an attachment with the same name.");
 
             if (DocumentsById.TryGetValue(documentId, out DocumentInfo documentInfo) &&
                 DeletedEntities.Contains(documentInfo.Entity))
