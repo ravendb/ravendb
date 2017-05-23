@@ -61,6 +61,12 @@ namespace Raven.Server
                 return 0;
             }
 
+            if (PlatformDetails.RunningOnPosix == false && CommandLineSwitches.RunAsService)
+            {
+                Console.WriteLine("\"--run-as-service\" switch is not available on Windows. Use --register-service switch to register the service and services.msc for service management.");
+                return 1;
+            }
+
             WelcomeMessage.Print();
 
             var configuration = new RavenConfiguration(null, ResourceType.Server, CommandLineSwitches.CustomConfigPath);
