@@ -287,6 +287,91 @@ where docBarSomeDictionaryItem.Item1 != docBarSomeOtherDictionaryItem.Item2
         }
     }
 }")]
+        [InlineData(@"from q in docs.Questions
+                    select new
+                    {
+                        Question = q,
+                    } into item
+                    select new
+                    {
+                        Month = item.Question.CreationDate,
+                        Users = 1
+                    }", @"foreach (var q in docs.Questions)
+{
+    var item = new
+    {
+    Question = q, }
+
+    ;
+    yield return new
+    {
+    Month = item.Question.CreationDate, Users = 1
+    }
+
+    ;
+}")]
+        [InlineData(@"docs.Questions.Select(x => new
+            {
+                Question = x
+            }).Select(x => new
+            {
+                Month = x,
+                Users = 1
+            })", @"foreach (var x in docs.Questions)
+{
+    var x = new
+    {
+    Question = x
+    }
+
+    ;
+    yield return new
+    {
+    Month = x, Users = 1
+    }
+
+    ;
+}")]
+        [InlineData(@"from q in docs.Questions
+                from a in q.Answers
+                select new
+                {
+                    QuestionCreatedAt = q.CreationDate,
+                    AnswerCreatedAt = a.CreationDate,
+                    Answers = q.Answers
+                }
+                into dates
+                where dates.QuestionCreatedAt != DateTimeOffset.MinValue
+                from answersAgain in dates.Answers
+                let a = answersAgain
+                select new
+                {
+                    Answer = a,
+                    Dates = dates
+                }", @"foreach (var q in docs.Questions)
+{
+    foreach (var a in q.Answers)
+    {
+        var dates = new
+        {
+        QuestionCreatedAt = q.CreationDate, AnswerCreatedAt = a.CreationDate, Answers = q.Answers
+        }
+
+        ;
+        if ((dates.QuestionCreatedAt != DateTimeOffset.MinValue) == false)
+            continue;
+        foreach (var answersAgain in dates.Answers)
+        {
+            var a = answersAgain;
+            yield return new
+            {
+            Answer = a, Dates = dates
+            }
+
+            ;
+        }
+    }
+}")]
         public void CanOptimizeExpression(string code, string optimized)
         {
             var result = OptimizeExpression(code);
