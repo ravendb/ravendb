@@ -37,8 +37,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
-        public int ProcessedFields => _processedFields;
-
         public void Reset()
         {
             _bufferPos = 0;
