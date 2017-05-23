@@ -27,9 +27,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
             if (last == null)
                 return node;
-           
 
-            Fields = RewritersHelper.ExtractFields(last);
+
+            VisitAnonymousObjectCreationExpression(last);
 
             return node;
         }
@@ -52,7 +52,17 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (last == null)
                 return node;
 
-            Fields = RewritersHelper.ExtractFields(last);
+            VisitAnonymousObjectCreationExpression(last);
+
+            return node;
+        }
+
+        public override SyntaxNode VisitAnonymousObjectCreationExpression(AnonymousObjectCreationExpressionSyntax node)
+        {
+            if (Fields != null)
+                return node;
+
+            Fields = RewritersHelper.ExtractFields(node);
 
             return node;
         }

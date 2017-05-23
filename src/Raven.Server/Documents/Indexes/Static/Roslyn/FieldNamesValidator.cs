@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
 
         private string _baseFunction;
 
-        public void Validate(string indexingFunction, ExpressionSyntax expression)
+        public bool Validate(string indexingFunction, ExpressionSyntax expression, bool throwOnError = true)
         {
             _visitor.Fields = null;
             _visitor.Visit(expression);
@@ -26,11 +26,11 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
             {
                 _baseFunction = indexingFunction;
                 _baseFields = _visitor.Fields;
-                return;
+                return true;
             }
 
             if (_baseFields.SetEquals(_visitor.Fields))
-                return;
+                return true;
 
             var message = $@"Map and Reduce functions of a index must return identical types.
 Baseline function		: {_baseFunction}
@@ -40,9 +40,14 @@ Common fields			: {string.Join(", ", _baseFields.Intersect(_visitor.Fields))}
 Missing fields			: {string.Join(", ", _baseFields.Except(_visitor.Fields))}
 Additional fields		: {string.Join(", ", _visitor.Fields.Except(_baseFields))}";
 
-            throw new InvalidOperationException(message);
+            if (throwOnError)
+                throw new InvalidOperationException(message);
+
+            return false;
         }
 
         public string[] Fields => _baseFields.ToArray();
+
+        public string[] ExtractedFields => _visitor.Fields.ToArray();
     }
 }
