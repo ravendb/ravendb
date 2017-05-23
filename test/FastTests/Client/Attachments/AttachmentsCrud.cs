@@ -702,7 +702,7 @@ namespace FastTests.Client.Attachments
                     profileStream.Dispose();
                     var exceptoin = Assert.Throws<InvalidOperationException>(
                         () => store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/png")));
-                    Assert.Equal("ff", exceptoin.Message);
+                    Assert.Equal("Cannot put an attachment with a not readable stream. Make sure that the specified stream is readable and was not disposed.", exceptoin.Message);
                 }
             }
         }
@@ -723,7 +723,7 @@ namespace FastTests.Client.Attachments
                     store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/png"));
                     var exceptoin = Assert.Throws<InvalidOperationException>(
                         () => store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/jpeg")));
-                    Assert.Equal("ff", exceptoin.Message);
+                    Assert.Equal($"Cannot put an attachment with a stream that have position which isn't zero (The position is: {3}) since this is most of the time not intended and it is a common mistake.", exceptoin.Message);
                 }
             }
         }
