@@ -169,17 +169,17 @@ namespace Raven.Client.Server
                     {
                         addDestinations.Add(newEnum.Current);
                         hasNewValues = newEnum.MoveNext();
-                        break;
+                        continue;
                     }
                     if (res < 0)
                     {
                         removeDestinations.Add(oldEnum.Current);
                         hasOldValues = oldEnum.MoveNext();
-                        break;
+                        continue;
                     }
+
                     hasNewValues = newEnum.MoveNext();
                     hasOldValues = oldEnum.MoveNext();
-                    break;
                 }
 
                 // the remaining nodes of the old destinations should be removed
