@@ -7,6 +7,8 @@ namespace Raven.Server.Documents.Indexes
     {
         bool MoveNext(out IEnumerable resultsOfCurrentDocument);
 
+        void OnError();
+
         Document Current { get; }
     }
 }
