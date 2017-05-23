@@ -165,23 +165,21 @@ namespace Raven.Client.Server
                 while (hasNewValues && hasOldValues)
                 {
                     var res = oldEnum.Current.CompareTo(newEnum.Current);
-                    switch (res)
+                    if (res > 0)
                     {
-                        case 1:
-                            addDestinations.Add(newEnum.Current);
-                            hasNewValues = newEnum.MoveNext();
-                            break;
-                        case -1:
-                            removeDestinations.Add(oldEnum.Current);
-                            hasOldValues = oldEnum.MoveNext();
-                            break;
-                        case 0:
-                            hasNewValues = newEnum.MoveNext();
-                            hasOldValues = oldEnum.MoveNext();
-                            break;
-                        default:// should never happen
-                            throw new InvalidDataException($"{res} is an invalid comparison result between {oldEnum.Current.Humane} and {newEnum.Current.Humane}");
+                        addDestinations.Add(newEnum.Current);
+                        hasNewValues = newEnum.MoveNext();
+                        continue;
                     }
+                    if (res < 0)
+                    {
+                        removeDestinations.Add(oldEnum.Current);
+                        hasOldValues = oldEnum.MoveNext();
+                        continue;
+                    }
+
+                    hasNewValues = newEnum.MoveNext();
+                    hasOldValues = oldEnum.MoveNext();
                 }
 
                 // the remaining nodes of the old destinations should be removed

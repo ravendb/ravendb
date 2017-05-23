@@ -111,12 +111,14 @@ namespace Raven.Server.ServerWide
         public RachisConsensus<ClusterStateMachine> Engine => _engine;
 
         private ClusterMaintenanceSupervisor _clusterMaintenanceSupervisor;
+
         public Dictionary<string, ClusterNodeStatusReport> ClusterStats()
         {
             if (_engine.LeaderTag != NodeTag)
                 throw new NotLeadingException($"Stats can be requested only from the raft leader {_engine.LeaderTag}");
             return _clusterMaintenanceSupervisor?.GetStats();
         }
+
         public async Task ClusterMaintanceSetupTask()
         {
             while (true)
@@ -298,7 +300,7 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            Task.Run(ClusterMaintanceSetupTask, ServerShutdown);
+            //Task.Run(ClusterMaintanceSetupTask, ServerShutdown);
         }
 
         public IEnumerable<string> GetSecretKeysNames(TransactionOperationContext context)
