@@ -221,8 +221,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         }
     }
 
-    public class RavenLinqOptimizer : CSharpSyntaxRewriter
+    internal class RavenLinqOptimizer : CSharpSyntaxRewriter
     {
+        public FieldNamesValidator FieldNamesValidator { get; set; }
 
         public override SyntaxNode VisitQueryExpression(QueryExpressionSyntax node)
         {
@@ -276,21 +277,21 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                         )
                     )
                 );
-                
+
                 selectClauseSyntax = continuation.Body.SelectOrGroup as SelectClauseSyntax;
-                
+
                 if (selectClauseSyntax == null)
                 {
                     return base.VisitQueryExpression(node);
                 }
-                
-                body = body.InsertNodesBefore(FindDummyYieldIn(body), new[] {selectIntoVar});
-                
+
+                body = body.InsertNodesBefore(FindDummyYieldIn(body), new[] { selectIntoVar });
+
                 foreach (var clause in continuation.Body.Clauses)
                 {
-                    if (TryRewriteBodyClause(clause, dummyYield, ref body)) 
+                    if (TryRewriteBodyClause(clause, dummyYield, ref body))
                         continue;
-                
+
                     return base.VisitQueryExpression(node);
                 }
             }
@@ -307,7 +308,12 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             );
 
             if (parent == null)
+            {
+                if (FieldNamesValidator != null && FieldNamesValidator.Validate(stmt.ToFullString(), selectClauseSyntax.Expression, throwOnError: false) == false)
+                    ThrowIndexRewritingException(node, stmt, FieldNamesValidator);
+
                 return stmt;
+            }
 
             var parentBody = (BlockSyntax)parent.Statement;
 
@@ -331,6 +337,15 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             return parent.WithStatement(
                 parentBody.ReplaceNode(yieldStatementSyntax, parentVar).AddStatements(statementSyntax)
             );
+        }
+
+        private void ThrowIndexRewritingException(QueryExpressionSyntax node, ForEachStatementSyntax stmt, FieldNamesValidator validator)
+        {
+            throw new InvalidOperationException("Rewriting the function to an optimized version resulted in creating invalid indexing outputs. " +
+                                                $"The output needs to have the following fields: [{string.Join(", ", validator.Fields)}] " +
+                                                $"while after the optimization it has: [{string.Join(", ", validator.ExtractedFields)}].{Environment.NewLine}" +
+                                                $"Original indexing func:{Environment.NewLine}{node.ToFullString()}{Environment.NewLine}{Environment.NewLine}" +
+                                                $"Optimized indexing func:{Environment.NewLine}{stmt.ToFullString()}");
         }
 
         private static bool TryRewriteBodyClause(QueryClauseSyntax clause, YieldStatementSyntax dummyYield, ref BlockSyntax body)
