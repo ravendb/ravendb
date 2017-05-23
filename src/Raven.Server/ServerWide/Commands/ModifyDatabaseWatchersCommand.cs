@@ -38,7 +38,12 @@ namespace Raven.Server.ServerWide.Commands
 
         public override void FillJson(DynamicJsonValue json)
         {
-            json[nameof(Watchers)] = new DynamicJsonArray(Watchers);
+            var watchers = new DynamicJsonArray();
+            foreach (var w in Watchers)
+            {
+                watchers.Add(w.ToJson());
+            }
+            json[nameof(Watchers)] = watchers;
         }
     }
 }
