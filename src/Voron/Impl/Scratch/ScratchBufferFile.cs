@@ -10,13 +10,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Sparrow.Platform.Win32;
-using Voron.Data;
 using Voron.Global;
 using Voron.Impl.Paging;
-#if VALIDATE
-using System.Diagnostics;
-#endif
 
 namespace Voron.Impl.Scratch
 {
@@ -197,7 +192,7 @@ namespace Voron.Impl.Scratch
                 if (_allocatedPages.TryGetValue(pageNumber, out temporary) != false)
                 {
                     var page = new Page(pagePointer);
-                    ulong pageSize = (ulong)_scratchPager.GetNumberOfPages(page) * Constants.Storage.PageSize;
+                    ulong pageSize = (ulong) (page.IsOverflow ? VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize) : 1) * Constants.Storage.PageSize;
                     // This has to be forced, as the scratchPager does NOT protect on allocate,
                     // (on the contrary, we force protection/unprotection when freeing a page and allocating it
                     // from the reserve)
