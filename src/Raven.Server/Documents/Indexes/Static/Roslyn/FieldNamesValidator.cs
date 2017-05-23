@@ -31,8 +31,10 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
 
             if (_baseFields.SetEquals(_visitor.Fields))
                 return true;
-
-            var message = $@"Map and Reduce functions of a index must return identical types.
+            
+            if (throwOnError)
+            {
+                var message = $@"Map and Reduce functions of a index must return identical types.
 Baseline function		: {_baseFunction}
 Non matching function	: {indexingFunction}
 
@@ -40,8 +42,8 @@ Common fields			: {string.Join(", ", _baseFields.Intersect(_visitor.Fields))}
 Missing fields			: {string.Join(", ", _baseFields.Except(_visitor.Fields))}
 Additional fields		: {string.Join(", ", _visitor.Fields.Except(_baseFields))}";
 
-            if (throwOnError)
                 throw new InvalidOperationException(message);
+            }
 
             return false;
         }
