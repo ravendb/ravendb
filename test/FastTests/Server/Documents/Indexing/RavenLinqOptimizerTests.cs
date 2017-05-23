@@ -1,6 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Raven.Server.Documents.Indexes.Static.Roslyn;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Xunit;
 
@@ -119,6 +120,18 @@ namespace FastTests.Server.Documents.Indexing
     foreach (var x2 in e2)
     {
         yield return x2.v;
+    }
+}", Skip = "RavenDB-7170")]
+        [InlineData(@"e1.SelectMany(x1 => e2, (x1, x2) => new { x2.v })", @"foreach (var x1 in e1)
+{
+    foreach (var x2 in e2)
+    {
+        yield return new
+        {
+        x2.v
+        }
+
+        ;
     }
 }")]
         [InlineData(@"docs.Customers.SelectMany(c => c.Orders, (customer, order) => new {Date = order.Date, Product = order.Product})"
@@ -384,7 +397,13 @@ where docBarSomeDictionaryItem.Item1 != docBarSomeOtherDictionaryItem.Item2
         {
             var expression = SyntaxFactory.ParseExpression(str.Trim());
             var result = new RavenLinqPrettifier().Visit(expression);
-            var expr = new RavenLinqOptimizer().Visit(result);
+
+            var validator = new FieldNamesValidator();
+
+            validator.Validate(str, SyntaxFactory.ParseExpression(str).NormalizeWhitespace());
+
+            var expr = new RavenLinqOptimizer(validator).Visit(result);
+
             expr = expr.ReplaceTrivia(expr.DescendantTrivia(), (t1, t2) => new SyntaxTrivia());
             return expr.NormalizeWhitespace();
         }
