@@ -3,8 +3,11 @@ using System.IO;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Loader;
+using System.ServiceProcess;
 using System.Threading;
 using System.Threading.Tasks;
+using DasMulli.Win32.ServiceUtils;
+using Microsoft.Extensions.CommandLineUtils;
 using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.ServerWide;
@@ -12,6 +15,7 @@ using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Raven.Server
@@ -22,7 +26,22 @@ namespace Raven.Server
 
         public static int Main(string[] args)
         {
-            args = CommandLineSwitches.ParseAndRemove(args);
+            try
+            {
+                args = CommandLineSwitches.Process(args);
+            }
+            catch (CommandParsingException commandParsingException)
+            {
+                Console.WriteLine(commandParsingException.Message);
+                CommandLineSwitches.ShowHelp();
+                return 1;
+            }
+
+            if (CommandLineSwitches.ShouldShowHelp)
+            {
+                CommandLineSwitches.ShowHelp();
+                return 0;
+            }
 
             if (CommandLineSwitches.PrintVersionAndExit)
             {
@@ -30,10 +49,21 @@ namespace Raven.Server
                 return 0;
             }
 
+            if (CommandLineSwitches.RegisterService)
+            {
+                RavenWindowsServiceController.Install();
+                return 0;
+            }
+
+            if (CommandLineSwitches.UnregisterService)
+            {
+                RavenWindowsServiceController.Uninstall();
+                return 0;
+            }
+
             WelcomeMessage.Print();
 
-            var customConfigPath = ParseCustomConfigPath(args);
-            var configuration = new RavenConfiguration(null, ResourceType.Server, customConfigPath);
+            var configuration = new RavenConfiguration(null, ResourceType.Server, CommandLineSwitches.CustomConfigPath);
 
             if (args != null)
                 configuration.AddCommandLine(args);
@@ -46,6 +76,11 @@ namespace Raven.Server
 
             LoggingSource.Instance.SetupLogMode(mode, Path.Combine(AppContext.BaseDirectory, configuration.Core.LogsDirectory));
 
+            if (RavenWindowsServiceController.ShouldRunAsWindowsService(configuration))
+            {
+                RavenWindowsServiceController.Run(configuration);
+                return 0;
+            }
 
             var rerun = false;
             do
@@ -87,7 +122,7 @@ namespace Raven.Server
                                 });
                             Console.WriteLine("Server started, listening to requests...");
 
-                            if (configuration.Core.RunAsService)
+                            if (CommandLineSwitches.RunAsService)
                             {
                                 RunAsService();
                             }
@@ -104,9 +139,11 @@ namespace Raven.Server
                             if (Logger.IsOperationsEnabled)
                                 Logger.Operations("Failed to initialize the server", e);
                             Console.WriteLine(e);
+                            
                             return -1;
                         }
                     }
+
                     Console.WriteLine("Shutdown completed");
                 }
                 catch (Exception e)
@@ -120,34 +157,20 @@ namespace Raven.Server
             return 0;
         }
 
-        private static string ParseCustomConfigPath(string[] args)
-        {
-            string customConfigPath = null;
-            if (args != null)
-            {
-                foreach (var cliOpt in args)
-                {
-                    if (cliOpt.StartsWith("/Raven/Config="))
-                    {
-                        customConfigPath = cliOpt.Split('=')[1].Trim();
-                        break;
-                    }
-                }
-            }
-            return customConfigPath;
-        }
-
         private static void RunAsService()
         {
             ManualResetEvent mre = new ManualResetEvent(false);
+
             if (Logger.IsInfoEnabled)
                 Logger.Info("Server is running as a service");
             Console.WriteLine("Running as Service");
+
             AssemblyLoadContext.Default.Unloading += (s) =>
             {
                 Console.WriteLine("Received graceful exit request...");
                 mre.Set();
             };
+
             mre.WaitOne();
         }
 
