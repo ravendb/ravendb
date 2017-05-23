@@ -553,22 +553,4 @@ namespace Raven.Server.Web.System
         public DatabaseTopology Topology { get; set; }
     }
 
-    public class DatabaseDeleteResult
-    {
-        public string Name { get; set; }
-
-        public bool Deleted { get; set; }
-
-        public string Reason { get; set; }
-
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(Name)] = Name,
-                [nameof(Deleted)] = Deleted,
-                [nameof(Reason)] = Reason
-            };
-        }
-    }
 }
