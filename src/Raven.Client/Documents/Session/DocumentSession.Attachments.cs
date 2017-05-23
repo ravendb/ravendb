@@ -92,18 +92,16 @@ namespace Raven.Client.Documents.Session
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentNullException(nameof(name));
 
-            if (_deferredCommands.OfType<DeleteCommandData>().Any(c => c.Key == documentId))
-                throw new InvalidOperationException($"Can't delete attachment {name} of document {documentId}, there is a deferred command registered for this document to be deleted.");
-
-            if (_deferredCommands.OfType<PutAttachmentCommandData>().Any(c => c.Key == documentId && c.Name == name))
-                throw new InvalidOperationException($"Can't delete attachment {name} of document {documentId}, there is a deferred command registered to create an attachment with the same name.");
-
-            if (_deferredCommands.OfType<DeleteAttachmentCommandData>().Any(c => c.Key == documentId && c.Name == name))
-                throw new InvalidOperationException($"Can't delete attachment {name} of document {documentId}, there is a deferred command registered to delete an attachment with the same name.");
+            if (_deferredCommands.OfType<DeleteCommandData>().Any(c => c.Key == documentId) ||
+                _deferredCommands.OfType<DeleteAttachmentCommandData>().Any(c => c.Key == documentId && c.Name == name))
+                return; // no-op
 
             if (DocumentsById.TryGetValue(documentId, out DocumentInfo documentInfo) &&
                 DeletedEntities.Contains(documentInfo.Entity))
-                throw new InvalidOperationException($"Can't store attachment {name} of document {documentId}, the document was already deleted in this session.");
+                return; // no-op
+
+            if (_deferredCommands.OfType<PutAttachmentCommandData>().Any(c => c.Key == documentId && c.Name == name))
+                throw new InvalidOperationException($"Can't delete attachment {name} of document {documentId}, there is a deferred command registered to create an attachment with the same name.");
 
             Defer(new DeleteAttachmentCommandData(documentId, name, null));
         }
