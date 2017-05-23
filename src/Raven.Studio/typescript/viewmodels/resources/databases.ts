@@ -18,6 +18,7 @@ import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import databaseInfo = require("models/resources/info/databaseInfo");
 import messagePublisher = require("common/messagePublisher");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import clusterNode = require("models/database/cluster/clusterNode");
 
 class databases extends viewModelBase {
 
@@ -177,6 +178,21 @@ class databases extends viewModelBase {
                 return link;
             } else {
                 return databases.toExternalUrl(dbInfo, link);
+            }
+        });
+    }
+
+    createAllDocumentsUrlObservableForNode(dbInfo: databaseInfo, node: clusterNode) {
+        const db = dbInfo.asDatabase();
+
+        return ko.pureComputed(() => {
+            const currentNodeTag = this.clusterManager.nodeTag();
+            const nodeTag = node.tag();
+            const link = appUrl.forDocuments(null, db);
+            if (currentNodeTag === nodeTag) {
+                return link;
+            } else {
+                return appUrl.toExternalUrl(node.serverUrl(), link);
             }
         });
     }
