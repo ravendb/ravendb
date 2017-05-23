@@ -12,9 +12,9 @@ namespace Raven.Client.Documents.Commands.Batches
     public class PutResult
     {
         /// <summary>
-        /// Key of the document that was PUT.
+        /// Id of the document that was PUT.
         /// </summary>
-        public string Key { get; set; }
+        public string Id { get; set; }
 
         /// <summary>
         /// long? of the document after PUT operation.
