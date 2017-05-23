@@ -326,12 +326,11 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 ["Key"] = cmd.Key,
                                 ["Etag"] = patchResult.Etag,
-                                    ["Type"] = CommandType.PATCH.ToString(),
+                                ["Type"] = CommandType.PATCH.ToString(),
                                 ["PatchStatus"] = patchResult.Status.ToString(),
                             });
                             break;
                         case CommandType.DELETE:
-                            
                             if (cmd.KeyPrefixed == false)
                             {
                                 var deleted = Database.DocumentsStorage.Delete(context, cmd.Key, cmd.Etag);
@@ -366,7 +365,6 @@ namespace Raven.Server.Documents.Handlers
                                     ["Deleted"] = deleteResults.Count > 0
                                 });
                             }
-                            
                             break;
                         case CommandType.AttachmentPUT:
                             using (var attachmentStream = AttachmentStreams.Dequeue())
@@ -374,8 +372,7 @@ namespace Raven.Server.Documents.Handlers
                                 var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, cmd.Key, cmd.Name, cmd.ContentType, attachmentStream.Hash, cmd.Etag, attachmentStream.File);
                                 LastEtag = attachmentPutResult.Etag;
 
-                                // Make sure all the metadata fields are always been add
-                                var attachmentPutReply = new DynamicJsonValue
+                                Reply.Add(new DynamicJsonValue
                                 {
                                     ["Type"] = CommandType.AttachmentPUT.ToString(),
                                     [Constants.Documents.Metadata.Id] = attachmentPutResult.DocumentId,
@@ -384,10 +381,22 @@ namespace Raven.Server.Documents.Handlers
                                     ["Hash"] = attachmentPutResult.Hash,
                                     ["ContentType"] = attachmentPutResult.ContentType,
                                     ["Size"] = attachmentPutResult.Size,
-                                };
-
-                                Reply.Add(attachmentPutReply);
+                                });
                             }
+
+                            break;
+                        case CommandType.AttachmentDELETE:
+                            var deleteEtag = Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Key, cmd.Name, cmd.Etag);
+                            if (deleteEtag.HasValue)
+                                LastEtag = deleteEtag.Value;
+
+                            Reply.Add(new DynamicJsonValue
+                            {
+                                ["Type"] = CommandType.AttachmentPUT.ToString(),
+                                [Constants.Documents.Metadata.Id] = cmd.Key,
+                                ["Name"] = cmd.Name,
+                                [Constants.Documents.Metadata.Etag] = deleteEtag,
+                            });
 
                             break;
                     }

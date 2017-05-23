@@ -21,6 +21,7 @@ namespace Raven.Client.Documents.Commands.Batches
         PUT,
         PATCH,
         DELETE,
-        AttachmentPUT
+        AttachmentPUT,
+        AttachmentDELETE,
     }
 }

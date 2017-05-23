@@ -530,6 +530,13 @@ namespace Raven.Server.Documents.Handlers
 
                     return CommandType.AttachmentPUT;
 
+                case 16:
+                    if (*(long*)state.StringBuffer != 7308612546338255937 ||
+                        *(long*)(state.StringBuffer + sizeof(long)) != 4995694080542667886)
+                        ThrowInvalidProperty(state, ctx);
+
+                    return CommandType.AttachmentDELETE;
+
                 default:
                     ThrowInvalidProperty(state, ctx);
                     return CommandType.None;

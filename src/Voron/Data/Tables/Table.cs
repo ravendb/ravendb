@@ -1306,7 +1306,6 @@ namespace Voron.Data.Tables
 #if DEBUG
             private readonly Transaction _tx;
 #endif
-            private readonly TableValueBuilder _builder;
 
             public ReturnTableValueBuilderToCache(Transaction tx)
             {
@@ -1317,14 +1316,14 @@ namespace Voron.Data.Tables
                 if (environmentWriteTransactionPool.BuilderUsages++ != 0)
                     throw new InvalidOperationException("Cannot use a cached table value builder when it is already in use");
 #endif
-                _builder = environmentWriteTransactionPool.TableValueBuilder;
+                Builder = environmentWriteTransactionPool.TableValueBuilder;
             }
 
-            public TableValueBuilder Builder => _builder;
+            public TableValueBuilder Builder { get; }
 
             public void Dispose()
             {
-                _builder.Reset();
+                Builder.Reset();
 #if DEBUG
                 Debug.Assert(_tx.LowLevelTransaction.IsDisposed == false);
                 if (_tx.LowLevelTransaction.Environment.WriteTransactionPool.BuilderUsages-- != 1)

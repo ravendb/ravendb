@@ -279,27 +279,11 @@ class databases extends viewModelBase {
                     });
                                     
                     new deleteDatabaseCommand(dbsList, !confirmResult.keepFiles)
-                                             .execute()                                            
-                                             .done((deletedDatabases: Array<Raven.Server.Web.System.DatabaseDeleteResult>) => {
-                                                    deletedDatabases.forEach(rs => this.onDatabaseDeleted(rs));                            
-                                              });
+                        .execute();
                 }
             });
 
         app.showBootstrapDialog(confirmDeleteViewModel);
-    }
-
-    private onDatabaseDeleted(deletedDatabaseResult: Raven.Server.Web.System.DatabaseDeleteResult) {
-        const matchedDatabase = this.databases()
-            .sortedDatabases()
-            .find(x => x.name.toLowerCase() === deletedDatabaseResult.Name.toLowerCase());
-
-        // Databases will be removed from the sortedDatabases in method removeDatabase through the global changes api flow..
-        // So only enable the 'delete' button and display err msg if relevant                                
-        if (matchedDatabase && (deletedDatabaseResult.Reason)) {                           
-                matchedDatabase.isBeingDeleted(false);
-                messagePublisher.reportError(`Failed to delete ${matchedDatabase.name}, reason: ${deletedDatabaseResult.Reason}`);
-        }        
     }
 
     private removeDatabase(dbInfo: databaseInfo) {

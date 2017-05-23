@@ -201,9 +201,6 @@ namespace TypingsGenerator
             // feedback form
             scripter.AddType(typeof(FeedbackForm));
 
-            // database admin
-            scripter.AddType(typeof(DatabaseDeleteResult));
-
             // io metrics stats
             scripter.AddType(typeof(IOMetricsHistoryStats));
             scripter.AddType(typeof(IOMetricsRecentStats));

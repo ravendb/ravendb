@@ -1126,15 +1126,13 @@ namespace Raven.Server.Documents
 
             fixed (ChangeVectorEntry* pChangeVector = changeVector)
             {
-                Slice collectionSlice;
-                using (Slice.From(context.Allocator, collectionName.Name, out collectionSlice))
+                using (Slice.From(context.Allocator, collectionName.Name, out Slice collectionSlice))
                 {
                     var modifiedTicks = lastModifiedTicks ?? _documentDatabase.Time.GetUtcNow().Ticks;
 
                     var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                         collectionName.GetTableName(CollectionTableType.Tombstones));
-                    TableValueBuilder tbv;
-                    using (table.Allocate(out tbv))
+                    using (table.Allocate(out TableValueBuilder tbv))
                     {
                         tbv.Add(lowerKey);
                         tbv.Add(Bits.SwapBytes(newEtag));
@@ -1459,7 +1457,7 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        public void UpdateDocumentAfterAttachmentChange(DocumentsOperationContext context, Slice lowerDocumentId, string documentId, TableValueReader tvr)
+        public PutOperationResults UpdateDocumentAfterAttachmentChange(DocumentsOperationContext context, Slice lowerDocumentId, string documentId, TableValueReader tvr)
         {
             // We can optimize this by copy just the document's data instead of the all tvr
             var copyOfDoc = context.GetMemory(tvr.Size);
@@ -1509,7 +1507,7 @@ namespace Raven.Server.Documents
                 }
 
                 data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                Put(context, documentId, null, data, null, null, flags, NonPersistentDocumentFlags.ByAttachmentUpdate);
+                return Put(context, documentId, null, data, null, null, flags, NonPersistentDocumentFlags.ByAttachmentUpdate);
             }
             finally
             {

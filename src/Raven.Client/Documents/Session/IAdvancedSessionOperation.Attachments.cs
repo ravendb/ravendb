@@ -40,5 +40,21 @@ namespace Raven.Client.Documents.Session
         /// Stores attachment to be sent in the session.
         /// </summary>
         void StoreAttachment(object entity, string name, Stream stream, string contentType = null);
+
+        /// <summary>
+        ///     Marks the specified document's attachment for deletion. The attachment will be deleted when
+        ///     <see cref="IDocumentSession.SaveChanges" /> is called.
+        /// </summary>
+        /// <param name="documentId">the document which holds the attachment</param>
+        /// <param name="name">the attachment name</param>
+        void DeleteAttachment(string documentId, string name);
+
+        /// <summary>
+        ///     Marks the specified document's attachment for deletion. The attachment will be deleted when
+        ///     <see cref="IDocumentSession.SaveChanges" /> is called.
+        /// </summary>
+        /// <param name="entity">instance of entity of the document which holds the attachment</param>
+        /// <param name="name">the attachment name</param>
+        void DeleteAttachment(object entity, string name);
     }
 }
