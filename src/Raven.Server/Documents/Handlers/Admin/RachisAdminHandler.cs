@@ -4,6 +4,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
+using Raven.Server.Extensions;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -14,22 +15,21 @@ namespace Raven.Server.Documents.Handlers.Admin
 {
     public class RachisAdminHandler : AdminRequestHandler
     {
-
         [RavenAction("/rachis/send", "POST", "/rachis/send")]
         public async Task ApplyCommand()
         {
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
-                var command = await context.ReadForMemoryAsync(RequestBodyStream(), "ExternalRachisCommand");
+                var command = await context.ReadForMemoryAsync(RequestBodyStream(), "ExternalRachisCommand").ThrowOnTimeout();
 
-                if (command.TryGet("Type", out string type) == false)
+                if (command.TryGet("Type", out string _) == false)
                 {
                     // TODO: maybe add further validation?
                     throw new ArgumentException("Received command must contain a Type field");
                 }
 
-                var etag = await ServerStore.PutCommandAsync(command);
+                var etag = await ServerStore.PutCommandAsync(command).ThrowOnTimeout();
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             var serverUrl = GetStringQueryString("url");
             ServerStore.EnsureNotPassive();
-            await ServerStore.AddNodeToClusterAsync(serverUrl);
+            await ServerStore.AddNodeToClusterAsync(serverUrl).ThrowOnTimeout();
 
             NoContentStatus();
         }
@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             var serverUrl = GetStringQueryString("nodeTag");
             ServerStore.EnsureNotPassive();
-            await ServerStore.RemoveFromClusterAsync(serverUrl);
+            await ServerStore.RemoveFromClusterAsync(serverUrl).ThrowOnTimeout();
 
             NoContentStatus();
         }
