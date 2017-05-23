@@ -400,7 +400,8 @@ namespace Raven.Server.Documents.Patch
                 if (_propertiesByValue.TryGetValue(propertyKey, out property))
                 {
                     var originalValue = property.Key;
-                    if (originalValue is float || originalValue is int)
+
+                    if (originalValue is float || originalValue is int || originalValue is LazyDoubleValue)
                     {
                         // If the current value is exactly as the original value, we can return the original value before we made the JS conversion, 
                         // which will convert a Int64 to jsFloat.
