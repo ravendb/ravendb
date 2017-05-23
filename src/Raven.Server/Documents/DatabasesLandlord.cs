@@ -20,6 +20,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
@@ -156,17 +157,11 @@ namespace Raven.Server.Documents
 
         private void NotifyLeaderAboutRemoval(string dbName)
         {
-            var cmd = new DynamicJsonValue
-            {
-                ["Type"] = nameof(RemoveNodeFromDatabaseCommand),
-                [nameof(RemoveNodeFromDatabaseCommand.DatabaseName)] = dbName,
-                [nameof(RemoveNodeFromDatabaseCommand.NodeTag)] = _serverStore.NodeTag
-            };
+            var cmd = new RemoveNodeFromDatabaseCommand(dbName);
             JsonOperationContext myContext;
             using (_serverStore.ContextPool.AllocateOperationContext(out myContext))
-            using (var json = myContext.ReadObject(cmd, "rachis command"))
             {
-                _serverStore.SendToLeaderAsync(json)
+                _serverStore.SendToLeaderAsync(cmd)
                     .ContinueWith(t =>
                     {
                         if (t.Exception != null)

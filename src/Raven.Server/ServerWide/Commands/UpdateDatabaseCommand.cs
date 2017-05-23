@@ -4,11 +4,9 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public abstract class UpdateDatabaseCommand
+    public abstract class UpdateDatabaseCommand : CommandBase
     {
-        public string DatabaseName;
-
-        public long? Etag;
+        public string DatabaseName;        
 
         protected UpdateDatabaseCommand(string databaseName)
         {
@@ -19,7 +17,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public abstract void FillJson(DynamicJsonValue json);
 
-        public DynamicJsonValue ToJson()
+        public override DynamicJsonValue ToJson()
         {
             var json = new DynamicJsonValue
             {
@@ -31,5 +29,11 @@ namespace Raven.Server.ServerWide.Commands
 
             return json;
         }
+    }
+
+    public abstract class CommandBase
+    {
+        public abstract DynamicJsonValue ToJson();
+        public long? Etag;
     }
 }

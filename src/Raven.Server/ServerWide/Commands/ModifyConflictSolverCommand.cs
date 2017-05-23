@@ -12,7 +12,7 @@ namespace Raven.Server.ServerWide.Commands
 {
     public class ModifyConflictSolverCommand : UpdateDatabaseCommand
     {
-        public BlittableJsonReaderObject Solver;
+        public ConflictSolver Solver;
 
         public ModifyConflictSolverCommand():base(null){}
 
@@ -20,7 +20,7 @@ namespace Raven.Server.ServerWide.Commands
         
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            record.ConflictSolverConfig = JsonDeserializationRachis<ConflictSolver>.Deserialize(Solver);
+            record.ConflictSolverConfig = Solver;
         }
 
         public override void FillJson(DynamicJsonValue json)

@@ -75,11 +75,10 @@ namespace Raven.Server.ServerWide
                 return;
 
             switch (type)
-            {
-                case nameof(DeleteDatabaseCommand):
-                    DeleteDatabase(context, cmd, index, leader);
-                    break;
-
+            {               
+                    //The reason we have a seperate case for removing node from database is because we must 
+                    //actually delete the database before we notify about changes to the record otherwise we 
+                    //don't know that it was us who needed to delete the database.
                 case nameof(RemoveNodeFromDatabaseCommand):
                     RemoveNodeFromDatabase(context, cmd, index, leader);
                     break;
@@ -102,6 +101,7 @@ namespace Raven.Server.ServerWide
                 case nameof(ModifyDatabaseWatchersCommand):
                 case nameof(ModifyConflictSolverCommand):
                 case nameof(UpdateTopologyCommand):
+                case nameof(DeleteDatabaseCommand):
                     UpdateDatabase(context, type, cmd, index, leader);
                     break;
                 case nameof(AcknowledgeSubscriptionBatchCommand):
@@ -209,12 +209,8 @@ namespace Raven.Server.ServerWide
                     NotifyDatabaseChanged(context, databaseName, index);
                     return;
                 }
-
-                databaseRecord.Topology.Members.RemoveAll(m => m.NodeTag == remove.NodeTag);
-                databaseRecord.Topology.Promotables.RemoveAll(p => p.NodeTag == remove.NodeTag);
-
-                databaseRecord.DeletionInProgress.Remove(remove.NodeTag);
-
+                remove.UpdateDatabaseRecord(databaseRecord,index);
+               
                 if (databaseRecord.Topology.Members.Count == 0 &&
                     databaseRecord.Topology.Promotables.Count == 0 &&
                     databaseRecord.Topology.Watchers.Count == 0)
@@ -281,7 +277,8 @@ namespace Raven.Server.ServerWide
                 else
                 {
                     var allNodes = databaseRecord.Topology.Members.Select(m => m.NodeTag)
-                        .Concat(databaseRecord.Topology.Promotables.Select(p => p.NodeTag));
+                        .Concat(databaseRecord.Topology.Promotables.Select(p => p.NodeTag))
+                        .Concat(databaseRecord.Topology.Watchers.Select(w => w.NodeTag));
 
                     foreach (var node in allNodes)
                         databaseRecord.DeletionInProgress[node] = deletionInProgressStatus;
@@ -306,7 +303,7 @@ namespace Raven.Server.ServerWide
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name, out Slice valueName))
                 using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name.ToLowerInvariant(), out Slice valueNameLowered))
-                using (var rec = context.ReadObject(addDatabaseCommand.Value, "inner-val"))
+                using (var rec = context.ReadObject(addDatabaseCommand.Record, "inner-val"))
                 {
                     if (addDatabaseCommand.Etag != null)
                     {
@@ -684,38 +681,6 @@ namespace Raven.Server.ServerWide
                 }, null);
             }
         }
-    }
-
-    public class PutValueCommand
-    {
-        public string Name;
-        public BlittableJsonReaderObject Value;
-    }
-
-    public class DeleteValueCommand
-    {
-        public string Name;
-    }
-
-    public class DeleteDatabaseCommand
-    {
-        public string DatabaseName;
-        public bool HardDelete;
-        public string FromNode;
-    }
-
-    public class AddDatabaseCommand
-    {
-        public string Name;
-        public BlittableJsonReaderObject Value;
-        public long? Etag;
-        public bool Encrypted;
-    }
-
-    public class RemoveNodeFromDatabaseCommand
-    {
-        public string DatabaseName;
-        public string NodeTag;
     }
 
     public class RachisLogIndexNotifications
