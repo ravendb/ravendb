@@ -439,8 +439,7 @@ more responsive application.
             if (ReferenceEquals(entity, null))
                 throw new ArgumentNullException(nameof(entity));
 
-            DocumentInfo value;
-            if (DocumentsByEntity.TryGetValue(entity, out value) == false)
+            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo value) == false)
             {
                 throw new InvalidOperationException(entity + " is not associated with the session, cannot delete unknown entity instance");
             }

@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using Raven.Client;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
 using Xunit;
@@ -284,6 +285,69 @@ namespace FastTests.Client.Attachments
                     session.SaveChanges();
                 }
                 AttachmentsCrud.AssertAttachmentCount(store, 0, documentsCount: 1);
+            }
+        }
+
+        [Fact]
+        public void DeleteDocumentAndThanItsAttachments_ThisIsNoOpButShouldBeSupported()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var user = new User {Name = "Fitzchak"};
+                    session.Store(user);
+
+                    using (var stream = new MemoryStream(Enumerable.Range(1, 3).Select(x => (byte)x).ToArray()))
+                    {
+                        session.Advanced.StoreAttachment(user, "file", stream, "image/png");
+                        session.SaveChanges();
+                    }
+                }
+
+                AttachmentsCrud.AssertAttachmentCount(store, 1, documentsCount: 2);
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+
+                    session.Delete(user);
+                    session.Advanced.DeleteAttachment(user, "file");
+                    session.Advanced.DeleteAttachment(user, "file"); // this should be no-op
+
+                    session.SaveChanges();
+                }
+                AttachmentsCrud.AssertAttachmentCount(store, 0, documentsCount: 1);
+            }
+        }
+
+        [Fact]
+        public void DeleteDocumentByCommandAndThanItsAttachments_ThisIsNoOpButShouldBeSupported()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User {Name = "Fitzchak"}, "users/1");
+
+                    using (var stream = new MemoryStream(Enumerable.Range(1, 3).Select(x => (byte)x).ToArray()))
+                    {
+                        session.Advanced.StoreAttachment("users/1", "file", stream, "image/png");
+                        session.SaveChanges();
+                    }
+                }
+
+                AttachmentsCrud.AssertAttachmentCount(store, 1, documentsCount: 1);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Defer(new DeleteCommandData("users/1", null));
+                    session.Advanced.DeleteAttachment("users/1", "file");
+                    session.Advanced.DeleteAttachment("users/1", "file"); // this should be no-op
+
+                    session.SaveChanges();
+                }
+                AttachmentsCrud.AssertAttachmentCount(store, 0, documentsCount: 0);
             }
         }
     }
