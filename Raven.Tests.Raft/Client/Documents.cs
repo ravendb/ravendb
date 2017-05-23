@@ -54,7 +54,7 @@ namespace Raven.Tests.Raft.Client
             clusterStores.ForEach(store =>
             {
                 var client = ((AsyncServerClient)store.AsyncDatabaseCommands);
-                AsyncHelpers.RunSync(()=>client.RequestExecuter.UpdateReplicationInformationIfNeededAsync(client));
+                AsyncHelpers.RunSync(()=>client.RequestExecuter.UpdateReplicationInformationIfNeededAsync(client,force:true));
             });
             var tasks = new List<ReplicationTask>();
             foreach (var server in servers)
