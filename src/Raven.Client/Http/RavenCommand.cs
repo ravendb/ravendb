@@ -84,7 +84,7 @@ namespace Raven.Client.Http
         {
             using (response)
             {
-                if (ResponseType == RavenCommandResponseType.Empty)
+                if (ResponseType == RavenCommandResponseType.Empty || response.StatusCode == HttpStatusCode.NoContent)
                     return;
 
                 using (var stream = await response.Content.ReadAsStreamAsync())
