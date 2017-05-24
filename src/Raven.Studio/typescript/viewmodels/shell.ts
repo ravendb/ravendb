@@ -146,6 +146,7 @@ class shell extends viewModelBase {
                     // please notice we don't wait here for connection to be established
                     // since this invocation is sync we can't end up with race condition
                     this.databasesManager.setupGlobalNotifications();
+                    clusterTopologyManager.default.setupGlobalNotifications();
                     this.notificationCenter.setupGlobalNotifications(changesContext.default.serverNotifications());
 
                     this.connectToRavenServer();

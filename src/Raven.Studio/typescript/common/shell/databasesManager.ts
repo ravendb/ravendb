@@ -194,15 +194,12 @@ class databasesManager {
     }
 
     // Please remember those notifications are setup before connection to websocket
-    setupGlobalNotifications(): Array<changeSubscription> {
+    setupGlobalNotifications(): void {
         const serverWideClient = changesContext.default.serverNotifications();
 
-        return [
-            serverWideClient.watchAllDatabaseChanges(e => this.onDatabaseUpdateReceivedViaChangesApi(e)),
-            serverWideClient.watchReconnect(() => this.refreshDatabases())
-
-             //TODO: DO: this.globalChangesApi.watchDocsStartingWith(shell.studioConfigDocumentId, () => shell.fetchStudioConfig()),*/
-        ];
+        serverWideClient.watchAllDatabaseChanges(e => this.onDatabaseUpdateReceivedViaChangesApi(e));
+        serverWideClient.watchReconnect(() => this.refreshDatabases());
+            //TODO: DO: this.globalChangesApi.watchDocsStartingWith(shell.studioConfigDocumentId, () => shell.fetchStudioConfig()),*/
     }
 
     private onDatabaseUpdateReceivedViaChangesApi(event: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) {

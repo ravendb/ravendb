@@ -283,6 +283,8 @@ namespace Raven.Server.ServerWide
             _engine.StateMachine.DatabaseChanged += DatabasesLandlord.ClusterOnDatabaseChanged;
             _engine.StateMachine.DatabaseChanged += OnDatabaseChanged;
 
+            _engine.TopologyChanged += OnTopologyChanged;
+
             _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
             _notificationsStorage.Initialize(_env, ContextPool);
             DatabaseInfoCache.Initialize(_env, ContextPool);
@@ -304,6 +306,11 @@ namespace Raven.Server.ServerWide
             }
 
             //Task.Run(ClusterMaintanceSetupTask, ServerShutdown);
+        }
+
+        private void OnTopologyChanged(object sender, ClusterTopology topologyJson)
+        {
+            NotificationCenter.Add(ClusterTopologyChanged.Create(topologyJson, LeaderTag, NodeTag));
         }
 
         private void OnDatabaseChanged(object sender, (string dbName, long index, string type) t)

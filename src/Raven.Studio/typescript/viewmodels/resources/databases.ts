@@ -81,8 +81,7 @@ class databases extends viewModelBase {
         this.addNotification(this.changesContext.serverNotifications().watchAllDatabaseChanges((e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) => this.fetchDatabase(e)));
         this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.fetchDatabases()));
 
-        return $.when<any>(this.fetchDatabases(), clusterTopologyManager.default.forceRefresh()); //TODO: remove me - temporary refresh cluster topology each time we enter this view 
-        //TODO: revert me: return this.fetchDatabases();
+        return this.fetchDatabases();
     }
 
     attached() {
