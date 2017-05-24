@@ -202,8 +202,8 @@ namespace Raven.Client.Connection.Async
                 var prevLeader = clusterAwareRequestExecuter.LeaderNode;
                 clusterAwareRequestExecuter.UpdateTopology(this, new OperationMetadata(Url, PrimaryCredentials, topology.ClusterInformation), topology, serverHash, prevLeader);
                 //The reason i lunch another topology request is because it will fetch the topology from all nodes, we are assuming 
-                //that our primary is up to date but it may be cut out of the cluster.
-                await clusterAwareRequestExecuter.UpdateReplicationInformationIfNeededAsync(this).ConfigureAwait(false);
+                //that our primary is up to date but it may be cut out of the cluster, i use force so to ignore correct primary.
+                await clusterAwareRequestExecuter.UpdateReplicationInformationIfNeededAsync(this,force:true).ConfigureAwait(false);
             }
             else
             {
