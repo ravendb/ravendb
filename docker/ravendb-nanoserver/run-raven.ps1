@@ -8,7 +8,7 @@ if ([string]::IsNullOrEmpty($env:CustomConfigFilename) -eq $False) {
         /Raven/ServerUrl/Tcp=tcp://0.0.0.0:38888 `
         /Raven/DataDir=$($env:DataDir) `
         --config-path "$CUSTOM_SETTINGS_PATH" `
-        --run-as-service `
+        --register-service `
         --print-id
 }
 else {
@@ -17,6 +17,16 @@ else {
         /Raven/ServerUrl/Tcp=tcp://0.0.0.0:38888 `
         /Raven/AllowAnonymousUserToAccessTheServer=$($env:AllowAnonymousUserToAccessTheServer) `
         /Raven/DataDir=$($env:DataDir) `
-        --run-as-service `
+        --register-service `
         --print-id
+}
+
+while ($true) { 
+    Start-Sleep 60 
+    $serviceStatus = (Get-Service -Name "RavenDB").Status
+    if (($serviceStatus -eq "Running") -or ($serviceStatus -eq "StartPending")) {
+        continue;
+    } else {
+        break;
+    }
 }

@@ -3,10 +3,8 @@ using System.IO;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Loader;
-using System.ServiceProcess;
 using System.Threading;
 using System.Threading.Tasks;
-using DasMulli.Win32.ServiceUtils;
 using Microsoft.Extensions.CommandLineUtils;
 using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Debugging;
@@ -51,7 +49,7 @@ namespace Raven.Server
 
             if (CommandLineSwitches.RegisterService)
             {
-                RavenWindowsServiceController.Install();
+                RavenWindowsServiceController.Install(args);
                 return 0;
             }
 
