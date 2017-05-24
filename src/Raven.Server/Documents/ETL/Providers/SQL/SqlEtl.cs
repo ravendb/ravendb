@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                 if (Logger.IsInfoEnabled)
                 {
                     Logger.Info($"[{Name}] Inserted {stats.InsertedRecordsCount} (out of {table.Inserts.Count}) records to '{table.TableName}' table " +
-                        $"from the following documents: {string.Join(", ", table.Inserts.Select(x => x.DocumentKey))}");
+                        $"from the following documents: {string.Join(", ", table.Inserts.Select(x => x.DocumentId))}");
                 }
             }
 
@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                 if (Logger.IsInfoEnabled)
                 {
                     Logger.Info($"[{Name}] Deleted {stats.DeletedRecordsCount} (out of {table.Deletes.Count}) records from '{table.TableName}' table " +
-                        $"for the following documents: {string.Join(", ", table.Inserts.Select(x => x.DocumentKey))}");
+                        $"for the following documents: {string.Join(", ", table.Inserts.Select(x => x.DocumentId))}");
                 }
             }
         }

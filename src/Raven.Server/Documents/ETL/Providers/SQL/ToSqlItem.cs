@@ -7,7 +7,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         public ToSqlItem(ToSqlItem item)
         {
             Etag = item.Etag;
-            DocumentKey = item.DocumentKey;
+            DocumentId = item.DocumentId;
             Document = item.Document;
             IsDelete = item.IsDelete;
             Collection = item.Collection;

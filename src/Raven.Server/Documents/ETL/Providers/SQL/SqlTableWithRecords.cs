@@ -7,7 +7,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         public SqlTableWithRecords(SqlEtlTable table)
         {
             TableName = table.TableName;
-            DocumentKeyColumn = table.DocumentKeyColumn;
+            DocumentIdColumn = table.DocumentIdColumn;
             InsertOnlyMode = table.InsertOnlyMode;
         }
 
