@@ -19,11 +19,11 @@ class visualizer extends viewModelBase {
     private hasIndexSelected: KnockoutComputed<boolean>;
 
     private documents = {
-        docKey: ko.observable(""),
-        hasFocusDocKey: ko.observable<boolean>(false),
-        loadingDocKeySearchResults: ko.observable<boolean>(false), //TODO: autocomplete support
-        docKeys: ko.observableArray<string>(),
-        docKeysSearchResults: ko.observableArray<string>()
+        documentId: ko.observable(""),
+        hasFocusDocumentId: ko.observable<boolean>(false),
+        loadingDocumentIdSearchResults: ko.observable<boolean>(false), //TODO: autocomplete support
+        documentIds: ko.observableArray<string>(),
+        documentIdsSearchResults: ko.observableArray<string>()
     }
 
     private trees = [] as Raven.Server.Documents.Indexes.Debugging.ReduceTree[];
@@ -34,7 +34,7 @@ class visualizer extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("setSelectedIndex", "selectDocKey", "addCurrentDocumentKey");
+        this.bindToCurrentInstance("setSelectedIndex", "selectDocumentId", "addCurrentDocumentId");
 
         this.initObservables();
     }
@@ -47,14 +47,14 @@ class visualizer extends viewModelBase {
 
         this.hasIndexSelected = ko.pureComputed(() => !!this.currentIndex());
 
-        this.documents.hasFocusDocKey.subscribe(value => {
+        this.documents.hasFocusDocumentId.subscribe(value => {
             if (!value) {
                 return;
             }
-            this.fetchDocKeySearchResults("");
+            this.fetchDocumentIdSearchResults("");
         });
 
-        this.documents.docKey.throttle(100).subscribe(query => this.fetchDocKeySearchResults(query));
+        this.documents.documentId.throttle(100).subscribe(query => this.fetchDocumentIdSearchResults(query));
     }
 
     activate(args: any) {
@@ -81,37 +81,37 @@ class visualizer extends viewModelBase {
     }
 
     private resetGraph() {
-        this.documents.docKeys([]);
-        this.documents.docKey("");
-        this.documents.docKeysSearchResults([]);
+        this.documents.documentIds([]);
+        this.documents.documentId("");
+        this.documents.documentIdsSearchResults([]);
         
         this.globalGraph.reset();
         this.detailsGraph.reset();
     }
 
-    addCurrentDocumentKey() {
-        this.addDocKey(this.documents.docKey());
+    addCurrentDocumentId() {
+        this.addDocumentId(this.documents.documentId());
     }
 
-    private addDocKey(key: string) {
-        if (!key) {
+    private addDocumentId(documentId: string) {
+        if (!documentId) {
             return;
         }
 
-        if (_.includes(this.documents.docKeys(), key)) {
-            this.globalGraph.zoomToDocument(key);
+        if (_.includes(this.documents.documentIds(), documentId)) {
+            this.globalGraph.zoomToDocument(documentId);
         } else {
             //TODO: spinner
-            new getIndexMapReduceTreeCommand(this.activeDatabase(), this.currentIndex(), key)
+            new getIndexMapReduceTreeCommand(this.activeDatabase(), this.currentIndex(), documentId)
                 .execute()
                 .done((mapReduceTrees) => {
-                    if (!_.includes(this.documents.docKeys(), key)) {
-                        this.documents.docKeys.push(key);
+                    if (!_.includes(this.documents.documentIds(), documentId)) {
+                        this.documents.documentIds.push(documentId);
 
-                        this.addDocument(key);
+                        this.addDocument(documentId);
                         this.addTrees(mapReduceTrees);
 
-                        this.globalGraph.zoomToDocument(key);
+                        this.globalGraph.zoomToDocument(documentId);
                     }
                 });
         }
@@ -183,23 +183,23 @@ class visualizer extends viewModelBase {
         return result;
     }
 
-    selectDocKey(value: string) {
-        this.addDocKey(value);
-        this.documents.docKey("");
-        this.documents.docKeysSearchResults.removeAll();
+    selectDocumentId(value: string) {
+        this.addDocumentId(value);
+        this.documents.documentId("");
+        this.documents.documentIdsSearchResults.removeAll();
     }
 
-    private fetchDocKeySearchResults(query: string) {
-        this.documents.loadingDocKeySearchResults(true);
+    private fetchDocumentIdSearchResults(query: string) {
+        this.documents.loadingDocumentIdSearchResults(true);
 
         new getIndexDebugSourceDocumentsCommand(this.activeDatabase(), this.currentIndex(), query, 0, 10)
             .execute()
             .done(result => {
-                if (this.documents.docKey() === query) {
-                    this.documents.docKeysSearchResults(result.Results);
+                if (this.documents.documentId() === query) {
+                    this.documents.documentIdsSearchResults(result.Results);
                 }
             })
-            .always(() => this.documents.loadingDocKeySearchResults(false));
+            .always(() => this.documents.loadingDocumentIdSearchResults(false));
     }
 
     /*

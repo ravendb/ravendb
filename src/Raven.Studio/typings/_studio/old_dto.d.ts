@@ -188,7 +188,7 @@ interface scriptedPatchRequestDto {
 }
 
 interface databaseDocumentSaveDto {
-    Key: string;
+    Id: string;
     ETag: number;
 }
 
@@ -244,7 +244,7 @@ interface compactStatusDto {
 
 interface commandData {
     CommandText: string;
-    Params:{Key:string;Value:any}[];
+    Params:{Id:string;Value:any}[];
 }
 
 interface tableQuerySummary {
@@ -397,7 +397,7 @@ interface statusDebugDocrefsDto {
 
 interface statusDebugIdentitiesDto {
     TotalCount: number;
-    Identities: Array<{ Key: string; Value: string}>;
+    Identities: Array<{ Id: string; Value: string}>;
 }
 
 interface statusDebugCurrentlyIndexingDto {
@@ -559,12 +559,6 @@ interface visualizerDataObjectDto {
     idx: number;
 }
 
-interface queryIndexDebugMapArgsDto {
-    key?: string;
-    sourceId?: string;
-    startsWith?: string;
-}
-
 interface mergeResult {
   Document: string;
   Metadata: string;
@@ -719,7 +713,7 @@ interface indexReplaceDocumentDto extends documentDto {
 }
 
 interface replicationExplanationForDocumentDto {
-    Key: string;
+    Id: string;
     Etag: string;
     Destination: destinationInformationDto;
     Message: string;
