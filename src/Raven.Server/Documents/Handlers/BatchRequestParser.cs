@@ -445,9 +445,8 @@ namespace Raven.Server.Documents.Handlers
             // we compare directly against the precomputed values
             switch (state.StringSize)
             {
-                case 3:
-                    if (*(short*)state.StringBuffer != 25931 ||
-                        state.StringBuffer[2] != (byte)'y')
+                case 2:
+                    if (*(short*)state.StringBuffer != 25673)
                         return CommandPropertyName.NoSuchProperty;
                     return CommandPropertyName.Id;
 
@@ -478,11 +477,13 @@ namespace Raven.Server.Documents.Handlers
                         return CommandPropertyName.NoSuchProperty;
                     return CommandPropertyName.PatchIfMissing;
 
-                case 11:
+                case 10: // TODO
                     if (*(long*)state.StringBuffer == 7594869363257730379 &&
-                        *(short*)(state.StringBuffer + sizeof(long)) == 25976 &&
-                        state.StringBuffer[sizeof(long) + sizeof(short)] == (byte)'d')
+                        *(short*)(state.StringBuffer + sizeof(long)) == 25976)
                         return CommandPropertyName.IdPrefixed;
+                    return CommandPropertyName.NoSuchProperty;
+
+                case 11:
                     if (*(long*)state.StringBuffer == 6085610378508529475 &&
                         *(short*)(state.StringBuffer + sizeof(long)) == 28793 &&
                         state.StringBuffer[sizeof(long) + sizeof(short)] == (byte)'e')
