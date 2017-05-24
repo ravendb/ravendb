@@ -8,7 +8,7 @@ namespace Raven.Server.Documents
     public class Attachment
     {
         public long StorageId;
-        public LazyStringValue LoweredKey;
+        public LazyStringValue Key;
         public long Etag;
         public LazyStringValue Name;
         public LazyStringValue ContentType;

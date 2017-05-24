@@ -19,8 +19,8 @@ namespace Raven.Server.Documents.Handlers
 {
     public class HiLoHandler : DatabaseRequestHandler
     {
-        private const string RavenKeyGeneratorsHilo = "Raven/Hilo/";
-        private const string RavenKeyServerPrefix = "Raven/ServerPrefixForHilo";
+        private const string RavenIdGeneratorsHilo = "Raven/Hilo/";
+        private const string RavenIdServerPrefix = "Raven/ServerPrefixForHilo";
 
         private static long CalculateCapacity(long lastSize, string lastRangeAtStr)
         {
@@ -47,9 +47,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/hilo/next", "GET", "/databases/{databaseName:string}/hilo/next?tag={collectionName:string}&lastBatchSize={size:long|optional}&lastRangeAt={date:System.DateTime|optional}&identityPartsSeparator={separator:string|optional}&lastMax={max:long|optional} ")]
         public async Task GetNextHiLo()
         {
-            DocumentsOperationContext context;
-
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var tag = GetQueryStringValueAndAssertIfSingleAndNotEmpty("tag");
                 var lastSize = GetLongQueryString("lastBatchSize", false) ?? 0;
@@ -99,7 +97,7 @@ namespace Raven.Server.Documents.Handlers
 
             public override int Execute(DocumentsOperationContext context)
             {
-                var hiLoDocumentKey = RavenKeyGeneratorsHilo + Key;
+                var hiLoDocumentId = RavenIdGeneratorsHilo + Key;
                 var prefix = Key + Separator;
 
                 long oldMax = 0;
@@ -109,15 +107,14 @@ namespace Raven.Server.Documents.Handlers
                 {
                     try
                     {
-                        serverPrefixDocReader = Database.DocumentsStorage.Get(context, RavenKeyServerPrefix)?.Data;
-                        hiloDocReader = Database.DocumentsStorage.Get(context, hiLoDocumentKey)?.Data;
+                        serverPrefixDocReader = Database.DocumentsStorage.Get(context, RavenIdServerPrefix)?.Data;
+                        hiloDocReader = Database.DocumentsStorage.Get(context, hiLoDocumentId)?.Data;
                     }
                     catch (DocumentConflictException e)
                     {
-                        throw new InvalidDataException(@"Failed to fetch HiLo document due to a conflict 
-                                                            on the document. This shouldn't happen, since
-                                                            it this conflict should've been resolved during replication.
-                                                             This exception should not happen and is likely a bug.", e);
+                        throw new InvalidDataException("Failed to fetch HiLo document due to a conflict on the document. " +
+                                                       "This shouldn't happen, since it this conflict should've been resolved during replication. " +
+                                                       "This exception should not happen and is likely a bug.", e);
                     }
 
                     string serverPrefix;
@@ -145,8 +142,8 @@ namespace Raven.Server.Documents.Handlers
 
                     newDoc["Max"] = oldMax + Capacity;
 
-                    using (var freshHilo = context.ReadObject(newDoc, hiLoDocumentKey, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
-                        Database.DocumentsStorage.Put(context, hiLoDocumentKey, null, freshHilo);
+                    using (var freshHilo = context.ReadObject(newDoc, hiLoDocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                        Database.DocumentsStorage.Put(context, hiLoDocumentId, null, freshHilo);
 
                     OldMax = oldMax;
                     Prefix = prefix;
@@ -193,7 +190,7 @@ namespace Raven.Server.Documents.Handlers
 
             public override int Execute(DocumentsOperationContext context)
             {
-                var hiLoDocumentKey = RavenKeyGeneratorsHilo + Key;
+                var hiLoDocumentKey = RavenIdGeneratorsHilo + Key;
 
                 var document = Database.DocumentsStorage.Get(context, hiLoDocumentKey);
 

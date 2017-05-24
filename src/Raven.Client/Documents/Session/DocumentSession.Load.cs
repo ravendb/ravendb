@@ -194,46 +194,46 @@ namespace Raven.Client.Documents.Session
             return loadTransformerOperation.GetTransformedDocuments<T>(command?.Result);
         }
 
-        public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null,
+        public T[] LoadStartingWith<T>(string idPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null,
             string startAfter = null)
         {
             var loadStartingWithOperation = new LoadStartingWithOperation(this);
-            LoadStartingWithInternal(keyPrefix, loadStartingWithOperation, null, matches, start, pageSize, exclude, null, startAfter);
+            LoadStartingWithInternal(idPrefix, loadStartingWithOperation, null, matches, start, pageSize, exclude, null, startAfter);
             return loadStartingWithOperation.GetDocuments<T>();
         }
 
-        public Dictionary<string, TResult> LoadStartingWith<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0,
+        public Dictionary<string, TResult> LoadStartingWith<TTransformer, TResult>(string idPrefix, string matches = null, int start = 0,
             int pageSize = 25, string exclude = null, Action<ILoadConfiguration> configure = null,
             string startAfter = null) where TTransformer : AbstractTransformerCreationTask, new()
         {
             var loadStartingWithOperation = new LoadStartingWithOperation(this);
-            var command = LoadStartingWithInternal(keyPrefix,loadStartingWithOperation ,null, matches, start, pageSize, exclude,
+            var command = LoadStartingWithInternal(idPrefix,loadStartingWithOperation ,null, matches, start, pageSize, exclude,
                 configure, startAfter, new TTransformer().TransformerName);
 
             return loadStartingWithOperation.GetTransformedDocuments<TResult>(command?.Result);
         }
 
-        public void LoadStartingWithIntoStream(string keyPrefix, Stream output, string matches = null, int start = 0, int pageSize = 25, string exclude = null,
+        public void LoadStartingWithIntoStream(string idPrefix, Stream output, string matches = null, int start = 0, int pageSize = 25, string exclude = null,
             string startAfter = null)
         {
-            LoadStartingWithInternal(keyPrefix, new LoadStartingWithOperation(this), output, matches, start, pageSize, exclude, null, startAfter);
+            LoadStartingWithInternal(idPrefix, new LoadStartingWithOperation(this), output, matches, start, pageSize, exclude, null, startAfter);
         }
 
-        public void LoadStartingWithIntoStream<TTransformer>(string keyPrefix, Stream output, string matches = null, int start = 0,
+        public void LoadStartingWithIntoStream<TTransformer>(string idPrefix, Stream output, string matches = null, int start = 0,
             int pageSize = 25, string exclude = null, Action<ILoadConfiguration> configure = null,
             string startAfter = null) where TTransformer : AbstractTransformerCreationTask, new()
         {
-            LoadStartingWithInternal(keyPrefix, new LoadStartingWithOperation(this), output, matches, start, pageSize, exclude, configure, startAfter, new TTransformer().TransformerName);
+            LoadStartingWithInternal(idPrefix, new LoadStartingWithOperation(this), output, matches, start, pageSize, exclude, configure, startAfter, new TTransformer().TransformerName);
         }
 
-        private GetDocumentCommand LoadStartingWithInternal(string keyPrefix, LoadStartingWithOperation operation, Stream stream = null, string matches = null,
+        private GetDocumentCommand LoadStartingWithInternal(string idPrefix, LoadStartingWithOperation operation, Stream stream = null, string matches = null,
             int start = 0, int pageSize = 25, string exclude = null, Action<ILoadConfiguration> configure = null,
             string startAfter = null, string transformer = null)
         {
             var configuration = new LoadConfiguration();
             configure?.Invoke(configuration);
 
-            operation.WithStartWith(keyPrefix, matches, start, pageSize, exclude, configure, startAfter);
+            operation.WithStartWith(idPrefix, matches, start, pageSize, exclude, configure, startAfter);
 
             if (transformer != null)
                 operation.WithTransformer(transformer, configuration.TransformerParameters);

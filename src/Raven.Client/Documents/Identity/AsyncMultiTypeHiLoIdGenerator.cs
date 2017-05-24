@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="MultiTypeHiLoKeyGenerator.cs" company="Hibernating Rhinos LTD">
+// <copyright file="AsyncMultiTypeHiLoIdGenerator.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -11,26 +11,26 @@ using Raven.Client.Documents.Conventions;
 namespace Raven.Client.Documents.Identity
 {
     /// <summary>
-    /// Generate a hilo key for each given type
+    /// Generate a hilo ID for each given type
     /// </summary>
-    public class AsyncMultiTypeHiLoKeyGenerator
+    public class AsyncMultiTypeHiLoIdGenerator
     {
         //private readonly int capacity;
         private readonly object _generatorLock = new object();
-        private readonly ConcurrentDictionary<string, AsyncHiLoKeyGenerator> _keyGeneratorsByTag = new ConcurrentDictionary<string, AsyncHiLoKeyGenerator>();
+        private readonly ConcurrentDictionary<string, AsyncHiLoIdGenerator> _idGeneratorsByTag = new ConcurrentDictionary<string, AsyncHiLoIdGenerator>();
         private readonly DocumentStore _store;
         private readonly string _dbName;
         private readonly DocumentConventions _conventions;
         private static readonly Task<string> NullStringCompletedTask = Task.FromResult<string>(null);
 
-        public AsyncMultiTypeHiLoKeyGenerator(DocumentStore store, string dbName, DocumentConventions conventions)
+        public AsyncMultiTypeHiLoIdGenerator(DocumentStore store, string dbName, DocumentConventions conventions)
         {
             _store = store;
             _dbName = dbName;
             _conventions = conventions;
         }
 
-        public Task<string> GenerateDocumentKeyAsync(object entity)
+        public Task<string> GenerateDocumentIdAsync(object entity)
         {
             var typeTagName = _conventions.GetCollectionName(entity);
             if (string.IsNullOrEmpty(typeTagName)) //ignore empty tags
@@ -38,25 +38,25 @@ namespace Raven.Client.Documents.Identity
                 return NullStringCompletedTask;
             }
             var tag = _conventions.TransformTypeCollectionNameToDocumentIdPrefix(typeTagName);
-            AsyncHiLoKeyGenerator value;
-            if (_keyGeneratorsByTag.TryGetValue(tag, out value))
-                return value.GenerateDocumentKeyAsync(entity);
+            AsyncHiLoIdGenerator value;
+            if (_idGeneratorsByTag.TryGetValue(tag, out value))
+                return value.GenerateDocumentIdAsync(entity);
 
             lock (_generatorLock)
             {
-                if (_keyGeneratorsByTag.TryGetValue(tag, out value))
-                    return value.GenerateDocumentKeyAsync(entity);
+                if (_idGeneratorsByTag.TryGetValue(tag, out value))
+                    return value.GenerateDocumentIdAsync(entity);
 
-                value = new AsyncHiLoKeyGenerator(tag, _store, _dbName, _conventions.IdentityPartsSeparator);
-                _keyGeneratorsByTag.TryAdd(tag, value);
+                value = new AsyncHiLoIdGenerator(tag, _store, _dbName, _conventions.IdentityPartsSeparator);
+                _idGeneratorsByTag.TryAdd(tag, value);
             }
 
-            return value.GenerateDocumentKeyAsync(entity);
+            return value.GenerateDocumentIdAsync(entity);
         }
 
         public async Task ReturnUnusedRange()
         {
-            foreach (var generator in _keyGeneratorsByTag)
+            foreach (var generator in _idGeneratorsByTag)
             {
                 await generator.Value.ReturnUnusedRangeAsync().ConfigureAwait(false);
             }

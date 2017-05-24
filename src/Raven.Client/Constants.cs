@@ -7,7 +7,7 @@ namespace Raven.Client
     {
         public class Json
         {
-            public const string CustomFunctionsKey = "Raven/Javascript/Functions";
+            public const string CustomFunctionsId = "Raven/Javascript/Functions";
 
             private Json()
             {
@@ -232,7 +232,7 @@ namespace Raven.Client
 
             public class Versioning
             {
-                public const string ConfigurationKey = "Raven/Versioning/Configuration";
+                public const string ConfigurationId = "Raven/Versioning/Configuration";
             }
 
             public class ETL

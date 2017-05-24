@@ -33,7 +33,7 @@ namespace FastTests.Server.Documents.Notifications
                 DocumentChange documentChange;
                 Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(1)));
 
-                Assert.Equal("users/1", documentChange.Key);
+                Assert.Equal("users/1", documentChange.Id);
                 Assert.Equal(documentChange.Type, DocumentChangeTypes.Put);
                 Assert.NotNull(documentChange.Etag);
             }
@@ -102,7 +102,7 @@ namespace FastTests.Server.Documents.Notifications
                 DocumentChange documentChange;
                 Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(2)));
 
-                Assert.Equal("users/1", documentChange.Key);
+                Assert.Equal("users/1", documentChange.Id);
                 Assert.Equal(documentChange.Type, DocumentChangeTypes.Delete);
 
                 //((RemoteDatabaseChanges)taskObservable).DisposeAsync().Wait();

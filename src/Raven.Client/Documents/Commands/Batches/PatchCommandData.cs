@@ -10,13 +10,13 @@ namespace Raven.Client.Documents.Commands.Batches
     {
         public PatchCommandData(string id, long? etag, PatchRequest patch, PatchRequest patchIfMissing)
         {
-            Key = id ?? throw new ArgumentNullException(nameof(id));
+            Id = id ?? throw new ArgumentNullException(nameof(id));
             Etag = etag;
             Patch = patch ?? throw new ArgumentNullException(nameof(patch));
             PatchIfMissing = patchIfMissing;
         }
 
-        public string Key { get; }
+        public string Id { get; }
         public long? Etag { get; }
         public PatchRequest Patch { get; }
         public PatchRequest PatchIfMissing { get; }
@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Commands.Batches
         {
             var json = new DynamicJsonValue
             {
-                [nameof(Key)] = Key,
+                [nameof(Id)] = Id,
                 [nameof(Etag)] = Etag,
                 [nameof(Patch)] = Patch.ToJson(conventions, context),
                 [nameof(Type)] = Type.ToString()

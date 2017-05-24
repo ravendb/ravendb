@@ -83,7 +83,7 @@ namespace Raven.Client.Documents.Session.Operations
             if (_session.DocumentsById.TryGetValue(id, out doc))
                 return _session.TrackEntity<T>(doc);
 
-            if (_session.IncludedDocumentsByKey.TryGetValue(id, out doc))
+            if (_session.IncludedDocumentsById.TryGetValue(id, out doc))
                 return _session.TrackEntity<T>(doc);
 
             return default(T);
@@ -115,7 +115,7 @@ namespace Raven.Client.Documents.Session.Operations
                         continue;
 
                     var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(include);
-                    _session.IncludedDocumentsByKey[newDocumentInfo.Id] = newDocumentInfo;
+                    _session.IncludedDocumentsById[newDocumentInfo.Id] = newDocumentInfo;
                 }
             }
 

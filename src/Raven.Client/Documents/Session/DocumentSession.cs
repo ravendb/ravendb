@@ -121,11 +121,11 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        /// Generates the document key.
+        /// Generates the document ID.
         /// </summary>
         /// <param name="entity">The entity.</param>
         /// <returns></returns>
-        protected override string GenerateKey(object entity)
+        protected override string GenerateId(object entity)
         {
             return Conventions.GenerateDocumentId(DatabaseName, entity);
         }
@@ -135,7 +135,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="entity">The entity.</param>
         /// <returns></returns>
-        protected override Task<string> GenerateKeyAsync(object entity)
+        protected override Task<string> GenerateIdAsync(object entity)
         {
             throw new NotSupportedException("Cannot use async operation in sync session");
         }

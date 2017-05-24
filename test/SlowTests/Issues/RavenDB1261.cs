@@ -69,7 +69,7 @@ namespace SlowTests.Issues
 
                     stream.MoveNext();
 
-                    Assert.NotNull(stream.Current.Key);
+                    Assert.NotNull(stream.Current.Id);
                 }
             }
         }

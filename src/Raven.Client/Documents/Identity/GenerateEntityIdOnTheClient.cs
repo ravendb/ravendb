@@ -10,12 +10,12 @@ namespace Raven.Client.Documents.Identity
     public class GenerateEntityIdOnTheClient
     {
         private readonly DocumentConventions _conventions;
-        private readonly Func<object, string> _generateKey;
+        private readonly Func<object, string> _generateId;
 
-        public GenerateEntityIdOnTheClient(DocumentConventions conventions, Func<object, string> generateKey)
+        public GenerateEntityIdOnTheClient(DocumentConventions conventions, Func<object, string> generateId)
         {
             _conventions = conventions;
-            _generateKey = generateKey;
+            _generateId = generateId;
         }
 
         private MemberInfo GetIdentityProperty(Type entityType)
@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Identity
         }
 
         /// <summary>
-        /// Attempts to get the document key from an instance 
+        /// Attempts to get the document ID from an instance 
         /// </summary>
         public bool TryGetIdFromInstance(object entity, out string id)
         {
@@ -47,15 +47,15 @@ namespace Raven.Client.Documents.Identity
         /// </summary>
         /// <param name="entity">The entity.</param>
         /// <returns></returns>
-        public string GetOrGenerateDocumentKey(object entity)
+        public string GetOrGenerateDocumentId(object entity)
         {
             string id;
             TryGetIdFromInstance(entity, out id);
 
             if (id == null)
             {
-                // Generate the key up front
-                id = _generateKey(entity);
+                // Generate the ID up front
+                id = _generateId(entity);
             }
 
             if (id != null && id.StartsWith("/"))
@@ -63,14 +63,14 @@ namespace Raven.Client.Documents.Identity
             return id;
         }
 
-        public string GenerateDocumentKeyForStorage(object entity)
+        public string GenerateDocumentIdForStorage(object entity)
         {
             string id;
             if (entity is IDynamicMetaObjectProvider)
             {
                 if (TryGetIdFromDynamic(entity, out id) == false || id == null)
                 {
-                    id = _generateKey(entity);
+                    id = _generateId(entity);
                     // If we generated a new id, store it back into the Id field so the client has access to it                    
                     if (id != null)
                         TrySetIdOnDynamic(entity, id);
@@ -78,7 +78,7 @@ namespace Raven.Client.Documents.Identity
                 return id;
             }
 
-            id = GetOrGenerateDocumentKey(entity);
+            id = GetOrGenerateDocumentId(entity);
             TrySetIdentity(entity, id);
             return id;
         }

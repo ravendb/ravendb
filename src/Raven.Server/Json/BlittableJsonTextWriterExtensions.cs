@@ -1180,11 +1180,11 @@ namespace Raven.Server.Json
                 writer.WritePropertyName(Constants.Documents.Metadata.Etag);
                 writer.WriteInteger(document.Etag);
             }
-            if (document.Key != null)
+            if (document.Id != null)
             {
                 writer.WriteComma();
                 writer.WritePropertyName(Constants.Documents.Metadata.Id);
-                writer.WriteString(document.Key);
+                writer.WriteString(document.Id);
 
             }
             if (document.IndexScore != null)

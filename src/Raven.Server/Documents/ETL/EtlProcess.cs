@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.ETL
 
             foreach (var item in items)
             {
-                if (Transformation.ApplyToAllDocuments && CollectionName.IsSystemDocument(item.DocumentKey.Buffer, item.DocumentKey.Size, out var isHilo))
+                if (Transformation.ApplyToAllDocuments && CollectionName.IsSystemDocument(item.DocumentId.Buffer, item.DocumentId.Size, out var isHilo))
                 {
                     if (ShouldFilterOutSystemDocument(isHilo))
                     {
@@ -198,7 +198,7 @@ namespace Raven.Server.Documents.ETL
                         Statistics.RecordTransformationError(e);
 
                         if (Logger.IsInfoEnabled)
-                            Logger.Info($"Could not process SQL ETL script for '{Name}', skipping document: {item.DocumentKey}", e);
+                            Logger.Info($"Could not process SQL ETL script for '{Name}', skipping document: {item.DocumentId}", e);
                     }
                 }
             }

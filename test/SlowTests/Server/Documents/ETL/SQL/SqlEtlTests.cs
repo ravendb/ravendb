@@ -631,8 +631,8 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                                     },
                                     SqlTables =
                                     {
-                                        new SqlEtlTable {TableName = "Orders", DocumentKeyColumn = "Id"},
-                                        new SqlEtlTable {TableName = "OrderLines", DocumentKeyColumn = "OrderId"},
+                                        new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
+                                        new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId"},
                                     }
                                 },
                                 Transforms =
@@ -770,7 +770,7 @@ CREATE TABLE [dbo].[Attachments]
                                 },
                                 SqlTables =
                                 {
-                                    new SqlEtlTable {TableName = "Attachments", DocumentKeyColumn = "UserId", InsertOnlyMode = false},
+                                    new SqlEtlTable {TableName = "Attachments", DocumentIdColumn = "UserId", InsertOnlyMode = false},
                                 },
                             },
                             Transforms =
@@ -977,8 +977,8 @@ loadToOrders(orderData);
                             },
                             SqlTables =
                             {
-                                new SqlEtlTable {TableName = "Orders", DocumentKeyColumn = "Id", InsertOnlyMode = insertOnly},
-                                new SqlEtlTable {TableName = "OrderLines", DocumentKeyColumn = "OrderId", InsertOnlyMode = insertOnly},
+                                new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id", InsertOnlyMode = insertOnly},
+                                new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId", InsertOnlyMode = insertOnly},
                             },
                         },
                         Transforms =

@@ -275,7 +275,7 @@ namespace Raven.Server.Smuggler.Documents
             public bool IsDisposed => _isDisposed;
 
             private readonly DocumentsOperationContext _context;
-            private const string PreV4RevisionsDocumentKey = "/revisions/";
+            private const string PreV4RevisionsDocumentId = "/revisions/";
 
             public MergedBatchPutCommand(DocumentDatabase database, BuildVersionType buildType, Logger log)
             {
@@ -309,7 +309,7 @@ namespace Raven.Server.Smuggler.Documents
                     var document = documentType.Document;
                     using (document.Data)
                     {
-                        var key = document.Key;
+                        var id = document.Id;
 
                         if (IsRevision)
                         {
@@ -318,26 +318,26 @@ namespace Raven.Server.Smuggler.Documents
 
                             PutAttachments(context, document);
                             // ReSharper disable once PossibleNullReferenceException
-                            _database.BundleLoader.VersioningStorage.Put(context, key, document.Data, document.Flags, document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
+                            _database.BundleLoader.VersioningStorage.Put(context, id, document.Data, document.Flags, document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
                             continue;
                         }
 
-                        if (IsPreV4Revision(key, document))
+                        if (IsPreV4Revision(id, document))
                         {
                             // handle old revisions
                             if (_database.BundleLoader.VersioningStorage == null)
                                 ThrowVersioningDisabled();
 
-                            var endIndex = key.IndexOf(PreV4RevisionsDocumentKey, StringComparison.OrdinalIgnoreCase);
-                            var newKey = key.Substring(0, endIndex);
+                            var endIndex = id.IndexOf(PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase);
+                            var newId = id.Substring(0, endIndex);
 
                             // ReSharper disable once PossibleNullReferenceException
-                            _database.BundleLoader.VersioningStorage.Put(context, newKey, document.Data, document.Flags, document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
+                            _database.BundleLoader.VersioningStorage.Put(context, newId, document.Data, document.Flags, document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
                             continue;
                         }
 
                         PutAttachments(context, document);
-                        _database.DocumentsStorage.Put(context, key, null, document.Data, nonPersistentFlags: document.NonPersistentFlags);
+                        _database.DocumentsStorage.Put(context, id, null, document.Data, nonPersistentFlags: document.NonPersistentFlags);
                     }
                 }
 
@@ -363,9 +363,9 @@ namespace Raven.Server.Smuggler.Documents
 
                     var type = (document.Flags & DocumentFlags.Revision) == DocumentFlags.Revision ? AttachmentType.Revision : AttachmentType.Document;
                     var attachmentsStorage = _database.DocumentsStorage.AttachmentsStorage;
-                    using (DocumentKeyWorker.GetSliceFromKey(_context, document.Key, out Slice lowerDocumentId))
-                    using (DocumentKeyWorker.GetLowerKeySliceAndStorageKey(_context, name, out Slice lowerName, out Slice nameSlice))
-                    using (DocumentKeyWorker.GetLowerKeySliceAndStorageKey(_context, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
+                    using (DocumentIdWorker.GetSliceFromId(_context, document.Id, out Slice lowerDocumentId))
+                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, name, out Slice lowerName, out Slice nameSlice))
+                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
                     using (Slice.External(_context.Allocator, hash, out Slice base64Hash))
                     using (attachmentsStorage.GetAttachmentKey(_context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
                         base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, type, document.ChangeVector, out Slice keySlice))
@@ -376,7 +376,7 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private bool IsPreV4Revision(string key, Document document)
+            private bool IsPreV4Revision(string id, Document document)
             {
                 if (_buildType == BuildVersionType.V3 == false)
                     return false;
@@ -384,7 +384,7 @@ namespace Raven.Server.Smuggler.Documents
                 if ((document.NonPersistentFlags & NonPersistentDocumentFlags.LegacyRevision) != NonPersistentDocumentFlags.LegacyRevision)
                     return false;
 
-                return key.Contains(PreV4RevisionsDocumentKey);
+                return id.Contains(PreV4RevisionsDocumentId);
             }
 
             private static void ThrowVersioningDisabled()

@@ -9,7 +9,6 @@ class replicationDestination {
     domain = ko.observable<string>();
     apiKey = ko.observable<string>();
     database = ko.observable<string>();
-    transitiveReplicationBehavior = ko.observable<string>();
     ignoredClient = ko.observable<boolean>();
     disabled = ko.observable<boolean>();
     clientVisibleUrl = ko.observable<string>();
@@ -85,7 +84,6 @@ class replicationDestination {
         this.domain(dto.Domain);
         this.apiKey(dto.ApiKey);
         this.database(dto.Database);
-        this.transitiveReplicationBehavior(dto.TransitiveReplicationBehavior);
         this.ignoredClient(dto.IgnoredClient);
         this.disabled(dto.Disabled);
         this.clientVisibleUrl(dto.ClientVisibleUrl);
@@ -145,7 +143,6 @@ class replicationDestination {
             ApiKey: null,
             
             Database: databaseName,
-            TransitiveReplicationBehavior: "Replicate" as Raven.Client.Documents.Replication.TransitiveReplicationOptions,
             IgnoredClient: false,
             Disabled: false,
             ClientVisibleUrl: null,
@@ -177,7 +174,6 @@ class replicationDestination {
             Domain: this.domain(),
             ApiKey: this.apiKey(),
             Database: this.database(),
-            TransitiveReplicationBehavior: this.transitiveReplicationBehavior(),
             IgnoredClient: this.ignoredClient(),
             Disabled: this.disabled(),
             ClientVisibleUrl: this.clientVisibleUrl(),

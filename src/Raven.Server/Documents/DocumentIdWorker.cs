@@ -3,35 +3,33 @@ using System.Text;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
 
 namespace Raven.Server.Documents
 {
-    internal unsafe class DocumentKeyWorker
+    internal unsafe class DocumentIdWorker
     {
         [ThreadStatic]
         private static JsonParserState _jsonParserState;
 
-        public static ByteStringContext<ByteStringMemoryCache>.ExternalScope GetSliceFromKey<TTransaction>(
-            TransactionOperationContext<TTransaction> context, string key, out Slice keySlice)
+        public static ByteStringContext<ByteStringMemoryCache>.ExternalScope GetSliceFromId<TTransaction>(
+            TransactionOperationContext<TTransaction> context, string id, out Slice idSlice)
             where TTransaction : RavenTransaction
         {
-            var byteCount = Encoding.GetMaxByteCount(key.Length);
+            var byteCount = Encoding.GetMaxByteCount(id.Length);
 
             var buffer = context.GetMemory(
                 byteCount // this buffer is allocated to also serve the GetSliceFromUnicodeKey
-                + sizeof(char) * key.Length);
+                + sizeof(char) * id.Length);
 
 
-            if (key.Length > 512)
-                ThrowKeyTooBig(key);
+            if (id.Length > 512)
+                ThrowDocumentIdTooBig(id);
 
-
-            for (var i = 0; i < key.Length; i++)
+            for (var i = 0; i < id.Length; i++)
             {
-                var ch = key[i];
+                var ch = id[i];
                 if (ch > 127) // not ASCII, use slower mode
                     goto UnlikelyUnicode;
                 if ((ch >= 65) && (ch <= 90))
@@ -40,10 +38,10 @@ namespace Raven.Server.Documents
                     buffer.Address[i] = (byte)ch;
             }
 
-            return Slice.External(context.Allocator, buffer.Address, (ushort)key.Length, out keySlice);
+            return Slice.External(context.Allocator, buffer.Address, (ushort)id.Length, out idSlice);
 
             UnlikelyUnicode:
-            return GetSliceFromUnicodeKey(context, key, out keySlice, buffer.Address, byteCount);
+            return GetSliceFromUnicodeKey(context, id, out idSlice, buffer.Address, byteCount);
         }
 
         private static ByteStringContext<ByteStringMemoryCache>.ExternalScope GetSliceFromUnicodeKey<TTransaction>(
@@ -64,7 +62,7 @@ namespace Raven.Server.Documents
                 var size = Encoding.GetBytes(destChars, key.Length, keyBytes, byteCount);
 
                 if (size > 512)
-                    ThrowKeyTooBig(key);
+                    ThrowDocumentIdTooBig(key);
 
                 return Slice.External(context.Allocator, keyBytes, (ushort)size, out keySlice);
             }
@@ -73,7 +71,8 @@ namespace Raven.Server.Documents
 
         private static readonly UTF8Encoding Encoding = new UTF8Encoding();
 
-        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetLowerKeySliceAndStorageKey<TTransaction>(TransactionOperationContext<TTransaction> context, string str, out Slice lowerKeySlice, out Slice keySlice)
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetLowerIdSliceAndStorageKey<TTransaction>(
+            TransactionOperationContext<TTransaction> context, string str, out Slice lowerIdSlice, out Slice idSlice)
             where TTransaction : RavenTransaction
         {
             // Because we need to also store escape positions for the key when we store it
@@ -96,15 +95,14 @@ namespace Raven.Server.Documents
 
             int strLength = str.Length;
 
-            int keySize = JsonParserState.VariableSizeIntSize(strLength);
+            int idSize = JsonParserState.VariableSizeIntSize(strLength);
 
             int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(str);
 
-            ByteString buffer;
             var scope = context.Allocator.Allocate(strLength // lower key
-                                                   + keySize // the size of var int for the len of the key
-                                                   + strLength // actual key
-                                                   + escapePositionsSize, out buffer);
+                                       + idSize // the size of var int for the len of the key
+                                       + strLength // actual key
+                                       + escapePositionsSize, out ByteString buffer);
 
 
             byte* ptr = buffer.Ptr;
@@ -131,31 +129,32 @@ namespace Raven.Server.Documents
                 }
 
 
-                ptr[i + keySize + strLength] = (byte)ch;
+                ptr[i + idSize + strLength] = (byte)ch;
             }
 
             var writePos = ptr + strLength;
 
             JsonParserState.WriteVariableSizeInt(ref writePos, strLength);
             _jsonParserState.WriteEscapePositionsTo(writePos + strLength);
-            keySize = escapePositionsSize + strLength + keySize;
+            idSize = escapePositionsSize + strLength + idSize;
 
-            Slice.External(context.Allocator, ptr + strLength, keySize, out keySlice);
-            Slice.External(context.Allocator, ptr, str.Length, out lowerKeySlice);
+            Slice.External(context.Allocator, ptr + strLength, idSize, out idSlice);
+            Slice.External(context.Allocator, ptr, str.Length, out lowerIdSlice);
             return scope;
 
             UnlikelyUnicode:
-            return UnicodeGetLowerKeySliceAndStorageKey(context, str, out lowerKeySlice, out keySlice);
+            return UnicodeGetLowerIdAndStorageKey(context, str, out lowerIdSlice, out idSlice);
         }
 
-        private static ByteStringContext.InternalScope UnicodeGetLowerKeySliceAndStorageKey<TTransaction>(TransactionOperationContext<TTransaction> context, string str,
-            out Slice lowerKeySlice, out Slice keySlice)
+        private static ByteStringContext.InternalScope UnicodeGetLowerIdAndStorageKey<TTransaction>(
+            TransactionOperationContext<TTransaction> context, string str,
+            out Slice lowerIdSlice, out Slice idSlice)
             where TTransaction : RavenTransaction
         {
-            // See comment in GetLowerKeySliceAndStorageKey for the format
+            // See comment in GetLowerIdSliceAndStorageKey for the format
             _jsonParserState.Reset();
             var byteCount = Encoding.GetMaxByteCount(str.Length);
-            var maxKeyLenSize = JsonParserState.VariableSizeIntSize(byteCount);
+            var maxIdLenSize = JsonParserState.VariableSizeIntSize(byteCount);
 
             int strLength = str.Length;
             int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(str);
@@ -163,9 +162,9 @@ namespace Raven.Server.Documents
             ByteString buffer;
             var scope = context.Allocator.Allocate(
                 sizeof(char) * strLength // for the lower calls
-                + byteCount // lower key
-                + maxKeyLenSize // the size of var int for the len of the key
-                + byteCount // actual key
+                + byteCount // lower ID
+                + maxIdLenSize // the size of var int for the len of the ID
+                + byteCount // actual ID
                 + escapePositionsSize, out buffer);
 
             fixed (char* pChars = str)
@@ -177,46 +176,46 @@ namespace Raven.Server.Documents
                 for (var i = 0; i < strLength; i++)
                     destChars[i] = char.ToLowerInvariant(pChars[i]);
 
-                byte* lowerKey = buffer.Ptr + strLength * sizeof(char);
+                byte* lowerId = buffer.Ptr + strLength * sizeof(char);
 
-                int lowerSize = Encoding.GetBytes(destChars, strLength, lowerKey, byteCount);
+                int lowerSize = Encoding.GetBytes(destChars, strLength, lowerId, byteCount);
 
                 if (lowerSize > 512)
-                    ThrowKeyTooBig(str);
+                    ThrowDocumentIdTooBig(str);
 
-                byte* key = buffer.Ptr + strLength * sizeof(char) + byteCount;
-                byte* writePos = key;
-                int keySize = Encoding.GetBytes(pChars, strLength, writePos + maxKeyLenSize, byteCount);
+                byte* id = buffer.Ptr + strLength * sizeof(char) + byteCount;
+                byte* writePos = id;
+                int idSize = Encoding.GetBytes(pChars, strLength, writePos + maxIdLenSize, byteCount);
 
-                var actualKeyLenSize = JsonParserState.VariableSizeIntSize(keySize);
-                if (actualKeyLenSize < maxKeyLenSize)
+                var actualIdLenSize = JsonParserState.VariableSizeIntSize(idSize);
+                if (actualIdLenSize < maxIdLenSize)
                 {
-                    var movePtr = maxKeyLenSize - actualKeyLenSize;
-                    key += movePtr;
+                    var movePtr = maxIdLenSize - actualIdLenSize;
+                    id += movePtr;
                     writePos += movePtr;
                 }
 
-                JsonParserState.WriteVariableSizeInt(ref writePos, keySize);
-                _jsonParserState.WriteEscapePositionsTo(writePos + keySize);
-                keySize += escapePositionsSize + maxKeyLenSize;
+                JsonParserState.WriteVariableSizeInt(ref writePos, idSize);
+                _jsonParserState.WriteEscapePositionsTo(writePos + idSize);
+                idSize += escapePositionsSize + maxIdLenSize;
 
-                Slice.External(context.Allocator, key, keySize, out keySlice);
-                Slice.External(context.Allocator, lowerKey, lowerSize, out lowerKeySlice);
+                Slice.External(context.Allocator, id, idSize, out idSlice);
+                Slice.External(context.Allocator, lowerId, lowerSize, out lowerIdSlice);
                 return scope;
             }
         }
 
-        private static void ThrowKeyTooBig(string str)
+        private static void ThrowDocumentIdTooBig(string str)
         {
             throw new ArgumentException(
-                $"Key cannot exceed 512 bytes, but the key was {Encoding.GetByteCount(str)} bytes. The invalid key is '{str}'.",
+                $"Document ID cannot exceed 512 bytes, but the ID was {Encoding.GetByteCount(str)} bytes. The invalid ID is '{str}'.",
                 nameof(str));
         }
 
         public static ByteStringContext.InternalScope GetStringPreserveCase(DocumentsOperationContext context, string str, out Slice strSlice)
         {
             // TODO: Optimize this
-            return GetLowerKeySliceAndStorageKey(context, str, out var _, out strSlice);
+            return GetLowerIdSliceAndStorageKey(context, str, out var _, out strSlice);
         }
     }
 }

@@ -27,7 +27,7 @@ namespace FastTests.Server.Documents
         [InlineData("USERs/1")]
         [InlineData("לכובע שלי שלוש פינות")]
         [InlineData("users/111112222233333333333444444445555556")]
-        public void PutAndGetDocumentById(string key)
+        public void PutAndGetDocumentById(string id)
         {
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
@@ -35,10 +35,10 @@ namespace FastTests.Server.Documents
 
                 using (var doc = ctx.ReadObject(new DynamicJsonValue
                 {
-                    ["Name"] = key
-                }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                    ["Name"] = id
+                }, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    _documentDatabase.DocumentsStorage.Put(ctx, key, null, doc);
+                    _documentDatabase.DocumentsStorage.Put(ctx, id, null, doc);
                 }
                 ctx.Transaction.Commit();
             }
@@ -47,13 +47,13 @@ namespace FastTests.Server.Documents
             {
                 ctx.OpenWriteTransaction();
 
-                var document = _documentDatabase.DocumentsStorage.Get(ctx, key);
+                var document = _documentDatabase.DocumentsStorage.Get(ctx, id);
                 Assert.NotNull(document);
                 Assert.Equal(1, document.Etag);
-                Assert.Equal(key, document.Key);
+                Assert.Equal(id, document.Id);
                 string name;
                 document.Data.TryGet("Name", out name);
-                Assert.Equal(key, name);
+                Assert.Equal(id, name);
 
                 ctx.Transaction.Commit();
             }
@@ -63,7 +63,7 @@ namespace FastTests.Server.Documents
         [InlineData("users/1")]
         [InlineData("USERs/1")]
         [InlineData("לכובע שלי שלוש פינות")]
-        public void CanDelete(string key)
+        public void CanDelete(string id)
         {
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
@@ -71,10 +71,10 @@ namespace FastTests.Server.Documents
 
                 using (var doc = ctx.ReadObject(new DynamicJsonValue
                 {
-                    ["Name"] = key
-                }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                    ["Name"] = id
+                }, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    _documentDatabase.DocumentsStorage.Put(ctx, key, null, doc);
+                    _documentDatabase.DocumentsStorage.Put(ctx, id, null, doc);
                 }
                 ctx.Transaction.Commit();
             }
@@ -83,7 +83,7 @@ namespace FastTests.Server.Documents
             {
                 ctx.OpenWriteTransaction();
 
-                _documentDatabase.DocumentsStorage.Delete(ctx, key, null);
+                _documentDatabase.DocumentsStorage.Delete(ctx, id, null);
 
                 ctx.Transaction.Commit();
             }
@@ -92,7 +92,7 @@ namespace FastTests.Server.Documents
             {
                 ctx.OpenWriteTransaction();
 
-                var document = _documentDatabase.DocumentsStorage.Get(ctx, key);
+                var document = _documentDatabase.DocumentsStorage.Get(ctx, id);
                 Assert.Null(document);
 
                 ctx.Transaction.Commit();
@@ -496,7 +496,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void PutDocumentWithoutId()
         {
-            var key = "users/";
+            var id = "users/";
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
@@ -506,9 +506,9 @@ namespace FastTests.Server.Documents
                     using (var doc = ctx.ReadObject(new DynamicJsonValue
                     {
                         ["ThisDocId"] = $"{i}"
-                    }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                    }, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                     {
-                        var putResult = _documentDatabase.DocumentsStorage.Put(ctx, key, null, doc);
+                        var putResult = _documentDatabase.DocumentsStorage.Put(ctx, id, null, doc);
                         Assert.Equal(i, putResult.Etag);
                     }
                 }
@@ -531,11 +531,11 @@ namespace FastTests.Server.Documents
                 using (var doc = ctx.ReadObject(new DynamicJsonValue
                 {
                     ["ThisDocId"] = "2"
-                }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                }, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    var putResult = _documentDatabase.DocumentsStorage.Put(ctx, key, null, doc);
+                    var putResult = _documentDatabase.DocumentsStorage.Put(ctx, id, null, doc);
                     Assert.True(putResult.Etag >= 5);
-                    Assert.Equal("users/5", putResult.Key);
+                    Assert.Equal("users/5", putResult.Id);
                 }
                 ctx.Transaction.Commit();
             }

@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Exceptions
         }
 
         public DocumentConflictException(GetConflictsResult conflicts)
-            : this($"Conflict detected on '{conflicts.Key}', conflict must be resolved before the document will be accessible.", conflicts.Key, conflicts.LargestEtag)
+            : this($"Conflict detected on '{conflicts.Id}', conflict must be resolved before the document will be accessible.", conflicts.Id, conflicts.LargestEtag)
         {
         }
 

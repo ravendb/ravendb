@@ -376,10 +376,10 @@ namespace Raven.Server.Documents.TcpHandlers
                                     {
                                         var newDoc = new Document
                                         {
-                                            Key = doc.Key,
+                                            Id = doc.Id,
                                             Etag = doc.Etag,
                                             Data = transformResult,
-                                            LoweredKey = doc.LoweredKey
+                                            LowerId = doc.LowerId
                                         };
 
                                         newDoc.EnsureMetadata();
@@ -583,7 +583,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 if (_logger.IsInfoEnabled)
                 {
                     _logger.Info(
-                        $"Criteria script threw exception for subscription {_options.SubscriptionId} connected to {TcpConnection.TcpClient.Client.RemoteEndPoint} for document id {doc.Key}",
+                        $"Criteria script threw exception for subscription {_options.SubscriptionId} connected to {TcpConnection.TcpClient.Client.RemoteEndPoint} for document id {doc.Id}",
                         ex);
                 }
                 return false;

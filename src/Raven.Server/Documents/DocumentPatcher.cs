@@ -4,12 +4,8 @@ using Jint.Native;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Voron.Exceptions;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents
@@ -47,7 +43,7 @@ namespace Raven.Server.Documents
             if (change.Type != DocumentChangeTypes.Put && change.Type != DocumentChangeTypes.Delete)
                 return;
 
-            if (string.Equals(change.Key, Constants.Json.CustomFunctionsKey, StringComparison.OrdinalIgnoreCase) == false)
+            if (string.Equals(change.Id, Constants.Json.CustomFunctionsId, StringComparison.OrdinalIgnoreCase) == false)
                 return;
 
             if (change.Type == DocumentChangeTypes.Delete)
@@ -61,7 +57,7 @@ namespace Raven.Server.Documents
 
         protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
         {
-            engine.SetValue(PutDocument, (Func<string, JsValue, JsValue, JsValue, string>)((key, data, metadata, etag) => scope.PutDocument(key, data, metadata, etag, engine)));
+            engine.SetValue(PutDocument, (Func<string, JsValue, JsValue, JsValue, string>)((id, data, metadata, etag) => scope.PutDocument(id, data, metadata, etag, engine)));
             engine.SetValue(DeleteDocument, (Action<string>)scope.DeleteDocument);
         }
 
@@ -75,14 +71,14 @@ namespace Raven.Server.Documents
         {
             lock (_locker)
             {
-                DocumentsOperationContext context;
-                using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var json = Database.DocumentsStorage.Get(context, Constants.Json.CustomFunctionsKey);
+                    var json = Database.DocumentsStorage.Get(context, Constants.Json.CustomFunctionsId);
 
-                    string functions;
-                    if (json == null || json.Data.TryGet("Functions", out functions) == false || string.IsNullOrWhiteSpace(functions))
+                    if (json == null || 
+                        json.Data.TryGet("Functions", out string functions) == false || 
+                        string.IsNullOrWhiteSpace(functions))
                     {
                         CustomFunctions = null;
                         return;

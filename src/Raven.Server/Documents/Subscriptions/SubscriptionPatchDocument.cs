@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Subscriptions
 
             using (var scope = CreateOperationScope(debugMode: false).Initialize(context))
             {
-                ApplySingleScript(context, document.Key, document, _patchRequest, scope);
+                ApplySingleScript(context, document.Id, document, _patchRequest, scope);
 
                 var result = scope.ActualPatchResult;
 
@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Subscriptions
                 if (result.IsObject())
                 {
                     var transformedDynamic = scope.ToBlittable(result.AsObject());
-                    transformResult = context.ReadObject(transformedDynamic, document.Key);
+                    transformResult = context.ReadObject(transformedDynamic, document.Id);
                     return true;
                 }
 

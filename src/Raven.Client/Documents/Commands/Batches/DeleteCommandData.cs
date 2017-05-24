@@ -9,11 +9,11 @@ namespace Raven.Client.Documents.Commands.Batches
     {
         public DeleteCommandData(string id, long? etag)
         {
-            Key = id ?? throw new ArgumentNullException(nameof(id));
+            Id = id ?? throw new ArgumentNullException(nameof(id));
             Etag = etag;
         }
 
-        public string Key { get; }
+        public string Id { get; }
         public long? Etag { get; }
         public CommandType Type { get; } = CommandType.DELETE;
 
@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Commands.Batches
         {
             return new DynamicJsonValue
             {
-                [nameof(Key)] = Key,
+                [nameof(Id)] = Id,
                 [nameof(Etag)] = Etag,
                 [nameof(Type)] = Type.ToString()
             };

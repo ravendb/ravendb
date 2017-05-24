@@ -375,8 +375,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs", "PUT", "/databases/{databaseName:string}/docs?id={documentId:string}")]
         public async Task Put()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
@@ -396,8 +395,8 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName(nameof(PutResult.Key));
-                    writer.WriteString(cmd.PutResult.Key);
+                    writer.WritePropertyName(nameof(PutResult.Id));
+                    writer.WriteString(cmd.PutResult.Id);
                     writer.WriteComma();
 
                     writer.WritePropertyName(nameof(PutResult.ETag));

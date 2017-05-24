@@ -149,9 +149,9 @@ namespace Raven.Client.Documents.Session
             return AddLazyOperation<Dictionary<string, TResult>>(lazyLoadOperation, null);
         }
 
-        Lazy<Dictionary<string, TResult>> ILazySessionOperations.LoadStartingWith<TResult>(string keyPrefix, string matches, int start, int pageSize, string exclude, string startAfter)
+        Lazy<Dictionary<string, TResult>> ILazySessionOperations.LoadStartingWith<TResult>(string idPrefix, string matches, int start, int pageSize, string exclude, string startAfter)
         {
-            var operation = new LazyStartsWithOperation<TResult>(keyPrefix, matches, exclude, start, pageSize, this, startAfter);
+            var operation = new LazyStartsWithOperation<TResult>(idPrefix, matches, exclude, start, pageSize, this, startAfter);
 
             return AddLazyOperation<Dictionary<string, TResult>>(operation, null);
         }

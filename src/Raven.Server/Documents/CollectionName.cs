@@ -112,10 +112,9 @@ namespace Raven.Server.Documents
             return string.Equals(collection, SystemCollection, StringComparison.OrdinalIgnoreCase);
         }
 
-        public static unsafe string GetCollectionName(Slice key, BlittableJsonReaderObject document)
+        public static unsafe string GetCollectionName(Slice id, BlittableJsonReaderObject document)
         {
-            bool _;
-            if (IsSystemDocument(key.Content.Ptr,key.Size, out _))
+            if (IsSystemDocument(id.Content.Ptr, id.Size, out bool _))
             {
                 return SystemCollection;
             }
@@ -157,27 +156,27 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsSystemCollectionName(string key)
+        public static bool IsSystemCollectionName(string id)
         {
-            if (key.Length < 6)
+            if (id.Length < 6)
                 return false;
 
             // case insensitive 'Raven/' match without doing allocations
 
-            if ( key[5] != '/' ||
-                (key[0] != 'R' && key[0] != 'r') ||
-                (key[1] != 'A' && key[1] != 'a') ||
-                (key[2] != 'V' && key[2] != 'v') ||
-                (key[3] != 'E' && key[3] != 'e') ||
-                (key[4] != 'N' && key[4] != 'n'))
+            if ( id[5] != '/' ||
+                (id[0] != 'R' && id[0] != 'r') ||
+                (id[1] != 'A' && id[1] != 'a') ||
+                (id[2] != 'V' && id[2] != 'v') ||
+                (id[3] != 'E' && id[3] != 'e') ||
+                (id[4] != 'N' && id[4] != 'n'))
                 return false;
 
             return true;
         }
         
-        public static string GetCollectionName(string key, BlittableJsonReaderObject document)
+        public static string GetCollectionName(string id, BlittableJsonReaderObject document)
         {
-            if (key != null && IsSystemCollectionName(key))
+            if (id != null && IsSystemCollectionName(id))
                 return SystemCollection;
 
             return GetCollectionName(document);
@@ -186,9 +185,9 @@ namespace Raven.Server.Documents
         public static string GetCollectionName(DynamicBlittableJson document)
         {
             dynamic dynamicDocument = document;
-            string key = dynamicDocument.Id;
+            string id = dynamicDocument.Id;
 
-            if (key != null && IsSystemCollectionName(key))
+            if (id != null && IsSystemCollectionName(id))
                 return SystemCollection;
 
             return GetCollectionName(document.BlittableJson);

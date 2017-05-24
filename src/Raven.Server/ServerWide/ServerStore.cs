@@ -342,7 +342,7 @@ namespace Raven.Server.ServerWide
             catch (Exception)
             {
                 // failure to read the key might be because the user password has changed
-                // in this case, we ignore the existance of the key and overwrite it
+                // in this case, we ignore the existence of the key and overwrite it
                 existingKey = null;
             }
             if (existingKey != null)
@@ -487,7 +487,7 @@ namespace Raven.Server.ServerWide
                 Solver = solver
             };
             return await SendToLeaderAsync(conflictResolverCommand);
-    }
+        }
 
         public async Task<long> PutValueInClusterAsync(string key, BlittableJsonReaderObject val)
         {

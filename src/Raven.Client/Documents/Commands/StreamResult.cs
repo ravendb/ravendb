@@ -13,9 +13,9 @@ namespace Raven.Client.Documents.Commands
     public class StreamResult<TType>
     {
         /// <summary>
-        /// Document key.
+        /// Document ID.
         /// </summary>
-        public string Key { get; set; }
+        public string Id { get; set; }
 
         /// <summary>
         /// Document etag.
