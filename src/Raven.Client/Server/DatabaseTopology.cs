@@ -244,7 +244,6 @@ namespace Raven.Client.Server
         {
             Members.RemoveAll(m => m.NodeTag == delDbFromNode);
             Promotables.RemoveAll(p => p.NodeTag == delDbFromNode);
-            Watchers.RemoveAll(w => w.NodeTag == delDbFromNode);
         }
 
         public string WhoseTaskIsIt(IDatabaseTask task)
