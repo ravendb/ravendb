@@ -296,10 +296,10 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
-                    return HandleSyntaxInMap(new MapFunctionProcessor(CollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax), queryExpression, ref members);
+                    return HandleSyntaxInMap(fieldNamesValidator, new MapFunctionProcessor(CollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax), queryExpression, ref members);
                 var invocationExpression = expression as InvocationExpressionSyntax;
                 if (invocationExpression != null)
-                    return HandleSyntaxInMap(new MapFunctionProcessor(CollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax), invocationExpression, ref members);
+                    return HandleSyntaxInMap(fieldNamesValidator, new MapFunctionProcessor(CollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax), invocationExpression, ref members);
 
                 throw new InvalidOperationException("Not supported expression type.");
             }
@@ -371,12 +371,12 @@ namespace Raven.Server.Documents.Indexes.Static
                 .AsExpressionStatement();
         }
 
-        private static List<StatementSyntax> HandleSyntaxInMap(MapFunctionProcessor mapRewriter, ExpressionSyntax expression,
+        private static List<StatementSyntax> HandleSyntaxInMap(FieldNamesValidator fieldValidator, MapFunctionProcessor mapRewriter, ExpressionSyntax expression,
             ref SyntaxList<MemberDeclarationSyntax> members)
         {
             var rewrittenExpression = (CSharpSyntaxNode)mapRewriter.Visit(expression);
 
-            var optimized = new RavenLinqOptimizer().Visit(new RavenLinqPrettifier().Visit(rewrittenExpression))
+            var optimized = new RavenLinqOptimizer(fieldValidator).Visit(new RavenLinqPrettifier().Visit(rewrittenExpression))
                 as StatementSyntax;
 
             var collectionName = string.IsNullOrWhiteSpace(mapRewriter.CollectionName) ? Constants.Documents.Collections.AllDocumentsCollection : mapRewriter.CollectionName;

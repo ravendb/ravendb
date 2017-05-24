@@ -122,7 +122,7 @@ namespace Raven.Client.Documents
                 {
                     // failed, because server is down.
                 }
-            }               
+            }
 
             Subscriptions?.Dispose();
 
@@ -133,9 +133,9 @@ namespace Raven.Client.Documents
 
             foreach (var kvp in _requestExecutors)
             {
-                if(kvp.Value.IsValueCreated == false)
+                if (kvp.Value.IsValueCreated == false)
                     continue;
-                
+
                 kvp.Value.Value.Dispose();
             }
         }
@@ -194,6 +194,20 @@ namespace Raven.Client.Documents
             lazy = _requestExecutors.GetOrAdd(database, lazy);
 
             return lazy.Value;
+        }
+
+        public override IDisposable SetRequestsTimeout(TimeSpan timeout, string database = null)
+        {
+            AssertInitialized();
+
+            var requestExecutor = GetRequestExecutor(database);
+            var oldTimeout = requestExecutor.DefaultTimeout;
+            requestExecutor.DefaultTimeout = timeout;
+
+            return new DisposableAction(() =>
+            {
+                requestExecutor.DefaultTimeout = oldTimeout;
+            });
         }
 
         /// <summary>

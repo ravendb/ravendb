@@ -191,6 +191,8 @@ namespace Raven.Client.Documents
 
         public abstract RequestExecutor GetRequestExecutor(string database = null);
 
+        public abstract IDisposable SetRequestsTimeout(TimeSpan timeout, string database = null);
+
         /// <summary>
         /// Setup the context for aggressive caching.
         /// </summary>

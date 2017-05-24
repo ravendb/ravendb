@@ -124,7 +124,7 @@ class ongoingTasks extends viewModelBase {
         app.showBootstrapDialog(confirmDeleteViewModel);
     }
 
-    private onTaskRemoved(deletedDatabaseResult: Raven.Server.Web.System.DatabaseDeleteResult) {
+    private onTaskRemoved() {
         // ...
     }
 

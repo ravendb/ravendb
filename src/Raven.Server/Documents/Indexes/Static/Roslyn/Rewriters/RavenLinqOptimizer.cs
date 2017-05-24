@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using System.Linq;
 using System.Linq.Expressions;
+using Raven.Client.Util;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
@@ -221,8 +222,29 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         }
     }
 
-    public class RavenLinqOptimizer : CSharpSyntaxRewriter
+    internal class RavenLinqOptimizer : CSharpSyntaxRewriter
     {
+        private readonly FieldNamesValidator _validator;
+
+        public RavenLinqOptimizer(FieldNamesValidator validator)
+        {
+            if (validator.Fields == null || validator.Fields.Length == 0)
+                throw new InvalidOperationException("Validator should have been validating original indexing func");
+
+            _validator = validator;
+        }
+
+        private int _recursiveCallCounter = 0;
+
+        public IDisposable RecursiveCall()
+        {
+            _recursiveCallCounter++;
+
+            return new DisposableAction(() =>
+            {
+                _recursiveCallCounter--;
+            });
+        }
 
         public override SyntaxNode VisitQueryExpression(QueryExpressionSyntax node)
         {
@@ -236,8 +258,11 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (queryExpressionSyntax != null &&
                 StripExpressionParentParenthesis(queryExpressionSyntax) is QueryExpressionSyntax)
             {
-                parent = VisitQueryExpression(queryExpressionSyntax) as ForEachStatementSyntax;
-
+                using (RecursiveCall())
+                {
+                    parent = VisitQueryExpression(queryExpressionSyntax) as ForEachStatementSyntax;
+                }
+                
                 if (parent != null)
                     node =
                         node.WithFromClause(
@@ -250,53 +275,50 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
             foreach (var clause in node.Body.Clauses)
             {
-                var whereClauseSyntax = clause as WhereClauseSyntax;
-                if (whereClauseSyntax != null)
-                {
-
-                    body = body.InsertNodesBefore(FindDummyYieldIn(body), new[]{
-                        IfStatement(BinaryExpression(SyntaxKind.EqualsExpression, MaybeParenthesizedExpression(whereClauseSyntax.Condition), LiteralExpression(SyntaxKind.FalseLiteralExpression)), ContinueStatement())
-                    });
+                if (TryRewriteBodyClause(clause, dummyYield, ref body)) 
                     continue;
-                }
-                var letClauseSyntax = clause as LetClauseSyntax;
-                if (letClauseSyntax != null)
-                {
-                    body = body.InsertNodesBefore(FindDummyYieldIn(body), new[]{
-                     LocalDeclarationStatement(
-                            VariableDeclaration(IdentifierName("var"), SingletonSeparatedList(VariableDeclarator(
-                                        letClauseSyntax.Identifier)
-                                    .WithInitializer(
-                                        EqualsValueClause(letClauseSyntax.Expression)
-                                    )
-                                )
-                            )
-                        )
-                    });
-                    continue;
-                }
-                var fromClauseSyntax = clause as FromClauseSyntax;
-                if (fromClauseSyntax != null)
-                {
-                    var nestedStmt = ForEachStatement(
-                        IdentifierName("var"),
-                        fromClauseSyntax.Identifier,
-                        fromClauseSyntax.Expression,
-                        Block().AddStatements(dummyYield));
-
-                    body = body.ReplaceNode(FindDummyYieldIn(body), nestedStmt);
-
-                    continue;
-                }
+                
                 return base.VisitQueryExpression(node);
             }
-
+            
             var selectClauseSyntax = node.Body.SelectOrGroup as SelectClauseSyntax;
             if (selectClauseSyntax == null)
             {
                 return base.VisitQueryExpression(node);
             }
 
+            var continuation = node.Body.Continuation;
+            if (continuation != null)
+            {
+                // select new {  } into 
+
+                var selectIntoVar = LocalDeclarationStatement(
+                    VariableDeclaration(IdentifierName("var"), SingletonSeparatedList(VariableDeclarator(
+                                continuation.Identifier)
+                            .WithInitializer(
+                                EqualsValueClause(selectClauseSyntax.Expression)
+                            )
+                        )
+                    )
+                );
+
+                selectClauseSyntax = continuation.Body.SelectOrGroup as SelectClauseSyntax;
+
+                if (selectClauseSyntax == null)
+                {
+                    return base.VisitQueryExpression(node);
+                }
+
+                body = body.InsertNodesBefore(FindDummyYieldIn(body), new[] { selectIntoVar });
+
+                foreach (var clause in continuation.Body.Clauses)
+                {
+                    if (TryRewriteBodyClause(clause, dummyYield, ref body))
+                        continue;
+
+                    return base.VisitQueryExpression(node);
+                }
+            }
 
             var stmt = ForEachStatement(
                 IdentifierName("var"),
@@ -310,7 +332,12 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             );
 
             if (parent == null)
+            {
+                if (_recursiveCallCounter == 0 && _validator.Validate(stmt.ToFullString(), selectClauseSyntax.Expression, throwOnError: false) == false)
+                    ThrowIndexRewritingException(node, stmt);
+
                 return stmt;
+            }
 
             var parentBody = (BlockSyntax)parent.Statement;
 
@@ -334,6 +361,59 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             return parent.WithStatement(
                 parentBody.ReplaceNode(yieldStatementSyntax, parentVar).AddStatements(statementSyntax)
             );
+        }
+
+        private void ThrowIndexRewritingException(QueryExpressionSyntax node, ForEachStatementSyntax stmt)
+        {
+            throw new InvalidOperationException("Rewriting the function to an optimized version resulted in creating invalid indexing outputs. " +
+                                                $"The output needs to have the following fields: [{string.Join(", ", _validator.Fields)}] " +
+                                                $"while after the optimization it has: [{string.Join(", ", _validator.ExtractedFields)}].{Environment.NewLine}" +
+                                                $"Original indexing func:{Environment.NewLine}{node.ToFullString()}{Environment.NewLine}{Environment.NewLine}" +
+                                                $"Optimized indexing func:{Environment.NewLine}{stmt.ToFullString()}");
+        }
+
+        private static bool TryRewriteBodyClause(QueryClauseSyntax clause, YieldStatementSyntax dummyYield, ref BlockSyntax body)
+        {
+            if (clause is WhereClauseSyntax whereClauseSyntax)
+            {
+                body = body.InsertNodesBefore(FindDummyYieldIn(body), new[]
+                {
+                    IfStatement(
+                        BinaryExpression(SyntaxKind.EqualsExpression, MaybeParenthesizedExpression(whereClauseSyntax.Condition),
+                            LiteralExpression(SyntaxKind.FalseLiteralExpression)), ContinueStatement())
+                });
+                return true;
+            }
+
+            if (clause is LetClauseSyntax letClauseSyntax)
+            {
+                body = body.InsertNodesBefore(FindDummyYieldIn(body), new[]
+                {
+                    LocalDeclarationStatement(
+                        VariableDeclaration(IdentifierName("var"), SingletonSeparatedList(VariableDeclarator(
+                                    letClauseSyntax.Identifier)
+                                .WithInitializer(
+                                    EqualsValueClause(letClauseSyntax.Expression)
+                                )
+                            )
+                        )
+                    )
+                });
+                return true;
+            }
+            if (clause is FromClauseSyntax fromClauseSyntax)
+            {
+                var nestedStmt = ForEachStatement(
+                    IdentifierName("var"),
+                    fromClauseSyntax.Identifier,
+                    fromClauseSyntax.Expression,
+                    Block().AddStatements(dummyYield));
+
+                body = body.ReplaceNode(FindDummyYieldIn(body), nestedStmt);
+
+                return true;
+            }
+            return false;
         }
 
         private static YieldStatementSyntax FindDummyYieldIn(SyntaxNode parent)
