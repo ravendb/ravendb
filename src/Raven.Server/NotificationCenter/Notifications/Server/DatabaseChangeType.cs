@@ -5,6 +5,7 @@
         Load,
         Put,
         Update,
-        Delete
+        Delete,
+        RemoveNode
     }
 }

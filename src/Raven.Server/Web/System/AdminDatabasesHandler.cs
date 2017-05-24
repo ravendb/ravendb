@@ -155,7 +155,6 @@ namespace Raven.Server.Web.System
 
                 var (index, _) = await ServerStore.WriteDbAsync(name, topologyJson, etag).ThrowOnTimeout();
                 await ServerStore.Cluster.WaitForIndexNotification(index).ThrowOnTimeout();
-                ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -216,8 +215,6 @@ namespace Raven.Server.Web.System
 
                 var (index, _) = await ServerStore.WriteDbAsync(name, json, etag).ThrowOnTimeout();
                 await ServerStore.Cluster.WaitForIndexNotification(index).ThrowOnTimeout();
-
-                ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -331,7 +328,6 @@ namespace Raven.Server.Web.System
                 {
                     await ServerStore.Cluster.WaitForIndexNotification(index).ThrowOnTimeout();
                 }        
-                ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Update));
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -375,8 +371,6 @@ namespace Raven.Server.Web.System
                     var (index, _) = await ServerStore.ModifyDatabaseWatchers(name, watchers).ThrowOnTimeout();
                     await ServerStore.Cluster.WaitForIndexNotification(index).ThrowOnTimeout();
 
-                    ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Update));
-
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -416,8 +410,6 @@ namespace Raven.Server.Web.System
                     var (index,_) = await ServerStore.ModifyConflictSolverAsync(name, conflictResolver).ThrowOnTimeout();
                     await ServerStore.Cluster.WaitForIndexNotification(index).ThrowOnTimeout();
                     
-                    ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Update));
-
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -461,10 +453,6 @@ namespace Raven.Server.Web.System
                 foreach (var name in names)
                 {
                     var (newEtag, _) = await ServerStore.DeleteDatabaseAsync(name, isHardDelete, fromNode).ThrowOnTimeout();
-                    if (string.IsNullOrEmpty(fromNode))
-                    {
-                        ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Delete));
-                    }
                     etag = newEtag;
                 }
                 await ServerStore.Cluster.WaitForIndexNotification(etag).ThrowOnTimeout();
@@ -545,8 +533,6 @@ namespace Raven.Server.Web.System
 
                     var (index, result) = await ServerStore.WriteDbAsync(name, json, null).ThrowOnTimeout();
                     await ServerStore.Cluster.WaitForIndexNotification(index).ThrowOnTimeout();
-
-                    ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
 
                     context.Write(writer, new DynamicJsonValue
                     {

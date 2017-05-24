@@ -154,11 +154,10 @@ class databases extends viewModelBase {
 
     createManageDbGroupUrlObsevable(dbInfo: databaseInfo): KnockoutComputed<string> {
         const isLocalObservable = this.createIsLocalDatabaseObservable(dbInfo.name);
-        const db = dbInfo.asDatabase();
 
         return ko.pureComputed(() => {
             const isLocal = isLocalObservable();
-            const link = appUrl.forManageDatabaseGroup(db);
+            const link = appUrl.forManageDatabaseGroup(dbInfo);
             if (isLocal) {
                 return link;
             } else {
@@ -169,11 +168,10 @@ class databases extends viewModelBase {
 
     createAllDocumentsUrlObservable(dbInfo: databaseInfo): KnockoutComputed<string> {
         const isLocalObservable = this.createIsLocalDatabaseObservable(dbInfo.name);
-        const db = dbInfo.asDatabase();
 
         return ko.pureComputed(() => {
             const isLocal = isLocalObservable();
-            const link = appUrl.forDocuments(null, db);
+            const link = appUrl.forDocuments(null, dbInfo);
             if (isLocal) {
                 return link;
             } else {
@@ -205,28 +203,23 @@ class databases extends viewModelBase {
     }
 
     indexErrorsUrl(dbInfo: databaseInfo): string {
-        const db = dbInfo.asDatabase();
-        return appUrl.forIndexErrors(db);
+        return appUrl.forIndexErrors(dbInfo);
     }
 
     storageReportUrl(dbInfo: databaseInfo): string {
-        const db = dbInfo.asDatabase();
-        return appUrl.forStatusStorageReport(db);
+        return appUrl.forStatusStorageReport(dbInfo);
     }
 
     indexesUrl(dbInfo: databaseInfo): string {
-        const db = dbInfo.asDatabase();
-        return appUrl.forIndexes(db);
+        return appUrl.forIndexes(dbInfo);
     } 
 
     periodicExportUrl(dbInfo: databaseInfo): string {
-        const db = dbInfo.asDatabase();
-        return appUrl.forPeriodicExport(db);
+        return appUrl.forPeriodicExport(dbInfo);
     }
 
     manageDatabaseGroupUrl(dbInfo: databaseInfo): string {
-        const db = dbInfo.asDatabase();
-        return appUrl.forManageDatabaseGroup(db);
+        return appUrl.forManageDatabaseGroup(dbInfo);
     }
 
     private getSelectedDatabases() {
@@ -407,8 +400,8 @@ class databases extends viewModelBase {
     }
 
     activateDatabase(dbInfo: databaseInfo) {
-        let db = this.databasesManager.getDatabaseByName(dbInfo.name);
-        if (!db || db.disabled())
+        const db = this.databasesManager.getDatabaseByName(dbInfo.name);
+        if (!db || db.disabled() || !db.relevant())
             return;
 
         this.databasesManager.activate(db);

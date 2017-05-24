@@ -68,7 +68,11 @@ class databaseInfo {
     }
 
     asDatabase(): database {
-        return databasesManager.default.getDatabaseByName(this.name);
+        const casted = databasesManager.default.getDatabaseByName(this.name);
+        if (!casted) {
+            throw new Error("Unable to find database: " + this.name + " in database manager");
+        }
+        return casted;
     }
 
     static extractQualifierAndNameFromNotification(input: string): { qualifier: string, name: string } {
