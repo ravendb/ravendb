@@ -144,16 +144,16 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         .Append(", ");
                     foreach (var column in itemToReplicate.Columns)
                     {
-                        if (column.Key == pkName)
+                        if (column.Id == pkName)
                             continue;
-                        sb.Append(_commandBuilder.QuoteIdentifier(column.Key)).Append(", ");
+                        sb.Append(_commandBuilder.QuoteIdentifier(column.Id)).Append(", ");
                     }
                     sb.Length = sb.Length - 2;
 
                     var pkParam = cmd.CreateParameter();
 
                     pkParam.ParameterName = GetParameterName(pkName);
-                    pkParam.Value = itemToReplicate.DocumentKey.ToString();
+                    pkParam.Value = itemToReplicate.DocumentId.ToString();
                     cmd.Parameters.Add(pkParam);
 
                     sb.Append(") \r\nVALUES (")
@@ -162,13 +162,13 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
                     foreach (var column in itemToReplicate.Columns)
                     {
-                        if (column.Key == pkName)
+                        if (column.Id == pkName)
                             continue;
                         var colParam = cmd.CreateParameter();
-                        colParam.ParameterName = column.Key;
+                        colParam.ParameterName = column.Id;
                         SetParamValue(colParam, column, _stringParserList);
                         cmd.Parameters.Add(colParam);
-                        sb.Append(GetParameterName(column.Key)).Append(", ");
+                        sb.Append(GetParameterName(column.Id)).Append(", ");
                     }
                     sb.Length = sb.Length - 2;
                     sb.Append(")");
@@ -194,7 +194,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         {
                             _logger.Info(
                                 $"Failed to replicate changes to relational database for: {_etl.Name} " +
-                                $"(doc: {itemToReplicate.DocumentKey}), will continue trying. {Environment.NewLine}{cmd.CommandText}", e);
+                                $"(doc: {itemToReplicate.DocumentId}), will continue trying. {Environment.NewLine}{cmd.CommandText}", e);
                         }
 
                         _etl.Statistics.RecordLoadError(e);
@@ -275,13 +275,13 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         {
                             var dbParameter = cmd.CreateParameter();
                             dbParameter.ParameterName = GetParameterName("p" + j);
-                            dbParameter.Value = toDelete[j].DocumentKey.ToString();
+                            dbParameter.Value = toDelete[j].DocumentId.ToString();
                             cmd.Parameters.Add(dbParameter);
                             sb.Append(dbParameter.ParameterName);
                         }
                         else
                         {
-                            sb.Append("'").Append(SanitizeSqlValue(toDelete[j].DocumentKey)).Append("'");
+                            sb.Append("'").Append(SanitizeSqlValue(toDelete[j].DocumentId)).Append("'");
                         }
 
                         if (toDelete[j].IsDelete) // count only "real" deletions, not the ones because of insert
@@ -386,12 +386,12 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             if (table.InsertOnlyMode == false && table.Deletes.Count > 0)
             {
                 // first, delete all the rows that might already exist there
-                stats.DeletedRecordsCount = DeleteItems(table.TableName, table.DocumentKeyColumn, _etl.Destination.ParameterizeDeletes, table.Deletes, token, collectCommands);
+                stats.DeletedRecordsCount = DeleteItems(table.TableName, table.DocumentIdColumn, _etl.Destination.ParameterizeDeletes, table.Deletes, token, collectCommands);
             }
 
             if (table.Inserts.Count > 0)
             {
-                stats.InsertedRecordsCount = InsertItems(table.TableName, table.DocumentKeyColumn, table.Inserts, token, collectCommands);
+                stats.InsertedRecordsCount = InsertItems(table.TableName, table.DocumentIdColumn, table.Inserts, token, collectCommands);
             }
 
             return stats;
