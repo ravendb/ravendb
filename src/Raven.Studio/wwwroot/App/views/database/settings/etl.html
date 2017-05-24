@@ -163,25 +163,6 @@
                                             <a data-bind="click: toggleIsAdvancedShows" class="advanced-replication-settings">
                                                 Advanced Options
                                             </a>
-                                            <div data-bind="visible: false">
-
-                                                <div class="form-group">
-                                                    <label class="col-sm-2 control-label">Transitive Replication</label>
-                                                    <div class="col-sm-9">
-                                                        <div class="btn-group">
-                                                            <button type="button" data-bind="enable: canEdit" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                                                <span data-bind="visible: transitiveReplicationBehavior() === 'None'">Changed only</span>
-                                                                <span data-bind="visible: transitiveReplicationBehavior() === 'Replicate'">Changed and replicated</span>
-                                                                <span class="caret"></span>
-                                                            </button>
-                                                            <ul class="dropdown-menu" role="menu">
-                                                                <li><a href="#" data-bind="click: transitiveReplicationBehavior.bind(transitiveReplicationBehavior, 'None')">Changed only</a></li>
-                                                                <li><a href="#" data-bind="click: transitiveReplicationBehavior.bind(transitiveReplicationBehavior, 'Replicate')">Changed and replicated</a></li>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
