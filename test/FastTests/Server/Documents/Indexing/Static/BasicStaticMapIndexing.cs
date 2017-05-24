@@ -88,7 +88,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                         queryResult = await index.Query(new IndexQueryServerSide() { Query = "Name:John" }, context, OperationCancelToken.None);
 
                         Assert.Equal(1, queryResult.Results.Count);
-                        Assert.Equal("users/1", queryResult.Results[0].Key);
+                        Assert.Equal("users/1", queryResult.Results[0].Id);
                     }
                 }
             }

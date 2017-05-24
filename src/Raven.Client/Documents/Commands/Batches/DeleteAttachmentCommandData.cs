@@ -14,12 +14,12 @@ namespace Raven.Client.Documents.Commands.Batches
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentNullException(nameof(name));
 
-            Key = documentId;
+            Id = documentId;
             Name = name;
             Etag = etag;
         }
 
-        public string Key { get; }
+        public string Id { get; }
         public string Name { get; }
         public long? Etag { get; }
         public CommandType Type { get; } = CommandType.AttachmentDELETE;
@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Commands.Batches
         {
             return new DynamicJsonValue
             {
-                [nameof(Key)] = Key,
+                [nameof(Id)] = Id,
                 [nameof(Name)] = Name,
                 [nameof(Etag)] = Etag,
                 [nameof(Type)] = Type.ToString(),

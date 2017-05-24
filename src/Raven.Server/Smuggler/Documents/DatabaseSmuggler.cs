@@ -338,7 +338,7 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    Debug.Assert(item.Document.Key != null);
+                    Debug.Assert(item.Document.Id != null);
 
                     item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
@@ -375,7 +375,7 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    if (item.Document.Key == null)
+                    if (item.Document.Id == null)
                         ThrowInvalidData();
 
                     if (CanSkipDocument(item.Document, buildType))
@@ -439,11 +439,11 @@ namespace Raven.Server.Smuggler.Documents
 
             // skipping "Raven/Replication/DatabaseIdsCache" and
             // "Raven/Replication/Sources/{GUID}"
-            if (document.Key.Size != 34 && document.Key.Size != 62)
+            if (document.Id.Size != 34 && document.Id.Size != 62)
                 return false;
 
-            return document.Key == "Raven/Replication/DatabaseIdsCache" ||
-                   document.Key.StartsWith("Raven/Replication/Sources/");
+            return document.Id == "Raven/Replication/DatabaseIdsCache" ||
+                   document.Id.StartsWith("Raven/Replication/Sources/");
         }
 
         private static void ThrowInvalidData()

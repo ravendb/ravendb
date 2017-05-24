@@ -190,7 +190,7 @@ namespace Raven.Server.Documents
             {
                 StorageId = tvr.Id,
                 LoweredKey = DocumentsStorage.TableValueToString(context, (int)ConflictsTable.LoweredKey, ref tvr),
-                Key = DocumentsStorage.TableValueToKey(context, (int)ConflictsTable.OriginalKey, ref tvr),
+                Key = DocumentsStorage.TableValueToId(context, (int)ConflictsTable.OriginalKey, ref tvr),
                 ChangeVector = DocumentsStorage.GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)ConflictsTable.ChangeVector),
                 Etag = DocumentsStorage.TableValueToEtag((int)ConflictsTable.Etag, ref tvr),
                 Collection = DocumentsStorage.TableValueToString(context, (int)ConflictsTable.Collection, ref tvr)
@@ -263,7 +263,7 @@ namespace Raven.Server.Documents
             if (ConflictsCount == 0)
                 return;
 
-            DocumentKeyWorker.GetSliceFromKey(context, key, out Slice lowerKey);
+            DocumentIdWorker.GetSliceFromId(context, key, out Slice lowerKey);
             DeleteConflictsFor(context, lowerKey);
         }
 
@@ -338,7 +338,7 @@ namespace Raven.Server.Documents
 
             Slice keyPtr;
             Slice lowerKey;
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out keyPtr);
+            DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, key, out lowerKey, out keyPtr);
 
             Slice prefixSlice;
             using (GetConflictsKeyPrefix(context, lowerKey, out prefixSlice))
@@ -372,7 +372,7 @@ namespace Raven.Server.Documents
                 return ImmutableAppendOnlyList<DocumentConflict>.Empty;
 
             Slice lowerKey, prefixSlice;
-            using (DocumentKeyWorker.GetSliceFromKey(context, key, out lowerKey))
+            using (DocumentIdWorker.GetSliceFromId(context, key, out lowerKey))
             using (GetConflictsKeyPrefix(context, lowerKey, out prefixSlice))
             {
                 return GetConflictsFor(context, prefixSlice);
@@ -524,7 +524,7 @@ namespace Raven.Server.Documents
 
             CollectionName collectionName;
 
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out Slice lowerKey, out Slice keyPtr);
+            DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, key, out Slice lowerKey, out Slice keyPtr);
             // ReSharper disable once ArgumentsStyleLiteral
             var existing = _documentsStorage.GetDocumentOrTombstone(context, key, throwOnConflict: false);
             if (existing.Document != null)
@@ -553,7 +553,7 @@ namespace Raven.Server.Documents
                     // we delete the data directly, without generating a tombstone, because we have a 
                     // conflict instead
                     _documentsStorage.EnsureLastEtagIsPersisted(context, existingDoc.Etag);
-                    collectionName = _documentsStorage.ExtractCollectionName(context, existingDoc.Key, existingDoc.Data);
+                    collectionName = _documentsStorage.ExtractCollectionName(context, existingDoc.Id, existingDoc.Data);
 
                     //make sure that the relevant collection tree exists
                     var table = tx.OpenTable(DocumentsStorage.DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
@@ -654,7 +654,7 @@ namespace Raven.Server.Documents
             {
                 Etag = etag,
                 CollectionName = collectionName.Name,
-                Key = key,
+                Id = key,
                 Type = DocumentChangeTypes.Conflict,
                 IsSystemDocument = false,
             });
@@ -698,7 +698,7 @@ namespace Raven.Server.Documents
             var latestConflict = conflicts[indexOfLargestEtag];
             var collectionName = new CollectionName(latestConflict.Collection);
 
-            using (DocumentKeyWorker.GetSliceFromKey(context, latestConflict.Key, out Slice lowerKey))
+            using (DocumentIdWorker.GetSliceFromId(context, latestConflict.Key, out Slice lowerKey))
             {
                 //note that CreateTombstone is also deleting conflicts
                 etag = _documentsStorage.CreateTombstone(context,

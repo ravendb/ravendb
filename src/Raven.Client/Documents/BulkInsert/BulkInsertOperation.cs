@@ -206,7 +206,7 @@ namespace Raven.Client.Documents.BulkInsert
                 var cmd = new DynamicJsonValue
                 {
                     [nameof(PutCommandDataWithBlittableJson.Type)] = "PUT",
-                    [nameof(PutCommandDataWithBlittableJson.Key)] = id,
+                    [nameof(PutCommandDataWithBlittableJson.Id)] = id,
                     [nameof(PutCommandDataWithBlittableJson.Document)] = doc,
                 };
 

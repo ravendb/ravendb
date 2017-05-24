@@ -1106,17 +1106,13 @@ namespace Sparrow.Json
 
             for (int i = 0; i < _propCount; i++)
             {
-                BlittableJsonToken token;
-                int position;
-                int id;
-                GetPropertyTypeAndPosition(i, metadataSize, out token, out position, out id);
+                GetPropertyTypeAndPosition(i, metadataSize, out BlittableJsonToken token, out int position, out int id);
 
                 if (propertyName == GetPropertyName(id))
                     return true;
             }
 
             return false;
-
         }
     }
 }

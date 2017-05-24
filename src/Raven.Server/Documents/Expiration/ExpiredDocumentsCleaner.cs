@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Expiration
                                             if (currentTime < date)
                                                 continue;
 
-                                            expiredDocs.Add((clonedKey, document.Key));
+                                            expiredDocs.Add((clonedKey, document.Id));
 
                                         } while (multiIt.MoveNext());
                                     }

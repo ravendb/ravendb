@@ -60,7 +60,7 @@ namespace FastTests.Server.Documents.Tombstones
                         Assert.True(tombstone.StorageId > 0);
                         Assert.Equal(result.Etag, tombstone.DeletedEtag);
                         Assert.Equal(result.Etag + 1, tombstone.Etag);
-                        Assert.Equal(result.Key, tombstone.LoweredKey);
+                        Assert.Equal(result.Id, tombstone.LowerId);
                     }
                 }
             }

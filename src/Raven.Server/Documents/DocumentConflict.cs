@@ -23,13 +23,13 @@ namespace Raven.Server.Documents
 
             return new DocumentConflict
             {
-                LoweredKey = doc.LoweredKey,
-                Key = doc.Key,
+                LoweredKey = doc.LowerId,
+                Key = doc.Id,
                 Doc = doc.Data,
                 StorageId = doc.StorageId,
                 ChangeVector = doc.ChangeVector,
                 LastModified = doc.LastModified,
-                Collection = ctx.GetLazyStringForFieldWithCaching(CollectionName.GetCollectionName(doc.Key, doc.Data))
+                Collection = ctx.GetLazyStringForFieldWithCaching(CollectionName.GetCollectionName(doc.Id, doc.Data))
             };
         }
 
@@ -42,8 +42,8 @@ namespace Raven.Server.Documents
 
             return new DocumentConflict
             {
-                LoweredKey = tombstone.LoweredKey,
-                Key = tombstone.LoweredKey,
+                LoweredKey = tombstone.LowerId,
+                Key = tombstone.LowerId,
                 Doc = null,
                 StorageId = tombstone.StorageId,
                 ChangeVector = tombstone.ChangeVector,

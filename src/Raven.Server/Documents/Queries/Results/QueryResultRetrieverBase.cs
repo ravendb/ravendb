@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 doc = new Document
                 {
-                    Key = _context.GetLazyString(id)
+                    Id = _context.GetLazyString(id)
                 };
             }
 
@@ -131,8 +131,8 @@ namespace Raven.Server.Documents.Queries.Results
         {
             var result = new DynamicJsonValue();
 
-            if (fieldsToFetch.IsDistinct == false && doc.Key != null)
-                result[Constants.Documents.Indexing.Fields.DocumentIdFieldName] = doc.Key;
+            if (fieldsToFetch.IsDistinct == false && doc.Id != null)
+                result[Constants.Documents.Indexing.Fields.DocumentIdFieldName] = doc.Id;
 
             foreach (var fieldToFetch in fieldsToFetch.Fields.Values)
                 MaybeExtractValueFromDocument(fieldToFetch, doc, result);

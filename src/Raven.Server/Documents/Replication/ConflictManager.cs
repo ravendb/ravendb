@@ -274,7 +274,7 @@ namespace Raven.Server.Documents.Replication
                 // Conflict between two tombstones resolves to the local tombstone
                 existingTombstone.ChangeVector = ChangeVectorUtils.MergeVectors(incomingChangeVector, existingTombstone.ChangeVector);
                 Slice loweredKey;
-                using (Slice.External(context.Allocator, existingTombstone.LoweredKey, out loweredKey))
+                using (Slice.External(context.Allocator, existingTombstone.LowerId, out loweredKey))
                 {
                     _database.DocumentsStorage.ConflictsStorage.DeleteConflicts(context, loweredKey, null, existingTombstone.ChangeVector);
                 }

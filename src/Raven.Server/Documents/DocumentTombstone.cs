@@ -10,7 +10,7 @@ namespace Raven.Server.Documents
         public long StorageId;
 
         public TombstoneType Type;
-        public LazyStringValue LoweredKey;
+        public LazyStringValue LowerId;
 
         public long Etag;
         public long DeletedEtag;
@@ -36,7 +36,7 @@ namespace Raven.Server.Documents
         {
             var json = new DynamicJsonValue
             {
-                ["Key"] = LoweredKey.ToString(),
+                ["Id"] = LowerId.ToString(),
                 [nameof(Etag)] = Etag,
                 [nameof(DeletedEtag)] = DeletedEtag,
                 [nameof(Type)] = Type.ToString(),

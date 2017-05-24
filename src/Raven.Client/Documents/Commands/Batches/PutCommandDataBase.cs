@@ -28,12 +28,12 @@ namespace Raven.Client.Documents.Commands.Batches
             if (document == null)
                 throw new ArgumentNullException(nameof(document));
 
-            Key = id;
+            Id = id;
             Etag = etag;
             Document = document;
         }
 
-        public string Key { get; }
+        public string Id { get; }
         public long? Etag { get; }
         public T Document { get; }
         public CommandType Type { get; } = CommandType.PUT;
@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Commands.Batches
         {
             return new DynamicJsonValue
             {
-                [nameof(Key)] = Key,
+                [nameof(Id)] = Id,
                 [nameof(Etag)] = Etag,
                 [nameof(Document)] = Document,
                 [nameof(Type)] = Type.ToString()

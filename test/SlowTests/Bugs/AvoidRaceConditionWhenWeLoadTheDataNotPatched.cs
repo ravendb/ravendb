@@ -95,10 +95,10 @@ namespace SlowTests.Bugs
         public void Commit(PatchCommandData[] patches, IDocumentStore store)
         {
             var mergedPatchCommands = patches
-                .GroupBy(cmd => cmd.Key)
+                .GroupBy(cmd => cmd.Id)
                 .Select(g =>
                 {
-                    string docKey = g.Select(it => it.Key).First();
+                    string docKey = g.Select(it => it.Id).First();
 
                     int index = 0;
                     foreach (var cmd in g)
