@@ -336,7 +336,6 @@ namespace Raven.Server.Rachis
 
         public void SetNewState(State state, IDisposable disposable, long expectedTerm, string stateChangedReason)
         {
-
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction()) // we use the write transaction lock here
             {
@@ -418,7 +417,7 @@ namespace Raven.Server.Rachis
             leader.Start();
         }
 
-        public Task<long> PutAsync(BlittableJsonReaderObject cmd)
+        public Task<(long, BlittableJsonReaderObject)> PutAsync(BlittableJsonReaderObject cmd)
         {
             var leader = _currentLeader;
             if (leader == null)
@@ -453,10 +452,12 @@ namespace Raven.Server.Rachis
             {
                 Log.Info("Switching to candidate state");
             }
+
             var candidate = new Candidate(this)
             {
                 IsForcedElection = forced
             };
+
             SetNewState(State.Candidate, candidate, CurrentTerm, reason);
             candidate.Start();
         }
@@ -548,10 +549,7 @@ namespace Raven.Server.Rachis
             if (engine == null)
                 return;
 
-
             tx.LowLevelTransaction.OnDispose += _ => TaskExecutor.CompleteAndReplace(ref engine._topologyChanged);
-
-
         }
 
         /// <summary>

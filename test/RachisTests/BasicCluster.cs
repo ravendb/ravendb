@@ -169,13 +169,15 @@ namespace SlowTests.Server.Rachis
             {
                 for (var i = 0; i < 5; i++)
                 {
-                    lastIndex  = await a.PutAsync(ctx.ReadObject(new DynamicJsonValue
+                    var (index,_)  = await a.PutAsync(ctx.ReadObject(new DynamicJsonValue
                     {
                         ["Name"] = "test",
                         ["Value"] = i + 5
                     }, "test"));
+                    lastIndex = index;
                 }
             }
+
             Assert.True(await b.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex).WaitAsync(5000));
             TransactionOperationContext context;
             using (b.ContextPool.AllocateOperationContext(out context))
@@ -207,7 +209,7 @@ namespace SlowTests.Server.Rachis
                     }, "test")));
                 }
 
-                var lastIndex = await a.PutAsync(ctx.ReadObject(new DynamicJsonValue
+                var (lastIndex,_) = await a.PutAsync(ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "test",
                     ["Value"] = 9
