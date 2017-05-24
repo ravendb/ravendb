@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
     {
-        private AsyncDocumentKeyGeneration _asyncDocumentKeyGeneration;
+        private AsyncDocumentIdGeneration _asyncDocumentIdGeneration;
         private OperationExecutor _operations;
 
         /// <summary>
@@ -32,7 +32,7 @@ namespace Raven.Client.Documents.Session
         public AsyncDocumentSession(string dbName, DocumentStore documentStore, RequestExecutor requestExecutor, Guid id)
             : base(dbName, documentStore, requestExecutor, id)
         {
-            GenerateDocumentKeysOnStore = false;
+            GenerateDocumentIdsOnStore = false;
         }
 
         public string GetDocumentUrl(object entity)
@@ -80,25 +80,24 @@ namespace Raven.Client.Documents.Session
         /// </remarks>
         public IAsyncAdvancedSessionOperations Advanced => this;
 
-        protected override string GenerateKey(object entity)
+        protected override string GenerateId(object entity)
         {
-            throw new NotSupportedException("Async session cannot generate keys synchronously");
+            throw new NotSupportedException("Async session cannot generate IDs synchronously");
         }
 
-        protected override void RememberEntityForDocumentKeyGeneration(object entity)
+        protected override void RememberEntityForDocumentIdGeneration(object entity)
         {
-            EnsureAsyncDocumentKeyGeneration();
-            _asyncDocumentKeyGeneration.Add(entity);
+            EnsureAsyncDocumentIdGeneration();
+            _asyncDocumentIdGeneration.Add(entity);
         }
 
-        private void EnsureAsyncDocumentKeyGeneration()
+        private void EnsureAsyncDocumentIdGeneration()
         {
-            if (_asyncDocumentKeyGeneration != null) return;
-            _asyncDocumentKeyGeneration = new AsyncDocumentKeyGeneration(this, DocumentsByEntity.TryGetValue,
-                (key, entity, metadata) => key);
+            if (_asyncDocumentIdGeneration != null) return;
+            _asyncDocumentIdGeneration = new AsyncDocumentIdGeneration(this, DocumentsByEntity.TryGetValue, (id, entity, metadata) => id);
         }
 
-        protected override Task<string> GenerateKeyAsync(object entity)
+        protected override Task<string> GenerateIdAsync(object entity)
         {
             return Conventions.GenerateDocumentIdAsync(DatabaseName, entity);
         }
@@ -113,9 +112,9 @@ namespace Raven.Client.Documents.Session
         /// <returns></returns>
         public async Task SaveChangesAsync(CancellationToken token = default(CancellationToken))
         {
-            if (_asyncDocumentKeyGeneration != null)
+            if (_asyncDocumentIdGeneration != null)
             {
-                await _asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges().WithCancellation(token).ConfigureAwait(false);
+                await _asyncDocumentIdGeneration.GenerateDocumentIdsForSaveChanges().WithCancellation(token).ConfigureAwait(false);
             }
 
             var saveChangesOperation = new BatchOperation(this);

@@ -45,7 +45,7 @@ namespace Raven.Client.Documents.Session.Operations
                     continue;
 
                 var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(include);
-                _session.IncludedDocumentsByKey[newDocumentInfo.Id] = newDocumentInfo;
+                _session.IncludedDocumentsById[newDocumentInfo.Id] = newDocumentInfo;
             }
 
             var usedTransformer = string.IsNullOrEmpty(_query.Transformer) == false;

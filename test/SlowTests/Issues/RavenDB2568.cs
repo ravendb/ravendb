@@ -55,11 +55,11 @@ namespace SlowTests.Issues
                     var results = session.Advanced.Stream<dynamic>(startsWith: "users/", startAfter: "users/02");
 
                     Assert.True(results.MoveNext());
-                    Assert.Equal("users/03", results.Current.Key);
+                    Assert.Equal("users/03", results.Current.Id);
                     Assert.True(results.MoveNext());
-                    Assert.Equal("users/10", results.Current.Key);
+                    Assert.Equal("users/10", results.Current.Id);
                     Assert.True(results.MoveNext());
-                    Assert.Equal("users/12", results.Current.Key);
+                    Assert.Equal("users/12", results.Current.Id);
                     Assert.False(results.MoveNext());
                 }
             }

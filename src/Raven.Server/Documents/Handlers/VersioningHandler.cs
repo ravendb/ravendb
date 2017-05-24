@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Handlers
 
         private Task GetRevisions()
         {
-            var key = GetQueryStringValueAndAssertIfSingleAndNotEmpty("key");
+            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
             var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
 
             DocumentsOperationContext context;
@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.Handlers
 
                 int start = GetStart();
                 int pageSize = GetPageSize();
-                var result = versioningStorage.GetRevisions(context, key, start, pageSize);
+                var result = versioningStorage.GetRevisions(context, id, start, pageSize);
                 var revisions = result.Revisions;
 
                 long actualEtag = revisions.Length == 0 ? -1 : revisions[0].Etag;

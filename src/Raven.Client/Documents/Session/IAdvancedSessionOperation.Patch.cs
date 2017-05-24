@@ -17,16 +17,16 @@ namespace Raven.Client.Documents.Session
     {
         void Increment<T, U>(T entity, Expression<Func<T, U>> path, U valToAdd);
 
-        void Increment<T, U>(string key, Expression<Func<T, U>> path, U valToAdd);
+        void Increment<T, U>(string id, Expression<Func<T, U>> path, U valToAdd);
 
-        void Patch<T, U>(string key, Expression<Func<T, U>> path, U value);
+        void Patch<T, U>(string id, Expression<Func<T, U>> path, U value);
 
         void Patch<T, U>(T entity, Expression<Func<T, U>> path, U value);
 
         void Patch<T, U>(T entity, Expression<Func<T, IEnumerable<U>>> path,
             Expression<Func<JavaScriptArray<U>, object>> arrayAdder);
 
-        void Patch<T, U>(string key, Expression<Func<T, IEnumerable<U>>> path,
+        void Patch<T, U>(string id, Expression<Func<T, IEnumerable<U>>> path,
             Expression<Func<JavaScriptArray<U>, object>> arrayAdder);
 
     }

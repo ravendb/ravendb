@@ -99,7 +99,7 @@ namespace Raven.Client.Documents.Session
                 var streamResult = new StreamResult<T>
                 {
                     Etag = etag,
-                    Key = id,
+                    Id = id,
                     Document = entity,
                     Metadata = new MetadataAsDictionary(metadata)
                 };
@@ -120,7 +120,7 @@ namespace Raven.Client.Documents.Session
                 {
                     yield return new StreamResult<T>
                     {
-                        Key = id,
+                        Id = id,
                         Etag = etag,
                         Document = value,
                         Metadata = new MetadataAsDictionary(metadata)

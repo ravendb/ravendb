@@ -98,7 +98,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <remarks>
         ///     This function may return <c>null</c> if the entity isn't tracked by the session, or if the entity is
-        ///     a new entity with a key that should be generated on the server.
+        ///     a new entity with an ID that should be generated on the server.
         /// </remarks>
         /// <param name="entity">The entity.</param>
         string GetDocumentId(object entity);

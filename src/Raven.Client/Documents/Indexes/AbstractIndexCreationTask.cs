@@ -347,7 +347,7 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Loads the specified document during the indexing process
         /// </summary>
-        public T LoadDocument<T>(string key)
+        public T LoadDocument<T>(string id)
         {
             throw new NotSupportedException("This can only be run on the server side");
         }
@@ -355,7 +355,7 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Loads the specified document during the indexing process
         /// </summary>
-        public T[] LoadDocument<T>(IEnumerable<string> keys)
+        public T[] LoadDocument<T>(IEnumerable<string> ids)
         {
             throw new NotSupportedException("This can only be run on the server side");
         }

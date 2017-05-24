@@ -10,13 +10,13 @@ namespace Raven.Client.Documents.Commands.Batches
         {
         }
         
-        private bool KeyPrefixed => true;
+        private bool IdPrefixed => true;
 
         public override DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
         {
             var result = base.ToJson(conventions, context);
 
-            result[nameof(KeyPrefixed)] = KeyPrefixed;
+            result[nameof(IdPrefixed)] = IdPrefixed;
 
             return result;
         }
