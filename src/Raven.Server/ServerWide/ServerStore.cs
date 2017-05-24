@@ -461,7 +461,7 @@ namespace Raven.Server.ServerWide
             tree.Delete(name);
         }
 
-        public async Task<long> DeleteDatabaseAsync(string db, bool hardDelete, string fromNode)
+        public async Task<(long, BlittableJsonReaderObject)> DeleteDatabaseAsync(string db, bool hardDelete, string fromNode)
         {
             var deleteCommand = new DeleteDatabaseCommand(db)
             {
@@ -471,7 +471,7 @@ namespace Raven.Server.ServerWide
             return await SendToLeaderAsync(deleteCommand);
         }
 
-        public async Task<long> ModifyDatabaseWatchers(string dbName,  List<DatabaseWatcher> watchers)
+        public async Task<(long, BlittableJsonReaderObject)> ModifyDatabaseWatchers(string dbName,  List<DatabaseWatcher> watchers)
         {
             var watcherCommand = new ModifyDatabaseWatchersCommand(dbName)
             {
@@ -480,7 +480,7 @@ namespace Raven.Server.ServerWide
             return await SendToLeaderAsync(watcherCommand);
         }
 
-        public async Task<long> ModifyConflictSolverAsync(string dbName, ConflictSolver solver)
+        public async Task<(long, BlittableJsonReaderObject)> ModifyConflictSolverAsync(string dbName, ConflictSolver solver)
         {
             var conflictResolverCommand = new ModifyConflictSolverCommand(dbName)
             {
@@ -489,7 +489,7 @@ namespace Raven.Server.ServerWide
             return await SendToLeaderAsync(conflictResolverCommand);
         }
 
-        public async Task<long> PutValueInClusterAsync(string key, BlittableJsonReaderObject val)
+        public async Task<(long, BlittableJsonReaderObject)> PutValueInClusterAsync(string key, BlittableJsonReaderObject val)
         {
             var putValueCommand = new PutValueCommand
             {
@@ -499,7 +499,7 @@ namespace Raven.Server.ServerWide
             return await SendToLeaderAsync(putValueCommand);
         }
 
-        public async Task<long> DeleteValueInClusterAsync(string key)
+        public async Task<(long, BlittableJsonReaderObject)> DeleteValueInClusterAsync(string key)
         {
             var deleteValueCommand = new DeleteValueCommand()
             {
@@ -508,20 +508,20 @@ namespace Raven.Server.ServerWide
             return await SendToLeaderAsync(deleteValueCommand);
         }
 
-        public async Task<long> ModifyDatabaseExpiration(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson)
+        public async Task<(long, BlittableJsonReaderObject)> ModifyDatabaseExpiration(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson)
         {
             var editExpiration = new EditExpirationCommand(JsonDeserializationCluster.ExpirationConfiguration(configurationJson), name);
             return await SendToLeaderAsync(editExpiration);
             
         }
 
-        public async Task<long> ModifyDatabasePeriodicBackup(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson)
+        public async Task<(long, BlittableJsonReaderObject)> ModifyDatabasePeriodicBackup(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson)
         {
             var editPeriodicBackup = new EditPeriodicBackupCommand(JsonDeserializationCluster.PeriodicBackupConfiguration(configurationJson), name);
             return await SendToLeaderAsync(editPeriodicBackup);
         }
         
-        public async Task<long> ModifyDatabaseVersioning(JsonOperationContext context, string name, BlittableJsonReaderObject configurationJson)
+        public async Task<(long, BlittableJsonReaderObject)> ModifyDatabaseVersioning(JsonOperationContext context, string name, BlittableJsonReaderObject configurationJson)
         {
             var editVersioning = new EditVersioningCommand(JsonDeserializationCluster.VersioningConfiguration(configurationJson), name);
             return await SendToLeaderAsync(editVersioning);
@@ -662,7 +662,7 @@ namespace Raven.Server.ServerWide
             return ((now - maxLastWork).TotalMinutes > 5) || ((now - database.LastIdleTime).TotalMinutes > 10);
         }
 
-        public async Task<long> WriteDbAsync(string databaseName, BlittableJsonReaderObject databaseRecord, long? etag, bool encrypted = false)
+        public async Task<(long, BlittableJsonReaderObject)> WriteDbAsync(string databaseName, BlittableJsonReaderObject databaseRecord, long? etag, bool encrypted = false)
         {
             var addDatabaseCommand = new AddDatabaseCommand()
             {
@@ -682,7 +682,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public Task<long> PutCommandAsync(BlittableJsonReaderObject cmd)
+        public Task<(long, BlittableJsonReaderObject)> PutCommandAsync(BlittableJsonReaderObject cmd)
         {
             return _engine.PutAsync(cmd);
         }
@@ -692,7 +692,7 @@ namespace Raven.Server.ServerWide
             return _engine.CurrentState == RachisConsensus.State.Leader;
         }
 
-        public async Task<long> SendToLeaderAsync(CommandBase cmd)
+        public async Task<(long,BlittableJsonReaderObject)> SendToLeaderAsync(CommandBase cmd)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -708,7 +708,7 @@ namespace Raven.Server.ServerWide
             return _engine.GetClusterErrorsFromLeader();
         }
 
-        private async Task<long> SendToLeaderAsyncInternal(BlittableJsonReaderObject cmdJson, TransactionOperationContext context)
+        private async Task<(long,BlittableJsonReaderObject)> SendToLeaderAsyncInternal(BlittableJsonReaderObject cmdJson, TransactionOperationContext context)
         {
             //I think it is reasonable to expect timeout twice of error retry
             var timeout = (uint)Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan.TotalMilliseconds;
@@ -760,7 +760,7 @@ namespace Raven.Server.ServerWide
             throw new TimeoutException();
         }
 
-        private async Task<long> SendToNodeAsync(TransactionOperationContext context, string engineLeaderTag, BlittableJsonReaderObject cmd)
+        private async Task<(long, BlittableJsonReaderObject)> SendToNodeAsync(TransactionOperationContext context, string engineLeaderTag, BlittableJsonReaderObject cmd)
         {
             using (context.OpenReadTransaction())
             {
@@ -780,7 +780,7 @@ namespace Raven.Server.ServerWide
 
                 await _clusterRequestExecutor.ExecuteAsync(command, context, ServerShutdown);
 
-                return command.Result.ETag;
+                return (command.Result.ETag, command.Result.Data);
             }
         }
 
@@ -825,6 +825,8 @@ namespace Raven.Server.ServerWide
         public class PutRaftCommandResult
         {
             public long ETag { get; set; }
+
+            public BlittableJsonReaderObject Data { get; set; }
         }
 
         public Task WaitForTopology(Leader.TopologyModification state)

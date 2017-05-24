@@ -12,10 +12,10 @@ class sqlReplicationSimulatedCommand {
             if (this.showParamsValues() && !!this.commandData().Params) {
                 var processedCommandText = this.commandData().CommandText.slice(0);
                 this.commandData().Params.forEach(x => {
-                    if (x.Key.slice(0,1) === '@') {
-                        processedCommandText = processedCommandText.replace(x.Key, x.Value);
+                    if (x.Id.slice(0,1) === '@') {
+                        processedCommandText = processedCommandText.replace(x.Id, x.Value);
                     } else {
-                        processedCommandText = processedCommandText.replace('@' + x.Key, x.Value);
+                        processedCommandText = processedCommandText.replace('@' + x.Id, x.Value);
                     }
                 });
                 return processedCommandText;

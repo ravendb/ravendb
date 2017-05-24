@@ -259,7 +259,7 @@ namespace Raven.Server.ServerWide.Maintance
             return true;
         }
 
-        private Task<long> UpdateTopology(BlittableJsonReaderObject cmd)
+        private Task<(long, BlittableJsonReaderObject)> UpdateTopology(BlittableJsonReaderObject cmd)
         {
             
             if (_engine.LeaderTag != _server.NodeTag)
