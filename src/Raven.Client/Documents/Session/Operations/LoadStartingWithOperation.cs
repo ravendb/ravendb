@@ -38,10 +38,10 @@ namespace Raven.Client.Documents.Session.Operations
             return new GetDocumentCommand(_startWith, _startAfter, _matches, _exclude, _transformer, _transformerParameters, _start, _pageSize);
         }
 
-        public void WithStartWith(string keyPrefix, string matches = null, int start = 0, int pageSize = 25,
+        public void WithStartWith(string idPrefix, string matches = null, int start = 0, int pageSize = 25,
             string exclude = null, Action<ILoadConfiguration> configure = null, string startAfter = null)
         {
-            _startWith = keyPrefix;
+            _startWith = idPrefix;
             _matches = matches;
             _start = start;
             _pageSize = pageSize;

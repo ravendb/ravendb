@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 {
     internal class LazyStartsWithOperation<T> : ILazyOperation
     {
-        private readonly string _keyPrefix;
+        private readonly string _idPrefix;
 
         private readonly string _matches;
 
@@ -29,9 +29,9 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 
         private readonly string _startAfter;
 
-        public LazyStartsWithOperation(string keyPrefix, string matches, string exclude, int start, int pageSize, InMemoryDocumentSessionOperations sessionOperations, string startAfter)
+        public LazyStartsWithOperation(string idPrefix, string matches, string exclude, int start, int pageSize, InMemoryDocumentSessionOperations sessionOperations, string startAfter)
         {
-            _keyPrefix = keyPrefix;
+            _idPrefix = idPrefix;
             _matches = matches;
             _exclude = exclude;
             _start = start;
@@ -48,7 +48,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
                 Query = "?" +
                     string.Format(
                         "startsWith={0}&matches={3}&exclude={4}&start={1}&pageSize={2}&startAfter={5}",
-                        Uri.EscapeDataString(_keyPrefix),
+                        Uri.EscapeDataString(_idPrefix),
                         _start,
                         _pageSize,
                         Uri.EscapeDataString(_matches ?? ""),

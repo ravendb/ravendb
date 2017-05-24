@@ -40,7 +40,7 @@ namespace SlowTests.Issues
                 {
                     commands
                         .Put(
-                            Constants.Json.CustomFunctionsKey,
+                            Constants.Json.CustomFunctionsId,
                             null,
                             new
                             {

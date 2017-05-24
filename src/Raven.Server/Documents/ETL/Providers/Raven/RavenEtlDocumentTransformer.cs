@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             if (_script.IsLoadedToDefaultCollection(Current, collectionName))
             {
-                id = Current.DocumentKey;
+                id = Current.DocumentId;
             }
             else
             {
@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 else
                     transformed[Constants.Documents.Metadata.Key] = metadata = new DynamicJsonValue();
 
-                id = GetPrefixedId(Current.DocumentKey, collectionName, OperationType.Put);
+                id = GetPrefixedId(Current.DocumentId, collectionName, OperationType.Put);
 
                 metadata[Constants.Documents.Metadata.Collection] = collectionName;
                 metadata[Constants.Documents.Metadata.Id] = id;
@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 {
                     if (_script.LoadToCollections.Length > 1 || _script.IsLoadedToDefaultCollection(item, _script.LoadToCollections[0]) == false)
                     {
-                        // first, we need to delete docs prefixed by modified document key to properly handle updates of 
+                        // first, we need to delete docs prefixed by modified document ID to properly handle updates of 
                         // documents loaded to non default collections
 
                         ApplyDeleteCommands(item, OperationType.Put);
@@ -92,14 +92,14 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     Apply(Context, Current.Document, _script.Transformation);
                 }
                 else
-                    _commands.Add(new PutCommandDataWithBlittableJson(item.DocumentKey, null, item.Document.Data));
+                    _commands.Add(new PutCommandDataWithBlittableJson(item.DocumentId, null, item.Document.Data));
             }
             else
             {
                 if (_script.Transformation != null)
                     ApplyDeleteCommands(item, OperationType.Delete);
                 else
-                    _commands.Add(new DeleteCommandData(item.DocumentKey, null));
+                    _commands.Add(new DeleteCommandData(item.DocumentId, null));
             }
         }
 
@@ -112,10 +112,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 if (_script.IsLoadedToDefaultCollection(item, collection))
                 {
                     if (operation == OperationType.Delete)
-                        _commands.Add(new DeleteCommandData(item.DocumentKey, null));
+                        _commands.Add(new DeleteCommandData(item.DocumentId, null));
                 }
                 else
-                    _commands.Add(new DeletePrefixedCommandData(GetPrefixedId(item.DocumentKey, collection, OperationType.Delete)));
+                    _commands.Add(new DeletePrefixedCommandData(GetPrefixedId(item.DocumentId, collection, OperationType.Delete)));
             }
         }
 

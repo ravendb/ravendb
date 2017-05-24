@@ -191,10 +191,10 @@ namespace Raven.Server.ServerWide
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             var remove = JsonDeserializationCluster.RemoveNodeFromDatabaseCommand(cmd);
             var databaseName = remove.DatabaseName;
-            using (Slice.From(context.Allocator, "db/" + databaseName.ToLowerInvariant(), out Slice loweredKey))
+            using (Slice.From(context.Allocator, "db/" + databaseName.ToLowerInvariant(), out Slice lowerKey))
             using (Slice.From(context.Allocator, "db/" + databaseName, out Slice key))
             {
-                if (items.ReadByKey(loweredKey, out TableValueReader reader) == false)
+                if (items.ReadByKey(lowerKey, out TableValueReader reader) == false)
                 {
                     NotifyLeaderAboutError(index, leader, new InvalidOperationException($"The database {databaseName} does not exists"));
                     return;
@@ -205,7 +205,7 @@ namespace Raven.Server.ServerWide
 
                 if (doc.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject topology) == false)
                 {
-                    items.DeleteByKey(loweredKey);
+                    items.DeleteByKey(lowerKey);
                     NotifyDatabaseChanged(context, databaseName, index);
                     return;
                 }
@@ -215,29 +215,82 @@ namespace Raven.Server.ServerWide
                     databaseRecord.Topology.Promotables.Count == 0 &&
                     databaseRecord.Topology.Watchers.Count == 0)
                 {
-                    items.DeleteByKey(loweredKey);
+                    items.DeleteByKey(lowerKey);
                     NotifyDatabaseChanged(context, databaseName, index);
                     return;
                 }
 
                 var updated = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
-                UpdateValue(index, items, loweredKey, key, updated);
+                UpdateValue(index, items, lowerKey, key, updated);
 
                 NotifyDatabaseChanged(context, databaseName, index);
             }
         }
 
-        private static unsafe void UpdateValue(long index, Table items, Slice loweredKey, Slice key, BlittableJsonReaderObject updated)
+        private static unsafe void UpdateValue(long index, Table items, Slice lowerKey, Slice key, BlittableJsonReaderObject updated)
         {
             using (items.Allocate(out TableValueBuilder builder))
             {
-                builder.Add(loweredKey);
+                builder.Add(lowerKey);
                 builder.Add(key);
                 builder.Add(updated.BasePointer, updated.Size);
                 builder.Add(Bits.SwapBytes(index));
 
                 items.Set(builder);
+            }
+        }
+
+        private unsafe void DeleteDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+            var delDb = JsonDeserializationCluster.DeleteDatabaseCommand(cmd);
+            var databaseName = delDb.DatabaseName;
+            using (Slice.From(context.Allocator, "db/" + databaseName.ToLowerInvariant(), out Slice lowerKey))
+            using (Slice.From(context.Allocator, "db/" + databaseName, out Slice key))
+            {
+                if (items.ReadByKey(lowerKey, out TableValueReader reader) == false)
+                {
+                    NotifyLeaderAboutError(index, leader, new DatabaseDoesNotExistException($"The database {databaseName} does not exists, cannot delete it"));
+                    return;
+                }
+
+                var deletionInProgressStatus = delDb.HardDelete
+                    ? DeletionInProgressStatus.HardDelete
+                    : DeletionInProgressStatus.SoftDelete;
+                var doc = new BlittableJsonReaderObject(reader.Read(2, out int size), size, context);
+                var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
+                if (databaseRecord.DeletionInProgress == null)
+                    databaseRecord.DeletionInProgress = new Dictionary<string, DeletionInProgressStatus>();
+
+                if (string.IsNullOrEmpty(delDb.FromNode) == false)
+                {
+                    if (databaseRecord.Topology.RelevantFor(delDb.FromNode) == false)
+                    {
+                        NotifyLeaderAboutError(index, leader, new DatabaseDoesNotExistException($"The database {databaseName} does not exists on node {delDb.FromNode}"));
+                        return;
+                    }
+                    databaseRecord.Topology.RemoveFromTopology(delDb.FromNode);
+
+                    databaseRecord.DeletionInProgress[delDb.FromNode] = deletionInProgressStatus;
+                }
+                else
+                {
+                    var allNodes = databaseRecord.Topology.Members.Select(m => m.NodeTag)
+                        .Concat(databaseRecord.Topology.Promotables.Select(p => p.NodeTag));
+
+                    foreach (var node in allNodes)
+                        databaseRecord.DeletionInProgress[node] = deletionInProgressStatus;
+
+                    databaseRecord.Topology = new DatabaseTopology();
+                }
+                
+                using (var updated = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context))
+                {
+                    UpdateValue(index, items, lowerKey, key, updated);
+                }
+
+                NotifyDatabaseChanged(context, databaseName, index);
             }
         }
 
@@ -661,9 +714,9 @@ namespace Raven.Server.ServerWide
 
         public void NotifyListenersAbout(long index)
         {
-            var lastModifed = _lastModifiedIndex;
-            while (index > lastModifed)
-                lastModifed = Interlocked.CompareExchange(ref _lastModifiedIndex, index, lastModifed);
+            var lastModified = _lastModifiedIndex;
+            while (index > lastModified)
+                lastModified = Interlocked.CompareExchange(ref _lastModifiedIndex, index, lastModified);
             _notifiedListeners.SetAndResetAtomically();
         }
     }

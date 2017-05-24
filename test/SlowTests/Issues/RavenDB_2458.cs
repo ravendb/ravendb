@@ -26,7 +26,7 @@ namespace SlowTests.Issues
                 using (var commands = store.Commands())
                 {
                     commands.Put(
-                        Constants.Json.CustomFunctionsKey,
+                        Constants.Json.CustomFunctionsId,
                         null,
                         new { Functions = "exports.test = function(value) { return 'test ' + value; };" });
                 }
@@ -64,7 +64,7 @@ namespace SlowTests.Issues
                 using (var commands = store.Commands())
                 {
                     commands.Put(
-                        Constants.Json.CustomFunctionsKey,
+                        Constants.Json.CustomFunctionsId,
                         null,
                         new { Functions = "exports.test = function(value) { return 'test ' + value; };" });
 
@@ -92,7 +92,7 @@ namespace SlowTests.Issues
                     }
 
                     commands
-                        .Delete(Constants.Json.CustomFunctionsKey, null);
+                        .Delete(Constants.Json.CustomFunctionsId, null);
 
                     Assert.True(SpinWait.SpinUntil(() => database.Patcher.CustomFunctions == null, TimeSpan.FromSeconds(10)));
 

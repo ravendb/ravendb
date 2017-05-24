@@ -16,7 +16,7 @@ namespace Raven.Server.Documents
 
         private static readonly Slice IdentitiesSlice;
 
-        private readonly StringBuilder _keyBuilder = new StringBuilder();
+        private readonly StringBuilder _idBuilder = new StringBuilder();
 
         static IdentitiesStorage()
         {
@@ -38,10 +38,10 @@ namespace Raven.Server.Documents
             }
         }
 
-        public long IdentityFor(DocumentsOperationContext ctx, string key)
+        public long IdentityFor(DocumentsOperationContext ctx, string id)
         {
             var identities = ctx.Transaction.InnerTransaction.ReadTree(IdentitiesSlice);
-            return identities.Increment(key, 1);
+            return identities.Increment(id, 1);
         }
 
         public IEnumerable<KeyValuePair<string, long>> GetIdentities(DocumentsOperationContext context)
@@ -62,21 +62,17 @@ namespace Raven.Server.Documents
             }
         }
 
-        public string GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key, Table table, DocumentsOperationContext context, out int tries)
+        public string GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string id, Table table, DocumentsOperationContext context, out int tries)
         {
             var identities = context.Transaction.InnerTransaction.ReadTree(IdentitiesStorage.IdentitiesSlice);
-            var nextIdentityValue = identities.Increment(key, 1);
-            var finalKey = AppendIdentityValueToKey(key, nextIdentityValue);
-            Slice finalKeySlice;
+            var nextIdentityValue = identities.Increment(id, 1);
+            var finalId = AppendIdentityValueToId(id, nextIdentityValue);
             tries = 1;
 
-            using (DocumentKeyWorker.GetSliceFromKey(context, finalKey, out finalKeySlice))
+            using (DocumentIdWorker.GetSliceFromId(context, finalId, out Slice finalIdSlice))
             {
-                TableValueReader reader;
-                if (table.ReadByKey(finalKeySlice, out reader) == false)
-                {
-                    return finalKey;
-                }
+                if (table.VerifyKeyExists(finalIdSlice) == false)
+                    return finalId;
             }
 
             /* We get here if the user inserted a document with a specified id.
@@ -90,16 +86,15 @@ namespace Raven.Server.Documents
             while (true)
             {
                 tries++;
-                finalKey = AppendIdentityValueToKey(key, maybeFree);
-                using (DocumentKeyWorker.GetSliceFromKey(context, finalKey, out finalKeySlice))
+                finalId = AppendIdentityValueToId(id, maybeFree);
+                using (DocumentIdWorker.GetSliceFromId(context, finalId, out Slice finalIdSlice))
                 {
-                    TableValueReader reader;
-                    if (table.ReadByKey(finalKeySlice, out reader) == false)
+                    if (table.VerifyKeyExists(finalIdSlice) == false)
                     {
                         if (lastKnownBusy + 1 == maybeFree)
                         {
-                            nextIdentityValue = identities.Increment(key, lastKnownBusy);
-                            return key + nextIdentityValue;
+                            nextIdentityValue = identities.Increment(id, lastKnownBusy);
+                            return id + nextIdentityValue;
                         }
                         lastKnownFree = maybeFree;
                         maybeFree = Math.Max(maybeFree - (maybeFree - lastKnownBusy) / 2, lastKnownBusy + 1);
@@ -113,21 +108,21 @@ namespace Raven.Server.Documents
             }
         }
 
-        private string AppendIdentityValueToKey(string key, long val)
+        private string AppendIdentityValueToId(string id, long val)
         {
-            _keyBuilder.Length = 0;
-            _keyBuilder.Append(key);
-            _keyBuilder.Append(val);
-            return _keyBuilder.ToString();
+            _idBuilder.Length = 0;
+            _idBuilder.Append(id);
+            _idBuilder.Append(val);
+            return _idBuilder.ToString();
         }
 
-        public string AppendNumericValueToKey(string key, long val)
+        public string AppendNumericValueToId(string id, long val)
         {
-            _keyBuilder.Length = 0;
-            _keyBuilder.Append(key);
-            _keyBuilder[_keyBuilder.Length - 1] = '/';
-            _keyBuilder.AppendFormat(CultureInfo.InvariantCulture, "{0:D19}", val);
-            return _keyBuilder.ToString();
+            _idBuilder.Length = 0;
+            _idBuilder.Append(id);
+            _idBuilder[_idBuilder.Length - 1] = '/';
+            _idBuilder.AppendFormat(CultureInfo.InvariantCulture, "{0:D19}", val);
+            return _idBuilder.ToString();
         }
     }
 }

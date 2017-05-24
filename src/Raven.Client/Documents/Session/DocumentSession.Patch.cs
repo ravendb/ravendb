@@ -87,11 +87,11 @@ namespace Raven.Client.Documents.Session
             Increment(id, path, valToAdd);
         }
 
-        public void Increment<T, U>(string key, Expression<Func<T, U>> path, U valToAdd)
+        public void Increment<T, U>(string id, Expression<Func<T, U>> path, U valToAdd)
         {
             var pathScript = path.CompileToJavascript();
 
-            Advanced.Defer(new PatchCommandData(key, null, new PatchRequest
+            Advanced.Defer(new PatchCommandData(id, null, new PatchRequest
             {
                 Script = $"this.{pathScript} += val;",
                 Values = { ["val"] = valToAdd }
@@ -105,11 +105,11 @@ namespace Raven.Client.Documents.Session
             Patch(id, path, value);
         }
 
-        public void Patch<T, U>(string key, Expression<Func<T, U>> path, U value)
+        public void Patch<T, U>(string id, Expression<Func<T, U>> path, U value)
         {
             var pathScript = path.CompileToJavascript();
 
-            Advanced.Defer(new PatchCommandData(key, null, new PatchRequest
+            Advanced.Defer(new PatchCommandData(id, null, new PatchRequest
             {
                 Script = $"this.{pathScript} = val;",
                 Values = { ["val"] = value }
@@ -124,7 +124,7 @@ namespace Raven.Client.Documents.Session
             Patch(id, path, arrayAdder);
         }
 
-        public void Patch<T, U>(string key, Expression<Func<T, IEnumerable<U>>> path,
+        public void Patch<T, U>(string id, Expression<Func<T, IEnumerable<U>>> path,
             Expression<Func<JavaScriptArray<U>, object>> arrayAdder)
         {
             var extension = new CustomMethods();
@@ -136,7 +136,7 @@ namespace Raven.Client.Documents.Session
 
             var script = $"this.{pathScript}{adderScript}";
 
-            Advanced.Defer(new PatchCommandData(key, null, new PatchRequest
+            Advanced.Defer(new PatchCommandData(id, null, new PatchRequest
             {
                 Script = script,
                 Values = extension.Parameters

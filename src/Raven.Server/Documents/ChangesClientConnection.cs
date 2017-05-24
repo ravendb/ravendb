@@ -186,13 +186,13 @@ namespace Raven.Server.Documents
                 return;
             }
 
-            if (change.Key != null && _matchingDocuments.Contains(change.Key))
+            if (change.Id != null && _matchingDocuments.Contains(change.Id))
             {
                 Send(change);
                 return;
             }
 
-            var hasPrefix = change.Key != null && HasItemStartingWith(_matchingDocumentPrefixes, change.Key);
+            var hasPrefix = change.Id != null && HasItemStartingWith(_matchingDocumentPrefixes, change.Id);
             if (hasPrefix)
             {
                 Send(change);
@@ -213,7 +213,7 @@ namespace Raven.Server.Documents
                 return;
             }
 
-            if (change.Key == null && change.CollectionName == null && change.TypeName == null)
+            if (change.Id == null && change.CollectionName == null && change.TypeName == null)
             {
                 Send(change);
             }

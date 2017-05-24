@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             using (_stats.BlittableJsonAggregation.Start())
             {
                 var document = ((Document[])mapResults)[0];
-                Debug.Assert(key == document.LoweredKey);
+                Debug.Assert(key == document.LowerId);
 
                 foreach (var indexField in Definition.MapFields.Values)
                 {

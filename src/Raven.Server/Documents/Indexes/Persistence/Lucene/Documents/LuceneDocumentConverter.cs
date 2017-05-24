@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             var document = (Document)doc;
             if (key != null)
             {
-                Debug.Assert(document.LoweredKey == null || (key == document.LoweredKey));
+                Debug.Assert(document.LowerId == null || (key == document.LowerId));
 
                 instance.Add(GetOrCreateKeyField(key));
                 newFields++;

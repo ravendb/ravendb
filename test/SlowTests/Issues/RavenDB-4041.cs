@@ -38,7 +38,7 @@ namespace SlowTests.Issues
                         Assert.Equal("John", enumerator.Current.Document.Name);
                         Assert.Equal("Tel Aviv", enumerator.Current.Document.Address);
 
-                        Assert.NotNull(enumerator.Current.Key);
+                        Assert.NotNull(enumerator.Current.Id);
                         Assert.NotNull(enumerator.Current.Etag);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.RavenClrType]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.Collection]);
@@ -74,7 +74,7 @@ namespace SlowTests.Issues
                         Assert.Equal("John", enumerator.Current.Document.Name);
                         Assert.Equal("Tel Aviv", enumerator.Current.Document.Address);
 
-                        Assert.NotNull(enumerator.Current.Key);
+                        Assert.NotNull(enumerator.Current.Id);
                         Assert.NotNull(enumerator.Current.Etag);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.RavenClrType]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.Collection]);
@@ -111,7 +111,7 @@ namespace SlowTests.Issues
                         Assert.Equal("John", enumerator.Current.Document.Name);
                         Assert.Equal("Tel Aviv", enumerator.Current.Document.Address);
 
-                        Assert.NotNull(enumerator.Current.Key);
+                        Assert.NotNull(enumerator.Current.Id);
                         Assert.NotNull(enumerator.Current.Etag);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.RavenClrType]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.Collection]);
@@ -149,7 +149,7 @@ namespace SlowTests.Issues
                         Assert.Equal("John", enumerator.Current.Document.Name);
                         Assert.Equal("Tel Aviv", enumerator.Current.Document.Address);
 
-                        Assert.NotNull(enumerator.Current.Key);
+                        Assert.NotNull(enumerator.Current.Id);
                         Assert.NotNull(enumerator.Current.Etag);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.RavenClrType]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.Collection]);

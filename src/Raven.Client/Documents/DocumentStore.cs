@@ -33,7 +33,7 @@ namespace Raven.Client.Documents
 
         private readonly ConcurrentDictionary<string, Lazy<RequestExecutor>> _requestExecutors = new ConcurrentDictionary<string, Lazy<RequestExecutor>>(StringComparer.OrdinalIgnoreCase);
 
-        private AsyncMultiDatabaseHiLoKeyGenerator _asyncMultiDbHiLo;
+        private AsyncMultiDatabaseHiLoIdGenerator _asyncMultiDbHiLo;
 
         private AdminOperationExecutor _adminOperationExecutor;
 
@@ -225,9 +225,9 @@ namespace Raven.Client.Documents
             {
                 if (Conventions.AsyncDocumentIdGenerator == null) // don't overwrite what the user is doing
                 {
-                    var generator = new AsyncMultiDatabaseHiLoKeyGenerator(this, Conventions);
+                    var generator = new AsyncMultiDatabaseHiLoIdGenerator(this, Conventions);
                     _asyncMultiDbHiLo = generator;
-                    Conventions.AsyncDocumentIdGenerator = (dbName, entity) => generator.GenerateDocumentKeyAsync(dbName, entity);
+                    Conventions.AsyncDocumentIdGenerator = (dbName, entity) => generator.GenerateDocumentIdAsync(dbName, entity);
                 }
 
                 Initialized = true;

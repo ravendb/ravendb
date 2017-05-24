@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------
-//  <copyright file="AsyncMultiDatabaseHiLoKeyGenerator.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="AsyncMultiDatabaseHiLoIdGenerator.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -10,32 +10,31 @@ using Raven.Client.Documents.Conventions;
 
 namespace Raven.Client.Documents.Identity
 {
-    public class AsyncMultiDatabaseHiLoKeyGenerator
+    public class AsyncMultiDatabaseHiLoIdGenerator
     {
         private readonly DocumentStore _store;
         private readonly DocumentConventions _conventions;
 
-        private readonly ConcurrentDictionary<string, AsyncMultiTypeHiLoKeyGenerator> _generators =
-            new ConcurrentDictionary<string, AsyncMultiTypeHiLoKeyGenerator>();
+        private readonly ConcurrentDictionary<string, AsyncMultiTypeHiLoIdGenerator> _generators =
+            new ConcurrentDictionary<string, AsyncMultiTypeHiLoIdGenerator>();
 
-        public AsyncMultiDatabaseHiLoKeyGenerator(DocumentStore store, DocumentConventions conventions)
+        public AsyncMultiDatabaseHiLoIdGenerator(DocumentStore store, DocumentConventions conventions)
         {
             _store = store;
             _conventions = conventions;
         }
 
 
-        public Task<string> GenerateDocumentKeyAsync(string dbName,
-                                                     object entity)
+        public Task<string> GenerateDocumentIdAsync(string dbName, object entity)
         {
             var db = dbName ?? _store.Database;
             var generator = _generators.GetOrAdd(db, GenerateAsyncMultiTypeHiLoFunc);
-            return generator.GenerateDocumentKeyAsync(entity);
+            return generator.GenerateDocumentIdAsync(entity);
         }
 
-        public AsyncMultiTypeHiLoKeyGenerator GenerateAsyncMultiTypeHiLoFunc(string dbName)
+        public AsyncMultiTypeHiLoIdGenerator GenerateAsyncMultiTypeHiLoFunc(string dbName)
         {
-            return new AsyncMultiTypeHiLoKeyGenerator(_store, dbName, _conventions);
+            return new AsyncMultiTypeHiLoIdGenerator(_store, dbName, _conventions);
         }
 
         public async Task ReturnUnusedRange()

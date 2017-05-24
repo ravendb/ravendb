@@ -57,12 +57,12 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
     public class SqlEtlTable
     {
         public string TableName { get; set; }
-        public string DocumentKeyColumn { get; set; }
+        public string DocumentIdColumn { get; set; }
         public bool InsertOnlyMode { get; set; }
 
         protected bool Equals(SqlEtlTable other)
         {
-            return string.Equals(TableName, other.TableName) && string.Equals(DocumentKeyColumn, other.DocumentKeyColumn, StringComparison.OrdinalIgnoreCase) &&
+            return string.Equals(TableName, other.TableName) && string.Equals(DocumentIdColumn, other.DocumentIdColumn, StringComparison.OrdinalIgnoreCase) &&
                    InsertOnlyMode == other.InsertOnlyMode;
         }
     }

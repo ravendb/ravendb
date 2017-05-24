@@ -55,9 +55,9 @@ namespace Raven.Server.Documents.Patch
 
             using (var scope = CreateOperationScope(debugMode).Initialize(context))
             {
-                ApplySingleScript(context, document.Key, document, patch, scope);
+                ApplySingleScript(context, document.Id, document, patch, scope);
 
-                var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject.AsObject()), document.Key, mode, modifier);
+                var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject.AsObject()), document.Id, mode, modifier);
 
                 var result = new PatchResult
                 {
@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Patch
             try
             {
                 run.Prepare(document?.Data?.Size ?? 0);
-                run.SetDocumentId(document?.Key ?? documentId);
+                run.SetDocumentId(document?.Id ?? documentId);
 
                 scope.PatchObject = scope.ToJsObject(run.JintEngine, document);
 

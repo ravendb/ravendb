@@ -27,14 +27,14 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             if (records.InsertOnlyMode == false)
             {
                 // first, delete all the rows that might already exist there
-                foreach (var deleteQuery in GenerateDeleteItemsCommandText(records.TableName, records.DocumentKeyColumn, _configuration.ParameterizeDeletes,
+                foreach (var deleteQuery in GenerateDeleteItemsCommandText(records.TableName, records.DocumentIdColumn, _configuration.ParameterizeDeletes,
                     records.Deletes, token))
                 {
                     yield return deleteQuery;
                 }
             }
 
-            foreach (var insertQuery in GenerteInsertItemCommandText(records.TableName, records.DocumentKeyColumn, records.Inserts, token))
+            foreach (var insertQuery in GenerteInsertItemCommandText(records.TableName, records.DocumentIdColumn, records.Inserts, token))
             {
                 yield return insertQuery;
             }
@@ -53,22 +53,22 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         .Append(", ");
                 foreach (var column in itemToReplicate.Columns)
                 {
-                    if (column.Key == pkName)
+                    if (column.Id == pkName)
                         continue;
-                    sb.Append(_commandBuilder.QuoteIdentifier(column.Key)).Append(", ");
+                    sb.Append(_commandBuilder.QuoteIdentifier(column.Id)).Append(", ");
                 }
                 sb.Length = sb.Length - 2;
 
 
                 sb.Append(") VALUES (")
                     .Append("'")
-                    .Append(itemToReplicate.DocumentKey)
+                    .Append(itemToReplicate.DocumentId)
                     .Append("'")
                     .Append(", ");
 
                 foreach (var column in itemToReplicate.Columns)
                 {
-                    if (column.Key == pkName)
+                    if (column.Id == pkName)
                         continue;
                      DbParameter param = new SqlParameter();
                      RelationalDatabaseWriter.SetParamValue(param, column, null);
@@ -108,11 +108,11 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         sb.Append(", ");
                     if (parameterize)
                     {
-                        sb.Append(toSqlItems[j].DocumentKey);
+                        sb.Append(toSqlItems[j].DocumentId);
                     }
                     else
                     {
-                        sb.Append("'").Append(RelationalDatabaseWriter.SanitizeSqlValue(toSqlItems[j].DocumentKey)).Append("'");
+                        sb.Append("'").Append(RelationalDatabaseWriter.SanitizeSqlValue(toSqlItems[j].DocumentId)).Append("'");
                     }
 
                 }

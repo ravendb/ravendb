@@ -605,11 +605,11 @@ namespace Raven.Server.Documents.Replication
 
                         var nameSize = *(int*)ReadExactly(sizeof(int));
                         var name = Encoding.UTF8.GetString(ReadExactly(nameSize), nameSize);
-                        item.NameDispose = DocumentKeyWorker.GetStringPreserveCase(context, name, out item.Name);
+                        item.NameDispose = DocumentIdWorker.GetStringPreserveCase(context, name, out item.Name);
 
                         var contentTypeSize = *(int*)ReadExactly(sizeof(int));
                         var contentType = Encoding.UTF8.GetString(ReadExactly(contentTypeSize), contentTypeSize);
-                        item.ContentTypeDispose = DocumentKeyWorker.GetStringPreserveCase(context, contentType, out item.ContentType);
+                        item.ContentTypeDispose = DocumentIdWorker.GetStringPreserveCase(context, contentType, out item.ContentType);
 
                         var base64HashSize = *ReadExactly(sizeof(byte));
                         item.Base64HashDispose = Slice.From(context.Allocator, ReadExactly(base64HashSize), base64HashSize, out item.Base64Hash);
@@ -879,7 +879,7 @@ namespace Raven.Server.Documents.Replication
                                                 if (_incoming._log.IsInfoEnabled)
                                                     _incoming._log.Info(
                                                         $"Conflict check resolved to Update operation, writing tombstone for doc = {item.Id}, with change vector = {_changeVector.Format()}");
-                                                using (DocumentKeyWorker.GetSliceFromKey(context, item.Id, out Slice keySlice))
+                                                using (DocumentIdWorker.GetSliceFromId(context, item.Id, out Slice keySlice))
                                                 {
                                                     database.DocumentsStorage.Delete(
                                                         context, keySlice, item.Id, null,

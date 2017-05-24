@@ -206,7 +206,7 @@ namespace Raven.Client.Documents.BulkInsert
                 var cmd = new DynamicJsonValue
                 {
                     [nameof(PutCommandDataWithBlittableJson.Type)] = "PUT",
-                    [nameof(PutCommandDataWithBlittableJson.Key)] = id,
+                    [nameof(PutCommandDataWithBlittableJson.Id)] = id,
                     [nameof(PutCommandDataWithBlittableJson.Document)] = doc,
                 };
 
@@ -341,7 +341,7 @@ namespace Raven.Client.Documents.BulkInsert
             string id;
             if (_generateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id) == false)
             {
-                id = _generateEntityIdOnTheClient.GenerateDocumentKeyForStorage(entity);
+                id = _generateEntityIdOnTheClient.GenerateDocumentIdForStorage(entity);
                 _generateEntityIdOnTheClient.TrySetIdentity(entity, id); //set Id property if it was null
             }
             return id;
