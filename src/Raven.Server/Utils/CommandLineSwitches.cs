@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.CommandLineUtils;
+using Sparrow.Platform;
 
 namespace Raven.Server.Utils
 {
@@ -105,15 +106,18 @@ namespace Raven.Server.Utils
 
             _app.Execute(nonConfigurationSwitches);
 
-            ValidateServiceName();
+            Validate();
 
             return args.Except(nonConfigurationSwitches).ToArray();
         }
 
-        private static void ValidateServiceName()
+        private static void Validate()
         {
             if (ServiceName.Length > 256)
                 throw new CommandParsingException(_app, "Service name must have maximum length of 256 characters.");
+
+            if (PlatformDetails.RunningOnPosix == false && RunAsService)
+                throw new CommandParsingException(_app, "Switch \"--run-as-service\" is not supported on Windows. Use --register-service switch to register the service and services.msc for service management.");
         }
 
         private static bool ParseSwitchOption(CommandOption opt)
