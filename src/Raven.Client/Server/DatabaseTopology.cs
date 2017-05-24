@@ -41,10 +41,14 @@ namespace Raven.Client.Server
 
         public DynamicJsonValue ToJson()
         {
-            var resolveByCollection = new DynamicJsonValue();
-            foreach (var scriptResolver in ResolveByCollection)
+            DynamicJsonValue resolveByCollection = null;
+            if(ResolveByCollection != null)
             {
-                resolveByCollection[scriptResolver.Key] = scriptResolver.Value.ToJson();
+                resolveByCollection = new DynamicJsonValue();
+                foreach (var scriptResolver in ResolveByCollection)
+                {
+                    resolveByCollection[scriptResolver.Key] = scriptResolver.Value.ToJson();
+                }
             }
             return new DynamicJsonValue
             {
