@@ -241,60 +241,6 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private unsafe void DeleteDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
-        {
-            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-            var delDb = JsonDeserializationCluster.DeleteDatabaseCommand(cmd);
-            var databaseName = delDb.DatabaseName;
-            using (Slice.From(context.Allocator, "db/" + databaseName.ToLowerInvariant(), out Slice loweredKey))
-            using (Slice.From(context.Allocator, "db/" + databaseName, out Slice key))
-            {
-                if (items.ReadByKey(loweredKey, out TableValueReader reader) == false)
-                {
-                    NotifyLeaderAboutError(index, leader, new DatabaseDoesNotExistException($"The database {databaseName} does not exists, cannot delete it"));
-                    return;
-                }
-
-                var deletionInProgressStatus = delDb.HardDelete
-    ? DeletionInProgressStatus.HardDelete
-    : DeletionInProgressStatus.SoftDelete;
-                var doc = new BlittableJsonReaderObject(reader.Read(2, out int size), size, context);
-                var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
-                if (databaseRecord.DeletionInProgress == null)
-                    databaseRecord.DeletionInProgress = new Dictionary<string, DeletionInProgressStatus>();
-
-                if (string.IsNullOrEmpty(delDb.FromNode) == false)
-                {
-                    if (databaseRecord.Topology.RelevantFor(delDb.FromNode) == false)
-                    {
-                        NotifyLeaderAboutError(index, leader, new DatabaseDoesNotExistException($"The database {databaseName} does not exists on node {delDb.FromNode}"));
-                        return;
-                    }
-                    databaseRecord.Topology.RemoveFromTopology(delDb.FromNode);
-
-                    databaseRecord.DeletionInProgress[delDb.FromNode] = deletionInProgressStatus;
-                }
-                else
-                {
-                    var allNodes = databaseRecord.Topology.Members.Select(m => m.NodeTag)
-                        .Concat(databaseRecord.Topology.Promotables.Select(p => p.NodeTag))
-                        .Concat(databaseRecord.Topology.Watchers.Select(w => w.NodeTag));
-
-                    foreach (var node in allNodes)
-                        databaseRecord.DeletionInProgress[node] = deletionInProgressStatus;
-
-                    databaseRecord.Topology = new DatabaseTopology();
-                }
-                
-                using (var updated = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context))
-                {
-                    UpdateValue(index, items, loweredKey, key, updated);
-                }
-
-                NotifyDatabaseChanged(context, databaseName, index);
-            }
-        }
-
         private unsafe void AddDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             var addDatabaseCommand = JsonDeserializationCluster.AddDatabaseCommand(cmd);
