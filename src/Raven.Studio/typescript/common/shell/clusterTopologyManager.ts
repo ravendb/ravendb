@@ -2,6 +2,7 @@
 
 import clusterTopology = require("models/database/cluster/clusterTopology");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
+import changesContext = require("common/changesContext");
 
 class clusterTopologyManager {
 
@@ -12,25 +13,25 @@ class clusterTopologyManager {
     nodeTag: KnockoutComputed<string>;
 
     init(): JQueryPromise<clusterTopology> {
-        return this.forceRefresh();
-    }
-
-    constructor() {
-        this.initObservables();
-
-        setInterval(() => this.forceRefresh(), 1000); //TODO: dleete me!
-    }
-
-    //TODO: connect websocket updates - waitin for: RavenDB-6929
-
-    //TODO: do we want to use this? 
-    forceRefresh() {
         return new getClusterTopologyCommand(window.location.host)
             .execute()
             .done(topology => {
                 this.topology(topology);
             });
-        //TODO: handle failure
+    }
+
+    constructor() {
+        this.initObservables();
+    }
+
+    setupGlobalNotifications() {
+        const serverWideClient = changesContext.default.serverNotifications();
+
+        serverWideClient.watchClusterTopologyChanges(e => this.onTopologyUpdated(e));
+    }
+
+    private onTopologyUpdated(e: Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged) {
+        this.topology().updateWith(e);
     }
 
     private initObservables() {

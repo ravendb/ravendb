@@ -17,6 +17,11 @@ class clusterNode {
         }
     });
 
+    updateWith(incoming: clusterNode) {
+        this.tag(incoming.tag());
+        this.type(incoming.type());
+    }
+
     static for(tag: string, serverUrl: string, type: clusterNodeType) {
         const node = new clusterNode();
         node.tag(tag);
