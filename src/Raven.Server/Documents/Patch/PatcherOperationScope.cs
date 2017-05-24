@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Patch
         public ObjectInstance ToJsObject(Engine engine, Document document)
         {
             var instance = ToJsObject(engine, document.Data);
-            return ApplyMetadataIfNecessary(instance, document.Key, document.Etag, document.LastModified, document.Flags, document.IndexScore);
+            return ApplyMetadataIfNecessary(instance, document.Id, document.Etag, document.LastModified, document.Flags, document.IndexScore);
         }
 
         public ObjectInstance ToJsObject(Engine engine, DocumentConflict document, string propertyName)
@@ -534,7 +534,7 @@ namespace Raven.Server.Documents.Patch
                 });
             }
 
-            return put.Key;
+            return put.Id;
         }
 
         public virtual void DeleteDocument(string documentKey)

@@ -46,7 +46,7 @@ namespace Raven.Server.Smuggler.Documents
                     return null;
                 }
 
-                var newDocument = context.ReadObject(scope.ToBlittable(jsObjectTransformed.AsObject()), document.Key);
+                var newDocument = context.ReadObject(scope.ToBlittable(jsObjectTransformed.AsObject()), document.Id);
                 if (newDocument.Equals(document.Data))
                 {
                     newDocument.Dispose();
@@ -58,7 +58,7 @@ namespace Raven.Server.Smuggler.Documents
                 return new Document
                 {
                     Data = newDocument,
-                    Key = document.Key,
+                    Id = document.Id,
                     Flags = document.Flags,
                     NonPersistentFlags = document.NonPersistentFlags
                 };

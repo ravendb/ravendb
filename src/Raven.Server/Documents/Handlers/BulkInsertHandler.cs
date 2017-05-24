@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Handlers
 
                                     progress.BatchCount++;
                                     progress.Processed += list.Count;
-                                    progress.LastProcessedId = list.Last().Key;
+                                    progress.LastProcessedId = list.Last().Id;
 
                                     onProgress(progress);
 
@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Handlers
 
                                 progress.BatchCount++;
                                 progress.Processed += list.Count;
-                                progress.LastProcessedId = list.Last().Key;
+                                progress.LastProcessedId = list.Last().Id;
 
                                 onProgress(progress);
                             }
@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Handlers
                 foreach (var cmd in Commands)
                 {
                     Debug.Assert(cmd.Type == CommandType.PUT);
-                    Database.DocumentsStorage.Put(context, cmd.Key, null, cmd.Document);
+                    Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document);
                 }
                 if (Logger.IsInfoEnabled)
                 {

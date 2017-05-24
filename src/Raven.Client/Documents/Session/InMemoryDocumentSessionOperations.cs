@@ -564,7 +564,7 @@ more responsive application.
                 GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
             }
 
-            if (_deferredCommands.Any(c => c.Key == id))
+            if (_deferredCommands.Any(c => c.Id == id))
                 throw new InvalidOperationException("Can't store document, there is a deferred command registered for this document in the session. Document id: " + id);
 
             if (DeletedEntities.Contains(entity))
@@ -755,7 +755,7 @@ more responsive application.
                 {
                     foreach (var resultCommand in result.DeferredCommands)
                     {
-                        if (resultCommand.Key == documentInfo.Id)
+                        if (resultCommand.Id == documentInfo.Id)
                             ThrowInvalidDeletedDocumentWithDeferredCommand(resultCommand);
                     }
 
@@ -796,7 +796,7 @@ more responsive application.
                 foreach (var resultCommand in result.DeferredCommands)
                 {
                     if (resultCommand.Type != CommandType.AttachmentPUT &&
-                        resultCommand.Key == entity.Value.Id)
+                        resultCommand.Id == entity.Value.Id)
                         ThrowInvalidModifiedDocumentWithDeferredCommand(resultCommand);
                 }
 
@@ -826,13 +826,13 @@ more responsive application.
         private static void ThrowInvalidDeletedDocumentWithDeferredCommand(ICommandData resultCommand)
         {
             throw new InvalidOperationException(
-                $"Cannot perform save because document {resultCommand.Key} has been deleted by the session and is also taking part in deferred {resultCommand.Type} command");
+                $"Cannot perform save because document {resultCommand.Id} has been deleted by the session and is also taking part in deferred {resultCommand.Type} command");
         }
 
         private static void ThrowInvalidModifiedDocumentWithDeferredCommand(ICommandData resultCommand)
         {
             throw new InvalidOperationException(
-                $"Cannot perform save because document {resultCommand.Key} has been modified by the session and is also taking part in deferred {resultCommand.Type} command");
+                $"Cannot perform save because document {resultCommand.Id} has been modified by the session and is also taking part in deferred {resultCommand.Type} command");
         }
 
         protected bool EntityChanged(BlittableJsonReaderObject newObj, DocumentInfo documentInfo, IDictionary<string, DocumentsChanges[]> changes)

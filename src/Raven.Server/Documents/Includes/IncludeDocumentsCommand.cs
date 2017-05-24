@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Includes
             {
                 if (include == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                 {
-                    _includedIds.Add(document.Key);
+                    _includedIds.Add(document.Id);
                     continue;
                 }
                 IncludeUtil.GetDocIdFromInclude(document.Data, new StringSegment(include), _includedIds);

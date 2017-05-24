@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Replication
                 Etag = doc.Etag,
                 ChangeVector = doc.ChangeVector,
                 Data = doc.Data,
-                Key = doc.Key,
+                Key = doc.Id,
                 Flags = doc.Flags,
                 TransactionMarker = doc.TransactionMarker,
                 LastModifiedTicks = doc.LastModified.Ticks,
@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Replication
             var item = new ReplicationBatchItem
             {
                 Etag = doc.Etag,
-                Key = doc.LoweredKey,
+                Key = doc.LowerId,
                 TransactionMarker = doc.TransactionMarker,
             };
 
@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Replication
             return new ReplicationBatchItem
             {
                 Type = ReplicationItemType.Attachment,
-                Key = attachment.LoweredKey,
+                Key = attachment.Key,
                 Etag = attachment.Etag,
                 Name = attachment.Name,
                 ContentType = attachment.ContentType,

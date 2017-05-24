@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             Slice docKeyAsSlice;
-            using (Slice.External(indexContext.Allocator, tombstone.LoweredKey.Buffer, tombstone.LoweredKey.Length, out docKeyAsSlice))
+            using (Slice.External(indexContext.Allocator, tombstone.LowerId.Buffer, tombstone.LowerId.Length, out docKeyAsSlice))
             {
                 MapReduceWorkContext.DocumentMapEntries.RepurposeInstance(docKeyAsSlice, clone: false);
 
@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     store.Delete(mapEntry.Id);
                 }
 
-                MapReduceWorkContext.MapPhaseTree.DeleteFixedTreeFor(tombstone.LoweredKey, sizeof(ulong));
+                MapReduceWorkContext.MapPhaseTree.DeleteFixedTreeFor(tombstone.LowerId, sizeof(ulong));
             }
 
 

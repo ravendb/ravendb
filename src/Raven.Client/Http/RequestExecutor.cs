@@ -527,11 +527,11 @@ namespace Raven.Client.Http
             });
         }
 
-        public string UrlFor(string documentKey)
+        public string UrlFor(string documentId)
         {
             var node = _nodeSelector.CurrentNode;
-            return $"{node.Url}/databases/{node.Database}/docs?id={documentKey}";
-        }
+            return $"{node.Url}/databases/{node.Database}/docs?id={documentId}";
+        }       
 
         private static void ThrowEmptyTopology()
         {

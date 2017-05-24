@@ -309,7 +309,7 @@ namespace Raven.Server.Smuggler.Documents
                     var document = documentType.Document;
                     using (document.Data)
                     {
-                        var key = document.Key;
+                        var key = document.Id;
 
                         if (IsRevision)
                         {
@@ -363,9 +363,9 @@ namespace Raven.Server.Smuggler.Documents
 
                     var type = (document.Flags & DocumentFlags.Revision) == DocumentFlags.Revision ? AttachmentType.Revision : AttachmentType.Document;
                     var attachmentsStorage = _database.DocumentsStorage.AttachmentsStorage;
-                    using (DocumentKeyWorker.GetSliceFromKey(_context, document.Key, out Slice lowerDocumentId))
-                    using (DocumentKeyWorker.GetLowerKeySliceAndStorageKey(_context, name, out Slice lowerName, out Slice nameSlice))
-                    using (DocumentKeyWorker.GetLowerKeySliceAndStorageKey(_context, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
+                    using (DocumentIdWorker.GetSliceFromId(_context, document.Id, out Slice lowerDocumentId))
+                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, name, out Slice lowerName, out Slice nameSlice))
+                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
                     using (Slice.External(_context.Allocator, hash, out Slice base64Hash))
                     using (attachmentsStorage.GetAttachmentKey(_context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
                         base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, type, document.ChangeVector, out Slice keySlice))

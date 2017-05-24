@@ -233,7 +233,7 @@ namespace Raven.Server.Documents.Queries
 
                 foreach (var document in results.Results)
                 {
-                    resultIds.Enqueue(document.Key.ToString());
+                    resultIds.Enqueue(document.Id.ToString());
                 }
             }
             finally // make sure to close tx if DocumentConflictException is thrown

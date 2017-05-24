@@ -50,7 +50,7 @@ namespace FastTests.Server.Documents
                 var document = _documentDatabase.DocumentsStorage.Get(ctx, key);
                 Assert.NotNull(document);
                 Assert.Equal(1, document.Etag);
-                Assert.Equal(key, document.Key);
+                Assert.Equal(key, document.Id);
                 string name;
                 document.Data.TryGet("Name", out name);
                 Assert.Equal(key, name);
@@ -535,7 +535,7 @@ namespace FastTests.Server.Documents
                 {
                     var putResult = _documentDatabase.DocumentsStorage.Put(ctx, key, null, doc);
                     Assert.True(putResult.Etag >= 5);
-                    Assert.Equal("users/5", putResult.Key);
+                    Assert.Equal("users/5", putResult.Id);
                 }
                 ctx.Transaction.Commit();
             }

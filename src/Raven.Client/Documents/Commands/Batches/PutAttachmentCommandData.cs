@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Commands.Batches
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentNullException(nameof(name));
 
-            Key = documentId;
+            Id = documentId;
             Name = name;
             Stream = stream;
             ContentType = contentType;
@@ -49,7 +49,7 @@ namespace Raven.Client.Documents.Commands.Batches
                 "Make sure that the specified stream is readable and was not disposed.");
         }
 
-        public string Key { get; }
+        public string Id { get; }
         public string Name { get; }
         public Stream Stream { get; }
         public string ContentType { get; }
@@ -60,7 +60,7 @@ namespace Raven.Client.Documents.Commands.Batches
         {
             return new DynamicJsonValue
             {
-                [nameof(Key)] = Key,
+                [nameof(Id)] = Id,
                 [nameof(Name)] = Name,
                 [nameof(ContentType)] = ContentType,
                 [nameof(Etag)] = Etag,

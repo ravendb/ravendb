@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.ETL
 
         protected ExtractedItem(Document document, string collection)
         {
-            DocumentKey = document.Key;
+            DocumentKey = document.Id;
             Etag = document.Etag;
             Document = document;
             Collection = collection;
@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.ETL
         protected ExtractedItem(DocumentTombstone tombstone, string collection)
         {
             Etag = tombstone.Etag;
-            DocumentKey = tombstone.LoweredKey;
+            DocumentKey = tombstone.LowerId;
             IsDelete = true;
             Collection = collection;
         }

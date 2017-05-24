@@ -47,7 +47,7 @@ namespace Raven.Server.Documents
             if (change.Type != DocumentChangeTypes.Put && change.Type != DocumentChangeTypes.Delete)
                 return;
 
-            if (string.Equals(change.Key, Constants.Json.CustomFunctionsKey, StringComparison.OrdinalIgnoreCase) == false)
+            if (string.Equals(change.Id, Constants.Json.CustomFunctionsId, StringComparison.OrdinalIgnoreCase) == false)
                 return;
 
             if (change.Type == DocumentChangeTypes.Delete)
@@ -79,7 +79,7 @@ namespace Raven.Server.Documents
                 using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
                 using (context.OpenReadTransaction())
                 {
-                    var json = Database.DocumentsStorage.Get(context, Constants.Json.CustomFunctionsKey);
+                    var json = Database.DocumentsStorage.Get(context, Constants.Json.CustomFunctionsId);
 
                     string functions;
                     if (json == null || json.Data.TryGet("Functions", out functions) == false || string.IsNullOrWhiteSpace(functions))
