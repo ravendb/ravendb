@@ -30,10 +30,10 @@ namespace FastTests.Client.BulkInsert
 
                 using (var session = store.OpenSession())
                 {
-                    var doc1 = session.Load<FooBar>("FooBars/1");
-                    var doc2 = session.Load<FooBar>("FooBars/2");
-                    var doc3 = session.Load<FooBar>("FooBars/3");
-                    var doc4 = session.Load<FooBar>("FooBars/4");
+                    var doc1 = session.Load<FooBar>("FooBars/1-A");
+                    var doc2 = session.Load<FooBar>("FooBars/2-A");
+                    var doc3 = session.Load<FooBar>("FooBars/3-A");
+                    var doc4 = session.Load<FooBar>("FooBars/4-A");
 
                     Assert.NotNull(doc1);
                     Assert.NotNull(doc2);
@@ -71,10 +71,10 @@ namespace FastTests.Client.BulkInsert
 
                 using (var session = store.OpenSession())
                 {
-                    var doc1 = session.Load<FooBar>("FooBars/1");
-                    var doc2 = session.Load<FooBar>("FooBars/2");
-                    var doc3 = session.Load<FooBar>("FooBars/3");
-                    var doc4 = session.Load<FooBar>("FooBars/4");
+                    var doc1 = session.Load<FooBar>("FooBars/1-A");
+                    var doc2 = session.Load<FooBar>("FooBars/2-A");
+                    var doc3 = session.Load<FooBar>("FooBars/3-A");
+                    var doc4 = session.Load<FooBar>("FooBars/4-A");
 
                     Assert.NotNull(doc1);
                     Assert.NotNull(doc2);

@@ -20,7 +20,6 @@ namespace Raven.Server.Documents.Handlers
     public class HiLoHandler : DatabaseRequestHandler
     {
         private const string RavenIdGeneratorsHilo = "Raven/Hilo/";
-        private const string RavenIdServerPrefix = "Raven/ServerPrefixForHilo";
 
         private static long CalculateCapacity(long lastSize, string lastRangeAtStr)
         {
@@ -47,7 +46,9 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/hilo/next", "GET", "/databases/{databaseName:string}/hilo/next?tag={collectionName:string}&lastBatchSize={size:long|optional}&lastRangeAt={date:System.DateTime|optional}&identityPartsSeparator={separator:string|optional}&lastMax={max:long|optional} ")]
         public async Task GetNextHiLo()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            DocumentsOperationContext context;
+
+            using (ContextPool.AllocateOperationContext(out context))
             {
                 var tag = GetQueryStringValueAndAssertIfSingleAndNotEmpty("tag");
                 var lastSize = GetLongQueryString("lastBatchSize", false) ?? 0;
@@ -102,12 +103,11 @@ namespace Raven.Server.Documents.Handlers
 
                 long oldMax = 0;
                 var newDoc = new DynamicJsonValue();
-                BlittableJsonReaderObject hiloDocReader = null, serverPrefixDocReader = null;
+                BlittableJsonReaderObject hiloDocReader = null;
                 try
                 {
                     try
                     {
-                        serverPrefixDocReader = Database.DocumentsStorage.Get(context, RavenIdServerPrefix)?.Data;
                         hiloDocReader = Database.DocumentsStorage.Get(context, hiLoDocumentId)?.Data;
                     }
                     catch (DocumentConflictException e)
@@ -116,11 +116,6 @@ namespace Raven.Server.Documents.Handlers
                                                        "This shouldn't happen, since it this conflict should've been resolved during replication. " +
                                                        "This exception should not happen and is likely a bug.", e);
                     }
-
-                    string serverPrefix;
-                    if (serverPrefixDocReader != null &&
-                        serverPrefixDocReader.TryGet("ServerPrefix", out serverPrefix))
-                        prefix += serverPrefix;
 
                     if (hiloDocReader != null)
                     {
@@ -150,7 +145,6 @@ namespace Raven.Server.Documents.Handlers
                 }
                 finally
                 {
-                    serverPrefixDocReader?.Dispose();
                     hiloDocReader?.Dispose();
                 }
                 return 1;
@@ -190,9 +184,9 @@ namespace Raven.Server.Documents.Handlers
 
             public override int Execute(DocumentsOperationContext context)
             {
-                var hiLoDocumentKey = RavenIdGeneratorsHilo + Key;
+                var hiLoDocumentId = RavenIdGeneratorsHilo + Key;
 
-                var document = Database.DocumentsStorage.Get(context, hiLoDocumentKey);
+                var document = Database.DocumentsStorage.Get(context, hiLoDocumentId);
 
                 if (document == null)
                     return 1;
@@ -209,9 +203,9 @@ namespace Raven.Server.Documents.Handlers
                     ["Max"] = Last,
                 };
 
-                using (var hiloReader = context.ReadObject(document.Data, hiLoDocumentKey, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                using (var hiloReader = context.ReadObject(document.Data, hiLoDocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    Database.DocumentsStorage.Put(context, hiLoDocumentKey, null, hiloReader);
+                    Database.DocumentsStorage.Put(context, hiLoDocumentId, null, hiloReader);
                 }
 
                 return 1;
