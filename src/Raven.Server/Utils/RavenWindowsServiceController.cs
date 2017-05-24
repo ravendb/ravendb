@@ -215,13 +215,6 @@ namespace Raven.Server.Utils
         public void Start(string[] startupArguments, ServiceStoppedCallback serviceStoppedCallback)
         {
             _ravenServer.Initialize();
-
-            ManualResetEvent mre = new ManualResetEvent(false);
-
-            AssemblyLoadContext.Default.Unloading += (s) =>
-            {
-                mre.Set();
-            };
         }
 
         public void Stop()
