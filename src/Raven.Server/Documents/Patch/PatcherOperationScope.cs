@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.Patch
             return ApplyMetadataIfNecessary(instance, document.Id, document.Etag, document.LastModified, flags: null, indexScore: null);
         }
 
-        private static ObjectInstance ApplyMetadataIfNecessary(ObjectInstance instance, LazyStringValue key, long etag, DateTime? lastModified, DocumentFlags? flags, double? indexScore)
+        private static ObjectInstance ApplyMetadataIfNecessary(ObjectInstance instance, LazyStringValue id, long etag, DateTime? lastModified, DocumentFlags? flags, double? indexScore)
         {
             var metadataValue = instance.Get(Constants.Documents.Metadata.Key);
             if (metadataValue == null || metadataValue.IsObject() == false)
@@ -114,8 +114,8 @@ namespace Raven.Server.Documents.Patch
             if (flags.HasValue && flags != DocumentFlags.None)
                 metadata.FastAddProperty(Constants.Documents.Metadata.Flags, flags.Value.ToString(), true, true, true);
 
-            if (key != null)
-                metadata.FastAddProperty(Constants.Documents.Metadata.Id, key.ToString(), true, true, true);
+            if (id != null)
+                metadata.FastAddProperty(Constants.Documents.Metadata.Id, id.ToString(), true, true, true);
 
             if (indexScore.HasValue)
                 metadata.FastAddProperty(Constants.Documents.Metadata.IndexScore, indexScore, true, true, true);
@@ -466,15 +466,15 @@ namespace Raven.Server.Documents.Patch
         {
         }
 
-        public virtual JsValue LoadDocument(string documentKey, Engine engine, ref int totalStatements)
+        public virtual JsValue LoadDocument(string documentId, Engine engine, ref int totalStatements)
         {
             if (_context == null)
                 ThrowDocumentsOperationContextIsNotSet();
 
-            var document = _database.DocumentsStorage.Get(_context, documentKey);
+            var document = _database.DocumentsStorage.Get(_context, documentId);
 
             if (DebugMode)
-                DebugActions.LoadDocument.Add(documentKey);
+                DebugActions.LoadDocument.Add(documentId);
 
             if (document == null)
                 return JsValue.Null;
@@ -491,7 +491,7 @@ namespace Raven.Server.Documents.Patch
             throw new InvalidOperationException("Documents operation context is not set");
         }
 
-        public virtual string PutDocument(string key, JsValue document, JsValue metadata, JsValue etagJs, Engine engine)
+        public virtual string PutDocument(string id, JsValue document, JsValue metadata, JsValue etagJs, Engine engine)
         {
             if (_context == null)
                 ThrowDocumentsOperationContextIsNotSet();
@@ -499,7 +499,7 @@ namespace Raven.Server.Documents.Patch
             if (document == null || document.IsObject() == false)
             {
                 throw new InvalidOperationException(
-                    $"Created document must be a valid object which is not null or empty. Document key: '{key}'.");
+                    $"Created document must be a valid object which is not null or empty. Document ID: '{id}'.");
             }
 
             long? etag = null;
@@ -511,7 +511,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 else if (etagJs.IsNull() == false && etagJs.IsUndefined() == false && etagJs.ToString() != "None")
                 {
-                    throw new InvalidOperationException($"Invalid ETag value for document '{key}'");
+                    throw new InvalidOperationException($"Invalid ETag value for document '{id}'");
                 }
             }
 
@@ -521,14 +521,14 @@ namespace Raven.Server.Documents.Patch
                 data["@metadata"] = ToBlittable(metadata.AsObject());
             }
 
-            var dataReader = _context.ReadObject(data, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-            var put = _database.DocumentsStorage.Put(_context, key, etag, dataReader);
+            var dataReader = _context.ReadObject(data, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            var put = _database.DocumentsStorage.Put(_context, id, etag, dataReader);
 
             if (DebugMode)
             {
                 DebugActions.PutDocument.Add(new DynamicJsonValue
                 {
-                    ["Key"] = key,
+                    ["Id"] = id,
                     ["Etag"] = etag,
                     ["Data"] = dataReader
                 });
@@ -537,7 +537,7 @@ namespace Raven.Server.Documents.Patch
             return put.Id;
         }
 
-        public virtual void DeleteDocument(string documentKey)
+        public virtual void DeleteDocument(string documentId)
         {
             throw new NotSupportedException("Deleting documents is not supported.");
         }

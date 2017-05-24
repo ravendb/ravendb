@@ -702,11 +702,11 @@ namespace Raven.Server.Documents.Replication
 
             public long LastHeartbeatTicks;
 
-            public const int MaxConnectionTimout = 60000;
+            public const int MaxConnectionTimeout = 60000;
 
             public int ErrorCount { get; set; }
 
-            public TimeSpan NextTimout { get; set; } = TimeSpan.FromMilliseconds(500);
+            public TimeSpan NextTimeout { get; set; } = TimeSpan.FromMilliseconds(500);
 
             public DateTime RetryOn { get; set; }
 
@@ -714,15 +714,15 @@ namespace Raven.Server.Documents.Replication
 
             public void Reset()
             {
-                NextTimout = TimeSpan.FromMilliseconds(500);
+                NextTimeout = TimeSpan.FromMilliseconds(500);
                 ErrorCount = 0;
             }
 
             public void OnError(Exception e)
             {
                 ErrorCount++;
-                NextTimout = TimeSpan.FromMilliseconds(Math.Min(NextTimout.TotalMilliseconds * 4, MaxConnectionTimout));
-                RetryOn = DateTime.UtcNow + NextTimout;
+                NextTimeout = TimeSpan.FromMilliseconds(Math.Min(NextTimeout.TotalMilliseconds * 4, MaxConnectionTimeout));
+                RetryOn = DateTime.UtcNow + NextTimeout;
                 LastException = e;
             }
 
