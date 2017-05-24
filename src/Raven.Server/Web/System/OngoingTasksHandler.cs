@@ -1,15 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
-using Raven.Client;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
-using Raven.Server.Documents;
-using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -26,7 +21,7 @@ namespace Raven.Server.Web.System
         public Task GetOngoingTasks()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("databaseName");
-            var result = GetOngoingTasksAndDbTopology(name, ServerStore).Item1;
+            var result = GetOngoingTasksAndDbTopology(name, ServerStore).tasks;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context)) 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -37,7 +32,7 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        public static Tuple<OngoingTasksResult, DatabaseTopology> GetOngoingTasksAndDbTopology(string dbName, ServerStore serverStore)
+        public static (OngoingTasksResult tasks , DatabaseTopology topology) GetOngoingTasksAndDbTopology(string dbName, ServerStore serverStore)
         {
             var ongoingTasksResult = new OngoingTasksResult();
             using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -48,14 +43,14 @@ namespace Raven.Server.Web.System
 
                 CollectReplicationOngoingTasks(dbTopology, clusterTopology, ongoingTasksResult.OngoingTasksList);
 
-                if (serverStore.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var database) && !database.IsFaulted && !database.IsCanceled)
+                if (serverStore.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var database) && database.Status == TaskStatus.RanToCompletion)
                 {
                     ongoingTasksResult.SubscriptionsCount = (int)database.Result.SubscriptionStorage.GetAllSubscriptionsCount();
                 }
 
                 //TODO: collect all the rest of the ongoing tasks (ETL, SQL, Backup)
 
-                return new Tuple<OngoingTasksResult, DatabaseTopology>(ongoingTasksResult, dbTopology);
+                return (ongoingTasksResult, dbTopology);
             }
         }
 
