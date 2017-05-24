@@ -75,10 +75,10 @@ namespace Raven.Server.ServerWide
                 return;
 
             switch (type)
-            {               
-                    //The reason we have a seperate case for removing node from database is because we must 
-                    //actually delete the database before we notify about changes to the record otherwise we 
-                    //don't know that it was us who needed to delete the database.
+            {
+                //The reason we have a seperate case for removing node from database is because we must 
+                //actually delete the database before we notify about changes to the record otherwise we 
+                //don't know that it was us who needed to delete the database.
                 case nameof(RemoveNodeFromDatabaseCommand):
                     RemoveNodeFromDatabase(context, cmd, index, leader);
                     break;
@@ -107,7 +107,7 @@ namespace Raven.Server.ServerWide
                 case nameof(AcknowledgeSubscriptionBatchCommand):
                 case nameof(CreateSubscriptionCommand):
                 case nameof(DeleteSubscriptionCommand):
-                    SetValueForTypedDatabaseCommand(context,type, cmd, index, leader);
+                    SetValueForTypedDatabaseCommand(context, type, cmd, index, leader);
                     break;
                 case nameof(PutValueCommand):
                     PutValue(context, cmd, index, leader);
@@ -126,14 +126,14 @@ namespace Raven.Server.ServerWide
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
                 updateCommand = JsonDeserializationCluster.UpdateValueCommands[type](cmd);
-                
+
                 var record = ReadDatabase(context, updateCommand.DatabaseName);
                 if (record == null)
                 {
                     NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot set typed value of type {type} for database {updateCommand.DatabaseName}, because does not exist"));
                     return;
                 }
-                
+
                 BlittableJsonReaderObject itemBlittable = null;
 
                 var itemKey = updateCommand.GetItemId();
@@ -148,7 +148,7 @@ namespace Raven.Server.ServerWide
 
                     try
                     {
-                        itemBlittable = updateCommand.GetUpdatedValue(index, record, context , itemBlittable);
+                        itemBlittable = updateCommand.GetUpdatedValue(index, record, context, itemBlittable);
 
                         // if returned null, means, there is nothing to update and we just wanted to delete the value
                         if (itemBlittable == null)
@@ -209,8 +209,8 @@ namespace Raven.Server.ServerWide
                     NotifyDatabaseChanged(context, databaseName, index);
                     return;
                 }
-                remove.UpdateDatabaseRecord(databaseRecord,index);
-               
+                remove.UpdateDatabaseRecord(databaseRecord, index);
+
                 if (databaseRecord.Topology.Members.Count == 0 &&
                     databaseRecord.Topology.Promotables.Count == 0 &&
                     databaseRecord.Topology.Watchers.Count == 0)
@@ -284,7 +284,7 @@ namespace Raven.Server.ServerWide
 
                     databaseRecord.Topology = new DatabaseTopology();
                 }
-                
+
                 using (var updated = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context))
                 {
                     UpdateValue(index, items, lowerKey, key, updated);
@@ -575,7 +575,7 @@ namespace Raven.Server.ServerWide
 
             etag = Bits.SwapBytes(*(long*)reader.Read(3, out size));
             Debug.Assert(size == sizeof(long));
-            
+
             return doc;
         }
 
@@ -591,7 +591,7 @@ namespace Raven.Server.ServerWide
         public static IEnumerable<(long, BlittableJsonReaderObject)> ReadValuesStartingWith(TransactionOperationContext context, Slice startsWithKey)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-            
+
             foreach (var holder in items.SeekByPrimaryKeyPrefix(startsWithKey, Slices.Empty, 0))
             {
                 var reader = holder.Reader;
@@ -600,7 +600,7 @@ namespace Raven.Server.ServerWide
 
                 yield return (etag, doc);
             }
-            
+
         }
 
         private static unsafe int GetDataAndEtagTupleFromReader(TransactionOperationContext context, TableValueReader reader, out BlittableJsonReaderObject doc, out long etag)
@@ -694,22 +694,28 @@ namespace Raven.Server.ServerWide
             _notifiedListeners = new AsyncManualResetEvent(token);
         }
 
-        public async Task WaitForIndexNotification(long index,uint? timeoutInMs = null)
+        public async Task WaitForIndexNotification(long index, uint? timeoutInMs = null)
         {
             Task timeoutTask = null;
             if (timeoutInMs.HasValue)
                 timeoutTask = TimeoutManager.WaitFor(timeoutInMs.Value, _token);
-            while (index > Volatile.Read(ref _lastModifiedIndex) && 
+            while (index > Volatile.Read(ref _lastModifiedIndex) &&
                     (timeoutInMs.HasValue == false || timeoutTask.IsCompleted == false))
+            {
                 if (timeoutInMs.HasValue == false)
+                {
                     await _notifiedListeners.WaitAsync();
-                else if(timeoutTask == await Task.WhenAny(_notifiedListeners.WaitAsync(),timeoutTask))
-                    ThrowTimeoutException();
+                }
+                else if (timeoutTask == await Task.WhenAny(_notifiedListeners.WaitAsync(), timeoutTask))
+                {
+                    ThrowTimeoutException(timeoutInMs.Value, index);
+                }
+            }
         }
 
-        private static void ThrowTimeoutException()
+        private static void ThrowTimeoutException(uint value, long index)
         {
-            throw new TimeoutException();
+            throw new TimeoutException("Waited for " + TimeSpan.FromMilliseconds(value) + " but didn't get index notification for " + index);
         }
 
         public void NotifyListenersAbout(long index)
