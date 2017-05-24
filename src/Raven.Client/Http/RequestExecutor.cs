@@ -58,7 +58,7 @@ namespace Raven.Client.Http
 
         private Timer _updateCurrentTokenTimer;
 
-        private readonly NodeSelector _nodeSelector;
+        public readonly NodeSelector _nodeSelector;
 
         private bool _disposed;
         private TimeSpan? _defaultTimeout;
@@ -622,7 +622,7 @@ namespace Raven.Client.Http
             HasUpdatedTopologyOnce = true;
         }
 
-        private class NodeSelector
+        public class NodeSelector
         {
             private Topology _topology;
 
