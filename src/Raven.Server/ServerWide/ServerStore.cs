@@ -13,6 +13,7 @@ using Raven.Client.Exceptions.Server;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.Server;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -460,112 +461,70 @@ namespace Raven.Server.ServerWide
             tree.Delete(name);
         }
 
-        public async Task<long> DeleteDatabaseAsync(JsonOperationContext context, string db, bool hardDelete, string fromNode)
+        public async Task<long> DeleteDatabaseAsync(string db, bool hardDelete, string fromNode)
         {
-            using (var putCmd = context.ReadObject(new DynamicJsonValue
+            var deleteCommand = new DeleteDatabaseCommand(db)
             {
-                ["Type"] = nameof(DeleteDatabaseCommand),
-                [nameof(DeleteDatabaseCommand.DatabaseName)] = db,
-                [nameof(DeleteDatabaseCommand.HardDelete)] = hardDelete,
-                [nameof(DeleteDatabaseCommand.FromNode)] = fromNode
-            }, "del-cmd"))
-            {
-                return await SendToLeaderAsync(putCmd);
-            }
+                HardDelete = hardDelete,
+                FromNode = fromNode
+            };
+            return await SendToLeaderAsync(deleteCommand);
         }
 
-        public async Task<long> ModifyDatabaseWatchers(
-            JsonOperationContext context, 
-            string key, 
-            BlittableJsonReaderArray watchers)
+        public async Task<long> ModifyDatabaseWatchers(string dbName,  List<DatabaseWatcher> watchers)
         {
-            using (var putCmd = context.ReadObject(new DynamicJsonValue
+            var watcherCommand = new ModifyDatabaseWatchersCommand(dbName)
             {
-                ["Type"] = nameof(ModifyDatabaseWatchersCommand),
-                [nameof(ModifyDatabaseWatchersCommand.DatabaseName)] = key,
-                [nameof(ModifyDatabaseWatchersCommand.Watchers)] = watchers,
-            }, "update-cmd"))
-            {
-                return await SendToLeaderAsync(putCmd);
-            }
+                Watchers = watchers
+            };
+            return await SendToLeaderAsync(watcherCommand);
         }
 
-        public async Task<long> ModifyConflictSolverAsync(JsonOperationContext context, string key, 
-            BlittableJsonReaderObject solver)
+        public async Task<long> ModifyConflictSolverAsync(string dbName, ConflictSolver solver)
         {
-            using (var putCmd = context.ReadObject(new DynamicJsonValue
+            var conflictResolverCommand = new ModifyConflictSolverCommand(dbName)
             {
-                ["Type"] = nameof(ModifyConflictSolverCommand),
-                [nameof(ModifyConflictSolverCommand.DatabaseName)] = key,
-                [nameof(ModifyConflictSolverCommand.Solver)] = solver
-            }, "update-conflict-resolver-cmd"))
+                Solver = solver
+            };
+            return await SendToLeaderAsync(conflictResolverCommand);
+    }
+
+        public async Task<long> PutValueInClusterAsync(string key, BlittableJsonReaderObject val)
+        {
+            var putValueCommand = new PutValueCommand
             {
-                return await SendToLeaderAsync(putCmd);
-            }
+                Name = key,
+                Value = val
+            };
+            return await SendToLeaderAsync(putValueCommand);
         }
 
-        public async Task<long> PutValueInClusterAsync(JsonOperationContext context, string key, BlittableJsonReaderObject val)
+        public async Task<long> DeleteValueInClusterAsync(string key)
         {
-            using (var putCmd = context.ReadObject(new DynamicJsonValue
+            var deleteValueCommand = new DeleteValueCommand()
             {
-                ["Type"] = nameof(PutValueCommand),
-                [nameof(PutValueCommand.Name)] = key,
-                [nameof(PutValueCommand.Value)] = val,
-            }, "put-cmd"))
-            {
-                return await SendToLeaderAsync(putCmd);
-            }
-        }
-
-        public async Task DeleteValueInClusterAsync(JsonOperationContext context, string key)
-        {
-            using (var putCmd = context.ReadObject(new DynamicJsonValue
-            {
-                ["Type"] = nameof(DeleteValueCommand),
-                [nameof(DeleteValueCommand.Name)] = key,
-            }, "delete-cmd"))
-            {
-                await SendToLeaderAsync(putCmd);
-            }
+                Name = key
+            };
+            return await SendToLeaderAsync(deleteValueCommand);
         }
 
         public async Task<long> ModifyDatabaseExpiration(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson)
         {
-            using (var putCmd = context.ReadObject(new DynamicJsonValue
-            {
-                ["Type"] = nameof(EditExpirationCommand),
-                [nameof(EditExpirationCommand.DatabaseName)] = name,
-                [nameof(EditExpirationCommand.Configuration)] = configurationJson,
-            }, "expiration-cmd"))
-            {
-                return await SendToLeaderAsync(putCmd);
-            }
+            var editExpiration = new EditExpirationCommand(JsonDeserializationCluster.ExpirationConfiguration(configurationJson), name);
+            return await SendToLeaderAsync(editExpiration);
+            
         }
 
         public async Task<long> ModifyDatabasePeriodicBackup(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson)
         {
-            using (var putCmd = context.ReadObject(new DynamicJsonValue
-            {
-                ["Type"] = nameof(EditPeriodicBackupCommand),
-                [nameof(EditExpirationCommand.DatabaseName)] = name,
-                [nameof(EditExpirationCommand.Configuration)] = configurationJson,
-            }, "periodic-export-cmd"))
-            {
-                return await SendToLeaderAsync(putCmd);
-            }
+            var editPeriodicBackup = new EditPeriodicBackupCommand(JsonDeserializationCluster.PeriodicBackupConfiguration(configurationJson), name);
+            return await SendToLeaderAsync(editPeriodicBackup);
         }
         
-        public async Task<long> ModifyDatabaseVersioning(JsonOperationContext context, string databaseName, BlittableJsonReaderObject val)
+        public async Task<long> ModifyDatabaseVersioning(JsonOperationContext context, string name, BlittableJsonReaderObject configurationJson)
         {
-            using (var putCmd = context.ReadObject(new DynamicJsonValue
-            {
-                ["Type"] = nameof(EditVersioningCommand),
-                [nameof(EditVersioningCommand.Configuration)] = val,
-                [nameof(EditVersioningCommand.DatabaseName)] = databaseName,
-            }, "versioning-cmd"))
-            {
-                return await SendToLeaderAsync(putCmd);
-            }
+            var editVersioning = new EditVersioningCommand(JsonDeserializationCluster.VersioningConfiguration(configurationJson), name);
+            return await SendToLeaderAsync(editVersioning);
         }
 
         public Guid GetServerId()
@@ -703,18 +662,16 @@ namespace Raven.Server.ServerWide
             return ((now - maxLastWork).TotalMinutes > 5) || ((now - database.LastIdleTime).TotalMinutes > 10);
         }
 
-        public async Task<long> WriteDbAsync(TransactionOperationContext context, string dbId, BlittableJsonReaderObject dbDoc, long? etag)
+        public async Task<long> WriteDbAsync(string databaseName, BlittableJsonReaderObject databaseRecord, long? etag, bool encrypted = false)
         {
-            using (var putCmd = context.ReadObject(new DynamicJsonValue
+            var addDatabaseCommand = new AddDatabaseCommand()
             {
-                ["Type"] = nameof(AddDatabaseCommand),
-                [nameof(AddDatabaseCommand.Name)] = dbId,
-                [nameof(AddDatabaseCommand.Value)] = dbDoc,
-                [nameof(AddDatabaseCommand.Etag)] = etag
-            }, "put-cmd"))
-            {
-                return await SendToLeaderAsync(putCmd);
-            }
+                Name = databaseName,
+                Etag = etag,
+                Encrypted = encrypted,
+                Record = databaseRecord
+            };
+            return await SendToLeaderAsync(addDatabaseCommand);
         }
 
         public void EnsureNotPassive()
@@ -735,30 +692,12 @@ namespace Raven.Server.ServerWide
             return _engine.CurrentState == RachisConsensus.State.Leader;
         }
 
-        public async Task<long> SendToLeaderAsync(UpdateDatabaseCommand cmd)
+        public async Task<long> SendToLeaderAsync(CommandBase cmd)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var djv = cmd.ToJson();
                 var cmdJson = context.ReadObject(djv, "raft/command");
-
-                return await SendToLeaderAsyncInternal(cmdJson, context);
-            }
-        }
-
-        public async Task<long> SendToLeaderAsync(BlittableJsonReaderObject cmd)
-        {
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                return await SendToLeaderAsyncInternal(cmd, context);
-            }
-        }
-
-        public async Task<long> SendToLeaderAsync(DynamicJsonValue cmd)
-        {
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var cmdJson = context.ReadObject(cmd, "raft/command");
 
                 return await SendToLeaderAsyncInternal(cmdJson, context);
             }

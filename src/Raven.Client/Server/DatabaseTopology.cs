@@ -239,7 +239,8 @@ namespace Raven.Client.Server
         public void RemoveFromTopology(string delDbFromNode)
         {
             Members.RemoveAll(m => m.NodeTag == delDbFromNode);
-            Promotables.RemoveAll(p=> p.NodeTag == delDbFromNode);
+            Promotables.RemoveAll(p => p.NodeTag == delDbFromNode);
+            Watchers.RemoveAll(w => w.NodeTag == delDbFromNode);
         }
 
         public string WhoseTaskIsIt(IDatabaseTask task)
