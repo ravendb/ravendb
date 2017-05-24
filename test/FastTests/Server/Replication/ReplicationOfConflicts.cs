@@ -204,8 +204,8 @@ namespace FastTests.Server.Replication
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);
 
-                Assert.Equal(2,WaitUntilHasConflict(store1, "users/1").Results.Length);
-                Assert.Equal(2,WaitUntilHasConflict(store2, "users/1").Results.Length);
+                Assert.Equal(2,WaitUntilHasConflict(store1, "users/1-A").Results.Length);
+                Assert.Equal(2,WaitUntilHasConflict(store2, "users/1-A").Results.Length);
 
                 var db = await GetDocumentDatabaseInstanceFor(store1);
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))

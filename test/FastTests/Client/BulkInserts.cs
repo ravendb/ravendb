@@ -62,7 +62,7 @@ namespace FastTests.Client
 
                 store.GetRequestExecutor(store.Database).ContextPool.AllocateOperationContext(out JsonOperationContext context);
 
-                var getDocumentCommand = new GetDocumentCommand(new[] { "FooBars/1", "FooBars/2", "FooBars/3", "FooBars/4" }, includes: null, transformer: null,
+                var getDocumentCommand = new GetDocumentCommand(new[] { "FooBars/1-A", "FooBars/2-A", "FooBars/3-A", "FooBars/4-A" }, includes: null, transformer: null,
                     transformerParameters: null, metadataOnly: false, context: context);
 
                 store.GetRequestExecutor(store.Database).Execute(getDocumentCommand, context);

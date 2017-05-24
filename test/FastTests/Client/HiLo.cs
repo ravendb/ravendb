@@ -32,29 +32,6 @@ namespace FastTests.Client
         }
 
         [Fact]
-        public void Can_Use_Server_Prefix()
-        {
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new PrefixHiloDoc()
-                    {
-                        ServerPrefix = "4,"
-                    }, "Raven/ServerPrefixForHilo");
-
-                    session.SaveChanges();
-
-                    var hiLoKeyGenerator = new AsyncHiLoIdGenerator("users", store, store.Database,
-                        store.Conventions.IdentityPartsSeparator);
-
-                    var generateDocumentKey = hiLoKeyGenerator.GenerateDocumentIdAsync(new User()).GetAwaiter().GetResult();
-                    Assert.Equal("users/4,1", generateDocumentKey);
-                }
-            }
-        }
-
-        [Fact]
         public void Hilo_Cannot_Go_Down()
         {
             using (var store = GetDocumentStore())
@@ -111,21 +88,16 @@ namespace FastTests.Client
                         Max = 128
                     }, "Raven/Hilo/products");
 
-                    session.Store(new PrefixHiloDoc()
-                    {
-                        ServerPrefix = "4,"
-                    }, "Raven/ServerPrefixForHilo");
-
                     session.SaveChanges();
 
 
                     var multiDbHiLo = new AsyncMultiDatabaseHiLoIdGenerator(store, store.Conventions);
 
                     var generateDocumentKey = multiDbHiLo.GenerateDocumentIdAsync(null, new User()).GetAwaiter().GetResult();
-                    Assert.Equal("users/4,65", generateDocumentKey);
+                    Assert.Equal("users/65-A", generateDocumentKey);
 
                     generateDocumentKey = multiDbHiLo.GenerateDocumentIdAsync(null, new Product()).GetAwaiter().GetResult();
-                    Assert.Equal("products/4,129", generateDocumentKey);
+                    Assert.Equal("products/129-A", generateDocumentKey);
                 }
             }
         }

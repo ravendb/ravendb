@@ -13,9 +13,7 @@ namespace Raven.Client.Documents.Identity
     /// </summary>   
     public class HiLoResult
     {
-        /// <summary>
-        /// prefix string, including the server prefix (if exists)
-        /// </summary>
+
         public string Prefix { get; set; }
 
         public long Low { get; set; }
