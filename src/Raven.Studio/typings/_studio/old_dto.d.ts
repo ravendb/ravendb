@@ -124,7 +124,6 @@ interface replicationDestinationDto {
     Domain: string;
     ApiKey: string;
     Database: string;
-    TransitiveReplicationBehavior: string;
     IgnoredClient: boolean;
     Disabled: boolean;
     ClientVisibleUrl: string;
