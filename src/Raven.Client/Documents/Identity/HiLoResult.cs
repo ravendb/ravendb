@@ -24,6 +24,11 @@ namespace Raven.Client.Documents.Identity
 
         public long LastSize { get; set; }
 
+        /// <summary>
+        /// The tag of the server that allocated this range.
+        /// </summary>
+        public string ServerTag { get; set; }
+
         public DateTime LastRangeAt { get; set; }
 
     }

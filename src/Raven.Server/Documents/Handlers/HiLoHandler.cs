@@ -80,6 +80,7 @@ namespace Raven.Server.Documents.Handlers
                         ["Low"] = cmd.OldMax + 1,
                         ["High"] = cmd.OldMax + capacity,
                         ["LastSize"] = capacity,
+                        ["ServerTag"] = ServerStore.NodeTag,
                         ["LastRangeAt"] = DateTime.UtcNow.ToString("o")
                     });
                 }
