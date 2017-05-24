@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Server;
 using Sparrow.Json.Parsing;
 
@@ -30,10 +31,9 @@ namespace Raven.Server.ServerWide.Commands
             }
             if (string.IsNullOrEmpty(FromNode) == false)
             {
-                //TODO: maybe expose a way to issue errors when applying commands so we can atleast raise alerts
                 if (record.Topology.RelevantFor(FromNode) == false)
                 {
-                    return;
+                    throw new DatabaseDoesNotExistException($"We were requested to delete {record.DatabaseName} from {FromNode} but it does not exists in the database record.");
                 }
                 record.Topology.RemoveFromTopology(FromNode);
 

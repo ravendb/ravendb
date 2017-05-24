@@ -161,21 +161,17 @@ namespace Raven.Server.Documents
             {
                 NodeTag = _serverStore.NodeTag
             };
-            JsonOperationContext myContext;
-            using (_serverStore.ContextPool.AllocateOperationContext(out myContext))
-            {
-                _serverStore.SendToLeaderAsync(cmd)
-                    .ContinueWith(t =>
+            _serverStore.SendToLeaderAsync(cmd)
+                .ContinueWith(t =>
+                {
+                    if (t.Exception != null)
                     {
-                        if (t.Exception != null)
+                        if (_logger.IsInfoEnabled)
                         {
-                            if (_logger.IsInfoEnabled)
-                            {
-                                _logger.Info($"Failed to notify leader about removal of node {_serverStore.NodeTag} from database {dbName}", t.Exception);
-                            }
+                            _logger.Info($"Failed to notify leader about removal of node {_serverStore.NodeTag} from database {dbName}", t.Exception);
                         }
-                    });
-            }
+                    }
+                });
         }
 
         private void NotifyDatabaseAboutStateChange(string changedDatabase, Task<DocumentDatabase> done, long index)
