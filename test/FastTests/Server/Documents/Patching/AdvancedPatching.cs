@@ -502,7 +502,7 @@ this.Value = another.Value;
                     await session.SaveChangesAsync();
                 }
 
-                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
+                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1-A", null, new PatchRequest
                 {
                     Script = @"
         this.Owner = this['@metadata']['Raven-Clr-Type'];
@@ -512,7 +512,7 @@ this.Value = another.Value;
 
                 using (var commands = store.Commands())
                 {
-                    dynamic doc = await commands.GetAsync("CustomTypes/1");
+                    dynamic doc = await commands.GetAsync("CustomTypes/1-A");
                     dynamic metadata = doc[Constants.Documents.Metadata.Key];
                     var clrType = metadata["Raven-Clr-Type"].ToString();
                     var pythonType = metadata["Raven-Python-Type"].ToString();
@@ -752,7 +752,7 @@ this.Value = another.Value;
                     await session.SaveChangesAsync();
                 }
 
-                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
+                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1-A", null, new PatchRequest
                 {
                     Script = @"PutDocument('NewTypes/1', { }, { });",
                 }));
