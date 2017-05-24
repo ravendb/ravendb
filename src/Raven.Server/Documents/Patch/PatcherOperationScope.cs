@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Patch
         public ObjectInstance ToJsObject(Engine engine, DocumentConflict document, string propertyName)
         {
             var instance = ToJsObject(engine, document.Doc, propertyName);
-            return ApplyMetadataIfNecessary(instance, document.Key, document.Etag, document.LastModified, flags: null, indexScore: null);
+            return ApplyMetadataIfNecessary(instance, document.Id, document.Etag, document.LastModified, flags: null, indexScore: null);
         }
 
         private static ObjectInstance ApplyMetadataIfNecessary(ObjectInstance instance, LazyStringValue key, long etag, DateTime? lastModified, DocumentFlags? flags, double? indexScore)
