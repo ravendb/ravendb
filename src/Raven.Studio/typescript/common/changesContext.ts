@@ -79,7 +79,7 @@ class changesContext {
             this.disconnect("ChangingDatabase");
         }
 
-        if (db.disabled()) { //TODO: or not licensed
+        if (db.disabled() || !db.relevant()) { //TODO: or not licensed
             this.navigateToResourceSpecificPage(db);
             return;
         }

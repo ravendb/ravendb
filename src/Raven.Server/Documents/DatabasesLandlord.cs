@@ -53,7 +53,7 @@ namespace Raven.Server.Documents
             _logger = LoggingSource.Instance.GetLogger<DatabasesLandlord>("Raven/Server");
         }
 
-        public void ClusterOnDatabaseChanged(object sender, (string dbName, long index) t)
+        public void ClusterOnDatabaseChanged(object sender, (string dbName, long index, string type) t)
         {
             _disposing.EnterReadLock();
             try
@@ -102,8 +102,6 @@ namespace Raven.Server.Documents
                                 DatabaseHelper.DeleteDatabaseFiles(configuration);
                             }
                         }
-
-                        _serverStore.NotificationCenter.Add(DatabaseChanged.Create(t.dbName, DatabaseChangeType.Delete));
 
                         NotifyLeaderAboutRemoval(t.dbName);
 

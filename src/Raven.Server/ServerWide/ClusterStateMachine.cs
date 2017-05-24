@@ -18,6 +18,7 @@ using Raven.Client.Http.OAuth;
 using Raven.Client.Server;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
@@ -67,7 +68,7 @@ namespace Raven.Server.ServerWide
             });
         }
 
-        public event EventHandler<(string dbName, long index)> DatabaseChanged;
+        public event EventHandler<(string dbName, long index, string type)> DatabaseChanged;
 
         protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
@@ -176,7 +177,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                NotifyDatabaseChanged(context, updateCommand?.DatabaseName, index);
+                NotifyDatabaseChanged(context, updateCommand?.DatabaseName, index, type);
             }
         }
 
@@ -206,7 +207,7 @@ namespace Raven.Server.ServerWide
                 if (doc.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject topology) == false)
                 {
                     items.DeleteByKey(lowerKey);
-                    NotifyDatabaseChanged(context, databaseName, index);
+                    NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
                     return;
                 }
                 remove.UpdateDatabaseRecord(databaseRecord, index);
@@ -216,7 +217,7 @@ namespace Raven.Server.ServerWide
                     databaseRecord.Topology.Watchers.Count == 0)
                 {
                     items.DeleteByKey(lowerKey);
-                    NotifyDatabaseChanged(context, databaseName, index);
+                    NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
                     return;
                 }
 
@@ -224,7 +225,7 @@ namespace Raven.Server.ServerWide
 
                 UpdateValue(index, items, lowerKey, key, updated);
 
-                NotifyDatabaseChanged(context, databaseName, index);
+                NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
             }
         }
 
@@ -290,7 +291,7 @@ namespace Raven.Server.ServerWide
                     UpdateValue(index, items, lowerKey, key, updated);
                 }
 
-                NotifyDatabaseChanged(context, databaseName, index);
+                NotifyDatabaseChanged(context, databaseName, index, nameof(DeleteDatabaseCommand));
             }
         }
 
@@ -328,7 +329,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                NotifyDatabaseChanged(context, addDatabaseCommand.Name, index);
+                NotifyDatabaseChanged(context, addDatabaseCommand.Name, index, nameof(AddDatabaseCommand));
             }
         }
 
@@ -388,7 +389,7 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        private void NotifyDatabaseChanged(TransactionOperationContext context, string databaseName, long index)
+        private void NotifyDatabaseChanged(TransactionOperationContext context, string databaseName, long index, string type)
         {
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
             {
@@ -397,7 +398,7 @@ namespace Raven.Server.ServerWide
                     {
                         try
                         {
-                            DatabaseChanged?.Invoke(this, (databaseName, index));
+                            DatabaseChanged?.Invoke(this, (databaseName, index, type));
                         }
                         finally
                         {
@@ -457,8 +458,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                NotifyDatabaseChanged(context, databaseName, index);
-
+                NotifyDatabaseChanged(context, databaseName, index, type);
             }
         }
 
@@ -676,7 +676,7 @@ namespace Raven.Server.ServerWide
                 TaskExecutor.Execute(_ =>
                 {
                     foreach (var db in listOfDatabaseName)
-                        onDatabaseChanged.Invoke(this, (db, lastIncludedIndex));
+                        onDatabaseChanged.Invoke(this, (db, lastIncludedIndex, "SnapshotInstalled"));
                 }, null);
             }
         }

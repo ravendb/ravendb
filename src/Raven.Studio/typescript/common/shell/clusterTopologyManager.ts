@@ -3,9 +3,9 @@
 import clusterTopology = require("models/database/cluster/clusterTopology");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 
-class clusterTopologyMananger {
+class clusterTopologyManager {
 
-    static default = new clusterTopologyMananger();
+    static default = new clusterTopologyManager();
 
     topology = ko.observable<clusterTopology>();
 
@@ -17,6 +17,8 @@ class clusterTopologyMananger {
 
     constructor() {
         this.initObservables();
+
+        setInterval(() => this.forceRefresh(), 1000); //TODO: dleete me!
     }
 
     //TODO: connect websocket updates - waitin for: RavenDB-6929
@@ -40,4 +42,4 @@ class clusterTopologyMananger {
     
 }
 
-export = clusterTopologyMananger;
+export = clusterTopologyManager;
