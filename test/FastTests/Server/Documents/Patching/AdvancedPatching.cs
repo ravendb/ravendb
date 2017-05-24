@@ -782,7 +782,7 @@ this.Value = another.Value;
                         Script = @"PutDocument('Items/1', null);",
                     }));
                 });
-                Assert.Contains("Created document must be a valid object which is not null or empty. Document key: 'Items/1'", exception.Message);
+                Assert.Contains("Created document must be a valid object which is not null or empty. Document ID: 'Items/1'", exception.Message);
             }
         }
 
