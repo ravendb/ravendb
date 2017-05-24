@@ -26,7 +26,7 @@ namespace Raven.Server.ServerWide.Commands
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(DatabaseName)] = DatabaseName;
-            json[nameof(ConflictSolver)] = Solver;
+            json[nameof(Solver)] = Solver.ToJson();
         }
     }
 }

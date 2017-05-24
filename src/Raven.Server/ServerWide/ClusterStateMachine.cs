@@ -427,7 +427,7 @@ namespace Raven.Server.ServerWide
 
                     if (doc == null)
                     {
-                        NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute update command of type {type} for {databaseName} because it does not exists"));
+                        NotifyLeaderAboutError(index, leader, new DatabaseDoesNotExistException($"Cannot execute update command of type {type} for {databaseName} because it does not exists"));
                         return;
                     }
 

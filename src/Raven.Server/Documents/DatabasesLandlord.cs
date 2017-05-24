@@ -157,7 +157,10 @@ namespace Raven.Server.Documents
 
         private void NotifyLeaderAboutRemoval(string dbName)
         {
-            var cmd = new RemoveNodeFromDatabaseCommand(dbName);
+            var cmd = new RemoveNodeFromDatabaseCommand(dbName)
+            {
+                NodeTag = _serverStore.NodeTag
+            };
             JsonOperationContext myContext;
             using (_serverStore.ContextPool.AllocateOperationContext(out myContext))
             {

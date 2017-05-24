@@ -24,6 +24,10 @@ namespace Raven.Server.ServerWide.Commands
         {
             var deletionInProgressStatus = HardDelete? DeletionInProgressStatus.HardDelete
                 : DeletionInProgressStatus.SoftDelete;
+            if (record.DeletionInProgress == null)
+            {
+                record.DeletionInProgress = new Dictionary<string, DeletionInProgressStatus>();
+            }
             if (string.IsNullOrEmpty(FromNode) == false)
             {
                 //TODO: maybe expose a way to issue errors when applying commands so we can atleast raise alerts
@@ -38,8 +42,9 @@ namespace Raven.Server.ServerWide.Commands
             else
             {
                 var allNodes = record.Topology.Members.Select(m => m.NodeTag)
-                    .Concat(record.Topology.Promotables.Select(p => p.NodeTag))
-                    .Concat(record.Topology.Watchers.Select(w => w.NodeTag));
+                    .Concat(record.Topology.Promotables.Select(p => p.NodeTag));
+                    // TODO: we need to delete databases from watchers too but watcher nodeTag seems to be null
+                    //.Concat(record.Topology.Watchers.Select(w => w.NodeTag));
 
                 foreach (var node in allNodes)
                     record.DeletionInProgress[node] = deletionInProgressStatus;
