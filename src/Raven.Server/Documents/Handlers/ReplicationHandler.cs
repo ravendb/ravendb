@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Handlers
                 var conflicts = Database.DocumentsStorage.ConflictsStorage.GetConflictsAfter(context, etag);
                 foreach (var conflict in conflicts)
                 {
-                    if (alreadyAdded.Add(conflict.Key))
+                    if (alreadyAdded.Add(conflict.Id))
                     {
                         if (skip > 0)
                         {
@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Handlers
                             break;
                         array.Add(new DynamicJsonValue
                         {
-                            [nameof(GetConflictsResult.Key)] = conflict.Key,
+                            [nameof(GetConflictsResult.Key)] = conflict.Id,
                             [nameof(conflict.LastModified)] = conflict.LastModified
                         });
                     }

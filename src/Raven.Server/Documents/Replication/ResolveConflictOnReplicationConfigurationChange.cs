@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Replication
 
                         var hadConflicts = false;
 
-                        foreach (var conflicts in _database.DocumentsStorage.ConflictsStorage.GetAllConflictsBySameKey(context))
+                        foreach (var conflicts in _database.DocumentsStorage.ConflictsStorage.GetAllConflictsBySameId(context))
                         {
                             if (_database.DatabaseShutdown.IsCancellationRequested)
                                 break;
@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     count++;
 
-                    using (Slice.External(context.Allocator, item.ResolvedConflict.LoweredKey, out var slice))
+                    using (Slice.External(context.Allocator, item.ResolvedConflict.LowerId, out var slice))
                     {
                         // let's check if nothing has changed since we resolved the conflict in the read tx
                         // in particulal the conflict could be resolved externally before the tx merger opened this write tx
@@ -264,7 +264,7 @@ namespace Raven.Server.Documents.Replication
                         _log.Info(msg);
 
                     var differentCollectionNameAlert = AlertRaised.Create(
-                        $"Script unable to resolve conflicted documents with the key {documentConflict.Key}",
+                        $"Script unable to resolve conflicted documents with the ID {documentConflict.Id}",
                         msg,
                         AlertType.Replication,
                         NotificationSeverity.Error,
@@ -284,10 +284,9 @@ namespace Raven.Server.Documents.Replication
         {
             if (conflict.Doc == null)
             {
-                Slice loweredKey;
-                using (Slice.External(context.Allocator, conflict.LoweredKey, out loweredKey))
+                using (Slice.External(context.Allocator, conflict.LowerId, out Slice lowerId))
                 {
-                    _database.DocumentsStorage.Delete(context, loweredKey, conflict.Key, null,
+                    _database.DocumentsStorage.Delete(context, lowerId, conflict.Id, null,
                         _database.Time.GetUtcNow().Ticks, conflict.ChangeVector, conflict.Collection);
                     return;
                 }
@@ -305,7 +304,7 @@ namespace Raven.Server.Documents.Replication
                 DeleteDocumentFromDifferentCollectionIfNeeded(context, conflict);
 
                 ReplicationUtils.EnsureCollectionTag(clone, conflict.Collection);
-                _database.DocumentsStorage.Put(context, conflict.LoweredKey, null, clone, null, conflict.ChangeVector);
+                _database.DocumentsStorage.Put(context, conflict.LowerId, null, clone, null, conflict.ChangeVector);
             }
         }
 
@@ -314,7 +313,7 @@ namespace Raven.Server.Documents.Replication
             Document oldVersion;
             try
             {
-                oldVersion = _database.DocumentsStorage.Get(ctx, conflict.LoweredKey);
+                oldVersion = _database.DocumentsStorage.Get(ctx, conflict.LowerId);
             }
             catch (DocumentConflictException)
             {
