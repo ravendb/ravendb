@@ -341,7 +341,7 @@ namespace Raven.Client.Documents.BulkInsert
             string id;
             if (_generateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id) == false)
             {
-                id = _generateEntityIdOnTheClient.GenerateDocumentKeyForStorage(entity);
+                id = _generateEntityIdOnTheClient.GenerateDocumentIdForStorage(entity);
                 _generateEntityIdOnTheClient.TrySetIdentity(entity, id); //set Id property if it was null
             }
             return id;

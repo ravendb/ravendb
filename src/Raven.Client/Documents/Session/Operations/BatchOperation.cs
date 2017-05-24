@@ -60,7 +60,7 @@ namespace Raven.Client.Documents.Session.Operations
                 if (batchResult.TryGet(Constants.Documents.Metadata.Etag, out long? etag) == false || etag == null)
                     throw new InvalidOperationException("PUT response is invalid. @etag is missing.");
 
-                if (batchResult.TryGet(Constants.Documents.Metadata.Id, out string key) == false || key == null)
+                if (batchResult.TryGet(Constants.Documents.Metadata.Id, out string id) == false || id == null)
                     throw new InvalidOperationException("PUT response is invalid. @id is missing.");
 
                 documentInfo.Metadata.Modifications = null;
@@ -74,19 +74,19 @@ namespace Raven.Client.Documents.Session.Operations
                     documentInfo.Metadata.Modifications[propertyName] = batchResult[propertyName];
                 }
 
-                documentInfo.Id = key;
+                documentInfo.Id = id;
                 documentInfo.ETag = etag;
-                documentInfo.Metadata = _session.Context.ReadObject(documentInfo.Metadata, key);
+                documentInfo.Metadata = _session.Context.ReadObject(documentInfo.Metadata, id);
                 documentInfo.Document.Modifications = null;
                 documentInfo.Document.Modifications = new DynamicJsonValue(documentInfo.Document)
                 {
                     [Constants.Documents.Metadata.Key] = documentInfo.Metadata
                 };
-                documentInfo.Document = _session.Context.ReadObject(documentInfo.Document, key);
+                documentInfo.Document = _session.Context.ReadObject(documentInfo.Document, id);
                 documentInfo.MetadataInstance = null;
 
                 _session.DocumentsById.Add(documentInfo);
-                _session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, key);
+                _session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
 
                 var afterStoreEventArgs = new AfterStoreEventArgs(_session, documentInfo.Id, documentInfo.Entity);
                 _session.OnAfterStoreInvoke(afterStoreEventArgs);

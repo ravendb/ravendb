@@ -28,17 +28,17 @@ namespace Raven.Client.Documents.Transformers
         public virtual string TransformerName => GetType().Name.Replace("_", "/");
 
         /// <summary>
-        /// Returns value of a transformer parameter for specified key
+        /// Returns value of a transformer parameter for specified ID
         /// </summary>
-        protected TransformerParameter Parameter(string key)
+        protected TransformerParameter Parameter(string id)
         {
             throw new NotSupportedException("This can only be run on the server side");
         }
 
         /// <summary>
-        /// Returns value of a transformer parameter for specified key or specified default value if there is no parameter under given key
+        /// Returns value of a transformer parameter for specified ID or specified default value if there is no parameter under given ID
         /// </summary>
-        protected TransformerParameter ParameterOrDefault(string key, object defaultVal)
+        protected TransformerParameter ParameterOrDefault(string id, object defaultVal)
         {
             throw new NotSupportedException("This can only be run on the server side");
         }
@@ -155,22 +155,22 @@ namespace Raven.Client.Documents.Transformers
     {
         protected Expression<Func<IEnumerable<TFrom>, IEnumerable>> TransformResults { get; set; }
 
-        public object Include(string key)
+        public object Include(string id)
         {
             throw new NotSupportedException("This can only be run on the server side");
         }
 
-        public T Include<T>(string key)
+        public T Include<T>(string id)
         {
             throw new NotSupportedException("This can only be run on the server side");
         }
 
-        public IEnumerable<T> Include<T>(IEnumerable<string> key)
+        public IEnumerable<T> Include<T>(IEnumerable<string> id)
         {
             throw new NotSupportedException("This can only be run on the server side");
         }
 
-        public object Include(IEnumerable<string> key)
+        public object Include(IEnumerable<string> id)
         {
             throw new NotSupportedException("This can only be run on the server side");
         }
