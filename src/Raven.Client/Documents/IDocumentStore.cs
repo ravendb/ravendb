@@ -175,5 +175,7 @@ namespace Raven.Client.Documents
         AdminOperationExecutor Admin { get; }
 
         OperationExecutor Operations { get; }
+
+        IDisposable SetRequestsTimeout(TimeSpan timeout, string database = null);
     }
 }
