@@ -20,17 +20,19 @@ namespace Raven.Server.Utils
     {
         private static string ServiceFullName => $@"""{RavenWindowsService.WindowsServiceName}"" (""{RavenWindowsService.WindowServiceDescription}"")";
 
-        public static void Install()
+        public static void Install(string[] args)
         {
+            var argsForService = args.Where(x => x != "--register-service").ToList();
             using (var serviceController = GetServiceController())
             {
-                InstallInternal(serviceController);
+                InstallInternal(serviceController, argsForService);
             }
         }
 
-        private static void InstallInternal(ServiceController serviceController, int counter = 0)
+        private static void InstallInternal(
+            ServiceController serviceController, List<string> serviceArgs, int counter = 0)
         {
-            var serviceCommand = GetServiceCommand();
+            var serviceCommand = GetServiceCommand(serviceArgs);
             var serviceName = RavenWindowsService.WindowsServiceName;
             var serviceDesc = RavenWindowsService.WindowServiceDescription;
 
@@ -53,7 +55,7 @@ namespace Raven.Server.Utils
             {
                 Console.WriteLine($@"Service {ServiceFullName} was already installed. Reinstalling...");
 
-                Reinstall(serviceController);
+                Reinstall(serviceController, serviceArgs);
 
             } catch (Exception e) 
                 when (e.Message.Contains("The specified service has been marked for deletion"))
@@ -64,7 +66,7 @@ namespace Raven.Server.Utils
                     counter++;
 
                     Console.WriteLine("The specified service has been marked for deletion. Retrying {0} time", counter);
-                    InstallInternal(serviceController, counter);
+                    InstallInternal(serviceController, serviceArgs, counter);
                 }
             }
 
@@ -103,11 +105,11 @@ namespace Raven.Server.Utils
             }
         }
 
-        private static void Reinstall(ServiceController sc)
+        private static void Reinstall(ServiceController sc, List<string> serviceArgs)
         {
             StopInternal(sc);
             UninstallInternal(sc);
-            InstallInternal(sc);
+            InstallInternal(sc, serviceArgs);
         }
 
         private static void StopInternal(ServiceController serviceController)
@@ -161,17 +163,22 @@ namespace Raven.Server.Utils
             }
         }
 
-        private static string GetServiceCommand()
+        private static string GetServiceCommand(List<string> argsForService)
         {
-            var host = Process.GetCurrentProcess().MainModule.FileName;
-            if (host.EndsWith("dotnet.exe", StringComparison.OrdinalIgnoreCase))
+            var result = Process.GetCurrentProcess().MainModule.FileName;
+            if (result.EndsWith("dotnet.exe", StringComparison.OrdinalIgnoreCase))
             {
                 var appPath = Path.Combine(PlatformServices.Default.Application.ApplicationBasePath,
                     PlatformServices.Default.Application.ApplicationName + ".dll");
-                host = string.Format("{0} \"{1}\"", host, appPath);
+                result = string.Format("{0} \"{1}\"", result, appPath);
             }
 
-            return host;
+            if (argsForService.Any())
+            {
+                result = $"{result} { string.Join(" ", argsForService) }";
+            }
+
+            return result;
         }
 
         private static ServiceController GetServiceController()
