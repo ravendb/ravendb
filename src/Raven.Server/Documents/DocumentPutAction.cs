@@ -246,10 +246,10 @@ namespace Raven.Server.Documents
                 var lastChar = id[id.Length - 1];
                 if (lastChar == '/')
                 {
-                   throw new NotSupportedException("PUT of documents with 'identity' Id generation using a server-side API is not supported. When using server-side API, use '|' separator instead.");
+                    knownNewId = true;
+                    id = _documentsStorage.Identities.GetNextIdentityValueWithoutOverwritingOnExistingDocuments(id, table, context, out _);
                 }
-
-                if (lastChar == '|')
+                else if (lastChar == '|')
                 {
                     knownNewId = true;
                     id = _documentsStorage.Identities.AppendNumericValueToId(id, newEtag);
