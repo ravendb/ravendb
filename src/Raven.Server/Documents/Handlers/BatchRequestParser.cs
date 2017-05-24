@@ -477,9 +477,9 @@ namespace Raven.Server.Documents.Handlers
                         return CommandPropertyName.NoSuchProperty;
                     return CommandPropertyName.PatchIfMissing;
 
-                case 10: // TODO
-                    if (*(long*)state.StringBuffer == 7594869363257730379 &&
-                        *(short*)(state.StringBuffer + sizeof(long)) == 25976)
+                case 10:
+                    if (*(long*)state.StringBuffer == 8676578743001572425 &&
+                        *(short*)(state.StringBuffer + sizeof(long)) == 25701)
                         return CommandPropertyName.IdPrefixed;
                     return CommandPropertyName.NoSuchProperty;
 
