@@ -20,17 +20,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new FastTests.Server.NotificationCenter.NotificationCenterTests())
+                using (var a = new FastTests.Server.Documents.Patching.AdvancedPatching())
                 {
-                    try
-                    {
-                        a.Can_dismiss_persistent_action_and_get_notified_about_it();
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                        Console.ReadLine();
-                    }
+                    a.CanCreateDocument().Wait();
                 }
             }
         }

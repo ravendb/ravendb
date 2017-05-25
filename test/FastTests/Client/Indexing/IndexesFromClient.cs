@@ -530,8 +530,8 @@ namespace FastTests.Client.Indexing
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "Fitzchak" });
-                    await session.StoreAsync(new User { Name = "Arek" });
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
+                    await session.StoreAsync(new User { Name = "Arek" }, "users/2");
 
                     await session.SaveChangesAsync();
                 }

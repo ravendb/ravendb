@@ -260,8 +260,8 @@ namespace FastTests.Server.Documents.Versioning
                 {
                     var company = new Company { Name = "Hibernaitng Rhinos " };
                     var user = new User { Name = "Fitzchak " };
-                    await session.StoreAsync(company);
-                    await session.StoreAsync(user);
+                    await session.StoreAsync(company, "companies/1");
+                    await session.StoreAsync(user, "users/1");
                     await session.SaveChangesAsync();
                 }
                 for (int i = 0; i < 10; i++)

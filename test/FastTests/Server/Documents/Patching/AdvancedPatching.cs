@@ -463,8 +463,8 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType { Value = 2 });
-                    await session.StoreAsync(new CustomType { Value = 1 });
+                    await session.StoreAsync(new CustomType { Value = 2 },"CustomTypes/1");
+                    await session.StoreAsync(new CustomType { Value = 1 },"CustomTypes/2");
                     await session.SaveChangesAsync();
                 }
 
@@ -497,12 +497,12 @@ this.Value = another.Value;
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType { Value = 2 });
-                    await session.StoreAsync(new CustomType { Value = 1 });
+                    await session.StoreAsync(new CustomType { Value = 2 },"CustomTypes/1");
+                    await session.StoreAsync(new CustomType { Value = 1 },"CustomTypes/2");
                     await session.SaveChangesAsync();
                 }
 
-                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1-A", null, new PatchRequest
+                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                 {
                     Script = @"
         this.Owner = this['@metadata']['Raven-Clr-Type'];
@@ -512,7 +512,7 @@ this.Value = another.Value;
 
                 using (var commands = store.Commands())
                 {
-                    dynamic doc = await commands.GetAsync("CustomTypes/1-A");
+                    dynamic doc = await commands.GetAsync("CustomTypes/1");
                     dynamic metadata = doc[Constants.Documents.Metadata.Key];
                     var clrType = metadata["Raven-Clr-Type"].ToString();
                     var pythonType = metadata["Raven-Python-Type"].ToString();
@@ -573,21 +573,21 @@ this.Value = another.Value;
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType { Value = 10 });
+                    await session.StoreAsync(new CustomType { Value = 10 }, "CustomTypes/1");
                     await session.SaveChangesAsync();
                 }
 
                 await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                 {
                     Script = @"PutDocument(
-        'NewTypes/1', 
+        'NewTypes/1-A', 
         { 'CopiedValue':  this.Value },
         {'CreatedBy': 'JS_Script'});",
                 }));
 
                 using (var commands = store.Commands())
                 {
-                    dynamic doc = await commands.GetAsync("NewTypes/1");
+                    dynamic doc = await commands.GetAsync("NewTypes/1-A");
                     dynamic metadata = doc[Constants.Documents.Metadata.Key];
                     var copiedValue = (int)doc.CopiedValue;
                     var createdBy = metadata.CreatedBy.ToString();
@@ -605,7 +605,7 @@ this.Value = another.Value;
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType { Value = 10 });
+                    await session.StoreAsync(new CustomType { Value = 10 },"CustomTypes/1");
                     await session.SaveChangesAsync();
                 }
 
@@ -722,7 +722,7 @@ this.Value = another.Value;
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType { Value = 10 });
+                    await session.StoreAsync(new CustomType { Value = 10 },"CustomTypes/1");
                     await session.SaveChangesAsync();
                 }
 
@@ -748,11 +748,11 @@ this.Value = another.Value;
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType { Value = 10 });
+                    await session.StoreAsync(new CustomType { Value = 10 }, "CustomTypes/1");
                     await session.SaveChangesAsync();
                 }
 
-                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1-A", null, new PatchRequest
+                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                 {
                     Script = @"PutDocument('NewTypes/1', { }, { });",
                 }));
