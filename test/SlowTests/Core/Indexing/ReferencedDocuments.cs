@@ -183,7 +183,7 @@ namespace SlowTests.Core.Indexing
 
                 using (var session = store.OpenSession())
                 {
-                    var address = session.Load<Address>("addresses/1");
+                    var address = session.Load<Address>("addresses/1-A");
                     address.City = "Barcelona";
 
                     session.SaveChanges();
@@ -197,7 +197,8 @@ namespace SlowTests.Core.Indexing
                         .Where(x => x.City == "New York")
                         .OfType<User>()
                         .ToList();
-
+                    var address = session.Load<Address>("addresses/1-A");
+                    WaitForUserToContinueTheTest(store);
                     Assert.Equal(0, users.Count);
 
                     users = session.Query<Users_ByCity.Result, Users_ByCity>()
@@ -211,7 +212,7 @@ namespace SlowTests.Core.Indexing
 
                 using (var session = store.OpenSession())
                 {
-                    session.Delete("addresses/1");
+                    session.Delete("addresses/1-A");
 
                     session.SaveChanges();
                 }
@@ -232,8 +233,8 @@ namespace SlowTests.Core.Indexing
 
                 using (var session = store.OpenSession())
                 {
-                    var user1 = session.Load<User>("users/1");
-                    user1.AddressId = "addresses/2";
+                    var user1 = session.Load<User>("users/1-A");
+                    user1.AddressId = "addresses/2-A";
 
                     session.SaveChanges();
                 }
@@ -252,7 +253,7 @@ namespace SlowTests.Core.Indexing
 
                 using (var session = store.OpenSession())
                 {
-                    session.Delete("users/1");
+                    session.Delete("users/1-A");
 
                     session.SaveChanges();
                 }
@@ -329,7 +330,7 @@ namespace SlowTests.Core.Indexing
 
                 using (var session = store.OpenSession())
                 {
-                    var address = session.Load<Address>("addresses/1");
+                    var address = session.Load<Address>("addresses/1-A");
                     address.City = "Barcelona";
 
                     session.SaveChanges();
@@ -357,7 +358,7 @@ namespace SlowTests.Core.Indexing
 
                 using (var session = store.OpenSession())
                 {
-                    session.Delete("addresses/1");
+                    session.Delete("addresses/1-A");
 
                     session.SaveChanges();
                 }
@@ -378,8 +379,8 @@ namespace SlowTests.Core.Indexing
 
                 using (var session = store.OpenSession())
                 {
-                    var user1 = session.Load<User>("users/1");
-                    user1.AddressId = "addresses/2";
+                    var user1 = session.Load<User>("users/1-A");
+                    user1.AddressId = "addresses/2-A";
 
                     session.SaveChanges();
                 }
@@ -398,7 +399,7 @@ namespace SlowTests.Core.Indexing
 
                 using (var session = store.OpenSession())
                 {
-                    session.Delete("users/1");
+                    session.Delete("users/1-A");
 
                     session.SaveChanges();
                 }

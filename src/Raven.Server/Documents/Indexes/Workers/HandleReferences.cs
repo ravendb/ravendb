@@ -175,7 +175,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     foreach (var key in _indexStorage
                                         .GetDocumentKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction))
                                     {
-                                        var doc = _documentsStorage.Get(databaseContext, key);
+                                        var doc = _documentsStorage.Get(databaseContext, key.ToString().ToLowerInvariant());
                                         if (doc != null && doc.Etag <= lastIndexedEtag)
                                             documents.Add(doc);
                                     }
