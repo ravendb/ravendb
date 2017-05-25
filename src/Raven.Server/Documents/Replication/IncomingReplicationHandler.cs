@@ -175,13 +175,13 @@ namespace Raven.Server.Documents.Replication
                             if (_log.IsInfoEnabled)
                             {
                                 if (e.InnerException is SocketException)
-                                    _log.Info(
-                                        "Failed to read data from incoming connection. The incoming connection will be closed and re-created.",
-                                        e);
+                                {
+                                    _log.Info("Failed to read data from incoming connection. The incoming connection will be closed and re-created.", e);
+                                }
                                 else
-                                    _log.Info(
-                                        "Received unexpected exception while receiving replication batch. This is not supposed to happen.",
-                                        e);
+                                {
+                                    _log.Info("Received unexpected exception while receiving replication batch.",e);
+                                }
                             }
 
                             throw;

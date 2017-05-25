@@ -17,6 +17,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Utils;
@@ -493,11 +494,17 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 long startEtag = 0;
 
+
+
                 if (subscription.LastEtagReachedInServer?.TryGetValue(TcpConnection.DocumentDatabase.DbId.ToString(), out startEtag) == true)
+                {
                     return startEtag;
+                }
 
                 if (subscription.ChangeVector == null || subscription.ChangeVector.Length == 0)
+                {
                     return startEtag;
+                }
 
                 var glovalChangeVector = TcpConnection.DocumentDatabase.DocumentsStorage.GetDatabaseChangeVector(docsContext);
                 var globalVsSubscripitnoConflictStatus = ConflictsStorage.GetConflictStatus(
