@@ -13,9 +13,10 @@ namespace Raven.Server.ServerWide.Commands
 
         public ModifyConflictSolverCommand(string databaseName) : base(databaseName){}
         
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.ConflictSolverConfig = JsonDeserializationRachis<ConflictSolver>.Deserialize(Solver);
+            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

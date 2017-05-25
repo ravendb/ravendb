@@ -20,9 +20,10 @@ namespace Raven.Server.ServerWide.Commands.Transformers
             TransformerName = name;
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.DeleteTransformer(TransformerName);
+            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

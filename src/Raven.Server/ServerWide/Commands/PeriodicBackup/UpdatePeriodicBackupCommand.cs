@@ -20,12 +20,13 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
             Configuration = configuration;
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             if (Configuration.TaskId == null)
                 Configuration.TaskId = etag;
 
             record.AddPeriodicBackupConfiguration(Configuration);
+            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

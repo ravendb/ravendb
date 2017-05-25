@@ -22,7 +22,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             LockMode = mode;
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             if (record.Indexes.TryGetValue(IndexName, out IndexDefinition staticIndex))
             {
@@ -30,12 +30,13 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                 staticIndex.Etag = etag;
             }
 
-
             if (record.AutoIndexes.TryGetValue(IndexName, out AutoIndexDefinition autoIndex))
             {
                 autoIndex.LockMode = LockMode;
                 autoIndex.Etag = etag;
             }
+
+            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

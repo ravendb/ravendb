@@ -16,9 +16,10 @@ namespace Raven.Server.ServerWide.Commands
         {
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.Topology = Topology;
+            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

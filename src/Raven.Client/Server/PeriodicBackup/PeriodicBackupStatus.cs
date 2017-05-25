@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Sparrow.Json.Parsing;
 
@@ -24,20 +25,20 @@ namespace Raven.Client.Server.PeriodicBackup
         {
             get
             {
-                var lastLocalBackup = LocalBackup?.LastFullBackup ?? DateTime.MinValue;
-                var lastS3Backup = LocalBackup?.LastFullBackup ?? DateTime.MinValue;
-                var lastGlacierBackup = LocalBackup?.LastFullBackup ?? DateTime.MinValue;
-                var lastAzureBackup = LocalBackup?.LastFullBackup ?? DateTime.MinValue;
-
-                var minDate = new DateTime(new[]
+                return GetLastBackup(allDateTimeTicks =>
                 {
-                    lastLocalBackup.Ticks,
-                    lastS3Backup.Ticks,
-                    lastGlacierBackup.Ticks,
-                    lastAzureBackup.Ticks
-                }.Min());
+                    if (LocalBackup?.LastFullBackup != null)
+                        allDateTimeTicks.Add(LocalBackup.LastFullBackup.Value.Ticks);
 
-                return minDate == DateTime.MinValue ? (DateTime?)null : minDate;
+                    if (UploadToS3?.LastFullBackup != null)
+                        allDateTimeTicks.Add(UploadToS3.LastFullBackup.Value.Ticks);
+
+                    if (UploadToGlacier?.LastFullBackup != null)
+                        allDateTimeTicks.Add(UploadToGlacier.LastFullBackup.Value.Ticks);
+
+                    if (UploadToAzure?.LastFullBackup != null)
+                        allDateTimeTicks.Add(UploadToAzure.LastFullBackup.Value.Ticks);
+                });
             }
         }
 
@@ -45,21 +46,32 @@ namespace Raven.Client.Server.PeriodicBackup
         {
             get
             {
-                var lastLocalBackup = LocalBackup?.LastIncrementalBackup ?? DateTime.MinValue;
-                var lastS3Backup = LocalBackup?.LastIncrementalBackup ?? DateTime.MinValue;
-                var lastGlacierBackup = LocalBackup?.LastIncrementalBackup ?? DateTime.MinValue;
-                var lastAzureBackup = LocalBackup?.LastIncrementalBackup ?? DateTime.MinValue;
-
-                var minDate = new DateTime(new[]
+                return GetLastBackup(allDateTimeTicks =>
                 {
-                    lastLocalBackup.Ticks,
-                    lastS3Backup.Ticks,
-                    lastGlacierBackup.Ticks,
-                    lastAzureBackup.Ticks
-                }.Min());
+                    if (LocalBackup?.LastIncrementalBackup != null)
+                        allDateTimeTicks.Add(LocalBackup.LastIncrementalBackup.Value.Ticks);
 
-                return minDate == DateTime.MinValue ? (DateTime?)null : minDate;
+                    if (UploadToS3?.LastIncrementalBackup != null)
+                        allDateTimeTicks.Add(UploadToS3.LastIncrementalBackup.Value.Ticks);
+
+                    if (UploadToGlacier?.LastIncrementalBackup != null)
+                        allDateTimeTicks.Add(UploadToGlacier.LastIncrementalBackup.Value.Ticks);
+
+                    if (UploadToAzure?.LastIncrementalBackup != null)
+                        allDateTimeTicks.Add(UploadToAzure.LastIncrementalBackup.Value.Ticks);
+                });
             }
+        }
+
+        private static DateTime? GetLastBackup(Action<List<long>> updateLastBackups)
+        {
+            var allLastBackupDateTimeTicks = new List<long>();
+            updateLastBackups(allLastBackupDateTimeTicks);
+
+            var minDate = allLastBackupDateTimeTicks.Count == 0 ?
+                DateTime.MinValue :
+                new DateTime(allLastBackupDateTimeTicks.Min());
+            return minDate == DateTime.MinValue ? (DateTime?)null : minDate;
         }
 
         public long? LastEtag { get; set; }

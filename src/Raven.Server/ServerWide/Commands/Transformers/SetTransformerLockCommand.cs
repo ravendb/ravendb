@@ -24,12 +24,12 @@ namespace Raven.Server.ServerWide.Commands.Transformers
             LockMode = mode;
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             if (record.Transformers.TryGetValue(TransformerName, out TransformerDefinition transformer))
             {
                 transformer.LockMode = LockMode;
-                return;
+                return null;
             }
 
             throw new InvalidOperationException($"Could not set lock mode to transformer {TransformerName}, because it was not found in the DatabaseRecord");

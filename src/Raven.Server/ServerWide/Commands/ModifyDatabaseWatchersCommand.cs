@@ -21,7 +21,7 @@ namespace Raven.Server.ServerWide.Commands
 
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             if (Watchers != null)
             {
@@ -34,6 +34,8 @@ namespace Raven.Server.ServerWide.Commands
             {
                 record.Topology.Watchers = new List<DatabaseWatcher>();
             }
+
+            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

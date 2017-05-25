@@ -23,7 +23,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             Priority = priority;
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             if (record.Indexes.TryGetValue(IndexName, out IndexDefinition staticIndex))
             {
@@ -36,6 +36,8 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                 autoIndex.Priority = Priority;
                 autoIndex.Etag = etag;
             }
+
+            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

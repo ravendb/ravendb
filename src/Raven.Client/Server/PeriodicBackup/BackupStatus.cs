@@ -41,7 +41,7 @@ namespace Raven.Client.Server.PeriodicBackup
 
         public virtual DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue()
+            return new DynamicJsonValue
             {
                 [nameof(LastFullBackup)] = LastFullBackup,
                 [nameof(LastIncrementalBackup)] = LastIncrementalBackup,

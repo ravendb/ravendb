@@ -51,12 +51,6 @@ namespace Raven.Client.Server.PeriodicBackup
             if (other.BackupType.Equals(BackupType) == false)
                 return false;
 
-            if (other.FullBackupFrequency.Equals(FullBackupFrequency) == false)
-                return false;
-
-            if (other.IncrementalBackupFrequency.Equals(IncrementalBackupFrequency) == false)
-                return false;
-
             if (other.LocalSettings != null && other.LocalSettings.Equals(LocalSettings) == false)
                 return false;
 

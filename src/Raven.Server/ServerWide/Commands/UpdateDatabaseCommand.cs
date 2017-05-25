@@ -1,5 +1,7 @@
 using Raven.Client.Server;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
+using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands
 {
@@ -14,7 +16,7 @@ namespace Raven.Server.ServerWide.Commands
             DatabaseName = databaseName;
         }
 
-        public abstract void UpdateDatabaseRecord(DatabaseRecord record, long etag);
+        public abstract string UpdateDatabaseRecord(DatabaseRecord record, long etag);
 
         public abstract void FillJson(DynamicJsonValue json);
 

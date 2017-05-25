@@ -123,9 +123,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/periodic-backup/status", "GET")]
         public Task GetPeriodicBackupBundleStatus()
         {
-            var taskId = GetLongQueryString("taskId");
-            if (taskId == null)
-                throw new ArgumentNullException(nameof(taskId));
+            var taskId = GetLongQueryString("taskId", required: true);
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))

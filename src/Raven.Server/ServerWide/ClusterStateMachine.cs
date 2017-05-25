@@ -151,7 +151,6 @@ namespace Raven.Server.ServerWide
                         existingValue = new BlittableJsonReaderObject(ptr, size, context);
                     }
 
-
                     try
                     {
                         djv = updateCommand.GetUpdatedValue(index, record, existingValue);
@@ -477,7 +476,16 @@ namespace Raven.Server.ServerWide
 
                     try
                     {
-                        updateCommand.UpdateDatabaseRecord(databaseRecord, index);
+                        var relatedRecordIdToDelete = updateCommand.UpdateDatabaseRecord(databaseRecord, index);
+                        if (relatedRecordIdToDelete != null)
+                        {
+                            var itemKey = relatedRecordIdToDelete;
+                            using (Slice.From(context.Allocator, itemKey, out Slice _))
+                            using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameToDeleteLowered))
+                            {
+                                items.DeleteByKey(valueNameToDeleteLowered);
+                            }
+                        }
                     }
                     catch (Exception e)
                     {

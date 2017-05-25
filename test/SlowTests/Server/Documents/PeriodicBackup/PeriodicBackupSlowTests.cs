@@ -143,7 +143,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 SpinWait.SpinUntil(() =>
                 {
-                    var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
+                    var getPeriodicBackupStatus = 
+                        new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
                     var status = store.Admin.Server.Send(getPeriodicBackupStatus).Status;
                     return status?.LastFullBackup != null && status.LastIncrementalBackup != null;
                 }, TimeSpan.FromMinutes(1));

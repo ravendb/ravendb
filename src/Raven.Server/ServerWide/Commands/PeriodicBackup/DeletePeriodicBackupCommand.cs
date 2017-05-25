@@ -1,6 +1,9 @@
 ﻿using Raven.Client.Server;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
+using Voron;
+using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands.PeriodicBackup
 {
@@ -19,9 +22,11 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
             TaskId = taskId;
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            // remove the record for the backup
             record.DeletePeriodicBackupConfiguration(TaskId);
+            return TaskId.ToString();
         }
 
         public override void FillJson(DynamicJsonValue json)

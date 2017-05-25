@@ -24,16 +24,18 @@ namespace Raven.Server.ServerWide.Commands.Transformers
             NewTransformerName = newName;
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             if (record.Transformers.ContainsKey(NewTransformerName))
             {
                 throw new InvalidOperationException($"Could not rename transformer {TransformerName} because there already is a transformer named {TransformerName}");
             }
+
             if (record.Indexes.ContainsKey(NewTransformerName) || record.AutoIndexes.ContainsKey(NewTransformerName))
             {
                 throw new InvalidOperationException($"Could not rename transformer {TransformerName} because there already is an index named {TransformerName}");
             }
+
             if (record.Transformers.TryGetValue(TransformerName, out TransformerDefinition transformer))
             {
                 transformer.Etag = etag;
@@ -41,7 +43,7 @@ namespace Raven.Server.ServerWide.Commands.Transformers
 
                 record.AddTransformer(transformer);
                 record.Transformers.Remove(TransformerName);
-                return;
+                return null;
             }
 
             throw new InvalidOperationException($"Could not rename transformer {TransformerName} because it was not found in DatabaseRecord");

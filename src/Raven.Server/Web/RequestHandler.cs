@@ -167,9 +167,9 @@ namespace Raven.Server.Web
             return null;
         }
 
-        protected void ThrowInvalidInteger(string name, string etag)
+        protected void ThrowInvalidInteger(string name, string etag, string type = "int")
         {
-            throw new ArgumentException("Could not parse header '" + name + "' header as int, value was: " + etag);
+            throw new ArgumentException($"Could not parse header '{name}' header as {type}, value was: {etag}");
         }
 
         protected int GetStart(int defaultStart = 0)
@@ -207,7 +207,7 @@ namespace Raven.Server.Web
 
             long result;
             if (long.TryParse(longAsString, out result) == false)
-                ThrowInvalidInteger(name, longAsString);
+                ThrowInvalidInteger(name, longAsString, "long");
 
             return result;
         }

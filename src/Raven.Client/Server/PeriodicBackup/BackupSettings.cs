@@ -16,7 +16,7 @@ namespace Raven.Client.Server.PeriodicBackup
     {
         /// <summary>
         /// Path to local folder. If not empty, exports will be held in this folder and not deleted. 
-        /// Otherwise, backups will be created in DataDir of a database and deleted after successful upload to S3/Glacier/Azure.
+        /// Otherwise, backups will be created in the TempDir of a database and deleted after successful upload to S3/Glacier/Azure.
         /// </summary>
         public string FolderPath { get; set; }
 
