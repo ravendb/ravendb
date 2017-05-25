@@ -62,7 +62,6 @@ namespace Sparrow
             [Pure]
             public async Task<bool> WaitAsync(TimeSpan timeout)
             {
-                Debug.Assert(timeout != TimeSpan.MaxValue);
                 var waitAsync = _tcs.Task;
                 _parent._token.ThrowIfCancellationRequested();
                 var result = await Task.WhenAny(waitAsync, TimeoutManager.WaitFor(timeout, _parent._token)).ConfigureAwait(false);

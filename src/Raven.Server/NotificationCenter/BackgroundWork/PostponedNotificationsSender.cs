@@ -12,7 +12,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
 {
     public class PostponedNotificationsSender : BackgroundWorkBase
     {
-        private static readonly TimeSpan Infinity = TimeSpan.FromMilliseconds(-1);
+        private static readonly TimeSpan Infinity = TimeSpan.MaxValue;
         
         private readonly NotificationsStorage _notificationsStorage;
         private readonly ConcurrentSet<NotificationCenter.ConnectedWatcher> _watchers;
