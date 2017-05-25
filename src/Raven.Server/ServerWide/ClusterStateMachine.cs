@@ -7,18 +7,15 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
-using Raven.Client.Extensions;
 using Raven.Client.Http.OAuth;
 using Raven.Client.Server;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Json;
-using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
@@ -77,7 +74,7 @@ namespace Raven.Server.ServerWide
 
             switch (type)
             {
-                //The reason we have a seperate case for removing node from database is because we must 
+                //The reason we have a separate case for removing node from database is because we must 
                 //actually delete the database before we notify about changes to the record otherwise we 
                 //don't know that it was us who needed to delete the database.
                 case nameof(RemoveNodeFromDatabaseCommand):
