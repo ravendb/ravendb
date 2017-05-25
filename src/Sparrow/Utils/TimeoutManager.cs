@@ -15,7 +15,7 @@ namespace Sparrow.Utils
     public static class TimeoutManager
     {
         private static readonly ConcurrentDictionary<uint, TimerTaskHolder> Values = new ConcurrentDictionary<uint, TimerTaskHolder>();
-        private static readonly Task InfiniteTask = new TaskCompletionSource<object>().Task;
+        private static readonly Task InfiniteTask = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously).Task;
 
         private class TimerTaskHolder  : IDisposable
         {
