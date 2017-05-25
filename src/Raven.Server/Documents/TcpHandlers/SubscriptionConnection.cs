@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.TcpHandlers
             await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionIdIsApplicable(SubscriptionId, TimeSpan.FromSeconds(15));
 
             _connectionState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
-            uint timeout = 16;
+            int timeout = 16;
 
             while (true)
             {

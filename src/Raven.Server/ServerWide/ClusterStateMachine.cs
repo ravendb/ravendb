@@ -694,7 +694,7 @@ namespace Raven.Server.ServerWide
             _notifiedListeners = new AsyncManualResetEvent(token);
         }
 
-        public async Task WaitForIndexNotification(long index, uint? timeoutInMs = null)
+        public async Task WaitForIndexNotification(long index, int? timeoutInMs = null)
         {
             Task timeoutTask = null;
             if (timeoutInMs.HasValue)
@@ -713,7 +713,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static void ThrowTimeoutException(uint value, long index)
+        private static void ThrowTimeoutException(int value, long index)
         {
             throw new TimeoutException("Waited for " + TimeSpan.FromMilliseconds(value) + " but didn't get index notification for " + index);
         }

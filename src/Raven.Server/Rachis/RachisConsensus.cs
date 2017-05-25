@@ -88,7 +88,7 @@ namespace Raven.Server.Rachis
 
         public State CurrentState { get; private set; }
         public TimeoutEvent Timeout { get; private set; }
-        public uint RemoteOperationTimeoutMs { get; private set; }
+        public int RemoteOperationTimeoutMs { get; private set; }
 
         public string LastStateChangeReason => _lastStateChangeReason;
 
@@ -166,7 +166,7 @@ namespace Raven.Server.Rachis
             try
             {
                 _persistentState = env;
-                RemoteOperationTimeoutMs = (uint)configuration.ClusterOperationTimeout.AsTimeSpan.TotalMilliseconds;
+                RemoteOperationTimeoutMs = (int)configuration.ClusterOperationTimeout.AsTimeSpan.TotalMilliseconds;
                 ElectionTimeoutMs = (int)configuration.ElectionTimeout.AsTimeSpan.TotalMilliseconds * (Debugger.IsAttached ? 10 : 1);
                 ContextPool = new TransactionContextPool(_persistentState);
 
@@ -1265,7 +1265,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public async Task WaitForTimeout(long knownLeaderTime, uint timeoutMillseconds)
+        public async Task WaitForTimeout(long knownLeaderTime, int timeoutMillseconds)
         {
             Interlocked.Increment(ref _hasTimers);
             try
@@ -1285,7 +1285,7 @@ namespace Raven.Server.Rachis
                     if (await task == false)
                         return;
 
-                    var remaining = timeoutMillseconds - (uint)timePassed;
+                    var remaining = timeoutMillseconds - (int)timePassed;
 
                     task = _leadershipTimeChanged.WaitAsync(remaining);
                 }
@@ -1295,7 +1295,7 @@ namespace Raven.Server.Rachis
                 Interlocked.Decrement(ref _hasTimers);
             }
         }
-        public Task WaitForTimeout(uint timeoutMillseconds)
+        public Task WaitForTimeout(int timeoutMillseconds)
         {
             return WaitForTimeout(_leaderTime, timeoutMillseconds);
         }
