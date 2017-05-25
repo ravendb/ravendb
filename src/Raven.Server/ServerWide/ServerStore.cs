@@ -21,6 +21,7 @@ using Raven.Server.NotificationCenter;
 using Raven.Server.Rachis;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintance;
@@ -280,6 +281,9 @@ namespace Raven.Server.ServerWide
             _engine.Initialize(_env, Configuration.Cluster);
 
             _engine.StateMachine.DatabaseChanged += DatabasesLandlord.ClusterOnDatabaseChanged;
+            _engine.StateMachine.DatabaseChanged += OnDatabaseChanged;
+
+            _engine.TopologyChanged += OnTopologyChanged;
 
             _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
             _notificationsStorage.Initialize(_env, ContextPool);
@@ -297,11 +301,34 @@ namespace Raven.Server.ServerWide
                 context.OpenReadTransaction();
                 foreach (var db in _engine.StateMachine.ItemsStartingWith(context, "db/", 0, int.MaxValue))
                 {
-                    DatabasesLandlord.ClusterOnDatabaseChanged(this, (db.Item1, 0));
+                    DatabasesLandlord.ClusterOnDatabaseChanged(this, (db.Item1, 0, "Init"));
                 }
             }
 
             Task.Run(ClusterMaintanceSetupTask, ServerShutdown);
+        }
+
+        private void OnTopologyChanged(object sender, ClusterTopology topologyJson)
+        {
+            NotificationCenter.Add(ClusterTopologyChanged.Create(topologyJson, LeaderTag, NodeTag));
+        }
+
+        private void OnDatabaseChanged(object sender, (string dbName, long index, string type) t)
+        {
+            switch (t.type)
+            {
+                case nameof(DeleteDatabaseCommand):
+                    NotificationCenter.Add(DatabaseChanged.Create(t.dbName, DatabaseChangeType.Delete));
+                    break;
+                case nameof(AddDatabaseCommand):
+                    NotificationCenter.Add(DatabaseChanged.Create(t.dbName, DatabaseChangeType.Put));
+                    break;
+                case nameof(UpdateTopologyCommand):
+                    NotificationCenter.Add(DatabaseChanged.Create(t.dbName, DatabaseChangeType.Update));
+                    break;
+            }
+
+            //TODO: send different commands to studio when necessary
         }
 
         public IEnumerable<string> GetSecretKeysNames(TransactionOperationContext context)

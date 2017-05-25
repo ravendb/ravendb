@@ -9,6 +9,7 @@
         NotificationUpdated,
         RecentError, // used in studio
         PerformanceHint,
-        DatabaseStatsChanged
+        DatabaseStatsChanged,
+        ClusterTopologyChanged
     }
 }

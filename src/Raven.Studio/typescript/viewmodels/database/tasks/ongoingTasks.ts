@@ -102,8 +102,7 @@ class ongoingTasks extends viewModelBase {
     }
 
     manageDatabaseGroupUrl(dbInfo: databaseInfo): string {
-        const db = dbInfo.asDatabase();
-        return appUrl.forManageDatabaseGroup(db);
+        return appUrl.forManageDatabaseGroup(dbInfo);
     }
 
     removeOngoingTask(db: databaseInfo) {

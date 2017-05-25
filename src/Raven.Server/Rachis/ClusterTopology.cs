@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Rachis
 {
@@ -50,6 +51,19 @@ namespace Raven.Server.Rachis
         public ClusterTopology()
         {
             
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(TopologyId)] = TopologyId,
+                [nameof(ApiKey)] = ApiKey,
+                [nameof(Members)] = DynamicJsonValue.Convert(Members),
+                [nameof(Promotables)] = DynamicJsonValue.Convert(Promotables),
+                [nameof(Watchers)] = DynamicJsonValue.Convert(Watchers),
+                [nameof(LastNodeId)] = LastNodeId
+            };
         }
 
         public string GetUrlFromTag(string tag)

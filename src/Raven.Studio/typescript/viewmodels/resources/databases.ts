@@ -81,8 +81,7 @@ class databases extends viewModelBase {
         this.addNotification(this.changesContext.serverNotifications().watchAllDatabaseChanges((e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) => this.fetchDatabase(e)));
         this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.fetchDatabases()));
 
-        return $.when<any>(this.fetchDatabases(), clusterTopologyManager.default.forceRefresh()); //TODO: remove me - temporary refresh cluster topology each time we enter this view 
-        //TODO: revert me: return this.fetchDatabases();
+        return this.fetchDatabases();
     }
 
     attached() {
@@ -154,11 +153,10 @@ class databases extends viewModelBase {
 
     createManageDbGroupUrlObsevable(dbInfo: databaseInfo): KnockoutComputed<string> {
         const isLocalObservable = this.createIsLocalDatabaseObservable(dbInfo.name);
-        const db = dbInfo.asDatabase();
 
         return ko.pureComputed(() => {
             const isLocal = isLocalObservable();
-            const link = appUrl.forManageDatabaseGroup(db);
+            const link = appUrl.forManageDatabaseGroup(dbInfo);
             if (isLocal) {
                 return link;
             } else {
@@ -169,11 +167,10 @@ class databases extends viewModelBase {
 
     createAllDocumentsUrlObservable(dbInfo: databaseInfo): KnockoutComputed<string> {
         const isLocalObservable = this.createIsLocalDatabaseObservable(dbInfo.name);
-        const db = dbInfo.asDatabase();
 
         return ko.pureComputed(() => {
             const isLocal = isLocalObservable();
-            const link = appUrl.forDocuments(null, db);
+            const link = appUrl.forDocuments(null, dbInfo);
             if (isLocal) {
                 return link;
             } else {
@@ -183,12 +180,10 @@ class databases extends viewModelBase {
     }
 
     createAllDocumentsUrlObservableForNode(dbInfo: databaseInfo, node: clusterNode) {
-        const db = dbInfo.asDatabase();
-
         return ko.pureComputed(() => {
             const currentNodeTag = this.clusterManager.nodeTag();
             const nodeTag = node.tag();
-            const link = appUrl.forDocuments(null, db);
+            const link = appUrl.forDocuments(null, dbInfo);
             if (currentNodeTag === nodeTag) {
                 return link;
             } else {
@@ -205,28 +200,23 @@ class databases extends viewModelBase {
     }
 
     indexErrorsUrl(dbInfo: databaseInfo): string {
-        const db = dbInfo.asDatabase();
-        return appUrl.forIndexErrors(db);
+        return appUrl.forIndexErrors(dbInfo);
     }
 
     storageReportUrl(dbInfo: databaseInfo): string {
-        const db = dbInfo.asDatabase();
-        return appUrl.forStatusStorageReport(db);
+        return appUrl.forStatusStorageReport(dbInfo);
     }
 
     indexesUrl(dbInfo: databaseInfo): string {
-        const db = dbInfo.asDatabase();
-        return appUrl.forIndexes(db);
+        return appUrl.forIndexes(dbInfo);
     } 
 
     periodicExportUrl(dbInfo: databaseInfo): string {
-        const db = dbInfo.asDatabase();
-        return appUrl.forPeriodicExport(db);
+        return appUrl.forPeriodicExport(dbInfo);
     }
 
     manageDatabaseGroupUrl(dbInfo: databaseInfo): string {
-        const db = dbInfo.asDatabase();
-        return appUrl.forManageDatabaseGroup(db);
+        return appUrl.forManageDatabaseGroup(dbInfo);
     }
 
     private getSelectedDatabases() {
@@ -407,8 +397,8 @@ class databases extends viewModelBase {
     }
 
     activateDatabase(dbInfo: databaseInfo) {
-        let db = this.databasesManager.getDatabaseByName(dbInfo.name);
-        if (!db || db.disabled())
+        const db = this.databasesManager.getDatabaseByName(dbInfo.name);
+        if (!db || db.disabled() || !db.relevant())
             return;
 
         this.databasesManager.activate(db);

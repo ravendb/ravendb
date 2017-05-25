@@ -60,8 +60,7 @@ class viewModelBase {
     }
 
     canActivate(args: any): boolean | JQueryPromise<canActivateResultDto> {
-        var self = this;
-        setTimeout(() => viewModelBase.showSplash(self.isAttached === false), 700);
+        setTimeout(() => viewModelBase.showSplash(this.isAttached === false), 700);
         this.downloader.reset();
 
         return this.databasesManager.activateBasedOnCurrentUrl();

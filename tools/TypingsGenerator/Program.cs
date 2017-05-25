@@ -119,6 +119,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(NotificationUpdated));
             scripter.AddType(typeof(OperationChanged));
             scripter.AddType(typeof(DatabaseChanged));
+            scripter.AddType(typeof(ClusterTopologyChanged));
             scripter.AddType(typeof(DatabaseStatsChanged));
             scripter.AddType(typeof(PerformanceHint));
             scripter.AddType(typeof(PagingPerformanceDetails));

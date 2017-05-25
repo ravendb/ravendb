@@ -21,10 +21,19 @@
                         <section>
                             <ul class="database-list">
                                 <!-- ko foreach: filteredDatabases-->
-                                <li data-bind="visible: !disabled()">
+                                <li data-bind="visible: !disabled() && relevant()">
                                     <a href="#" data-bind="click: $parent.selectDatabase.bind($parent)" class="database">
                                         <span data-bind="text: name"></span>
                                         <span data-bind="visible: errored" class="badge badge-danger">Errored</span>
+                                    </a>
+                                </li>
+                                <!-- /ko -->
+                                <!-- ko foreach: filteredDatabases-->
+                                <li data-bind="visible: !relevant()">
+                                    <a class="database non-relevant">
+                                        <span data-bind="text: name"></span>
+                                        <span class="label label-default">Non-relevant</span>
+                                        <span data-bind="visible: errored" class="label label-danger">Errored</span>
                                     </a>
                                 </li>
                                 <!-- /ko -->
