@@ -448,6 +448,28 @@ namespace Raven.Client
             return documentSession.AddLazyOperation<SuggestionQueryResult>(lazyOperation, null);
         }
 
+        /// <summary>
+        /// LazyAsync Suggest alternative values for the queried term
+        /// </summary>
+        public static Lazy<Task<SuggestionQueryResult>> SuggestLazyAsync(this IQueryable queryable)
+        {
+            return SuggestLazyAsync(queryable, new SuggestionQuery());
+        }
+
+        /// <summary>
+        /// LazyAsync Suggest alternative values for the queried term
+        /// </summary>
+        public static Lazy<Task<SuggestionQueryResult>> SuggestLazyAsync(this IQueryable queryable, SuggestionQuery query)
+        {
+            var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+            SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query, true);
+
+            var lazyOperation = new LazySuggestOperation(ravenQueryInspector.AsyncIndexQueried, query);
+
+            var documentSession = ((AsyncDocumentSession)ravenQueryInspector.Session);
+            return documentSession.AddLazyOperation<SuggestionQueryResult>(lazyOperation, null);
+        }
+
         private static void SetSuggestionQueryFieldAndTerm(IRavenQueryInspector queryInspector, SuggestionQuery query, bool isAsync = false)
         {
             if (string.IsNullOrEmpty(query.Field) == false && string.IsNullOrEmpty(query.Term) == false)
