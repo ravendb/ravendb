@@ -301,7 +301,7 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            //Task.Run(ClusterMaintanceSetupTask, ServerShutdown);
+            Task.Run(ClusterMaintanceSetupTask, ServerShutdown);
         }
 
         public IEnumerable<string> GetSecretKeysNames(TransactionOperationContext context)
