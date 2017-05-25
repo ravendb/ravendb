@@ -15,6 +15,7 @@ namespace Sparrow.Utils
     public static class TimeoutManager
     {
         private static readonly ConcurrentDictionary<uint, TimerTaskHolder> Values = new ConcurrentDictionary<uint, TimerTaskHolder>();
+        private static readonly Task InfiniteTask = new TaskCompletionSource<object>().Task;
 
         private class TimerTaskHolder  : IDisposable
         {
@@ -66,14 +67,7 @@ namespace Sparrow.Utils
         {
             if (time == Timeout.InfiniteTimeSpan)
             {
-                if (token == CancellationToken.None || token.CanBeCanceled == false)
-                {
-                    await InfiniteTask;
-                }
-                else
-                {
-                    await new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously).Task;
-                }
+                await InfiniteTask;
                 return;
             }
 
@@ -122,8 +116,6 @@ namespace Sparrow.Utils
             }
             return value;
         }
-
-        private static readonly Task InfiniteTask = new TaskCompletionSource<object>().Task;
 
         public static async Task WaitFor(TimeSpan duration, CancellationToken token = default(CancellationToken))
         {
