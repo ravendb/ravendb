@@ -90,7 +90,7 @@ namespace RachisTests
 
             var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
             {
-                TimeToWaitBeforeConnectionRetryMilliseconds = 500
+                TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500)
             });
 
             var getDatabaseTopologyCommand = new GetDatabaseTopologyOperation(defaultDatabase);
