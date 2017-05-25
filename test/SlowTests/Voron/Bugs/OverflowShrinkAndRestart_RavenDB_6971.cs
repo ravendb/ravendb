@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
@@ -21,7 +22,7 @@ namespace SlowTests.Voron.Bugs
                     store.Operations.Send(new PatchCollectionOperation("Orders", new PatchRequest()
                     {
                         Script = @"PutDocument(""orders/"", this);"
-                    })).WaitForCompletion();
+                    })).WaitForCompletion(TimeSpan.FromSeconds(30));
                 }
 
                 WaitForIndexing(store);
@@ -31,7 +32,7 @@ namespace SlowTests.Voron.Bugs
                 store.Operations.Send(new PatchCollectionOperation("Orders", new PatchRequest()
                 {
                     Script = @"PutDocument(""orders/"", this);"
-                })).WaitForCompletion();
+                })).WaitForCompletion(TimeSpan.FromSeconds(30));
 
                 WaitForIndexing(store);
 

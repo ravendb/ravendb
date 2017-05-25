@@ -218,7 +218,7 @@ namespace Raven.Server.Documents
 
             options.ForceUsing32BitsPager = _documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
             options.TimeToSyncAfterFlashInSeconds = _documentDatabase.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
-            options.NumOfCocurrentSyncsPerPhysDrive = _documentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
+            options.NumOfConcurrentSyncsPerPhysDrive = _documentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
             options.MasterKey = _documentDatabase.MasterKey;
 
             try

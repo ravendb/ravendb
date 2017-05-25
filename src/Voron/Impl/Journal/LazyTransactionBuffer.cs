@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using Sparrow;
 using Sparrow.Logging;
@@ -25,7 +24,7 @@ namespace Voron.Impl.Journal
         {
             _lazyTransactionPager = options.CreateTemporaryBufferPager("lazy-transactions.buffer", options.InitialFileSize ?? options.InitialLogFileSize);
             _transactionPersistentContext = new TransactionPersistentContext(true);
-            _log = LoggingSource.Instance.GetLogger<LazyTransactionBuffer>(options.BasePath);
+            _log = LoggingSource.Instance.GetLogger<LazyTransactionBuffer>(options.BasePath.FullPath);
             _options = options;
         }
 
@@ -68,8 +67,8 @@ namespace Voron.Impl.Journal
             {
                 using (var tempTx = new TempPagerTransaction())
                 {
-                    var numberOfPages = _lastUsed4Kbs / (Constants.Storage.PageSize/ (4 * Constants.Size.Kilobyte));
-                    if ((_lastUsed4Kbs%(Constants.Storage.PageSize/(4*Constants.Size.Kilobyte))) != 0)
+                    var numberOfPages = _lastUsed4Kbs / (Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte));
+                    if ((_lastUsed4Kbs % (Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte))) != 0)
                         numberOfPages++;
 
                     _lazyTransactionPager.EnsureMapped(tempTx, 0, numberOfPages);
@@ -78,7 +77,7 @@ namespace Voron.Impl.Journal
                     journalFile.JournalWriter.Write(_firstPositionInJournalFile.Value, src, _lastUsed4Kbs);
                     if (_log.IsInfoEnabled)
                     {
-                        _log.Info($"Writing lazy transaction buffer with {_lastUsed4Kbs/4:#,#} kb took {sp.Elapsed}");
+                        _log.Info($"Writing lazy transaction buffer with {_lastUsed4Kbs / 4:#,#} kb took {sp.Elapsed}");
                     }
                     ZeroLazyTransactionBufferIfNeeded(tempTx);
                 }

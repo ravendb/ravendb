@@ -9,6 +9,7 @@ using Sparrow.Utils;
 using Voron.Data;
 using Voron.Exceptions;
 using Voron.Global;
+using Voron.Util.Settings;
 
 namespace Voron.Impl.Paging
 {
@@ -78,7 +79,7 @@ namespace Voron.Impl.Paging
 
         public const int PageMaxSpace = Constants.Storage.PageSize - Constants.Tree.PageHeaderSize;
 
-        public string FileName { get; protected set; }
+        public VoronPathSetting FileName { get; protected set; }
 
         protected AbstractPager(StorageEnvironmentOptions options, bool usePageProtection = false)
         {
@@ -212,7 +213,7 @@ namespace Voron.Impl.Paging
             if (Disposed)
                 return;
 
-            _options.IoMetrics.FileClosed(FileName);
+            _options.IoMetrics.FileClosed(FileName.FullPath);
 
             if (_pagerState != null)
             {
@@ -221,7 +222,7 @@ namespace Voron.Impl.Paging
             }
 
             Disposed = true;
-            NativeMemory.UnregisterFileMapping(FileName);
+            NativeMemory.UnregisterFileMapping(FileName.FullPath);
             GC.SuppressFinalize(this);
         }
 

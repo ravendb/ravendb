@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var ioMetrics = new IOMetricsEnvironment
             {
-                Path = storageEnvironment.Options.BasePath
+                Path = storageEnvironment.Options.BasePath.FullPath
             };
 
             foreach (var fileMetric in storageEnvironment.Options.IoMetrics.Files)

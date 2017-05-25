@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Indexes
                     // So we will disable it (temporarily) when working with encryption. 
                     if (options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
                     {
-                        using (var metadata = File.Open(Path.Combine(options.BasePath, MetadataFileName), FileMode.Create))
+                        using (var metadata = File.Open(options.BasePath.Combine(MetadataFileName).FullPath, FileMode.Create))
                         using (var metadataWriter = new StreamWriter(metadata, Encoding.UTF8))
                         {
                             metadataWriter.WriteLine(Name);
