@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -18,14 +19,20 @@ namespace Raven.Server.Utils
 {
     public static class RavenWindowsServiceController
     {
-        private static string ServiceFullName => $@"""{RavenWindowsService.WindowsServiceName}"" (""{RavenWindowsService.WindowServiceDescription}"")";
+        private const uint ErrorServiceExists = 0x00000431;
+
+        private const uint ErrorServiceMarkedForDeletion = 0x00000430;
+
+        private const uint ErrorAccessIsDenied = 0x00000005;
+
+        private static string ServiceFullName => $@"""{RavenWindowsService.WindowsServiceName} ({RavenWindowsService.WindowServiceDescription})""";
 
         public static void Install(string[] args)
         {
-            var argsForService = args.Where(x => x != "--register-service").ToList();
+            var serviceArgs = args.Where(x => x != "--register-service").ToList();
             using (var serviceController = GetServiceController())
             {
-                InstallInternal(serviceController, argsForService);
+                InstallInternal(serviceController, serviceArgs);
             }
         }
 
@@ -48,28 +55,38 @@ namespace Raven.Server.Utils
                     startImmediately: true,
                     errorSeverity: ErrorSeverity.Normal);
 
-                Console.WriteLine($@"Successfully registered service {ServiceFullName}");
+                Console.WriteLine($"Service {ServiceFullName} has been registered.");
             }
-            catch (Exception e) 
-                when (e.Message.Contains("already exists"))
+            catch (Win32Exception e) when (e.NativeErrorCode == ErrorServiceExists)
             {
-                Console.WriteLine($@"Service {ServiceFullName} was already installed. Reinstalling...");
-
+                Console.WriteLine($"Service {ServiceFullName} already exists. Reinstalling...");
                 Reinstall(serviceController, serviceArgs);
-
-            } catch (Exception e) 
-                when (e.Message.Contains("The specified service has been marked for deletion"))
+            }
+            catch (Win32Exception e) when (e.NativeErrorCode == ErrorServiceMarkedForDeletion)
             {
                 if (counter < 10)
                 {
-                    Thread.Sleep(500);
+                    Console.WriteLine($"Service {ServiceFullName} has been marked for deletion.  Performing {counter + 1} installation attempt.");
+
+                    Thread.Sleep(1000);
                     counter++;
 
-                    Console.WriteLine("The specified service has been marked for deletion. Retrying {0} time", counter);
                     InstallInternal(serviceController, serviceArgs, counter);
                 }
             }
+            catch (Win32Exception e) when (e.NativeErrorCode == ErrorAccessIsDenied)
+            {
+                Console.WriteLine($"Cannot register service {ServiceFullName} due to insufficient privileges. Please use Administrator account to install the service.");
+            }
+            catch (Win32Exception e)
+            {
+                Console.WriteLine($"Cannot register service {ServiceFullName}: { FormatWin32ErrorMessage(e) }");
+            }
+        }
 
+        private static string FormatWin32ErrorMessage(Win32Exception exception)
+        {
+            return $"{exception.Message} (ERROR CODE 0x{exception.NativeErrorCode:x8}).";
         }
 
         private static string NormalizeServiceName(string serviceName)
@@ -87,59 +104,68 @@ namespace Raven.Server.Utils
 
         private static void UninstallInternal(ServiceController serviceController)
         {
-            try
+            if (serviceController == null)
             {
-                if ((serviceController.Status == ServiceControllerStatus.Stopped || serviceController.Status == ServiceControllerStatus.StopPending) == false)
+                Console.WriteLine($"Service {ServiceFullName} does not exist. No action taken.");
+                return;
+            }
+
+            if ((serviceController.Status == ServiceControllerStatus.Stopped || serviceController.Status == ServiceControllerStatus.StopPending) == false)
+            {
+                try
                 {
                     StopInternal(serviceController);
                 }
+                catch (InvalidOperationException invalidOperationException)
+                {
+                    var win32Exception = invalidOperationException.InnerException as Win32Exception;
+                    if (win32Exception == null)
+                        throw;
 
+                    Console.WriteLine($"Error stopping service {ServiceFullName}: { FormatWin32ErrorMessage(win32Exception) }");
+                    return;
+                }
+            }
+
+            try
+            {
                 new Win32ServiceManager().DeleteService(
                     NormalizeServiceName(RavenWindowsService.WindowsServiceName));
 
-                Console.WriteLine($@"Successfully unregistered service {ServiceFullName}");
+                Console.WriteLine($"Service {ServiceFullName} has been unregistered.");
             }
-            catch (Exception e) when (e.Message.Contains("does not exist"))
+            catch (Win32Exception exception) when (exception.NativeErrorCode == ErrorAccessIsDenied)
             {
-                Console.WriteLine($@"Service {ServiceFullName} does not exist. No action taken.");
+                Console.WriteLine($"Cannot unregister service {ServiceFullName} due to insufficient privileges. Please use Administrator account to uninstall the service.");
+            }
+            catch (Win32Exception exception)
+            {
+                Console.WriteLine($"Cannot unregister service {ServiceFullName}: { FormatWin32ErrorMessage(exception) }");
             }
         }
 
-        private static void Reinstall(ServiceController sc, List<string> serviceArgs)
+        private static void Reinstall(ServiceController serviceController, List<string> serviceArgs)
         {
-            StopInternal(sc);
-            UninstallInternal(sc);
-            InstallInternal(sc, serviceArgs);
+            StopInternal(serviceController);
+            UninstallInternal(serviceController);
+            InstallInternal(serviceController, serviceArgs);
         }
 
         private static void StopInternal(ServiceController serviceController)
         {
+            if (serviceController == null)
+                return;
+
             if (!(serviceController.Status == ServiceControllerStatus.Stopped | serviceController.Status == ServiceControllerStatus.StopPending))
             {
+                Console.WriteLine($"Service {ServiceFullName} is being stopped.");
                 serviceController.Stop();
-                serviceController.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromMilliseconds(1000));
-                Console.WriteLine($@"Successfully stopped service {ServiceFullName}");
             }
-            else
-            {
-                Console.WriteLine($@"Service {ServiceFullName} is already stopped or stop is pending.");
-            }
-        }
 
-        public static void Stop()
-        {
-            using (var serviceController = GetServiceController())
-            {
-                StopInternal(serviceController);
-            }
-        }
+            serviceController.WaitForStatus(
+                ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(60));
 
-        public static void Start()
-        {
-            using (var serviceController = GetServiceController())
-            {
-                StartInternal(serviceController);
-            }
+            Console.WriteLine($"Service {ServiceFullName} stopped.");
         }
 
         public static void Run(RavenConfiguration configuration)
@@ -147,20 +173,6 @@ namespace Raven.Server.Utils
             var service = new RavenWindowsService(configuration);
             var serviceHost = new Win32ServiceHost(service);
             serviceHost.Run();
-        }
-
-        private static void StartInternal(ServiceController serviceController)
-        {
-            if (!(serviceController.Status == ServiceControllerStatus.StartPending | serviceController.Status == ServiceControllerStatus.Running))
-            {
-                serviceController.Start();
-                serviceController.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromMilliseconds(1000));
-                Console.WriteLine($@"Successfully started service {ServiceFullName}");
-            }
-            else
-            {
-                Console.WriteLine($@"Service {ServiceFullName} is already running or start is pending.");
-            }
         }
 
         private static string GetServiceCommand(List<string> argsForService)
@@ -183,7 +195,9 @@ namespace Raven.Server.Utils
 
         private static ServiceController GetServiceController()
         {
-            return new ServiceController(NormalizeServiceName(RavenWindowsService.WindowsServiceName));
+            var serviceName = NormalizeServiceName(RavenWindowsService.WindowsServiceName);
+            return ServiceController.GetServices()
+                .FirstOrDefault(x => x.ServiceName == serviceName);
         }
 
         public static bool ShouldRunAsWindowsService(RavenConfiguration configuration)
@@ -215,6 +229,7 @@ namespace Raven.Server.Utils
         public void Start(string[] startupArguments, ServiceStoppedCallback serviceStoppedCallback)
         {
             _ravenServer.Initialize();
+            _ravenServer.AfterDisposal += () => serviceStoppedCallback();
         }
 
         public void Stop()
