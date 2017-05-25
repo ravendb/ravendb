@@ -64,6 +64,19 @@ namespace Sparrow.Utils
 
         private static async Task WaitForInternal(TimeSpan time, CancellationToken token)
         {
+            if (time == Timeout.InfiniteTimeSpan)
+            {
+                if (token == CancellationToken.None || token.CanBeCanceled == false)
+                {
+                    await InfiniteTask;
+                }
+                else
+                {
+                    await new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously).Task;
+                }
+                return;
+            }
+
             if (time.TotalMilliseconds < 0)
                 ThrowOutOfRange();
 
@@ -94,8 +107,6 @@ namespace Sparrow.Utils
                 token.ThrowIfCancellationRequested();
                 await value.NextTask;
             } while (sp.ElapsedMilliseconds < (duration - step));
-
-
         }
 
         private static void ThrowOutOfRange()
@@ -118,19 +129,6 @@ namespace Sparrow.Utils
         {
             if (duration == TimeSpan.Zero)
                 return;
-
-            if (duration == Timeout.InfiniteTimeSpan)
-            {
-                if (token == CancellationToken.None || token.CanBeCanceled == false)
-                {
-                    await InfiniteTask;
-                }
-                else
-                {
-                    await new TaskCompletionSource<object>(token).Task;
-                }
-                return;
-            }
 
             token.ThrowIfCancellationRequested();
             var task = WaitForInternal(duration, token);
