@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Sparrow.Logging;
 using Sparrow.Platform;
@@ -63,8 +64,8 @@ namespace Sparrow.LowMemory
                 if (PlatformDetails.RunningOnPosix)
                 {
                     // read both cgroup and sysinfo memory stats, and use the lowest if applicable
-                    long cgroupMemoryLimit = CgroupUtils.ReadNumberFromCgroupFile("/sys/fs/cgroup/memory/memory.limit_in_bytes");
-                    long cgroupMemoryUsage = CgroupUtils.ReadNumberFromCgroupFile("/sys/fs/cgroup/memory/memory.usage_in_bytes");
+                    long cgroupMemoryLimit = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile("/sys/fs/cgroup/memory/memory.limit_in_bytes");
+                    long cgroupMemoryUsage = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile("/sys/fs/cgroup/memory/memory.usage_in_bytes");
 
                     sysinfo_t info = new sysinfo_t();
                     if (Syscall.sysinfo(ref info) != 0)
@@ -120,6 +121,13 @@ namespace Sparrow.LowMemory
                 _failedToGetAvailablePhysicalMemory = true;
                 return FailedResult;
             }
+        }
+
+        public static bool IsSwappingOnHddInsteadOfSsd()
+        {
+            if (PlatformDetails.RunningOnPosix)
+                return CheckPageFileOnHdd.PosixIsSwappingOnHddInsteadOfSsd();
+            return CheckPageFileOnHdd.WindowsIsSwappingOnHddInsteadOfSsd();
         }
     }
 
