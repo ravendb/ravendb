@@ -114,7 +114,7 @@ namespace FastTests
                 if (createDatabase)
                 {
                     var result = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFacotr));
-                    Server.ServerStore.Cluster.WaitForIndexNotification(result.ETag ?? 0).Wait();
+                    defaultServer.ServerStore.Cluster.WaitForIndexNotification(result.ETag ?? 0).Wait();
                 }
 
 

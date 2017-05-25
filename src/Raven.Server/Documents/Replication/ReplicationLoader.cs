@@ -767,7 +767,7 @@ namespace Raven.Server.Documents.Replication
                 if (remaining < TimeSpan.Zero)
                     return ReplicatedPast(lastEtag);
 
-                var timeout = TimeoutManager.WaitFor((uint)remaining.TotalMilliseconds);
+                var timeout = TimeoutManager.WaitFor((int)remaining.TotalMilliseconds);
 
                 try
                 {

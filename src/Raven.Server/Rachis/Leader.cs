@@ -36,8 +36,9 @@ namespace Raven.Server.Rachis
         private class CommandState
         {
             public long CommandIndex;
-            public TaskCompletionSource<long> TaskCompletionSource;
-            public Action<TaskCompletionSource<long>> OnNotify;
+            public BlittableJsonReaderObject Result;
+            public TaskCompletionSource<(long, BlittableJsonReaderObject)> TaskCompletionSource;
+            public Action<TaskCompletionSource<(long, BlittableJsonReaderObject)>> OnNotify;
         }
 
         private int _hasNewTopology;
@@ -394,7 +395,7 @@ namespace Raven.Server.Rachis
                             tuple.OnNotify(tuple.TaskCompletionSource);
                             return;
                         }
-                        tuple.TaskCompletionSource.TrySetResult(tuple.CommandIndex);
+                        tuple.TaskCompletionSource.TrySetResult((tuple.CommandIndex, tuple.Result));
                     }, value);
                 }
             }
@@ -515,10 +516,9 @@ namespace Raven.Server.Rachis
                 _promotableUpdated.Set();
                 break;
             }
-
         }
 
-        public Task<long> PutAsync(BlittableJsonReaderObject cmd)
+        public Task<(long index, BlittableJsonReaderObject result)> PutAsync(BlittableJsonReaderObject cmd)
         {
             long index;
 
@@ -528,7 +528,7 @@ namespace Raven.Server.Rachis
                 index = _engine.InsertToLeaderLog(context, cmd, RachisEntryFlags.StateMachineCommand);
                 context.Transaction.Commit();
             }
-            var tcs = new TaskCompletionSource<long>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var tcs = new TaskCompletionSource<(long, BlittableJsonReaderObject)>(TaskCreationOptions.RunContinuationsAsynchronously);
             _entries[index] = new CommandState
             {
                 CommandIndex = index,
@@ -540,8 +540,6 @@ namespace Raven.Server.Rachis
         }
         
         public ConcurrentQueue<(string node,AlertRaised error)> ErrorsList = new ConcurrentQueue<(string,AlertRaised)>();
-
-        
 
         public void NotifyAboutException(FollowerAmbassador node, Exception e)
         {
@@ -716,7 +714,7 @@ namespace Raven.Server.Rachis
                 var topologyJson = _engine.SetTopology(context, clusterTopology);
 
                 var index = _engine.InsertToLeaderLog(context, topologyJson, RachisEntryFlags.Topology);
-                var tcs = new TaskCompletionSource<long>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var tcs = new TaskCompletionSource<(long, BlittableJsonReaderObject)>(TaskCreationOptions.RunContinuationsAsynchronously);
                 _entries[index] = new CommandState
                 {
                     TaskCompletionSource = tcs,
@@ -751,11 +749,19 @@ namespace Raven.Server.Rachis
             return clusterTopology.LastNodeId.Substring(0, clusterTopology.LastNodeId.Length - 1) + lastChar;
         }
 
-        public void SetStateOf(long index, Action<TaskCompletionSource<long>> onNotify)
+        public void SetStateOf(long index, Action<TaskCompletionSource<(long, BlittableJsonReaderObject)>> onNotify)
         {
             if (_entries.TryGetValue(index, out CommandState value))
             {
                 value.OnNotify = onNotify;
+            }
+        }
+
+        public void SetStateOf(long index, BlittableJsonReaderObject result)
+        {
+            if (_entries.TryGetValue(index, out CommandState value))
+            {
+                value.Result = result;
             }
         }
     }

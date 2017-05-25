@@ -290,7 +290,14 @@ namespace Voron
 
                     try
                     {
-                        _journalsForReuse[new FileInfo(reusableFile).LastWriteTimeUtc] = reusableFile;
+                        var lastWriteTimeUtcTicks = new FileInfo(reusableFile).LastWriteTimeUtc.Ticks;
+
+                        while (_journalsForReuse.ContainsKey(lastWriteTimeUtcTicks))
+                        {
+                            lastWriteTimeUtcTicks++;
+                        }
+                        
+                        _journalsForReuse[lastWriteTimeUtcTicks] = reusableFile;
                     }
                     catch (Exception ex)
                     {
@@ -381,11 +388,13 @@ namespace Voron
                 return result.Value;
             }
 
+            private static long TickInHour = TimeSpan.FromHours(1).Ticks;
+
             private void AttemptToReuseJournal(string desiredPath, long journalNumber)
             {
                 lock (_journalsForReuse)
                 {
-                    var lastModifed = DateTime.MinValue;
+                    var lastModifed = DateTime.MinValue.Ticks;
                     while (_journalsForReuse.Count > 0)
                     {
                         lastModifed = _journalsForReuse.Keys[_journalsForReuse.Count - 1];
@@ -420,7 +429,7 @@ namespace Voron
                                 continue;
                             }
 
-                            if ((lastModifed - fileInfo.LastWriteTimeUtc).TotalHours > 72)
+                            if (lastModifed - fileInfo.LastWriteTimeUtc.Ticks> TickInHour * 72)
                             {
                                 _journalsForReuse.RemoveAt(0);
                                 TryDelete(fileInfo.FullName);
@@ -944,8 +953,8 @@ namespace Voron
         public OpenFlags SafePosixOpenFlags = OpenFlags.O_DSYNC | PerPlatformValues.OpenFlags.O_DIRECT;
         private readonly Logger _log;
 
-        private readonly SortedList<DateTime, string> _journalsForReuse =
-            new SortedList<DateTime, string>();
+        private readonly SortedList<long, string> _journalsForReuse =
+            new SortedList<long, string>();
 
         private int _numOfCocurrentSyncsPerPhysDrive;
         private int _timeToSyncAfterFlashInSeconds;
@@ -977,7 +986,7 @@ namespace Voron
                 File.Move(filename, newName);
                 lock (_journalsForReuse)
                 {
-                    _journalsForReuse[fileModifiedDate] = newName;
+                    _journalsForReuse[fileModifiedDate.Ticks] = newName;
                 }
             }
             catch (Exception ex)

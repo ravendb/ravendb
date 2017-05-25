@@ -660,7 +660,7 @@ class patch extends viewModelBase {
             .done(result => {
                 if (result.can) {
                     const bulkDocs = documentIds.map(docId => ({
-                        Key: docId,
+                        Id: docId,
                         Type: 'PATCH' as Raven.Client.Documents.Commands.Batches.CommandType,
                         Patch: {
                             Script: this.patchDocument().script()

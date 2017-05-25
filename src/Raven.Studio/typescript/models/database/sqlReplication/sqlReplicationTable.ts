@@ -3,19 +3,19 @@
 class sqlReplicationTable {
 
     tableName = ko.observable<string>().extend({ required: true });
-    documentKeyColumn = ko.observable<string>().extend({ required: true });
+    documentIdColumn = ko.observable<string>().extend({ required: true });
     insertOnly = ko.observable<boolean>(false);
 
     constructor(dto: Raven.Server.Documents.ETL.Providers.SQL.SqlEtlTable) {
         this.tableName(dto.TableName);
-        this.documentKeyColumn(dto.DocumentKeyColumn);
+        this.documentIdColumn(dto.DocumentIdColumn);
         this.insertOnly(dto.InsertOnlyMode);
     }
 
     static empty(): sqlReplicationTable {
         return new sqlReplicationTable({
             TableName: null,
-            DocumentKeyColumn: null,
+            DocumentIdColumn: null,
             InsertOnlyMode: false
         });
     }
@@ -23,7 +23,7 @@ class sqlReplicationTable {
     toDto(): Raven.Server.Documents.ETL.Providers.SQL.SqlEtlTable {
         return {
             TableName: this.tableName(),
-            DocumentKeyColumn: this.documentKeyColumn(),
+            DocumentIdColumn: this.documentIdColumn(),
             InsertOnlyMode: this.insertOnly()
         };
     }

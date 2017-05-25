@@ -76,7 +76,7 @@ namespace Raven.Client.Documents.Subscriptions
         }
 
         public string SubscriptionId { get; private set; }
-        public uint TimeToWaitBeforeConnectionRetryMilliseconds { get; set; }
+        public int TimeToWaitBeforeConnectionRetryMilliseconds { get; set; }
         public bool IgnoreSubscriberErrors { get; set; }
         public SubscriptionOpeningStrategy Strategy { get; set; }
         public int MaxDocsPerBatch { get; set; }

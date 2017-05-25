@@ -32,7 +32,7 @@ class indexErrors extends viewModelBase {
         grid.init((s, t) => this.fetchIndexErrors(s, t), () => 
             [
                 new hyperlinkColumn<IndexErrorPerDocument>(x => x.IndexName, x => appUrl.forQuery(this.activeDatabase(), x.IndexName), "Index name", "25%"),
-                new hyperlinkColumn<IndexErrorPerDocument>(x => x.Document, x => appUrl.forEditDoc(x.Document, this.activeDatabase()), "Document id", "25%"),
+                new hyperlinkColumn<IndexErrorPerDocument>(x => x.Document, x => appUrl.forEditDoc(x.Document, this.activeDatabase()), "Document Id", "25%"),
                 new textColumn<IndexErrorPerDocument>(x => this.formatTimestampAsAgo(x.Timestamp), "Timestamp", "25%"),
                 new textColumn<IndexErrorPerDocument>(x => x.Error, "Error", "25%")
             ]

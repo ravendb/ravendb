@@ -29,13 +29,14 @@ namespace Raven.Server.Documents.Handlers.Admin
                     throw new ArgumentException("Received command must contain a Type field");
                 }
 
-                var etag = await ServerStore.PutCommandAsync(command).ThrowOnTimeout();
+                var (etag, result) = await ServerStore.PutCommandAsync(command).ThrowOnTimeout();
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
                         ["ETag"] = etag,
+                        ["Data"] = result
                     });
                     writer.Flush();
                 }

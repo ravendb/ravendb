@@ -88,7 +88,7 @@ namespace Raven.Server.Rachis
 
         public State CurrentState { get; private set; }
         public TimeoutEvent Timeout { get; private set; }
-        public uint RemoteOperationTimeoutMs { get; private set; }
+        public int RemoteOperationTimeoutMs { get; private set; }
 
         public string LastStateChangeReason => _lastStateChangeReason;
 
@@ -166,7 +166,7 @@ namespace Raven.Server.Rachis
             try
             {
                 _persistentState = env;
-                RemoteOperationTimeoutMs = (uint)configuration.ClusterOperationTimeout.AsTimeSpan.TotalMilliseconds;
+                RemoteOperationTimeoutMs = (int)configuration.ClusterOperationTimeout.AsTimeSpan.TotalMilliseconds;
                 ElectionTimeoutMs = (int)configuration.ElectionTimeout.AsTimeSpan.TotalMilliseconds * (Debugger.IsAttached ? 10 : 1);
                 ContextPool = new TransactionContextPool(_persistentState);
 
@@ -336,7 +336,6 @@ namespace Raven.Server.Rachis
 
         public void SetNewState(State state, IDisposable disposable, long expectedTerm, string stateChangedReason)
         {
-
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction()) // we use the write transaction lock here
             {
@@ -418,7 +417,7 @@ namespace Raven.Server.Rachis
             leader.Start();
         }
 
-        public Task<long> PutAsync(BlittableJsonReaderObject cmd)
+        public Task<(long, BlittableJsonReaderObject)> PutAsync(BlittableJsonReaderObject cmd)
         {
             var leader = _currentLeader;
             if (leader == null)
@@ -453,10 +452,12 @@ namespace Raven.Server.Rachis
             {
                 Log.Info("Switching to candidate state");
             }
+
             var candidate = new Candidate(this)
             {
                 IsForcedElection = forced
             };
+
             SetNewState(State.Candidate, candidate, CurrentTerm, reason);
             candidate.Start();
         }
@@ -548,10 +549,7 @@ namespace Raven.Server.Rachis
             if (engine == null)
                 return;
 
-
             tx.LowLevelTransaction.OnDispose += _ => TaskExecutor.CompleteAndReplace(ref engine._topologyChanged);
-
-
         }
 
         /// <summary>
@@ -1267,7 +1265,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public async Task WaitForTimeout(long knownLeaderTime, uint timeoutMillseconds)
+        public async Task WaitForTimeout(long knownLeaderTime, int timeoutMillseconds)
         {
             Interlocked.Increment(ref _hasTimers);
             try
@@ -1287,7 +1285,7 @@ namespace Raven.Server.Rachis
                     if (await task == false)
                         return;
 
-                    var remaining = timeoutMillseconds - (uint)timePassed;
+                    var remaining = timeoutMillseconds - (int)timePassed;
 
                     task = _leadershipTimeChanged.WaitAsync(remaining);
                 }
@@ -1297,7 +1295,7 @@ namespace Raven.Server.Rachis
                 Interlocked.Decrement(ref _hasTimers);
             }
         }
-        public Task WaitForTimeout(uint timeoutMillseconds)
+        public Task WaitForTimeout(int timeoutMillseconds)
         {
             return WaitForTimeout(_leaderTime, timeoutMillseconds);
         }

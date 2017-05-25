@@ -59,8 +59,10 @@ namespace Sparrow.Utils
             }
         }
 
-        public static async Task WaitFor(uint duration)
+        public static async Task WaitFor(int time)
         {
+            if (time < 0) ThrowOutOfRange();
+            var duration = (uint)time;
             if (duration == 0)
                 return;
 
@@ -88,6 +90,11 @@ namespace Sparrow.Utils
 
         }
 
+        private static void ThrowOutOfRange()
+        {
+            throw new ArgumentOutOfRangeException("time");
+        }
+
         private static TimerTaskHolder GetHolderForDuration(uint duration)
         {
             if (Values.TryGetValue(duration, out var value) == false)
@@ -99,10 +106,10 @@ namespace Sparrow.Utils
 
         public static Task WaitFor(TimeSpan duration, CancellationToken token)
         {
-            return WaitFor((uint)duration.TotalMilliseconds, token);
+            return WaitFor((int)duration.TotalMilliseconds, token);
         }
 
-        public static async Task WaitFor(uint duration, CancellationToken token)
+        public static async Task WaitFor(int duration, CancellationToken token)
         {
             if (duration == 0)
                 return;

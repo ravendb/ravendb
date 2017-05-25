@@ -118,7 +118,7 @@ class apiKeys extends viewModelBase {
 
     updateKeys(serverKeys: Raven.Server.Documents.Handlers.BatchRequestParser.CommandData[]) {
         this.apiKeys().forEach(key => {
-            var serverKey = serverKeys.find(k => k.Key === key.getId());
+            var serverKey = serverKeys.find(k => k.Id === key.getId());
             if (serverKey) {
                 key.__metadata.etag(serverKey.Etag);
                 //TODO: key.__metadata.lastModified(serverKey.Metadata["@last-modified"]); 

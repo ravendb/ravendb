@@ -843,7 +843,15 @@ namespace Voron.Impl.Journal
                 {
                     GatherInformationToStartSync();
 
+                    if (_parent._waj._env.Disposed)
+                        return;
+
                     CallPagerSync();
+
+
+                    // can take a long time, need to check again
+                    if (_parent._waj._env.Disposed)
+                        return;
 
                     UpdateDatabaseStateAfterSync();
                 }
@@ -873,6 +881,9 @@ namespace Voron.Impl.Journal
                 {
                     lock (_parent._flushingLock)
                     {
+                        if (_parent._waj._env.Disposed)
+                            return;
+
                         _parent._totalWrittenButUnsyncedBytes -= _currentTotalWrittenBytes;
                         _parent.UpdateFileHeaderAfterDataFileSync(_lastSyncedJournal, _lastSyncedTransactionId, ref _transactionHeader);
 

@@ -400,7 +400,7 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
-                    var etag = await _serverStore.SendToLeaderAsync(command);
+                    var (etag,result) = await _serverStore.SendToLeaderAsync(command);
 
                     await _documentDatabase.WaitForIndexNotification(etag);
 
@@ -436,7 +436,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var command = PutAutoIndexCommand.Create(definition, _documentDatabase.Name);
 
-                var index = await _serverStore.SendToLeaderAsync(command);
+                var (index, result) = await _serverStore.SendToLeaderAsync(command);
 
                 await _documentDatabase.WaitForIndexNotification(index);
 
@@ -644,7 +644,7 @@ namespace Raven.Server.Documents.Indexes
                 if (index == null)
                     return false;
 
-                var etag = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
+                var (etag, result) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
 
                 await _documentDatabase.WaitForIndexNotification(etag);
 
@@ -666,9 +666,9 @@ namespace Raven.Server.Documents.Indexes
                 if (index == null)
                     IndexDoesNotExistException.ThrowFor(etag);
 
-                etag = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
+                var (resultEtag,result) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
 
-                await _documentDatabase.WaitForIndexNotification(etag);
+                await _documentDatabase.WaitForIndexNotification(resultEtag);
             }
             finally
             {
@@ -1189,7 +1189,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var command = new SetIndexLockCommand(name, mode, _documentDatabase.Name);
 
-                var etag = await _serverStore.SendToLeaderAsync(command);
+                var (etag, result) = await _serverStore.SendToLeaderAsync(command);
 
                 await _documentDatabase.WaitForIndexNotification(etag);
             }
@@ -1218,7 +1218,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var command = new SetIndexPriorityCommand(name, priority, _documentDatabase.Name);
 
-                var etag = await _serverStore.SendToLeaderAsync(command);
+                var (etag, result) = await _serverStore.SendToLeaderAsync(command);
 
                 await _documentDatabase.WaitForIndexNotification(etag);
             }

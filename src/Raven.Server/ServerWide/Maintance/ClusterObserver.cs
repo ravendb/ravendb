@@ -58,7 +58,7 @@ namespace Raven.Server.ServerWide.Maintance
                 {
                     var newStats = _maintenance.GetStats();
 
-                    var delay = TimeoutManager.WaitFor((uint)SupervisorSamplePeriod.TotalMilliseconds, token);
+                    var delay = TimeoutManager.WaitFor((int)SupervisorSamplePeriod.TotalMilliseconds, token);
                     await AnalyzeLatestStats(newStats, prevStats);
                     prevStats = newStats;
                     await delay;
@@ -259,7 +259,7 @@ namespace Raven.Server.ServerWide.Maintance
             return true;
         }
 
-        private Task<long> UpdateTopology(BlittableJsonReaderObject cmd)
+        private Task<(long, BlittableJsonReaderObject)> UpdateTopology(BlittableJsonReaderObject cmd)
         {
             
             if (_engine.LeaderTag != _server.NodeTag)

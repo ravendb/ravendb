@@ -15,7 +15,7 @@ class getDocumentRevisionsCommand extends commandBase {
 
     execute(): JQueryPromise<pagedResult<document>> {
         const args = {
-            key: this.id, 
+            id: this.id, 
             start: this.skip,
             pageSize: this.take,
             'metadata-only': this.metadataOnly

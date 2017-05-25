@@ -54,7 +54,7 @@ class document implements documentBase {
         const dto = this.toDto(true);
         const bulkDoc = {
             Document: dto,
-            Key: this.getId(),
+            Id: this.getId(),
             Type: method
         } as Raven.Server.Documents.Handlers.BatchRequestParser.CommandData;
 

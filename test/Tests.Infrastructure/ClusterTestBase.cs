@@ -288,7 +288,7 @@ namespace Tests.Infrastructure
             var serversToPorts = new Dictionary<RavenServer,string>();
             for (var i = 0; i < numberOfNodes; i++)
             {
-                var serverUrl = $"http://localhost:{GetPort()}";
+                var serverUrl = UseFiddler($"http://127.0.0.1:{GetPort()}");
                 var server = GetNewServer(new Dictionary<string, string>()
                 {                    
                     {"Raven/ServerUrl", serverUrl}
