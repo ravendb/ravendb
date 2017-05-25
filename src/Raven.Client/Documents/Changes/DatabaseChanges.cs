@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Changes
         private readonly Uri _url;
 
         private readonly Action _onDispose;
-        private readonly ClientWebSocket _client;
+        private ClientWebSocket _client;
 
         private readonly Task _task;
         private readonly CancellationTokenSource _cts;
@@ -75,7 +75,7 @@ namespace Raven.Client.Documents.Changes
             }
         }
 
-        public bool Connected => _client.State == WebSocketState.Open;
+        public bool Connected => _client?.State == WebSocketState.Open;
 
         public Task<IDatabaseChanges> EnsureConnectedNow()
         {
@@ -373,6 +373,9 @@ namespace Raven.Client.Documents.Changes
                 }
                 catch (Exception e)
                 {
+                    using (var client = _client)
+                        _client = new ClientWebSocket();
+
                     ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
 
                     NotifyAboutError(e);

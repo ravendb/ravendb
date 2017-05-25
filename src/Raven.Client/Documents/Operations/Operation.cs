@@ -5,6 +5,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Changes;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
@@ -101,6 +102,14 @@ namespace Raven.Client.Documents.Operations
 
         public void OnError(Exception error)
         {
+            if (error is ChangeProcessingException)
+                return;
+
+            _subscription?.Dispose();
+
+#pragma warning disable 4014
+            Task.Factory.StartNew(Initialize);
+#pragma warning restore 4014
         }
 
         public void OnCompleted()
