@@ -17,6 +17,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Server;
 using Raven.Client.Server.Commands;
+using Raven.Client.Server.Operations;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
@@ -293,11 +294,6 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/periodic-backup/update", "POST", "/admin/config-periodic-backup?name={databaseName:string}")]
         public async Task UpdatePeriodicBackup()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            string errorMessage;
-            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
             await DatabaseConfigurations(ServerStore.ModifyPeriodicBackup, 
                 "update-periodic-backup-config",
                 fillJson: (json, readerObject, index) =>
@@ -311,6 +307,46 @@ namespace Raven.Server.Web.System
         public async Task DeletePeriodicBackup()
         {
             await DatabaseConfigurations(ServerStore.DeletePeriodicBackup, "delete-periodic-backup-config");
+        }
+
+        [RavenAction("/admin/periodic-backup/status", "GET", "/admin/delete-periodic-status?name={databaseName:string}")]
+        public Task GetPeriodicBackupBundleStatus()
+        {
+            var taskId = GetLongQueryString("taskId", required: true);
+            Debug.Assert(taskId != null);
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            string errorMessage;
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            TransactionOperationContext context;
+            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
+            using (var statusBlittable =
+                ServerStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(name, taskId.Value)))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName(nameof(GetPeriodicBackupStatusOperationResult.Status));
+                writer.WriteObject(statusBlittable);
+                writer.WriteEndObject();
+                writer.Flush();
+            }
+
+            return Task.CompletedTask;
+
+            /*DocumentsOperationContext context;
+            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.OpenReadTransaction();
+                writer.WriteStartObject();
+                writer.WritePropertyName(nameof(GetPeriodicBackupStatusOperationResult.Status));
+                writer.WriteObject(Database.ConfigurationStorage.PeriodicBackupStorage.GetPeriodicBackupStatusAsBlittable(taskId.Value));
+                writer.WriteEndObject();
+                writer.Flush();
+            }*/
+            //return Task.CompletedTask;
         }
 
         private async Task DatabaseConfigurations(

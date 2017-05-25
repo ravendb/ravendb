@@ -55,7 +55,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     .GetField(nameof(PeriodicBackupRunner.MaxTimerTimeout), BindingFlags.Instance | BindingFlags.NonPublic)
                     .SetValue(periodicBackupRunner, TimeSpan.FromMilliseconds(5));
 
-                var operation = new GetPeriodicBackupStatusOperation(1); //TODO
+                var operation = new GetPeriodicBackupStatusOperation(store.Database, 1); //TODO
                     //await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.DefaultDatabase));
                 SpinWait.SpinUntil(() =>
                 {
@@ -130,7 +130,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 SpinWait.SpinUntil(() =>
                 {
-                    var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
+                    var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
                     var status = store.Admin.Server.Send(getPeriodicBackupStatus).Status;
                     return status?.LastFullBackup != null;
                 }, 2000);
@@ -144,7 +144,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 SpinWait.SpinUntil(() =>
                 {
                     var getPeriodicBackupStatus = 
-                        new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
+                        new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
                     var status = store.Admin.Server.Send(getPeriodicBackupStatus).Status;
                     return status?.LastFullBackup != null && status.LastIncrementalBackup != null;
                 }, TimeSpan.FromMinutes(1));
@@ -186,7 +186,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await store.Admin.Server.SendAsync(operation);
                     await session.SaveChangesAsync();
                 }
-                var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(1); //TODO
+                var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(store.Database, 1); //TODO
 
                 SpinWait.SpinUntil(() =>
                 {

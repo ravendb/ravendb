@@ -9,33 +9,36 @@ namespace Raven.Client.Server.Operations
 {
     public class GetPeriodicBackupStatusOperation : IServerOperation<GetPeriodicBackupStatusOperationResult>
     {
+        private readonly string _databaseName;
         private readonly long _taskId;
-
-        public GetPeriodicBackupStatusOperation(long taskId)
+        
+        public GetPeriodicBackupStatusOperation(string databaseName, long taskId)
         {
-            this._taskId = taskId;
+            _databaseName = databaseName;
+            _taskId = taskId;
         }
 
         public RavenCommand<GetPeriodicBackupStatusOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetPeriodicBackupStatusCommand(_taskId);
+            return new GetPeriodicBackupStatusCommand(_databaseName, _taskId);
         }
     }
 
     public class GetPeriodicBackupStatusCommand : RavenCommand<GetPeriodicBackupStatusOperationResult>
     {
         public override bool IsReadRequest => true;
+        private readonly string _databaseName;
         private readonly long _taskId;
 
-        public GetPeriodicBackupStatusCommand(long taskId)
+        public GetPeriodicBackupStatusCommand(string databaseName, long taskId)
         {
+            _databaseName = databaseName;
             _taskId = taskId;
         }
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/periodic-backup/status?taskId={_taskId}";
-
+            url = $"{node.Url}/admin/periodic-backup/status?name={_databaseName}&taskId={_taskId}";
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Get
