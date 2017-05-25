@@ -36,12 +36,6 @@ class cluster extends viewModelBase {
         this.bindToCurrentInstance("deleteNode");
     }
 
-    activate(args: any) {
-        super.activate(args);
-
-        this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.fetchDatabases()));
-    }
-
     addAnotherServerToCluster() {
         eventsCollector.default.reportEvent("cluster", "add-server");
 
