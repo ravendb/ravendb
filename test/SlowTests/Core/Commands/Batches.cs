@@ -33,14 +33,14 @@ namespace SlowTests.Core.Commands
                         {
                             ["Name"] = "James"
                         }),
-                        new PatchCommandData("users/1", null, new PatchRequest
+                        new PatchCommandData("users/1-A", null, new PatchRequest
                         {
                             Script = "this.Name = 'Nhoj';"
                         }, null),
-                        new DeleteCommandData("users/2", null)
+                        new DeleteCommandData("users/2-A", null)
                     });
 
-                    dynamic multiLoadResult = await commands.GetAsync(new[] { "users/1", "users/2", "users/3" });
+                    dynamic multiLoadResult = await commands.GetAsync(new[] { "users/1-A", "users/2-A", "users/3" });
 
                     Assert.Equal(3, multiLoadResult.Count);
 
