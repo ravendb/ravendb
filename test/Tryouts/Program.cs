@@ -18,11 +18,11 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new FastTests.Server.Replication.DisableDatabasePropagationInRaftCluster())
+                using (var a = new FastTests.Server.NotificationCenter.NotificationCenterTests())
                 {
                     try
                     {
-                        a.DisableDatabaseToggleOperation_should_propagate_through_raft_cluster().Wait();
+                        a.Can_dismiss_persistent_action_and_get_notified_about_it();
                     }
                     catch (Exception e)
                     {
