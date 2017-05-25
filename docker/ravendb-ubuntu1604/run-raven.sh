@@ -11,7 +11,7 @@ then
         /Raven/ServerUrl/Tcp=tcp://0.0.0.0:38888 \
         /Raven/AllowAnonymousUserToAccessTheServer=${AllowAnonymousUserToAccessTheServer} \
         /Raven/DataDir=${DataDir} \
-        --run-as-service \
+        --daemon \
         --print-id
 else
     ./Raven.Server \
@@ -19,6 +19,6 @@ else
         /Raven/ServerUrl/Tcp=tcp://0.0.0.0:38888 \
         /Raven/DataDir=${DataDir} \
         --config-path "${CUSTOM_SETTINGS_PATH}" \
-        --run-as-service \
+        --daemon \
         --print-id
 fi
