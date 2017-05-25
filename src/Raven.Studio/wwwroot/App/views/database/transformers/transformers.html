@@ -22,10 +22,6 @@
                 </div>
 
                 <div class="transformersToolbar-actions">
-                    <a class="btn btn-primary" data-bind="attr: { href: newTransformerUrl }">
-                        <i class="icon-plus"></i>
-                        <span>New transformer</span>
-                    </a>
                     <div class="btn-group-label" data-bind="css: { active: selectedTransformersName().length }" data-label="Selection" role="group">
                         <div class="btn-group">
                             <button class="btn btn-danger" data-bind="click: deleteSelectedTransformers, enable: selectedTransformersName().length">
@@ -56,6 +52,10 @@
                             </ul>
                         </div>
                     </div>
+                    <a class="btn btn-primary" data-bind="attr: { href: newTransformerUrl }">
+                        <i class="icon-plus"></i>
+                        <span>New transformer</span>
+                    </a>
                 </div>
             </div>
         </div>
