@@ -54,6 +54,9 @@ namespace FastTests.Issues
             {
                 try
                 {
+                    if (t == typeof(Microsoft.Extensions.CommandLineUtils.CommandParsingException))
+                        continue;
+
                     Assert.False(HasInvalidProperties(t), $"The type {t.FullName} should not have pointer or BlittableXXX properties");
                 }
                 catch (Exception e)
