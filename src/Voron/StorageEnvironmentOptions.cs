@@ -17,6 +17,7 @@ using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Platform.Posix;
 using Voron.Platform.Win32;
+using Voron.Util.Settings;
 
 namespace Voron
 {
@@ -292,7 +293,7 @@ namespace Voron
                         {
                             lastWriteTimeUtcTicks++;
                         }
-                        
+
                         _journalsForReuse[lastWriteTimeUtcTicks] = reusableFile;
                     }
                     catch (Exception ex)
@@ -308,7 +309,7 @@ namespace Voron
             {
                 try
                 {
-                    return Directory.GetFiles(_journalPath, $"{RecyclableJournalFileNamePrefix}.*");
+                    return Directory.GetFiles(_journalPath.FullPath, $"{RecyclableJournalFileNamePrefix}.*");
                 }
                 catch (Exception)
                 {
@@ -386,7 +387,7 @@ namespace Voron
 
             private static long TickInHour = TimeSpan.FromHours(1).Ticks;
 
-            private void AttemptToReuseJournal(string desiredPath, long desiredSize)
+            private void AttemptToReuseJournal(VoronPathSetting desiredPath, long desiredSize)
             {
                 lock (_journalsForReuse)
                 {
@@ -425,7 +426,7 @@ namespace Voron
                                 continue;
                             }
 
-                            if (lastModifed - fileInfo.LastWriteTimeUtc.Ticks> TickInHour * 72)
+                            if (lastModifed - fileInfo.LastWriteTimeUtc.Ticks > TickInHour * 72)
                             {
                                 _journalsForReuse.RemoveAt(0);
                                 TryDelete(fileInfo.FullName);
@@ -977,7 +978,7 @@ namespace Voron
             {
                 var fileModifiedDate = new FileInfo(filename.FullPath).LastWriteTimeUtc;
                 var counter = Interlocked.Increment(ref _reuseCounter);
-                var newName = Path.Combine(Path.GetDirectoryName(filename), RecyclableJournalName(counter));
+                var newName = Path.Combine(Path.GetDirectoryName(filename.FullPath), RecyclableJournalName(counter));
 
                 File.Move(filename.FullPath, newName);
                 lock (_journalsForReuse)

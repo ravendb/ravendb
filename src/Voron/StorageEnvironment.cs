@@ -110,7 +110,7 @@ namespace Voron
                 _dataPager = options.DataPager;
                 _freeSpaceHandling = new FreeSpaceHandling();
                 _headerAccessor = new HeaderAccessor(this);
-                NumOfCocurrentSyncsPerPhysDrive = options.NumOfConcurrentSyncsPerPhysDrive;
+                NumOfConcurrentSyncsPerPhysDrive = options.NumOfConcurrentSyncsPerPhysDrive;
                 TimeToSyncAfterFlashInSeconds = options.TimeToSyncAfterFlashInSeconds;
 
                 Debug.Assert(_dataPager.NumberOfAllocatedPages != 0);
