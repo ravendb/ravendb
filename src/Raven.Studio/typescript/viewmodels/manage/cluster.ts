@@ -27,9 +27,6 @@ import clusterTopology = require("models/database/cluster/clusterTopology");
 import clusterNode = require("models/database/cluster/clusterNode");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 
-
-//TODO: use live topology instead of fetching and refreshing it
-
 class cluster extends viewModelBase {
 
     topology = clusterTopologyManager.default.topology;
@@ -37,6 +34,12 @@ class cluster extends viewModelBase {
     constructor() {
         super();
         this.bindToCurrentInstance("deleteNode");
+    }
+
+    activate(args: any) {
+        super.activate(args);
+
+        this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.fetchDatabases()));
     }
 
     addAnotherServerToCluster() {
