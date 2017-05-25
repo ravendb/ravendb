@@ -16,7 +16,7 @@ namespace SlowTests.Issues
             var l = new List<string>();
             for (var i = 0; i < 1040; i++)
             {
-                l.Add("orders/" + i);
+                l.Add("orders/" + i+ "-A");
             }
             using (var store = GetDocumentStore())
             {
@@ -24,7 +24,7 @@ namespace SlowTests.Issues
                 {
                     for (var i = 0; i < 1040; i++)
                     {
-                        var id = "orders/" + i;
+                        var id = "orders/" + i+ "-A";
                         l.Add(id);
                         bulk.Store(new Order(), id);
                     }

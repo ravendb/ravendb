@@ -100,7 +100,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 using (var session = src.OpenSession())
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = session.Load<User>("users/1-A");
 
                     user.Name = "James Doe";
 
@@ -115,7 +115,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                     Assert.Equal(5, stats.CountOfDocuments); // 3 docs and 2 HiLo 
 
-                    var user = session.Load<User>("users/1");
+                    var user = session.Load<User>("users/1-A");
                     Assert.Equal("James Doe", user.Name);
                 }
 
@@ -125,7 +125,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 using (var session = src.OpenSession())
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = session.Load<User>("users/1-A");
 
                     session.Delete(user);
 
@@ -140,7 +140,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                     Assert.Equal(4, stats.CountOfDocuments); // 2 docs and 2 HiLo 
 
-                    var user = session.Load<User>("users/1");
+                    var user = session.Load<User>("users/1-A");
                     Assert.Null(user);
                 }
             }
@@ -301,7 +301,7 @@ if (this['@metadata']['@collection'] != 'Orders')
 
                 using (var session = src.OpenSession())
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = session.Load<User>("users/1-A");
 
                     user.Name = "James Doe";
 
@@ -322,7 +322,7 @@ if (this['@metadata']['@collection'] != 'Orders')
 
                 using (var session = src.OpenSession())
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = session.Load<User>("users/1-A");
 
                     session.Delete(user);
 
