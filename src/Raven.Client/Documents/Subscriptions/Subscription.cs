@@ -262,7 +262,7 @@ namespace Raven.Client.Documents.Subscriptions
                 {
                     try
                     {
-                        await requestExecutor.ExecuteAsync(_redirectNode, context, command).ConfigureAwait(false);
+                        await requestExecutor.ExecuteAsync(_redirectNode, context, command, shouldRetry: false).ConfigureAwait(false);
 
                     }
                     catch (Exception)
