@@ -81,7 +81,7 @@ namespace SlowTests.Server.Rachis
                         ["Name"] = "test",
                         ["Value"] = commandCount
                     }, "test"));
-                    Assert.True(await task.WaitAsync(leader.ElectionTimeoutMs * 5));
+                    Assert.True(await task.WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 5)));
                     await task;
                     Assert.True(false, "We should have gotten an error");
                 }

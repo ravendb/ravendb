@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.TcpHandlers
             await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionIdIsApplicable(SubscriptionId, TimeSpan.FromSeconds(15));
 
             _connectionState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
-            int timeout = 16;
+            var timeout = TimeSpan.FromMilliseconds(16);
 
             while (true)
             {
@@ -112,12 +112,12 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
                 catch (TimeoutException)
                 {
-                    if (timeout == 0 && _logger.IsInfoEnabled)
+                    if (timeout == TimeSpan.Zero && _logger.IsInfoEnabled)
                     {
                         _logger.Info(
                             $"Subscription Id {SubscriptionId} from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} starts to wait until previous connection from {_connectionState.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} is released");
                     }
-                    timeout = Math.Max(250, _options.TimeToWaitBeforeConnectionRetryMilliseconds / 2);
+                    timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)_options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2));
                     await SendHeartBeat();
                 }
             }
@@ -440,7 +440,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         while (true)
                         {
                             var result = await Task.WhenAny(replyFromClientTask,
-                                    TimeoutManager.WaitFor(5000, CancellationTokenSource.Token)).ConfigureAwait(false);
+                                    TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(5000), CancellationTokenSource.Token)).ConfigureAwait(false);
                             CancellationTokenSource.Token.ThrowIfCancellationRequested();
                             if (result == replyFromClientTask)
                             {
@@ -542,7 +542,7 @@ namespace Raven.Server.Documents.TcpHandlers
             do
             {
                 var hasMoreDocsTask = _waitForMoreDocuments.WaitAsync();
-                var resultingTask = await Task.WhenAny(hasMoreDocsTask, pendingReply, TimeoutManager.WaitFor(3000)).ConfigureAwait(false);
+                var resultingTask = await Task.WhenAny(hasMoreDocsTask, pendingReply, TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(3000))).ConfigureAwait(false);
 
                 if (CancellationTokenSource.IsCancellationRequested)
                     return false;

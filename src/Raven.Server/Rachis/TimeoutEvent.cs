@@ -86,7 +86,7 @@ namespace Raven.Server.Rachis
         }
 
 
-        public bool ExpiredLastDeferral(int maxInInMs, out string leader)
+        public bool ExpiredLastDeferral(double maxInMs, out string leader)
         {
             var ticks = Interlocked.Read(ref _lastDeferredTicks);
             var elapsed = (DateTime.UtcNow - new DateTime(ticks));
@@ -96,7 +96,7 @@ namespace Raven.Server.Rachis
                 return true; // if times goes backward (clock shift, etc), assume expired
             }
             leader = _currentLeader;
-            return elapsed.TotalMilliseconds > maxInInMs;
+            return elapsed.TotalMilliseconds > maxInMs;
         }
 
         public void Dispose()

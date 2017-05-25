@@ -242,7 +242,7 @@ namespace Raven.Server.Rachis
                 _newEntry.Set(); //This is so the noop would register right away
                 while (_running)
                 {
-                    switch (WaitHandle.WaitAny(handles, _engine.ElectionTimeoutMs))
+                    switch (WaitHandle.WaitAny(handles, _engine.ElectionTimeout))
                     {
                         case 0: // new entry
                             _newEntry.Reset();
@@ -313,7 +313,7 @@ namespace Raven.Server.Rachis
             sb.AppendLine("Triggered because of:");
             foreach (var timeoutsForVoter in _timeoutsForVoters)
             {
-                sb.Append($"\t{timeoutsForVoter.voter.Tag} - {Math.Round(timeoutsForVoter.time, 3)} ms").AppendLine();
+                sb.Append($"\t{timeoutsForVoter.voter.Tag} - {Math.Round(timeoutsForVoter.time.TotalMilliseconds, 3)} ms").AppendLine();
             }
             foreach (var ambassador in _voters)
             {
@@ -407,7 +407,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private readonly List<(FollowerAmbassador voter, double time)> _timeoutsForVoters = new List<(FollowerAmbassador, double)>();
+        private readonly List<(FollowerAmbassador voter, TimeSpan time)> _timeoutsForVoters = new List<(FollowerAmbassador, TimeSpan)>();
         private void EnsureThatWeHaveLeadership(int majority)
         {
             var now = DateTime.UtcNow;
@@ -415,9 +415,9 @@ namespace Raven.Server.Rachis
             _timeoutsForVoters.Clear();
             foreach (var voter in _voters.Values)
             {
-                var time = (now - voter.LastReplyFromFollower).TotalMilliseconds;
+                var time = (now - voter.LastReplyFromFollower);
                 _timeoutsForVoters.Add((voter, time));
-                if (time < _engine.ElectionTimeoutMs)
+                if (time < _engine.ElectionTimeout)
                     peersHeardFromInElectionTimeout++;
             }
             if (peersHeardFromInElectionTimeout < majority)

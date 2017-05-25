@@ -145,7 +145,7 @@ namespace Raven.Server.ServerWide.Maintance
             {
                 bool needToWait = false;
                 var onErrorDelayTime = _parent.Config.OnErrorDelayTime.AsTimeSpan;
-                var recieveFromWorkerTimeout = _parent.Config.RecieveFromWorkerTimeout.AsTimeSpan;
+                var receiveFromWorkerTimeout = _parent.Config.RecieveFromWorkerTimeout.AsTimeSpan;
 
                 while (_token.IsCancellationRequested == false)
                 {
@@ -154,7 +154,7 @@ namespace Raven.Server.ServerWide.Maintance
                         if (needToWait)
                         {
                             needToWait = false; // avoid tight loop if there was timeout / error
-                            await TimeoutManager.WaitFor((int)onErrorDelayTime.TotalMilliseconds, _token).ConfigureAwait(false);
+                            await TimeoutManager.WaitFor(onErrorDelayTime, _token).ConfigureAwait(false);
                         }
                         using (var connection = await ConnectToClientNodeAsync(_tcpConnection))
                         {
@@ -163,13 +163,13 @@ namespace Raven.Server.ServerWide.Maintance
                                 using (_contextPool.AllocateOperationContext(out JsonOperationContext context))
                                 {                                    
                                     var readResponseTask = context.ReadForMemoryAsync(connection, _readStatusUpdateDebugString, _token);
-                                    var timeout = TimeoutManager.WaitFor((int)recieveFromWorkerTimeout.TotalMilliseconds, _token);
+                                    var timeout = TimeoutManager.WaitFor(receiveFromWorkerTimeout, _token);
 
                                     if (await Task.WhenAny(readResponseTask, timeout) == timeout)
                                     {
                                         if (_log.IsInfoEnabled)
                                         {
-                                            _log.Info($"Timeout occured while collection info from {ClusterTag}");
+                                            _log.Info($"Timeout occurred while collection info from {ClusterTag}");
                                         }
                                         ReceivedReport = new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>(), 
                                             ClusterNodeStatusReport.ReportStatus.Timeout,

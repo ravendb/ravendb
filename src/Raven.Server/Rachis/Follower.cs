@@ -483,7 +483,7 @@ namespace Raven.Server.Rachis
 
         private void MaybeNotifyLeaderThatWeAreSillAlive(TransactionOperationContext context, Stopwatch sp)
         {
-            if (sp.ElapsedMilliseconds <= _engine.ElectionTimeoutMs / 4)
+            if (sp.ElapsedMilliseconds <= _engine.ElectionTimeout.TotalMilliseconds / 4)
                 return;
 
             sp.Restart();

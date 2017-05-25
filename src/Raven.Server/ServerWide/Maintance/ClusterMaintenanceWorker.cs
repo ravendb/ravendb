@@ -63,13 +63,13 @@ namespace Raven.Server.ServerWide.Maintance
                             ctx.Write(writer, djv);
                         }
                     }
-                    await TimeoutManager.WaitFor((int)WorkerSamplePeriod.TotalMilliseconds, _token).ConfigureAwait(false);
+                    await TimeoutManager.WaitFor(WorkerSamplePeriod, _token).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
                     if (_logger.IsInfoEnabled)
                     {
-                        _logger.Info($"Exception occured while collecting info from {_server.NodeTag}", e);
+                        _logger.Info($"Exception occurred while collecting info from {_server.NodeTag}", e);
                     }
                     return;
                 }

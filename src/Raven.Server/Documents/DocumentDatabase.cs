@@ -593,7 +593,7 @@ namespace Raven.Server.Documents
 
 
 
-        public Task WaitForIndexNotification(long index) => _rachisLogIndexNotifications.WaitForIndexNotification(index,(int)Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan.TotalMilliseconds);
+        public Task WaitForIndexNotification(long index) => _rachisLogIndexNotifications.WaitForIndexNotification(index, Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan);
 
         private readonly RachisLogIndexNotifications _rachisLogIndexNotifications;
         public byte[] MasterKey;

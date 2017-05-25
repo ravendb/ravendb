@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent;
+using System.Collections.Concurrent; // TODO: Use our own fast ConcurrentDictionary
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,7 +14,7 @@ namespace Sparrow.Utils
 {
     public static class TimeoutManager
     {
-        private static readonly ConcurrentDictionary<uint, TimerTaskHolder> Values = new ConcurrentDictionary<uint, TimerTaskHolder>();
+        private static readonly ConcurrentDictionary<TimeSpan, TimerTaskHolder> Values = new ConcurrentDictionary<TimeSpan, TimerTaskHolder>();
 
         private class TimerTaskHolder  : IDisposable
         {
@@ -44,12 +44,8 @@ namespace Sparrow.Utils
                 }
             }
 
-            public TimerTaskHolder(uint timeout)
+            public TimerTaskHolder(TimeSpan period)
             {
-                var period = TimeSpan.FromMilliseconds(timeout);
-                // TODO: Use the ctor which take uint once it is available.
-                // https://github.com/dotnet/coreclr/blob/master/src/mscorlib/src/System/Threading/Timer.cs#L710
-                // https://github.com/dotnet/coreclr/blob/c55f023f542e63e93a300752432de7bcc4104b3b/src/mscorlib/src/System/Threading/Timer.cs#L710
                 _timer = new Timer(TimerCallback, null, period, period);
             }
 
@@ -59,18 +55,20 @@ namespace Sparrow.Utils
             }
         }
 
-        public static async Task WaitFor(int time)
+        public static async Task WaitFor(TimeSpan time)
         {
-            if (time < 0) ThrowOutOfRange();
-            var duration = (uint)time;
-            if (duration == 0)
+            if (time == TimeSpan.Zero)
                 return;
+
+            var duration = (long)time.TotalMilliseconds;
+            if (duration < 0)
+                ThrowOutOfRange();
 
             var mod = duration % 50;
             if (mod != 0)
                 duration += 50 - mod;
 
-            var value = GetHolderForDuration(duration);
+            var value = GetHolderForDuration(TimeSpan.FromMilliseconds(duration));
 
             var sp = Stopwatch.StartNew();
             await value.NextTask;
@@ -80,7 +78,7 @@ namespace Sparrow.Utils
             if (sp.ElapsedMilliseconds >= (duration - step))
                 return;
 
-            value = GetHolderForDuration(step);
+            value = GetHolderForDuration(TimeSpan.FromMilliseconds(step));
 
             do
             {
@@ -95,7 +93,7 @@ namespace Sparrow.Utils
             throw new ArgumentOutOfRangeException("time");
         }
 
-        private static TimerTaskHolder GetHolderForDuration(uint duration)
+        private static TimerTaskHolder GetHolderForDuration(TimeSpan duration)
         {
             if (Values.TryGetValue(duration, out var value) == false)
             {
@@ -104,14 +102,9 @@ namespace Sparrow.Utils
             return value;
         }
 
-        public static Task WaitFor(TimeSpan duration, CancellationToken token)
+        public static async Task WaitFor(TimeSpan duration, CancellationToken token)
         {
-            return WaitFor((int)duration.TotalMilliseconds, token);
-        }
-
-        public static async Task WaitFor(int duration, CancellationToken token)
-        {
-            if (duration == 0)
+            if (duration == TimeSpan.Zero)
                 return;
 
             token.ThrowIfCancellationRequested();

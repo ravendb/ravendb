@@ -58,7 +58,7 @@ namespace Raven.Server.ServerWide.Maintance
                 {
                     var newStats = _maintenance.GetStats();
 
-                    var delay = TimeoutManager.WaitFor((int)SupervisorSamplePeriod.TotalMilliseconds, token);
+                    var delay = TimeoutManager.WaitFor(SupervisorSamplePeriod, token);
                     await AnalyzeLatestStats(newStats, prevStats);
                     prevStats = newStats;
                     await delay;

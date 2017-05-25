@@ -183,7 +183,7 @@ namespace Raven.Server.ServerWide
         private readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
         public async Task WaitForIndexNotification(long index)
         {
-            await _rachisLogIndexNotifications.WaitForIndexNotification(index, _parent.RemoteOperationTimeoutMs);
+            await _rachisLogIndexNotifications.WaitForIndexNotification(index, _parent.RemoteOperationTimeout);
         }
 
         private unsafe void RemoveNodeFromDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
@@ -694,7 +694,7 @@ namespace Raven.Server.ServerWide
             _notifiedListeners = new AsyncManualResetEvent(token);
         }
 
-        public async Task WaitForIndexNotification(long index, int? timeoutInMs = null)
+        public async Task WaitForIndexNotification(long index, TimeSpan? timeoutInMs = null)
         {
             Task timeoutTask = null;
             if (timeoutInMs.HasValue)
@@ -713,9 +713,9 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static void ThrowTimeoutException(int value, long index)
+        private static void ThrowTimeoutException(TimeSpan value, long index)
         {
-            throw new TimeoutException("Waited for " + TimeSpan.FromMilliseconds(value) + " but didn't get index notification for " + index);
+            throw new TimeoutException("Waited for " + value + " but didn't get index notification for " + index);
         }
 
         public void NotifyListenersAbout(long index)
