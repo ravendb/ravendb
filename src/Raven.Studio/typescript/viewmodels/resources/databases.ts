@@ -180,12 +180,10 @@ class databases extends viewModelBase {
     }
 
     createAllDocumentsUrlObservableForNode(dbInfo: databaseInfo, node: clusterNode) {
-        const db = dbInfo.asDatabase();
-
         return ko.pureComputed(() => {
             const currentNodeTag = this.clusterManager.nodeTag();
             const nodeTag = node.tag();
-            const link = appUrl.forDocuments(null, db);
+            const link = appUrl.forDocuments(null, dbInfo);
             if (currentNodeTag === nodeTag) {
                 return link;
             } else {
