@@ -2,33 +2,41 @@
 
 import clusterTopology = require("models/database/cluster/clusterTopology");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
+import changesContext = require("common/changesContext");
 
-class clusterTopologyMananger {
+class clusterTopologyManager {
 
-    static default = new clusterTopologyMananger();
+    static default = new clusterTopologyManager();
 
     topology = ko.observable<clusterTopology>();
 
     nodeTag: KnockoutComputed<string>;
 
     init(): JQueryPromise<clusterTopology> {
-        return this.forceRefresh();
+        return this.fetchTopology();
+    }
+
+    private fetchTopology() {
+        return new getClusterTopologyCommand(window.location.host)
+            .execute()
+            .done(topology => {
+                this.topology(topology);
+            });
     }
 
     constructor() {
         this.initObservables();
     }
 
-    //TODO: connect websocket updates - waitin for: RavenDB-6929
+    setupGlobalNotifications() {
+        const serverWideClient = changesContext.default.serverNotifications();
 
-    //TODO: do we want to use this? 
-    forceRefresh() {
-        return new getClusterTopologyCommand(window.location.host)
-            .execute()
-            .done(topology => {
-                this.topology(topology);
-            });
-        //TODO: handle failure
+        serverWideClient.watchClusterTopologyChanges(e => this.onTopologyUpdated(e));
+        serverWideClient.watchReconnect(() => this.fetchTopology());
+    }
+
+    private onTopologyUpdated(e: Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged) {
+        this.topology().updateWith(e);
     }
 
     private initObservables() {
@@ -40,4 +48,4 @@ class clusterTopologyMananger {
     
 }
 
-export = clusterTopologyMananger;
+export = clusterTopologyManager;

@@ -385,6 +385,39 @@ where docBarSomeDictionaryItem.Item1 != docBarSomeOtherDictionaryItem.Item2
         }
     }
 }")]
+        [InlineData(@"from q in docs.Questions
+                    select new
+                    {
+                        Id = q.Id,
+                        CreatedAt = q.CreatedAt
+                    } into first
+                    select new 
+                    {
+                        first.CreatedAt
+                    } into second
+                    select new
+                    {
+                        CreatedAt = second.CreatedAt,
+                    }", @"foreach (var q in docs.Questions)
+{
+    var first = new
+    {
+    Id = q.Id, CreatedAt = q.CreatedAt
+    }
+
+    ;
+    var second = new
+    {
+    first.CreatedAt
+    }
+
+    ;
+    yield return new
+    {
+    CreatedAt = second.CreatedAt, }
+
+    ;
+}")]
         public void CanOptimizeExpression(string code, string optimized)
         {
             var result = OptimizeExpression(code);

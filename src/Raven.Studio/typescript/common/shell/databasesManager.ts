@@ -11,6 +11,7 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import mergedIndexesStorage = require("common/storage/mergedIndexesStorage");
 import recentQueriesStorage = require("common/storage/recentQueriesStorage");
 import starredDocumentsStorage = require("common/storage/starredDocumentsStorage");
+import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 
 class databasesManager {
 
@@ -78,25 +79,34 @@ class databasesManager {
     private activateIfDifferent(db: database, dbName: string, urlIfNotFound: () => string): JQueryPromise<canActivateResultDto> {
         const task = $.Deferred<canActivateResultDto>();
 
+        const incomingDatabaseName = db ? db.name : undefined;
+
         this.initialized.done(() => {
             const currentActiveDatabase = this.activeDatabaseTracker.database();
-            if (currentActiveDatabase != null && currentActiveDatabase.name === db.name) {
+            if (currentActiveDatabase != null && currentActiveDatabase.name === incomingDatabaseName) {
                 task.resolve({ can: true });
                 return;
             }
 
-            if (db && !db.disabled()) {
+            if (db && !db.disabled() && db.relevant()) {
                 this.activate(db)
                     .done(() => task.resolve({ can: true }))
                     .fail(() => task.reject());
 
-            } else if (db) {
+            } else if (db && db.disabled()) {
                 messagePublisher.reportError(`${db.fullTypeName} '${db.name}' is disabled!`,
                     `You can't access any section of the ${db.fullTypeName.toLowerCase()} while it's disabled.`);
                 router.navigate(urlIfNotFound());
+                task.reject();
+            } else if (db && !db.relevant()) {
+                messagePublisher.reportError(`${db.fullTypeName} '${db.name}' is not relevant on this node!`,
+                    `You can't access any section of the ${db.fullTypeName.toLowerCase()} while it's not relevant.`);
+                router.navigate(urlIfNotFound());
+                task.reject();
             } else {
                 messagePublisher.reportError("The database " + dbName + " doesn't exist!");
                 router.navigate(urlIfNotFound());
+                task.reject();
             }
         });
 
@@ -180,19 +190,16 @@ class databasesManager {
     }
 
     private createDatabase(databaseInfo: Raven.Client.Server.Operations.DatabaseInfo): database {
-        return new database(databaseInfo);
+        return new database(databaseInfo, clusterTopologyManager.default.nodeTag);
     }
 
     // Please remember those notifications are setup before connection to websocket
-    setupGlobalNotifications(): Array<changeSubscription> {
+    setupGlobalNotifications(): void {
         const serverWideClient = changesContext.default.serverNotifications();
 
-        return [
-            serverWideClient.watchAllDatabaseChanges(e => this.onDatabaseUpdateReceivedViaChangesApi(e)),
-            serverWideClient.watchReconnect(() => this.refreshDatabases())
-
-             //TODO: DO: this.globalChangesApi.watchDocsStartingWith(shell.studioConfigDocumentId, () => shell.fetchStudioConfig()),*/
-        ];
+        serverWideClient.watchAllDatabaseChanges(e => this.onDatabaseUpdateReceivedViaChangesApi(e));
+        serverWideClient.watchReconnect(() => this.refreshDatabases());
+            //TODO: DO: this.globalChangesApi.watchDocsStartingWith(shell.studioConfigDocumentId, () => shell.fetchStudioConfig()),*/
     }
 
     private onDatabaseUpdateReceivedViaChangesApi(event: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) {

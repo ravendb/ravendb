@@ -50,7 +50,7 @@ class footer {
             this.subscription = null;
         }
 
-        if (!db) {
+        if (!db || db.disabled() || !db.relevant()) {
             return;
         }
 

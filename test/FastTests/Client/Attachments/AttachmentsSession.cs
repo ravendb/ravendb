@@ -202,7 +202,7 @@ namespace FastTests.Client.Attachments
                 using (var session = store.OpenSession())
                 {
                     var user = new User {Name = "Fitzchak"};
-                    session.Store(user);
+                    session.Store(user, "users/1");
 
                     using (var stream1 = new MemoryStream(Enumerable.Range(1, 3).Select(x => (byte)x).ToArray()))
                     using (var stream2 = new MemoryStream(Enumerable.Range(1, 6).Select(x => (byte)x).ToArray()))
@@ -218,7 +218,7 @@ namespace FastTests.Client.Attachments
                     }
                 }
 
-                AttachmentsCrud.AssertAttachmentCount(store, 4, documentsCount: 2);
+                AttachmentsCrud.AssertAttachmentCount(store, 4, documentsCount: 1);
 
                 using (var session = store.OpenSession())
                 {
@@ -229,7 +229,7 @@ namespace FastTests.Client.Attachments
 
                     session.SaveChanges();
                 }
-                AttachmentsCrud.AssertAttachmentCount(store, 2, documentsCount: 2);
+                AttachmentsCrud.AssertAttachmentCount(store, 2, documentsCount: 1);
 
                 using (var session = store.OpenSession())
                 {
@@ -252,7 +252,7 @@ namespace FastTests.Client.Attachments
                     using (var attachmentStream = new MemoryStream(readBuffer))
                     {
                         var attachment = session.Advanced.GetAttachment("users/1", "file1", (result, stream) => stream.CopyTo(attachmentStream));
-                        Assert.Equal(3, attachment.Etag);
+                        Assert.Equal(2, attachment.Etag);
                         Assert.Equal("file1", attachment.Name);
                         Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Hash);
                         Assert.Equal(3, attachmentStream.Position);
@@ -267,7 +267,7 @@ namespace FastTests.Client.Attachments
                     using (var attachmentStream = new MemoryStream(readBuffer))
                     {
                         var attachment = session.Advanced.GetAttachment(user, "file3", (result, stream) => stream.CopyTo(attachmentStream));
-                        Assert.Equal(7, attachment.Etag);
+                        Assert.Equal(6, attachment.Etag);
                         Assert.Equal("file3", attachment.Name);
                         Assert.Equal("NRQuixiqj+xvEokF6MdQq1u+uH1dk/gk2PLChJQ58Vo=", attachment.Hash);
                         Assert.Equal(9, attachmentStream.Position);
@@ -284,7 +284,7 @@ namespace FastTests.Client.Attachments
                     session.Delete(user);
                     session.SaveChanges();
                 }
-                AttachmentsCrud.AssertAttachmentCount(store, 0, documentsCount: 1);
+                AttachmentsCrud.AssertAttachmentCount(store, 0, documentsCount: 0);
             }
         }
 
@@ -296,7 +296,7 @@ namespace FastTests.Client.Attachments
                 using (var session = store.OpenSession())
                 {
                     var user = new User {Name = "Fitzchak"};
-                    session.Store(user);
+                    session.Store(user, "users/1");
 
                     using (var stream = new MemoryStream(Enumerable.Range(1, 3).Select(x => (byte)x).ToArray()))
                     {
@@ -305,7 +305,7 @@ namespace FastTests.Client.Attachments
                     }
                 }
 
-                AttachmentsCrud.AssertAttachmentCount(store, 1, documentsCount: 2);
+                AttachmentsCrud.AssertAttachmentCount(store, 1, documentsCount: 1);
 
                 using (var session = store.OpenSession())
                 {
@@ -317,7 +317,7 @@ namespace FastTests.Client.Attachments
 
                     session.SaveChanges();
                 }
-                AttachmentsCrud.AssertAttachmentCount(store, 0, documentsCount: 1);
+                AttachmentsCrud.AssertAttachmentCount(store, 0, documentsCount: 0);
             }
         }
 

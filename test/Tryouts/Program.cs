@@ -19,9 +19,18 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new NotificationCenterTests())
+
+                using (var a = new FastTests.Server.NotificationCenter.NotificationCenterTests())
                 {
-                    a.Can_dismiss_persistent_action_and_get_notified_about_it();
+                    try
+                    {
+                        a.Can_dismiss_persistent_action_and_get_notified_about_it();
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        Console.ReadLine();
+                    }
                 }
             }
         }

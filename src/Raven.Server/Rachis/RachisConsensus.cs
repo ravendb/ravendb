@@ -92,6 +92,8 @@ namespace Raven.Server.Rachis
 
         public string LastStateChangeReason => _lastStateChangeReason;
 
+        public event EventHandler<ClusterTopology> TopologyChanged;
+
         private string _tag;
         public TransactionContextPool ContextPool { get; private set; }
         private StorageEnvironment _persistentState;
@@ -522,30 +524,10 @@ namespace Raven.Server.Rachis
 
             return topologyJson;
         }
-
-        private static BlittableJsonReaderObject SetTopology(RachisConsensus engine, Transaction tx,
-            JsonOperationContext context, ClusterTopology topology)
+        public static unsafe BlittableJsonReaderObject SetTopology(RachisConsensus engine, Transaction tx, JsonOperationContext context,
+            ClusterTopology clusterTopology)
         {
-            var djv = new DynamicJsonValue
-            {
-                [nameof(ClusterTopology.TopologyId)] = topology.TopologyId,
-                [nameof(ClusterTopology.ApiKey)] = topology.ApiKey,
-                [nameof(ClusterTopology.Members)] = DynamicJsonValue.Convert(topology.Members),
-                [nameof(ClusterTopology.Promotables)] = DynamicJsonValue.Convert(topology.Promotables),
-                [nameof(ClusterTopology.Watchers)] = DynamicJsonValue.Convert(topology.Watchers),
-                [nameof(ClusterTopology.LastNodeId)] = topology.LastNodeId
-            };
-
-            var topologyJson = context.ReadObject(djv, "topology");
-
-            SetTopology(engine, tx, topologyJson);
-
-            return topologyJson;
-        }
-
-        public static unsafe void SetTopology(RachisConsensus engine, Transaction tx,
-            BlittableJsonReaderObject topologyJson)
-        {
+            var topologyJson = context.ReadObject(clusterTopology.ToJson(), "topology");
             var state = tx.CreateTree(GlobalStateSlice);
             using (state.DirectAdd(TopologySlice, topologyJson.Size, out byte* ptr))
             {
@@ -553,9 +535,15 @@ namespace Raven.Server.Rachis
             }
 
             if (engine == null)
-                return;
+                return null;
 
-            tx.LowLevelTransaction.OnDispose += _ => TaskExecutor.CompleteAndReplace(ref engine._topologyChanged);
+            tx.LowLevelTransaction.OnDispose += _ =>
+            {
+                TaskExecutor.CompleteAndReplace(ref engine._topologyChanged);
+                engine.TopologyChanged?.Invoke(engine, clusterTopology);
+            };
+
+            return topologyJson;
         }
 
         /// <summary>

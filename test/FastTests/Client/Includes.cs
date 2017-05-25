@@ -25,7 +25,7 @@ namespace FastTests.Client
 
                 using (var session = store.OpenSession())
                 {
-                    var user = session.Include<User>(x => x.AddressId).Load<User>("users/1");
+                    var user = session.Include<User>(x => x.AddressId).Load<User>("users/1-A");
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
@@ -38,7 +38,7 @@ namespace FastTests.Client
 
                 using (var session = store.OpenSession())
                 {
-                    var user = session.Include("AddressId").Load<User>("users/1");
+                    var user = session.Include("AddressId").Load<User>("users/1-A");
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
@@ -160,7 +160,7 @@ namespace FastTests.Client
                     session.Store(new Supplier { Name = "1" });
                     session.Store(new Supplier { Name = "2" });
                     session.Store(new Supplier { Name = "3" });
-                    session.Store(new Order { SupplierIds = new[] { "suppliers/1", "suppliers/2", "suppliers/3" } },
+                    session.Store(new Order { SupplierIds = new[] { "suppliers/1-A", "suppliers/2-A", "suppliers/3-A" } },
                         "orders/1234");
 
                     session.SaveChanges();
@@ -193,7 +193,7 @@ namespace FastTests.Client
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Customer());
-                    session.Store(new Order { Refferal = new Referral { CustomerId = "customers/1" } }, "orders/1234");
+                    session.Store(new Order { Refferal = new Referral { CustomerId = "customers/1-A" } }, "orders/1234");
 
                     session.SaveChanges();
                 }
@@ -228,8 +228,8 @@ namespace FastTests.Client
                             LineItems =
                                 new[]
                                 {
-                                    new LineItem {ProductId = "products/1"}, new LineItem {ProductId = "products/2"},
-                                    new LineItem {ProductId = "products/3"}
+                                    new LineItem {ProductId = "products/1-A"}, new LineItem {ProductId = "products/2-A"},
+                                    new LineItem {ProductId = "products/3-A"}
                                 }
                         }, "orders/1234");
 

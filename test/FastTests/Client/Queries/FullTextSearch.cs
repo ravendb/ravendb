@@ -83,8 +83,8 @@ namespace FastTests.Client.Queries
                         .ToList();
                     Assert.NotEmpty(images);
 
-                    Assert.Equal("images/2", images[0].Id);
-                    Assert.Equal("images/1", images[1].Id);
+                    Assert.Equal("images/2-A", images[0].Id);
+                    Assert.Equal("images/1-A", images[1].Id);
                 }
             }
         }
@@ -333,9 +333,9 @@ namespace FastTests.Client.Queries
                     var images = ravenQueryable.ToList();
 
                     Assert.Equal(3, images.Count);
-                    Assert.Equal("images/2", images[1].Id);
-                    Assert.Equal("images/1", images[2].Id);
-                    Assert.Equal("images/3", images[0].Id);
+                    Assert.Equal("images/2-A", images[1].Id);
+                    Assert.Equal("images/1-A", images[2].Id);
+                    Assert.Equal("images/3-A", images[0].Id);
                 }
             }
         }
