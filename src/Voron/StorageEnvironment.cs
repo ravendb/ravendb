@@ -105,12 +105,12 @@ namespace Voron
         {
             try
             {
-                _log = LoggingSource.Instance.GetLogger<StorageEnvironment>(options.BasePath);
+                _log = LoggingSource.Instance.GetLogger<StorageEnvironment>(options.BasePath.FullPath);
                 _options = options;
                 _dataPager = options.DataPager;
                 _freeSpaceHandling = new FreeSpaceHandling();
                 _headerAccessor = new HeaderAccessor(this);
-                NumOfConcurrentSyncsPerPhysDrive = options.NumOfCocurrentSyncsPerPhysDrive;
+                NumOfCocurrentSyncsPerPhysDrive = options.NumOfConcurrentSyncsPerPhysDrive;
                 TimeToSyncAfterFlashInSeconds = options.TimeToSyncAfterFlashInSeconds;
 
                 Debug.Assert(_dataPager.NumberOfAllocatedPages != 0);

@@ -18,7 +18,7 @@ namespace FastTests.Voron.Storage
         {
             var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(DataDir);
 
-            Assert.Equal(DataDir, options.BasePath);
+            Assert.Equal(DataDir, options.BasePath.FullPath);
             Assert.Equal(options.BasePath, options.TempPath);
         }
 
@@ -27,8 +27,8 @@ namespace FastTests.Voron.Storage
         {
             var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(DataDir, DataDir + "Temp", null, null, null);
 
-            Assert.Equal(DataDir, options.BasePath);
-            Assert.Equal(DataDir + "Temp", options.TempPath);
+            Assert.Equal(DataDir, options.BasePath.FullPath);
+            Assert.Equal(DataDir + "Temp", options.TempPath.FullPath);
         }
 
         [Fact]

@@ -106,7 +106,7 @@ namespace Voron.Impl.Journal
 
             _lastFile = now;
 
-            _journalPath = Path.Combine(_env.Options.JournalPath ?? "", StorageEnvironmentOptions.JournalName(_journalIndex));
+            _journalPath = Path.Combine(_env.Options.JournalPath?.FullPath ?? string.Empty, StorageEnvironmentOptions.JournalName(_journalIndex));
 
             var journal = new JournalFile(_env, journalPager, _journalIndex);
             journal.AddRef(); // one reference added by a creator - write ahead log
@@ -999,7 +999,7 @@ namespace Voron.Impl.Journal
                 {
                     long written = 0;
                     var sp = Stopwatch.StartNew();
-                    using (var meter = _waj._dataPager.Options.IoMetrics.MeterIoRate(_waj._dataPager.FileName, IoMetrics.MeterType.DataFlush, 0))
+                    using (var meter = _waj._dataPager.Options.IoMetrics.MeterIoRate(_waj._dataPager.FileName.FullPath, IoMetrics.MeterType.DataFlush, 0))
                     {
                         using (var batchWrites = _waj._dataPager.BatchWriter())
                         {

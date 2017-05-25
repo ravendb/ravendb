@@ -142,7 +142,7 @@ namespace Raven.Server.Documents
             DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr);
 
             using (Slice.From(context.Allocator, hash, out Slice base64Hash)) // Hash is a base64 string, so this is a special case that we do not need to escape
-            using (GetAttachmentKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash, 
+            using (GetAttachmentKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash,
                 lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Document, null, out Slice keySlice))
             {
                 Debug.Assert(base64Hash.Size == 44, $"Hash size should be 44 but was: {keySlice.Size}");
@@ -402,7 +402,7 @@ namespace Raven.Server.Documents
             return (count, streamsCount);
         }
 
-        public Attachment GetAttachment(DocumentsOperationContext context, string documentId, string name, 
+        public Attachment GetAttachment(DocumentsOperationContext context, string documentId, string name,
             AttachmentType type, ChangeVectorEntry[] changeVector)
         {
             if (string.IsNullOrWhiteSpace(documentId))
@@ -684,7 +684,7 @@ namespace Raven.Server.Documents
         private void DeleteInternal(DocumentsOperationContext context, Slice key, long etag, Slice hash)
         {
             CreateTombstone(context, key, etag);
-            
+
             // we are running just before the delete, so we may still have 1 entry there, the one just
             // about to be deleted
             DeleteAttachmentStream(context, hash);
@@ -748,15 +748,14 @@ namespace Raven.Server.Documents
             var name = $"attachment.{Guid.NewGuid():N}.put";
             if (prefix != null)
                 name = prefix + name;
-            var tempPath = Path.Combine(_documentsStorage.Environment.Options.DataPager.Options.TempPath, name);
+            var tempPath = _documentsStorage.Environment.Options.DataPager.Options.TempPath.Combine(name);
 
             if (_documentDatabase.DocumentsStorage.Environment.Options.EncryptionEnabled)
-                file = new TempCryptoStream(tempPath);
+                file = new TempCryptoStream(tempPath.FullPath);
             else
-                file = new FileStream(tempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose | FileOptions.SequentialScan);
+                file = new FileStream(tempPath.FullPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose | FileOptions.SequentialScan);
 
-            
-            return new ReleaseTempFile(tempPath, file);
+            return new ReleaseTempFile(tempPath.FullPath, file);
         }
 
         public struct ReleaseTempFile : IDisposable

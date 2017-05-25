@@ -13,6 +13,7 @@ using Voron.Impl.Paging;
 using Sparrow;
 using Sparrow.Platform.Posix;
 using Voron.Global;
+using Voron.Util.Settings;
 
 namespace Voron.Platform.Posix
 {
@@ -22,7 +23,7 @@ namespace Voron.Platform.Posix
     public class PosixJournalWriter : IJournalWriter
     {
         private readonly StorageEnvironmentOptions _options;
-        private readonly string _filename;
+        private readonly VoronPathSetting _filename;
         private int _fd, _fdReads = -1;
         private readonly int _maxNumberOf4KbPerSingleWrite;
         private int _refs;
@@ -42,13 +43,13 @@ namespace Voron.Platform.Posix
         }
 
 
-        public PosixJournalWriter(StorageEnvironmentOptions options, string filename, long journalSize)
+        public PosixJournalWriter(StorageEnvironmentOptions options, VoronPathSetting filename, long journalSize)
         {
             _options = options;
             _filename = filename;
-            _maxNumberOf4KbPerSingleWrite = int.MaxValue / (4*Constants.Size.Kilobyte);
+            _maxNumberOf4KbPerSingleWrite = int.MaxValue / (4 * Constants.Size.Kilobyte);
 
-            _fd = Syscall.open(filename, OpenFlags.O_WRONLY | options.PosixOpenFlags | OpenFlags.O_CREAT,
+            _fd = Syscall.open(filename.FullPath, OpenFlags.O_WRONLY | options.PosixOpenFlags | OpenFlags.O_CREAT,
                 FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
 
             if (_fd == -1)
@@ -57,13 +58,13 @@ namespace Voron.Platform.Posix
                 Syscall.ThrowLastError(err, "when opening " + filename);
             }
 
-            var length = new FileInfo(filename).Length;
+            var length = new FileInfo(filename.FullPath).Length;
             if (length < journalSize)
             {
                 length = journalSize;
                 try
                 {
-                    PosixHelper.AllocateFileSpace(options, _fd, journalSize,filename);
+                    PosixHelper.AllocateFileSpace(options, _fd, journalSize, filename.FullPath);
                 }
                 catch (Exception)
                 {
@@ -72,20 +73,20 @@ namespace Voron.Platform.Posix
                 }
             }
 
-            if (Syscall.CheckSyncDirectoryAllowed(_filename) && Syscall.SyncDirectory(filename) == -1)
+            if (Syscall.CheckSyncDirectoryAllowed(_filename.FullPath) && Syscall.SyncDirectory(filename.FullPath) == -1)
             {
                 var err = Marshal.GetLastWin32Error();
                 Syscall.ThrowLastError(err, "when syncing dir for on " + filename);
             }
 
-            NumberOfAllocated4Kb = (int) (length / (4*Constants.Size.Kilobyte));
+            NumberOfAllocated4Kb = (int)(length / (4 * Constants.Size.Kilobyte));
         }
 
         public void Dispose()
         {
             Disposed = true;
             GC.SuppressFinalize(this);
-            _options.IoMetrics.FileClosed(_filename);
+            _options.IoMetrics.FileClosed(_filename.FullPath);
             if (_fdReads != -1)
             {
                 Syscall.close(_fdReads);
@@ -108,8 +109,8 @@ namespace Voron.Platform.Posix
 
 #if DEBUG
             Debug.WriteLine(
-                "Disposing a journal file from finalizer! It should be disposed by using JournalFile.Release() instead!. Log file number: " 
-                +_filename + ". Number of references: " + _refs);
+                "Disposing a journal file from finalizer! It should be disposed by using JournalFile.Release() instead!. Log file number: "
+                + _filename + ". Number of references: " + _refs);
 #endif
         }
 
@@ -121,7 +122,7 @@ namespace Voron.Platform.Posix
                 WriteFile(posBy4Kb, p, _maxNumberOf4KbPerSingleWrite);
 
                 posBy4Kb += _maxNumberOf4KbPerSingleWrite;
-                p += _maxNumberOf4KbPerSingleWrite * (4*Constants.Size.Kilobyte);
+                p += _maxNumberOf4KbPerSingleWrite * (4 * Constants.Size.Kilobyte);
                 numberOf4Kb -= _maxNumberOf4KbPerSingleWrite;
             }
 
@@ -134,14 +135,14 @@ namespace Voron.Platform.Posix
             if (numberOf4Kb == 0)
                 return; // nothing to do
 
-            var nNumberOfBytesToWrite = (ulong) numberOf4Kb*(4*Constants.Size.Kilobyte);
+            var nNumberOfBytesToWrite = (ulong)numberOf4Kb * (4 * Constants.Size.Kilobyte);
             long actuallyWritten = 0;
             long result;
-            using (_options.IoMetrics.MeterIoRate(_filename, IoMetrics.MeterType.JournalWrite, (long)nNumberOfBytesToWrite))
+            using (_options.IoMetrics.MeterIoRate(_filename.FullPath, IoMetrics.MeterType.JournalWrite, (long)nNumberOfBytesToWrite))
             {
                 do
                 {
-                    result = Syscall.pwrite(_fd, p, nNumberOfBytesToWrite - (ulong)actuallyWritten, 
+                    result = Syscall.pwrite(_fd, p, nNumberOfBytesToWrite - (ulong)actuallyWritten,
                         position * 4 * Constants.Size.Kilobyte);
                     if (result < 1)
                         break;
@@ -159,7 +160,7 @@ namespace Voron.Platform.Posix
                 var err = Marshal.GetLastWin32Error();
                 throw new IOException($"pwrite reported zero bytes written, after write of {actuallyWritten} bytes out of {nNumberOfBytesToWrite}. lastErrNo={err} on {_filename}");
             }
-            else if ((ulong) actuallyWritten != nNumberOfBytesToWrite)
+            else if ((ulong)actuallyWritten != nNumberOfBytesToWrite)
             {
                 var err = Marshal.GetLastWin32Error();
                 throw new IOException($"pwrite couln't write {nNumberOfBytesToWrite} to file. only {actuallyWritten} written. lastErrNo={err} on {_filename}");
@@ -184,7 +185,7 @@ namespace Voron.Platform.Posix
         {
             if (_fdReads == -1)
             {
-                _fdReads = Syscall.open(_filename, OpenFlags.O_RDONLY, FilePermissions.S_IRUSR);
+                _fdReads = Syscall.open(_filename.FullPath, OpenFlags.O_RDONLY, FilePermissions.S_IRUSR);
                 if (_fdReads == -1)
                 {
                     var err = Marshal.GetLastWin32Error();
@@ -219,7 +220,7 @@ namespace Voron.Platform.Posix
                 Syscall.ThrowLastError(err, "when fsycning " + _filename);
             }
 
-            if (Syscall.CheckSyncDirectoryAllowed(_filename) && Syscall.SyncDirectory(_filename) == -1)
+            if (Syscall.CheckSyncDirectoryAllowed(_filename.FullPath) && Syscall.SyncDirectory(_filename.FullPath) == -1)
             {
                 var err = Marshal.GetLastWin32Error();
                 Syscall.ThrowLastError(err, "when syncing dir for " + _filename);
