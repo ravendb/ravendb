@@ -23,10 +23,7 @@
                         </div>
 
                         <div class="indexesToolbar-actions">
-                            <a class="btn btn-primary" data-bind="attr: { href: newIndexUrl }">
-                                <i class="icon-plus"></i>
-                                <span>New index</span>
-                            </a>
+                            
                             <div class="btn-group-label" data-bind="css: { active: selectedIndexesName().length }" data-label="Selection" role="group">
                                 <button class="btn btn-danger" data-bind="click: deleteSelectedIndexes, enable: selectedIndexesName().length"><i class="icon-trash"></i><span>Delete</span></button>
                                 <div class="btn-group">
@@ -93,6 +90,10 @@
                                     </ul>
                                 </div>
                             </div>
+                            <a class="btn btn-primary" data-bind="attr: { href: newIndexUrl }">
+                                <i class="icon-plus"></i>
+                                <span>New index</span>
+                            </a>
                         </div>
                     </div>
                 </div>
