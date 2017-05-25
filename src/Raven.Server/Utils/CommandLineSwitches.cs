@@ -118,6 +118,12 @@ namespace Raven.Server.Utils
 
             if (PlatformDetails.RunningOnPosix == false && Daemon)
                 throw new CommandParsingException(_app, "Switch \"--daemon\" is not supported on Windows. Use --register-service switch to register the service and services.msc for service management.");
+
+            if (PlatformDetails.RunningOnPosix && RegisterService)
+                throw new CommandParsingException(_app, "Switch \"--register-service\" is not supported on Linux. Use --daemon switch to run as daemon.");
+
+            if (PlatformDetails.RunningOnPosix && UnregisterService)
+                throw new CommandParsingException(_app, "Switch \"--unregister-service\" is not supported on Linux. Use --daemon switch to run as daemon.");
         }
 
         private static bool ParseSwitchOption(CommandOption opt)
