@@ -95,6 +95,7 @@ namespace RachisTests.DatabaseCluster
                     doc = MultiDatabase.CreateDatabaseDocument($"Watcher{i}");
                     var res = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc));
                     var server = Servers.Single(x => x.WebUrls[0] == res.NodesAddedTo[0]);
+                    await server.ServerStore.Cluster.WaitForIndexNotification(res.ETag ?? -1);
                     await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore($"Watcher{i}");
 
                     watchers.Add(new DatabaseWatcher
