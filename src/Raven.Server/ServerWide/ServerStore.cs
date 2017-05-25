@@ -738,7 +738,7 @@ namespace Raven.Server.ServerWide
         private async Task<(long, BlittableJsonReaderObject)> SendToLeaderAsyncInternal(BlittableJsonReaderObject cmdJson, TransactionOperationContext context)
         {
             //I think it is reasonable to expect timeout twice of error retry
-            var timeout = (int)Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan.TotalMilliseconds;
+            var timeout = Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan;
             var timeoutTask = TimeoutManager.WaitFor(timeout, _shutdownNotification.Token);
             while (true)
             {
@@ -757,7 +757,7 @@ namespace Raven.Server.ServerWide
                 {
                     if (cachedLeaderTag == null)
                     {
-                        var completed = await Task.WhenAny(logChange, TimeoutManager.WaitFor(10000, ServerShutdown));
+                        var completed = await Task.WhenAny(logChange, TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(10000), ServerShutdown));
 
                         if (completed != logChange)
                             throw new TimeoutException("Could not send command to leader because there is no leader, and we timed out waiting for one");

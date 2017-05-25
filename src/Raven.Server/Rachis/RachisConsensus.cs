@@ -88,7 +88,7 @@ namespace Raven.Server.Rachis
 
         public State CurrentState { get; private set; }
         public TimeoutEvent Timeout { get; private set; }
-        public int RemoteOperationTimeoutMs { get; private set; }
+        public TimeSpan RemoteOperationTimeout { get; private set; }
 
         public string LastStateChangeReason => _lastStateChangeReason;
 
@@ -148,7 +148,8 @@ namespace Raven.Server.Rachis
                 StartIndex = 0,
             });
         }
-        public int ElectionTimeoutMs;
+
+        public TimeSpan ElectionTimeout;
 
         private Leader _currentLeader;
         private TaskCompletionSource<object> _topologyChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -168,8 +169,12 @@ namespace Raven.Server.Rachis
             try
             {
                 _persistentState = env;
-                RemoteOperationTimeoutMs = (int)configuration.ClusterOperationTimeout.AsTimeSpan.TotalMilliseconds;
-                ElectionTimeoutMs = (int)configuration.ElectionTimeout.AsTimeSpan.TotalMilliseconds * (Debugger.IsAttached ? 10 : 1);
+                RemoteOperationTimeout = configuration.ClusterOperationTimeout.AsTimeSpan;
+                ElectionTimeout = configuration.ElectionTimeout.AsTimeSpan;
+                if (Debugger.IsAttached)
+                {
+                    ElectionTimeout = TimeSpan.FromMilliseconds(ElectionTimeout.TotalMilliseconds * 10);
+                }
                 ContextPool = new TransactionContextPool(_persistentState);
 
                 ClusterTopology topology;
@@ -202,7 +207,8 @@ namespace Raven.Server.Rachis
                 }
                 //We want to be able to reproduce rare issues that are related to timing
                 var rand = _seed.HasValue ? new Random(_seed.Value) : new Random();
-                Timeout = new TimeoutEvent(rand.Next(ElectionTimeoutMs / 3 * 2, ElectionTimeoutMs));
+                Timeout = new TimeoutEvent(rand.Next((int)Math.Max(int.MaxValue, ElectionTimeout.TotalMilliseconds / 3 * 2),
+                    (int)Math.Max(int.MaxValue, ElectionTimeout.TotalMilliseconds)));
 
                 // if we don't have a topology id, then we are passive
                 // an admin needs to let us know that it is fine, either
@@ -957,7 +963,7 @@ namespace Raven.Server.Rachis
 
         public async Task WaitForCommitIndexChange(CommitIndexModification modification, long value)
         {
-            var timeoutTask = TimeoutManager.WaitFor(RemoteOperationTimeoutMs);
+            var timeoutTask = TimeoutManager.WaitFor(RemoteOperationTimeout);
             while (timeoutTask.IsCompleted == false)
             {
                 var task = _commitIndexChanged.Task;
@@ -1253,28 +1259,27 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public async Task WaitForTimeout(long knownLeaderTime, int timeoutMillseconds)
+        public async Task WaitForTimeout(long knownLeaderTime, TimeSpan timeout)
         {
             Interlocked.Increment(ref _hasTimers);
             try
             {
                 var term = CurrentTerm;
-                var task = _leadershipTimeChanged.WaitAsync(timeoutMillseconds);
+                var task = _leadershipTimeChanged.WaitAsync(timeout);
 
                 while (true)
                 {
                     if (term != CurrentTerm)
                         knownLeaderTime = 0;
 
-                    var timePassed = _leaderTime - knownLeaderTime;
-                    if (timePassed > timeoutMillseconds)
+                    var timePassed = TimeSpan.FromMilliseconds(_leaderTime - knownLeaderTime);
+                    if (timePassed > timeout)
                         return;
 
                     if (await task == false)
                         return;
 
-                    var remaining = timeoutMillseconds - (int)timePassed;
-
+                    var remaining = timeout.Subtract(timePassed);
                     task = _leadershipTimeChanged.WaitAsync(remaining);
                 }
             }
@@ -1283,9 +1288,9 @@ namespace Raven.Server.Rachis
                 Interlocked.Decrement(ref _hasTimers);
             }
         }
-        public Task WaitForTimeout(int timeoutMillseconds)
+        public Task WaitForTimeout(TimeSpan timeout)
         {
-            return WaitForTimeout(_leaderTime, timeoutMillseconds);
+            return WaitForTimeout(_leaderTime, timeout);
         }
 
         private long _leaderTime;

@@ -26,7 +26,7 @@ namespace SlowTests.Server.Rachis
             var newLeader = WaitForAnyToBecomeLeader(followers);
             Assert.NotNull(newLeader);
             ReconnectToNode(leader);
-            Assert.True(await leader.WaitForTopology(Leader.TopologyModification.Remove, newServer.Url).WaitAsync(leader.ElectionTimeoutMs * 3));
+            Assert.True(await leader.WaitForTopology(Leader.TopologyModification.Remove, newServer.Url).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 3)));
         }
         /// <summary>
         /// This test checks that a node could be added to the cluster even if the node is down.
@@ -37,13 +37,13 @@ namespace SlowTests.Server.Rachis
         public async Task New_node_can_be_added_even_if_it_is_down()
         {
             var leader = await CreateNetworkAndGetLeader(3);
-            Assert.True(await leader.AddToClusterAsync("http://rachis.example.com:1337").WaitAsync(leader.ElectionTimeoutMs*2),"non existing node should be able to join the cluster");
+            Assert.True(await leader.AddToClusterAsync("http://rachis.example.com:1337").WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)),"non existing node should be able to join the cluster");
             List<Task> waitingList = new List<Task>();
             foreach (var consensus in RachisConsensuses)
             {
                 waitingList.Add(consensus.WaitForTopology(Leader.TopologyModification.Promotable, "D"));
             }
-            Assert.True(await Task.WhenAll(waitingList).WaitAsync(leader.ElectionTimeoutMs * 2),"Cluster was non informed about new node within two election periods");
+            Assert.True(await Task.WhenAll(waitingList).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)),"Cluster was non informed about new node within two election periods");
         }
 
         /// <summary>
@@ -57,17 +57,17 @@ namespace SlowTests.Server.Rachis
             DisconnectFromNode(node4);
             DisconnectFromNode(node5);
             var leader = await CreateNetworkAndGetLeader(3);            
-            Assert.True(await leader.AddToClusterAsync(node4.Url).WaitAsync(leader.ElectionTimeoutMs * 2), "non existing node should be able to join the cluster");
-            Assert.True(await leader.AddToClusterAsync(node5.Url).WaitAsync(leader.ElectionTimeoutMs * 2), "non existing node should be able to join the cluster");
+            Assert.True(await leader.AddToClusterAsync(node4.Url).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)), "non existing node should be able to join the cluster");
+            Assert.True(await leader.AddToClusterAsync(node5.Url).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)), "non existing node should be able to join the cluster");
             var t = IssueCommandsAndWaitForCommit(leader, 3, "test", 1);
-            Assert.True(await t.WaitAsync(leader.ElectionTimeoutMs * 2),"Commands were not committed in time although there is a majority of active nodes in the cluster");
+            Assert.True(await t.WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)),"Commands were not committed in time although there is a majority of active nodes in the cluster");
 
             ReconnectToNode(node4);
             ReconnectToNode(node5);
 
-            Assert.True(await node4.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, t.Result).WaitAsync(leader.ElectionTimeoutMs * 2),
+            Assert.True(await node4.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, t.Result).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)),
                 "#D server didn't get the commands in time");
-            Assert.True(await node5.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, t.Result).WaitAsync(leader.ElectionTimeoutMs * 2),
+            Assert.True(await node5.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, t.Result).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)),
                 "#E server didn't get the commands in time");
         }
 
@@ -75,7 +75,7 @@ namespace SlowTests.Server.Rachis
         public async Task Adding_already_existing_node_should_throw()
         {
             var leader = await CreateNetworkAndGetLeader(3);
-            Assert.True(await leader.AddToClusterAsync("http://not-a-real-url.com").WaitAsync(leader.ElectionTimeoutMs * 2),
+            Assert.True(await leader.AddToClusterAsync("http://not-a-real-url.com").WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)),
                 "non existing node should be able to join the cluster");
             await Assert.ThrowsAsync<InvalidOperationException>(
                 () => leader.AddToClusterAsync("http://not-a-real-url.com"));
@@ -98,12 +98,12 @@ namespace SlowTests.Server.Rachis
         {
             var leader = await CreateNetworkAndGetLeader(nodeCount);
             var follower = GetRandomFollower();
-            Assert.True(await leader.RemoveFromClusterAsync(follower.Tag).WaitAsync(leader.ElectionTimeoutMs*10),"Was unable to remove node from cluster in time");
+            Assert.True(await leader.RemoveFromClusterAsync(follower.Tag).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 10)),"Was unable to remove node from cluster in time");
             foreach (var node in RachisConsensuses)
             {
                 if(node.Url == follower.Url)
                     continue;
-                Assert.True(await node.WaitForTopology(Leader.TopologyModification.Remove, follower.Tag).WaitAsync(node.ElectionTimeoutMs * 1000),"Node was not removed from topology in time");
+                Assert.True(await node.WaitForTopology(Leader.TopologyModification.Remove, follower.Tag).WaitAsync(TimeSpan.FromMilliseconds(node.ElectionTimeout.TotalMilliseconds * 1000)),"Node was not removed from topology in time");
             }
         }
     }

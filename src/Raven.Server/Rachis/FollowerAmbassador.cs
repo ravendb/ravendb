@@ -104,7 +104,7 @@ namespace Raven.Server.Rachis
                                 _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: Failed to connect to remote follower: {_tag} {_url}", e);
                             }
                             // wait a bit
-                            _leader.WaitForNewEntries().Wait(_engine.ElectionTimeoutMs / 2);
+                            _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
                             continue; // we'll retry connecting
                         }
                         Status = "Connected";
@@ -200,7 +200,7 @@ namespace Raven.Server.Rachis
                                 }
                                 // either we have new entries to send, or we waited for long enough 
                                 // to send another heartbeat
-                                task.Wait(_engine.ElectionTimeoutMs / 3);
+                                task.Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 3));
                             }
                         }
                     }
@@ -213,7 +213,7 @@ namespace Raven.Server.Rachis
                         }
                         // notify leader about an error
                         _leader.NotifyAboutException(this,e);
-                        _leader.WaitForNewEntries().Wait(_engine.ElectionTimeoutMs / 2);
+                        _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
                     }
                     finally
                     {
@@ -317,7 +317,7 @@ namespace Raven.Server.Rachis
             if (count % 100 != 0)
                 return;
 
-            if (sp.ElapsedMilliseconds <= _engine.ElectionTimeoutMs / 2)
+            if (sp.ElapsedMilliseconds <= _engine.ElectionTimeout.TotalMilliseconds / 2)
                 return;
 
             sp.Restart();

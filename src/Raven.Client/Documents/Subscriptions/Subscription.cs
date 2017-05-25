@@ -661,7 +661,7 @@ namespace Raven.Client.Documents.Subscriptions
                             return;
                         }
 
-                        await TimeoutManager.WaitFor(_options.TimeToWaitBeforeConnectionRetryMilliseconds).ConfigureAwait(false);
+                        await TimeoutManager.WaitFor(_options.TimeToWaitBeforeConnectionRetry).ConfigureAwait(false);
                     }
                     catch (Exception e)
                     {
