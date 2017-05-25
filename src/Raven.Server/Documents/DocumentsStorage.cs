@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions;
@@ -284,7 +285,8 @@ namespace Raven.Server.Documents
             AssertTransaction(context);
 
             var tree = context.Transaction.InnerTransaction.ReadTree(ChangeVectorSlice);
-            return ChangeVectorUtils.ReadChangeVectorFrom(tree);
+            var changeVector = ChangeVectorUtils.ReadChangeVectorFrom(tree);
+            return ChangeVectorUtils.UpdateChangeVectorWithNewEtag(Environment.DbId, Volatile.Read(ref _lastEtag), changeVector);
         }
 
         public void SetDatabaseChangeVector(DocumentsOperationContext context, Dictionary<Guid, long> changeVector)
@@ -1075,11 +1077,12 @@ namespace Raven.Server.Documents
 
         public long GenerateNextEtag()
         {
-            return ++_lastEtag;
+            return Interlocked.Increment(ref _lastEtag); // use interlocked so the GetDatabaseChangeVector can read the latest version
         }
 
         public void EnsureLastEtagIsPersisted(DocumentsOperationContext context, long docEtag)
         {
+            // this is called only from write tx, don't need to worry about threading to read _lastEtag
             if (docEtag != _lastEtag)
                 return;
             var etagTree = context.Transaction.InnerTransaction.ReadTree(EtagsSlice);
