@@ -64,6 +64,12 @@ namespace Sparrow.Utils
 
         private static async Task WaitForInternal(TimeSpan time, CancellationToken token)
         {
+            if (time == Timeout.InfiniteTimeSpan)
+            {
+                await new TaskCompletionSource<object>(token).Task;
+                return;
+            }
+                
             if (time.TotalMilliseconds < 0)
                 ThrowOutOfRange();
 
