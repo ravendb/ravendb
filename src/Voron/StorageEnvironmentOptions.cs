@@ -3,12 +3,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow;
-using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Utils;
@@ -19,13 +17,12 @@ using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Platform.Posix;
 using Voron.Platform.Win32;
-using Voron.Util;
 
 namespace Voron
 {
     public abstract class StorageEnvironmentOptions : IDisposable
     {
-        public const string PendingRecycleFileNamePrefix = "pending-recycle";
+        public const string RecyclableJournalFileNamePrefix = "recyclable-journal";
 
         private ExceptionDispatchInfo _catastrophicFailure;
         private CatastrophicFailureNotification _catastrophicFailureNotification;
@@ -271,14 +268,14 @@ namespace Voron
                     return GetMemoryMapPager(this, InitialFileSize, FilePath, usePageProtection: true);
                 });
 
-                GatherRecyclableJournalFiles();
+                GatherRecyclableJournalFiles(); // if there are any (e.g. after a rude db shut down) let us reuse them
 
                 DeleteAllTempBuffers();
             }
 
             private void GatherRecyclableJournalFiles()
             {
-                foreach (var reusableFile in GetReusableFiles())
+                foreach (var reusableFile in GetRecyclableJournalFiles())
                 {
                     var reuseNameWithoutExt = Path.GetExtension(reusableFile).Substring(1);
 
@@ -308,11 +305,11 @@ namespace Voron
                 }
             }
 
-            private string[] GetReusableFiles()
+            private string[] GetRecyclableJournalFiles()
             {
                 try
                 {
-                    return Directory.GetFiles(_journalPath, $"{PendingRecycleFileNamePrefix}.*");
+                    return Directory.GetFiles(_journalPath, $"{RecyclableJournalFileNamePrefix}.*");
                 }
                 catch (Exception)
                 {
@@ -390,7 +387,7 @@ namespace Voron
 
             private static long TickInHour = TimeSpan.FromHours(1).Ticks;
 
-            private void AttemptToReuseJournal(string desiredPath, long journalNumber)
+            private void AttemptToReuseJournal(string desiredPath, long desiredSize)
             {
                 lock (_journalsForReuse)
                 {
@@ -436,7 +433,7 @@ namespace Voron
                                 continue;
                             }
 
-                            if (fileInfo.Length < journalNumber)
+                            if (fileInfo.Length < desiredSize)
                             {
                                 _journalsForReuse.RemoveAt(0);
                                 TryDelete(fileInfo.FullName);
@@ -863,9 +860,9 @@ namespace Voron
             return string.Format("{0:D19}.journal", number);
         }
 
-        public static string PendingRecycleName(long number)
+        public static string RecyclableJournalName(long number)
         {
-            return $"{PendingRecycleFileNamePrefix}.{number:D19}";
+            return $"{RecyclableJournalFileNamePrefix}.{number:D19}";
         }
 
         public static string JournalRecoveryName(long number)
@@ -981,7 +978,7 @@ namespace Voron
             {
                 var fileModifiedDate = new FileInfo(filename).LastWriteTimeUtc;
                 var counter = Interlocked.Increment(ref _reuseCounter);
-                var newName = Path.Combine(Path.GetDirectoryName(filename), PendingRecycleName(counter));
+                var newName = Path.Combine(Path.GetDirectoryName(filename), RecyclableJournalName(counter));
 
                 File.Move(filename, newName);
                 lock (_journalsForReuse)
