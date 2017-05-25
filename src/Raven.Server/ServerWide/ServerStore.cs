@@ -67,9 +67,9 @@ namespace Raven.Server.ServerWide
         {
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _ravenServer = ravenServer;
-            
+
             DatabasesLandlord = new DatabasesLandlord(this);
-            
+
             _notificationsStorage = new NotificationsStorage(ResourceName);
 
             NotificationCenter = new NotificationCenter.NotificationCenter(_notificationsStorage, ResourceName, ServerShutdown);
@@ -81,7 +81,7 @@ namespace Raven.Server.ServerWide
             DatabaseInfoCache = new DatabaseInfoCache();
 
             _frequencyToCheckForIdleDatabases = Configuration.Databases.FrequencyToCheckForIdle.AsTimeSpan;
-            
+
         }
 
         public DatabaseInfoCache DatabaseInfoCache { get; set; }
@@ -108,7 +108,7 @@ namespace Raven.Server.ServerWide
 
         private Timer _timer;
         private RachisConsensus<ClusterStateMachine> _engine;
-        private bool _disposed;      
+        private bool _disposed;
         public RachisConsensus<ClusterStateMachine> Engine => _engine;
 
         private ClusterMaintenanceSupervisor _clusterMaintenanceSupervisor;
@@ -132,8 +132,8 @@ namespace Raven.Server.ServerWide
                                      .WithCancellation(_shutdownNotification.Token);
                         continue;
                     }
-                    using (_clusterMaintenanceSupervisor = new ClusterMaintenanceSupervisor(this,_engine.Tag, _engine.CurrentTerm))
-                    using (new ClusterObserver(this,_clusterMaintenanceSupervisor,_engine,ContextPool,ServerShutdown))
+                    using (_clusterMaintenanceSupervisor = new ClusterMaintenanceSupervisor(this, _engine.Tag, _engine.CurrentTerm))
+                    using (new ClusterObserver(this, _clusterMaintenanceSupervisor, _engine, ContextPool, ServerShutdown))
                     {
                         var oldNodes = new Dictionary<string, string>();
                         while (_engine.LeaderTag == NodeTag)
@@ -156,9 +156,9 @@ namespace Raven.Server.ServerWide
                             {
                                 var task = _clusterMaintenanceSupervisor.AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key)).ContinueWith(t =>
                                         {
-                                            if(Logger.IsInfoEnabled)
-                                                Logger.Info($"ClusterMaintenanceSupervisor() => Failed to add to cluster node key = {node.Key}",t.Exception);
-                                        },TaskContinuationOptions.OnlyOnFaulted);
+                                            if (Logger.IsInfoEnabled)
+                                                Logger.Info($"ClusterMaintenanceSupervisor() => Failed to add to cluster node key = {node.Key}", t.Exception);
+                                        }, TaskContinuationOptions.OnlyOnFaulted);
                                 GC.KeepAlive(task);
                             }
 
@@ -177,7 +177,7 @@ namespace Raven.Server.ServerWide
                 {
                     //
                 }
-            }   
+            }
         }
 
         public ClusterTopology GetClusterTopology(TransactionOperationContext context)
@@ -197,7 +197,7 @@ namespace Raven.Server.ServerWide
 
         public void Initialize()
         {
-            LowMemoryNotification.Initialize(ServerShutdown, 
+            LowMemoryNotification.Initialize(ServerShutdown,
                 Configuration.Memory.LowMemoryDetection.GetValue(SizeUnit.Bytes),
                 Configuration.Memory.PhysicalRatioForLowMemDetection);
 
@@ -218,7 +218,7 @@ namespace Raven.Server.ServerWide
                     AlertType.NonDurableFileSystem,
                     NotificationSeverity.Warning,
                     "NonDurable Error System",
-                    details: new MessageDetails{Message=e.Details});
+                    details: new MessageDetails { Message = e.Details });
                 if (NotificationCenter.IsInitialized)
                 {
                     NotificationCenter.Add(alert);
@@ -404,7 +404,7 @@ namespace Raven.Server.ServerWide
         public unsafe byte[] GetSecretKey(TransactionOperationContext context, string name)
         {
             Debug.Assert(context.Transaction != null);
-            
+
             var tree = context.Transaction.InnerTransaction.ReadTree("SecretKeys");
 
             var readResult = tree?.Read(name);
@@ -471,7 +471,7 @@ namespace Raven.Server.ServerWide
             return await SendToLeaderAsync(deleteCommand);
         }
 
-        public async Task<(long, BlittableJsonReaderObject)> ModifyDatabaseWatchers(string dbName,  List<DatabaseWatcher> watchers)
+        public async Task<(long, BlittableJsonReaderObject)> ModifyDatabaseWatchers(string dbName, List<DatabaseWatcher> watchers)
         {
             var watcherCommand = new ModifyDatabaseWatchersCommand(dbName)
             {
@@ -512,7 +512,7 @@ namespace Raven.Server.ServerWide
         {
             var editExpiration = new EditExpirationCommand(JsonDeserializationCluster.ExpirationConfiguration(configurationJson), name);
             return await SendToLeaderAsync(editExpiration);
-            
+
         }
 
         public async Task<(long, BlittableJsonReaderObject)> ModifyDatabasePeriodicBackup(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson)
@@ -520,7 +520,7 @@ namespace Raven.Server.ServerWide
             var editPeriodicBackup = new EditPeriodicBackupCommand(JsonDeserializationCluster.PeriodicBackupConfiguration(configurationJson), name);
             return await SendToLeaderAsync(editPeriodicBackup);
         }
-        
+
         public async Task<(long, BlittableJsonReaderObject)> ModifyDatabaseVersioning(JsonOperationContext context, string name, BlittableJsonReaderObject configurationJson)
         {
             var editVersioning = new EditVersioningCommand(JsonDeserializationCluster.VersioningConfiguration(configurationJson), name);
@@ -692,7 +692,7 @@ namespace Raven.Server.ServerWide
             return _engine.CurrentState == RachisConsensus.State.Leader;
         }
 
-        public async Task<(long,BlittableJsonReaderObject)> SendToLeaderAsync(CommandBase cmd)
+        public async Task<(long, BlittableJsonReaderObject)> SendToLeaderAsync(CommandBase cmd)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -708,10 +708,10 @@ namespace Raven.Server.ServerWide
             return _engine.GetClusterErrorsFromLeader();
         }
 
-        private async Task<(long,BlittableJsonReaderObject)> SendToLeaderAsyncInternal(BlittableJsonReaderObject cmdJson, TransactionOperationContext context)
+        private async Task<(long, BlittableJsonReaderObject)> SendToLeaderAsyncInternal(BlittableJsonReaderObject cmdJson, TransactionOperationContext context)
         {
             //I think it is reasonable to expect timeout twice of error retry
-            var timeout = (uint)Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan.TotalMilliseconds;
+            var timeout = (int)Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan.TotalMilliseconds;
             var timeoutTask = TimeoutManager.WaitFor(timeout, _shutdownNotification.Token);
             while (true)
             {
@@ -723,16 +723,16 @@ namespace Raven.Server.ServerWide
                 }
 
                 var logChange = _engine.WaitForHeartbeat();
-             
+
 
                 var cachedLeaderTag = _engine.LeaderTag; // not actually working
                 try
                 {
-                    if(cachedLeaderTag == null)
+                    if (cachedLeaderTag == null)
                     {
                         var completed = await Task.WhenAny(logChange, TimeoutManager.WaitFor(10000, ServerShutdown));
 
-                        if(completed != logChange)
+                        if (completed != logChange)
                             throw new TimeoutException("Could not send command to leader because there is no leader, and we timed out waiting for one");
 
                         continue;
@@ -748,11 +748,11 @@ namespace Raven.Server.ServerWide
                     if (_engine.LeaderTag == cachedLeaderTag)
                         throw; // if the leader changed, let's try again
                 }
-                
+
                 if (await Task.WhenAny(logChange, timeoutTask) == timeoutTask)
                     ThrowTimeoutException();
             }
-            
+
         }
 
         private static void ThrowTimeoutException()
@@ -762,26 +762,27 @@ namespace Raven.Server.ServerWide
 
         private async Task<(long, BlittableJsonReaderObject)> SendToNodeAsync(TransactionOperationContext context, string engineLeaderTag, BlittableJsonReaderObject cmd)
         {
+            ClusterTopology clusterTopology;
             using (context.OpenReadTransaction())
+                clusterTopology = _engine.GetTopology(context);
+
+            if (clusterTopology.Members.TryGetValue(engineLeaderTag, out string leaderUrl) == false)
+                throw new InvalidOperationException("Leader " + engineLeaderTag + " was not found in the topology members");
+
+            var command = new PutRaftCommand(context, cmd);
+
+            if (_clusterRequestExecutor == null)
+                _clusterRequestExecutor = RequestExecutor.CreateForSingleNode(leaderUrl, "Rachis.Server", clusterTopology.ApiKey);
+            else if (_clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false ||
+                     _clusterRequestExecutor.ApiKey?.Equals(clusterTopology.ApiKey) == false)
             {
-                var clusterTopology = _engine.GetTopology(context);
-                if (clusterTopology.Members.TryGetValue(engineLeaderTag, out string leaderUrl) == false)
-                    throw new InvalidOperationException("Leader " + engineLeaderTag + " was not found in the topology members");
-                var command = new PutRaftCommand(context, cmd);
-
-                if (_clusterRequestExecutor == null)
-                    _clusterRequestExecutor = RequestExecutor.CreateForSingleNode(leaderUrl, "Rachis.Server", clusterTopology.ApiKey);
-                else if (_clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false ||
-                         _clusterRequestExecutor.ApiKey?.Equals(clusterTopology.ApiKey) == false)
-                {
-                    _clusterRequestExecutor.Dispose();
-                    _clusterRequestExecutor = RequestExecutor.CreateForSingleNode(leaderUrl, "Rachis.Server", clusterTopology.ApiKey);
-                }
-
-                await _clusterRequestExecutor.ExecuteAsync(command, context, ServerShutdown);
-
-                return (command.Result.ETag, command.Result.Data);
+                _clusterRequestExecutor.Dispose();
+                _clusterRequestExecutor = RequestExecutor.CreateForSingleNode(leaderUrl, "Rachis.Server", clusterTopology.ApiKey);
             }
+
+            await _clusterRequestExecutor.ExecuteAsync(command, context, ServerShutdown);
+
+            return (command.Result.ETag, command.Result.Data);
         }
 
         protected internal class PutRaftCommand : RavenCommand<PutRaftCommandResult>

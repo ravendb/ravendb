@@ -26,12 +26,12 @@ namespace FastTests.Server.Replication
             const string databaseName = "DisableDatabaseToggleOperation_should_propagate_through_raft_cluster";
             using (var master = new DocumentStore
             {
-                Url = leaderServer.WebUrls[0],
+                Url = UseFiddler(leaderServer.WebUrls[0]),
                 Database = databaseName
             })
             using (var slave = new DocumentStore
             {
-                Url = slaveServer.WebUrls[0],
+                Url = UseFiddler(slaveServer.WebUrls[0]),
                 Database = databaseName
             })
             {
