@@ -38,7 +38,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var dates = session.Load<Dates>("dates/1");
+                    var dates = session.Load<Dates>("dates/1-A");
                     Assert.NotNull(dates.Date1);
                     Assert.NotNull(dates.Date2);
                 }

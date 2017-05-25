@@ -24,16 +24,16 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var items = session.Load<ItemsTransformer, Item>(new[] { "items/1", "items/2" });
-                    Assert.Equal(1 * 3, items["items/1"].Position);
-                    Assert.Equal(2 * 3, items["items/2"].Position);
+                    var items = session.Load<ItemsTransformer, Item>(new[] { "items/1-A", "items/2-A" });
+                    Assert.Equal(1 * 3, items["items/1-A"].Position);
+                    Assert.Equal(2 * 3, items["items/2-A"].Position);
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var items = session.Advanced.Lazily.Load<ItemsTransformer, Item>(new[] { "items/1", "items/2" }).Value;
-                    Assert.Equal(1 * 3, items["items/1"].Position);
-                    Assert.Equal(2 * 3, items["items/2"].Position);
+                    var items = session.Advanced.Lazily.Load<ItemsTransformer, Item>(new[] { "items/1-A", "items/2-A" }).Value;
+                    Assert.Equal(1 * 3, items["items/1-A"].Position);
+                    Assert.Equal(2 * 3, items["items/2-A"].Position);
                 }
             }
         }
@@ -54,16 +54,16 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var items = session.Load<Item>(new[] { "items/1", "items/2" }, typeof(ItemsTransformer));
-                    Assert.Equal(1 * 3, items["items/1"].Position);
-                    Assert.Equal(2 * 3, items["items/2"].Position);
+                    var items = session.Load<Item>(new[] { "items/1-A", "items/2-A" }, typeof(ItemsTransformer));
+                    Assert.Equal(1 * 3, items["items/1-A"].Position);
+                    Assert.Equal(2 * 3, items["items/2-A"].Position);
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var items = session.Advanced.Lazily.Load<Item>(new[] { "items/1", "items/2" }, typeof(ItemsTransformer)).Value;
-                    Assert.Equal(1 * 3, items["items/1"].Position);
-                    Assert.Equal(2 * 3, items["items/2"].Position);
+                    var items = session.Advanced.Lazily.Load<Item>(new[] { "items/1-A", "items/2-A" }, typeof(ItemsTransformer)).Value;
+                    Assert.Equal(1 * 3, items["items/1-A"].Position);
+                    Assert.Equal(2 * 3, items["items/2-A"].Position);
                 }
             }
         }

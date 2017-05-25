@@ -35,13 +35,13 @@ namespace SlowTests.Bugs.Caching
 
                 using (var s = store.OpenSession())
                 {
-                    s.Load<User>("users/1");
+                    s.Load<User>("users/1-A");
                     s.SaveChanges();
                 }
 
                 using (var s = store.OpenSession())
                 {
-                    s.Load<User>("users/1");
+                    s.Load<User>("users/1-A");
                     Assert.Equal(1, s.Advanced.RequestExecutor.Cache.NumberOfItems);
                 }
             }
@@ -60,13 +60,13 @@ namespace SlowTests.Bugs.Caching
 
                 using (var s = store.OpenSession())
                 {
-                    s.Load<User>("users/1");
+                    s.Load<User>("users/1-A");
                     s.SaveChanges();
                 }
 
                 using (var s = store.OpenSession())
                 {
-                    var user = s.Load<User>("users/1");
+                    var user = s.Load<User>("users/1-A");
                     user.Name = "Rahien";
                     Assert.Equal(1, s.Advanced.RequestExecutor.Cache.NumberOfItems);
                     s.SaveChanges();
@@ -74,7 +74,7 @@ namespace SlowTests.Bugs.Caching
 
                 using (var s = store.OpenSession())
                 {
-                    s.Load<User>("users/1");
+                    s.Load<User>("users/1-A");
                     Assert.Equal(1, s.Advanced.RequestExecutor.Cache.NumberOfItems); // did NOT get from cache
                 }
             }

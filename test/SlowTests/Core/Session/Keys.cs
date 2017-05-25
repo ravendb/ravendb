@@ -31,7 +31,7 @@ namespace SlowTests.Core.Session
                     session.Store(user);
 
                     var id = session.Advanced.GetDocumentId(user);
-                    Assert.Equal("UserWithoutIds/1", id);
+                    Assert.Equal("UserWithoutIds/1-A", id);
                 }
 
                 using (var session = store.OpenSession())
@@ -68,8 +68,8 @@ namespace SlowTests.Core.Session
                 Assert.Equal("def/", store.Conventions.GenerateDocumentId(store.Database, new User()));
                 Assert.Equal("def/", await store.Conventions.GenerateDocumentIdAsync(store.Database, new User()));
 
-                Assert.Equal("addresses/1", store.Conventions.GenerateDocumentId(store.Database, new Address()));
-                Assert.Equal("companies/1", await store.Conventions.GenerateDocumentIdAsync(store.Database, new Company()));
+                Assert.Equal("addresses/1-A", store.Conventions.GenerateDocumentId(store.Database, new Address()));
+                Assert.Equal("companies/1-A", await store.Conventions.GenerateDocumentIdAsync(store.Database, new Company()));
             }
         }
 

@@ -503,7 +503,7 @@ namespace SlowTests.Issues
 
                 using (var commands = store.Commands())
                 {
-                    var customer = commands.Get("customers/1");
+                    var customer = commands.Get("customers/1-A");
 
                     Assert.NotNull(customer);
 
@@ -545,7 +545,7 @@ namespace SlowTests.Issues
 
                 using (var commands = store.Commands())
                 {
-                    var customer = await commands.GetAsync("customers/1");
+                    var customer = await commands.GetAsync("customers/1-A");
 
                     Assert.NotNull(customer);
 

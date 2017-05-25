@@ -23,15 +23,15 @@ namespace SlowTests.MailingList
                 {
                     session.Store(new Item
                     {
-                        Parent = "items/2"
+                        Parent = "items/2-A"
                     });
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    session.Include<Item>(x => x.Parent).Load("items/1");
-                    Assert.Null(session.Load<Item>("items/2"));
+                    session.Include<Item>(x => x.Parent).Load("items/1-A");
+                    Assert.Null(session.Load<Item>("items/2-A"));
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }

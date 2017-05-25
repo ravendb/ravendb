@@ -29,13 +29,13 @@ namespace SlowTests.Bugs
                     BaseAddress = new Uri(store.Url)
                 };
 
-                var httpResponseMessage = await httpClient.PutAsync($"/databases/{store.Database}/docs?id=items/1",
+                var httpResponseMessage = await httpClient.PutAsync($"/databases/{store.Database}/docs?id=items/1-A",
                     new StringContent("{'item': NaN}"));
                 Assert.True(httpResponseMessage.IsSuccessStatusCode);
 
                 session.Store(new Number());
                 session.SaveChanges();
-                var num = session.Load<Number>("Numbers/1");
+                var num = session.Load<Number>("Numbers/1-A");
                 Assert.Equal(float.NaN, num.FNumber);
             }
         }

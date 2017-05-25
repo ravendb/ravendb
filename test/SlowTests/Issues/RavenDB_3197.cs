@@ -61,7 +61,7 @@ exports.c = function(v) { throw 'oops'; }
                 {
                     var e = Assert.Throws<JavaScriptException>(() =>
                     {
-                        var document = database.DocumentsStorage.Get(context, "simpleUsers/1");
+                        var document = database.DocumentsStorage.Get(context, "simpleUsers/1-A");
 
                         database.Patcher.Apply(context, document, new PatchRequest
                         {

@@ -180,7 +180,7 @@ namespace SlowTests.Core.Commands
 
                         string id;
                         Assert.True(item.TryGet(Constants.Documents.Indexing.Fields.DocumentIdFieldName, out id));
-                        Assert.Equal("users/" + (i + 1), id);
+                        Assert.Equal("users/" + (i + 1)+ "-A", id);
                     }
                 }
             }

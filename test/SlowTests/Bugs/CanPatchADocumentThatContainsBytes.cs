@@ -62,7 +62,7 @@ for (var i = 0; i < this.Skills.$values.length; i++) {
 
                     operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
-                    var user = session.Load<User>("Users/1");
+                    var user = session.Load<User>("Users/1-A");
                     Assert.False(user.Skills.Single().IsPrimary);
                 }
             }

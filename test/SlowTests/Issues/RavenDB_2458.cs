@@ -46,11 +46,11 @@ namespace SlowTests.Issues
 
                 store
                     .Operations
-                    .Send(new PatchOperation("people/1", null, new PatchRequest { Script = "this.Name = test(this.Name);" }));
+                    .Send(new PatchOperation("people/1-A", null, new PatchRequest { Script = "this.Name = test(this.Name);" }));
 
                 using (var session = store.OpenSession())
                 {
-                    var person = session.Load<Person>("people/1");
+                    var person = session.Load<Person>("people/1-A");
                     Assert.Equal("test Name1", person.Name);
                 }
             }
@@ -83,11 +83,11 @@ namespace SlowTests.Issues
 
                     store
                         .Operations
-                        .Send(new PatchOperation("people/1", null, new PatchRequest { Script = "this.Name = test(this.Name);" }));
+                        .Send(new PatchOperation("people/1-A", null, new PatchRequest { Script = "this.Name = test(this.Name);" }));
 
                     using (var session = store.OpenSession())
                     {
-                        var person = session.Load<Person>("people/1");
+                        var person = session.Load<Person>("people/1-A");
                         Assert.Equal("test Name1", person.Name);
                     }
 

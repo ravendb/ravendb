@@ -58,7 +58,7 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var item = session.Load<Aggregate>("aggregates/1");
+                    var item = session.Load<Aggregate>("aggregates/1-A");
                     Assert.NotNull(item);
                 }
 
@@ -67,7 +67,7 @@ namespace SlowTests.MailingList
                     session.Advanced.UseOptimisticConcurrency = true;
                     var query = session
                         .Include("Bridge.Aggregates")
-                        .Load<Root>("roots/1");
+                        .Load<Root>("roots/1-A");
 
                     Assert.NotNull(query);
                 }
@@ -77,8 +77,8 @@ namespace SlowTests.MailingList
                     session.Advanced.UseOptimisticConcurrency = true;
                     var query = session
                         .Include("Bridge.Aggregates")
-                        .Load<Root>("roots/1");
-                    var loaded = session.Load<Aggregate>("aggregates/1");
+                        .Load<Root>("roots/1-A");
+                    var loaded = session.Load<Aggregate>("aggregates/1-A");
 
                     Assert.NotNull(query);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -89,8 +89,8 @@ namespace SlowTests.MailingList
                     session.Advanced.UseOptimisticConcurrency = true;
                     var query = session
                         .Include("Bridge.Aggregates")
-                        .Load<Root>("roots/1");
-                    var loaded = session.Load<Aggregate>("aggregates/1");
+                        .Load<Root>("roots/1-A");
+                    var loaded = session.Load<Aggregate>("aggregates/1-A");
 
                     Assert.NotNull(query);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);

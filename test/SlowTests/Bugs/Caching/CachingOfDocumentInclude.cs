@@ -36,21 +36,21 @@ namespace SlowTests.Bugs.Caching
                 using (var s = store.OpenSession())
                 {
                     s.Store(new User { Name = "Ayende" });
-                    s.Store(new User { PartnerId = "users/1" });
+                    s.Store(new User { PartnerId = "users/1-A" });
                     s.SaveChanges();
                 }
 
                 using (var s = store.OpenSession())
                 {
                     s.Include<User>(x => x.PartnerId)
-                        .Load("users/2");
+                        .Load("users/2-A");
                     s.SaveChanges();
                 }
 
                 using (var s = store.OpenSession())
                 {
                     s.Include<User>(x => x.PartnerId)
-                        .Load("users/2");
+                        .Load("users/2-A");
 
                     Assert.Equal(1, s.Advanced.RequestExecutor.Cache.NumberOfItems);
                 }
@@ -65,19 +65,19 @@ namespace SlowTests.Bugs.Caching
                 using (var s = store.OpenSession())
                 {
                     s.Store(new User { Name = "Ayende" });
-                    s.Store(new User { PartnerId = "users/1" });
+                    s.Store(new User { PartnerId = "users/1-A" });
                     s.SaveChanges();
                 }
 
                 using (var s = store.OpenAsyncSession())
                 {
-                    var u = await s.LoadAsync<User>("users/2");
+                    var u = await s.LoadAsync<User>("users/2-A");
 
                     await s.LoadAsync<User>(u.PartnerId);
 
                     var old = s.Advanced.NumberOfRequests;
                     var res = await s.Include<User>(x => x.PartnerId)
-                         .LoadAsync("users/2");
+                         .LoadAsync("users/2-A");
 
                     Assert.Equal(old, s.Advanced.NumberOfRequests);
                 }
@@ -91,20 +91,20 @@ namespace SlowTests.Bugs.Caching
                 using (var s = store.OpenSession())
                 {
                     s.Store(new User { Name = "Ayende" });
-                    s.Store(new User { PartnerId = "users/1" });
+                    s.Store(new User { PartnerId = "users/1-A" });
                     s.SaveChanges();
                 }
 
                 using (var s = store.OpenSession())
                 {
-                    s.Advanced.Lazily.Load<User>("users/2");
-                    s.Advanced.Lazily.Load<User>("users/1");
+                    s.Advanced.Lazily.Load<User>("users/2-A");
+                    s.Advanced.Lazily.Load<User>("users/1-A");
                     s.Advanced.Eagerly.ExecuteAllPendingLazyOperations();
 
                     var old = s.Advanced.NumberOfRequests;
                     Lazy<User> result1 = s.Advanced.Lazily
                         .Include<User>(x => x.PartnerId)
-                        .Load<User>("users/2");
+                        .Load<User>("users/2-A");
                     Assert.NotNull(result1.Value);
                     Assert.Equal(old, s.Advanced.NumberOfRequests);
                 }
@@ -119,19 +119,19 @@ namespace SlowTests.Bugs.Caching
                 using (var s = store.OpenSession())
                 {
                     s.Store(new User { Name = "Ayende" });
-                    s.Store(new User { PartnerId = "users/1" });
+                    s.Store(new User { PartnerId = "users/1-A" });
                     s.SaveChanges();
                 }
 
                 using (var s = store.OpenSession())
                 {
-                    var u = s.Load<User>("users/2");
+                    var u = s.Load<User>("users/2-A");
 
                     s.Load<User>(u.PartnerId);
 
                     var old = s.Advanced.NumberOfRequests;
                     var res = s.Include<User>(x => x.PartnerId)
-                         .Load("users/2");
+                         .Load("users/2-A");
 
                     Assert.Equal(old, s.Advanced.NumberOfRequests);
                 }
@@ -149,28 +149,28 @@ namespace SlowTests.Bugs.Caching
                     s.Store(new User { Name = "Michael" });
                     s.Store(new User { Name = "Fitzhak" });
                     s.Store(new User { Name = "Maxim" });
-                    s.Store(new User { PartnerId = "users/1" });
+                    s.Store(new User { PartnerId = "users/1-A" });
                     s.SaveChanges();
                 }
 
                 using (var s = store.OpenSession())
                 {
-                    var u2 = s.Load<User>("users/2");
-                    var u6 = s.Load<User>("users/6");
+                    var u2 = s.Load<User>("users/2-A");
+                    var u6 = s.Load<User>("users/6-A");
                     var inp = new List<string>();
-                    inp.Add("users/1");
-                    inp.Add("users/2");
-                    inp.Add("users/3");
-                    inp.Add("users/4");
-                    inp.Add("users/5");
-                    inp.Add("users/6");
+                    inp.Add("users/1-A");
+                    inp.Add("users/2-A");
+                    inp.Add("users/3-A");
+                    inp.Add("users/4-A");
+                    inp.Add("users/5-A");
+                    inp.Add("users/6-A");
                     var u4 = s.Load<User>(inp.ToArray());
 
                     s.Load<User>(u6.PartnerId);
 
                     var old = s.Advanced.NumberOfRequests;
                     var res = s.Include<User>(x => x.PartnerId)
-                         .Load("users/2", "users/3", "users/6");
+                         .Load("users/2-A", "users/3-A", "users/6-A");
 
                     Assert.Equal(old, s.Advanced.NumberOfRequests);
                 }
@@ -184,21 +184,21 @@ namespace SlowTests.Bugs.Caching
                 using (var s = store.OpenSession())
                 {
                     s.Store(new User { Name = "Ayende" });
-                    s.Store(new User { PartnerId = "users/1" });
+                    s.Store(new User { PartnerId = "users/1-A" });
                     s.SaveChanges();
                 }
 
                 using (var s = store.OpenSession())
                 {
                     s.Include<User>(x => x.PartnerId)
-                        .Load("users/2");
+                        .Load("users/2-A");
                     s.SaveChanges();
                 }
 
                 using (var s = store.OpenSession())
                 {
                     var user = s.Include<User>(x => x.PartnerId)
-                        .Load("users/2");
+                        .Load("users/2-A");
                     Assert.Equal(1, s.Advanced.RequestExecutor.Cache.NumberOfItems);
                     user.Name = "Foo";
                     s.SaveChanges();
@@ -208,7 +208,7 @@ namespace SlowTests.Bugs.Caching
                 using (var s = store.OpenSession())
                 {
                     s.Include<User>(x => x.PartnerId)
-                        .Load("users/2");
+                        .Load("users/2-A");
                     Assert.Equal(1, s.Advanced.RequestExecutor.Cache.NumberOfItems); // did NOT increase cache
                 }
             }
@@ -289,29 +289,29 @@ namespace SlowTests.Bugs.Caching
                 using (var s = store.OpenSession())
                 {
                     s.Store(new User { Name = "Ayende" });
-                    s.Store(new User { PartnerId = "users/1" });
+                    s.Store(new User { PartnerId = "users/1-A" });
                     s.SaveChanges();
                 }
 
                 using (var s = store.OpenSession())
                 {
                     s.Include<User>(x => x.PartnerId)
-                        .Load("users/2");
+                        .Load("users/2-A");
                 }
 
                 using (var s = store.OpenSession())
                 {
                     s.Include<User>(x => x.PartnerId)
-                        .Load("users/2");
+                        .Load("users/2-A");
                     Assert.Equal(1, s.Advanced.RequestExecutor.Cache.NumberOfItems);
-                    s.Load<User>("users/1").Name = "foo";
+                    s.Load<User>("users/1-A").Name = "foo";
                     s.SaveChanges();
                 }
 
                 using (var s = store.OpenSession())
                 {
                     s.Include<User>(x => x.PartnerId)
-                        .Load("users/2");
+                        .Load("users/2-A");
                     Assert.Equal(1, s.Advanced.RequestExecutor.Cache.NumberOfItems); // did NOT increase cache
                 }
             }

@@ -84,7 +84,7 @@ namespace SlowTests.Server.Documents.PeriodicExport
                     Directory.GetDirectories(_exportPath).First());
                 using (var session = store.OpenAsyncSession())
                 {
-                    var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
+                    var users = await session.LoadAsync<User>(new[] { "users/1-A", "users/2-A" });
                     Assert.True(users.Any(x => x.Value.Name == "oren"));
                     Assert.True(users.Any(x => x.Value.Name == "ayende"));
                 }
@@ -131,7 +131,7 @@ namespace SlowTests.Server.Documents.PeriodicExport
                     Directory.GetDirectories(_exportPath).First());
                 using (var session = store.OpenAsyncSession())
                 {
-                    var user = await session.LoadAsync<User>("users/1");
+                    var user = await session.LoadAsync<User>("users/1-A");
                     Assert.Equal("oren", user.Name);
                 }
             }
@@ -190,7 +190,7 @@ namespace SlowTests.Server.Documents.PeriodicExport
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
+                    var users = await session.LoadAsync<User>(new[] { "users/1-A", "users/2-A" });
                     Assert.True(users.Any(x => x.Value.Name == "oren"));
                     Assert.True(users.Any(x => x.Value.Name == "ayende"));
                 }

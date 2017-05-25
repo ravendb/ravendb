@@ -468,7 +468,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
                     await session.SaveChangesAsync();
                 }
 
-                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
+                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1-A", null, new PatchRequest
                 {
                     Script = @"
 var another = LoadDocument(anotherId);
@@ -476,13 +476,13 @@ this.Value = another.Value;
 ",
                     Values =
                     {
-                        {"anotherId", "CustomTypes/2"}
+                        {"anotherId", "CustomTypes/2-A"}
                     }
                 }));
 
                 using (var commands = store.Commands())
                 {
-                    var doc = await commands.GetAsync("CustomTypes/1");
+                    var doc = await commands.GetAsync("CustomTypes/1-A");
 
                     var result = commands.Deserialize<CustomType>(doc.BlittableJson);
                     Assert.Equal(1, result.Value);
@@ -577,7 +577,7 @@ this.Value = another.Value;
                     await session.SaveChangesAsync();
                 }
 
-                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
+                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1-A", null, new PatchRequest
                 {
                     Script = @"PutDocument(
         'NewTypes/1', 
@@ -609,7 +609,7 @@ this.Value = another.Value;
                     await session.SaveChangesAsync();
                 }
 
-                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
+                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1-A", null, new PatchRequest
                 {
                     Script = @"PutDocument(
         'NewTypes/1', 
@@ -728,7 +728,7 @@ this.Value = another.Value;
 
                 var exception = await Assert.ThrowsAsync<JavaScriptException>(async () =>
                 {
-                    await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
+                    await store.Operations.SendAsync(new PatchOperation("CustomTypes/1-A", null, new PatchRequest
                     {
                         Script = @"PutDocument(
     'Items/1', 

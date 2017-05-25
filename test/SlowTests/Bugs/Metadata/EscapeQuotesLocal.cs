@@ -26,7 +26,7 @@ namespace SlowTests.Bugs.Metadata
 
                 using (var session = store.OpenSession())
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = session.Load<User>("users/1-A");
                     var metadata = session.Advanced.GetMetadataFor(user);
                     Assert.Equal("\"Bar\"", metadata["Foo"]);
                 }
@@ -48,7 +48,7 @@ namespace SlowTests.Bugs.Metadata
 
                 using (var session = store.OpenSession())
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = session.Load<User>("users/1-A");
                     var metadata = session.Advanced.GetMetadataFor(user);
                     Assert.Equal("\\\"Bar\\\"", metadata["Foo"]);
                 }
