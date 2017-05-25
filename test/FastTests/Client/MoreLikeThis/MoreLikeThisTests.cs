@@ -328,7 +328,7 @@ namespace FastTests.Client.MoreLikeThis
         [Fact]
         public void CanGetResultsWhenIndexHasSlashInIt()
         {
-            const string key = "datas/1";
+            const string key = "datas/1-A";
 
             using (var session = _store.OpenSession())
             {
@@ -346,7 +346,7 @@ namespace FastTests.Client.MoreLikeThis
         [Fact]
         public void Query_On_Document_That_Does_Not_Have_High_Enough_Word_Frequency()
         {
-            const string key = "datas/4";
+            const string key = "datas/4-A";
 
             using (var session = _store.OpenSession())
             {
@@ -374,7 +374,7 @@ namespace FastTests.Client.MoreLikeThis
         [Fact]
         public void Test_With_Lots_Of_Random_Data()
         {
-            var key = "datas/1";
+            var key = "datas/1-A";
             using (var session = _store.OpenSession())
             {
                 new DataIndex().Execute(_store);
@@ -395,7 +395,7 @@ namespace FastTests.Client.MoreLikeThis
         [Fact]
         public void Do_Not_Pass_FieldNames()
         {
-            var key = "datas/1";
+            var key = "datas/1-A";
             using (var session = _store.OpenSession())
             {
                 new DataIndex().Execute(_store);
@@ -421,7 +421,7 @@ namespace FastTests.Client.MoreLikeThis
         [Fact]
         public void Each_Field_Should_Use_Correct_Analyzer()
         {
-            var key = "datas/1";
+            var key = "datas/1-A";
             using (var session = _store.OpenSession())
             {
                 new DataIndex().Execute(_store);
@@ -443,7 +443,7 @@ namespace FastTests.Client.MoreLikeThis
                 Assert.Empty(list);
             }
 
-            key = "datas/11";
+            key = "datas/11-A";
             using (var session = _store.OpenSession())
             {
                 new DataIndex().Execute(_store);
@@ -469,7 +469,7 @@ namespace FastTests.Client.MoreLikeThis
         [Fact]
         public void Can_Use_Min_Doc_Freq_Param()
         {
-            const string key = "datas/1";
+            const string key = "datas/1-A";
 
             using (var session = _store.OpenSession())
             {
@@ -505,7 +505,7 @@ namespace FastTests.Client.MoreLikeThis
         [Fact]
         public void Can_Use_Boost_Param()
         {
-            const string key = "datas/1";
+            const string key = "datas/1-A";
 
             using (var session = _store.OpenSession())
             {
@@ -544,7 +544,7 @@ namespace FastTests.Client.MoreLikeThis
         [Fact]
         public void Can_Use_Stop_Words()
         {
-            const string key = "datas/1";
+            const string key = "datas/1-A";
 
             using (var session = _store.OpenSession())
             {

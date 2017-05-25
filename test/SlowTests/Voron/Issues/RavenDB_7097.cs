@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Threading;
-using SlowTests.Utils;
 using Voron;
 using Xunit;
 
@@ -15,7 +14,7 @@ namespace SlowTests.Voron.Issues
         }
 
         [Fact]
-        public void Pending_recycle_files_are_deleted_on_dispose()
+        public void Recyclable_journal_files_are_deleted_on_dispose()
         {
             RequireFileBasedPager();
 
@@ -38,12 +37,12 @@ namespace SlowTests.Voron.Issues
             Env.FlushLogToDataFile();
             Env.ForceSyncDataFile();
 
-            SpinWait.SpinUntil(() => new DirectoryInfo(DataDir).GetFiles($"{StorageEnvironmentOptions.PendingRecycleFileNamePrefix}*").Length == 6,
+            SpinWait.SpinUntil(() => new DirectoryInfo(DataDir).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*").Length == 6,
                 TimeSpan.FromSeconds(30));
 
             Env.Dispose();
 
-            var journalsForReuse = new DirectoryInfo(DataDir).GetFiles($"{StorageEnvironmentOptions.PendingRecycleFileNamePrefix}*");
+            var journalsForReuse = new DirectoryInfo(DataDir).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*");
 
             Assert.Equal(0, journalsForReuse.Length);
         }
