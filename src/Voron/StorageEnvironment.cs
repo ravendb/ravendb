@@ -58,7 +58,7 @@ namespace Voron
 
         private readonly AbstractPager _dataPager;
 
-        internal LowLevelTransaction.WriteTransactionPool WriteTransactionPool =
+        internal readonly LowLevelTransaction.WriteTransactionPool WriteTransactionPool =
             new LowLevelTransaction.WriteTransactionPool();
 
         private readonly WriteAheadJournal _journal;
@@ -90,7 +90,7 @@ namespace Voron
         public bool Disposed;
         private readonly Logger _log;
         public static int MaxConcurrentFlushes = 10; // RavenDB-5221
-        public static int NumOfCocurrentSyncsPerPhysDrive;
+        public static int NumOfConcurrentSyncsPerPhysDrive;
         public static int TimeToSyncAfterFlashInSeconds;
 
         public Guid DbId { get; set; }
@@ -110,7 +110,7 @@ namespace Voron
                 _dataPager = options.DataPager;
                 _freeSpaceHandling = new FreeSpaceHandling();
                 _headerAccessor = new HeaderAccessor(this);
-                NumOfCocurrentSyncsPerPhysDrive = options.NumOfCocurrentSyncsPerPhysDrive;
+                NumOfConcurrentSyncsPerPhysDrive = options.NumOfCocurrentSyncsPerPhysDrive;
                 TimeToSyncAfterFlashInSeconds = options.TimeToSyncAfterFlashInSeconds;
 
                 Debug.Assert(_dataPager.NumberOfAllocatedPages != 0);
@@ -169,14 +169,14 @@ namespace Voron
                 {
                     if (log.IsInfoEnabled)
                         log.Info(
-                            $"Failed to fallocate test file at \'{filename}\'. (rc = {result}) but had success with pwrite. New file allocations will take longer time with pwrite");
+                            $"Failed to allocate test file at \'{filename}\'. (rc = {result}) but had success with pwrite. New file allocations will take longer time with pwrite");
                 }
 
                 if (result == (int)Errno.EINVAL)
                 {
                     if (log.IsInfoEnabled)
                         log.Info(
-                            $"Cannot fallocate (rc = EINVAL) to a file \'{filename}\' opened using O_DIRECT. Assuming O_DIRECT is not supported by this file system");
+                            $"Cannot allocate (rc = EINVAL) to a file \'{filename}\' opened using O_DIRECT. Assuming O_DIRECT is not supported by this file system");
 
                     return false;
                 }
@@ -185,7 +185,7 @@ namespace Voron
                 {
                     if (log.IsInfoEnabled)
                         log.Info(
-                            $"Failed to fallocate test file at \'{filename}\'. (rc = {result}). Cannot determine if O_DIRECT supported by the file system. Assuming it is");
+                            $"Failed to allocate test file at \'{filename}\'. (rc = {result}). Cannot determine if O_DIRECT supported by the file system. Assuming it is");
                 }
 
             }
@@ -457,7 +457,7 @@ namespace Voron
         {
             throw new TimeoutException(
                 $"Could not dispose the environment {Options.BasePath} after {Options.DisposeWaitTime} because there are running transaction.{Environment.NewLine}" +
-                $"Either you have long running transactions or hung transactions. Can\'t disposet the enviorment becasue that would invalid memory regions{Environment.NewLine}" +
+                $"Either you have long running transactions or hung transactions. Can\'t dispose the environment because that would invalid memory regions{Environment.NewLine}" +
                 $"that those transactions are still looking at.{Environment.NewLine}" +
                 $"There are {activeTxs.Count:#,#} transactions ({string.Join(", ", activeTxs)})"
             );
@@ -610,7 +610,7 @@ namespace Voron
 
             var message = $"Waited for {wait} for transaction write lock, but could not get it";
             if (copy != null)
-                message += $", the tx is currenly owned by thread {copy.Id} - {copy.Name}";
+                message += $", the tx is currently owned by thread {copy.Id} - {copy.Name}";
 
             throw new TimeoutException(message);
         }
@@ -894,7 +894,7 @@ namespace Voron
             var bitIndex = (int)(pageNumber % (8 * sizeof(long)));
             var bitToSet = 1L << bitIndex;
 
-            // If the page is beyong the initiall size of the file we don't validate it. 
+            // If the page is beyond the initial size of the file we don't validate it. 
             // We assume that it is valid since we wrote it in this run.
             if (index >= _validPages.Length)
                 return;
@@ -1013,7 +1013,7 @@ namespace Voron
                     return TransactionsModeResult.ModeAlreadySet;
 
                 Options.TransactionsMode = mode;
-                if (duration == TimeSpan.FromMinutes(0)) // infinte
+                if (duration == TimeSpan.FromMinutes(0)) // infinite
                     Options.NonSafeTransactionExpiration = null;
                 else
                     Options.NonSafeTransactionExpiration = DateTime.Now + duration;
