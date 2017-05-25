@@ -82,13 +82,13 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<DocumentItem> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions, int limit)
+        public IEnumerable<DocumentItem> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions)
         {
             var versioningStorage = _database.BundleLoader.VersioningStorage;
             if (versioningStorage == null)
                 yield break;
 
-            var documents = versioningStorage.GetRevisionsFrom(_context, _startDocumentEtag, limit);
+            var documents = versioningStorage.GetRevisionsFrom(_context, _startDocumentEtag, int.MaxValue);
             foreach (var document in documents)
             {
                 yield return new DocumentItem

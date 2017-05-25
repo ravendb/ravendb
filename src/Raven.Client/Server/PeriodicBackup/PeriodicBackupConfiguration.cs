@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 
 using System.Diagnostics;
-using Raven.Client.Documents;
 
 namespace Raven.Client.Server.PeriodicBackup
 {
@@ -14,6 +13,8 @@ namespace Raven.Client.Server.PeriodicBackup
         public long? TaskId { get; set; }
 
         public bool Disabled { get; set; }
+
+        public string Name { get; set; }
 
         public BackupType BackupType { get; set; }
 

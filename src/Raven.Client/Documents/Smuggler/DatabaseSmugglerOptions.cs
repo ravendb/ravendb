@@ -21,8 +21,6 @@ namespace Raven.Client.Documents.Smuggler
 
         public DatabaseItemType OperateOnTypes { get; set; }
 
-        public int? RevisionDocumentsLimit { get; set; }
-
         public bool IncludeExpired { get; set; }
 
         public bool RemoveAnalyzers { get; set; }
@@ -46,9 +44,6 @@ namespace Raven.Client.Documents.Smuggler
 
             if (OperateOnTypes != DefaultOperateOnTypes)
                 sb.Append($"operateOnTypes={OperateOnTypes}");
-
-            if (RevisionDocumentsLimit.HasValue)
-                sb.Append($"&revisionDocumentsLimit={RevisionDocumentsLimit.Value}");
 
             if (IncludeExpired == false)
                 sb.Append("&includeExpired=false");

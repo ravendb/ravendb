@@ -114,7 +114,7 @@ namespace Raven.Server.Smuggler.Documents
             return ReadDocuments(actions);
         }
 
-        public IEnumerable<DocumentItem> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions, int limit)
+        public IEnumerable<DocumentItem> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions)
         {
             return ReadDocuments(actions);
         }
