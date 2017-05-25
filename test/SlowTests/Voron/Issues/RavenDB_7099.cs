@@ -16,7 +16,7 @@ namespace SlowTests.Voron.Issues
 
         [Theory]
         [InlineDataWithRandomSeed()]
-        public void Do_not_create_pending_recycle_files_on_db_load(int seed)
+        public void Do_not_create_recyclable_journal_files_on_db_load(int seed)
         {
             RequireFileBasedPager();
 
@@ -36,20 +36,20 @@ namespace SlowTests.Voron.Issues
                 }
             }
 
-            var journalsForReuse = new DirectoryInfo(DataDir).GetFiles($"{StorageEnvironmentOptions.PendingRecycleFileNamePrefix}*");
+            var journalsForReuse = new DirectoryInfo(DataDir).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*");
 
             Assert.Equal(0, journalsForReuse.Length);
 
             RestartDatabase();
 
-            journalsForReuse = new DirectoryInfo(DataDir).GetFiles($"{StorageEnvironmentOptions.PendingRecycleFileNamePrefix}*");
+            journalsForReuse = new DirectoryInfo(DataDir).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*");
 
             Assert.Equal(0, journalsForReuse.Length);
         }
 
         [Theory]
         [InlineDataWithRandomSeed()]
-        public void Flushed_journals_should_become_pending_recycle_files_after_sync(int seed)
+        public void Flushed_journals_should_become_recyclable_files_after_sync(int seed)
         {
             RequireFileBasedPager();
 
@@ -72,7 +72,7 @@ namespace SlowTests.Voron.Issues
             Env.FlushLogToDataFile();
             Env.ForceSyncDataFile();
 
-            SpinWait.SpinUntil(() => new DirectoryInfo(DataDir).GetFiles($"{StorageEnvironmentOptions.PendingRecycleFileNamePrefix}*").Length > 0,
+            SpinWait.SpinUntil(() => new DirectoryInfo(DataDir).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*").Length > 0,
                 TimeSpan.FromSeconds(30));
         }
     }
