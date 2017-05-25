@@ -61,7 +61,7 @@ namespace SlowTests.MailingList
 
                     var ids = result.Select(b => b.Id).ToArray();
 
-                    Assert.Equal(new[] { "blogs/3", "blogs/2", "blogs/4", "blogs/1" }, ids);
+                    Assert.Equal(new[] { "blogs/3-A", "blogs/2-A", "blogs/4-A", "blogs/1-A" }, ids);
                 }
             }
         }

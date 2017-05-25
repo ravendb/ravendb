@@ -268,8 +268,8 @@ namespace FastTests.Server.Documents.Versioning
                 {
                     using (var session = store.OpenAsyncSession())
                     {
-                        var company = await session.LoadAsync<Company>("companies/1");
-                        var user = await session.LoadAsync<User>("users/1");
+                        var company = await session.LoadAsync<Company>("companies/1-A");
+                        var user = await session.LoadAsync<User>("users/1-A");
                         company.Name += i;
                         user.Name += i;
                         await session.StoreAsync(company);
@@ -280,8 +280,8 @@ namespace FastTests.Server.Documents.Versioning
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var company = await session.LoadAsync<Company>("companies/1");
-                    var user = await session.LoadAsync<User>("users/1");
+                    var company = await session.LoadAsync<Company>("companies/1-A");
+                    var user = await session.LoadAsync<User>("users/1-A");
                     Assert.NotNull(company);
                     Assert.NotNull(user);
                     session.Delete(company);
@@ -290,22 +290,22 @@ namespace FastTests.Server.Documents.Versioning
                 }
                 using (var session = store.OpenAsyncSession())
                 {
-                    var companies = await session.Advanced.GetRevisionsForAsync<Company>("companies/1");
-                    var users = await session.Advanced.GetRevisionsForAsync<User>("users/1");
+                    var companies = await session.Advanced.GetRevisionsForAsync<Company>("companies/1-A");
+                    var users = await session.Advanced.GetRevisionsForAsync<User>("users/1-A");
                     Assert.Equal(5, companies.Count);
                     Assert.Empty(users);
                 }
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new Company { Name = "New Company" }, "companies/1");
-                    await session.StoreAsync(new User { Name = "New User" }, "users/1");
+                    await session.StoreAsync(new Company { Name = "New Company" }, "companies/1-A");
+                    await session.StoreAsync(new User { Name = "New User" }, "users/1-A");
                     await session.SaveChangesAsync();
                 }
                 using (var session = store.OpenAsyncSession())
                 {
-                    var companies = await session.Advanced.GetRevisionsForAsync<Company>("companies/1");
-                    var users = await session.Advanced.GetRevisionsForAsync<User>("users/1");
+                    var companies = await session.Advanced.GetRevisionsForAsync<Company>("companies/1-A");
+                    var users = await session.Advanced.GetRevisionsForAsync<User>("users/1-A");
                     Assert.Equal(5, companies.Count);
                     Assert.Equal("New Company", companies.First().Name);
                     Assert.Equal(1, users.Count);

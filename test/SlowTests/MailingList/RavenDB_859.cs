@@ -91,11 +91,11 @@ namespace SlowTests.MailingList
                 {
                     var results = session.Query<TestIndex.Result, TestIndex>()
                                          .Customize(x => x.WaitForNonStaleResults())
-                                         .Where(x => x.Id == "bars/1")
+                                         .Where(x => x.Id == "bars/1-A")
                                          .ToList();
 
                     Assert.Equal(1, results.Count);
-                    Assert.Equal("bars/1", results[0].Id);
+                    Assert.Equal("bars/1-A", results[0].Id);
                     Assert.Equal(4, results[0].Count);
                 }
             }
@@ -130,11 +130,11 @@ namespace SlowTests.MailingList
                 {
                     var results = session.Query<OuterResult, TestIndex>()
                                          .Customize(x => x.WaitForNonStaleResults())
-                                         .Where(x => x.Id == "bars/1")
+                                         .Where(x => x.Id == "bars/1-A")
                                          .ToList();
 
                     Assert.Equal(1, results.Count);
-                    Assert.Equal("bars/1", results[0].Id);
+                    Assert.Equal("bars/1-A", results[0].Id);
                     Assert.Equal(4, results[0].Count);
                 }
             }

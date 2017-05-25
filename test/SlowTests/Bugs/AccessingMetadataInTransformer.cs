@@ -31,7 +31,7 @@ namespace SlowTests.Bugs
 
                 using (var session = store.OpenSession())
                 {
-                    var load = session.Load<Profile>("profiles/1");
+                    var load = session.Load<Profile>("profiles/1-A");
 
                     var meta = session.Advanced.GetMetadataFor(load);
 

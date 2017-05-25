@@ -31,10 +31,10 @@ namespace SlowTests.Issues
                     int tries;
                     var val = documentDatabase.DocumentsStorage.Identities.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("users/", table, context, out tries);
                     Assert.True(30 > tries);
-                    Assert.Equal("users/1338", val);
+                    Assert.Equal("users/1338-A", val);
                     val = documentDatabase.DocumentsStorage.Identities.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("users/", table, context, out tries);
                     Assert.Equal(1, tries);
-                    Assert.Equal("users/1339", val);
+                    Assert.Equal("users/1339-A", val);
                 }
             }
         }

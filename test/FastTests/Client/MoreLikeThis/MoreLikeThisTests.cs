@@ -165,7 +165,7 @@ namespace FastTests.Client.MoreLikeThis
                 }
 
                 var numberOfRequests = session.Advanced.NumberOfRequests;
-                var person = session.Load<Person>("people/1");
+                var person = session.Load<Person>("people/1-A");
                 Assert.NotNull(person);
                 Assert.Equal("Name1", person.Name);
                 Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);

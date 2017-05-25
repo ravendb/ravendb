@@ -32,8 +32,8 @@ namespace SlowTests.Bugs
                 using (var s = store.OpenSession())
                 {
 
-                    Assert.Equal(dateTimeOffset, s.Load<EntityWithNullableDateTimeOffset>("EntityWithNullableDateTimeOffsets/1").At);
-                    Assert.Null(s.Load<EntityWithNullableDateTimeOffset>("EntityWithNullableDateTimeOffsets/2").At);
+                    Assert.Equal(dateTimeOffset, s.Load<EntityWithNullableDateTimeOffset>("EntityWithNullableDateTimeOffsets/1-A").At);
+                    Assert.Null(s.Load<EntityWithNullableDateTimeOffset>("EntityWithNullableDateTimeOffsets/2-A").At);
                     s.SaveChanges();
                 }
             }

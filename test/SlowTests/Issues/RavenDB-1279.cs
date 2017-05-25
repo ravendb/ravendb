@@ -65,7 +65,7 @@ namespace SlowTests.Issues
                 using (var sesion = store.OpenSession())
                 {
                     var order = sesion.Include<Order>(x => x.CompanyId)
-                                      .Load("orders/1");
+                                      .Load("orders/1-A");
                     var company = sesion.Load<Company>(order.CompanyId);
                     Assert.Equal("HR", company.Name);
                     Assert.Equal(1, sesion.Advanced.NumberOfRequests);

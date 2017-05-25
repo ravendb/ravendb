@@ -31,7 +31,7 @@ namespace SlowTests.Bugs
                 {
                     for (int i = 0; i < 5; i++)
                     {
-                        Assert.Equal("Ayende #" + i, s.Load<User>("users/" + (i + 1)).Name);
+                        Assert.Equal("Ayende #" + i, s.Load<User>("users/" + (i + 1)+ "-A").Name);
                     }
                 }
             }
@@ -56,7 +56,7 @@ namespace SlowTests.Bugs
                 {
                     for (int i = 0; i < 5; i++)
                     {
-                        var clone = s.Load<User>("users/" + (i + 1));
+                        var clone = s.Load<User>("users/" + (i + 1)+ "-A");
                         clone.Name = "Rahien #" + i;
                     }
                     s.SaveChanges();
@@ -66,7 +66,7 @@ namespace SlowTests.Bugs
                 {
                     for (int i = 0; i < 5; i++)
                     {
-                        Assert.Equal("Rahien #" + i, s.Load<User>("users/" + (i + 1)).Name);
+                        Assert.Equal("Rahien #" + i, s.Load<User>("users/" + (i + 1)+ "-A").Name);
                     }
                 }
             }
@@ -91,7 +91,7 @@ namespace SlowTests.Bugs
                 {
                     for (int i = 0; i < 5; i++)
                     {
-                        var clone = s.Load<User>("users/" + (i + 1));
+                        var clone = s.Load<User>("users/" + (i + 1)+ "-A");
                         s.Delete(clone);
                     }
                     s.SaveChanges();
@@ -101,7 +101,7 @@ namespace SlowTests.Bugs
                 {
                     for (int i = 0; i < 5; i++)
                     {
-                        Assert.Null(s.Load<User>("users/" + (i + 1)));
+                        Assert.Null(s.Load<User>("users/" + (i + 1)+ "-A"));
                     }
                 }
             }
@@ -126,8 +126,8 @@ namespace SlowTests.Bugs
                 {
                     for (int i = 0; i < 5; i++)
                     {
-                        var clone = s.Load<User>("users/" + (i + 1));
-                        Assert.Equal("users/" + (i + 1), s.Advanced.GetDocumentId(clone));
+                        var clone = s.Load<User>("users/" + (i + 1)+ "-A");
+                        Assert.Equal("users/" + (i + 1)+ "-A", s.Advanced.GetDocumentId(clone));
                     }
                 }
             }

@@ -112,10 +112,10 @@ namespace SlowTests.Issues
                     {
                         sesssion.Store(new Restaurant
                         {
-                            Categories = new List<string> { "categories/1", "categories/2", "categories/3", "categories/4", "categories/5" },
+                            Categories = new List<string> { "categories/1-A", "categories/2-A", "categories/3-A", "categories/4-A", "categories/5-A" },
                             CityId = "cities/2",
                             CityName = "New York",
-                            MainCategory = "categories/6"
+                            MainCategory = "categories/6-A"
                         });
                     }
 

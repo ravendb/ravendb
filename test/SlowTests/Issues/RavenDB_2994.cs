@@ -121,7 +121,7 @@ namespace SlowTests.Issues
 
                     Assert.Equal(2, items.Count);
 
-                    var item1 = items.Single(x => x.Id == "items/1");
+                    var item1 = items.Single(x => x.Id == "items/1-A");
 
                     Assert.Equal(dec, item1.Decimal1);
                     Assert.Equal(dec, item1.Decimal2);
@@ -135,7 +135,7 @@ namespace SlowTests.Issues
                     Assert.Equal(l, item1.Long1);
                     Assert.Equal(l, item1.Long2);
 
-                    var item2 = items.Single(x => x.Id == "items/2");
+                    var item2 = items.Single(x => x.Id == "items/2-A");
 
                     Assert.Equal(default(decimal), item2.Decimal1);
                     Assert.Equal(-1, item2.Decimal2);

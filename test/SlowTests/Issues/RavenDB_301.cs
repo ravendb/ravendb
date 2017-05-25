@@ -31,7 +31,7 @@ namespace SlowTests.Issues
                     session.Store(new Item
                     {
                         Name = "Ayende",
-                        Parent = "items/1"
+                        Parent = "items/1-A"
                     });
                     session.SaveChanges();
                 }

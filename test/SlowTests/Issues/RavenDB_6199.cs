@@ -107,7 +107,7 @@ namespace SlowTests.Issues
                     Assert.NotNull(details);
                     Assert.Equal(1, details.NumberOfExceedingDocuments);
                     Assert.Equal(3, details.MaxNumberOutputsPerDocument);
-                    Assert.Equal("users/2", details.SampleDocumentId);
+                    Assert.Equal("users/2-A", details.SampleDocumentId);
                 }
 
                 var indexStats = store.Admin.Send(new GetIndexStatisticsOperation(index.IndexName));

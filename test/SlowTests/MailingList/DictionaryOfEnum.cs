@@ -69,7 +69,7 @@ namespace SlowTests.MailingList
                     });
                     s.SaveChanges();
 
-                    var myTransformer = s.Load<MyTransformer, Result>("tests/1");
+                    var myTransformer = s.Load<MyTransformer, Result>("tests/1-A");
                     Assert.Equal("t", myTransformer.Name);
                 }
             }
