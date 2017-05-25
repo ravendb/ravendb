@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Sparrow.Logging;
 
 namespace Sparrow.Platform.Posix
@@ -8,7 +9,7 @@ namespace Sparrow.Platform.Posix
     public static class KernelVirtualFileSystemUtils
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger(nameof(KernelVirtualFileSystemUtils), "Raven/Server");
-        public static HashSet<string> IsOldFileAlert { get; set; }
+        private static readonly HashSet<string> IsOldFileAlert = new HashSet<string>();
 
 
         public static long ReadNumberFromCgroupFile(string filename)
@@ -76,9 +77,9 @@ namespace Sparrow.Platform.Posix
             try
             {
                 var txt = File.ReadAllText(filename);
-                var items = System.Text.RegularExpressions.Regex.Split(txt, @"\s+");
+                var items = System.Text.RegularExpressions.Regex.Split(txt, @"\s+").Where(s => s != string.Empty).ToArray();
 
-                if (items.Length < 6)
+               if (items.Length < 6)
                 {
                     if (IsOldFileAlert.Add(filename) && Logger.IsOperationsEnabled)
                         Logger.Operations($"no swap defined on this system according to {filename}");
@@ -103,12 +104,16 @@ namespace Sparrow.Platform.Posix
                     return null;
                 }
 
-                var numberOfSwaps = items.Length / 5;
+                var numberOfSwaps = items.Length / 5 - 1; // "-1" ignore header;
+                if (numberOfSwaps < 1)
+                    return null; // no swaps defined
+
                 var path = new string[numberOfSwaps];
-              
-                for (var i=5; i < numberOfSwaps; i+=5) // start from "5" - skip header
+
+                int j = 0;
+                for (var i=5; i < items.Length; i+=5) // start from "5" - skip header
                 {
-                    path[i] = items[i];                    
+                    path[j++] = items[i];                    
                 }
 
                 return path;
@@ -157,7 +162,7 @@ namespace Sparrow.Platform.Posix
             try
             {
                 var txt = File.ReadAllText(filename);
-                var items = System.Text.RegularExpressions.Regex.Split(txt, @"\s+");
+                var items = System.Text.RegularExpressions.Regex.Split(txt, @"\s+").Where(s => s != string.Empty).ToArray();
 
                 if (items.Length < 5)
                 {
@@ -183,12 +188,13 @@ namespace Sparrow.Platform.Posix
                     return results;
                 }
 
-                var numberOfSwaps = items.Length / 4;
-                for (var i = 4; i < numberOfSwaps; i += 4) // start from "4" - skip header
+                for (var i = 7; i < items.Length; i += 4) // start from "7" - skip header
                 {
-                    var reg = new System.Text.RegularExpressions.Regex(@"\d+$"); // remove numbers at end of string (i.e.: /dev/sda5 ==> /dev/sda)
-                    var disk = reg.Replace(items[i], "");
-                    results.Add(disk);
+                    // remove numbers at end of string (i.e.: /dev/sda5 ==> sda)
+                    var reg = new System.Text.RegularExpressions.Regex(@"\d+$"); // we do not check swap file, only partitions
+                    var disk = reg.Replace(items[i], "").Replace("/dev/", "");
+                    if (disk != string.Empty)
+                        results.Add(disk); // hash set to avoid duplicates (i.e. sda1 && sda)
                 }
 
                 return results;

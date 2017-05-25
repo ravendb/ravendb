@@ -247,6 +247,33 @@ namespace Raven.Server.ServerWide
                 }
             };
 
+            try
+            {
+                if (MemoryInformation.IsSwappingOnHddInsteadOfSsd())
+                {
+                    var alert = AlertRaised.Create("Swap Storage Type Warning",
+                        "OS swapping on at least one HDD drive while there is at least one SSD drive on this system. " +
+                        "This can cause a slowdown, consider moving swap-partition/pagefile to SSD",
+                        AlertType.SwappingHddInsteadOfSsd,
+                        NotificationSeverity.Warning,
+                        "Swap Storage Type Warning");
+                    if (NotificationCenter.IsInitialized)
+                    {
+                        NotificationCenter.Add(alert);
+                    }
+                    else
+                    {
+                        storeAlertForLateRaise.Add(alert);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                // the above should not throw, but we mask it in case it does (as it reads IO parameters) - this alert is just a nice-to-have warning
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("An error occurred while trying to determine Is Swapping On Hdd Instead Of Ssd", e);
+            }
+
             options.SchemaVersion = 2;
             options.ForceUsing32BitsPager = Configuration.Storage.ForceUsing32BitsPager;
             try
