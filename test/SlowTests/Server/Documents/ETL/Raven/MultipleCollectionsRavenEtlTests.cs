@@ -21,12 +21,12 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.Store(new User
                     {
                         Name = "Joe Doe"
-                    });
+                    },"users/1");
 
                     session.Store(new Person
                     {
                         Name = "James Smith"
-                    });
+                    },"people/1");
 
                     session.SaveChanges();
                 }
@@ -35,12 +35,12 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 using (var session = dest.OpenSession())
                 {
-                    var user = session.Load<User>("users/1-A");
+                    var user = session.Load<User>("users/1");
 
                     Assert.NotNull(user);
                     Assert.Equal("Joe Doe", user.Name);
 
-                    var userFromPerson = session.Advanced.LoadStartingWith<User>("people/1-A/users/")[0];
+                    var userFromPerson = session.Advanced.LoadStartingWith<User>("people/1/users/")[0];
 
                     Assert.NotNull(userFromPerson);
                     Assert.Equal("James Smith", userFromPerson.Name);
@@ -68,12 +68,12 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 using (var session = dest.OpenSession())
                 {
-                    var user = session.Load<User>("users/1-A");
+                    var user = session.Load<User>("users/1");
 
                     Assert.NotNull(user);
                     Assert.Equal("Doe Joe", user.Name);
 
-                    var userFromPerson = session.Advanced.LoadStartingWith<User>("people/1-A/users/")[0];
+                    var userFromPerson = session.Advanced.LoadStartingWith<User>("people/1/users/")[0];
 
                     Assert.NotNull(userFromPerson);
                     Assert.Equal("Smith James", userFromPerson.Name);

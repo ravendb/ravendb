@@ -230,7 +230,7 @@ loadToAddresses(LoadDocument(this.AddressId));
                             Age = i,
                             Name = "James",
                             LastName = "Smith",
-                            AddressId = $"addresses/{i}"
+                            AddressId = $"addresses/{i}-A"
                         });
 
                         session.Store(new Address
