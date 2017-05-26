@@ -617,18 +617,7 @@ class editIndex extends viewModelBase {
                 });
         }
     }
-
-    tryIndex() {
-        eventsCollector.default.reportEvent("index", "try-index");
-        if (this.editedIndex().name()) {
-            if (!this.editedIndex().isTestIndex()) {
-                this.editedIndex().isTestIndex(true);
-                this.editedIndex().name(index.TestIndexPrefix + this.editedIndex().name());
-            }
-            var indexDef = this.editedIndex().toDto();
-            this.saveIndex(indexDef);
-        }
-    }*/
+*/
 
     /* TODO side by side
 
