@@ -221,7 +221,7 @@ class databasesManager {
 
                     const toActivate = this.databaseToActivate();
 
-                    if (toActivate && toActivate === event.DatabaseName) {
+                    if (updatedDatabase.relevant() && toActivate && toActivate === event.DatabaseName) {
                         this.activate(updatedDatabase);
                         this.databaseToActivate(null);
                     }
