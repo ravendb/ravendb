@@ -292,7 +292,7 @@ class editDocument extends viewModelBase {
     }
 
     onDocumentChange(n: Raven.Client.Documents.Changes.DocumentChange): void {
-        if (this.isSaving() || n.Etag === this.metadata().etag()) {
+        if (this.isSaving() || n.Etag === this.metadata().etag() || this.inReadOnlyMode()) {
             return;
         }
 
