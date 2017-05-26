@@ -245,6 +245,32 @@
         <span class="global-spinner spinner-sm"></span> <strong>Loading, please wait</strong>
     </div>
     <div class="footer-right">
+        <div class="footer-item" data-bind="visible: $root.clusterManager.nodesCount() === 1, if: $root.clusterManager.nodesCount() === 1">
+            <!-- when cluster contains single node - display fake button -->
+            <div class="btn" style="pointer-events: none">
+                <i class="icon-cluster"></i>
+                <span data-bind="text: 'Node ' + $root.clusterManager.nodeTag()"></span>
+            </div>
+        </div>
+
+        <div class="footer-item" data-bind="visible: $root.clusterManager.nodesCount() > 1, if: $root.clusterManager.nodesCount() > 1">
+            <div class="btn-group dropup">
+                <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" title="Jump to different cluster node">
+                    <i class="icon-cluster"></i>
+                    <span data-bind="text: 'Node ' + $root.clusterManager.nodeTag()"></span>
+                    <span class="caret"></span>
+                    <span class="sr-only">Toggle Dropdown</span>
+                </button>
+                <ul class="dropdown-menu dropup" data-bind="foreach: $root.clusterManager.topology().nodes">
+                    <li>
+                        <a target="_blank" title="Go to another cluster node" data-bind="attr: { href: serverUrl() }">
+                            <i data-bind="attr: { class: cssIcon() }"></i>
+                            <span data-bind="text: 'Node ' + tag()"></span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
         <div class="footer-item">
             <a title="Studio Version" data-bind="attr: { href: urlForAbout }">
                 <i class="icon-client"></i> <span data-bind="text: $root.constructor.clientVersion"></span>
