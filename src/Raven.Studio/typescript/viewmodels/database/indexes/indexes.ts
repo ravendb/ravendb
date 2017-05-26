@@ -131,11 +131,6 @@ class indexes extends viewModelBase {
         return this.fetchIndexes();
     }
 
-    attached() {
-        super.attached();
-        ko.postbox.publish("SetRawJSONUrl", appUrl.forIndexesRawData(this.activeDatabase())); //TODO: do we need it?
-    }
-
     private fetchIndexes(): JQueryPromise<void> {
         const statsTask = new getIndexesStatsCommand(this.activeDatabase())
             .execute();

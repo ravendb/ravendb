@@ -644,6 +644,10 @@ class appUrl {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/docs?id=" + docId;
     }
 
+    static forDocumentRevisionRawData(db: database | databaseInfo, revisionEtag: number): string {
+        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/revisions?etag=" + revisionEtag;
+    }
+
     static getDatabaseNameFromUrl(): string {
         const indicator = "database=";
         const hash = window.location.hash;

@@ -81,8 +81,6 @@ class viewModelBase {
         this.postboxSubscriptions = this.createPostboxSubscriptions();
         this.modelPollingStart();
 
-
-        ko.postbox.publish("SetRawJSONUrl", "");
         this.updateHelpLink(null); // clean link
     }
 
