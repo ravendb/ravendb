@@ -714,7 +714,7 @@ loadToOrders(orderData);
 
                     using (var dbCommand = con.CreateCommand())
                     {
-                        dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1'";
+                        dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1-A'";
 
                         var sqlDataReader = dbCommand.ExecuteReader();
 
@@ -856,7 +856,7 @@ loadToOrders(orderData);
 
                     using (var dbCommand = con.CreateCommand())
                     {
-                        dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1'";
+                        dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1-A'";
 
                         var sqlDataReader = dbCommand.ExecuteReader();
 
