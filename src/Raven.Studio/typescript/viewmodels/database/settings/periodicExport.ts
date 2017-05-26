@@ -64,7 +64,7 @@ class periodicExport extends viewModelBase {
                     this.updateExportDisabledFlag();
                     deferred.resolve({ can: true });
                 })
-                .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(this.activeDatabase()) }));
+                .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseRecord(this.activeDatabase()) }));
         } else {
             deferred.resolve({ can: true });
         }

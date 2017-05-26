@@ -29,7 +29,7 @@ class globalConfigDatabaseSettings extends viewModelBase {
         } else {
             this.fetchClusterConfiguration(null)
                 .done(() => deferred.resolve({ can: true }))
-                .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(null) }));
+                .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseRecord(null) }));
         }
         
         return deferred;

@@ -66,7 +66,7 @@ class appUrl {
         replicationStats: ko.pureComputed(() => appUrl.forReplicationStats(appUrl.currentDatabase())),
         userInfo: ko.pureComputed(() => appUrl.forUserInfo(appUrl.currentDatabase())),
         visualizer: ko.pureComputed(() => appUrl.forVisualizer(appUrl.currentDatabase())),
-        databaseSettings: ko.pureComputed(() => appUrl.forDatabaseSettings(appUrl.currentDatabase())),
+        databaseRecord: ko.pureComputed(() => appUrl.forDatabaseRecord(appUrl.currentDatabase())),
         quotas: ko.pureComputed(() => appUrl.forQuotas(appUrl.currentDatabase())),
         periodicExport: ko.pureComputed(() => appUrl.forPeriodicExport(appUrl.currentDatabase())),
         replications: ko.pureComputed(() => appUrl.forReplications(appUrl.currentDatabase())),
@@ -390,7 +390,7 @@ class appUrl {
     }
 
     static forSettings(db: database | databaseInfo): string {
-        return "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
+        return "#databases/settings/databaseRecord?" + appUrl.getEncodedDbPart(db);
     }
     
     static forLogs(db: database | databaseInfo): string {
@@ -425,8 +425,8 @@ class appUrl {
         return url;
     }
 
-    static forDatabaseSettings(db: database | databaseInfo): string {
-        return "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
+    static forDatabaseRecord(db: database | databaseInfo): string {
+        return "#databases/settings/databaseRecord?" + appUrl.getEncodedDbPart(db);
     }
 
     static forQuotas(db: database | databaseInfo): string {
