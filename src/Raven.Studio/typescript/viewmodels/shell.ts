@@ -8,6 +8,7 @@ import generateMenuItems = require("common/shell/menu/generateMenuItems");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import databaseSwitcher = require("common/shell/databaseSwitcher");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import favNodeBadge = require("common/shell/favNodeBadge");
 import searchBox = require("common/shell/searchBox");
 import database = require("models/resources/database");
 import license = require("models/auth/license");
@@ -60,9 +61,6 @@ class shell extends viewModelBase {
     footer = footer.default;
     clusterManager = clusterTopologyManager.default;
 
-    static clusterMode = ko.observable<boolean>(false); //TODO: extract from shell
-    isInCluster = ko.computed(() => shell.clusterMode()); //TODO: extract from shell
-
     static serverBuildVersion = ko.observable<serverBuildVersionDto>();
     static serverMainVersion = ko.observable<number>(4);
     static serverMinorVersion = ko.observable<number>(0);
@@ -79,6 +77,7 @@ class shell extends viewModelBase {
     mainMenu = new menu(generateMenuItems(activeDatabaseTracker.default.database()));
     searchBox = new searchBox();
     databaseSwitcher = new databaseSwitcher();
+    favNodeBadge = new favNodeBadge();
 
     displayUsageStatsInfo = ko.observable<boolean>(false);
     trackingTask = $.Deferred();
@@ -197,6 +196,7 @@ class shell extends viewModelBase {
 
         this.databaseSwitcher.initialize();
         this.searchBox.initialize();
+        this.favNodeBadge.initialize();
     }
 
     compositionComplete() {
