@@ -100,8 +100,6 @@ class shell extends viewModelBase {
         });
         oauthContext.enterApiKeyTask = this.setupApiKey();
 
-        ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
-
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
         helpBindingHandler.install();

@@ -34,12 +34,14 @@ class editDocument extends viewModelBase {
     static docEditorSelector = "#docEditor";
 
     inReadOnlyMode = ko.observable<boolean>(false);
+    revisionEtag = ko.observable<number>();
     document = ko.observable<document>();
     documentText = ko.observable("");
     metadata: KnockoutComputed<documentMetadata>;
     lastModifiedAsAgo: KnockoutComputed<string>;
     latestRevisionUrl: KnockoutComputed<string>;
     attachmentsCount: KnockoutComputed<number>;
+    rawJsonUrl: KnockoutComputed<string>;
 
     isCreatingNewDocument = ko.observable(false);
     collectionForNewDocument = ko.observable<string>();
@@ -216,6 +218,22 @@ class editDocument extends viewModelBase {
             }
 
             return doc.__metadata.attachments().length;
+        });
+
+        this.rawJsonUrl = ko.pureComputed(() => {
+            const newDocMode = this.isCreatingNewDocument();
+            if (newDocMode) {
+                return null;
+            }
+
+            const isRevision = this.inReadOnlyMode();
+
+            const docId = this.userSpecifiedId();
+            const revisionEtag = this.revisionEtag();
+
+            return isRevision ? 
+                appUrl.forDocumentRevisionRawData(this.activeDatabase(), revisionEtag) :
+                appUrl.forDocumentRawData(this.activeDatabase(), docId);
         });
 
         this.document.subscribe(doc => {
@@ -525,6 +543,7 @@ class editDocument extends viewModelBase {
         const newDoc = new document(localDoc);
         this.document(newDoc);
         this.inReadOnlyMode(false);
+        this.revisionEtag(null);
         this.displayDocumentChange(false);
         this.dirtyFlag().reset();
 
@@ -589,6 +608,7 @@ class editDocument extends viewModelBase {
                 this.displayDocumentChange(false);
 
                 this.inReadOnlyMode(true);
+                this.revisionEtag(etag);
 
                 this.dirtyFlag().reset();
 
