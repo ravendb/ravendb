@@ -18,7 +18,6 @@ class globalConfigDatabaseSettings extends viewModelBase {
     isSaveEnabled: KnockoutComputed<boolean>;
     settingsAccess = new settingsAccessAuthorizer();
     loadedClusterConfigurationDto = ko.observable<clusterConfigurationDto>();
-    clusterMode = shell.clusterMode;
 
     canActivate(args: any): any {
         super.canActivate(args);
