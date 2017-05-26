@@ -58,6 +58,7 @@ class shell extends viewModelBase {
     notificationCenter = notificationCenter.instance;
     collectionsTracker = collectionsTracker.default;
     footer = footer.default;
+    clusterManager = clusterTopologyManager.default;
 
     static clusterMode = ko.observable<boolean>(false); //TODO: extract from shell
     isInCluster = ko.computed(() => shell.clusterMode()); //TODO: extract from shell
@@ -129,7 +130,7 @@ class shell extends viewModelBase {
             // and then start configuring services
 
             const licenseTask = license.fetchLicenseStatus();
-            const topologyTask = clusterTopologyManager.default.init();
+            const topologyTask = this.clusterManager.init();
 
             $.when<any>(licenseTask, topologyTask)
                 .done(() => {
@@ -144,7 +145,7 @@ class shell extends viewModelBase {
                     // please notice we don't wait here for connection to be established
                     // since this invocation is sync we can't end up with race condition
                     this.databasesManager.setupGlobalNotifications();
-                    clusterTopologyManager.default.setupGlobalNotifications();
+                    this.clusterManager.setupGlobalNotifications();
                     this.notificationCenter.setupGlobalNotifications(changesContext.default.serverNotifications());
 
                     this.connectToRavenServer();

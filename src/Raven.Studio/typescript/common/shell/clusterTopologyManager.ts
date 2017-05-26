@@ -12,6 +12,8 @@ class clusterTopologyManager {
 
     nodeTag: KnockoutComputed<string>;
 
+    nodesCount: KnockoutComputed<number>;
+
     init(): JQueryPromise<clusterTopology> {
         return this.fetchTopology();
     }
@@ -43,6 +45,11 @@ class clusterTopologyManager {
         this.nodeTag = ko.pureComputed(() => {
             const topology = this.topology();
             return topology ? topology.nodeTag() : null;
+        });
+
+        this.nodesCount = ko.pureComputed(() => {
+            const topology = this.topology();
+            return topology ? topology.nodes().length : 0;
         });
     }
     
