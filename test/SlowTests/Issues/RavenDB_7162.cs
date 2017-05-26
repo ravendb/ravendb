@@ -24,12 +24,12 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                using (store.SetRequestsTimeout(TimeSpan.FromMilliseconds(1)))
+                using (store.SetRequestsTimeout(TimeSpan.FromMilliseconds(0)))
                 {
                     using (var session = store.OpenSession())
                     {
-                        var e = Assert.Throws<TimeoutException>(() => session.Query<Person>().ToList());
-                        Assert.Contains("failed with timeout after 00:00:00.0010000", e.Message);
+                        var e = Assert.Throws<TimeoutException>(() => session.Query<Person>().Where(x => x.Name == "John").ToList());
+                        Assert.Contains("failed with timeout after 00:00:00", e.Message);
                     }
                 }
             }
