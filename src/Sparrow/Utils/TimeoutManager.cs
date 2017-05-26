@@ -65,12 +65,6 @@ namespace Sparrow.Utils
 
         private static async Task WaitForInternal(TimeSpan time, CancellationToken token)
         {
-            if (time == Timeout.InfiniteTimeSpan)
-            {
-                await InfiniteTask;
-                return;
-            }
-
             if (time.TotalMilliseconds < 0)
                 ThrowOutOfRange();
 
@@ -123,7 +117,14 @@ namespace Sparrow.Utils
                 return;
 
             token.ThrowIfCancellationRequested();
-            var task = WaitForInternal(duration, token);
+
+            Task task;
+            // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
+            if (duration != Timeout.InfiniteTimeSpan)
+                task = WaitForInternal(duration, token);
+            else
+                task = InfiniteTask;
+            
             if (token == CancellationToken.None || token.CanBeCanceled == false)
             {
                 await task;
