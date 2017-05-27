@@ -6,10 +6,6 @@ namespace FastTests.Client
 {
     public class CRUD : RavenTestBase
     {
-        protected override void ModifyStore(DocumentStore store)
-        {
-            store.FailoverServers = null;
-        }
 
         [Fact]
         public void CRUD_Operations()

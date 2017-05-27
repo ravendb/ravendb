@@ -145,7 +145,6 @@ namespace Raven.Client.Documents.BulkInsert
         public BulkInsertOperation(string database, IDocumentStore store, CancellationToken token = default(CancellationToken))
         {
             _token = token;
-            database = database ?? MultiDatabase.GetDatabaseName(store.Url);
             _conventions = store.Conventions;
             _requestExecutor = store.GetRequestExecutor(database);
             _resetContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);

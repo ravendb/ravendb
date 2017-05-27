@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using FastTests;
@@ -26,7 +27,7 @@ namespace SlowTests.Bugs
             {
                 var httpClient = new HttpClient
                 {
-                    BaseAddress = new Uri(store.Url)
+                    BaseAddress = new Uri(store.Urls.First())
                 };
 
                 var httpResponseMessage = await httpClient.PutAsync($"/databases/{store.Database}/docs?id=items/1-A",

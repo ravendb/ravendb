@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading;
+using Raven.Client.Http;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Rachis

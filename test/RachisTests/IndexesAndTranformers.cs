@@ -45,7 +45,7 @@ namespace SlowTests.Server.Rachis
             var databaseCreationResult = await CreateDatabaseInCluster(defaultDatabase, 5, leader.WebUrls[0]);
             using (var store = new DocumentStore()
             {
-                Url =  databaseCreationResult.Item2[0].WebUrls[0],
+                Urls =  databaseCreationResult.Item2[0].WebUrls,
                 Database = defaultDatabase
             }.Initialize())
             {
@@ -64,7 +64,7 @@ namespace SlowTests.Server.Rachis
 
                     using (var serverToStoreAtStore = new DocumentStore
                     {
-                        Url = serverToStoreAt.WebUrls[0],
+                        Urls = serverToStoreAt.WebUrls,
                         Database = store.Database
                     })
                     {
@@ -75,10 +75,10 @@ namespace SlowTests.Server.Rachis
                         {
                             var db = await serverToCheckAt.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
-                            Assert.True(await db.WaitForIndexNotification(putTransformerResult.Etag).WaitAsync(WaitInterval));
+                            Assert.True(await db.RachisLogIndexNotifications.WaitForIndexNotification(putTransformerResult.Etag).WaitAsync(WaitInterval));
                             using (var currentServerStore = new DocumentStore
                             {
-                                Url = serverToCheckAt.WebUrls[0],
+                                Urls = serverToStoreAt.WebUrls,
                                 Database = store.Database
                             })
                             {

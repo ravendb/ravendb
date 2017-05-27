@@ -61,7 +61,7 @@ namespace Raven.Server.Web.System
         public Task Get()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
+            
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
@@ -171,12 +171,12 @@ namespace Raven.Server.Web.System
             }
         }
         
-        [RavenAction("/admin/databases", "PUT", "/admin/databases/{databaseName:string}")]
+        [RavenAction("/admin/databases", "PUT", "/admin/databases?name={databaseName:string}")]
         public async Task Put()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var nodesAddedTo = new List<string>();
-
+            
             string errorMessage;
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
                 throw new BadRequestException(errorMessage);
@@ -322,7 +322,7 @@ namespace Raven.Server.Web.System
                 if (dbRecord.Topology.RelevantFor(ServerStore.NodeTag))
                 {
                     var db = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name).ThrowOnTimeout();
-                    await db.WaitForIndexNotification(index).ThrowOnTimeout();
+                    await db.RachisLogIndexNotifications.WaitForIndexNotification(index).ThrowOnTimeout();
                 }
                 else
                 {
@@ -356,13 +356,14 @@ namespace Raven.Server.Web.System
             {
                 var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-modify-watchers").ThrowOnTimeout();
                 if (updateJson.TryGet(nameof(DatabaseTopology.Watchers), out BlittableJsonReaderArray watchersBlittable) == false)
-                {                    
+                {
                     throw new InvalidDataException("NewWatchers property was not found.");
                 }
                 using (context.OpenReadTransaction())
                 {              
                     long etag;
                     var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out etag);
+
                     var watchers = new List<DatabaseWatcher>(watchersBlittable.Length);
                     foreach (BlittableJsonReaderObject watcher in watchersBlittable)
                     {
@@ -370,9 +371,8 @@ namespace Raven.Server.Web.System
                     }
                     var (index, _) = await ServerStore.ModifyDatabaseWatchers(name, watchers).ThrowOnTimeout();
                     await ServerStore.Cluster.WaitForIndexNotification(index).ThrowOnTimeout();
-
+                    
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         context.Write(writer, new DynamicJsonValue
@@ -454,7 +454,7 @@ namespace Raven.Server.Web.System
                 {
                     var (newEtag, _) = await ServerStore.DeleteDatabaseAsync(name, isHardDelete, fromNode).ThrowOnTimeout();
                     etag = newEtag;
-                }
+                    }
                 await ServerStore.Cluster.WaitForIndexNotification(etag).ThrowOnTimeout();
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 

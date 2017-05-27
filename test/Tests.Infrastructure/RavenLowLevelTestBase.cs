@@ -62,7 +62,7 @@ namespace FastTests
 
             using (var store = new DocumentStore
             {
-                Url = UseFiddler(Server.WebUrls[0]),
+                Urls = UseFiddler(Server.WebUrls),
                 Database = name
             })
             {
@@ -81,7 +81,7 @@ namespace FastTests
         {
             using (var store = new DocumentStore
             {
-                Url = UseFiddler(Server.WebUrls[0]),
+                Urls = UseFiddler(Server.WebUrls),
                 Database = dbName
             })
             {

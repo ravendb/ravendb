@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using FastTests;
 using Raven.Client;
@@ -39,13 +40,13 @@ namespace SlowTests.Server.Documents.ETL
                         Destination = new RavenDestination
                         {
                             Database = dst.Database,
-                            Url = dst.Url
+                            Url = dst.Urls.First()
                         },
                         Transforms =
                         {
                             new Transformation
                             {
-                                Name = $"ETL : {src.Database}@{src.Url} to {dst.Database}@{dst.Url}",
+                                Name = $"ETL : {src.Database}@{src.Urls.First()} to {dst.Database}@{dst.Urls.First()}",
                                 Collections = new List<string>(collections),
                                 Script = script,
                                 ApplyToAllDocuments = applyToAllDocuments,

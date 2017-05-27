@@ -320,7 +320,7 @@ namespace FastTests
                 {
                     Result = (TResult)(object)response;
                 }
-            }
+                }
 
             private class JsonCommandWithPayload<TResult> : RavenCommand<TResult>
                where TResult : BlittableJsonReaderBase
@@ -370,7 +370,7 @@ namespace FastTests
                 {
                     Result = (TResult)(object)response;
                 }
+                }
             }
         }
-    }
 }

@@ -43,7 +43,7 @@ namespace Indexing.Benchmark
 
             _store = new DocumentStore
             {
-                Url = url,
+                Urls = new [] { url },
                 Database = DbName
             }.Initialize();
 

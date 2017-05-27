@@ -23,7 +23,7 @@ namespace FastTests.Client.Attachments
             using (var store = new DocumentStore
             {
                 Database = databaseName,
-                Url = leader.WebUrls[0]
+                Urls = leader.WebUrls
             }.Initialize())
             {
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);

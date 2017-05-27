@@ -555,7 +555,7 @@ loadToOrders(orderData);");
                     await session.StoreAsync(new Order());
                     await session.SaveChangesAsync();
                 }
-                string str = string.Format("{0}/admin/logs/watch", store.Url.Replace("http", "ws"));
+                string str = string.Format("{0}/admin/logs/watch", store.Urls.First().Replace("http", "ws"));
                 StringBuilder sb = new StringBuilder();
                 await client.ConnectAsync(new Uri(str), CancellationToken.None);
                 var task = Task.Run((Func<Task>)(async () =>
