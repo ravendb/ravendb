@@ -533,6 +533,15 @@ namespace Raven.Server.ServerWide
             return await SendToLeaderAsync(watcherCommand);
         }
 
+        public async Task<(long, BlittableJsonReaderObject)> UpdateDatabaseWatcher(string dbName, DatabaseWatcher watcher)
+        {
+            var addWatcherCommand = new UpdateDatabaseWatcherCommand(dbName)
+            {
+                Watcher = watcher
+            };
+            return await SendToLeaderAsync(addWatcherCommand);
+        }
+
         public async Task<(long, BlittableJsonReaderObject)> ModifyConflictSolverAsync(string dbName, ConflictSolver solver)
         {
             var conflictResolverCommand = new ModifyConflictSolverCommand(dbName)

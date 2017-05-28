@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Replication
         public string Url
         {
             get => _url;
-            set => _url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
+            set => _url = value == null ? null : value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
         }
 
         /// <summary>

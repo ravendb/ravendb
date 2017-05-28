@@ -100,6 +100,7 @@ namespace Raven.Server.ServerWide
                 case nameof(ModifyConflictSolverCommand):
                 case nameof(UpdateTopologyCommand):
                 case nameof(DeleteDatabaseCommand):
+                case nameof(UpdateDatabaseWatcherCommand):
                     UpdateDatabase(context, type, cmd, index, leader);
                     break;
                 case nameof(AcknowledgeSubscriptionBatchCommand):
