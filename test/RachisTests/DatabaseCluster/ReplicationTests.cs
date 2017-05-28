@@ -135,6 +135,69 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
+        [Fact]
+        public async Task CanAddSingleWatcher()
+        {
+            var clusterSize = 3;
+            var databaseName = "ReplicationTestDB";
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize);
+            DatabaseWatcher watcher;
+
+            using (var store = new DocumentStore()
+            {
+                Url = leader.WebUrls[0],
+                Database = databaseName
+            }.Initialize())
+            {
+                var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
+                var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+                Assert.Equal(clusterSize, databaseResult.Topology.AllReplicationNodes().Count());
+                foreach (var server in Servers)
+                {
+                    await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag ?? -1);
+                }
+                foreach (var server in Servers)
+                {
+                    await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+                }
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+                Assert.True(await WaitForDocumentInClusterAsync<User>(
+                    databaseResult.Topology,
+                    "users/1",
+                    u => u.Name.Equals("Karmel"),
+                    TimeSpan.FromSeconds(clusterSize + 5)));
+
+
+                doc = MultiDatabase.CreateDatabaseDocument("Watcher");
+                var res = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc));
+                var node = Servers.Single(x => x.WebUrls[0] == res.NodesAddedTo[0]);
+                await node.ServerStore.Cluster.WaitForIndexNotification(res.ETag ?? -1);
+                await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore("Watcher");
+
+                watcher = new DatabaseWatcher
+                {
+                    Database = "Watcher",
+                    Url = res.NodesAddedTo[0]
+                };
+
+                await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
+            }
+
+            using (var store = new DocumentStore()
+            {
+                Url = watcher.Url,
+                Database = watcher.Database
+            }.Initialize())
+            {
+                Assert.True(WaitForDocument<User>(store, "users/1", u => u.Name == "Karmel"));
+            }
+        }
+
+
         [Theory]
         [InlineData(false)]
         [InlineData(true)]

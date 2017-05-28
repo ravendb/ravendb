@@ -294,15 +294,23 @@ namespace FastTests.Server.Replication
             DocumentStore store,
             List<DatabaseWatcher> watchers)
         {
-            var cmd = new ModifyDatabaseWatchersOperation(store.Database, watchers);
-            return await store.Admin.Server.SendAsync(cmd);
+            var op = new ModifyDatabaseWatchersOperation(store.Database, watchers);
+            return await store.Admin.Server.SendAsync(op);
+        }
+
+        protected static async Task<ModifyDatabaseWatchersResult> AddWatcherToReplicationTopology(
+            DocumentStore store,
+            DatabaseWatcher watcher)
+        {
+            var op = new UpdateWatcherOperation(store.Database, watcher);
+            return await store.Admin.Server.SendAsync(op);
         }
 
         protected static async Task<ModifySolverResult> UpdateConflictResolver(IDocumentStore store, string resovlerDbId = null, Dictionary<string, ScriptResolver> collectionByScript = null, bool resolveToLatest = false)
         {
-            var cmd = new ModifyConflictSolverOperation(store.Database,
+            var op = new ModifyConflictSolverOperation(store.Database,
                 resovlerDbId, collectionByScript, resolveToLatest);
-            return await store.Admin.Server.SendAsync(cmd);
+            return await store.Admin.Server.SendAsync(op);
         }
 
         public DatabaseTopology CurrentDatabaseTopology;
