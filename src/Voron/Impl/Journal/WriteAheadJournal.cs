@@ -106,7 +106,7 @@ namespace Voron.Impl.Journal
 
             _lastFile = now;
 
-            _journalPath = Path.Combine(_env.Options.JournalPath?.FullPath ?? string.Empty, StorageEnvironmentOptions.JournalName(_journalIndex));
+            _journalPath = Path.Combine(_env.Options.JournalPath?.FullPath ?? _env.Options.BasePath?.FullPath ?? string.Empty, StorageEnvironmentOptions.JournalName(_journalIndex));
 
             var journal = new JournalFile(_env, journalPager, _journalIndex);
             journal.AddRef(); // one reference added by a creator - write ahead log
@@ -183,6 +183,7 @@ namespace Voron.Impl.Journal
                         {
                             var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber,
                                 pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+                            _journalPath = Path.Combine(_env.Options.JournalPath?.FullPath ?? _env.Options.BasePath?.FullPath ?? string.Empty, StorageEnvironmentOptions.JournalName(journalNumber));
                             var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber);
                             jrnlFile.InitFrom(journalReader);
                             jrnlFile.AddRef(); // creator reference - write ahead log
@@ -1518,7 +1519,7 @@ namespace Voron.Impl.Journal
 
         private DateTime _lastCompressionBufferReduceCheck = DateTime.UtcNow;
         private CompressionAccelerationStats _lastCompressionAccelerationInfo = new CompressionAccelerationStats();
-        private string _journalPath;
+        private string _journalPath; // this field is for web use only. It does not necessary reflects the current used journal path.
 
         public void ReduceSizeOfCompressionBufferIfNeeded()
         {
