@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using FastTests.Server.NotificationCenter;
+using FastTests.Server.Replication;
 using Orders;
 using Raven.Client.Documents;
 using SlowTests.Smuggler;
-using FastTests.Client.Subscriptions;
 
 namespace Tryouts
 {
@@ -17,13 +17,12 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
 
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 1000000; i++)
             {
                 Console.WriteLine(i);
-
-                using (var a = new SlowTests.Issues.RavenDB937())
+                using (var a = new DisableDatabasePropagationInRaftCluster())
                 {
-                    a.LowLevelEmbeddedStreamAsync().Wait();
+                    a.DisableDatabaseToggleOperation_should_propagate_through_raft_cluster().Wait();
                 }
             }
         }

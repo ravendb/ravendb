@@ -77,10 +77,23 @@ namespace Raven.Server.Routing
             if (database.IsCompleted)
             {
                 context.Database = database.Result;
-                return Task.CompletedTask;
+                return context.Database.DatabaseShutdown.IsCancellationRequested == false
+                    ? Task.CompletedTask
+                    : UnlikelyWaitForDatabaseToUnload(context, context.Database, databasesLandlord, databaseName);
             }
 
             return UnlikelyWaitForDatabaseToLoad(context, database, databasesLandlord, databaseName);
+        }
+
+        private async Task UnlikelyWaitForDatabaseToUnload(RequestHandlerContext context, DocumentDatabase database, 
+            DatabasesLandlord databasesLandlord, StringSegment databaseName)
+        {
+            var time = databasesLandlord.DatabaseLoadTimeout;
+            if (await database.DatabaseShutdownCompleted.WaitAsync(time) == false)
+            {
+                ThrowDatabaseUnloadTimeout(databaseName, databasesLandlord.DatabaseLoadTimeout);
+            }
+            await CreateDatabase(context);
         }
 
         private static async Task UnlikelyWaitForDatabaseToLoad(RequestHandlerContext context, Task<DocumentDatabase> database,
@@ -93,6 +106,11 @@ namespace Raven.Server.Routing
                 ThrowDatabaseLoadTimeout(databaseName, databasesLandlord.DatabaseLoadTimeout);
             }
             context.Database = await database;
+        }
+
+        private static void ThrowDatabaseUnloadTimeout(StringSegment databaseName, TimeSpan timeout)
+        {
+            throw new DatabaseLoadTimeoutException($"Timeout when unloading database {databaseName} after {timeout}, try again later");
         }
 
         private static void ThrowDatabaseLoadTimeout(StringSegment databaseName, TimeSpan timeout)
