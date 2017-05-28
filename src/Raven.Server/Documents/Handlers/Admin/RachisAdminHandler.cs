@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
@@ -86,6 +87,34 @@ namespace Raven.Server.Documents.Handlers.Admin
                     });
                     writer.Flush();
                 }
+            }
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/cluster/maintenance-stats", "Get", "/cluster/maintenance-stats")]
+        public Task ClusterMaintenanceStats()
+        {
+            if (ServerStore.LeaderTag == null)
+            {
+                return Task.CompletedTask;
+            }
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                if (ServerStore.IsLeader())
+                {
+                    context.Write(writer, DynamicJsonValue.Convert(ServerStore.ClusterMaintenanceSupervisor?.GetStats()));
+                    writer.Flush();
+                    return Task.CompletedTask;
+                }
+                // redirect to leader
+                ClusterTopology topology;
+                using (context.OpenReadTransaction())
+                {
+                    topology = ServerStore.GetClusterTopology(context);
+                }
+                var url = topology.GetUrlFromTag(ServerStore.LeaderTag);
+                HttpContext.Response.Redirect(Path.Combine(url,"cluster/maintenance-stats"));
             }
             return Task.CompletedTask;
         }
