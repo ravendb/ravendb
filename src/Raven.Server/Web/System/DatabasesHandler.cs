@@ -65,8 +65,9 @@ namespace Raven.Server.Web.System
         [RavenAction("/topology", "GET", "/topology?name={databaseName:string}&url={url:string}")]
         public Task GetTopology()
         {
-           
-            var name = GetStringQueryString("name");
+
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var url = GetStringQueryString("url", false);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -80,7 +81,6 @@ namespace Raven.Server.Web.System
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
                         using (var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body))
                         {
-                            Console.WriteLine("error");
                             context.Write(writer,
                                 new DynamicJsonValue
                                 {

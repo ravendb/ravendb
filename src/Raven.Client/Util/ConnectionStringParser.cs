@@ -14,24 +14,7 @@ namespace Raven.Client.Util
             _urls = new List<string>();
         }
 
-        public List<string> Urls
-        {
-            get => _urls;
-            set
-            {
-                if (value == null) throw new ArgumentNullException(nameof(value));
-                for (var i = 0; i < value.Count; i++)
-                {
-                    if(value[i] == null)
-                        throw new ArgumentNullException(nameof(value), "Urls cannot contain null");
-
-                    if(Uri.TryCreate(value[i], UriKind.Absolute, out var _) == false)
-                        throw new ArgumentException(value[i] + " is no a valid url");
-                    value[i] = value[i].TrimEnd('/');
-                }
-                _urls = value;
-            }
-        }
+        public List<string> Urls { get; set; }
 
         public string ApiKey { get; set; }
 
@@ -52,29 +35,6 @@ namespace Raven.Client.Util
         public override string ToString()
         {
             return string.Format("Urls: {1}, DefaultDatabase: {0}, Api Key: {2}", Database, string.Join(",", Urls), ApiKey);
-        }
-    }
-
-    public class EmbeddedRavenConnectionStringOptions : RavenConnectionStringOptions
-    {
-        public bool AllowEmbeddedOptions { get; set; }
-
-        public string DataDirectory { get; set; }
-
-        public bool RunInMemory { get; set; }
-    }
-
-    public class FilesConnectionStringOptions : ConnectionStringOptions
-    {
-        public string DefaultFileSystem { get; set; }
-
-        public int MaxChunkSizeInMb { get; set; }
-
-        public override string ToString()
-        {
-            //TODO change the format to have List of urls
-            var filesystem = string.IsNullOrWhiteSpace(DefaultFileSystem) ? "<none>" : DefaultFileSystem;
-            return string.Format("Urls: {0}, FileSystem: {1}, Api Key: {2}", string.Join(",", Urls), filesystem, ApiKey);
         }
     }
 

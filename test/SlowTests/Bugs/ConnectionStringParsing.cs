@@ -33,28 +33,6 @@ namespace SlowTests.Bugs
         }
 
         [Fact]
-        public void EnsureWellFormedConnectionStrings_ParsingWithEmbeddedOptionTypes_Successful()
-        {
-            var parser = ConnectionStringParser<EmbeddedRavenConnectionStringOptions>.FromConnectionString("Urls=http://localhost:8080;user=beam;password=up;memory=true");
-            parser.Parse();
-            var options = parser.ConnectionStringOptions;
-
-            Assert.Equal("http://localhost:8080", options.Urls.First());
-            Assert.True(options.RunInMemory);
-        }
-
-        [Fact]
-        public void EnsureWellFormedConnectionStrings_ParsingWithFilesOptionTypes_Successful()
-        {
-            var parser = ConnectionStringParser<FilesConnectionStringOptions>.FromConnectionString("Urls=http://localhost:8080;user=beam;password=up;filesystem=test");
-            parser.Parse();
-            var options = parser.ConnectionStringOptions;
-
-            Assert.Equal("http://localhost:8080", options.Urls.First());
-            Assert.Equal("test", options.DefaultFileSystem);
-        }
-
-        [Fact]
         public void EnsureWellFormedConnectionStrings_Parsing_FailWithUnknownParameter()
         {
             var dbParser = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionString("memory=true");

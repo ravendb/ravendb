@@ -391,7 +391,7 @@ namespace Raven.Client.Documents
 
         internal Task GetObserveChangesAndEvictItemsFromCacheTask(string database = null)
         {
-            var changes = _observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(database);
+            var changes = _observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(database ?? Database);
 
             return changes == null ? Task.CompletedTask : changes.ConnectionTask;
         }

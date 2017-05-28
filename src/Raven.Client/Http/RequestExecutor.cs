@@ -70,6 +70,8 @@ namespace Raven.Client.Http
 
         public bool HasUpdatedTopologyOnce { get; private set; }
 
+        protected bool _withoutTopology;
+
         public TimeSpan? DefaultTimeout
         {
             get => _defaultTimeout;
@@ -107,20 +109,23 @@ namespace Raven.Client.Http
 
         public static RequestExecutor CreateForSingleNode(string url, string databaseName, string apiKey)
         {
-            var executor = new RequestExecutor(databaseName, apiKey);
-            executor._nodeSelector = new NodeSelector(new Topology
+            var executor = new RequestExecutor(databaseName, apiKey)
             {
-                Etag = -1,
-                Nodes = new List<ServerNode>
+                _nodeSelector = new NodeSelector(new Topology
                 {
-                    new ServerNode
+                    Etag = -1,
+                    Nodes = new List<ServerNode>
                     {
-                        Database = executor._databaseName,
-                        Url = url
+                        new ServerNode
+                        {
+                            Database = databaseName,
+                            Url = url
+                        }
                     }
-                }
-            });
-            executor.TopologyEtag = -1;
+                }),
+                TopologyEtag = -2,
+                _withoutTopology = true
+            };
             return executor;
         }
 
@@ -170,7 +175,7 @@ namespace Raven.Client.Http
         {
             var topologyUpdate = _firstTopologyUpdate;
 
-            if (topologyUpdate != null && topologyUpdate.Status == TaskStatus.RanToCompletion)
+            if ((topologyUpdate != null && topologyUpdate.Status == TaskStatus.RanToCompletion) || _withoutTopology)
             {
                 await ExecuteAsync(_nodeSelector.CurrentNode, context, command, token).ConfigureAwait(false);
                 return;
@@ -250,7 +255,7 @@ namespace Raven.Client.Http
                 }
                 catch (Exception e)
                 {
-                    list.Add(e);
+                    list.Add(new Exception($"{url} - {e.Message}", e));
                 }
             }
 
@@ -258,7 +263,7 @@ namespace Raven.Client.Http
             {
                 foreach (var url in initialUrls)
                 {
-                    if (TryloadFromCache(url, context) == false)
+                    if (TryLoadFromCache(url, context) == false)
                         continue;
 
                     IntializeUpdateTopologyTimer();
@@ -267,8 +272,8 @@ namespace Raven.Client.Http
             }
 
             _lastKnownUrls = initialUrls;
-
-            throw new InvalidOperationException("Unable to get initial topology for " + _databaseName, new AggregateException(list));
+            
+            throw new AggregateException("Unable to get initial topology for " + _databaseName, list);
         }
 
         private void IntializeUpdateTopologyTimer()
@@ -285,7 +290,7 @@ namespace Raven.Client.Http
             }
         }
 
-        private bool TryloadFromCache(string url, JsonOperationContext context)
+        private bool TryLoadFromCache(string url, JsonOperationContext context)
         {
             var serverHash = ServerHash.GetServerHash(url, _databaseName);
             var cachedTopology = TopologyLocalCache.TryLoadTopologyFromLocalCache(serverHash, context);
@@ -318,7 +323,10 @@ namespace Raven.Client.Http
 
                     request.Headers.TryAddWithoutValidation("If-None-Match", $"\"{cachedEtag}\"");
                 }
-                request.Headers.TryAddWithoutValidation("Topology-Etag", $"\"{TopologyEtag}\"");
+
+                if(!_withoutTopology)
+                    request.Headers.TryAddWithoutValidation("Topology-Etag", $"\"{TopologyEtag}\"");
+
                 var sp = Stopwatch.StartNew();
                 HttpResponseMessage response = null;
                 try
@@ -623,7 +631,6 @@ namespace Raven.Client.Http
                 return;
 
             _updateTopologySemaphore.Wait();
-            // _clusterTopologySemaphore.Wait();
 
             if (_disposed)
                 return;
@@ -633,7 +640,6 @@ namespace Raven.Client.Http
             _updateCurrentTokenTimer?.Dispose();
             _updateTopologyTimer?.Dispose();
             _updateTopologySemaphore.Dispose();
-            // _clusterTopologySemaphore.Dispose();
             // shared instance, cannot dispose!
             //_httpClient.Dispose();
         }
@@ -667,24 +673,24 @@ namespace Raven.Client.Http
 
             public Topology Topology => _topology;
 
-            private int CurrentNodeIndex;
+            private int _currentNodeIndex;
 
             public NodeSelector(Topology topology)
             {
                 _topology = topology;
             }
 
-            public ServerNode CurrentNode => _topology.Nodes.Count > 0 ? _topology.Nodes[CurrentNodeIndex] : null;
+            public ServerNode CurrentNode => _topology.Nodes.Count > 0 ? _topology.Nodes[_currentNodeIndex] : null;
 
             public void OnFailedRequest()
             {
                 if (Topology.Nodes.Count == 0)
                     ThrowEmptyTopology();
 
-                if (CurrentNodeIndex < 0) //precaution, should never happen
-                    CurrentNodeIndex = 0;
+                if (_currentNodeIndex < 0) //precaution, should never happen
+                    _currentNodeIndex = 0;
 
-                CurrentNodeIndex = CurrentNodeIndex < Topology.Nodes.Count - 1 ? CurrentNodeIndex + 1 : 0;
+                _currentNodeIndex = _currentNodeIndex < Topology.Nodes.Count - 1 ? _currentNodeIndex + 1 : 0;
             }
 
             public bool OnUpdateTopology(Topology topology, bool forceUpdate = false)
@@ -700,7 +706,7 @@ namespace Raven.Client.Http
 
                     if (forceUpdate == false)
                     {
-                        CurrentNodeIndex = 0;
+                        _currentNodeIndex = 0;
                     }
 
                     var changed = Interlocked.CompareExchange(ref _topology, topology, oldTopology);

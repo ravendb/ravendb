@@ -16,7 +16,7 @@ namespace Raven.Client.Server.Operations
         public ServerOperationExecutor(DocumentStoreBase store)
         {
             _store = store;
-            _requestExecutor = ClusterRequestExecutor.Create(_store.Urls, _store.Database, _store.ApiKey);
+            _requestExecutor = ClusterRequestExecutor.Create(_store.Urls, _store.ApiKey);
         }
 
         public void Send(IServerOperation operation)

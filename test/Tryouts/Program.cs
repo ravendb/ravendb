@@ -2,10 +2,17 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests.Server.Documents.Patching;
 using FastTests.Server.NotificationCenter;
 using Orders;
+using Org.BouncyCastle.Crypto.Tls;
 using Raven.Client.Documents;
+using Raven.Client.Server;
+using Raven.Client.Server.Operations;
+using Raven.Server.Config;
 using SlowTests.Smuggler;
+using Xunit;
 
 namespace Tryouts
 {
@@ -13,25 +20,16 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            Console.WriteLine(Process.GetCurrentProcess().Id);
-            Console.WriteLine();
-
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 30; i++)
             {
                 Console.WriteLine(i);
-
-                using (var a = new NotificationCenterTests())
+                Parallel.For(0, 5, _ =>
                 {
-                    try
+                    using (var a = new AdvancedPatching())
                     {
-                        a.Can_dismiss_persistent_action_and_get_notified_about_it();
+                       a.CanUseMathFloor().Wait();
                     }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                        Console.ReadLine();
-                    }
-                }
+                });
             }
         }
     }

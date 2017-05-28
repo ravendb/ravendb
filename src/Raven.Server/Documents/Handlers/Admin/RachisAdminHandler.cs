@@ -84,8 +84,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                         ["CurrentState"] = ServerStore.CurrentState,
                         ["NodeTag"] = nodeTag
                     };
-                    if (ServerStore.GetClusterErrors().Count > 0)
-                        json["Erros"] = ServerStore.GetClusterErrors();
+                    var clusterErrors = ServerStore.GetClusterErrors();
+                    if (clusterErrors.Count > 0)
+                        json["Errors"] = clusterErrors;
 
                     context.Write(writer, json);
                     writer.Flush();
