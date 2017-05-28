@@ -776,6 +776,9 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public void RemoveInactiveCompletedTasks()
         {
+            if (_inactiveRunningPeriodicBackupsTasks.Count == 0)
+                return;
+
             var tasksToRemove = new List<Task>();
             foreach (var inactiveTask in _inactiveRunningPeriodicBackupsTasks)
             {

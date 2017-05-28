@@ -674,6 +674,17 @@ namespace Raven.Server.ServerWide
 
                     foreach (var db in databasesToCleanup)
                     {
+                        Task<DocumentDatabase> resourceTask;
+                        if (DatabasesLandlord.DatabasesCache.TryGetValue(db, out resourceTask) &&
+                            resourceTask != null &&
+                            resourceTask.Status == TaskStatus.RanToCompletion &&
+                            resourceTask.Result.BundleLoader != null &&
+                            resourceTask.Result.BundleLoader.PeriodicBackupRunner.HasBackupsInProgress())
+                        {
+                            // there are running backups for this database
+                            continue;
+                        }
+
                         // intentionally inside the loop, so we get better concurrency overall
                         // since shutting down a database can take a while
                         DatabasesLandlord.UnloadDatabase(db, skipIfActiveInDuration: maxTimeDatabaseCanBeIdle, shouldSkip: database => database.Configuration.Core.RunInMemory);
