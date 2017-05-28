@@ -400,8 +400,7 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
-                    var (etag,result) = await _serverStore.SendToLeaderAsync(command);
-
+                    var (etag, _) = await _serverStore.SendToLeaderAsync(command);
                     await _documentDatabase.WaitForIndexNotification(etag);
 
                     var index = GetIndex(definition.Name); // not all operations are changing Etag, this is why we need to take it directly from the index

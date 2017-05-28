@@ -715,9 +715,9 @@ namespace Raven.Server.ServerWide
             return ((now - maxLastWork).TotalMinutes > 5) || ((now - database.LastIdleTime).TotalMinutes > 10);
         }
 
-        public async Task<(long, BlittableJsonReaderObject)> WriteDbAsync(string databaseName, BlittableJsonReaderObject databaseRecord, long? etag, bool encrypted = false)
+        public async Task<(long etag, BlittableJsonReaderObject result)> WriteDbAsync(string databaseName, BlittableJsonReaderObject databaseRecord, long? etag, bool encrypted = false)
         {
-            var addDatabaseCommand = new AddDatabaseCommand()
+            var addDatabaseCommand = new AddDatabaseCommand
             {
                 Name = databaseName,
                 Etag = etag,

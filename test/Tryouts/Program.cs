@@ -6,6 +6,7 @@ using FastTests.Server.NotificationCenter;
 using FastTests.Server.Replication;
 using Orders;
 using Raven.Client.Documents;
+using SlowTests.Issues;
 using SlowTests.Smuggler;
 
 namespace Tryouts
@@ -20,9 +21,9 @@ namespace Tryouts
             for (int i = 0; i < 1000000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new DisableDatabasePropagationInRaftCluster())
+                using (var a = new RavenDB937())
                 {
-                    a.DisableDatabaseToggleOperation_should_propagate_through_raft_cluster().Wait();
+                    a.LowLevelEmbeddedStreamAsync().Wait();
                 }
             }
         }
