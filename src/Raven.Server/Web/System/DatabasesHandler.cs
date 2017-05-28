@@ -4,8 +4,8 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Replication;
 using Raven.Client.Http;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
@@ -13,7 +13,6 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Extensions;
-using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -147,16 +146,16 @@ namespace Raven.Server.Web.System
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     var dbId = Constants.Documents.Prefix + dbName;
-                    using (var dbDoc = ServerStore.Cluster.Read(context, dbId, out long etag))
+                    using (var dbRecord = ServerStore.Cluster.Read(context, dbId, out long etag))
                     {
-                        WriteDatabaseInfo(dbName, dbDoc, context, writer);
-                        return Task.CompletedTask;
+                        WriteDatabaseInfo(dbName, dbRecord, context, writer);
                     }
+                    return Task.CompletedTask;
                 }
             }
         }
 
-        private void WriteDatabaseInfo(string databaseName, BlittableJsonReaderObject data,
+        private void WriteDatabaseInfo(string databaseName, BlittableJsonReaderObject dbRecordBlittable,
             TransactionOperationContext context, BlittableJsonTextWriter writer)
         {
             var online = ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out Task<DocumentDatabase> dbTask) &&
@@ -169,52 +168,32 @@ namespace Raven.Server.Web.System
                 WriteFaultedDatabaseInfo(context, writer, dbTask, databaseName);
                 return;
             }
-           
+
+            var dbRecord = JsonDeserializationCluster.DatabaseRecord(dbRecordBlittable);
             var db = online ? dbTask.Result : null;
 
-            IndexRunningStatus indexingStatus = db?.IndexStore.Status ?? IndexRunningStatus.Running;
-
+            var indexingStatus = db?.IndexStore.Status ?? IndexRunningStatus.Running;
             // Looking for disabled indexing flag inside the database settings for offline database status
-            if (data.TryGet("Settings", out BlittableJsonReaderObject settings) && settings != null)
+            if (dbRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Indexing.Disabled),out var val) && val == "true")
             {
-
-                if (settings.TryGet(RavenConfiguration.GetKey(x => x.Indexing.Disabled), out bool indexingDisable) &&
-                    indexingDisable)
-                {
-                    indexingStatus = IndexRunningStatus.Disabled;
-                }
+                indexingStatus = IndexRunningStatus.Disabled;
             }
+            var disabled = dbRecord.Disabled;
+            var topology = dbRecord.Topology;
 
-            data.TryGet("Disabled", out bool disabled);
-
-            data.TryGet("Topology", out BlittableJsonReaderObject topology);
-            NodesTopology nodesTopology = new NodesTopology();
+            var nodesTopology = new NodesTopology();
 
             if (topology != null)
             {
-                if (topology.TryGet("Members", out BlittableJsonReaderArray members))
+                foreach (var member in topology.Members)
                 {
-                    foreach (BlittableJsonReaderObject member in members)
-                    {
-                        nodesTopology.Members.Add(GetNodeId(member));
-                    }
+                    nodesTopology.Members.Add(GetNodeId(member));
                 }
-                if (data.TryGet("Promotables", out BlittableJsonReaderArray promotables))
+                foreach (var promotable in topology.Promotables)
                 {
-                    foreach (BlittableJsonReaderObject promotable in promotables)
-                    {
-                        nodesTopology.Promotables.Add(GetNodeId(promotable));
-                    }
-                }
-                if (data.TryGet("Watchers", out BlittableJsonReaderArray watchers))
-                {
-                    foreach (BlittableJsonReaderObject watcher in watchers)
-                    {
-                        nodesTopology.Watchers.Add(GetNodeId(watcher));
-                    }
+                    nodesTopology.Promotables.Add(GetNodeId(promotable, topology.WhoseTaskIsIt(promotable)));
                 }
             }
-
 
             if (online == false)
             {
@@ -229,8 +208,6 @@ namespace Raven.Server.Web.System
 
             var size = new Size(GetTotalSize(db));
 
-           
-
             DatabaseInfo databaseInfo = new DatabaseInfo
             {
                 Name = databaseName,
@@ -241,14 +218,14 @@ namespace Raven.Server.Web.System
                 UpTime = online ? (TimeSpan?)GetUptime(db) : null,
                 BackupInfo = GetBackupInfo(db),
                 
-                Alerts = online ? db.NotificationCenter.GetAlertCount() : 0,
+                Alerts = online ? db?.NotificationCenter.GetAlertCount() : 0,
                 RejectClients = false, //TODO: implement me!
                 LoadError = null,
-                IndexingErrors = online ? db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount()) : 0,
+                IndexingErrors = online ? db?.IndexStore.GetIndexes().Sum(index => index.GetErrorCount()) : 0,
 
-                DocumentsCount = online ? db.DocumentsStorage.GetNumberOfDocuments() : 0,
+                DocumentsCount = online ? db?.DocumentsStorage.GetNumberOfDocuments() : 0,
                 Bundles = GetBundles(db),
-                IndexesCount = online ? db.IndexStore.GetIndexes().Count() : 0,
+                IndexesCount = online ? db?.IndexStore.GetIndexes().Count() : 0,
                 IndexingStatus = indexingStatus,
 
                 NodesTopology = nodesTopology
@@ -311,19 +288,14 @@ namespace Raven.Server.Web.System
             return new List<string>();
         }
 
-        private NodeId GetNodeId(BlittableJsonReaderObject node)
+        private NodeId GetNodeId(ReplicationNode node,string responsible = null)
         {
-            NodeId nodeId = new NodeId();
-
-            if (node.TryGet("NodeTag", out string nodeTag))
+            var nodeId = new NodeId
             {
-                nodeId.NodeTag = nodeTag;
-            }
-
-            if (node.TryGet("Url", out string nodeUrl))
-            {
-                nodeId.NodeUrl = nodeUrl;
-            }
+                NodeTag = node.NodeTag,
+                NodeUrl = node.Url,
+                ResponsibleNode = responsible
+            };
 
             return nodeId;
         }
