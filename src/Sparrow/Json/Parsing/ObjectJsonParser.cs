@@ -488,6 +488,11 @@ namespace Sparrow.Json.Parsing
                     continue;
                 }
 
+                if (current is IDynamicJsonValueConvertible convertible)
+                {
+                    current = convertible.ToJson();
+                }
+
                 throw new InvalidOperationException("Got unknown type: " + current.GetType() + " " + current);
             }
         }
