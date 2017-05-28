@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Subscriptions
                 _logger.Info($"New Subscription with index {etag} was created");
             
             await _db.WaitForIndexNotification(etag);
-            return SubscriptionState.GenerateSubscriptionItemName(_db.Name, etag); ;
+            return SubscriptionState.GenerateSubscriptionItemName(_db.Name, etag);
         }
 
         public SubscriptionConnectionState OpenSubscription(SubscriptionConnection connection)

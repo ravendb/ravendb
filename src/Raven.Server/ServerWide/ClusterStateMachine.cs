@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
@@ -189,7 +190,8 @@ namespace Raven.Server.ServerWide
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             var remove = JsonDeserializationCluster.RemoveNodeFromDatabaseCommand(cmd);
             var databaseName = remove.DatabaseName;
-            using (Slice.From(context.Allocator, "db/" + databaseName.ToLowerInvariant(), out Slice lowerKey))
+            var databaseNameLowered = databaseName.ToLowerInvariant();
+            using (Slice.From(context.Allocator, "db/" + databaseNameLowered, out Slice lowerKey))
             using (Slice.From(context.Allocator, "db/" + databaseName, out Slice key))
             {
                 if (items.ReadByKey(lowerKey, out TableValueReader reader) == false)
@@ -213,7 +215,13 @@ namespace Raven.Server.ServerWide
                     databaseRecord.Topology.Promotables.Count == 0 &&
                     databaseRecord.Topology.Watchers.Count == 0)
                 {
+                    // delete database record
                     items.DeleteByKey(lowerKey);
+
+                    // delete all values linked to database record - for subscription, etl etc.
+                    CleanupDatabaseRelatedValues(context, items, databaseName);
+
+                    items.DeleteByPrimaryKeyPrefix(lowerKey);
                     NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
                     return;
                 }
@@ -223,6 +231,16 @@ namespace Raven.Server.ServerWide
                 UpdateValue(index, items, lowerKey, key, updated);
 
                 NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
+            }
+        }
+
+        private void CleanupDatabaseRelatedValues(TransactionOperationContext context, Table items, string dbNameLowered)
+        {
+            var subscriptionItemsPrefix = SubscriptionState.GenerateSubscriptionPrefix(dbNameLowered).ToLowerInvariant();
+            using (Slice.From(context.Allocator, subscriptionItemsPrefix, out Slice loweredKey))
+            {
+                
+                items.DeleteByPrimaryKeyPrefix(loweredKey);
             }
         }
 
