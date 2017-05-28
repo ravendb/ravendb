@@ -10,7 +10,7 @@ namespace Raven.Client.Server.PeriodicBackup
 {
     public class PeriodicBackupConfiguration: IDatabaseTask
     {
-        public long? TaskId { get; set; }
+        public long TaskId { get; set; }
 
         public bool Disabled { get; set; }
 
@@ -39,9 +39,9 @@ namespace Raven.Client.Server.PeriodicBackup
         
         public ulong GetTaskKey()
         {
-            Debug.Assert(TaskId != null);
+            Debug.Assert(TaskId != 0);
 
-            return (ulong)TaskId.Value;
+            return (ulong)TaskId;
         }
 
         public bool Equals(PeriodicBackupConfiguration other)

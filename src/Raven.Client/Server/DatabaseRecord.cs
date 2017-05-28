@@ -169,8 +169,8 @@ namespace Raven.Client.Server
 
         public void AddPeriodicBackupConfiguration(PeriodicBackupConfiguration configuration)
         {
-            Debug.Assert(configuration.TaskId != null);
-            PeriodicBackups[configuration.TaskId.Value] = configuration;
+            Debug.Assert(configuration.TaskId != 0);
+            PeriodicBackups[configuration.TaskId] = configuration;
         }
 
         public void DeletePeriodicBackupConfiguration(long backupTaskId)

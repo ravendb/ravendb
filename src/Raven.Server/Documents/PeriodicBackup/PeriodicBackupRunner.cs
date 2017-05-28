@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (nextFullBackup == null && nextIncrementalBackup == null)
                 return null;
 
-            Debug.Assert(configuration.TaskId != null);
+            Debug.Assert(configuration.TaskId != 0);
 
             var nextBackupDateTime = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup);
             var nextBackupTimeSpan =
@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             var backupTaskDetails = new BackupTaskDetails
             {
                 IsFullBackup = isFullBackup,
-                TaskId = configuration.TaskId.Value,
+                TaskId = configuration.TaskId,
                 NextBackup = nextBackupTimeSpan
             };
 
@@ -635,9 +635,8 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             periodicBackup.RunningTask = Task.Run(async () =>
             {
-                Debug.Assert(periodicBackup.Configuration.TaskId != null);
-                var backupStatus = GetBackupStatus(periodicBackup.Configuration.TaskId.Value);
-                backupStatus.TaskId = periodicBackup.Configuration.TaskId.Value;
+                var backupStatus = GetBackupStatus(periodicBackup.Configuration.TaskId);
+                backupStatus.TaskId = periodicBackup.Configuration.TaskId;
 
                 try
                 {
