@@ -52,6 +52,8 @@
     <ProjectReference Include="..\..\tools\TypingsGenerator\TypingsGenerator.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="wwwroot\App\commands\database\dbGroup" />
+    <Folder Include="wwwroot\App\commands\database\tasks" />
     <Folder Include="wwwroot\lib\favico.js" />
   </ItemGroup>
 </Project>

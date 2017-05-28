@@ -7,6 +7,7 @@ using Orders;
 using Raven.Client.Documents;
 using SlowTests.Smuggler;
 using FastTests.Client.Subscriptions;
+using System.Threading.Tasks;
 
 namespace Tryouts
 {
@@ -21,10 +22,13 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new SlowTests.Issues.RavenDB937())
+                Parallel.For(0, 10, async _ =>
                 {
-                    a.LowLevelEmbeddedStreamAsync().Wait();
-                }
+                    using (var a = new SlowTests.Issues.RavenDB937())
+                    {
+                        await a.LowLevelEmbeddedStreamAsync();
+                    }
+                });
             }
         }
     }

@@ -9,13 +9,13 @@ namespace Raven.Server.Extensions
     {
         public static async Task ThrowOnTimeout(this Task task, TimeSpan? timeout = null)
         {
-            await InternalThrowOnTimeout(task, timeout ?? TimeSpan.FromSeconds(10));
+            await InternalThrowOnTimeout(task, timeout ?? TimeSpan.FromSeconds(30));
             await task;
         }
 
         public static async Task<T> ThrowOnTimeout<T>(this Task<T> task, TimeSpan? timeout = null)
         {
-            await InternalThrowOnTimeout(task, timeout ?? TimeSpan.FromSeconds(10));
+            await InternalThrowOnTimeout(task, timeout ?? TimeSpan.FromSeconds(30));
             return await task;
         }
 
