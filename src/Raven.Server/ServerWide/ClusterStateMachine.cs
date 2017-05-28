@@ -691,22 +691,22 @@ namespace Raven.Server.ServerWide
             _notifiedListeners = new AsyncManualResetEvent(token);
         }
 
-        public async Task WaitForIndexNotification(long index, TimeSpan? timeoutInMs = null)
+        public async Task WaitForIndexNotification(long index, TimeSpan? timeout = null)
         {
             Task timeoutTask = null;
-            if (timeoutInMs.HasValue)
-                timeoutTask = TimeoutManager.WaitFor(timeoutInMs.Value, _token);
+            if (timeout.HasValue)
+                timeoutTask = TimeoutManager.WaitFor(timeout.Value, _token);
             while (index > Volatile.Read(ref _lastModifiedIndex) &&
-                    (timeoutInMs.HasValue == false || timeoutTask.IsCompleted == false))
+                    (timeout.HasValue == false || timeoutTask.IsCompleted == false))
             {
                 var task = _notifiedListeners.WaitAsync();
-                if (timeoutInMs.HasValue == false)
+                if (timeout.HasValue == false)
                 {
                     await task;
                 }
                 else if (timeoutTask == await Task.WhenAny(task, timeoutTask))
                 {
-                    ThrowTimeoutException(timeoutInMs.Value, index);
+                    ThrowTimeoutException(timeout.Value, index);
                 }
             }
         }
