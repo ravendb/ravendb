@@ -65,7 +65,7 @@ namespace Raven.Server.ServerWide.Maintance
                 {
                     if (_logger.IsInfoEnabled)
                     {
-                        _logger.Info($"Closing observer on {_nodeTag}, caused by an interrupt.", e);
+                        _logger.Info($"An error occured while analyzing maintainance stats on node {_nodeTag}.", e);
                     }
                 }
                 finally

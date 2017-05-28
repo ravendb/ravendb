@@ -150,7 +150,7 @@ namespace Raven.Server.Documents.Indexes
             }
 
             Index index;
-
+            
             if (definition is AutoMapIndexDefinition)
                 index = AutoMapIndex.CreateNew(etag, (AutoMapIndexDefinition)definition, _documentDatabase);
             else if (definition is AutoMapReduceIndexDefinition)
@@ -296,9 +296,8 @@ namespace Raven.Server.Documents.Indexes
                 if (replacementIndex != null)
                     DeleteIndexInternal(replacementIndex);
             }
-
+            
             Index index;
-
             switch (definition.Type)
             {
                 case IndexType.Map:
@@ -313,7 +312,7 @@ namespace Raven.Server.Documents.Indexes
 
             CreateIndexInternal(index);
         }
-
+        
         private void HandleDeletes(DatabaseRecord record)
         {
             foreach (var index in _indexes)
@@ -343,7 +342,7 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_initialized)
                 throw new InvalidOperationException($"{nameof(IndexStore)} was already initialized.");
-        //    HandleDatabaseRecordChange();
+
             lock (_locker)
             {
                 if (_initialized)
@@ -354,7 +353,11 @@ namespace Raven.Server.Documents.Indexes
                 _initialized = true;
             }
 
-            return Task.Factory.StartNew(HandleDatabaseRecordChange, TaskCreationOptions.LongRunning);
+            return Task.Factory.StartNew(() =>
+            {
+                OpenIndexes(record);
+                HandleDatabaseRecordChange();
+            }, TaskCreationOptions.LongRunning);
         }
 
         public Index GetIndex(long etag)
@@ -942,8 +945,8 @@ namespace Raven.Server.Documents.Indexes
                 var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(definition.Name);
                 var singleIndexConfiguration = new SingleIndexConfiguration(definition.Configuration, _documentDatabase.Configuration);
                 var indexPath = path.Combine(safeName).FullPath;
-
-                OpenIndex(path, definition.Etag, indexPath, exceptions, name);
+                if (Directory.Exists(indexPath))
+                    OpenIndex(path, definition.Etag, indexPath, exceptions, name);
             }
 
             foreach (var kvp in record.AutoIndexes)
@@ -956,8 +959,8 @@ namespace Raven.Server.Documents.Indexes
 
                 var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(definition.Name);
                 var indexPath = path.Combine(safeName).FullPath;
-
-                OpenIndex(path, definition.Etag, indexPath, exceptions, name);
+                if (Directory.Exists(indexPath))
+                    OpenIndex(path, definition.Etag, indexPath, exceptions, name);
             }
 
             if (exceptions != null && exceptions.Count > 0)

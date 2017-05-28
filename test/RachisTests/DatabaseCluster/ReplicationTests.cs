@@ -21,10 +21,10 @@ namespace RachisTests.DatabaseCluster
         [Fact]
         public async Task EnsureDocumentsReplication()
         {
-            NoTimeouts();
             var clusterSize = 5;
             var databaseName = "ReplicationTestDB";
             var leader = await CreateRaftClusterAndGetLeader(clusterSize,false);
+            WaitForUserToContinueTheTest(leader.WebUrls[0]);
             CreateDatabaseResult databaseResult;
             using (var store = new DocumentStore()
             {

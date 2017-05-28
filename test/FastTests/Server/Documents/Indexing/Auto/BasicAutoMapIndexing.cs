@@ -115,9 +115,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.True(etag2 > 0);
 
                 var index2 = database.IndexStore.GetIndex(etag2);
-                index2.SetLock(IndexLockMode.LockedError);
-                index2.SetPriority(IndexPriority.Low);
+
+                var task =  Task.WhenAll(database.IndexStore.SetLock(index2.Name, IndexLockMode.LockedError), 
+                    database.IndexStore.SetPriority(index2.Name, IndexPriority.Low));
                 index2.SetState(IndexState.Disabled);
+                await task;
 
                 Server.ServerStore.DatabasesLandlord.UnloadDatabase(dbName);
 
