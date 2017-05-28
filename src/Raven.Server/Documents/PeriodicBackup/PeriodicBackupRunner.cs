@@ -23,6 +23,7 @@ using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 using System.Collections.Concurrent;
 using System.Linq;
 using NCrontab.Advanced;
+using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
@@ -183,7 +184,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                         var currentLastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
                         // no-op if nothing has changed
                         if (currentLastEtag == status.LastEtag)
+                        {
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info("Skipping incremental backup because " +
+                                             $"last etag ({currentLastEtag}) hasn't changed since last backup");
                             return;
+                        }
                     }
 
                     var startDocumentEtag = isFullBackup == false ? status.LastEtag : null;
@@ -191,17 +197,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     var lastEtag = CreateLocalBackupOrSnapshot(configuration,
                         isFullBackup, status, backupFilePath, startDocumentEtag, context, tx);
-
-                    if (isFullBackup == false &&
-                        lastEtag == status.LastEtag)
-                    {
-                        // no-op if nothing has changed
-
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info("Periodic backup returned prematurely, " +
-                                         "nothing has changed since last backup");
-                        return;
-                    }
 
                     try
                     {
@@ -264,7 +259,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 .Combine($"{now}.ravendb-{_database.Name}-{_serverStore.NodeTag}-{configuration.BackupType.ToString().ToLower()}");
         }
 
-        private string GetFileName(
+        private static string GetFileName(
             bool isFullBackup,
             string backupFolder,
             string now,
@@ -272,44 +267,41 @@ namespace Raven.Server.Documents.PeriodicBackup
             out string backupFilePath)
         {
             string fileName;
+
             if (isFullBackup)
             {
-                // create filename for full backup/snapshot
-                fileName = $"{now}.ravendb-{GetFullBackupName(backupType)}";
-                backupFilePath = Path.Combine(backupFolder, fileName);
-                if (File.Exists(backupFilePath))
-                {
-                    var counter = 1;
-                    while (true)
-                    {
-                        fileName = $"{now} - {counter}.${GetFullBackupExtension(backupType)}";
-                        backupFilePath = Path.Combine(backupFolder, fileName);
-
-                        if (File.Exists(backupFilePath) == false)
-                            break;
-
-                        counter++;
-                    }
-                }
+                // create file name for full backup/snapshot
+                fileName = GetFileNameFor(() => GetFullBackupExtension(backupType),
+                    now, backupFolder, out backupFilePath);
             }
             else
             {
-                // create filename for incremental backup
-                fileName = $"{now}-0.${Constants.Documents.PeriodicBackup.IncrementalBackupExtension}";
-                backupFilePath = Path.Combine(backupFolder, fileName);
-                if (File.Exists(backupFilePath))
+                // create file name for incremental backup
+                fileName = GetFileNameFor(() => Constants.Documents.PeriodicBackup.IncrementalBackupExtension,
+                    now, backupFolder, out backupFilePath);
+            }
+
+            return fileName;
+        }
+
+        private static string GetFileNameFor(Func<string> getBackupExtension,
+            string now, string backupFolder, out string backupFilePath)
+        {
+            var fileName = $"{now}.{getBackupExtension()}";
+            backupFilePath = Path.Combine(backupFolder, fileName);
+
+            if (File.Exists(backupFilePath))
+            {
+                var counter = 1;
+                while (true)
                 {
-                    var counter = 1;
-                    while (true)
-                    {
-                        fileName = $"{now}-{counter}.${Constants.Documents.PeriodicBackup.IncrementalBackupExtension}";
-                        backupFilePath = Path.Combine(backupFolder, fileName);
+                    fileName = $"{now}-{counter}.${getBackupExtension()}";
+                    backupFilePath = Path.Combine(backupFolder, fileName);
 
-                        if (File.Exists(backupFilePath) == false)
-                            break;
+                    if (File.Exists(backupFilePath) == false)
+                        break;
 
-                        counter++;
-                    }
+                    counter++;
                 }
             }
 
@@ -520,14 +512,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private async Task UploadToS3(S3Settings settings, string backupPath, string fileName, bool isFullBackup, BackupType backupType)
         {
-            if (settings.AwsAccessKey == Constants.Documents.Encryption.DataCouldNotBeDecrypted ||
-                settings.AwsSecretKey == Constants.Documents.Encryption.DataCouldNotBeDecrypted)
-            {
-                throw new InvalidOperationException("Could not decrypt the AWS access settings, " +
-                                                    "if you are running on IIS, " +
-                                                    "make sure that load user profile is set to true.");
-            }
-
             using (var client = new RavenAwsS3Client(settings.AwsAccessKey, settings.AwsSecretKey, settings.AwsRegionName ?? RavenAwsClient.DefaultRegion))
             using (var fileStream = File.OpenRead(backupPath))
             {
@@ -545,15 +529,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private async Task UploadToGlacier(GlacierSettings settings, string backupPath, string fileName)
         {
-
-            if (settings.AwsAccessKey == Constants.Documents.Encryption.DataCouldNotBeDecrypted ||
-                settings.AwsSecretKey == Constants.Documents.Encryption.DataCouldNotBeDecrypted)
-            {
-                throw new InvalidOperationException("Could not decrypt the AWS access settings, " +
-                                                    "if you are running on IIS, " +
-                                                    "make sure that load user profile is set to true.");
-            }
-
             using (var client = new RavenAwsGlacierClient(settings.AwsAccessKey, settings.AwsSecretKey, settings.AwsRegionName ?? RavenAwsClient.DefaultRegion))
             using (var fileStream = File.OpenRead(backupPath))
             {
@@ -565,14 +540,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private async Task UploadToAzure(AzureSettings settings, string backupPath, string fileName, bool isFullBackup, BackupType backupType)
         {
-            if (settings.StorageAccount == Constants.Documents.Encryption.DataCouldNotBeDecrypted ||
-                settings.StorageKey == Constants.Documents.Encryption.DataCouldNotBeDecrypted)
-            {
-                throw new InvalidOperationException("Could not decrypt the Azure access settings, " +
-                                                    "if you are running on IIS, " +
-                                                    "make sure that load user profile is set to true.");
-            }
-
             using (var client = new RavenAzureClient(settings.StorageAccount, settings.StorageKey, settings.StorageContainer))
             {
                 await client.PutContainer();
@@ -755,8 +722,18 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private PeriodicBackupStatus GetBackupStatus(long taskId)
         {
-            var status = _database.ConfigurationStorage.PeriodicBackupStorage.GetPeriodicBackupStatus(taskId);
-            return status ?? new PeriodicBackupStatus();
+            TransactionOperationContext context;
+            using (_serverStore.ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
+            {
+                var statusBlittable = _serverStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(_database.Name, taskId));
+
+                if (statusBlittable == null)
+                    return null;
+
+                var periodicBackupStatusJson = JsonDeserializationClient.PeriodicBackupStatus(statusBlittable);
+                return periodicBackupStatusJson;
+            }
         }
 
         public void UpdateConfigurations(DatabaseRecord databaseRecord)
@@ -866,7 +843,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 return TaskStatus.ActiveByCurrentNode;
 
             if (_logger.IsInfoEnabled)
-                _logger.Info("Backup job is skipped because it is managed " +
+                _logger.Info($"Backup job is skipped at {SystemTime.UtcNow}, because it is managed " +
                              $"by '{whoseTaskIsIt}' node and not the current node ({_serverStore.NodeTag})");
 
             return TaskStatus.ActiveByOtherNode;

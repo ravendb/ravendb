@@ -16,15 +16,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public class PeriodicBackupTestsSlow : RavenTestBase
     {
-        private readonly string _exportPath;
+        private readonly string _backupPath;
 
         public PeriodicBackupTestsSlow()
         {
-            _exportPath = NewDataPath(suffix: "ExportFolder");
+            _backupPath = NewDataPath(suffix: "BackupFolder");
         }
 
         [Fact, Trait("Category", "Smuggler")]
-        public async Task CanExportToDirectory_MultipleExports_with_long_interval()
+        public async Task CanBackupToDirectory_MultipleBackups_with_long_interval()
         {
             using (var store = GetDocumentStore())
             {
@@ -35,12 +35,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         LocalSettings = new LocalSettings
                         {
-                            FolderPath = _exportPath
+                            FolderPath = _backupPath
                         },
                         //TODO: IncrementalIntervalInMilliseconds = 25
                     };
 
-                    await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.Database));                    
+                    await store.Admin.Server.SendAsync(new UpdatePeriodicBackupOperation(config, store.Database));                    
                     await session.SaveChangesAsync();
                 }
 
@@ -48,7 +48,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 //get by reflection the maxTimerTimeoutInMilliseconds field
                 //this field is the maximum interval acceptable in .Net's threading timer
-                //if the requested export interval is bigger than this maximum interval, 
+                //if the requested backup interval is bigger than this maximum interval, 
                 //a timer with maximum interval will be used several times until the interval cumulatively
                 //will be equal to requested interval
                 typeof(PeriodicBackupRunner)
@@ -56,7 +56,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     .SetValue(periodicBackupRunner, TimeSpan.FromMilliseconds(5));
 
                 var operation = new GetPeriodicBackupStatusOperation(store.Database, 1); //TODO
-                    //await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.DefaultDatabase));
+                    //await store.Admin.Server.SendAsync(new UpdatePeriodicBackupOperation(config, store.DefaultDatabase));
                 SpinWait.SpinUntil(() =>
                 {
                     var result = store.Admin.Server.Send(operation);
@@ -65,7 +65,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     return result.Status.LastEtag > 0;
                 }, TimeSpan.FromSeconds(10));
 
-                var etagForExports = store.Admin.Server.Send(operation).Status.LastEtag;
+                var etagForBackups = store.Admin.Server.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "ayende" });
@@ -75,14 +75,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 SpinWait.SpinUntil(() =>
                 {
                     var newLastEtag = store.Admin.Server.Send(operation).Status.LastEtag;
-                    return newLastEtag != etagForExports;
+                    return newLastEtag != etagForBackups;
                 }, 10000);
             }
 
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
             {
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
-                    Directory.GetDirectories(_exportPath).First());
+                    Directory.GetDirectories(_backupPath).First());
                 using (var session = store.OpenAsyncSession())
                 {
                     var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
@@ -101,7 +101,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 //get by reflection the maxTimerTimeoutInMilliseconds field
                 //this field is the maximum interval acceptable in .Net's threading timer
-                //if the requested export interval is bigger than this maximum interval, 
+                //if the requested backup interval is bigger than this maximum interval, 
                 //a timer with maximum interval will be used several times until the interval cumulatively
                 //will be equal to requested interval
                 typeof(PeriodicBackupRunner)
@@ -119,12 +119,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     BackupType = BackupType.Backup,
                     LocalSettings = new LocalSettings
                     {
-                        FolderPath = _exportPath
+                        FolderPath = _backupPath
                     },
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var operation = new ConfigurePeriodicBackupOperation(config, store.Database);
+                var operation = new UpdatePeriodicBackupOperation(config, store.Database);
                 var result = await store.Admin.Server.SendAsync(operation);
                 var periodicBackupTaskId = result.TaskId;
 
@@ -153,7 +153,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
             {
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
-                    Directory.GetDirectories(_exportPath).First());
+                    Directory.GetDirectories(_backupPath).First());
                 using (var session = store.OpenAsyncSession())
                 {
                     var user = await session.LoadAsync<User>("users/1");
@@ -165,9 +165,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-
         [Fact, Trait("Category", "Smuggler")]
-        public async Task CanExportToDirectory_MultipleExports()
+        public async Task CanBackupToDirectory_MultipleExports()
         {
             using (var store = GetDocumentStore())
             {
@@ -178,11 +177,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         LocalSettings = new LocalSettings
                         {
-                            FolderPath = _exportPath
+                            FolderPath = _backupPath
                         },
                         //TODO: IncrementalIntervalInMilliseconds = 25
                     };
-                    var operation = new ConfigurePeriodicBackupOperation(config, store.Database);
+                    var operation = new UpdatePeriodicBackupOperation(config, store.Database);
                     await store.Admin.Server.SendAsync(operation);
                     await session.SaveChangesAsync();
                 }
@@ -216,7 +215,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
             {
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
-                    Directory.GetDirectories(_exportPath).First());
+                    Directory.GetDirectories(_backupPath).First());
 
                 using (var session = store.OpenAsyncSession())
                 {

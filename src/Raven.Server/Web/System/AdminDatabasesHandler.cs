@@ -334,19 +334,6 @@ namespace Raven.Server.Web.System
             }
 
             return Task.CompletedTask;
-
-            /*DocumentsOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                context.OpenReadTransaction();
-                writer.WriteStartObject();
-                writer.WritePropertyName(nameof(GetPeriodicBackupStatusOperationResult.Status));
-                writer.WriteObject(Database.ConfigurationStorage.PeriodicBackupStorage.GetPeriodicBackupStatusAsBlittable(taskId.Value));
-                writer.WriteEndObject();
-                writer.Flush();
-            }*/
-            //return Task.CompletedTask;
         }
 
         private async Task DatabaseConfigurations(

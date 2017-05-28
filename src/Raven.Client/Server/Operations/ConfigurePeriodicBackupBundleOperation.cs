@@ -9,12 +9,12 @@ using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations
 {
-    public class ConfigurePeriodicBackupOperation : IServerOperation<UpdatePeriodicBackupOperationResult>
+    public class UpdatePeriodicBackupOperation : IServerOperation<UpdatePeriodicBackupOperationResult>
     {
         private readonly PeriodicBackupConfiguration _configuration;
         private readonly string _databaseName;
 
-        public ConfigurePeriodicBackupOperation(PeriodicBackupConfiguration configuration, string databaseName)
+        public UpdatePeriodicBackupOperation(PeriodicBackupConfiguration configuration, string databaseName)
         {
             _configuration = configuration;
             _databaseName = databaseName;
@@ -22,17 +22,17 @@ namespace Raven.Client.Server.Operations
 
         public RavenCommand<UpdatePeriodicBackupOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new ConfigurePeriodicBackupCommand(_configuration, _databaseName, context);
+            return new UpdatePeriodicBackupCommand(_configuration, _databaseName, context);
         }
     }
 
-    public class ConfigurePeriodicBackupCommand : RavenCommand<UpdatePeriodicBackupOperationResult>
+    public class UpdatePeriodicBackupCommand : RavenCommand<UpdatePeriodicBackupOperationResult>
     {
-        private PeriodicBackupConfiguration _configuration;
+        private readonly PeriodicBackupConfiguration _configuration;
         private readonly string _databaseName;
-        private JsonOperationContext _context;
+        private readonly JsonOperationContext _context;
 
-        public ConfigurePeriodicBackupCommand(PeriodicBackupConfiguration configuration, string databaseName, JsonOperationContext context)
+        public UpdatePeriodicBackupCommand(PeriodicBackupConfiguration configuration, string databaseName, JsonOperationContext context)
         {
             _configuration = configuration;
             _databaseName = databaseName;
@@ -63,7 +63,7 @@ namespace Raven.Client.Server.Operations
             if (response == null)
                 ThrowInvalidResponse();
 
-            Result = JsonDeserializationClient.ConfigurePeriodicExportBundleOperationResult(response);
+            Result = JsonDeserializationClient.ConfigurePeriodicBackupBundleOperationResult(response);
         }
     }
 

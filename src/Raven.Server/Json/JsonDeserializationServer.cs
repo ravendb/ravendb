@@ -79,8 +79,8 @@ namespace Raven.Server.Json
     
         public static readonly Func<BlittableJsonReaderObject, ExpirationConfiguration> ExpirationConfiguration = GenerateJsonDeserializationRoutine<ExpirationConfiguration>();
 
-        public static readonly Func<BlittableJsonReaderObject, PeriodicBackupConfiguration> PeriodicExportConfiguration = GenerateJsonDeserializationRoutine<PeriodicBackupConfiguration>();
-        public static readonly Func<BlittableJsonReaderObject, PeriodicBackupStatus> PeriodicExportStatus = GenerateJsonDeserializationRoutine<PeriodicBackupStatus>();
+        public static readonly Func<BlittableJsonReaderObject, PeriodicBackupConfiguration> PeriodicBackupConfiguration = GenerateJsonDeserializationRoutine<PeriodicBackupConfiguration>();
+        public static readonly Func<BlittableJsonReaderObject, PeriodicBackupStatus> PeriodicBackupStatus = GenerateJsonDeserializationRoutine<PeriodicBackupStatus>();
 
         public static readonly Func<BlittableJsonReaderObject, IndexDefinition> IndexDefinition = GenerateJsonDeserializationRoutine<IndexDefinition>();
         internal static readonly Func<BlittableJsonReaderObject, LegacyIndexDefinition> LegacyIndexDefinition = GenerateJsonDeserializationRoutine<LegacyIndexDefinition>();

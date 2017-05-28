@@ -219,8 +219,6 @@ namespace Raven.Client
                 }
 
                 public const int DefaultGeneratedEncryptionKeyLength = 256 / 8;
-
-                public const string DataCouldNotBeDecrypted = "<data could not be decrypted>";
             }
 
             public class Replication
@@ -245,7 +243,7 @@ namespace Raven.Client
             {
                 public const string FullBackupExtension = ".ravendb-full-backup";
 
-                public const string SnapshotExtension = ".ravendb-snaphot";
+                public const string SnapshotExtension = ".ravendb-snapshot";
 
                 public const string IncrementalBackupExtension = ".ravendb-incremental-backup";
             }

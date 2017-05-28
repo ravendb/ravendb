@@ -5,17 +5,16 @@
 // -----------------------------------------------------------------------
 
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-
-using Xunit;
-using System.Linq;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Tests.Core.Utils.Entities;
+using Xunit;
 
-namespace FastTests.Server.Documents.PeriodicExport
+namespace FastTests.Server.Documents.PeriodicBackup
 {
     public class PeriodicBackupTests : RavenTestBase
     {
@@ -27,7 +26,7 @@ namespace FastTests.Server.Documents.PeriodicExport
         }
 
         [Fact, Trait("Category", "Smuggler")]
-        public async Task CanSetupPeriodicExportWithVeryLargePeriods()
+        public async Task CanSetupPeriodicBackupWithVeryLargePeriods()
         {
             using (var store = GetDocumentStore())
             {
@@ -41,11 +40,11 @@ namespace FastTests.Server.Documents.PeriodicExport
                     //FullBackupIntervalInMilliseconds = (long)TimeSpan.FromDays(50).TotalMilliseconds,
                     //IncrementalIntervalInMilliseconds = (long)TimeSpan.FromDays(50).TotalMilliseconds
                 };
-                await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.Database));
+                await store.Admin.Server.SendAsync(new UpdatePeriodicBackupOperation(config, store.Database));
 
-                var periodicExportRunner = (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.PeriodicBackupRunner;
-                //TODO: Assert.Equal(50, periodicExportRunner.IncrementalInterval.TotalDays);
-                //TODO: Assert.Equal(50, periodicExportRunner.FullExportInterval.TotalDays);
+                var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.PeriodicBackupRunner;
+                //TODO: Assert.Equal(50, periodicBackupRunner.IncrementalInterval.TotalDays);
+                //TODO: Assert.Equal(50, periodicBackupRunner.FullExportInterval.TotalDays);
             }
         }
 
@@ -66,7 +65,7 @@ namespace FastTests.Server.Documents.PeriodicExport
                         //TODO: FullBackupFrequency = 
                         //IncrementalIntervalInMilliseconds = 25
                     };
-                    await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.Database));
+                    await store.Admin.Server.SendAsync(new UpdatePeriodicBackupOperation(config, store.Database));
                     await session.SaveChangesAsync();
 
                 }
