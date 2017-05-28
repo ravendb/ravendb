@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Subscriptions
                 InitialChangeVector = options.ChangeVector
             };
             
-            var etag = await _serverStore.SendToLeaderAsync(command.ToJson());
+            var (etag,result) = await _serverStore.SendToLeaderAsync(command);
 
             if (_logger.IsInfoEnabled)
                 _logger.Info($"New Subscription with index {etag} was created");
@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Subscriptions
                 DbId = _db.DbId
             };
 
-            var etag = await _serverStore.SendToLeaderAsync(command.ToJson());
+            var (etag, result) = await _serverStore.SendToLeaderAsync(command);
             await _db.WaitForIndexNotification(etag);            
         }
 
@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.Subscriptions
                 SubscriptionId = id                
             };
 
-            var etag = await _serverStore.SendToLeaderAsync(command.ToJson());
+            var (etag, result) = await _serverStore.SendToLeaderAsync(command);
 
             if (_logger.IsInfoEnabled)
             {

@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -14,10 +15,12 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
+using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Client.Server.Commands;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.Rachis;
@@ -150,9 +153,8 @@ namespace Raven.Server.Web.System
 
                 var topologyJson = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
-                var index = await ServerStore.WriteDbAsync(context, name, topologyJson, etag);
-                await ServerStore.Cluster.WaitForIndexNotification(index);
-                ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
+                var (index, _) = await ServerStore.WriteDbAsync(name, topologyJson, etag).ThrowOnTimeout();
+                await ServerStore.Cluster.WaitForIndexNotification(index).ThrowOnTimeout();
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -173,6 +175,7 @@ namespace Raven.Server.Web.System
         public async Task Put()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var nodesAddedTo = new List<string>();
 
             string errorMessage;
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
@@ -206,14 +209,12 @@ namespace Raven.Server.Web.System
                 else
                 {
                     var factor = Math.Max(1, GetIntValueQueryString("replication-factor", required: false) ?? 0);
-                    topology = AssignNodesToDatabase(context, factor, name, json);
+                    topology = AssignNodesToDatabase(context, factor, name, json, out nodesAddedTo);
                 }
 
 
-                var index = await ServerStore.WriteDbAsync(context, name, json, etag);
-                await ServerStore.Cluster.WaitForIndexNotification(index);
-
-                ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
+                var (index, _) = await ServerStore.WriteDbAsync(name, json, etag).ThrowOnTimeout();
+                await ServerStore.Cluster.WaitForIndexNotification(index).ThrowOnTimeout();
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -223,14 +224,15 @@ namespace Raven.Server.Web.System
                     {
                         [nameof(DatabasePutResult.ETag)] = index,
                         [nameof(DatabasePutResult.Key)] = name,
-                        [nameof(DatabasePutResult.Topology)] = topology.ToJson()
+                        [nameof(DatabasePutResult.Topology)] = topology.ToJson(),
+                        [nameof(DatabasePutResult.NodesAddedTo)] = nodesAddedTo
                     });
                     writer.Flush();
                 }
             }
         }
 
-        private DatabaseTopology AssignNodesToDatabase(TransactionOperationContext context, int factor, string name, BlittableJsonReaderObject json)
+        private DatabaseTopology AssignNodesToDatabase(TransactionOperationContext context, int factor, string name, BlittableJsonReaderObject json, out List<string> nodesAddedTo)
         {
             var topology = new DatabaseTopology();
 
@@ -242,16 +244,19 @@ namespace Raven.Server.Web.System
                 .ToArray();
 
             var offset = new Random().Next();
+            nodesAddedTo = new List<string>();
 
             for (int i = 0; i < Math.Min(allNodes.Length, factor); i++)
             {
                 var selectedNode = allNodes[(i + offset) % allNodes.Length];
+                var url = clusterTopology.GetUrlFromTag(selectedNode);
                 topology.Members.Add(new DatabaseTopologyNode
                 {
                     Database = name,
                     NodeTag = selectedNode,
-                    Url = clusterTopology.GetUrlFromTag(selectedNode)
+                    Url = url,
                 });
+                nodesAddedTo.Add(url);
             }
 
             var topologyJson = EntityToBlittable.ConvertEntityToBlittable(topology, DocumentConventions.Default, context);
@@ -280,22 +285,22 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/expiration/config", "POST", "/admin/config-expiration?name={databaseName:string}")]
         public async Task ConfigExpirationBundle()
         {
-            await DatabaseConfigurations(ServerStore.ModifyDatabaseExpiration, "read-expiration-config");
+            await DatabaseConfigurations(ServerStore.ModifyDatabaseExpiration, "read-expiration-config").ThrowOnTimeout(); 
         }
 
         [RavenAction("/admin/versioning/config", "POST", "/admin/config-versioning?name={databaseName:string}")]
         public async Task ConfigVersioning()
         {
-            await DatabaseConfigurations(ServerStore.ModifyDatabaseVersioning, "read-versioning-config");
+            await DatabaseConfigurations(ServerStore.ModifyDatabaseVersioning, "read-versioning-config").ThrowOnTimeout();
         }
 
         [RavenAction("/admin/periodic-backup/config", "POST", "/admin/config-periodic-backup?name={databaseName:string}")]
         public async Task ConfigPeriodicBackup()
         {
-            await DatabaseConfigurations(ServerStore.ModifyDatabasePeriodicBackup, "read-periodic-backup-config");
+            await DatabaseConfigurations(ServerStore.ModifyDatabasePeriodicBackup, "read-periodic-backup-config").ThrowOnTimeout();
         }
 
-        private async Task DatabaseConfigurations(Func<TransactionOperationContext, string, BlittableJsonReaderObject, Task<long>> setupConfigurationFunc, string debug)
+        private async Task DatabaseConfigurations(Func<TransactionOperationContext, string, BlittableJsonReaderObject, Task<(long, BlittableJsonReaderObject)>> setupConfigurationFunc, string debug)
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             string errorMessage;
@@ -307,7 +312,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {                
                 var configurationJson = await context.ReadForMemoryAsync(RequestBodyStream(), debug);
-                var index = await setupConfigurationFunc(context, name, configurationJson);
+                var (index, _) = await setupConfigurationFunc(context, name, configurationJson);
                 DatabaseRecord dbRecord;
                 using (context.OpenReadTransaction())                    
                 {
@@ -316,14 +321,13 @@ namespace Raven.Server.Web.System
                 }
                 if (dbRecord.Topology.RelevantFor(ServerStore.NodeTag))
                 {
-                    var db = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
-                    await db.WaitForIndexNotification(index);
+                    var db = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name).ThrowOnTimeout();
+                    await db.WaitForIndexNotification(index).ThrowOnTimeout();
                 }
                 else
                 {
-                    await ServerStore.Cluster.WaitForIndexNotification(index);;
+                    await ServerStore.Cluster.WaitForIndexNotification(index).ThrowOnTimeout();
                 }        
-                ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Update));
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -336,6 +340,7 @@ namespace Raven.Server.Web.System
                 }
             }
         }
+        
         [RavenAction("/admin/modify-watchers", "POST", "/admin/modify-watchers?name={databaseName:string}")]
         public async Task ModifyWathcers()
         {
@@ -349,20 +354,22 @@ namespace Raven.Server.Web.System
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
-                var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-modify-watchers");
-                if (updateJson.TryGet(nameof(DatabaseTopology.Watchers), out BlittableJsonReaderArray watchers) == false)
-                {
+                var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-modify-watchers").ThrowOnTimeout();
+                if (updateJson.TryGet(nameof(DatabaseTopology.Watchers), out BlittableJsonReaderArray watchersBlittable) == false)
+                {                    
                     throw new InvalidDataException("NewWatchers property was not found.");
                 }
                 using (context.OpenReadTransaction())
                 {              
                     long etag;
                     var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out etag);
-                    
-                    var index = await ServerStore.ModifyDatabaseWatchers(context, name, watchers);
-                    await ServerStore.Cluster.WaitForIndexNotification(index);
-
-                    ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Update));
+                    var watchers = new List<DatabaseWatcher>(watchersBlittable.Length);
+                    foreach (BlittableJsonReaderObject watcher in watchersBlittable)
+                    {
+                        watchers.Add(JsonDeserializationClient.DatabaseWatcher(watcher));
+                    }
+                    var (index, _) = await ServerStore.ModifyDatabaseWatchers(name, watchers).ThrowOnTimeout();
+                    await ServerStore.Cluster.WaitForIndexNotification(index).ThrowOnTimeout();
 
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -392,19 +399,17 @@ namespace Raven.Server.Web.System
             ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "read-conflict-resolver");
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "read-conflict-resolver").ThrowOnTimeout();
                 var conflictResolver = (ConflictSolver)EntityToBlittable.ConvertToEntity(typeof(ConflictSolver), "convert-conflict-resolver", json, DocumentConventions.Default);
-                var conflictResolverJson = EntityToBlittable.ConvertEntityToBlittable(conflictResolver, DocumentConventions.Default, context);
+
                 using (context.OpenReadTransaction())
                 {
                     long etag;
                     var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out etag);
 
-                    var index = await ServerStore.ModifyConflictSolverAsync(context, name, conflictResolverJson);
-                    await ServerStore.Cluster.WaitForIndexNotification(index);
+                    var (index,_) = await ServerStore.ModifyConflictSolverAsync(name, conflictResolver).ThrowOnTimeout();
+                    await ServerStore.Cluster.WaitForIndexNotification(index).ThrowOnTimeout();
                     
-                    ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Update));
-
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -443,23 +448,21 @@ namespace Raven.Server.Web.System
                         }
                     }
                 }
-                long newEtag = -1;
+
+                long etag = -1;
                 foreach (var name in names)
                 {
-                    newEtag = await ServerStore.DeleteDatabaseAsync(context, name, isHardDelete, fromNode);
-                    if (string.IsNullOrEmpty(fromNode))
-                    {
-                        ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Delete));
-                    }
+                    var (newEtag, _) = await ServerStore.DeleteDatabaseAsync(name, isHardDelete, fromNode).ThrowOnTimeout();
+                    etag = newEtag;
                 }
-                await ServerStore.Cluster.WaitForIndexNotification(newEtag);
+                await ServerStore.Cluster.WaitForIndexNotification(etag).ThrowOnTimeout();
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        ["ETag"] = newEtag
+                        ["ETag"] = etag
                     });
                     writer.Flush();
                 }
@@ -469,13 +472,13 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/databases/disable", "POST", "/admin/databases/disable?name={resourceName:string|multiple}")]
         public async Task DisableDatabases()
         {
-            await ToggleDisableDatabases(disableRequested: true);
+            await ToggleDisableDatabases(disableRequested: true).ThrowOnTimeout();
         }
 
         [RavenAction("/admin/databases/enable", "POST", "/admin/databases/enable?name={resourceName:string|multiple}")]
         public async Task EnableDatabases()
         {
-            await ToggleDisableDatabases(disableRequested: false);
+            await ToggleDisableDatabases(disableRequested: false).ThrowOnTimeout();
         }
 
         private async Task ToggleDisableDatabases(bool disableRequested)
@@ -528,10 +531,8 @@ namespace Raven.Server.Web.System
 
                     var json = EntityToBlittable.ConvertEntityToBlittable(dbDoc, DocumentConventions.Default, context);
 
-                    var index = await ServerStore.WriteDbAsync(context, name, json, null);
-                    await ServerStore.Cluster.WaitForIndexNotification(index);
-
-                    ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
+                    var (index, result) = await ServerStore.WriteDbAsync(name, json, null).ThrowOnTimeout();
+                    await ServerStore.Cluster.WaitForIndexNotification(index).ThrowOnTimeout();
 
                     context.Write(writer, new DynamicJsonValue
                     {
@@ -554,24 +555,7 @@ namespace Raven.Server.Web.System
         public long ETag { get; set; }
         public string Key { get; set; }
         public DatabaseTopology Topology { get; set; }
+        public List<string> NodesAddedTo { get; set; }
     }
 
-    public class DatabaseDeleteResult
-    {
-        public string Name { get; set; }
-
-        public bool Deleted { get; set; }
-
-        public string Reason { get; set; }
-
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(Name)] = Name,
-                [nameof(Deleted)] = Deleted,
-                [nameof(Reason)] = Reason
-            };
-        }
-    }
 }

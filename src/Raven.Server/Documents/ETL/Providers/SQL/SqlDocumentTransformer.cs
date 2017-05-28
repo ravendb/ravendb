@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
                 var sqlColumn = new SqlColumn
                 {
-                    Key = prop.Name,
+                    Id = prop.Name,
                     Value = prop.Value,
                     Type = prop.Token
                 };
@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                 {
                     var attachmentStream = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(
                                                    Context,
-                                                   Current.DocumentKey,
+                                                   Current.DocumentId,
                                                    attachmentName,
                                                    AttachmentType.Document,
                                                    Current.Document.ChangeVector)

@@ -24,7 +24,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var toExclude = new [] { "companies/1", "companies/2", "companies/3" };
+                var toExclude = new [] { "companies/1-A", "companies/2-A", "companies/3-A" };
 
                 using (var commands = store.Commands())
                 {

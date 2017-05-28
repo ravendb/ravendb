@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Changes
         private readonly Uri _url;
 
         private readonly Action _onDispose;
-        private readonly ClientWebSocket _client;
+        private ClientWebSocket _client;
 
         private readonly Task _task;
         private readonly CancellationTokenSource _cts;
@@ -75,7 +75,7 @@ namespace Raven.Client.Documents.Changes
             }
         }
 
-        public bool Connected => _client.State == WebSocketState.Open;
+        public bool Connected => _client?.State == WebSocketState.Open;
 
         public Task<IDatabaseChanges> EnsureConnectedNow()
         {
@@ -104,7 +104,7 @@ namespace Raven.Client.Documents.Changes
 
             var taskedObservable = new ChangesObservable<DocumentChange, DatabaseConnectionState>(
                 counter,
-                notification => string.Equals(notification.Key, docId, StringComparison.OrdinalIgnoreCase));
+                notification => string.Equals(notification.Id, docId, StringComparison.OrdinalIgnoreCase));
 
             counter.OnDocumentChangeNotification += taskedObservable.Send;
             counter.OnError += taskedObservable.Error;
@@ -188,7 +188,7 @@ namespace Raven.Client.Documents.Changes
 
             var taskedObservable = new ChangesObservable<DocumentChange, DatabaseConnectionState>(
                 counter,
-                notification => notification.Key != null && notification.Key.StartsWith(docIdPrefix, StringComparison.OrdinalIgnoreCase));
+                notification => notification.Id != null && notification.Id.StartsWith(docIdPrefix, StringComparison.OrdinalIgnoreCase));
 
             counter.OnDocumentChangeNotification += taskedObservable.Send;
             counter.OnError += taskedObservable.Error;
@@ -373,6 +373,9 @@ namespace Raven.Client.Documents.Changes
                 }
                 catch (Exception e)
                 {
+                    using (var client = _client)
+                        _client = new ClientWebSocket();
+
                     ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
 
                     NotifyAboutError(e);

@@ -10,7 +10,10 @@ using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using FastTests.Server.Documents.Notifications;
+using Raven.Client.Server.Operations;
 using Raven.Server;
+using Raven.Server.Rachis;
+using Sparrow;
 
 
 namespace RachisTests
@@ -40,23 +43,22 @@ namespace RachisTests
             }.Initialize())
             {
                 var usersCount = new List<User>();
-                var reachedMaxDocCountMre = new ManualResetEvent(false);
-                var subscription = await CreateAndInitiateSubscription(store, defaultDatabase, usersCount, reachedMaxDocCountMre); 
+                var reachedMaxDocCountMre = new AsyncManualResetEvent();
+                var subscription = await CreateAndInitiateSubscription(store, defaultDatabase, usersCount, reachedMaxDocCountMre);
                 
                 await GenerateDocuments(store);
 
+                Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime));
+
                 tag1 = subscription.CurrentNodeTag;
 
-                reachedMaxDocCountMre.WaitOne(_reasonableWaitTime);
                 usersCount.Clear();
                 reachedMaxDocCountMre.Reset();
-
 
                 await KillServerWhereSubscriptionWorks( defaultDatabase, subscription.SubscriptionId);
 
                 await GenerateDocuments(store);
-
-                Assert.True(reachedMaxDocCountMre.WaitOne(_reasonableWaitTime));
+                Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime));
 
                 tag2 = subscription.CurrentNodeTag;
 
@@ -68,7 +70,7 @@ namespace RachisTests
 
                 await GenerateDocuments(store);
 
-                Assert.True(reachedMaxDocCountMre.WaitOne(_reasonableWaitTime));
+                Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime));
 
                 tag3 = subscription.CurrentNodeTag;
                 Assert.NotEqual(tag1, tag3);
@@ -77,20 +79,24 @@ namespace RachisTests
             }
         }
 
-        private async Task<Subscription<User>> CreateAndInitiateSubscription(IDocumentStore store, string defaultDatabase, List<User> usersCount, ManualResetEvent reachedMaxDocCountMre)
+        private async Task<Subscription<User>> CreateAndInitiateSubscription(IDocumentStore store, string defaultDatabase, List<User> usersCount, AsyncManualResetEvent reachedMaxDocCountMre)
         {
             var proggress = new SubscriptionProggress()
             {
                 MaxId = 0
             };
             var subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCreationOptions<User>()).ConfigureAwait(false);
-            var subscriptionEtag = long.Parse(subscriptionId.Substring(subscriptionId.LastIndexOf("/") + 1));
+            var subscriptionEtag = long.Parse(subscriptionId.Substring(subscriptionId.LastIndexOf("/", StringComparison.OrdinalIgnoreCase) + 1));
 
-            var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
+            var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
+            {
+                TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500)
+            });
 
-            foreach (var server in Servers.Where(s =>
-                store.GetRequestExecutor(defaultDatabase).TopologyNodes.Any(x => x.ClusterTag == s.ServerStore.NodeTag)))
-
+            var getDatabaseTopologyCommand = new GetDatabaseTopologyOperation(defaultDatabase);
+            var topology = await store.Admin.Server.SendAsync(getDatabaseTopologyCommand).ConfigureAwait(false);
+            
+            foreach (var server in Servers.Where(s => topology.RelevantFor(s.ServerStore.NodeTag)))
             {
                 await server.ServerStore.Cluster.WaitForIndexNotification(subscriptionEtag).ConfigureAwait(false);
             }
@@ -98,7 +104,7 @@ namespace RachisTests
             subscription.Subscribe(x =>
             {
                 int curId = 0;
-                curId = int.Parse(x.Id.Substring(x.Id.LastIndexOf("/") + 1));
+                curId = int.Parse(x.Id.Substring(x.Id.LastIndexOf("/",StringComparison.OrdinalIgnoreCase) + 1));
                 Assert.True(curId > proggress.MaxId);
                 usersCount.Add(x);
                 proggress.MaxId = curId;

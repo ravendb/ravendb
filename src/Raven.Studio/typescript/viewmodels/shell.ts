@@ -8,6 +8,7 @@ import generateMenuItems = require("common/shell/menu/generateMenuItems");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import databaseSwitcher = require("common/shell/databaseSwitcher");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import favNodeBadge = require("common/shell/favNodeBadge");
 import searchBox = require("common/shell/searchBox");
 import database = require("models/resources/database");
 import license = require("models/auth/license");
@@ -58,9 +59,7 @@ class shell extends viewModelBase {
     notificationCenter = notificationCenter.instance;
     collectionsTracker = collectionsTracker.default;
     footer = footer.default;
-
-    static clusterMode = ko.observable<boolean>(false); //TODO: extract from shell
-    isInCluster = ko.computed(() => shell.clusterMode()); //TODO: extract from shell
+    clusterManager = clusterTopologyManager.default;
 
     static serverBuildVersion = ko.observable<serverBuildVersionDto>();
     static serverMainVersion = ko.observable<number>(4);
@@ -78,11 +77,14 @@ class shell extends viewModelBase {
     mainMenu = new menu(generateMenuItems(activeDatabaseTracker.default.database()));
     searchBox = new searchBox();
     databaseSwitcher = new databaseSwitcher();
+    favNodeBadge = new favNodeBadge();
 
     displayUsageStatsInfo = ko.observable<boolean>(false);
     trackingTask = $.Deferred();
 
     studioLoadingFakeRequest: requestExecution;
+
+    private onApiKeyAndBootstrapFinishedTask = $.Deferred<void>();
 
     constructor() {
         super();
@@ -97,22 +99,6 @@ class shell extends viewModelBase {
             return lsApiKey || contextApiKey;
         });
         oauthContext.enterApiKeyTask = this.setupApiKey();
-        oauthContext.enterApiKeyTask.done(() => {
-            changesContext.default
-                .connectServerWideNotificationCenter();
-
-            // load global settings
-            studioSettings.default.globalSettings();
-
-            // bind event handles before we connect to server wide notification center 
-            // (connection will be started after executing this method) - it was just scheduled 2 lines above
-            // please notice we don't wait here for connection to be established
-            // since this invocation is sync we can't end up with race condition
-            this.databasesManager.setupGlobalNotifications();
-            this.notificationCenter.setupGlobalNotifications(changesContext.default.serverNotifications());
-        });
-
-        ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
 
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
@@ -136,11 +122,37 @@ class shell extends viewModelBase {
     activate(args: any) {
         super.activate(args, true);
 
-        oauthContext.enterApiKeyTask.done(() => this.connectToRavenServer());
+        oauthContext.enterApiKeyTask.done(() => {
+
+            // we have api key set up at this moment, let's 
+            // bootstap project by download global defaults
+            // and then start configuring services
+
+            const licenseTask = license.fetchLicenseStatus();
+            const topologyTask = this.clusterManager.init();
+
+            $.when<any>(licenseTask, topologyTask)
+                .done(() => {
+                    changesContext.default
+                        .connectServerWideNotificationCenter();
+
+                    // load global settings
+                    studioSettings.default.globalSettings();
+
+                    // bind event handles before we connect to server wide notification center 
+                    // (connection will be started after executing this method) - it was just scheduled 2 lines above
+                    // please notice we don't wait here for connection to be established
+                    // since this invocation is sync we can't end up with race condition
+                    this.databasesManager.setupGlobalNotifications();
+                    this.clusterManager.setupGlobalNotifications();
+                    this.notificationCenter.setupGlobalNotifications(changesContext.default.serverNotifications());
+
+                    this.connectToRavenServer();
+                })
+                .then(() => this.onApiKeyAndBootstrapFinishedTask.resolve(), () => this.onApiKeyAndBootstrapFinishedTask.reject());
+        });
 
         this.setupRouting();
-
-        var self = this;
 
         $(window).bind("storage", (e: any) => {
             if (e.originalEvent.key === apiKeyLocalStorage.localStorageName) {
@@ -148,14 +160,11 @@ class shell extends viewModelBase {
             }
         });
 
-        $(window).resize(() => self.activeDatabase.valueHasMutated());
+        $(window).resize(() => this.activeDatabase.valueHasMutated());
 
+        //TODO: should we await for api key here? 
         this.fetchClientBuildVersion();
         this.fetchServerBuildVersion();
-
-        const licenseTask = license.fetchLicenseStatus();
-        const topologyTask = clusterTopologyManager.default.init();
-        return $.when<any>(license.fetchLicenseStatus(), topologyTask);
     }
 
     private setupRouting() {
@@ -187,6 +196,7 @@ class shell extends viewModelBase {
 
         this.databaseSwitcher.initialize();
         this.searchBox.initialize();
+        this.favNodeBadge.initialize();
     }
 
     compositionComplete() {
@@ -198,7 +208,10 @@ class shell extends viewModelBase {
 
         this.initializeShellComponents();
 
-        registration.showRegistrationDialogIfNeeded(license.licenseStatus());
+        this.onApiKeyAndBootstrapFinishedTask
+            .done(() => {
+                registration.showRegistrationDialogIfNeeded(license.licenseStatus());
+            });
     }
 
     urlForCollection(coll: collection) {
@@ -231,6 +244,7 @@ class shell extends viewModelBase {
     setupApiKey() {
         // try to find api key as studio hash parameter
         const hash = window.location.hash;
+
         if (hash === "#has-api-key") {
             return this.showApiKeyDialog();
         } else if (hash.match(/#api-key/g)) {

@@ -13,9 +13,7 @@ namespace Raven.Client.Documents.Identity
     /// </summary>   
     public class HiLoResult
     {
-        /// <summary>
-        /// prefix string, including the server prefix (if exists)
-        /// </summary>
+
         public string Prefix { get; set; }
 
         public long Low { get; set; }
@@ -23,6 +21,11 @@ namespace Raven.Client.Documents.Identity
         public long High { get; set; }
 
         public long LastSize { get; set; }
+
+        /// <summary>
+        /// The tag of the server that allocated this range.
+        /// </summary>
+        public string ServerTag { get; set; }
 
         public DateTime LastRangeAt { get; set; }
 

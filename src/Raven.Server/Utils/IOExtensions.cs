@@ -10,22 +10,6 @@ namespace Raven.Server.Utils
     {
         private const int Retries = 10;
 
-        public static string ToFullPath(this string path, string basePath = null)
-        {
-            if (string.IsNullOrWhiteSpace(path))
-                return string.Empty;
-            path = Environment.ExpandEnvironmentVariables(path);
-            if (path.StartsWith(@"~\") || path.StartsWith(@"~/"))
-            {
-                if (!string.IsNullOrEmpty(basePath))
-                    basePath = Path.GetDirectoryName(basePath.EndsWith("\\") ? basePath.Substring(0, basePath.Length - 2) : basePath);
-
-                path = Path.Combine(basePath ?? AppContext.BaseDirectory, path.Substring(2));
-            }
-
-            return Path.IsPathRooted(path) ? path : Path.Combine(basePath ?? AppContext.BaseDirectory, path);
-        }
-
         public static void DeleteFile(string file)
         {
             try

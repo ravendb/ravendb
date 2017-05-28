@@ -88,13 +88,13 @@ namespace Raven.Server.Documents
             {
             IoChanges = new IoChangesNotifications();
             Changes = new DocumentsChanges();
+            DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
             DocumentsStorage = new DocumentsStorage(this);
             IndexStore = new IndexStore(this, serverStore, _indexAndTransformerLocker);
             TransformerStore = new TransformerStore(this, serverStore, _indexAndTransformerLocker);
             EtlLoader = new EtlLoader(this);
             if(serverStore != null)
                 ReplicationLoader = new ReplicationLoader(this, serverStore);
-            DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
             SubscriptionStorage = new SubscriptionStorage(this, serverStore);
             Operations = new DatabaseOperations(this);
             Metrics = new MetricsCountersManager();
@@ -216,6 +216,11 @@ namespace Raven.Server.Documents
             return new DatabaseUsage(this, skipUsagesCount);
         }
 
+        internal void ThrowOperationCancelled()
+        {
+            throw new OperationCanceledException("The database " + Name + " is shutting down");
+        }
+
         public struct DatabaseUsage : IDisposable
         {
             private readonly DocumentDatabase _parent;
@@ -232,13 +237,8 @@ namespace Raven.Server.Documents
                 if (_parent._databaseShutdown.IsCancellationRequested)
                 {
                     Dispose();
-                    ThrowOperationCancelled();
+                    _parent.ThrowOperationCancelled();
                 }
-            }
-
-            private void ThrowOperationCancelled()
-            {
-                throw new OperationCanceledException("The database " + _parent.Name + " is shutting down");
             }
 
             public void Dispose()
@@ -571,11 +571,19 @@ namespace Raven.Server.Documents
         {
             try
             {
+                if (_databaseShutdown.IsCancellationRequested)
+                    ThrowOperationCancelled();
+
                 TransformerStore.HandleDatabaseRecordChange();
                 BundleLoader.HandleDatabaseRecordChange();
                 IndexStore.HandleDatabaseRecordChange();
                 ReplicationLoader?.HandleDatabaseRecordChange();
                 SubscriptionStorage?.HandleDatabaseValueChange();
+            }
+            catch
+            {
+                if (_databaseShutdown.IsCancellationRequested)
+                    ThrowOperationCancelled();
             }
             finally
             {
@@ -583,7 +591,9 @@ namespace Raven.Server.Documents
             }
         }
 
-        public Task WaitForIndexNotification(long index) => _rachisLogIndexNotifications.WaitForIndexNotification(index,(uint)Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan.TotalMilliseconds);
+
+
+        public Task WaitForIndexNotification(long index) => _rachisLogIndexNotifications.WaitForIndexNotification(index, Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan);
 
         private readonly RachisLogIndexNotifications _rachisLogIndexNotifications;
         public byte[] MasterKey;

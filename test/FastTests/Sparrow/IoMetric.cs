@@ -38,8 +38,7 @@ namespace FastTests.Sparrow
 
                 foreach (var currentItem in currentItems)
                 {
-                    var durationInMs = currentItem.Duration.TotalMilliseconds;
-                    Assert.InRange(durationInMs, 0, 2);
+                    Assert.InRange(currentItem.Duration.TotalMilliseconds, 0, 2);
                 }
 
                 Assert.Equal(1, historyItems.Count);

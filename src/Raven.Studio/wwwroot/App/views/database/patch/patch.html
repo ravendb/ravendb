@@ -35,7 +35,7 @@
                 </div>
 
                 <div class="row" data-bind="visible: isDocumentMode, with: patchDocument">
-                    <label class="control-label col-sm-3 col-lg-2">Document ID</label>
+                    <label class="control-label col-sm-3 col-lg-2">Document Id</label>
 
                     <div class="col-sm-9 col-lg-4 margin-bottom" data-bind="validationElement: selectedItem">
                         <div class="input-group">
@@ -175,11 +175,8 @@
                             <i class="icon-rocket"></i><span>Test</span>
                         </button>
                         <div class="flex-separator"></div>
-                        <button class="btn btn-success btn-block text-center test-close" data-bind="click: test.applyTestScript">
-                            <i class="icon-check"></i><span>Apply</span>
-                        </button>
                         <button class="btn btn-default btn-block text-center test-close" data-bind="click: test.closeTestMode">
-                            <i class="icon-cancel"></i><span>Close</span>
+                            <i class="icon-check"></i><span>Done</span>
                         </button>
                     </div>
                 </div>
@@ -286,7 +283,7 @@
                             </div>
                             <div class="flex-grow scroll" data-bind="foreach: actions.putDocument">
                                 <div class="put-item">
-                                    <div class="put-heading" data-bind="text: Key"></div>
+                                    <div class="put-heading" data-bind="text: Id"></div>
                                     <div class="put-placeholder">{ ... }</div>
                                     <pre data-bind="html: $parent.formatAsJson(Data)"></pre>
                                 </div>
@@ -365,7 +362,7 @@
                     </div>
                     <div class="flex-grow scroll">
                         <ul class="patch-list" data-bind="foreach: filteredPatches">
-                            <li>
+                            <li data-bind="css: { selected: $data === $parent.previewItem() }">
                                 <a href="#" class="patch-link" data-bind="click: $parent.previewPatch">
                                     <span class="name" data-bind="text: name()"></span>
                                     <span class="modified" data-bind="text: modificationDate()"></span>

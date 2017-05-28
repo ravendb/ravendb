@@ -7,7 +7,6 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
-using Sparrow.Logging;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
@@ -68,7 +67,7 @@ namespace Voron.Impl.Compaction
                 minimalCompactedDataFileSize = compactedEnv.NextPageNumber * Constants.Storage.PageSize;
             }
 
-            using (var compactedDataFile = new FileStream(Path.Combine(compactOptions.BasePath, Constants.DatabaseFilename), FileMode.Open, FileAccess.ReadWrite))
+            using (var compactedDataFile = new FileStream(compactOptions.BasePath.Combine(Constants.DatabaseFilename).FullPath, FileMode.Open, FileAccess.ReadWrite))
             {
                 compactedDataFile.SetLength(minimalCompactedDataFileSize);
             }

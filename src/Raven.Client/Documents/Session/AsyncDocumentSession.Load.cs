@@ -170,7 +170,7 @@ namespace Raven.Client.Documents.Session
             return command;
         }
 
-        public async Task<Dictionary<string, TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix,
+        public async Task<Dictionary<string, TResult>> LoadStartingWithAsync<TTransformer, TResult>(string idPrefix,
             string matches = null, int start = 0,
             int pageSize = 25, string exclude = null,
             Action<ILoadConfiguration> configure = null,
@@ -178,46 +178,46 @@ namespace Raven.Client.Documents.Session
             where TTransformer : AbstractTransformerCreationTask, new()
         {
             var operation = new LoadStartingWithOperation(this);
-            var command = await LoadStartingWithInternal(keyPrefix, operation, null, matches, start,
+            var command = await LoadStartingWithInternal(idPrefix, operation, null, matches, start,
                 pageSize, exclude, configure, startAfter, new TTransformer().TransformerName, token).ConfigureAwait(false);
 
             return operation.GetTransformedDocuments<TResult>(command?.Result);
         }
 
-        public async Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0,
+        public async Task<IEnumerable<T>> LoadStartingWithAsync<T>(string idPrefix, string matches = null, int start = 0,
             int pageSize = 25, string exclude = null,
             string startAfter = null, CancellationToken token = default(CancellationToken))
         {
             var operation = new LoadStartingWithOperation(this);
-            await LoadStartingWithInternal(keyPrefix, operation, null, matches, start,
+            await LoadStartingWithInternal(idPrefix, operation, null, matches, start,
                 pageSize, exclude, null, startAfter, null, token).ConfigureAwait(false);
 
             return operation.GetDocuments<T>();
         }
 
-        public async Task LoadStartingWithIntoStreamAsync(string keyPrefix, Stream output, string matches = null, int start = 0,
+        public async Task LoadStartingWithIntoStreamAsync(string idPrefix, Stream output, string matches = null, int start = 0,
             int pageSize = 25, string exclude = null, string startAfter = null, CancellationToken token = default(CancellationToken))
         {
-            await LoadStartingWithInternal(keyPrefix, new LoadStartingWithOperation(this), output, matches, start,
+            await LoadStartingWithInternal(idPrefix, new LoadStartingWithOperation(this), output, matches, start,
                 pageSize, exclude, null, startAfter, null, token).ConfigureAwait(false);
         }
 
-        public async Task LoadStartingWithIntoStreamAsync<TTransformer>(string keyPrefix, Stream output, string matches = null,
+        public async Task LoadStartingWithIntoStreamAsync<TTransformer>(string idPrefix, Stream output, string matches = null,
             int start = 0, int pageSize = 25, string exclude = null, Action<ILoadConfiguration> configure = null,
             string startAfter = null, CancellationToken token = default(CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new()
         {
-            await LoadStartingWithInternal(keyPrefix, new LoadStartingWithOperation(this), output, matches, start,
+            await LoadStartingWithInternal(idPrefix, new LoadStartingWithOperation(this), output, matches, start,
                 pageSize, exclude, configure, startAfter, new TTransformer().TransformerName, token).ConfigureAwait(false);
         }
 
-        private async Task<GetDocumentCommand> LoadStartingWithInternal(string keyPrefix, LoadStartingWithOperation operation, Stream stream = null, string matches = null,
+        private async Task<GetDocumentCommand> LoadStartingWithInternal(string idPrefix, LoadStartingWithOperation operation, Stream stream = null, string matches = null,
             int start = 0, int pageSize = 25, string exclude = null, Action<ILoadConfiguration> configure = null,
             string startAfter = null, string transformer = null, CancellationToken token = default(CancellationToken))
         {
             var configuration = new LoadConfiguration();
             configure?.Invoke(configuration);
 
-            operation.WithStartWith(keyPrefix, matches, start, pageSize, exclude, configure, startAfter);
+            operation.WithStartWith(idPrefix, matches, start, pageSize, exclude, configure, startAfter);
 
             if (transformer != null)
                 operation.WithTransformer(transformer, configuration.TransformerParameters);

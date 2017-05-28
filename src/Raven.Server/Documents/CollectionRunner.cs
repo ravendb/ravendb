@@ -82,7 +82,7 @@ namespace Raven.Server.Documents
 
                             startEtag = document.Etag + 1;
 
-                            ids.Enqueue(document.Key);
+                            ids.Enqueue(document.Id);
                         }
 
                         if (ids.Count == 0)

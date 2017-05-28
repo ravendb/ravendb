@@ -16,6 +16,12 @@ declare module "jszip-utils" {
     export = JSZipUtils;
 }
 
+/// Favico
+///
+/// Using *any* as official typings are broken
+
+declare var Favico: any;
+
 ///
 /// Forge
 ///

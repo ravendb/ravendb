@@ -48,7 +48,7 @@ namespace SlowTests.MailingList
 
                  using (var session = store.OpenSession())
                  {
-                     var x = session.Load<ContactTransformer, ContactDto>("contacts/1");
+                     var x = session.Load<ContactTransformer, ContactDto>("contacts/1-A");
 
                      Assert.Equal("oren", x.ContactName);
                  }
@@ -56,13 +56,13 @@ namespace SlowTests.MailingList
 
                  using (var session = store.OpenSession())
                  {
-                     session.Load<Contact>("contacts/1").Name = "ayende";
+                     session.Load<Contact>("contacts/1-A").Name = "ayende";
                      session.SaveChanges();
                  }
 
                  using (var session = store.OpenSession())
                  {
-                     var x = session.Load<ContactTransformer, ContactDto>("contacts/1");
+                     var x = session.Load<ContactTransformer, ContactDto>("contacts/1-A");
 
                      Assert.Equal("ayende", x.ContactName);
                  }

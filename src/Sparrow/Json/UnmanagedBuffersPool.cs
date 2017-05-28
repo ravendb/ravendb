@@ -2,6 +2,9 @@
 using System.Collections.Concurrent;
 using Sparrow.Binary;
 using Sparrow.Logging;
+#if MEM_GUARD
+using Sparrow.Platform;
+#endif
 using Sparrow.Utils;
 
 namespace Sparrow.Json

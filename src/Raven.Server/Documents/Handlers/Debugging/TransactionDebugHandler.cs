@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 var txInfo = new TransactionInfo
                 {
-                    Path = env.Environment.Options.BasePath,
+                    Path = env.Environment.Options.BasePath.FullPath,
                     Information = env.Environment.ActiveTransactions.AllTransactionsInstances
                 };
                 results.Add(txInfo);

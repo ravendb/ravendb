@@ -463,8 +463,8 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType { Value = 2 });
-                    await session.StoreAsync(new CustomType { Value = 1 });
+                    await session.StoreAsync(new CustomType { Value = 2 },"CustomTypes/1");
+                    await session.StoreAsync(new CustomType { Value = 1 },"CustomTypes/2");
                     await session.SaveChangesAsync();
                 }
 
@@ -497,8 +497,8 @@ this.Value = another.Value;
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType { Value = 2 });
-                    await session.StoreAsync(new CustomType { Value = 1 });
+                    await session.StoreAsync(new CustomType { Value = 2 },"CustomTypes/1");
+                    await session.StoreAsync(new CustomType { Value = 1 },"CustomTypes/2");
                     await session.SaveChangesAsync();
                 }
 
@@ -573,7 +573,7 @@ this.Value = another.Value;
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType { Value = 10 });
+                    await session.StoreAsync(new CustomType { Value = 10 }, "CustomTypes/1");
                     await session.SaveChangesAsync();
                 }
 
@@ -605,7 +605,7 @@ this.Value = another.Value;
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType { Value = 10 });
+                    await session.StoreAsync(new CustomType { Value = 10 },"CustomTypes/1");
                     await session.SaveChangesAsync();
                 }
 
@@ -722,7 +722,7 @@ this.Value = another.Value;
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType { Value = 10 });
+                    await session.StoreAsync(new CustomType { Value = 10 },"CustomTypes/1");
                     await session.SaveChangesAsync();
                 }
 
@@ -748,7 +748,7 @@ this.Value = another.Value;
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType { Value = 10 });
+                    await session.StoreAsync(new CustomType { Value = 10 }, "CustomTypes/1");
                     await session.SaveChangesAsync();
                 }
 
@@ -782,7 +782,7 @@ this.Value = another.Value;
                         Script = @"PutDocument('Items/1', null);",
                     }));
                 });
-                Assert.Contains("Created document must be a valid object which is not null or empty. Document key: 'Items/1'", exception.Message);
+                Assert.Contains("Created document must be a valid object which is not null or empty. Document ID: 'Items/1'", exception.Message);
             }
         }
 

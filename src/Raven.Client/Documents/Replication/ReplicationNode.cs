@@ -44,13 +44,6 @@ namespace Raven.Client.Documents.Replication
         /// The database to use
         /// </summary>
         public string Database { get; set; }
-
-        /// <summary>
-        /// How should the replication bundle behave with respect to replicated documents.
-        /// If a document was replicated to us from another node, should we replicate that to
-        /// this destination, or should we replicate only documents that were locally modified.
-        /// </summary>
-        public TransitiveReplicationOptions TransitiveReplicationBehavior { get; set; }
         
         /// <summary>
         /// Gets or sets if the replication will ignore this destination in the client
@@ -101,7 +94,6 @@ namespace Raven.Client.Documents.Replication
         {
             return string.Equals(NodeTag, other.NodeTag, StringComparison.OrdinalIgnoreCase) &&
                    string.Equals(Database, other.Database, StringComparison.OrdinalIgnoreCase) &&
-                   TransitiveReplicationBehavior == other.TransitiveReplicationBehavior &&
                    IgnoredClient.Equals(other.IgnoredClient) && Disabled.Equals(other.Disabled) &&
                    ((string.Equals(Url, other.Url, StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(ClientVisibleUrl)) ||
                    (!string.IsNullOrWhiteSpace(ClientVisibleUrl) && string.Equals(ClientVisibleUrl, other.ClientVisibleUrl, StringComparison.OrdinalIgnoreCase))) &&
@@ -131,7 +123,6 @@ namespace Raven.Client.Documents.Replication
             {
                 var hashCode = (NodeTag?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (Database?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (int)TransitiveReplicationBehavior;
                 hashCode = (hashCode * 397) ^ (ClientVisibleUrl?.GetHashCode() ?? 0);
                 return hashCode;
             }
@@ -141,7 +132,6 @@ namespace Raven.Client.Documents.Replication
         {
             var hashCode = CalculateStringHash(NodeTag);
             hashCode = (hashCode * 397) ^ CalculateStringHash(Database);
-            hashCode = (hashCode * 397) ^ (ulong)TransitiveReplicationBehavior;
             hashCode = (hashCode * 397) ^ CalculateStringHash(ClientVisibleUrl);
             return hashCode;
         }
@@ -161,7 +151,6 @@ namespace Raven.Client.Documents.Replication
                 [nameof(Disabled)] = Disabled,
                 [nameof(Humane)] = Humane,
                 [nameof(IgnoredClient)] = IgnoredClient,
-                [nameof(TransitiveReplicationBehavior)] = TransitiveReplicationBehavior,
                 [nameof(Url)] = Url,
             };
 
@@ -176,20 +165,5 @@ namespace Raven.Client.Documents.Replication
 
             return json;
         }
-    }
-
-    /// <summary>
-    /// Options for how to replicate replicated documents
-    /// </summary>
-    public enum TransitiveReplicationOptions
-    {
-        /// <summary>
-        /// Don't replicate replicated documents
-        /// </summary>
-        None,
-        /// <summary>
-        /// Replicate replicated documents
-        /// </summary>
-        Replicate
     }
 }

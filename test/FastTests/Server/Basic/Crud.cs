@@ -25,7 +25,7 @@ namespace FastTests.Server.Basic
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var user = await session.LoadAsync<User>("users/1");
+                    var user = await session.LoadAsync<User>("users/1-A");
                     Assert.NotNull(user);
                     Assert.Equal("Fitzchak", user.Name);
 

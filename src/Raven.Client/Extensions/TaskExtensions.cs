@@ -44,7 +44,7 @@ namespace Raven.Client.Extensions
                 return true;
             }
 
-            return task == await Task.WhenAny(task, TimeoutManager.WaitFor((uint)timeout.Value.TotalMilliseconds)).ConfigureAwait(false);
+            return task == await Task.WhenAny(task, TimeoutManager.WaitFor(timeout.Value)).ConfigureAwait(false);
         }
 
         public static Task<T> WithResult<T>(this Task task, T result)

@@ -8,7 +8,7 @@ import messagePublisher = require("common/messagePublisher");
 import accessHelper = require("viewmodels/shell/accessHelper");
 import eventsCollector = require("common/eventsCollector");
 
-class databaseSettings extends viewModelBase {
+class databaseRecord extends viewModelBase {
     document = ko.observable<document>();
     documentText = ko.observable<string>().extend({ required: true });
     docEditor: AceAjax.Editor;
@@ -100,4 +100,4 @@ class databaseSettings extends viewModelBase {
     }
 }
 
-export = databaseSettings;
+export = databaseRecord;

@@ -69,7 +69,7 @@
         }
 
         .flex-footer {
-            margin:0;
+            margin: 0;
             padding: 0 @grid-gutter-width/4 @grid-gutter-width/4;
         }
 
@@ -137,6 +137,10 @@
                 &:hover {
                     background-color: lighten(@gray-darker,3%);
                 }
+
+                &.selected {
+                    background-color: lighten(@gray-darker,10%);
+                }
             }
 
             a {
@@ -156,8 +160,8 @@
 
                 .modified {
                     font-size: 11px;
-                    position:relative;
-                    top:-1px;
+                    position: relative;
+                    top: -1px;
                     color: @gray-light;
                 }
             }

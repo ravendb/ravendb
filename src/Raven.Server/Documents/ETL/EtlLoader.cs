@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.ETL
 
         private void HandleSystemDocumentChange(DocumentChange change)
         {
-            if (change.Key.Equals(Constants.Documents.ETL.RavenEtlDocument, StringComparison.OrdinalIgnoreCase) == false)
+            if (change.Id.Equals(Constants.Documents.ETL.RavenEtlDocument, StringComparison.OrdinalIgnoreCase) == false)
                 return;
 
             var old = _processes;

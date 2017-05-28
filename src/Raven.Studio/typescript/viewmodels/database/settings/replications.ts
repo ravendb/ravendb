@@ -4,10 +4,8 @@ import replicationConfig = require("models/database/replication/replicationConfi
 import replicationDestination = require("models/database/replication/replicationDestination");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getReplicationsCommand = require("commands/database/replication/getReplicationsCommand");
-import updateServerPrefixHiLoCommand = require("commands/database/documents/updateServerPrefixHiLoCommand");
 import saveReplicationDocumentCommand = require("commands/database/replication/saveReplicationDocumentCommand");
 import saveAutomaticConflictResolutionDocumentCommand = require("commands/database/replication/saveAutomaticConflictResolutionDocumentCommand");
-import getServerPrefixForHiLoCommand = require("commands/database/documents/getServerPrefixForHiLoCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import getEffectiveConflictResolutionCommand = require("commands/database/globalConfig/getEffectiveConflictResolutionCommand");
 import appUrl = require("common/appUrl");
@@ -24,11 +22,9 @@ class replications extends viewModelBase {
     replicationConfig = ko.observable<replicationConfig>(new replicationConfig({ DocumentConflictResolution: "None" }));
     replicationsSetup = ko.observable<replicationsSetup>(new replicationsSetup({ Source: null, Destinations: [], ClientConfiguration: null, DocumentConflictResolution: null, Id: null }));
 
-    serverPrefixForHiLoDirtyFlag = new ko.DirtyFlag([]);
     replicationConfigDirtyFlag = new ko.DirtyFlag([]);
     replicationsSetupDirtyFlag = new ko.DirtyFlag([]);
 
-    isServerPrefixForHiLoSaveEnabled: KnockoutComputed<boolean>;
     isConfigSaveEnabled: KnockoutComputed<boolean>;
     isSetupSaveEnabled: KnockoutComputed<boolean>;
 
@@ -47,7 +43,7 @@ class replications extends viewModelBase {
         if (db) {
             //TODO: we don't have active bundles in v4.0, let assume it is enabled
             this.replicationEnabled(true);
-            $.when(this.fetchServerPrefixForHiLoCommand(db), this.fetchAutomaticConflictResolution(db), this.fetchReplications(db))
+            $.when(this.fetchAutomaticConflictResolution(db), this.fetchReplications(db))
                 .done(() => deferred.resolve({ can: true }))
                 .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }));
 
@@ -59,8 +55,6 @@ class replications extends viewModelBase {
         super.activate(args);
         this.updateHelpLink("7K1KES");
 
-        this.serverPrefixForHiLoDirtyFlag = new ko.DirtyFlag([this.prefixForHilo]);
-        this.isServerPrefixForHiLoSaveEnabled = ko.computed(() => this.serverPrefixForHiLoDirtyFlag().isDirty());
         this.replicationConfigDirtyFlag = new ko.DirtyFlag([this.replicationConfig]);
         this.isConfigSaveEnabled = ko.computed(() => this.replicationConfigDirtyFlag().isDirty());
 
@@ -73,7 +67,6 @@ class replications extends viewModelBase {
         var combinedFlag = ko.computed(() => {
             var rc = this.replicationConfigDirtyFlag().isDirty();
             var rs = this.replicationsSetupDirtyFlag().isDirty();
-            var sp = this.serverPrefixForHiLoDirtyFlag().isDirty();
             return rc || rs || sp;
         });
         this.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
@@ -82,15 +75,6 @@ class replications extends viewModelBase {
     attached() {
         super.attached();
         $.each(this.replicationsSetup().destinations(), this.addScriptHelpPopover);
-    }
-
-    private fetchServerPrefixForHiLoCommand(db: database): JQueryPromise<any> {
-        var deferred = $.Deferred();
-        new getServerPrefixForHiLoCommand(db)
-            .execute()
-            .done((result) => this.prefixForHilo(result))
-            .always(() => deferred.resolve({ can: true }));
-        return deferred;
     }
 
     fetchAutomaticConflictResolution(db: database): JQueryPromise<any> {
@@ -207,19 +191,6 @@ class replications extends viewModelBase {
         }
     }
 
-    saveServerPrefixForHiLo() {
-        eventsCollector.default.reportEvent("replications", "save-hilo-prefix");
-
-        var db = this.activeDatabase();
-        if (db) {
-            new updateServerPrefixHiLoCommand(this.prefixForHilo(), db)
-                .execute()
-                .done(() => {
-                    this.serverPrefixForHiLoDirtyFlag().reset();
-                    this.dirtyFlag().reset();
-                });
-        }
-    }
 
     saveAutomaticConflictResolutionSettings() {
         eventsCollector.default.reportEvent("replications", "save-auto-conflict-resolution");
@@ -244,7 +215,6 @@ class replications extends viewModelBase {
                 var db = this.activeDatabase();
                 db.activeBundles(bundles);
                 this.replicationEnabled(true);
-                this.fetchServerPrefixForHiLoCommand(db);
                 this.fetchAutomaticConflictResolution(db);
                 this.fetchReplications(db);
             });

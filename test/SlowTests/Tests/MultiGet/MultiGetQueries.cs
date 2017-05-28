@@ -144,7 +144,7 @@ namespace SlowTests.Tests.MultiGet
                 using (var session = store.OpenSession())
                 {
                     User user = null;
-                    session.Advanced.Lazily.Load<User>("users/1", x => user = x);
+                    session.Advanced.Lazily.Load<User>("users/1-A", x => user = x);
                     session.Advanced.Eagerly.ExecuteAllPendingLazyOperations();
                     Assert.NotNull(user);
                 }

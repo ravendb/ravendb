@@ -12,8 +12,6 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
 {
     public class PostponedNotificationsSender : BackgroundWorkBase
     {
-        private static readonly TimeSpan Infinity = TimeSpan.FromMilliseconds(-1);
-        
         private readonly NotificationsStorage _notificationsStorage;
         private readonly ConcurrentSet<NotificationCenter.ConnectedWatcher> _watchers;
         private AsyncManualResetEvent _event;
@@ -42,11 +40,11 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
 
             TimeSpan wait;
             if (notifications.Count == 0)
-                wait = Infinity;
+                wait = Timeout.InfiniteTimeSpan;
             else
                 wait = notifications.Peek().PostponedUntil - SystemTime.UtcNow;
 
-            if (wait == Infinity || wait > TimeSpan.Zero)
+            if (wait == Timeout.InfiniteTimeSpan || wait > TimeSpan.Zero)
                 await _event.WaitAsync(wait);
 
             if (CancellationToken.IsCancellationRequested)

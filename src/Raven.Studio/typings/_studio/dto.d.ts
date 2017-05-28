@@ -218,7 +218,7 @@ interface storedQueryDto extends queryDto {
 }
 
 interface replicationConflictListItemDto {
-    Key: string;
+    Id: string;
     LastModified: string;
 }
 

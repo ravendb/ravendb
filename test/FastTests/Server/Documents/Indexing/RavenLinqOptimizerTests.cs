@@ -1,6 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Raven.Server.Documents.Indexes.Static.Roslyn;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Xunit;
 
@@ -119,6 +120,18 @@ namespace FastTests.Server.Documents.Indexing
     foreach (var x2 in e2)
     {
         yield return x2.v;
+    }
+}", Skip = "RavenDB-7170")]
+        [InlineData(@"e1.SelectMany(x1 => e2, (x1, x2) => new { x2.v })", @"foreach (var x1 in e1)
+{
+    foreach (var x2 in e2)
+    {
+        yield return new
+        {
+        x2.v
+        }
+
+        ;
     }
 }")]
         [InlineData(@"docs.Customers.SelectMany(c => c.Orders, (customer, order) => new {Date = order.Date, Product = order.Product})"
@@ -287,6 +300,124 @@ where docBarSomeDictionaryItem.Item1 != docBarSomeOtherDictionaryItem.Item2
         }
     }
 }")]
+        [InlineData(@"from q in docs.Questions
+                    select new
+                    {
+                        Question = q,
+                    } into item
+                    select new
+                    {
+                        Month = item.Question.CreationDate,
+                        Users = 1
+                    }", @"foreach (var q in docs.Questions)
+{
+    var item = new
+    {
+    Question = q, }
+
+    ;
+    yield return new
+    {
+    Month = item.Question.CreationDate, Users = 1
+    }
+
+    ;
+}")]
+        [InlineData(@"docs.Questions.Select(x => new
+            {
+                Question = x
+            }).Select(x => new
+            {
+                Month = x,
+                Users = 1
+            })", @"foreach (var x in docs.Questions)
+{
+    var x = new
+    {
+    Question = x
+    }
+
+    ;
+    yield return new
+    {
+    Month = x, Users = 1
+    }
+
+    ;
+}")]
+        [InlineData(@"from q in docs.Questions
+                from a in q.Answers
+                select new
+                {
+                    QuestionCreatedAt = q.CreationDate,
+                    AnswerCreatedAt = a.CreationDate,
+                    Answers = q.Answers
+                }
+                into dates
+                where dates.QuestionCreatedAt != DateTimeOffset.MinValue
+                from answersAgain in dates.Answers
+                let a = answersAgain
+                select new
+                {
+                    Answer = a,
+                    Dates = dates
+                }", @"foreach (var q in docs.Questions)
+{
+    foreach (var a in q.Answers)
+    {
+        var dates = new
+        {
+        QuestionCreatedAt = q.CreationDate, AnswerCreatedAt = a.CreationDate, Answers = q.Answers
+        }
+
+        ;
+        if ((dates.QuestionCreatedAt != DateTimeOffset.MinValue) == false)
+            continue;
+        foreach (var answersAgain in dates.Answers)
+        {
+            var a = answersAgain;
+            yield return new
+            {
+            Answer = a, Dates = dates
+            }
+
+            ;
+        }
+    }
+}")]
+        [InlineData(@"from q in docs.Questions
+                    select new
+                    {
+                        Id = q.Id,
+                        CreatedAt = q.CreatedAt
+                    } into first
+                    select new 
+                    {
+                        first.CreatedAt
+                    } into second
+                    select new
+                    {
+                        CreatedAt = second.CreatedAt,
+                    }", @"foreach (var q in docs.Questions)
+{
+    var first = new
+    {
+    Id = q.Id, CreatedAt = q.CreatedAt
+    }
+
+    ;
+    var second = new
+    {
+    first.CreatedAt
+    }
+
+    ;
+    yield return new
+    {
+    CreatedAt = second.CreatedAt, }
+
+    ;
+}")]
         public void CanOptimizeExpression(string code, string optimized)
         {
             var result = OptimizeExpression(code);
@@ -299,7 +430,13 @@ where docBarSomeDictionaryItem.Item1 != docBarSomeOtherDictionaryItem.Item2
         {
             var expression = SyntaxFactory.ParseExpression(str.Trim());
             var result = new RavenLinqPrettifier().Visit(expression);
-            var expr = new RavenLinqOptimizer().Visit(result);
+
+            var validator = new FieldNamesValidator();
+
+            validator.Validate(str, SyntaxFactory.ParseExpression(str).NormalizeWhitespace());
+
+            var expr = new RavenLinqOptimizer(validator).Visit(result);
+
             expr = expr.ReplaceTrivia(expr.DescendantTrivia(), (t1, t2) => new SyntaxTrivia());
             return expr.NormalizeWhitespace();
         }

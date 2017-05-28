@@ -49,12 +49,12 @@ class changesApi extends eventsWebSocketClient<changesApiEventDto[]> {
             case "DocumentChange":
                 this.fireEvents<Raven.Client.Documents.Changes.DocumentChange>(this.allDocsHandlers(), value, () => true);
 
-                this.watchedDocuments.forEach((callbacks, key) => {
-                    this.fireEvents<Raven.Client.Documents.Changes.DocumentChange>(callbacks(), value, (event) => event.Key != null && event.Key === key);
+                this.watchedDocuments.forEach((callbacks, id) => {
+                    this.fireEvents<Raven.Client.Documents.Changes.DocumentChange>(callbacks(), value, (event) => event.Id != null && event.Id === id);
                 });
 
-                this.watchedPrefixes.forEach((callbacks, key) => {
-                    this.fireEvents<Raven.Client.Documents.Changes.DocumentChange>(callbacks(), value, (event) => event.Key != null && event.Key.startsWith(key));
+                this.watchedPrefixes.forEach((callbacks, id) => {
+                    this.fireEvents<Raven.Client.Documents.Changes.DocumentChange>(callbacks(), value, (event) => event.Id != null && event.Id.startsWith(id));
                 });
                 break;
             case "IndexChange":

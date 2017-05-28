@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.Patch
                 val = null;
                 if (Logger.IsInfoEnabled)
                 {
-                    Logger.Info($"Conflict resolution script for {_docs[0].Collection} collection declined to resolve the conflict for {_docs[0].LoweredKey}");
+                    Logger.Info($"Conflict resolution script for {_docs[0].Collection} collection declined to resolve the conflict for {_docs[0].LowerId}");
                 }
                 return false;
             }

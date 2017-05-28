@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="HiLoKeyGenerator.cs" company="Hibernating Rhinos LTD">
+// <copyright file="AsyncHiLoIdGenerator.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Identity
     /// <summary>
     /// Generate hilo numbers against a RavenDB document
     /// </summary>
-    public class AsyncHiLoKeyGenerator
+    public class AsyncHiLoIdGenerator
     {
         private readonly DocumentStore _store;
         private readonly string _tag;
@@ -28,9 +28,9 @@ namespace Raven.Client.Documents.Identity
 
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="AsyncHiLoKeyGenerator"/> class.
+        /// Initializes a new instance of the <see cref="AsyncHiLoIdGenerator"/> class.
         /// </summary>
-        public AsyncHiLoKeyGenerator(string tag, DocumentStore store, string dbName, string identityPartsSeparator)
+        public AsyncHiLoIdGenerator(string tag, DocumentStore store, string dbName, string identityPartsSeparator)
         {
             _store = store;
             _tag = tag;
@@ -39,9 +39,9 @@ namespace Raven.Client.Documents.Identity
             _range = new RangeValue(1, 0);
         }
 
-        protected string GetDocumentKeyFromId(long nextId)
+        protected string GetDocumentIdFromId(long nextId)
         {
-            return $"{_prefix}{nextId}";
+            return $"{_prefix}{nextId}-{_serverTag}";
         }
 
         protected RangeValue Range
@@ -66,15 +66,16 @@ namespace Raven.Client.Documents.Identity
         }
 
         private Lazy<Task> _nextRangeTask;
+        private string _serverTag;
 
         /// <summary>
-        /// Generates the document key.
+        /// Generates the document ID.
         /// </summary>
         /// <param name="entity">The entity.</param>
         /// <returns></returns>
-        public Task<string> GenerateDocumentKeyAsync(object entity)
+        public Task<string> GenerateDocumentIdAsync(object entity)
         {
-            return NextIdAsync().ContinueWith(task => GetDocumentKeyFromId(task.Result));
+            return NextIdAsync().ContinueWith(task => GetDocumentIdFromId(task.Result));
         }
 
         public async Task<long> NextIdAsync()
@@ -115,6 +116,7 @@ namespace Raven.Client.Documents.Identity
             }
 
             _prefix = hiloCommand.Result.Prefix;
+            _serverTag = hiloCommand.Result.ServerTag;
             _lastRangeDate = hiloCommand.Result.LastRangeAt;
             _lastBatchSize = hiloCommand.Result.LastSize;
             Range = new RangeValue(hiloCommand.Result.Low, hiloCommand.Result.High);

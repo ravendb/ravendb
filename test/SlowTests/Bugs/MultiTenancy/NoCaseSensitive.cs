@@ -28,7 +28,7 @@ namespace SlowTests.Bugs.MultiTenancy
 
                 using (var session = documentStore.OpenSession("Repro"))
                 {
-                    Assert.NotNull(session.Load<Foo>("foos/1"));
+                    Assert.NotNull(session.Load<Foo>("foos/1-A"));
                 }
             }
             

@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     return true;
                 }
 
-                result = _doc.Key;
+                result = _doc.Id;
                 return true;
             }
 
@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 getResult = true;
                 if (FastCompare(name, MetadataIdIndex))
-                    result = _doc.Key;
+                    result = _doc.Id;
                 else if (FastCompare(name, MetadataEtagIndex))
                     result = _doc.Etag;
                 else if (FastCompare(name, MetadataLastModifiedIndex))

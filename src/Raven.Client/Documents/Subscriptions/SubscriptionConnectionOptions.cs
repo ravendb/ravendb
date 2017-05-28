@@ -72,11 +72,11 @@ namespace Raven.Client.Documents.Subscriptions
             SubscriptionId = subscriptionId;
             Strategy = SubscriptionOpeningStrategy.OpenIfFree;
             MaxDocsPerBatch = 4096;
-            TimeToWaitBeforeConnectionRetryMilliseconds = 5000;
+            TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(5000);
         }
 
         public string SubscriptionId { get; private set; }
-        public uint TimeToWaitBeforeConnectionRetryMilliseconds { get; set; }
+        public TimeSpan TimeToWaitBeforeConnectionRetry { get; set; }
         public bool IgnoreSubscriberErrors { get; set; }
         public SubscriptionOpeningStrategy Strategy { get; set; }
         public int MaxDocsPerBatch { get; set; }

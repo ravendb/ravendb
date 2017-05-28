@@ -47,7 +47,7 @@ namespace SlowTests.Bugs
 
                 using (var session = store.OpenSession())
                 {
-                    var registration = session.Load<ProjectingDates.Registration>("registrations/1");
+                    var registration = session.Load<ProjectingDates.Registration>("registrations/1-A");
                     Assert.False(session.Advanced.HasChanged(registration));
                     Assert.False(session.Advanced.HasChanges);
                     registration.RegisteredAt = new DateTime(2010, 2, 1);

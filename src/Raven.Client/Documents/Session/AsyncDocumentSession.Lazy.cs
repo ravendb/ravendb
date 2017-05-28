@@ -74,7 +74,7 @@ namespace Raven.Client.Documents.Session
 
                 while (await ExecuteLazyOperationsSingleStep(responseTimeDuration).WithCancellation(token).ConfigureAwait(false))
                 {
-                    await TimeoutManager.WaitFor(100, token).ConfigureAwait(false);
+                    await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(100), token).ConfigureAwait(false);
                 }
 
                 responseTimeDuration.ComputeServerTotal();
@@ -206,11 +206,11 @@ namespace Raven.Client.Documents.Session
             return AddLazyOperation(lazyOp, onEval, token);
         }
 
-        Lazy<Task<Dictionary<string, T>>> IAsyncLazySessionOperations.LoadStartingWithAsync<T>(string keyPrefix, string matches, int start, int pageSize,
+        Lazy<Task<Dictionary<string, T>>> IAsyncLazySessionOperations.LoadStartingWithAsync<T>(string idPrefix, string matches, int start, int pageSize,
             string exclude, string startAfter,
             CancellationToken token)
         {
-            var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, startAfter);
+            var operation = new LazyStartsWithOperation<T>(idPrefix, matches, exclude, start, pageSize, this, startAfter);
 
             return AddLazyOperation<Dictionary<string, T>>(operation, null, token);
         }

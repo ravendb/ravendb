@@ -25,10 +25,10 @@ class getIdentitiesCommand extends commandBase {
             done((identities: statusDebugIdentitiesDto) => {
                 var items = identities.Identities.map(r => { 
                     return {
-                        getId: () => r.Key,
-                        getUrl: () => r.Key,
+                        getId: () => r.Id,
+                        getUrl: () => r.Id,
                         'Value': r.Value,
-                        'Key': r.Key,
+                        'Key': r.Id,
                         getDocumentPropertyNames: () => <Array<string>>["Key", "Value"]
                     };
                 });

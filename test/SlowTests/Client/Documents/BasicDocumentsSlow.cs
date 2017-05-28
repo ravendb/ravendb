@@ -37,7 +37,7 @@ namespace SlowTests.Client.Documents
 
                 using (requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var getDocumentCommand = new GetDocumentCommand(new[] {"users/1", "users/2"}, includes: null, transformer: transformer.TransformerName,
+                    var getDocumentCommand = new GetDocumentCommand(new[] {"users/1-A", "users/2-A" }, includes: null, transformer: transformer.TransformerName,
                         transformerParameters: null, metadataOnly: false, context: context);
 
                     requestExecuter
@@ -69,14 +69,14 @@ namespace SlowTests.Client.Documents
 
                     using (var session = (DocumentSession)store.OpenSession())
                     {
-                        var user1 = (User)session.EntityToBlittable.ConvertToEntity(typeof(User), "users/1", (BlittableJsonReaderObject)values1[0]);
-                        var user2 = (User)session.EntityToBlittable.ConvertToEntity(typeof(User), "users/2", (BlittableJsonReaderObject)values2[0]);
+                        var user1 = (User)session.EntityToBlittable.ConvertToEntity(typeof(User), "users/1-A", (BlittableJsonReaderObject)values1[0]);
+                        var user2 = (User)session.EntityToBlittable.ConvertToEntity(typeof(User), "users/2-A", (BlittableJsonReaderObject)values2[0]);
 
                         Assert.Equal("Fitzchak", user1.Name);
                         Assert.Equal("Arek", user2.Name);
                     }
 
-                    getDocumentCommand = new GetDocumentCommand(new[] { "users/1", "users/2" }, includes: null, transformer: transformer.TransformerName,
+                    getDocumentCommand = new GetDocumentCommand(new[] { "users/1-A", "users/2-A" }, includes: null, transformer: transformer.TransformerName,
                         transformerParameters: null, metadataOnly: true, context: context);
 
                     requestExecuter

@@ -10,7 +10,6 @@ class etl extends viewModelBase {
 
     replicationsSetupDirtyFlag = new ko.DirtyFlag([]);
 
-    isServerPrefixForHiLoSaveEnabled: KnockoutComputed<boolean>;
     isSetupSaveEnabled: KnockoutComputed<boolean>;
 
     constructor() {

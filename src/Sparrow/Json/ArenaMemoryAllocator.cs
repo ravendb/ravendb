@@ -4,6 +4,9 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow.Binary;
 using Sparrow.LowMemory;
+#if MEM_GUARD
+using Sparrow.Platform;
+#endif
 using Sparrow.Utils;
 
 namespace Sparrow.Json

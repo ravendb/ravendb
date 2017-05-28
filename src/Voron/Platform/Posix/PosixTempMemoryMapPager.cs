@@ -5,6 +5,7 @@ using Sparrow.Platform.Posix;
 using Sparrow.Utils;
 using Voron.Global;
 using Voron.Impl;
+using Voron.Util.Settings;
 
 namespace Voron.Platform.Posix
 {
@@ -28,14 +29,14 @@ namespace Voron.Platform.Posix
         public readonly long SysPageSize;
         private long _totalAllocationSize;
         public override long TotalAllocationSize => _totalAllocationSize;
-        public PosixTempMemoryMapPager(StorageEnvironmentOptions options, string file, long? initialFileSize = null)
+        public PosixTempMemoryMapPager(StorageEnvironmentOptions options, VoronPathSetting file, long? initialFileSize = null)
             : base(options)
         {
             _options = options;
             FileName = file;
-            PosixHelper.EnsurePathExists(file);
+            PosixHelper.EnsurePathExists(file.FullPath);
 
-            _fd = Syscall.open(FileName, OpenFlags.O_RDWR | OpenFlags.O_CREAT | OpenFlags.O_EXCL,
+            _fd = Syscall.open(FileName.FullPath, OpenFlags.O_RDWR | OpenFlags.O_CREAT | OpenFlags.O_EXCL,
                 FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
                 
             if (_fd == -1)
@@ -48,7 +49,7 @@ namespace Voron.Platform.Posix
             SysPageSize = Syscall.sysconf(SysconfName._SC_PAGESIZE);
 
             _totalAllocationSize = NearestSizeToPageSize(initialFileSize ?? _totalAllocationSize);
-            PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize, FileName);
+            PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize, FileName.FullPath);
 
             NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
             SetPagerState(CreatePagerState());
@@ -84,7 +85,7 @@ namespace Voron.Platform.Posix
 
             var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-            PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize + allocationSize, FileName);
+            PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize + allocationSize, FileName.FullPath);
 
             _totalAllocationSize += allocationSize;
 
@@ -118,7 +119,7 @@ namespace Voron.Platform.Posix
                 var err = Marshal.GetLastWin32Error();
                 Syscall.ThrowLastError(err, "mmap on " + FileName);
             }
-            NativeMemory.RegisterFileMapping(FileName, startingBaseAddressPtr, _totalAllocationSize);
+            NativeMemory.RegisterFileMapping(FileName.FullPath, startingBaseAddressPtr, _totalAllocationSize);
             var allocationInfo = new PagerState.AllocationInfo
             {
                 BaseAddress = (byte*)startingBaseAddressPtr.ToPointer(),
@@ -143,7 +144,7 @@ namespace Voron.Platform.Posix
 
         public override string ToString()
         {
-            return FileName;
+            return FileName.FullPath;
         }
 
         public override void ReleaseAllocationInfo(byte* baseAddress, long size)
@@ -155,7 +156,7 @@ namespace Voron.Platform.Posix
                 var err = Marshal.GetLastWin32Error();
                 Syscall.ThrowLastError(err);
             }
-            NativeMemory.UnregisterFileMapping(FileName, ptr, size);
+            NativeMemory.UnregisterFileMapping(FileName.FullPath, ptr, size);
         }
 
         public override void Dispose()
@@ -169,7 +170,7 @@ namespace Voron.Platform.Posix
                 // to disk just to discard it
                 if (DeleteOnClose)
                 {
-                    Syscall.unlink(FileName);
+                    Syscall.unlink(FileName.FullPath);
                     // explicitly ignoring the result here, there isn't
                     // much we can do to recover from being unable to delete it
                 }

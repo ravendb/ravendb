@@ -61,10 +61,7 @@ namespace Raven.Server.Config.Categories
 
                 return _indexStoragePath;
             }
-            protected set
-            {
-                _indexStoragePath = value;
-            }
+            protected set => _indexStoragePath = value;
         }
 
         [DefaultValue(null)]

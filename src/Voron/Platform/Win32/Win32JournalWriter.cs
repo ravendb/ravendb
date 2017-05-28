@@ -12,6 +12,7 @@ using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
+using Voron.Util.Settings;
 
 namespace Voron.Platform.Win32
 {
@@ -22,7 +23,7 @@ namespace Voron.Platform.Win32
     public unsafe class Win32FileJournalWriter : IJournalWriter
     {
         private readonly StorageEnvironmentOptions _options;
-        private readonly string _filename;
+        private readonly VoronPathSetting _filename;
         private SafeFileHandle _handle;
         private SafeFileHandle _readHandle;
         private NativeOverlapped* _nativeOverlapped;
@@ -43,13 +44,13 @@ namespace Voron.Platform.Win32
             return true;
         }
 
-        public Win32FileJournalWriter(StorageEnvironmentOptions options, string filename, long journalSize, 
+        public Win32FileJournalWriter(StorageEnvironmentOptions options, VoronPathSetting filename, long journalSize, 
             Win32NativeFileAccess access = Win32NativeFileAccess.GenericWrite, 
             Win32NativeFileShare shareMode = Win32NativeFileShare.Read)
         {
             _options = options;
             _filename = filename;
-            _handle = Win32NativeFileMethods.CreateFile(filename,
+            _handle = Win32NativeFileMethods.CreateFile(filename.FullPath,
                 access, shareMode, IntPtr.Zero,
                 Win32NativeFileCreationDisposition.OpenAlways,
                 options.WinOpenFlags, IntPtr.Zero);
@@ -57,7 +58,7 @@ namespace Voron.Platform.Win32
             if (_handle.IsInvalid)
                 throw new IOException("When opening file " + filename, new Win32Exception(Marshal.GetLastWin32Error()));
 
-            var length = new FileInfo(filename).Length;
+            var length = new FileInfo(filename.FullPath).Length;
             if (length < journalSize)
             {
                 try
@@ -70,7 +71,7 @@ namespace Voron.Platform.Win32
                     {
                         _handle?.Dispose();
                         _handle = null;
-                        File.Delete(_filename);
+                        File.Delete(_filename.FullPath);
                     }
                     catch (Exception)
                     {
@@ -119,7 +120,7 @@ namespace Voron.Platform.Win32
 
             bool writeSuccess;
             var nNumberOfBytesToWrite = numberOf4Kb*(4*Constants.Size.Kilobyte);
-            using (var metrics = _options.IoMetrics.MeterIoRate(_filename, IoMetrics.MeterType.JournalWrite, nNumberOfBytesToWrite))
+            using (var metrics = _options.IoMetrics.MeterIoRate(_filename.FullPath, IoMetrics.MeterType.JournalWrite, nNumberOfBytesToWrite))
             {
                 int written;
                 writeSuccess = Win32NativeFileMethods.WriteFile(_handle, p, nNumberOfBytesToWrite,
@@ -149,7 +150,7 @@ namespace Voron.Platform.Win32
         {
             if (_readHandle == null)
             {
-                _readHandle = Win32NativeFileMethods.CreateFile(_filename,
+                _readHandle = Win32NativeFileMethods.CreateFile(_filename.FullPath,
                     Win32NativeFileAccess.GenericRead,
                     Win32NativeFileShare.Write | Win32NativeFileShare.Read | Win32NativeFileShare.Delete,
                     IntPtr.Zero,
@@ -198,7 +199,7 @@ namespace Voron.Platform.Win32
             _disposed = true;
 
             GC.SuppressFinalize(this);
-            _options.IoMetrics.FileClosed(_filename);
+            _options.IoMetrics.FileClosed(_filename.FullPath);
             _readHandle?.Dispose();
             _readHandle = null;
             _handle?.Dispose();

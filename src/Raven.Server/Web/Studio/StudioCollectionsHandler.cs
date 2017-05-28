@@ -197,11 +197,11 @@ namespace Raven.Server.Web.Studio
             if (metadata != null)
             {
                 metadata.Modifications = extraMetadataProperties;
-                metadata = context.ReadObject(metadata, document.Key);
+                metadata = context.ReadObject(metadata, document.Id);
             }
             else
             {
-                metadata = context.ReadObject(extraMetadataProperties, document.Key);
+                metadata = context.ReadObject(extraMetadataProperties, document.Id);
             }
 
             writer.WriteMetadata(document, metadata);

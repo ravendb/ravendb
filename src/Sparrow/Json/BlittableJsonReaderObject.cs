@@ -279,6 +279,16 @@ namespace Sparrow.Json
                             throw new FormatException($"Could not convert {result.GetType().FullName} ('{result}') to DateTime");
                         obj = (T)(object)time;
                     }
+                    else if (type == typeof(TimeSpan))
+                    {
+                        string timeSpanString;
+                        if (ChangeTypeToString(result, out timeSpanString) == false)
+                            throw new FormatException($"Could not convert {result.GetType().FullName} ('{result}') to string");
+                        TimeSpan timeSpan;
+                        if (TimeSpan.TryParseExact(timeSpanString, "g", CultureInfo.InvariantCulture, out timeSpan) == false) // todo: format might be problematic here
+                            throw new FormatException($"Could not convert {result.GetType().FullName} ('{result}') to TimeSpan");
+                        obj = (T)(object)timeSpan;
+                    }
                     else if (type == typeof(Guid))
                     {
                         string guidString;
@@ -1106,17 +1116,13 @@ namespace Sparrow.Json
 
             for (int i = 0; i < _propCount; i++)
             {
-                BlittableJsonToken token;
-                int position;
-                int id;
-                GetPropertyTypeAndPosition(i, metadataSize, out token, out position, out id);
+                GetPropertyTypeAndPosition(i, metadataSize, out BlittableJsonToken token, out int position, out int id);
 
                 if (propertyName == GetPropertyName(id))
                     return true;
             }
 
             return false;
-
         }
     }
 }

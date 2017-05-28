@@ -57,7 +57,7 @@ namespace RachisTests
         {
             var leader = await CreateRaftClusterAndGetLeader(3);
             const int replicationFactor = 2;
-            const string databaseName = "RequestExecutor_failover_to_database_topology_should_work";
+            const string databaseName = nameof(RequestExecutor_failover_to_database_topology_should_work);
             using (var store = new DocumentStore
             {
                 Database = databaseName,

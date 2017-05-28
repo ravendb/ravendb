@@ -108,7 +108,7 @@ namespace SlowTests.MailingList
                 //Block2
                 using (var session = store.OpenSession())
                 {
-                    var consultant1 = session.Load<Consultant>("consultants/1");
+                    var consultant1 = session.Load<Consultant>("consultants/1-A");
 
                     //Here I am changing the name of one consultant from "Subha" to "Subhashini".
                     //A denormalized reference to this name exists in the Proficiency class. After this update, I will need to sync the denormalized reference.
@@ -133,7 +133,7 @@ namespace SlowTests.MailingList
                 store.Operations.Send(new PatchByIndexOperation("Proficiencies/ConsultantId",
                     new IndexQuery()
                     {
-                        Query = "Consultant_Id:consultants/1"
+                        Query = "Consultant_Id:consultants/1-A"
                     },
                     new PatchRequest
                     {
@@ -147,7 +147,7 @@ namespace SlowTests.MailingList
                     //Block2
                     var proficiencies = session.Query<Proficiency>("Proficiencies/ConsultantId")
                                                .Customize(o => o.WaitForNonStaleResults())
-                                               .Where(o => o.Consultant.Id == "consultants/1")
+                                               .Where(o => o.Consultant.Id == "consultants/1-A")
                                                .ToList();
 
                     Assert.Equal("Subhashini", proficiencies.Single().Consultant.Name);

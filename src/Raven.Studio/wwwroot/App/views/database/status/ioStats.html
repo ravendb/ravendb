@@ -2,7 +2,7 @@
     <div class="flex-vertical absolute-fill">
         <div class="flex-header">
             <div class="row">
-                <div class="col-xl-5 col-xs-12">
+                <div class="col-xl-4 col-xs-12">
                     <div class="form-inline toolbar" role="form">
                         <div class="clearfix">
                             <div class="input-group">
@@ -28,17 +28,10 @@
                                     <i class="icon-cancel"></i><span data-bind="text: 'Close import (' + importFileName() + ')'"></span>
                                 </button>
                             </div>
-
-                            <div>
-                                <div class="toggle toggle-inline" data-bind="visible: !isImport()">
-                                    <input type="checkbox" class="styled" id="autoScroll" data-bind="checked: autoScroll">
-                                    <label for="autoScroll"> Auto scroll </label>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-xl-7 col-xs-12" data-bind="visible: hasAnyData">
+                <div class="col-xl-8 col-xs-12" data-bind="visible: hasAnyData">
                     <div id="IOMetricsLegend">
                         <div class="legend-container" data-bind="template: { name: 'legend-template', data: { type: 'Compression', text: 'Compression' }}">
                         </div>
@@ -49,6 +42,12 @@
                         <div class="legend-container" data-bind="template: { name: 'legend-template', data: { type: 'DataSync', text: 'Data Sync' }}">
                         </div>
                     </div>
+                    
+                    <div class="toggle toggle-inline pull-right" data-bind="visible: !isImport()">
+                        <input type="checkbox" class="styled" id="autoScroll" data-bind="checked: autoScroll">
+                        <label for="autoScroll"> Auto scroll </label>
+                    </div>
+
                 </div>
             </div>
         </div>

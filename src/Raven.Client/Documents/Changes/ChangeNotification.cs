@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Changes
         /// <summary>
         /// Identifier of document for which notification was created.
         /// </summary>
-        public string Key { get; set; }
+        public string Id { get; set; }
 
         /// <summary>
         /// Document collection name.
@@ -43,7 +43,7 @@ namespace Raven.Client.Documents.Changes
 
         public override string ToString()
         {
-            return string.Format("{0} on {1}", Type, Key);
+            return string.Format("{0} on {1}", Type, Id);
         }
 
         public DynamicJsonValue ToJson()
@@ -51,7 +51,7 @@ namespace Raven.Client.Documents.Changes
             return new DynamicJsonValue
             {
                 [nameof(Type)] = Type.ToString(),
-                [nameof(Key)] = Key,
+                [nameof(Id)] = Id,
                 [nameof(CollectionName)] = CollectionName,
                 [nameof(TypeName)] = TypeName,
                 [nameof(Etag)] = Etag
@@ -63,7 +63,7 @@ namespace Raven.Client.Documents.Changes
             value.TryGet(nameof(CollectionName), out string collectionName);
             value.TryGet(nameof(Etag), out long? etag);
             value.TryGet(nameof(TypeName), out string typeName);
-            value.TryGet(nameof(Key), out string key);
+            value.TryGet(nameof(Id), out string id);
             value.TryGet(nameof(Type), out string type);
 
             return new DocumentChange
@@ -71,7 +71,7 @@ namespace Raven.Client.Documents.Changes
                 CollectionName = collectionName,
                 Etag = etag,
                 IsSystemDocument = false,
-                Key = key,
+                Id = id,
                 TypeName = typeName,
                 Type = (DocumentChangeTypes)Enum.Parse(typeof(DocumentChangeTypes), type, ignoreCase: true)
             };

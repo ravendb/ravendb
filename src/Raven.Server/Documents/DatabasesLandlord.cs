@@ -20,6 +20,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
@@ -52,7 +53,7 @@ namespace Raven.Server.Documents
             _logger = LoggingSource.Instance.GetLogger<DatabasesLandlord>("Raven/Server");
         }
 
-        public void ClusterOnDatabaseChanged(object sender, (string dbName, long index) t)
+        public void ClusterOnDatabaseChanged(object sender, (string dbName, long index, string type) t)
         {
             _disposing.EnterReadLock();
             try
@@ -101,8 +102,6 @@ namespace Raven.Server.Documents
                                 DatabaseHelper.DeleteDatabaseFiles(configuration);
                             }
                         }
-
-                        _serverStore.NotificationCenter.Add(DatabaseChanged.Create(t.dbName, DatabaseChangeType.Delete));
 
                         NotifyLeaderAboutRemoval(t.dbName);
 
@@ -156,28 +155,21 @@ namespace Raven.Server.Documents
 
         private void NotifyLeaderAboutRemoval(string dbName)
         {
-            var cmd = new DynamicJsonValue
+            var cmd = new RemoveNodeFromDatabaseCommand(dbName)
             {
-                ["Type"] = nameof(RemoveNodeFromDatabaseCommand),
-                [nameof(RemoveNodeFromDatabaseCommand.DatabaseName)] = dbName,
-                [nameof(RemoveNodeFromDatabaseCommand.NodeTag)] = _serverStore.NodeTag
+                NodeTag = _serverStore.NodeTag
             };
-            JsonOperationContext myContext;
-            using (_serverStore.ContextPool.AllocateOperationContext(out myContext))
-            using (var json = myContext.ReadObject(cmd, "rachis command"))
-            {
-                _serverStore.SendToLeaderAsync(json)
-                    .ContinueWith(t =>
+            _serverStore.SendToLeaderAsync(cmd)
+                .ContinueWith(t =>
+                {
+                    if (t.Exception != null)
                     {
-                        if (t.Exception != null)
+                        if (_logger.IsInfoEnabled)
                         {
-                            if (_logger.IsInfoEnabled)
-                            {
-                                _logger.Info($"Failed to notify leader about removal of node {_serverStore.NodeTag} from database {dbName}", t.Exception);
-                            }
+                            _logger.Info($"Failed to notify leader about removal of node {_serverStore.NodeTag} from database {dbName}", t.Exception);
                         }
-                    });
-            }
+                    }
+                });
         }
 
         private void NotifyDatabaseAboutStateChange(string changedDatabase, Task<DocumentDatabase> done, long index)
@@ -454,10 +446,9 @@ namespace Raven.Server.Documents
             if (databaseRecord.Disabled && ignoreDisabledDatabase == false)
                 throw new DatabaseDisabledException(databaseName + " has been disabled");
 
-            DeletionInProgressStatus deletionInProgress;
             var databaseIsBeenDeleted = databaseRecord.DeletionInProgress != null &&
-                                        databaseRecord.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
-                                        deletionInProgress != DeletionInProgressStatus.No;
+                            databaseRecord.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out DeletionInProgressStatus deletionInProgress) &&
+                            deletionInProgress != DeletionInProgressStatus.No;
             if (ignoreBeenDeleted == false && databaseIsBeenDeleted)
                 throw new DatabaseDisabledException(databaseName + " is currently being deleted on " + _serverStore.NodeTag);
 

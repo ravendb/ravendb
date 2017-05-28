@@ -5,7 +5,7 @@ namespace Raven.Client.Documents.Commands
 {  
     public class GetConflictsResult
     {
-        public string Key { get; set; }
+        public string Id { get; set; }
 
         public Conflict[] Results { get; internal set; }
 

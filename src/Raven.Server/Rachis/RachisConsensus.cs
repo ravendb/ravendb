@@ -88,9 +88,11 @@ namespace Raven.Server.Rachis
 
         public State CurrentState { get; private set; }
         public TimeoutEvent Timeout { get; private set; }
-        public uint RemoteOperationTimeoutMs { get; private set; }
+        public TimeSpan RemoteOperationTimeout { get; private set; }
 
         public string LastStateChangeReason => _lastStateChangeReason;
+
+        public event EventHandler<ClusterTopology> TopologyChanged;
 
         private string _tag;
         public TransactionContextPool ContextPool { get; private set; }
@@ -146,7 +148,8 @@ namespace Raven.Server.Rachis
                 StartIndex = 0,
             });
         }
-        public int ElectionTimeoutMs;
+
+        public TimeSpan ElectionTimeout;
 
         private Leader _currentLeader;
         private TaskCompletionSource<object> _topologyChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -166,8 +169,12 @@ namespace Raven.Server.Rachis
             try
             {
                 _persistentState = env;
-                RemoteOperationTimeoutMs = (uint)configuration.ClusterOperationTimeout.AsTimeSpan.TotalMilliseconds;
-                ElectionTimeoutMs = (int)configuration.ElectionTimeout.AsTimeSpan.TotalMilliseconds * (Debugger.IsAttached ? 10 : 1);
+                RemoteOperationTimeout = configuration.ClusterOperationTimeout.AsTimeSpan;
+                ElectionTimeout = configuration.ElectionTimeout.AsTimeSpan;
+                if (Debugger.IsAttached)
+                {
+                    ElectionTimeout = TimeSpan.FromMilliseconds(ElectionTimeout.TotalMilliseconds * 10);
+                }
                 ContextPool = new TransactionContextPool(_persistentState);
 
                 ClusterTopology topology;
@@ -200,7 +207,8 @@ namespace Raven.Server.Rachis
                 }
                 //We want to be able to reproduce rare issues that are related to timing
                 var rand = _seed.HasValue ? new Random(_seed.Value) : new Random();
-                Timeout = new TimeoutEvent(rand.Next(ElectionTimeoutMs / 3 * 2, ElectionTimeoutMs));
+                Timeout = new TimeoutEvent(rand.Next((int)Math.Max(int.MaxValue, ElectionTimeout.TotalMilliseconds / 3 * 2),
+                    (int)Math.Max(int.MaxValue, ElectionTimeout.TotalMilliseconds)));
 
                 // if we don't have a topology id, then we are passive
                 // an admin needs to let us know that it is fine, either
@@ -336,7 +344,6 @@ namespace Raven.Server.Rachis
 
         public void SetNewState(State state, IDisposable disposable, long expectedTerm, string stateChangedReason)
         {
-
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction()) // we use the write transaction lock here
             {
@@ -418,7 +425,7 @@ namespace Raven.Server.Rachis
             leader.Start();
         }
 
-        public Task<long> PutAsync(BlittableJsonReaderObject cmd)
+        public Task<(long, BlittableJsonReaderObject)> PutAsync(BlittableJsonReaderObject cmd)
         {
             var leader = _currentLeader;
             if (leader == null)
@@ -453,10 +460,12 @@ namespace Raven.Server.Rachis
             {
                 Log.Info("Switching to candidate state");
             }
+
             var candidate = new Candidate(this)
             {
                 IsForcedElection = forced
             };
+
             SetNewState(State.Candidate, candidate, CurrentTerm, reason);
             candidate.Start();
         }
@@ -515,30 +524,10 @@ namespace Raven.Server.Rachis
 
             return topologyJson;
         }
-
-        private static BlittableJsonReaderObject SetTopology(RachisConsensus engine, Transaction tx,
-            JsonOperationContext context, ClusterTopology topology)
+        public static unsafe BlittableJsonReaderObject SetTopology(RachisConsensus engine, Transaction tx, JsonOperationContext context,
+            ClusterTopology clusterTopology)
         {
-            var djv = new DynamicJsonValue
-            {
-                [nameof(ClusterTopology.TopologyId)] = topology.TopologyId,
-                [nameof(ClusterTopology.ApiKey)] = topology.ApiKey,
-                [nameof(ClusterTopology.Members)] = DynamicJsonValue.Convert(topology.Members),
-                [nameof(ClusterTopology.Promotables)] = DynamicJsonValue.Convert(topology.Promotables),
-                [nameof(ClusterTopology.Watchers)] = DynamicJsonValue.Convert(topology.Watchers),
-                [nameof(ClusterTopology.LastNodeId)] = topology.LastNodeId
-            };
-
-            var topologyJson = context.ReadObject(djv, "topology");
-
-            SetTopology(engine, tx, topologyJson);
-
-            return topologyJson;
-        }
-        
-        public static unsafe void SetTopology(RachisConsensus engine, Transaction tx,
-            BlittableJsonReaderObject topologyJson)
-        {
+            var topologyJson = context.ReadObject(clusterTopology.ToJson(), "topology");
             var state = tx.CreateTree(GlobalStateSlice);
             using (state.DirectAdd(TopologySlice, topologyJson.Size, out byte* ptr))
             {
@@ -546,12 +535,15 @@ namespace Raven.Server.Rachis
             }
 
             if (engine == null)
-                return;
+                return null;
 
+            tx.LowLevelTransaction.OnDispose += _ =>
+            {
+                TaskExecutor.CompleteAndReplace(ref engine._topologyChanged);
+                engine.TopologyChanged?.Invoke(engine, clusterTopology);
+            };
 
-            tx.LowLevelTransaction.OnDispose += _ => TaskExecutor.CompleteAndReplace(ref engine._topologyChanged);
-
-
+            return topologyJson;
         }
 
         /// <summary>
@@ -587,7 +579,24 @@ namespace Raven.Server.Rachis
                     }
 
                     if (_tag == "?")
-                        _tag = initialMessage.DebugDestinationIdentifier;
+                    {
+                        using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (context.OpenWriteTransaction())
+                        {
+                            if (_tag == "?")// double checked locking under tx write lock
+                            {
+                                UpdateNodeTag(context, initialMessage.DebugDestinationIdentifier);
+                                context.Transaction.Commit();
+                            }
+                        }
+
+                        if (_tag != initialMessage.DebugDestinationIdentifier)
+                        {
+                            throw new TopologyMismatchException(
+                                $"{initialMessage.DebugSourceIdentifier} attempted to connect to us with tag {initialMessage.DebugDestinationIdentifier} but our tag is already set ({_tag}). " +
+                                $"Rejecting connection from confused server, this is likely an old server trying to connect to us, or bad network configuration.");
+                        }
+                    }
 
                     switch (initialMessage.InitialMessageType)
                     {
@@ -954,7 +963,7 @@ namespace Raven.Server.Rachis
 
         public async Task WaitForCommitIndexChange(CommitIndexModification modification, long value)
         {
-            var timeoutTask = TimeoutManager.WaitFor(RemoteOperationTimeoutMs);
+            var timeoutTask = TimeoutManager.WaitFor(RemoteOperationTimeout);
             while (timeoutTask.IsCompleted == false)
             {
                 var task = _commitIndexChanged.Task;
@@ -975,7 +984,7 @@ namespace Raven.Server.Rachis
                     }
                 }
 
-                if(timeoutTask == await Task.WhenAny(task,timeoutTask))
+                if (timeoutTask == await Task.WhenAny(task, timeoutTask))
                     ThrowTimeoutException();
             }
         }
@@ -1158,13 +1167,7 @@ namespace Raven.Server.Rachis
                 if (CurrentState != State.Passive)
                     return;
 
-                _tag = "A";
-
-                using (Slice.From(tx.InnerTransaction.Allocator, _tag, out Slice str))
-                {
-                    var state = tx.InnerTransaction.CreateTree(GlobalStateSlice);
-                    state.Add(TagSlice, str);
-                }
+                UpdateNodeTag(ctx, "A");
 
                 var topology = new ClusterTopology(
                     Guid.NewGuid().ToString(),
@@ -1256,28 +1259,27 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public async Task WaitForTimeout(long knownLeaderTime, uint timeoutMillseconds)
+        public async Task WaitForTimeout(long knownLeaderTime, TimeSpan timeout)
         {
             Interlocked.Increment(ref _hasTimers);
             try
             {
                 var term = CurrentTerm;
-                var task = _leadershipTimeChanged.WaitAsync(timeoutMillseconds);
+                var task = _leadershipTimeChanged.WaitAsync(timeout);
 
                 while (true)
                 {
                     if (term != CurrentTerm)
                         knownLeaderTime = 0;
 
-                    var timePassed = _leaderTime - knownLeaderTime;
-                    if (timePassed > timeoutMillseconds)
+                    var timePassed = TimeSpan.FromMilliseconds(_leaderTime - knownLeaderTime);
+                    if (timePassed > timeout)
                         return;
 
                     if (await task == false)
                         return;
 
-                    var remaining = timeoutMillseconds - (uint)timePassed;
-
+                    var remaining = timeout.Subtract(timePassed);
                     task = _leadershipTimeChanged.WaitAsync(remaining);
                 }
             }
@@ -1286,9 +1288,9 @@ namespace Raven.Server.Rachis
                 Interlocked.Decrement(ref _hasTimers);
             }
         }
-        public Task WaitForTimeout(uint timeoutMillseconds)
+        public Task WaitForTimeout(TimeSpan timeout)
         {
-            return WaitForTimeout(_leaderTime, timeoutMillseconds);
+            return WaitForTimeout(_leaderTime, timeout);
         }
 
         private long _leaderTime;
@@ -1305,11 +1307,11 @@ namespace Raven.Server.Rachis
 
         public DynamicJsonArray GetClusterErrorsFromLeader()
         {
-            if (_currentLeader == null) 
+            if (_currentLeader == null)
                 return new DynamicJsonArray();
 
             var dja = new DynamicJsonArray();
-            while(_currentLeader.ErrorsList.TryDequeue(out var entry))
+            while (_currentLeader.ErrorsList.TryDequeue(out var entry))
             {
                 var djv = new DynamicJsonValue
                 {
@@ -1319,6 +1321,18 @@ namespace Raven.Server.Rachis
                 dja.Add(djv);
             }
             return dja;
+        }
+
+        public void UpdateNodeTag(TransactionOperationContext context, string newTag)
+        {
+            _tag = newTag;
+
+            using (Slice.From(context.Transaction.InnerTransaction.Allocator, _tag, out Slice str))
+            {
+                var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
+                state.Add(TagSlice, str);
+            }
+
         }
     }
 

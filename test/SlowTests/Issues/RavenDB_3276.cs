@@ -28,7 +28,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var entity = session.Load<TestEntity>("TestEntities/1");
+                    var entity = session.Load<TestEntity>("TestEntities/1-A");
 
                     Assert.NotNull(entity);
                     Assert.Equal(1, entity.Items.Count);
@@ -56,7 +56,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var entity = session.Load<TestEntity>("TestEntities/1");
+                    var entity = session.Load<TestEntity>("TestEntities/1-A");
 
                     Assert.NotNull(entity);
                     Assert.Equal(1, entity.Items.Count);

@@ -17,6 +17,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Utils;
@@ -93,7 +94,7 @@ namespace Raven.Server.Documents.TcpHandlers
             await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionIdIsApplicable(SubscriptionId, TimeSpan.FromSeconds(15));
 
             _connectionState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
-            uint timeout = 16;
+            var timeout = TimeSpan.FromMilliseconds(16);
 
             while (true)
             {
@@ -112,12 +113,12 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
                 catch (TimeoutException)
                 {
-                    if (timeout == 0 && _logger.IsInfoEnabled)
+                    if (timeout == TimeSpan.Zero && _logger.IsInfoEnabled)
                     {
                         _logger.Info(
                             $"Subscription Id {SubscriptionId} from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} starts to wait until previous connection from {_connectionState.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} is released");
                     }
-                    timeout = Math.Max(250, _options.TimeToWaitBeforeConnectionRetryMilliseconds / 2);
+                    timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)_options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2));
                     await SendHeartBeat();
                 }
             }
@@ -376,10 +377,10 @@ namespace Raven.Server.Documents.TcpHandlers
                                     {
                                         var newDoc = new Document
                                         {
-                                            Key = doc.Key,
+                                            Id = doc.Id,
                                             Etag = doc.Etag,
                                             Data = transformResult,
-                                            LoweredKey = doc.LoweredKey
+                                            LowerId = doc.LowerId
                                         };
 
                                         newDoc.EnsureMetadata();
@@ -440,7 +441,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         while (true)
                         {
                             var result = await Task.WhenAny(replyFromClientTask,
-                                    TimeoutManager.WaitFor(5000, CancellationTokenSource.Token)).ConfigureAwait(false);
+                                    TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(5000), CancellationTokenSource.Token)).ConfigureAwait(false);
                             CancellationTokenSource.Token.ThrowIfCancellationRequested();
                             if (result == replyFromClientTask)
                             {
@@ -494,19 +495,13 @@ namespace Raven.Server.Documents.TcpHandlers
                 long startEtag = 0;
 
                 if (subscription.LastEtagReachedInServer?.TryGetValue(TcpConnection.DocumentDatabase.DbId.ToString(), out startEtag) == true)
+                {
                     return startEtag;
+                }
 
                 if (subscription.ChangeVector == null || subscription.ChangeVector.Length == 0)
-                    return startEtag;
-
-                var glovalChangeVector = TcpConnection.DocumentDatabase.DocumentsStorage.GetDatabaseChangeVector(docsContext);
-                var globalVsSubscripitnoConflictStatus = ConflictsStorage.GetConflictStatus(
-                    remote: glovalChangeVector,
-                    local: subscription.ChangeVector);
-
-                if (globalVsSubscripitnoConflictStatus == ConflictsStorage.ConflictStatus.AlreadyMerged)
                 {
-                    startEtag = TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext, subscription.Criteria.Collection);
+                    return startEtag;
                 }
                 return startEtag;
             }
@@ -542,7 +537,7 @@ namespace Raven.Server.Documents.TcpHandlers
             do
             {
                 var hasMoreDocsTask = _waitForMoreDocuments.WaitAsync();
-                var resultingTask = await Task.WhenAny(hasMoreDocsTask, pendingReply, TimeoutManager.WaitFor(3000)).ConfigureAwait(false);
+                var resultingTask = await Task.WhenAny(hasMoreDocsTask, pendingReply, TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(3000))).ConfigureAwait(false);
 
                 if (CancellationTokenSource.IsCancellationRequested)
                     return false;
@@ -583,7 +578,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 if (_logger.IsInfoEnabled)
                 {
                     _logger.Info(
-                        $"Criteria script threw exception for subscription {_options.SubscriptionId} connected to {TcpConnection.TcpClient.Client.RemoteEndPoint} for document id {doc.Key}",
+                        $"Criteria script threw exception for subscription {_options.SubscriptionId} connected to {TcpConnection.TcpClient.Client.RemoteEndPoint} for document id {doc.Id}",
                         ex);
                 }
                 return false;

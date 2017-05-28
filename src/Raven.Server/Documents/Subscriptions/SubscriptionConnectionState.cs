@@ -43,11 +43,11 @@ namespace Raven.Server.Documents.Subscriptions
         // remember to catch ArgumentOutOfRangeException for timeout problems
         public async Task<IDisposable> RegisterSubscriptionConnection(
             SubscriptionConnection incomingConnection,
-            uint timeToWait)
+            TimeSpan timeToWait)
         {
             try
             {
-                if (await ConnectionInUse.WaitAsync(TimeSpan.FromMilliseconds(timeToWait)) == false)
+                if (await ConnectionInUse.WaitAsync(timeToWait) == false)
                 {
                     switch (incomingConnection.Strategy)
                     {

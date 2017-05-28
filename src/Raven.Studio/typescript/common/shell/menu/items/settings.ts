@@ -6,12 +6,12 @@ export = getSettingsMenuItem;
 function getSettingsMenuItem(appUrls: computedAppUrls) {
     var items: menuItem[] = [
         new leafMenuItem({
-            route: ['databases/settings', 'databases/settings/databaseSettings'],
-            moduleId: 'viewmodels/database/settings/databaseSettings',
-            title: 'Database Settings',
+            route: ['databases/record', 'databases/settings/databaseRecord'],
+            moduleId: 'viewmodels/database/settings/databaseRecord',
+            title: 'Database Record',
             nav: true,
             css: 'icon-database-settings',
-            dynamicHash: appUrls.databaseSettings
+            dynamicHash: appUrls.databaseRecord
         }),
         /* TODO
         new leafMenuItem({

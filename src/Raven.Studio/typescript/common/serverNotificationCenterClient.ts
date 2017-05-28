@@ -10,6 +10,7 @@ class serverNotificationCenterClient extends abstractNotificationCenterClient {
     protected allDatabaseChangedHandlers = ko.observableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged>>(); 
     protected watchedDatabaseChanged = new Map<string, KnockoutObservableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged>>>();
     protected watchedDatabaseChangedPrefixes = new Map<string, KnockoutObservableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged>>>();
+    protected clusterTopologyChangedHandlers = ko.observableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged>>(); 
 
     constructor() {
         super(null);
@@ -24,7 +25,7 @@ class serverNotificationCenterClient extends abstractNotificationCenterClient {
         return endpoints.global.serverNotificationCenter.notificationCenterWatch + connectionString;
     }
 
-    protected onMessage(actionDto: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) {
+    protected onMessage(actionDto: Raven.Server.NotificationCenter.Notifications.Notification) {
         const actionType = actionDto.Type;
 
         switch (actionType) {
@@ -40,10 +41,26 @@ class serverNotificationCenterClient extends abstractNotificationCenterClient {
                     this.fireEvents<Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged>(callbacks(), databaseDto, (event) => event.DatabaseName != null && event.DatabaseName.startsWith(key));
                 });
                 break;
+
+            case "ClusterTopologyChanged":
+                const topologyChangedDto = actionDto as Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged;
+                this.fireEvents<Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged>(this.clusterTopologyChangedHandlers(), topologyChangedDto, () => true);
+                break;
+
             default:
                 super.onMessage(actionDto);
 
         }
+    }
+
+    watchClusterTopologyChanges(onChange: (e: Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged) => void) {
+        const callback = new changesCallback<Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged>(onChange);
+
+        this.clusterTopologyChangedHandlers.push(callback);
+
+        return new changeSubscription(() => {
+            this.clusterTopologyChangedHandlers.remove(callback);
+        });
     }
 
     watchAllDatabaseChanges(onChange: (e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) => void) {

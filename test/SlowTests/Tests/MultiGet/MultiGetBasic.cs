@@ -49,12 +49,12 @@ namespace SlowTests.Tests.MultiGet
                         new GetRequest
                         {
                             Url = docs,
-                            Query = "?id=users/1"
+                            Query = "?id=users/1-A"
                         },
                         new GetRequest
                         {
                             Url = docs,
-                            Query = "?id=users/2"
+                            Query = "?id=users/2-A"
                         }
                     });
 
@@ -150,12 +150,12 @@ namespace SlowTests.Tests.MultiGet
                         new GetRequest
                         {
                             Url = docs,
-                            Query = "?id=users/1"
+                            Query = "?id=users/1-A"
                         },
                         new GetRequest
                         {
                             Url = docs,
-                            Query = "?id=users/2"
+                            Query = "?id=users/2-A"
                         }
                     });
 
@@ -169,7 +169,7 @@ namespace SlowTests.Tests.MultiGet
                         new GetRequest
                         {
                             Url = docs,
-                            Query = "?id=users/1",
+                            Query = "?id=users/1-A",
                             Headers =
                             {
                                 {"If-None-Match", command.Result[0].Headers["ETag"]}
@@ -178,7 +178,7 @@ namespace SlowTests.Tests.MultiGet
                         new GetRequest
                         {
                             Url = docs,
-                            Query = "?id=users/2",
+                            Query = "?id=users/2-A",
                             Headers =
                             {
                                 {"If-None-Match", command.Result[1].Headers["ETag"]}

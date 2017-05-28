@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                     if (_logger.IsInfoEnabled)
                                         _logger.Info(
-                                            $"Executing map for '{_index.Name} ({_index.Etag})'. Processing document: {current.Key}.");
+                                            $"Executing map for '{_index.Name} ({_index.Etag})'. Processing document: {current.Id}.");
 
                                     collectionStats.RecordMapAttempt();
 
@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                     try
                                     {
-                                        var numberOfResults = _index.HandleMap(current.LoweredKey, mapResults,
+                                        var numberOfResults = _index.HandleMap(current.LowerId, mapResults,
                                             indexWriter, indexContext, collectionStats);
                                         _index.MapsPerSec.Mark(numberOfResults);
                                         resultsCount += numberOfResults;
@@ -114,16 +114,17 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     }
                                     catch (Exception e)
                                     {
+                                        docsEnumerator.OnError();
                                         _index.HandleError(e);
 
                                         collectionStats.RecordMapError();
                                         if (_logger.IsInfoEnabled)
                                             _logger.Info(
-                                                $"Failed to execute mapping function on '{current.Key}' for '{_index.Name} ({_index.Etag})'.",
+                                                $"Failed to execute mapping function on '{current.Id}' for '{_index.Name} ({_index.Etag})'.",
                                                 e);
 
-                                        collectionStats.AddMapError(current.Key,
-                                            $"Failed to execute mapping function on {current.Key}. Exception: {e}");
+                                        collectionStats.AddMapError(current.Id,
+                                            $"Failed to execute mapping function on {current.Id}. Exception: {e}");
                                     }
 
                                     if (CanContinueBatch(databaseContext, indexContext, collectionStats, lastEtag, lastCollectionEtag) == false)

@@ -262,7 +262,7 @@ namespace Raven.Client.Documents.Subscriptions
                 {
                     try
                     {
-                        await requestExecutor.ExecuteAsync(_redirectNode, context, command).ConfigureAwait(false);
+                        await requestExecutor.ExecuteAsync(_redirectNode, context, command, shouldRetry: false).ConfigureAwait(false);
 
                     }
                     catch (Exception)
@@ -661,7 +661,7 @@ namespace Raven.Client.Documents.Subscriptions
                             return;
                         }
 
-                        await TimeoutManager.WaitFor(_options.TimeToWaitBeforeConnectionRetryMilliseconds).ConfigureAwait(false);
+                        await TimeoutManager.WaitFor(_options.TimeToWaitBeforeConnectionRetry).ConfigureAwait(false);
                     }
                     catch (Exception e)
                     {

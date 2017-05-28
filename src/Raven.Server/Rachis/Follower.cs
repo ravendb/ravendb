@@ -93,8 +93,7 @@ namespace Raven.Server.Rachis
                                             topology.Promotables.ContainsKey(_engine.Tag) ||
                                             topology.Watchers.ContainsKey(_engine.Tag))
                                         {
-                                            RachisConsensus.SetTopology(_engine, context.Transaction.InnerTransaction,
-                                                lastTopology);
+                                            RachisConsensus.SetTopology(_engine, context.Transaction.InnerTransaction, context, topology);
                                         }
                                         else
                                         {
@@ -199,7 +198,7 @@ namespace Raven.Server.Rachis
             // only the leader can send append entries, so if we accepted it, it's the leader
             if (_engine.Log.IsInfoEnabled)
             {
-                _engine.Log.Info($"Follower {_engine.Tag}: Got a nogotiation requet for term {negotiation.Term} where our term is {_engine.CurrentTerm}");
+                _engine.Log.Info($"Follower {_engine.Tag}: Got a negotiation request for term {negotiation.Term} where our term is {_engine.CurrentTerm}");
             }
             if (negotiation.Term > _engine.CurrentTerm)
             {               
@@ -215,7 +214,7 @@ namespace Raven.Server.Rachis
             {
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info($"Follower {_engine.Tag}: Got a nogotiation requet with PrevLogTerm={negotiation.PrevLogTerm} while our PrevLogTerm={prevTerm}" +
+                    _engine.Log.Info($"Follower {_engine.Tag}: Got a negotiation request with PrevLogTerm={negotiation.PrevLogTerm} while our PrevLogTerm={prevTerm}" +
                                      $" will negotiate to find next matched index");
                 }
                 // we now have a mismatch with the log position, and need to negotiate it with 
@@ -226,7 +225,7 @@ namespace Raven.Server.Rachis
             {
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info($"Follower {_engine.Tag}: Got a nogotiation requet with identical PrevLogTerm will continue to steady state");
+                    _engine.Log.Info($"Follower {_engine.Tag}: Got a negotiation request with identical PrevLogTerm will continue to steady state");
                 }
                 // this (or the negotiation above) completes the negotiation process
                 _connection.Send(context, new LogLengthNegotiationResponse
@@ -293,13 +292,16 @@ namespace Raven.Server.Rachis
                     }
                     throw new InvalidOperationException(message);
                 }
-                using (var topology = context.ReadObject(snapshot.Topology, "topology"))
+                using (var topologyJson = context.ReadObject(snapshot.Topology, "topology"))
                 {
                     if (_engine.Log.IsInfoEnabled)
                     {
-                        _engine.Log.Info($"Follower {_engine.Tag}: topology on install snapshot: {topology}");
+                        _engine.Log.Info($"Follower {_engine.Tag}: topology on install snapshot: {topologyJson}");
                     }
-                    RachisConsensus.SetTopology(_engine, context.Transaction.InnerTransaction, topology);
+
+                    var topology = JsonDeserializationRachis<ClusterTopology>.Deserialize(topologyJson);
+
+                    RachisConsensus.SetTopology(_engine, context.Transaction.InnerTransaction, context, topology);
                 }
 
                 context.Transaction.Commit();
@@ -483,7 +485,7 @@ namespace Raven.Server.Rachis
 
         private void MaybeNotifyLeaderThatWeAreSillAlive(TransactionOperationContext context, Stopwatch sp)
         {
-            if (sp.ElapsedMilliseconds <= _engine.ElectionTimeoutMs / 4)
+            if (sp.ElapsedMilliseconds <= _engine.ElectionTimeout.TotalMilliseconds / 4)
                 return;
 
             sp.Restart();

@@ -149,8 +149,6 @@ namespace Raven.Server
                     })
                     // ReSharper disable once AccessToDisposedClosure
                     .Build();
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Initialized Server...");
             }
             catch (Exception e)
             {
@@ -165,10 +163,13 @@ namespace Raven.Server
             try
             {
                 _webHost.Start();
-
+                
                 var serverAddressesFeature = _webHost.ServerFeatures.Get<IServerAddressesFeature>();
                 WebUrls = serverAddressesFeature.Addresses.ToArray();
 
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Initialized Server... {string.Join(", ", WebUrls)}");
+                
                 _tcpListenerTask = StartTcpListener();
             }
             catch (Exception e)
@@ -407,8 +408,7 @@ namespace Raven.Server
                         }
                         if (tcp != null)
                         {
-                            JsonOperationContext context;
-                            using (_tcpContextPool.AllocateOperationContext(out context))
+                            using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
                             using (var errorWriter = new BlittableJsonTextWriter(context, tcp.Stream))
                             {
                                 context.Write(errorWriter, new DynamicJsonValue
@@ -455,7 +455,8 @@ namespace Raven.Server
                 {
                     
                     var maintenanceHeader = JsonDeserializationRachis<ClusterMaintenanceSupervisor.ClusterMaintenanceConnectionHeader>.Deserialize(headerJson);
-                    if (_clusterMaintainanceWorker?.CurrentTerm >= maintenanceHeader.Term)
+                    
+                    if (_clusterMaintainanceWorker?.CurrentTerm > maintenanceHeader.Term)
                     {
                         if (_tcpLogger.IsInfoEnabled)
                         {
@@ -494,14 +495,15 @@ namespace Raven.Server
                 var resultingTask = await Task.WhenAny(databaseLoadingTask, Task.Delay(databaseLoadTimeout));
                 if (resultingTask != databaseLoadingTask)
                 {
-                        ThrowTimeoutOnDatabaseLoad(header);
+                    ThrowTimeoutOnDatabaseLoad(header);
                 }
             }
 
             tcp.DocumentDatabase = await databaseLoadingTask;
+            if (tcp.DocumentDatabase.DatabaseShutdown.IsCancellationRequested)
+                ThrowDatabaseShutdown(tcp.DocumentDatabase);
 
             tcp.DocumentDatabase.RunningTcpConnections.Add(tcp);
-
             switch (header.Operation)
             {
 
@@ -605,6 +607,11 @@ namespace Raven.Server
             writer.WriteString(status);
             writer.WriteEndObject();
             writer.Flush();
+        }
+
+        private static void ThrowDatabaseShutdown(DocumentDatabase database)
+        {
+            throw new DatabaseDisabledException($"Database {database.Name} was shutdown.");
         }
 
         private static void ThrowTimeoutOnDatabaseLoad(TcpConnectionHeaderMessage header)

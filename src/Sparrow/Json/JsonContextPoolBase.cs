@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using Sparrow.LowMemory;
+using Sparrow.Utils;
 
 namespace Sparrow.Json
 {
@@ -19,9 +20,31 @@ namespace Sparrow.Json
 
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
-        private class StackHeader
+        private class StackHeader : IDisposable
         {
             public StackNode Head;
+
+            ~StackHeader()
+            {
+                Dispose();
+            }
+
+            public void Dispose()
+            {
+                GC.SuppressFinalize(this);
+
+                var current = Head;
+                while (current != null)
+                {
+                    var ctx = current.Value;
+                    current = current.Next;
+                    if (ctx == null)
+                        continue;
+                    if (Interlocked.CompareExchange(ref ctx.InUse, 1, 0) != 0)
+                        continue;
+                    ctx.Dispose();
+                }
+            }
         }
 
         private class StackNode
@@ -188,7 +211,16 @@ namespace Sparrow.Json
 
         private void Push(T context)
         {
-            var threadHeader = _contextPool.Value;
+            StackHeader threadHeader;
+            try
+            {
+                threadHeader = _contextPool.Value;
+            }
+            catch (ObjectDisposedException)
+            {
+                context.Dispose();
+                return;
+            }
             while (true)
             {
                 var current = threadHeader.Head;
@@ -211,17 +243,7 @@ namespace Sparrow.Json
                 _timer.Dispose();
                 foreach (var stack in _contextPool.Values)
                 {
-                    var current = stack.Head;
-                    while (current != null)
-                    {
-                        var ctx = current.Value;
-                        current = current.Next;
-                        if (ctx == null)
-                            continue;
-                        if (Interlocked.CompareExchange(ref ctx.InUse, 1, 0) != 0)
-                            continue;
-                        ctx.Dispose();
-                    }
+                    stack.Dispose();
                 }
                 _contextPool.Dispose();
             }

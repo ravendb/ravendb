@@ -11,7 +11,7 @@ namespace Raven.Client.Documents.Exceptions.Session
 {
     /// <summary>
     /// This exception is thrown when a separate instance of an entity is added to the session
-    /// when a different entity with the same key already exists within the session.
+    /// when a different entity with the same ID already exists within the session.
     /// </summary>
     public class NonUniqueObjectException : RavenException
     {

@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Expiration
                     {
                         var expirationTree = tx.InnerTransaction.CreateTree(DocumentsByExpiration);
 
-                        Dictionary<Slice, List<(Slice LoweredKey, LazyStringValue Key)>> expired;
+                        Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> expired;
                         Stopwatch duration;
 
                         using (var it = expirationTree.Iterate(false))
@@ -109,7 +109,7 @@ namespace Raven.Server.Documents.Expiration
                             if (it.Seek(Slices.BeforeAllKeys) == false)
                                 return;
 
-                            expired = new Dictionary<Slice, List<(Slice LoweredKey, LazyStringValue Key)>>();
+                            expired = new Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>>();
                             duration = Stopwatch.StartNew();
 
                             do
@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Expiration
 
                                 var ticksAsSlice = it.CurrentKey.Clone(tx.InnerTransaction.Allocator);
 
-                                var expiredDocs = new List<(Slice LoweredKey, LazyStringValue Key)>();
+                                var expiredDocs = new List<(Slice LowerId, LazyStringValue Id)>();
 
                                 expired.Add(ticksAsSlice, expiredDocs);
 
@@ -133,12 +133,12 @@ namespace Raven.Server.Documents.Expiration
                                             if (CancellationToken.IsCancellationRequested)
                                                 return;
 
-                                            var clonedKey = multiIt.CurrentKey.Clone(tx.InnerTransaction.Allocator);
+                                            var clonedId = multiIt.CurrentKey.Clone(tx.InnerTransaction.Allocator);
 
-                                            var document = _database.DocumentsStorage.Get(context, clonedKey);
+                                            var document = _database.DocumentsStorage.Get(context, clonedId);
                                             if (document == null)
                                             {
-                                                expiredDocs.Add((clonedKey, null));
+                                                expiredDocs.Add((clonedId, null));
                                                 continue;
                                             }
 
@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Expiration
                                             if (currentTime < date)
                                                 continue;
 
-                                            expiredDocs.Add((clonedKey, document.Key));
+                                            expiredDocs.Add((clonedId, document.Id));
 
                                         } while (multiIt.MoveNext());
                                     }
@@ -184,7 +184,7 @@ namespace Raven.Server.Documents.Expiration
         }
 
         public unsafe void Put(DocumentsOperationContext context,
-            Slice loweredKey, BlittableJsonReaderObject document)
+            Slice lowerId, BlittableJsonReaderObject document)
         {
             string expirationDate;
             BlittableJsonReaderObject metadata;
@@ -205,18 +205,18 @@ namespace Raven.Server.Documents.Expiration
             var tree = context.Transaction.InnerTransaction.CreateTree(DocumentsByExpiration);
             Slice ticksSlice;
             using (Slice.External(context.Allocator, (byte*) &ticksBigEndian, sizeof(long), out ticksSlice))
-                tree.MultiAdd(ticksSlice, loweredKey);
+                tree.MultiAdd(ticksSlice, lowerId);
         }
 
         private class DeleteExpiredDocumentsCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
-            private readonly Dictionary<Slice, List<(Slice LoweredKey, LazyStringValue Key)>> _expired;
+            private readonly Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> _expired;
             private readonly DocumentDatabase _database;
             private readonly Logger _logger;
 
             public int DeletionCount;
 
-            public DeleteExpiredDocumentsCommand(Dictionary<Slice, List<(Slice LoweredKey, LazyStringValue Key)>> expired, DocumentDatabase database, Logger logger)
+            public DeleteExpiredDocumentsCommand(Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> expired, DocumentDatabase database, Logger logger)
             {
                 _expired = expired;
                 _database = database;
@@ -231,17 +231,17 @@ namespace Raven.Server.Documents.Expiration
                 {
                     foreach (var ids in expired.Value)
                     {
-                        if (ids.Key != null)
+                        if (ids.Id != null)
                         {
-                            var deleted = _database.DocumentsStorage.Delete(context, ids.LoweredKey, ids.Key, expectedEtag: null);
+                            var deleted = _database.DocumentsStorage.Delete(context, ids.LowerId, ids.Id, expectedEtag: null);
 
                             if (_logger.IsInfoEnabled && deleted == null)
-                                _logger.Info($"Tried to delete expired document '{ids.Key}' but document was not found.");
+                                _logger.Info($"Tried to delete expired document '{ids.Id}' but document was not found.");
 
                             DeletionCount++;
                         }
 
-                        expirationTree.MultiDelete(expired.Key, ids.LoweredKey);
+                        expirationTree.MultiDelete(expired.Key, ids.LowerId);
                     }
                 }
 

@@ -181,8 +181,8 @@ namespace FastTests.Smuggler
                     {
                         using (var session = store1.OpenAsyncSession())
                         {
-                            var company = await session.LoadAsync<Company>("companies/1");
-                            var person = await session.LoadAsync<Person>("people/1");
+                            var company = await session.LoadAsync<Company>("companies/1-A");
+                            var person = await session.LoadAsync<Person>("people/1-A");
                             company.Name += " update " + i;
                             person.Name += " update " + i;
                             await session.StoreAsync(company);
@@ -193,7 +193,7 @@ namespace FastTests.Smuggler
 
                     using (var session = store1.OpenAsyncSession())
                     {
-                        var person = await session.LoadAsync<Person>("people/2");
+                        var person = await session.LoadAsync<Person>("people/2-A");
                         Assert.NotNull(person);
                         session.Delete(person);
                         await session.SaveChangesAsync();
@@ -248,8 +248,8 @@ namespace FastTests.Smuggler
                     {
                         using (var session = store1.OpenAsyncSession())
                         {
-                            var company = await session.LoadAsync<Company>("companies/1");
-                            var person = await session.LoadAsync<Person>("people/1");
+                            var company = await session.LoadAsync<Company>("companies/1-A");
+                            var person = await session.LoadAsync<Person>("people/1-A");
                             company.Name += " update " + i;
                             person.Name += " update " + i;
                             await session.StoreAsync(company);
@@ -260,7 +260,7 @@ namespace FastTests.Smuggler
 
                     using (var session = store1.OpenAsyncSession())
                     {
-                        var person = await session.LoadAsync<Person>("people/2");
+                        var person = await session.LoadAsync<Person>("people/2-A");
                         Assert.NotNull(person);
                         session.Delete(person);
                         await session.SaveChangesAsync();

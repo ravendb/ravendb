@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Replication
 
     public class ReplicationBatchItem
     {
-        public LazyStringValue Key;
+        public LazyStringValue Id;
         public long Etag;
         public short TransactionMarker;
 
@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Replication
                 Etag = doc.Etag,
                 ChangeVector = doc.ChangeVector,
                 Data = doc.Data,
-                Key = doc.Key,
+                Id = doc.Id,
                 Flags = doc.Flags,
                 TransactionMarker = doc.TransactionMarker,
                 LastModifiedTicks = doc.LastModified.Ticks,
@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Replication
             var item = new ReplicationBatchItem
             {
                 Etag = doc.Etag,
-                Key = doc.LoweredKey,
+                Id = doc.LowerId,
                 TransactionMarker = doc.TransactionMarker,
             };
 
@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Replication
                 ChangeVector = doc.ChangeVector,
                 Collection = doc.Collection,
                 Data = doc.Doc,
-                Key = doc.Key,
+                Id = doc.Id,
                 LastModifiedTicks = doc.LastModified.Ticks,
                 TransactionMarker = -1// not relevant
             };
@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Replication
             return new ReplicationBatchItem
             {
                 Type = ReplicationItemType.Attachment,
-                Key = attachment.LoweredKey,
+                Id = attachment.Key,
                 Etag = attachment.Etag,
                 Name = attachment.Name,
                 ContentType = attachment.ContentType,

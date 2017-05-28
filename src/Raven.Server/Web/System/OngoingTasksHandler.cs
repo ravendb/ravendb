@@ -2,9 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client;
+using Raven.Client.Documents.Replication;
+using Raven.Client.Server;
 using Raven.Client.Server.Operations;
+using Raven.Server.Rachis;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -18,49 +21,66 @@ namespace Raven.Server.Web.System
         public Task GetOngoingTasks()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("databaseName");
-            var dbId = Constants.Documents.Prefix + name;
+            var result = GetOngoingTasksAndDbTopology(name, ServerStore).tasks;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context)) 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                 var result = GetOngoingTasks(dbId);
-                 context.Write(writer, result.ToJson());
+                context.Write(writer, result.ToJson());
             }
            
             return Task.CompletedTask;
         }
 
-        public OngoingTasksResult GetOngoingTasks(string databaseId) 
+        public static (OngoingTasksResult tasks , DatabaseTopology topology) GetOngoingTasksAndDbTopology(string dbName, ServerStore serverStore)
         {
-            // Todo (Aviv): Get real data... !
-
-            // Sample Data:
             var ongoingTasksResult = new OngoingTasksResult();
+            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                context.OpenReadTransaction();
+                var dbTopology = serverStore.Cluster.ReadDatabase(context, dbName)?.Topology;
+                var clusterTopology = serverStore.GetClusterTopology(context);
 
-            NodeId node1 = new NodeId() {NodeTag = "SampleNodeTag-1", NodeUrl = "SampleNodeUrl-1"};
-            NodeId node2 = new NodeId() {NodeTag = "SampleNodeTag-2", NodeUrl = "SampleNodeUrl-2"};
-            NodeId node3 = new NodeId() {NodeTag = "SampleNodeTag-3", NodeUrl = "SampleNodeUrl-3"};
-            NodeId node4 = new NodeId() {NodeTag = "SampleNodeTag-4", NodeUrl = "SampleNodeUrl-4"};
-            NodeId node5 = new NodeId() {NodeTag = "SampleNodeTag-5", NodeUrl = "SampleNodeUrl-5"};
-            NodeId node6 = new NodeId() {NodeTag = "SampleNodeTag-6", NodeUrl = "SampleNodeUrl-6"};
-            
-            ongoingTasksResult.OngoingTasksList = new List<OngoingTask>();
+                CollectReplicationOngoingTasks(dbTopology, clusterTopology, ongoingTasksResult.OngoingTasksList);
 
-            var repTask1 = new OngoingTaskReplication() { TaskType = OngoingTaskType.Replication, ResponsibleNode = node2, DestinationURL = "SampleNodeUrl-4", DestinationDB = "SampleDB-4" };
-            var repTask2 = new OngoingTaskReplication() { TaskType = OngoingTaskType.Replication, ResponsibleNode = node1, DestinationURL = "SampleNodeUrl-3", DestinationDB = "SamleDB-3" };
-            var repTask3 = new OngoingTaskETL() { TaskType = OngoingTaskType.ETL, ResponsibleNode = node2, DestinationURL = "SampleNodeUrl-5", DestinationDB = "SampleDB-5" };
-            var repTask4 = new OngoingTaskBackup() { TaskType = OngoingTaskType.Backup, ResponsibleNode = node6,BackupDestinations = new List<string>() { "SampleDest1", "SampleDest2" }, BackupType = BackupType.Backup };
-            var repTask5 = new OngoingTaskSQL() { TaskType = OngoingTaskType.SQL, ResponsibleNode = node1, SqlProvider = "SampleProvider", SqlTable = "SampleTable"};
+                if (serverStore.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var database) && database.Status == TaskStatus.RanToCompletion)
+                {
+                    ongoingTasksResult.SubscriptionsCount = (int)database.Result.SubscriptionStorage.GetAllSubscriptionsCount();
+                }
 
-            ongoingTasksResult.OngoingTasksList.Add(repTask1);
-            ongoingTasksResult.OngoingTasksList.Add(repTask2);
-            ongoingTasksResult.OngoingTasksList.Add(repTask3);
-            ongoingTasksResult.OngoingTasksList.Add(repTask4);
-            ongoingTasksResult.OngoingTasksList.Add(repTask5);
+                //TODO: collect all the rest of the ongoing tasks (ETL, SQL, Backup)
 
-            ongoingTasksResult.SubscriptionsCount = 5;
+                return (ongoingTasksResult, dbTopology);
+            }
+        }
 
-            return ongoingTasksResult;
+        private static void CollectReplicationOngoingTasks(DatabaseTopology dbTopology, ClusterTopology clusterTopology, ICollection<OngoingTask> ongoingTasksList)
+        {
+            if (dbTopology == null)
+                return;
+
+            foreach (var watcher in dbTopology.Watchers)
+            {
+                var tag = dbTopology.WhoseTaskIsIt(watcher);
+                var task = GetReplicationTaskInfo(clusterTopology, tag, watcher);
+                ongoingTasksList.Add(task);
+            }
+        }
+
+        private static OngoingTaskReplication GetReplicationTaskInfo(ClusterTopology clusterTopology, string tag, ReplicationNode replicationNode)
+        {
+            return new OngoingTaskReplication
+            {
+                TaskType = OngoingTaskType.Replication,
+                ResponsibleNode = new NodeId
+                {
+                    NodeTag = tag,
+                    NodeUrl = clusterTopology.GetUrlFromTag(tag)
+                },
+                DestinationDB = replicationNode.Database,
+                TaskState = replicationNode.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
+                DestinationURL = replicationNode.Url,
+            };
         }
     }
 
@@ -91,7 +111,6 @@ namespace Raven.Server.Web.System
         public OngoingTaskState TaskState { get; set; }
         public DateTime LastModificationTime { get; set; }
         public OngoingTaskConnectionStatus TaskConnectionStatus { get; set; }
-
         public virtual DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue 
@@ -139,7 +158,6 @@ namespace Raven.Server.Web.System
     {
         public string SqlProvider { get; set; }
         public string SqlTable { get; set; }
-
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();

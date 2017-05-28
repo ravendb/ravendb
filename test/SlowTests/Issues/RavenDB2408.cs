@@ -44,7 +44,7 @@ namespace SlowTests.Issues
                     {
                         while (enumerator.MoveNext())
                         {
-                            Assert.NotNull(enumerator.Current.Key);
+                            Assert.NotNull(enumerator.Current.Id);
                         }
                     }
                 }
