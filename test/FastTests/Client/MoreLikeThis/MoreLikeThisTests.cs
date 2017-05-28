@@ -46,11 +46,11 @@ namespace FastTests.Client.MoreLikeThis
             public Transformer2()
             {
                 TransformResults = results => from result in results
-                                              let _ = Include<Person>("people/1")
+                                              let _ = Include<Person>(result.PersonId)
                                               select new
                                               {
                                                   TransformedBody = result.Body + "321",
-                                                  Name = LoadDocument<Person>("people/1").Name
+                                                  Name = LoadDocument<Person>(result.PersonId).Name
                                               };
             }
         }
@@ -130,7 +130,7 @@ namespace FastTests.Client.MoreLikeThis
 
         public void TransformersShouldWorkWithMoreLikeThis2()
         {
-            string id;
+            string id, personId;
 
             new Transformer2().Execute(_store);
 
@@ -138,10 +138,17 @@ namespace FastTests.Client.MoreLikeThis
             {
                 new DataIndex(true, false).Execute(_store);
 
-                session.Store(new Person { Name = "Name1" });
+                var person = new Person { Name = "Name1" };
+                session.Store(person);
+                personId = person.Id;
 
                 var list = GetDataList();
-                list.ForEach(session.Store);
+                list.ForEach(x =>
+                {
+                    x.PersonId = personId;
+                    session.Store(x);
+                });
+
                 session.SaveChanges();
 
                 id = session.Advanced.GetDocumentId(list.First());
@@ -165,7 +172,7 @@ namespace FastTests.Client.MoreLikeThis
                 }
 
                 var numberOfRequests = session.Advanced.NumberOfRequests;
-                var person = session.Load<Person>("people/1");
+                var person = session.Load<Person>("people/1-A");
                 Assert.NotNull(person);
                 Assert.Equal("Name1", person.Name);
                 Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
@@ -709,6 +716,7 @@ namespace FastTests.Client.MoreLikeThis
             public string Id { get; set; }
             public string Body { get; set; }
             public string WhitespaceAnalyzerField { get; set; }
+            public string PersonId { get; set; }
         }
 
         public class DataWithIntegerId

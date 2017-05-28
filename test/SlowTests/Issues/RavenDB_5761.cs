@@ -93,7 +93,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var address = session.Load<Address>("addresses/1");
+                    var address = session.Load<Address>("addresses/1-A");
                     address.City = "Barcelona";
 
                     session.SaveChanges();

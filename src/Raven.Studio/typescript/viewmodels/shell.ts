@@ -8,6 +8,7 @@ import generateMenuItems = require("common/shell/menu/generateMenuItems");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import databaseSwitcher = require("common/shell/databaseSwitcher");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import favNodeBadge = require("common/shell/favNodeBadge");
 import searchBox = require("common/shell/searchBox");
 import database = require("models/resources/database");
 import license = require("models/auth/license");
@@ -58,9 +59,7 @@ class shell extends viewModelBase {
     notificationCenter = notificationCenter.instance;
     collectionsTracker = collectionsTracker.default;
     footer = footer.default;
-
-    static clusterMode = ko.observable<boolean>(false); //TODO: extract from shell
-    isInCluster = ko.computed(() => shell.clusterMode()); //TODO: extract from shell
+    clusterManager = clusterTopologyManager.default;
 
     static serverBuildVersion = ko.observable<serverBuildVersionDto>();
     static serverMainVersion = ko.observable<number>(4);
@@ -78,6 +77,7 @@ class shell extends viewModelBase {
     mainMenu = new menu(generateMenuItems(activeDatabaseTracker.default.database()));
     searchBox = new searchBox();
     databaseSwitcher = new databaseSwitcher();
+    favNodeBadge = new favNodeBadge();
 
     displayUsageStatsInfo = ko.observable<boolean>(false);
     trackingTask = $.Deferred();
@@ -99,8 +99,6 @@ class shell extends viewModelBase {
             return lsApiKey || contextApiKey;
         });
         oauthContext.enterApiKeyTask = this.setupApiKey();
-
-        ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
 
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
@@ -131,7 +129,7 @@ class shell extends viewModelBase {
             // and then start configuring services
 
             const licenseTask = license.fetchLicenseStatus();
-            const topologyTask = clusterTopologyManager.default.init();
+            const topologyTask = this.clusterManager.init();
 
             $.when<any>(licenseTask, topologyTask)
                 .done(() => {
@@ -146,7 +144,7 @@ class shell extends viewModelBase {
                     // please notice we don't wait here for connection to be established
                     // since this invocation is sync we can't end up with race condition
                     this.databasesManager.setupGlobalNotifications();
-                    clusterTopologyManager.default.setupGlobalNotifications();
+                    this.clusterManager.setupGlobalNotifications();
                     this.notificationCenter.setupGlobalNotifications(changesContext.default.serverNotifications());
 
                     this.connectToRavenServer();
@@ -198,6 +196,7 @@ class shell extends viewModelBase {
 
         this.databaseSwitcher.initialize();
         this.searchBox.initialize();
+        this.favNodeBadge.initialize();
     }
 
     compositionComplete() {

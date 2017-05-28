@@ -112,7 +112,6 @@ class patchTester extends viewModelBase {
 
     testMode = ko.observable<boolean>(false);
     script: KnockoutObservable<string>;
-    private scriptCopy: string;
     documentId = ko.observable<string>();
     private db: KnockoutObservable<database>;
 
@@ -142,7 +141,7 @@ class patchTester extends viewModelBase {
         this.db = db;
         this.initObservables();
 
-        this.bindToCurrentInstance("closeTestMode", "enterTestMode", "applyTestScript", "runTest", "onAutocompleteOptionSelected");
+        this.bindToCurrentInstance("closeTestMode", "enterTestMode", "runTest", "onAutocompleteOptionSelected");
 
         this.validationGroup = ko.validatedObservable({
             script: this.script,
@@ -179,12 +178,10 @@ class patchTester extends viewModelBase {
     }
 
     closeTestMode() {
-        this.script(this.scriptCopy);
         this.testMode(false);
     }
 
     enterTestMode(documentIdToUse: string) {
-        this.scriptCopy = this.script();
         this.testMode(true);
         this.documentId(documentIdToUse);
 
@@ -223,10 +220,6 @@ class patchTester extends viewModelBase {
                 }
             })
             .always(() => this.spinners.loadingDocument(false));
-    }
-
-    applyTestScript() {
-        this.testMode(false);
     }
 
     onAutocompleteOptionSelected(item: string) {

@@ -17,26 +17,29 @@
             <div class="input-group">
                 <input type="text" class="form-control" placeholder="Filter" accesskey="/" title="Filter databases (Alt+/)" data-bind="textInput: filters.searchText">
             </div>
-            <div class="toggle toggle-primary">
-                <input id="localOnlyInput" name="localDbOnly" class="styled" type="checkbox" data-bind="checked: filters.localOnly" />
-                <label for="localOnlyInput">
-                    Show only local (Node <span data-bind="text: clusterManager.nodeTag"></span>)
-                </label>
+            <div class="btn-group">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Filter visible databases">
+                    <span data-bind="visible: !filters.localOnly()">Show all</span>
+                    <span data-bind="visible: filters.localOnly">Show local (Node <span data-bind="text: clusterManager.nodeTag"></span>)</span>
+                    &nbsp;&nbsp;
+                    <span class="caret"></span>
+                    <span class="sr-only">Toggle Dropdown</span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li data-bind="click: _.partial(filters.localOnly, false)">
+                        <a href="#" title="Show all databases available in cluster">
+                            <span>Show all</span>
+                        </a>
+                    </li>
+                    <li data-bind="click: _.partial(filters.localOnly, true)">
+                        <a href="#" title="Show only databases which are relevant for current node">
+                            <span>Show local (Node <span data-bind="text: clusterManager.nodeTag"></span>)</span>
+                        </a>
+                    </li>
+                </ul>
             </div>
             <div class="databasesToolbar-actions">
-                <div class="btn-group">
-                    <button type="button" class="btn btn-primary" data-bind="click: newDatabase">
-                        <i class="icon-plus"></i>
-                        <span>New database</span>
-                    </button>
-                    <button type="button" class="btn btn-primary dropdown-toggle" disabled="disabled" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        <span class="caret"></span>
-                        <span class="sr-only">Toggle Dropdown</span>
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a href="#"><i class="icon-backup"></i> <span>New database from backup</span></a></li>
-                    </ul>
-                </div>
+                
 
                 <div class="btn-group-label" data-bind="css: { active: selectedDatabases().length }" data-label="Selection" role="group">
                     <button class="btn btn-danger" data-bind="visible: isGlobalAdmin(), enable: selectedDatabases().length, click: deleteSelectedDatabases">
@@ -66,6 +69,19 @@
                             </li>
                         </ul>
                     </div>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-primary" data-bind="click: newDatabase">
+                        <i class="icon-plus"></i>
+                        <span>New database</span>
+                    </button>
+                    <button type="button" class="btn btn-primary dropdown-toggle" disabled="disabled" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <span class="caret"></span>
+                        <span class="sr-only">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a href="#"><i class="icon-backup"></i> <span>New database from backup</span></a></li>
+                    </ul>
                 </div>
             </div>
             <div class="flex-separator"></div>

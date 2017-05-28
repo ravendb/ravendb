@@ -121,7 +121,7 @@ namespace Raven.Server
                                 });
                             Console.WriteLine("Server started, listening to requests...");
 
-                            if (CommandLineSwitches.RunAsService)
+                            if (CommandLineSwitches.Daemon)
                             {
                                 RunAsService();
                             }

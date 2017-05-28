@@ -59,7 +59,7 @@ namespace SlowTests.Bugs
                 using (var session = store.OpenSession())
                 {
                     var d = session.Load<FooBar>(documentId);
-                    Assert.Equal("FooBars/1", d.Name);
+                    Assert.Equal("FooBars/1-A", d.Name);
                 }
             }
         }

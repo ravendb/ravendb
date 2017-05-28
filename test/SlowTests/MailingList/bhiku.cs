@@ -44,9 +44,9 @@ namespace SlowTests.MailingList
 
                     Assert.Equal(3, students.Count);
 
-                    Assert.Equal("students/1", students[0].Id);
-                    Assert.Equal("students/3", students[1].Id);
-                    Assert.Equal("students/2", students[2].Id);
+                    Assert.Equal("students/1-A", students[0].Id);
+                    Assert.Equal("students/3-A", students[1].Id);
+                    Assert.Equal("students/2-A", students[2].Id);
                 }
             }
         }
@@ -78,9 +78,9 @@ namespace SlowTests.MailingList
 
                     Assert.Equal(3, students.Count);
 
-                    Assert.Equal("students/1", students[0].Id);
-                    Assert.Equal("students/3", students[1].Id);
-                    Assert.Equal("students/2", students[2].Id);
+                    Assert.Equal("students/1-A", students[0].Id);
+                    Assert.Equal("students/3-A", students[1].Id);
+                    Assert.Equal("students/2-A", students[2].Id);
                 }
             }
         }

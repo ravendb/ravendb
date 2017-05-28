@@ -49,12 +49,12 @@ namespace SlowTests.Issues
 
                     operation.WaitForCompletion(TimeSpan.FromSeconds(15));
 
-                    var users = session.Load<User>(new[] { "users/1", "users/2", "users/3" });
+                    var users = session.Load<User>(new[] { "users/1-A", "users/2-A", "users/3-A" });
 
                     Assert.Equal(3, users.Count);
-                    Assert.Null(users["users/1"].Name);
-                    Assert.Equal("Patched", users["users/2"].Name);
-                    Assert.Equal("Patched", users["users/3"].Name);
+                    Assert.Null(users["users/1-A"].Name);
+                    Assert.Equal("Patched", users["users/2-A"].Name);
+                    Assert.Equal("Patched", users["users/3-A"].Name);
                 }
             }
         }

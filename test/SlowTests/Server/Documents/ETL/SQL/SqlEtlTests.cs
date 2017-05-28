@@ -388,7 +388,7 @@ loadToOrders(orderData);");
                 etlDone.Reset();
                 using (var session = store.OpenAsyncSession())
                 {
-                    var order = await session.LoadAsync<Order>("orders/1");
+                    var order = await session.LoadAsync<Order>("orders/1-A");
                     order.OrderLines.Clear();
                     await session.SaveChangesAsync();
                 }
@@ -444,7 +444,7 @@ loadToOrders(orderData);");
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var order = await session.LoadAsync<Order>("orders/1");
+                    var order = await session.LoadAsync<Order>("orders/1-A");
                     order.OrderLines.Clear();
                     await session.SaveChangesAsync();
                 }
@@ -485,7 +485,7 @@ loadToOrders(orderData);");
                 etlDone.Reset();
 
                 using (var commands = store.Commands())
-                    await commands.DeleteAsync("orders/1", null);
+                    await commands.DeleteAsync("orders/1-A", null);
 
                 etlDone.Wait(TimeSpan.FromMinutes(5));
 
@@ -619,7 +619,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                         var result = SqlEtl.SimulateSqlEtl(new SimulateSqlEtl
                         {
                             PerformRolledBackTransaction = i % 2 != 0,
-                            DocumentId = "orders/1",
+                            DocumentId = "orders/1-A",
                             Configuration = new EtlConfiguration<SqlDestination>()
                             {
                                 Destination = new SqlDestination
@@ -685,7 +685,7 @@ CREATE TABLE [dbo].[Orders]
                     await session.SaveChangesAsync();
                 }
 
-                store.Operations.Send(new PutAttachmentOperation("orders/1", "test-attachment", new MemoryStream(attachmentBytes), "image/png"));
+                store.Operations.Send(new PutAttachmentOperation("orders/1-A", "test-attachment", new MemoryStream(attachmentBytes), "image/png"));
 
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
 
@@ -714,7 +714,7 @@ loadToOrders(orderData);
 
                     using (var dbCommand = con.CreateCommand())
                     {
-                        dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1'";
+                        dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1-A'";
 
                         var sqlDataReader = dbCommand.ExecuteReader();
 
@@ -750,8 +750,8 @@ CREATE TABLE [dbo].[Attachments]
                     await session.SaveChangesAsync();
                 }
 
-                store.Operations.Send(new PutAttachmentOperation("users/1", "profile.jpg", new MemoryStream(new byte[] { 1, 2, 3, 4, 5, 6, 7 }), "image/jpeg"));
-                store.Operations.Send(new PutAttachmentOperation("users/1", "profile-small.jpg", new MemoryStream(new byte[] { 1, 2, 3 }), "image/jpeg"));
+                store.Operations.Send(new PutAttachmentOperation("users/1-A", "profile.jpg", new MemoryStream(new byte[] { 1, 2, 3, 4, 5, 6, 7 }), "image/jpeg"));
+                store.Operations.Send(new PutAttachmentOperation("users/1-A", "profile-small.jpg", new MemoryStream(new byte[] { 1, 2, 3 }), "image/jpeg"));
 
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
 
@@ -856,7 +856,7 @@ loadToOrders(orderData);
 
                     using (var dbCommand = con.CreateCommand())
                     {
-                        dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1'";
+                        dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1-A'";
 
                         var sqlDataReader = dbCommand.ExecuteReader();
 

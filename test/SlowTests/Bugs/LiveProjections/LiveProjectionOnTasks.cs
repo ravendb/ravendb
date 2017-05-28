@@ -60,7 +60,7 @@ namespace SlowTests.Bugs.LiveProjections
                     var first = results.FirstOrDefault();
 
                     Assert.NotNull(first);
-                    Assert.Equal(first.Id, "tasks/1");
+                    Assert.Equal(first.Id, "tasks/1-A");
                     Assert.Equal(first.GiverId, 1);
                 }
             }

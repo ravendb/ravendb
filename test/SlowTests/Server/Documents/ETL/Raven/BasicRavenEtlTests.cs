@@ -37,7 +37,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 using (var session = dest.OpenSession())
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = session.Load<User>("users/1-A");
 
                     Assert.NotNull(user);
                     Assert.Equal("James Doe", user.Name);
@@ -47,7 +47,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 using (var session = src.OpenSession())
                 {
-                    session.Delete("users/1");
+                    session.Delete("users/1-A");
 
                     session.SaveChanges();
                 }
@@ -56,7 +56,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 using (var session = dest.OpenSession())
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = session.Load<User>("users/1-A");
 
                     Assert.Null(user);
                 }
@@ -87,7 +87,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 using (var session = dest.OpenSession())
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = session.Load<User>("users/1-A");
 
                     Assert.NotNull(user);
                     Assert.Equal("Joe Doe", user.Name);
@@ -97,7 +97,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 using (var session = src.OpenSession())
                 {
-                    session.Delete("users/1");
+                    session.Delete("users/1-A");
 
                     session.SaveChanges();
                 }
@@ -106,7 +106,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 using (var session = dest.OpenSession())
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = session.Load<User>("users/1-A");
 
                     Assert.Null(user);
                 }
@@ -230,7 +230,7 @@ loadToAddresses(LoadDocument(this.AddressId));
                             Age = i,
                             Name = "James",
                             LastName = "Smith",
-                            AddressId = $"addresses/{i}"
+                            AddressId = $"addresses/{i}-A"
                         });
 
                         session.Store(new Address
@@ -248,16 +248,16 @@ loadToAddresses(LoadDocument(this.AddressId));
                 {
                     for (var i = 1; i <= count; i++)
                     {
-                        var user = session.Load<User>($"users/{i}");
+                        var user = session.Load<User>($"users/{i}"+ "-A");
                         Assert.NotNull(user);
                         Assert.Equal("James", user.Name);
                         Assert.Equal("Smith", user.LastName);
 
-                        var person = session.Advanced.LoadStartingWith<Person>($"users/{i}/people/")[0];
+                        var person = session.Advanced.LoadStartingWith<Person>($"users/{i}-A/people/")[0];
                         Assert.NotNull(person);
                         Assert.Equal("James Smith", person.Name);
 
-                        var address = session.Advanced.LoadStartingWith<Address>($"users/{i}/addresses/")[0];
+                        var address = session.Advanced.LoadStartingWith<Address>($"users/{i}-A/addresses/")[0];
                         Assert.NotNull(address);
                         Assert.Equal("New York", address.City);
                     }
@@ -271,7 +271,7 @@ loadToAddresses(LoadDocument(this.AddressId));
 
                 using (var session = src.OpenSession())
                 {
-                    session.Delete("users/3");
+                    session.Delete("users/3-A");
 
                     session.SaveChanges();
                 }
@@ -280,13 +280,13 @@ loadToAddresses(LoadDocument(this.AddressId));
 
                 using (var session = dest.OpenSession())
                 {
-                    var user = session.Load<User>("users/3");
+                    var user = session.Load<User>("users/3-A");
                     Assert.Null(user);
 
-                    var persons = session.Advanced.LoadStartingWith<Person>("users/3/people/");
+                    var persons = session.Advanced.LoadStartingWith<Person>("users/3-A/people/");
                     Assert.Equal(0, persons.Length);
 
-                    var addresses = session.Advanced.LoadStartingWith<Address>("users/3/addresses/");
+                    var addresses = session.Advanced.LoadStartingWith<Address>("users/3-A/addresses/");
                     Assert.Equal(0, addresses.Length);
                 }
 
@@ -354,12 +354,12 @@ loadToOrders(orderData);
 
                 using (var session = dest.OpenSession())
                 {
-                    var order = session.Load<OrderWithLinesCount>("orders/1");
+                    var order = session.Load<OrderWithLinesCount>("orders/1-A");
 
                     Assert.Equal(2, order.OrderLinesCount);
                     Assert.Equal(30, order.TotalCost);
 
-                    var lines = session.Advanced.LoadStartingWith<LineItemWithTotalCost>("orders/1/OrderLines/").OrderBy(x => x.ProductName).ToList();
+                    var lines = session.Advanced.LoadStartingWith<LineItemWithTotalCost>("orders/1-A/OrderLines/").OrderBy(x => x.ProductName).ToList();
 
                     Assert.Equal(2, lines.Count);
 
@@ -393,7 +393,7 @@ loadToOrders(orderData);
                                 Quantity = 1
                             }
                         }
-                    }, "orders/1");
+                    }, "orders/1-A");
 
                     session.SaveChanges();
                 }
@@ -402,12 +402,12 @@ loadToOrders(orderData);
 
                 using (var session = dest.OpenSession())
                 {
-                    var order = session.Load<OrderWithLinesCount>("orders/1");
+                    var order = session.Load<OrderWithLinesCount>("orders/1-A");
 
                     Assert.Equal(2, order.OrderLinesCount);
                     Assert.Equal(20, order.TotalCost);
 
-                    var lines = session.Advanced.LoadStartingWith<LineItemWithTotalCost>("orders/1/OrderLines/").OrderBy(x => x.ProductName).ToList();
+                    var lines = session.Advanced.LoadStartingWith<LineItemWithTotalCost>("orders/1-A/OrderLines/").OrderBy(x => x.ProductName).ToList();
 
                     Assert.Equal(2, lines.Count);
 
@@ -446,10 +446,10 @@ loadToOrders(orderData);
 
                 using (var session = dest.OpenSession())
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = session.Load<User>("users/1-A");
 
                     Assert.NotNull(user);
-                    Assert.Equal("users/1", user.Name);
+                    Assert.Equal("users/1-A", user.Name);
                 }
             }
         }

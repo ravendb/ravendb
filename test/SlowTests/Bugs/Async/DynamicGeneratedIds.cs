@@ -18,7 +18,7 @@ namespace SlowTests.Bugs.Async
                     var result = session.StoreAsync(client);
                     result.Wait();
 
-                    Assert.Equal("ExpandoObjects/1", client.Id);
+                    Assert.Equal("ExpandoObjects/1-A", client.Id);
                 }
             }
         }
@@ -39,7 +39,7 @@ namespace SlowTests.Bugs.Async
                     var result = session.StoreAsync(client);
                     result.Wait();
 
-                    Assert.Equal("clients/1", client.Id);
+                    Assert.Equal("clients/1-A", client.Id);
                 }
             }
         }

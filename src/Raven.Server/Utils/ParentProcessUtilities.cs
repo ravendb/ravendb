@@ -38,7 +38,10 @@ namespace Raven.Server.Utils
         public static Process GetParentProcess(int processId)
         {
             Process process = Process.GetProcessById(processId);
-            return GetParentProcess(process.SafeHandle.DangerousGetHandle());
+            using (var processHandle = process.SafeHandle)
+            {
+                return GetParentProcess(processHandle.DangerousGetHandle());
+            }
         }
 
         /// <summary>

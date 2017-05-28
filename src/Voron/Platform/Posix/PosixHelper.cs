@@ -12,6 +12,7 @@ using Sparrow;
 using Sparrow.Platform.Posix;
 using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
+using Voron.Util.Settings;
 
 namespace Voron.Platform.Posix
 {
@@ -36,9 +37,9 @@ namespace Voron.Platform.Posix
                 Syscall.ThrowLastError(result, $"posix_fallocate(\"{file}\", {size})");
         }
 
-        public static unsafe void WriteFileHeader(FileHeader* header, string path)
+        public static unsafe void WriteFileHeader(FileHeader* header, VoronPathSetting path)
         {
-            var fd = Syscall.open(path, OpenFlags.O_WRONLY | OpenFlags.O_CREAT,
+            var fd = Syscall.open(path.FullPath, OpenFlags.O_WRONLY | OpenFlags.O_CREAT,
                 FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
 
             try
@@ -68,7 +69,7 @@ namespace Voron.Platform.Posix
                     var err = Marshal.GetLastWin32Error();
                     Syscall.ThrowLastError(err, "fsync " + path);
                 }
-                Syscall.FsyncDirectoryFor(path);
+                Syscall.FsyncDirectoryFor(path.FullPath);
             }
             finally
             {
@@ -104,9 +105,9 @@ namespace Voron.Platform.Posix
 
    
 
-        public static unsafe bool TryReadFileHeader(FileHeader* header, string path)
+        public static unsafe bool TryReadFileHeader(FileHeader* header, VoronPathSetting path)
         {
-            var fd = Syscall.open(path, OpenFlags.O_RDONLY, FilePermissions.S_IRUSR);
+            var fd = Syscall.open(path.FullPath, OpenFlags.O_RDONLY, FilePermissions.S_IRUSR);
             try
             {
                 if (fd == -1)

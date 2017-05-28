@@ -94,7 +94,9 @@ namespace Raven.Server.Documents.Handlers
 
             foreach (var storageEnvironment in documentDatabase.GetAllStoragesEnvironment())
             {
-                result.Environments.Add(GetIoMetrics(storageEnvironment.Environment));
+                var metrics = GetIoMetrics(storageEnvironment.Environment);
+                metrics.Type = storageEnvironment.Type;
+                result.Environments.Add(metrics);
             }
 
             foreach (var metrics in documentDatabase.GetAllPerformanceMetrics())
@@ -109,7 +111,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var ioMetrics = new IOMetricsEnvironment
             {
-                Path = storageEnvironment.Options.BasePath
+                Path = storageEnvironment.Options.BasePath.FullPath
             };
 
             foreach (var fileMetric in storageEnvironment.Options.IoMetrics.Files)
@@ -310,6 +312,7 @@ namespace Raven.Server.Documents.Handlers
             Files = new List<IOMetricsFileStats>();
         }
 
+        public StorageEnvironmentWithType.StorageEnvironmentType Type { get; set; }
         public string Path { get; set; }
         public List<IOMetricsFileStats> Files { get; set; }
 
@@ -318,6 +321,7 @@ namespace Raven.Server.Documents.Handlers
             return new DynamicJsonValue
             {
                 [nameof(Path)] = Path,
+                [nameof(Type)] = Type,
                 [nameof(Files)] = new DynamicJsonArray(Files.Select(x => x.ToJson()))
             };
         }

@@ -33,7 +33,8 @@
     "toastr": "^2.1.3",
     "prism": "^1.6.0",
     "Sortable": "1.4.2",
-	"qrcode.js": "qrcode-js#*"
+    "qrcode.js": "qrcode-js#*",
+    "favico.js": "^0.3.10"
   },
   "resolutions": {
     "jquery": "^2.2.0",

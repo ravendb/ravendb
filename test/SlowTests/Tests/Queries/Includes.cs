@@ -212,7 +212,7 @@ namespace SlowTests.Tests.Queries
                     session.Store(new Supplier { Name = "2" });
                     session.Store(new Supplier { Name = "3" });
                     session.Store(
-                        new Order { SupplierIds = new[] { "suppliers/1", "suppliers/2", "suppliers/3" } },
+                        new Order { SupplierIds = new[] { "suppliers/1-A", "suppliers/2-A", "suppliers/3-A" } },
                         "orders/1234");
 
                     session.SaveChanges();
@@ -280,7 +280,7 @@ namespace SlowTests.Tests.Queries
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Customer());
-                    session.Store(new Order { Refferal = new Referral { CustomerId = "customers/1" } }, "orders/1234");
+                    session.Store(new Order { Refferal = new Referral { CustomerId = "customers/1-A" } }, "orders/1234");
 
                     session.SaveChanges();
                 }
@@ -340,9 +340,9 @@ namespace SlowTests.Tests.Queries
                             LineItems =
                                     new[]
                                         {
-                                            new LineItem { ProductId = "products/1" },
-                                            new LineItem { ProductId = "products/2" },
-                                            new LineItem { ProductId = "products/3" }
+                                            new LineItem { ProductId = "products/1-A" },
+                                            new LineItem { ProductId = "products/2-A" },
+                                            new LineItem { ProductId = "products/3-A" }
                                         }
                         },
                         "orders/1234");

@@ -15,6 +15,7 @@ using Voron.Data.BTrees;
 using Voron.Impl.Journal;
 using Voron.Global;
 using Voron.Util;
+using Voron.Util.Settings;
 
 namespace Voron.Impl.Backup
 {
@@ -48,7 +49,7 @@ namespace Voron.Impl.Backup
                 using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
                 {
                     numberOfBackedUpPages = Incremental_Backup(env, compression, infoNotify,
-                        backupStarted,  package, string.Empty, copier);
+                        backupStarted, package, string.Empty, copier);
                 }
                 file.Flush(true); // make sure that this is actually persisted fully to disk
                 return numberOfBackedUpPages;
@@ -78,7 +79,7 @@ namespace Voron.Impl.Backup
                         var env = e.Env;
                         var copier = new DataCopier(Constants.Storage.PageSize * 16);
                         var numberOfBackedUpPages = Incremental_Backup(env, compression, infoNotify,
-                                                backupStarted,  package, basePath, copier);
+                                                backupStarted, package, basePath, copier);
                         totalNumberOfBackedUpPages += numberOfBackedUpPages;
                     }
                 }
@@ -202,7 +203,7 @@ namespace Voron.Impl.Backup
                             if (jrnl.Number < lastWrittenLogFile &&
                                 // prevent deletion of the current journal and journals with a greater number
                                 jrnl.Number < lastSyncedJournal)
-                                // prevent deletion of journals that aren't synced with the data file
+                            // prevent deletion of journals that aren't synced with the data file
                             {
                                 jrnl.DeleteOnClose = true;
                             }
@@ -311,8 +312,9 @@ namespace Voron.Impl.Backup
                         var toDispose = new List<IDisposable>();
 
                         var tempDir = Directory.CreateDirectory(Path.GetTempPath() + Guid.NewGuid()).FullName;
+                        var tempDirSettings = new VoronPathSetting(tempDir);
 
-                        Restore(env, package.Entries, tempDir, toDispose, txw);
+                        Restore(env, package.Entries, tempDirSettings, toDispose, txw);
                     }
                 }
             }
@@ -331,12 +333,14 @@ namespace Voron.Impl.Backup
                     var toDispose = new List<IDisposable>();
 
                     var tempDir = Directory.CreateDirectory(Path.GetTempPath() + Guid.NewGuid()).FullName;
+                    var tempDirSettings = new VoronPathSetting(tempDir);
 
-                    Restore(env, entries, tempDir, toDispose, txw);
+                    Restore(env, entries, tempDirSettings, toDispose, txw);
                 }
             }
         }
-        private static void Restore(StorageEnvironment env, IEnumerable<ZipArchiveEntry> entries, string tempDir, List<IDisposable> toDispose,
+
+        private static void Restore(StorageEnvironment env, IEnumerable<ZipArchiveEntry> entries, VoronPathSetting tempDir, List<IDisposable> toDispose,
             LowLevelTransaction txw)
         {
             try
@@ -352,8 +356,8 @@ namespace Voron.Impl.Backup
                         case ".merged-journal":
                         case ".journal":
 
-                            var jounalFileName = Path.Combine(tempDir, entry.Name);
-                            using (var output = new FileStream(jounalFileName, FileMode.Create))
+                            var jounalFileName = tempDir.Combine(entry.Name);
+                            using (var output = new FileStream(jounalFileName.FullPath, FileMode.Create))
                             using (var input = entry.Open())
                             {
                                 output.Position = output.Length;
@@ -369,8 +373,7 @@ namespace Voron.Impl.Backup
                             }
 
                             var recoveryPager =
-                                env.Options.CreateTemporaryBufferPager(Path.Combine(tempDir,
-                                    StorageEnvironmentOptions.JournalRecoveryName(journalNumber)),
+                                env.Options.CreateTemporaryBufferPager(Path.Combine(tempDir.Combine(StorageEnvironmentOptions.JournalRecoveryName(journalNumber)).FullPath),
                                     env.Options.InitialFileSize ?? env.Options.InitialLogFileSize);
                             toDispose.Add(recoveryPager);
 
@@ -387,7 +390,7 @@ namespace Voron.Impl.Backup
                                     lastTxHeader = lastTxHeaderStackLocation;
                                 }
                             }
-                            
+
                             break;
 
                         default:
@@ -401,7 +404,7 @@ namespace Voron.Impl.Backup
                 env.Options.DataPager.Sync(0);
 
 
-                var root = Tree.Open(txw, null, Constants.RootTreeNameSlice, & lastTxHeader->Root);
+                var root = Tree.Open(txw, null, Constants.RootTreeNameSlice, &lastTxHeader->Root);
 
                 txw.UpdateRootsIfNeeded(root);
 
@@ -431,7 +434,7 @@ namespace Voron.Impl.Backup
 
                 try
                 {
-                    Directory.Delete(tempDir, true);
+                    Directory.Delete(tempDir.FullPath, true);
                 }
                 catch
                 {

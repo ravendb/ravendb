@@ -105,7 +105,7 @@ namespace SlowTests.Core.Indexing
 
                     Assert.Equal(2, results2.Count);
 
-                    Assert.Equal(2, results2["companies/1"].Length);
+                    Assert.Equal(2, results2["companies/1-A"].Length);
                     Assert.Equal("email1@email.com", results2["companies/1-A"][0].Email);
                     Assert.Equal("email2@email.com", results2["companies/1-A"][1].Email);
 
@@ -160,7 +160,7 @@ namespace SlowTests.Core.Indexing
 
                 using (var session = store.OpenSession())
                 {
-                    var result = session.Load<CompanyEmployeesTransformer.Result>("companies/1", typeof(CompanyEmployeesTransformer));
+                    var result = session.Load<CompanyEmployeesTransformer.Result>("companies/1-A", typeof(CompanyEmployeesTransformer));
 
                     Assert.Equal("Amazing", result.Name);
                     Assert.True(result.Employees.SequenceEqual(new[] { "John", "Bob" }));
@@ -331,7 +331,7 @@ namespace SlowTests.Core.Indexing
                     session.Store(new User()
                     {
                         Name = "Arek",
-                        AddressId = "addresses/1"
+                        AddressId = "addresses/1-A"
                     });
 
                     session.SaveChanges();

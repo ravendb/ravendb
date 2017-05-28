@@ -175,11 +175,8 @@
                             <i class="icon-rocket"></i><span>Test</span>
                         </button>
                         <div class="flex-separator"></div>
-                        <button class="btn btn-success btn-block text-center test-close" data-bind="click: test.applyTestScript">
-                            <i class="icon-check"></i><span>Use it</span>
-                        </button>
                         <button class="btn btn-default btn-block text-center test-close" data-bind="click: test.closeTestMode">
-                            <i class="icon-cancel"></i><span>Close</span>
+                            <i class="icon-check"></i><span>Done</span>
                         </button>
                     </div>
                 </div>
@@ -189,7 +186,7 @@
         </div>
     </div>
 </div>
-<div class="backdrop"></div>
+<div class="backdrop" data-bind="click: test.closeTestMode"></div>
 <div class="tooltip json-preview" style="opacity: 0">
     <pre><code></code></pre>
 </div>

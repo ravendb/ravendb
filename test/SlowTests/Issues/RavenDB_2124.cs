@@ -34,7 +34,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var person = session.Include<Person>(x => x.AddressId).Load<Person>("people/1");
+                    var person = session.Include<Person>(x => x.AddressId).Load<Person>("people/1-A");
 
                     Assert.NotNull(person);
                     Assert.Equal("Name1", person.Name);

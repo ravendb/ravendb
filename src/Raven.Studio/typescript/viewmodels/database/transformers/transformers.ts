@@ -71,7 +71,6 @@ class transformers extends viewModelBase {
     attached() {
         super.attached();
         this.updateHelpLink("OWRJLV");
-        ko.postbox.publish("SetRawJSONUrl", appUrl.forTransformersRawData(this.activeDatabase()));
     }
 
     private filterTransformers() {

@@ -16,7 +16,7 @@ namespace Raven.Server.Utils
 
         public static bool PrintVersionAndExit => ParseSwitchOption(_versionOption);
 
-        public static bool RunAsService => ParseSwitchOption(_runAsServiceOption);
+        public static bool Daemon => ParseSwitchOption(_daemonOption);
 
         public static bool RegisterService => ParseSwitchOption(_registerServiceOption);
 
@@ -44,7 +44,7 @@ namespace Raven.Server.Utils
 
         private static CommandOption _unregisterServiceOption;
 
-        private static CommandOption _runAsServiceOption;
+        private static CommandOption _daemonOption;
 
         private static CommandOption _serviceNameOption;
 
@@ -87,9 +87,9 @@ namespace Raven.Server.Utils
                 "--unregister-service",
                 "Unregisters Windows service and exits",
                 CommandOptionType.NoValue);
-            _runAsServiceOption = _app.Option(
-                "--run-as-service",
-                "Runs as service (available only for Linux). Windows users should use --register-service and services.msc for service management",
+            _daemonOption = _app.Option(
+                "-d | --daemon",
+                "Runs as daemon (available only for Linux). Windows users should use --register-service and services.msc for service management",
                 CommandOptionType.NoValue);
             _serviceNameOption = _app.Option(
                 "--service-name",
@@ -116,8 +116,14 @@ namespace Raven.Server.Utils
             if (ServiceName.Length > 256)
                 throw new CommandParsingException(_app, "Service name must have maximum length of 256 characters.");
 
-            if (PlatformDetails.RunningOnPosix == false && RunAsService)
-                throw new CommandParsingException(_app, "Switch \"--run-as-service\" is not supported on Windows. Use --register-service switch to register the service and services.msc for service management.");
+            if (PlatformDetails.RunningOnPosix == false && Daemon)
+                throw new CommandParsingException(_app, "Switch \"--daemon\" is not supported on Windows. Use --register-service switch to register the service and services.msc for service management.");
+
+            if (PlatformDetails.RunningOnPosix && RegisterService)
+                throw new CommandParsingException(_app, "Switch \"--register-service\" is not supported on Linux. Use --daemon switch to run as daemon.");
+
+            if (PlatformDetails.RunningOnPosix && UnregisterService)
+                throw new CommandParsingException(_app, "Switch \"--unregister-service\" is not supported on Linux. Use --daemon switch to run as daemon.");
         }
 
         private static bool ParseSwitchOption(CommandOption opt)

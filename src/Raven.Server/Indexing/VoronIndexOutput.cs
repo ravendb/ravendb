@@ -19,7 +19,7 @@ namespace Raven.Server.Indexing
         {
             _name = name;
             _tx = tx;
-            var fileTempPath = Path.Combine(options.TempPath, name + "_" + Guid.NewGuid());
+            var fileTempPath = options.TempPath.Combine(name + "_" + Guid.NewGuid()).FullPath;
             //TODO: Pass this flag
             //const FileOptions FILE_ATTRIBUTE_TEMPORARY = (FileOptions)256;
 

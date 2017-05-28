@@ -65,7 +65,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                     session.Store(new Order
                     {
-                        Id = "orders/1", // so we won't generate HiLo
+                        Id = "orders/1-A", // so we won't generate HiLo
                         Lines = new List<OrderLine>
                         {
                             new OrderLine{Product = "Milk", Quantity = 3},
@@ -84,13 +84,13 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                     Assert.Equal(5, stats.CountOfDocuments); // 3 docs and 2 HiLo 
 
-                    var user = session.Load<User>("users/1");
+                    var user = session.Load<User>("users/1-A");
                     Assert.NotNull(user);
 
-                    var address = session.Load<Address>("addresses/1");
+                    var address = session.Load<Address>("addresses/1-A");
                     Assert.NotNull(address);
 
-                    var order = session.Load<Order>("orders/1");
+                    var order = session.Load<Order>("orders/1-A");
                     Assert.NotNull(order);
                 }
 
@@ -100,7 +100,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 using (var session = src.OpenSession())
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = session.Load<User>("users/1-A");
 
                     user.Name = "James Doe";
 
@@ -115,7 +115,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                     Assert.Equal(5, stats.CountOfDocuments); // 3 docs and 2 HiLo 
 
-                    var user = session.Load<User>("users/1");
+                    var user = session.Load<User>("users/1-A");
                     Assert.Equal("James Doe", user.Name);
                 }
 
@@ -125,7 +125,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 using (var session = src.OpenSession())
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = session.Load<User>("users/1-A");
 
                     session.Delete(user);
 
@@ -140,7 +140,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                     Assert.Equal(4, stats.CountOfDocuments); // 2 docs and 2 HiLo 
 
-                    var user = session.Load<User>("users/1");
+                    var user = session.Load<User>("users/1-A");
                     Assert.Null(user);
                 }
             }
@@ -170,7 +170,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                     session.Store(new Order
                     {
-                        Id = "orders/1", // so we won't generate HiLo
+                        Id = "orders/1-A", // so we won't generate HiLo
                         Lines = new List<OrderLine>
                         {
                             new OrderLine{Product = "Milk", Quantity = 3},
@@ -189,17 +189,17 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                     Assert.Equal(3, stats.CountOfDocuments);
 
-                    var audit = session.Advanced.LoadStartingWith<AuditItem>("users/1/AuditItems/")[0];
+                    var audit = session.Advanced.LoadStartingWith<AuditItem>("users/1-A/AuditItems/")[0];
                     Assert.NotNull(audit);
-                    Assert.Equal("users/1", audit.DocumentId);
+                    Assert.Equal("users/1-A", audit.DocumentId);
 
-                    audit = session.Advanced.LoadStartingWith<AuditItem>("addresses/1/AuditItems/")[0];
+                    audit = session.Advanced.LoadStartingWith<AuditItem>("addresses/1-A/AuditItems/")[0];
                     Assert.NotNull(audit);
-                    Assert.Equal("addresses/1", audit.DocumentId);
+                    Assert.Equal("addresses/1-A", audit.DocumentId);
 
-                    audit = session.Advanced.LoadStartingWith<AuditItem>("orders/1/AuditItems/")[0];
+                    audit = session.Advanced.LoadStartingWith<AuditItem>("orders/1-A/AuditItems/")[0];
                     Assert.NotNull(audit);
-                    Assert.Equal("orders/1", audit.DocumentId);
+                    Assert.Equal("orders/1-A", audit.DocumentId);
                 }
 
                 // update
@@ -208,7 +208,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 using (var session = src.OpenSession())
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = session.Load<User>("users/1-A");
 
                     user.Name = "James Doe";
 
@@ -229,7 +229,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 using (var session = src.OpenSession())
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = session.Load<User>("users/1-A");
 
                     session.Delete(user);
 
@@ -274,7 +274,7 @@ if (this['@metadata']['@collection'] != 'Orders')
 
                     session.Store(new Order
                     {
-                        Id = "orders/1"
+                        Id = "orders/1-A"
                     });
 
                     session.SaveChanges();
@@ -288,10 +288,10 @@ if (this['@metadata']['@collection'] != 'Orders')
 
                     Assert.Equal(2, stats.CountOfDocuments);
 
-                    var smith = session.Load<Person>("people/1");
+                    var smith = session.Load<Person>("people/1-A");
                     Assert.NotNull(smith);
 
-                    var neo = session.Advanced.LoadStartingWith<Person>("users/1/people")[0];
+                    var neo = session.Advanced.LoadStartingWith<Person>("users/1-A/people")[0];
                     Assert.NotNull(neo);
                 }
 
@@ -301,7 +301,7 @@ if (this['@metadata']['@collection'] != 'Orders')
 
                 using (var session = src.OpenSession())
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = session.Load<User>("users/1-A");
 
                     user.Name = "James Doe";
 
@@ -322,7 +322,7 @@ if (this['@metadata']['@collection'] != 'Orders')
 
                 using (var session = src.OpenSession())
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = session.Load<User>("users/1-A");
 
                     session.Delete(user);
 

@@ -35,8 +35,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 using (var session = src.OpenSession())
                 {
-                    session.Delete("users/1");
-                    session.Delete("orders/1");
+                    session.Delete("users/1-A");
+                    session.Delete("orders/1-A");
 
                     session.SaveChanges();
                 }
@@ -84,8 +84,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 using (var session = src.OpenSession())
                 {
-                    session.Delete("users/1");
-                    session.Delete("orders/1");
+                    session.Delete("users/1-A");
+                    session.Delete("orders/1-A");
 
                     session.SaveChanges();
                 }

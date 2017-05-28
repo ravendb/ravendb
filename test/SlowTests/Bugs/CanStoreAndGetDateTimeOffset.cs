@@ -20,7 +20,7 @@ namespace SlowTests.Bugs
 
                 using (var session = store.OpenSession())
                 {
-                    var fooBar = session.Load<FooBar>("foobars/1");
+                    var fooBar = session.Load<FooBar>("foobars/1-A");
                     Assert.Equal(expected, fooBar.Foo);
                 }
             }

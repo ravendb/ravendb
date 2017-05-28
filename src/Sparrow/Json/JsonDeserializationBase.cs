@@ -89,6 +89,7 @@ namespace Sparrow.Json
                 type.GetTypeInfo().IsEnum ||
                 type == typeof(Guid) ||
                 type == typeof(DateTime) ||
+                type == typeof(TimeSpan) ||
                 type == typeof(BlittableJsonReaderArray) ||
                 type == typeof(BlittableJsonReaderObject))
             {

@@ -25,7 +25,7 @@ namespace SlowTests.Bugs
 
                 using (var session = store.OpenSession())
                 {
-                    var load = session.Load<Foo>("foos/1");
+                    var load = session.Load<Foo>("foos/1-A");
                     Assert.Equal(new DateTime(2010,1,1), load.CreatedAt);
                 }
             }

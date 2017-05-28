@@ -15,7 +15,6 @@
                         <button class="btn btn-primary" data-bind="click: save, enable: isSaveEnabled(), css: { 'btn-spinner': saveInProgress }"><i class="icon-save"></i><span>Save</span></button>
                         <a data-bind="attr: { href: indexesUrl }, visible: !isEditingExistingIndex()" class="btn btn-default"><i class="icon-cancel"></i> <span>Cancel</span></a>
                         <button class="btn btn-default" data-bind="click: cloneIndex, visible: isEditingExistingIndex"><i class="icon-clone"></i><span>Clone</span></button>
-                        <button class="btn btn-default btn-upcoming" disabled="disabled"><i class="icon-rocket"></i><span>Try</span></button>
                         <button class="btn btn-danger" data-bind="visible: isEditingExistingIndex, click: deleteIndex"><i class="icon-trash"></i> <span>Delete</span></button>
                     </div>
                     <div class="btn-group pull-right-sm">
@@ -530,11 +529,6 @@
                     <a title="Replaces current index when specified condition is met" href="#" 
                        data-bind="visible: !editedIndex().isSideBySideIndex() && !editedIndex().isTestIndex() && canSaveSideBySideIndex(), click: replaceIndex">
                         <i class="fa fa-reply fa-fw"></i> Side-by-side indexing
-                    </a>
-                </li>
-                <li>
-                    <a title="Create test index based on limited data set" href="#" data-bind="visible: !editedIndex().isTestIndex() && !editedIndex().isSideBySideIndex(), click: tryIndex">
-                        <i class="fa fa-eyedropper fa-fw"></i> Try index
                     </a>
                 </li>
                 <li>

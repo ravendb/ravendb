@@ -58,7 +58,7 @@ namespace SlowTests.Bugs.LiveProjections
                     s.Store(new Person
                                 {
                                     Name = "Oren",
-                                    Children = new string[] { "people/1" , "people/2"}
+                                    Children = new string[] { "people/1-A", "people/2-A" }
                                 });
                     s.SaveChanges();
 

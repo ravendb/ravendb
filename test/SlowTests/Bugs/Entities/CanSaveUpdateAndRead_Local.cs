@@ -19,13 +19,13 @@ namespace SlowTests.Bugs.Entities
 
                 using (var s = store.OpenSession())
                 {
-                    s.Load<Event>("events/1").Happy = false;
+                    s.Load<Event>("events/1-A").Happy = false;
                     s.SaveChanges();
                 }
 
                 using (var s = store.OpenSession())
                 {
-                    var e = s.Load<Event>("events/1");
+                    var e = s.Load<Event>("events/1-A");
                     var entityName = s.Advanced.GetMetadataFor(e)[Constants.Documents.Metadata.Collection];
                     Assert.Equal("Events", entityName);
                 }

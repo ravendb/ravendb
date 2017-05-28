@@ -17,8 +17,6 @@ class globalConfigReplications extends viewModelBase {
 
     settingsAccess = new settingsAccessAuthorizer();
 
-    isInCluster = shell.clusterMode;
-
     activated = ko.observable<boolean>(false);
 
     canActivate(args: any): JQueryPromise<any> {

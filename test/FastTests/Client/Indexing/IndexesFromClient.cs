@@ -559,8 +559,8 @@ namespace FastTests.Client.Indexing
 
                 using (var session = store.OpenSession())
                 {
-                    var user1 = session.Load<User>("users/1");
-                    var user2 = session.Load<User>("users/2");
+                    var user1 = session.Load<User>("users/1-A");
+                    var user2 = session.Load<User>("users/2-A");
 
                     Assert.Equal("Test", user1.LastName);
                     Assert.Equal("Test", user2.LastName);

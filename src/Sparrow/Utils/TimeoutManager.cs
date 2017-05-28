@@ -15,6 +15,7 @@ namespace Sparrow.Utils
     public static class TimeoutManager
     {
         private static readonly ConcurrentDictionary<uint, TimerTaskHolder> Values = new ConcurrentDictionary<uint, TimerTaskHolder>();
+        private static readonly Task InfiniteTask = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously).Task;
 
         private class TimerTaskHolder  : IDisposable
         {
@@ -64,19 +65,6 @@ namespace Sparrow.Utils
 
         private static async Task WaitForInternal(TimeSpan time, CancellationToken token)
         {
-            if (time == Timeout.InfiniteTimeSpan)
-            {
-                if (token == CancellationToken.None || token.CanBeCanceled == false)
-                {
-                    await InfiniteTask;
-                }
-                else
-                {
-                    await new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously).Task;
-                }
-                return;
-            }
-
             if (time.TotalMilliseconds < 0)
                 ThrowOutOfRange();
 
@@ -123,15 +111,20 @@ namespace Sparrow.Utils
             return value;
         }
 
-        private static readonly Task InfiniteTask = new TaskCompletionSource<object>().Task;
-
         public static async Task WaitFor(TimeSpan duration, CancellationToken token = default(CancellationToken))
         {
             if (duration == TimeSpan.Zero)
                 return;
 
             token.ThrowIfCancellationRequested();
-            var task = WaitForInternal(duration, token);
+
+            Task task;
+            // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
+            if (duration != Timeout.InfiniteTimeSpan)
+                task = WaitForInternal(duration, token);
+            else
+                task = InfiniteTask;
+            
             if (token == CancellationToken.None || token.CanBeCanceled == false)
             {
                 await task;
