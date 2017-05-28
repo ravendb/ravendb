@@ -135,7 +135,7 @@ namespace FastTests.Server.Documents.Patching
 
                     await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
                     {
-                        Script = "this.Age =  Math.floor(1.6);"
+                        Script = "this.Age = Math.floor(1.6);"
                     }));
 
                     dynamic doc = await commands.GetAsync("doc");

@@ -35,7 +35,7 @@ namespace Raven.Client.Server.Commands
             if (response == null)
                 return;
 
-            Result = JsonDeserializationClient.DatabaseClusterTopology(response);
+            Result = JsonDeserializationClient.Topology(response);
         }
 
         public override bool IsReadRequest => true;

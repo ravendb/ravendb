@@ -11,20 +11,50 @@ namespace Raven.Client.Http
     public class ClusterRequestExecutor : RequestExecutor
     {
 
-        protected ClusterRequestExecutor(string databaseName, string apiKey) : base(databaseName, apiKey)
+        protected ClusterRequestExecutor(string apiKey) : base(null, apiKey)
         {
         }
 
+        [Obsolete("Not supported", error: true)]
         public new static ClusterRequestExecutor Create(string[] urls, string databaseName, string apiKey)
         {
-            var executor = new ClusterRequestExecutor(databaseName, apiKey);
-            executor._firstTopologyUpdate = executor.FirstTopologyUpdate(urls);
-            return executor;
+            throw new NotSupportedException();
         }
 
-        public new static RequestExecutor CreateForSingleNode(string url, string databaseName, string apiKey)
+        [Obsolete("Not supported", error: true)]
+        public new static ClusterRequestExecutor CreateForSingleNode(string url, string databaseName, string apiKey)
         {
-            return Create(new[] { url }, databaseName, apiKey);
+            throw new NotSupportedException();
+        }
+
+        public static ClusterRequestExecutor CreateForSingleNode(string url, string apiKey)
+        {
+            {
+                var executor = new ClusterRequestExecutor(apiKey)
+                {
+                    _nodeSelector = new NodeSelector(new Topology
+                    {
+                        Etag = -1,
+                        Nodes = new List<ServerNode>
+                    {
+                        new ServerNode
+                        {
+                            Url = url
+                        }
+                    }
+                    }),
+                    TopologyEtag = -2,
+                    _withoutTopology = true
+                };
+                return executor;
+            }
+        }
+
+        public static ClusterRequestExecutor Create(string[] urls, string apiKey)
+        {
+            var executor = new ClusterRequestExecutor(apiKey);
+            executor._firstTopologyUpdate = executor.FirstTopologyUpdate(urls);
+            return executor;
         }
 
         protected override async Task FirstTopologyUpdate(string[] initialUrls)
@@ -35,24 +65,33 @@ namespace Raven.Client.Http
                 try
                 {
                     await GetClusterTopologyAsync(new ServerNode
-                        {
-                            Url = url,
-                            Database = _databaseName
-                        }, Timeout.Infinite)
+                    {
+                        Url = url,
+                        Database = _databaseName
+                    }, Timeout.Infinite)
                         .ConfigureAwait(false);
                     return;
                 }
                 catch (Exception e)
                 {
-                    list.Add(e);
+                    list.Add(new Exception($"{url} - {e.Message}", e));
                 }
             }
 
-            //TODO: cache for cluster topology
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                foreach (var url in initialUrls)
+                {
+                    if (TryLoadFromCache(url, context) == false)
+                        continue;
+
+                    return;
+                }
+            }
 
             _lastKnownUrls = initialUrls;
 
-            throw new AggregateException("Failed to retrieve clsuter topology from all known nodes", list);
+            throw new AggregateException("Failed to retrieve cluster topology from all known nodes", list);
         }
 
         public async Task<bool> GetClusterTopologyAsync(ServerNode node, int timeout)
@@ -73,6 +112,9 @@ namespace Raven.Client.Http
 
                     await ExecuteAsync(node, context, command, shouldRetry: false).ConfigureAwait(false);
 
+                    var serverHash = ServerHash.GetServerHash(node.Url);
+                    ClusterTopologyLocalCache.TrySavingTopologyToLocalCache(serverHash, command.Result, context);
+
                     var results = command.Result;
                     _nodeSelector = new NodeSelector(new Topology
                     {
@@ -91,6 +133,28 @@ namespace Raven.Client.Http
             {
                 _clusterTopologySemaphore.Release();
             }
+            return true;
+        }
+
+        private bool TryLoadFromCache(string url, JsonOperationContext context)
+        {
+            var serverHash = ServerHash.GetServerHash(url);
+            var cachedTopology = ClusterTopologyLocalCache.TryLoadClusterTopologyFromLocalCache(serverHash, context);
+
+            if (cachedTopology == null)
+                return false;
+
+            _nodeSelector = new NodeSelector(new Topology
+            {
+                Nodes = new List<ServerNode>
+                {
+                    new ServerNode
+                    {
+                        Url = cachedTopology.Topology.Members.First().Value,
+                        ClusterTag = cachedTopology.Topology.Members.First().Key
+                    }
+                }
+            });
             return true;
         }
 

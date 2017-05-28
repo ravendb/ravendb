@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Operations
         private RequestExecutor _requestExecutor;
         private ServerOperationExecutor _serverOperationExecutor;
 
-        private RequestExecutor RequestExecutor => _requestExecutor ?? (_requestExecutor = _store.GetRequestExecutor());
+        private RequestExecutor RequestExecutor => _requestExecutor ?? (_requestExecutor = _store.GetRequestExecutor(_databaseName));
 
         public AdminOperationExecutor(DocumentStoreBase store, string databaseName = null)
         {

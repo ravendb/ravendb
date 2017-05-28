@@ -883,12 +883,12 @@ namespace Raven.Server.ServerWide
                 var command = new PutRaftCommand(context, cmd);
 
                 if (_clusterRequestExecutor == null)
-                    _clusterRequestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, "Rachis.Server", clusterTopology.ApiKey);
+                    _clusterRequestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, clusterTopology.ApiKey);
                 else if (_clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false ||
                          _clusterRequestExecutor.ApiKey?.Equals(clusterTopology.ApiKey) == false)
                 {
                     _clusterRequestExecutor.Dispose();
-                    _clusterRequestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, "Rachis.Server", clusterTopology.ApiKey);
+                    _clusterRequestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, clusterTopology.ApiKey);
                 }
 
                 await _clusterRequestExecutor.ExecuteAsync(command, context, ServerShutdown);

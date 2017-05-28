@@ -78,7 +78,6 @@ namespace Raven.Server.Web.System
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
                         using (var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body))
                         {
-                            Console.WriteLine("error");
                             context.Write(writer,
                                 new DynamicJsonValue
                                 {
