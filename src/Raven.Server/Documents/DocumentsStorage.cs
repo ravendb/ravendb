@@ -285,8 +285,7 @@ namespace Raven.Server.Documents
             AssertTransaction(context);
 
             var tree = context.Transaction.InnerTransaction.ReadTree(ChangeVectorSlice);
-            var changeVector = ChangeVectorUtils.ReadChangeVectorFrom(tree);
-            return ChangeVectorUtils.UpdateChangeVectorWithNewEtag(Environment.DbId, Volatile.Read(ref _lastEtag), changeVector);
+            return ChangeVectorUtils.ReadChangeVectorFrom(tree);
         }
 
         public void SetDatabaseChangeVector(DocumentsOperationContext context, Dictionary<Guid, long> changeVector)

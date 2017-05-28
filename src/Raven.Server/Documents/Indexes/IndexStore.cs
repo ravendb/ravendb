@@ -343,7 +343,7 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_initialized)
                 throw new InvalidOperationException($"{nameof(IndexStore)} was already initialized.");
-
+        //    HandleDatabaseRecordChange();
             lock (_locker)
             {
                 if (_initialized)
@@ -352,9 +352,9 @@ namespace Raven.Server.Documents.Indexes
                 InitializePath(_documentDatabase.Configuration.Indexing.StoragePath);
 
                 _initialized = true;
-
-                return Task.Factory.StartNew(() => OpenIndexes(record), TaskCreationOptions.LongRunning);
             }
+
+            return Task.Factory.StartNew(HandleDatabaseRecordChange, TaskCreationOptions.LongRunning);
         }
 
         public Index GetIndex(long etag)

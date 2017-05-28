@@ -937,10 +937,10 @@ namespace Raven.Server.Documents.Replication
                 {
                     _changeVector[i] = ((ChangeVectorEntry*)(buffer + position))[i];
 
-                    if (maxReceivedChangeVectorByDatabase.TryGetValue(_changeVector[i].DbId, out long etag) == false ||
-    etag > _changeVector[i].Etag)
+                    if (maxReceivedChangeVectorByDatabase.TryGetValue(_changeVector[i].DbId, out long etag) == false 
+                        || etag < _changeVector[i].Etag)
                     {
-                        maxReceivedChangeVectorByDatabase[_changeVector[i].DbId] = _changeVector[i].Etag;
+                            maxReceivedChangeVectorByDatabase[_changeVector[i].DbId] = _changeVector[i].Etag;
                     }
                 }
             }

@@ -65,13 +65,6 @@ namespace Raven.Server.Web.System
                 var task = GetReplicationTaskInfo(clusterTopology, tag, watcher);
                 ongoingTasksList.Add(task);
             }
-
-            foreach (var promotable in dbTopology.Promotables)
-            {
-                var tag = dbTopology.WhoseTaskIsIt(promotable);
-                var task = GetReplicationTaskInfo(clusterTopology, tag, promotable);
-                ongoingTasksList.Add(task);
-            }
         }
 
         private static OngoingTaskReplication GetReplicationTaskInfo(ClusterTopology clusterTopology, string tag, ReplicationNode replicationNode)

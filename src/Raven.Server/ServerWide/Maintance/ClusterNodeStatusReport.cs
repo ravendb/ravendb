@@ -35,7 +35,7 @@ namespace Raven.Server.ServerWide.Maintance
         public long NumberOfConflicts;
 
         public DatabaseStatus Status;
-        public string FailureToLoad;
+        public string Error;
 
         public DynamicJsonValue ToJson()
         {
@@ -48,7 +48,7 @@ namespace Raven.Server.ServerWide.Maintance
                 [nameof(LastTombstoneEtag)] = LastTombstoneEtag,
                 [nameof(NumberOfConflicts)] = NumberOfConflicts,
                 [nameof(LastDocumentChangeVector)] = LastDocumentChangeVector?.ToJson(),
-                [nameof(FailureToLoad)] = FailureToLoad,
+                [nameof(Error)] = Error,
             };
             var indexStats = new DynamicJsonValue();
 
@@ -67,7 +67,7 @@ namespace Raven.Server.ServerWide.Maintance
         }
     }
 
-    public class ClusterNodeStatusReport
+    public class ClusterNodeStatusReport : IDynamicJson
     {
         // public string ClusterTag { get; set; }
 
@@ -96,6 +96,18 @@ namespace Raven.Server.ServerWide.Maintance
             LastError = lastError;
             LastUpdateDateTime = lastUpdateDateTime;
             LastSuccessfulUpdateDateTime = lastSuccessfulUpdateDateTime;
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(LastReport)] = DynamicJsonValue.Convert(LastReport),
+                [nameof(LastReportStatus)] = LastReportStatus,
+                [nameof(LastError)] = LastError,
+                [nameof(LastUpdateDateTime)] = LastUpdateDateTime,
+                [nameof(LastSuccessfulUpdateDateTime)] = LastSuccessfulUpdateDateTime,
+            };
         }
     }
 }

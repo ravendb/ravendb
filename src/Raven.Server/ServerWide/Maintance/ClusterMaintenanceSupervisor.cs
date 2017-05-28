@@ -107,7 +107,7 @@ namespace Raven.Server.ServerWide.Maintance
 
             public string ClusterTag { get; }
 
-            private readonly TcpClient _tcpClient;
+            private TcpClient _tcpClient;
 
             public ClusterNodeStatusReport ReceivedReport = new ClusterNodeStatusReport(
                 new Dictionary<string, DatabaseStatusReport>(), ClusterNodeStatusReport.ReportStatus.WaitingForResponse,
@@ -154,7 +154,13 @@ namespace Raven.Server.ServerWide.Maintance
                         if (needToWait)
                         {
                             needToWait = false; // avoid tight loop if there was timeout / error
-                            await TimeoutManager.WaitFor(onErrorDelayTime, _token).ConfigureAwait(false);
+                            await TimeoutManager.WaitFor(onErrorDelayTime, _token);
+
+                            if (_tcpClient.Connected == false)
+                            {
+                                _tcpClient?.Dispose();
+                                _tcpClient = new TcpClient();
+                            }
                         }
                         using (var connection = await ConnectToClientNodeAsync(_tcpConnection))
                         {
@@ -213,7 +219,7 @@ namespace Raven.Server.ServerWide.Maintance
                             e,
                             DateTime.UtcNow,
                             _lastSuccessfulUpdateDateTime);
-                        needToWait = true;                      
+                        needToWait = true;
                     }
                 }
             }

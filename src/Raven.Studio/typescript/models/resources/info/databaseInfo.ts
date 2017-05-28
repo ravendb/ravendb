@@ -204,9 +204,8 @@ class databaseInfo {
         const topologyDto = dto.NodesTopology;
         const members = this.mapNodes("Member", topologyDto.Members);
         const promotables = this.mapNodes("Promotable", topologyDto.Promotables);
-        const watchers = this.mapNodes("Watcher", topologyDto.Watchers);
 
-        this.nodes(_.concat<clusterNode>(members, promotables, watchers));
+        this.nodes(_.concat<clusterNode>(members, promotables));
         //TODO: consider in place update? of nodes?
     }
 

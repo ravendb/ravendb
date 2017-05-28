@@ -455,7 +455,8 @@ namespace Raven.Server
                 {
                     
                     var maintenanceHeader = JsonDeserializationRachis<ClusterMaintenanceSupervisor.ClusterMaintenanceConnectionHeader>.Deserialize(headerJson);
-                    if (_clusterMaintainanceWorker?.CurrentTerm >= maintenanceHeader.Term)
+                    
+                    if (_clusterMaintainanceWorker?.CurrentTerm > maintenanceHeader.Term)
                     {
                         if (_tcpLogger.IsInfoEnabled)
                         {
