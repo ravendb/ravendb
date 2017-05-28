@@ -281,7 +281,7 @@ namespace Tests.Infrastructure
             return leader;
         }
 
-        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null)
+        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false)
         {
             leaderIndex = leaderIndex ?? _random.Next(0, numberOfNodes);
             RavenServer leader = null;
@@ -289,10 +289,20 @@ namespace Tests.Infrastructure
             for (var i = 0; i < numberOfNodes; i++)
             {
                 var serverUrl = UseFiddler($"http://127.0.0.1:{GetPort()}");
-                var server = GetNewServer(new Dictionary<string, string>()
-                {                    
-                    {"Raven/ServerUrl", serverUrl}
-                },runInMemory:shouldRunInMemory);
+
+                var customSettings = new Dictionary<string, string>{{"Raven/ServerUrl", serverUrl}};
+
+                if (useSsl)
+                {
+                    var certificatePath = GenerateAndSaveSelfSignedCertificate();
+                    serverUrl = serverUrl.Replace("http:", "https:");
+
+                    customSettings["Raven/Certificate/Path"] = certificatePath;
+                    customSettings["Raven/ServerUrl"] = serverUrl;
+                }
+
+                var server = GetNewServer(customSettings ,runInMemory:shouldRunInMemory);
+
                 serversToPorts.Add(server, serverUrl);
                 Servers.Add(server);
                 if (i == leaderIndex)

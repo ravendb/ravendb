@@ -550,12 +550,12 @@ namespace Raven.Server.Rachis
         /// This method is expected to run for a long time (lifetime of the connection)
         /// and can never throw. We expect this to be on a separate thread
         /// </summary>
-        public void AcceptNewConnection(TcpClient tcpClient, Action<RachisHello> sayHello = null)
+        public void AcceptNewConnection(Stream stream, Action<RachisHello> sayHello = null)
         {
             RemoteConnection remoteConnection = null;
             try
             {
-                remoteConnection = new RemoteConnection(_tag, tcpClient.GetStream());
+                remoteConnection = new RemoteConnection(_tag, stream);
                 try
                 {
                     RachisHello initialMessage;
@@ -613,15 +613,19 @@ namespace Raven.Server.Rachis
                                                                   initialMessage.InitialMessageType +
                                                                   ", no idea how to handle it");
                     }
-
-                    //initialMessage.AppendEntries
-                    // validate that can handle this
-                    // start listening thread
                 }
                 catch (Exception e)
                 {
-                    using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                        remoteConnection.Send(context, e);
+                    try
+                    {
+                        using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                            remoteConnection.Send(context, e);
+                    }
+                    catch 
+                    {
+                        // errors here do not matter
+                    }
+                    throw;
                 }
             }
             catch (Exception e)
@@ -641,7 +645,7 @@ namespace Raven.Server.Rachis
 
                 try
                 {
-                    tcpClient?.Dispose();
+                    stream?.Dispose();
                 }
                 catch (Exception)
                 {

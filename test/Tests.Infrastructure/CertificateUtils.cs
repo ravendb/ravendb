@@ -13,11 +13,10 @@ using Org.BouncyCastle.X509;
 using BigInteger = Org.BouncyCastle.Math.BigInteger;
 using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
-namespace Raven.Server
+namespace Tests.Infrastructure
 {
     public class CertificateUtils
     {
-
         public static X509Certificate2 CreateSelfSignedCertificate(string subjectName, string issuerName)
         {
             AsymmetricKeyParameter caPrivateKey;

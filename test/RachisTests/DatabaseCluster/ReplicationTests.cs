@@ -18,13 +18,16 @@ namespace RachisTests.DatabaseCluster
 {
     public class ReplicationTests : ReplicationTestsBase
     {
-        [Fact]
-        public async Task EnsureDocumentsReplication()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task EnsureDocumentsReplication(bool useSsl)
         {
             NoTimeouts();
             var clusterSize = 5;
             var databaseName = "ReplicationTestDB";
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize,false);
+
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: useSsl);
             CreateDatabaseResult databaseResult;
             using (var store = new DocumentStore()
             {
@@ -65,12 +68,14 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
-        public async Task EnsureReplicationToWatchers()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task EnsureReplicationToWatchers(bool useSsl)
         {
             var clusterSize = 3;
             var databaseName = "ReplicationTestDB";
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize);
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize, useSsl:useSsl);
             var watchers = new List<DatabaseWatcher>();
 
             using (var store = new DocumentStore()
@@ -132,12 +137,14 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
-        public async Task DoNotReplicateBack()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task DoNotReplicateBack(bool useSsl)
         {
             var clusterSize = 5;
             var databaseName = "ReplicationTestDB";
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize);
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize, useSsl:useSsl);
             using (var store = new DocumentStore()
             {
                 Url = leader.WebUrls[0],
@@ -179,12 +186,14 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
-        public async Task AddGlobalChangeVectorToNewDocument()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task AddGlobalChangeVectorToNewDocument(bool useSsl)
         {
             var clusterSize = 3;
             var databaseName = "ReplicationTestDB";
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize, true, 0);
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize, true, 0, useSsl: useSsl);
             var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
             using (var store = new DocumentStore()
             {

@@ -156,7 +156,7 @@ namespace Tests.Infrastructure
                 {
                     break;
                 }
-                rachis.AcceptNewConnection(tcpClient, hello =>
+                rachis.AcceptNewConnection(tcpClient.GetStream(), hello =>
                 {
                     lock (this)
                     {
