@@ -116,7 +116,10 @@ namespace Sparrow.Utils
             if (duration == TimeSpan.Zero)
                 return;
 
-            token.ThrowIfCancellationRequested();
+            if (token.IsCancellationRequested)
+            {
+                return;
+            }
 
             Task task;
             // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression

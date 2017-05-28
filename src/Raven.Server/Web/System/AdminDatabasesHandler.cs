@@ -254,7 +254,7 @@ namespace Raven.Server.Web.System
                 {
                     Database = name,
                     NodeTag = selectedNode,
-                    Url = url
+                    Url = url,
                 });
                 nodesAddedTo.Add(url);
             }
