@@ -255,8 +255,7 @@ namespace Raven.Server.ServerWide
                         "OS swapping on at least one HDD drive while there is at least one SSD drive on this system. " +
                         "This can cause a slowdown, consider moving swap-partition/pagefile to SSD",
                         AlertType.SwappingHddInsteadOfSsd,
-                        NotificationSeverity.Warning,
-                        "Swap Storage Type Warning");
+                        NotificationSeverity.Warning);
                     if (NotificationCenter.IsInitialized)
                     {
                         NotificationCenter.Add(alert);
