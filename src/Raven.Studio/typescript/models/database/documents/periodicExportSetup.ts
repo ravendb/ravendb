@@ -209,7 +209,7 @@ class periodicExportSetup {
         return "";
     }
 
-    fromDto(dto: Raven.Client.Server.PeriodicExport.PeriodicBackupConfiguration) {
+    /*fromDto(dto: Raven.Client.Server.PeriodicExport.PeriodicBackupConfiguration) {
         if (dto) {
             this.awsRegionName(dto.AwsRegionName);
 
@@ -227,9 +227,9 @@ class periodicExportSetup {
 
             this.active(dto.Active);
         }
-    }
+    }*/
 
-    toDto(): Raven.Client.Server.PeriodicExport.PeriodicBackupConfiguration {
+    /*toDto(): Raven.Client.Server.PeriodicExport.PeriodicBackupConfiguration {
         return {
             Active: this.active(),
             GlacierVaultName: this.prepareMainValue(this.GLACIER_VAULT),
@@ -242,7 +242,7 @@ class periodicExportSetup {
             IntervalMilliseconds: this.convertToMilliseconds(this.incrementalBackupInterval(), this.incrementalBackupIntervalUnit()),
             FullExportIntervalMilliseconds: this.convertToMilliseconds(this.fullBackupInterval(), this.fullBackupIntervalUnit())
         };
-    }
+    }*/
 
     private prepareMainValue(expectedType: string): string {
         return ((this.type() === expectedType && this.remoteUploadEnabled()) ? this.mainValue() : null);
@@ -319,7 +319,7 @@ class periodicExportSetup {
         this.azureStorageKeyDecryptionFailed(false);
     }
 
-    private setupTypeAndMainValue(dto: Raven.Client.Server.PeriodicExport.PeriodicBackupConfiguration) {
+    /*private setupTypeAndMainValue(dto: Raven.Client.Server.PeriodicExport.PeriodicBackupConfiguration) {
         var count = 0;
         if (dto.LocalFolderName) {
             this.localFolderName(dto.LocalFolderName);
@@ -344,7 +344,7 @@ class periodicExportSetup {
             this.remoteUploadEnabled(true);
         }
         this.unsupported(count > 1);
-    }
+    }*/
 
     private prepareBackupInterval(milliseconds: number):[number, string] {
         if (milliseconds) {

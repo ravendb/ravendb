@@ -272,18 +272,8 @@ namespace Raven.Server.Web.System
         
         private static BackupInfo GetBackupInfo(DocumentDatabase db)
         {
-            var periodicExportRunner = db?.BundleLoader.PeriodicBackupRunner;
-
-            if (periodicExportRunner == null)
-                return null;
-
-            return new BackupInfo
-            {
-                IncrementalBackupInterval = TimeSpan.MinValue, //TODO: periodicExportRunner.IncrementalInterval,
-                FullBackupInterval = TimeSpan.MinValue, //TODO: periodicExportRunner.FullExportInterval,
-                LastIncrementalBackup = DateTime.Now, //TODO: periodicExportRunner.ExportTime,
-                LastFullBackup = DateTime.Now //TODO: periodicExportRunner.FullExportTime
-            };
+            var periodicBackupRunner = db?.BundleLoader?.PeriodicBackupRunner;
+            return periodicBackupRunner?.GetBackupInfo();
         }
 
         private TimeSpan GetUptime(DocumentDatabase db)

@@ -101,18 +101,7 @@ namespace Raven.Server.Documents
 
         public DynamicJsonValue GetBackupInfo()
         {
-            if (PeriodicBackupRunner == null)
-            {
-                return null;
-            }
-
-            return new DynamicJsonValue
-            {
-                [nameof(BackupInfo.IncrementalBackupInterval)] = DateTime.Now,//TODO: PeriodicBackupRunner.IncrementalInterval,
-                [nameof(BackupInfo.FullBackupInterval)] = DateTime.Now,//TODO: PeriodicBackupRunner.FullExportInterval,
-                [nameof(BackupInfo.LastIncrementalBackup)] = DateTime.Now,//TODO: PeriodicBackupRunner.ExportTime,
-                [nameof(BackupInfo.LastFullBackup)] = DateTime.Now//TODO: PeriodicBackupRunner.FullExportTime
-            };
+            return PeriodicBackupRunner?.GetBackupInfo().ToJson();
         }
     }
 }

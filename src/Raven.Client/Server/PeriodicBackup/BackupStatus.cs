@@ -17,7 +17,7 @@ namespace Raven.Client.Server.PeriodicBackup
 
         public Exception Exception { get; set; }
 
-        public IDisposable Update(bool isFullBackup, Reference<Exception> exception)
+        public IDisposable UpdateStats(bool isFullBackup, Reference<Exception> exception)
         {
             var now = SystemTime.UtcNow;
             var sw = Stopwatch.StartNew();

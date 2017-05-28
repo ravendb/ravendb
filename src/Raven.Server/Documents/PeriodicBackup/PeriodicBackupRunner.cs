@@ -25,6 +25,7 @@ using System.Linq;
 using NCrontab.Advanced;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server;
+using Raven.Client.Server.Operations;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Sparrow.Collections;
@@ -67,6 +68,13 @@ namespace Raven.Server.Documents.PeriodicBackup
             Directory.CreateDirectory(_tempBackupPath.FullPath);
         }
 
+        private class NextBackup
+        {
+            public TimeSpan TimeSpan { get; set; }
+
+            public bool IsFull { get; set; }
+        }
+
         private Timer GetTimer(
             PeriodicBackupConfiguration configuration,
             PeriodicBackupStatus backupStatus = null)
@@ -74,33 +82,19 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (backupStatus == null)
                 backupStatus = new PeriodicBackupStatus();
 
-            var now = SystemTime.UtcNow;
-            var lastFullBackup = backupStatus.LastFullBackup ?? now;
-            var lastIncrementalBackup = backupStatus.LastIncrementalBackup ?? backupStatus.LastFullBackup ?? now;
-            var nextFullBackup = GetNextBackupOccurrence(configuration.FullBackupFrequency, lastFullBackup, configuration);
-            var nextIncrementalBackup = GetNextBackupOccurrence(configuration.IncrementalBackupFrequency, lastIncrementalBackup, configuration);
-
-            if (nextFullBackup == null && nextIncrementalBackup == null)
+            var nextBackup = GetNextBackupDetails(configuration, backupStatus);
+            if (nextBackup == null)
                 return null;
 
-            Debug.Assert(configuration.TaskId != 0);
-
-            var nextBackupDateTime = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup);
-            var nextBackupTimeSpan =
-                (nextBackupDateTime - now).Ticks <= 0 ?
-                    TimeSpan.Zero :
-                    nextBackupDateTime - now;
-
-            var isFullBackup = IsFullBackup(backupStatus, configuration, nextFullBackup, nextIncrementalBackup);
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Next {(isFullBackup ? "full" : "incremental")} " +
-                             $"backup is in {nextBackupTimeSpan.TotalMinutes} minutes");
+                _logger.Info($"Next {(nextBackup.IsFull ? "full" : "incremental")} " +
+                             $"backup is in {nextBackup.TimeSpan.TotalMinutes} minutes");
 
             var backupTaskDetails = new BackupTaskDetails
             {
-                IsFullBackup = isFullBackup,
+                IsFullBackup = nextBackup.IsFull,
                 TaskId = configuration.TaskId,
-                NextBackup = nextBackupTimeSpan
+                NextBackup = nextBackup.TimeSpan
             };
 
             var isValidTimeSpanForTimer = IsValidTimeSpanForTimer(backupTaskDetails.NextBackup);
@@ -109,6 +103,34 @@ namespace Raven.Server.Documents.PeriodicBackup
                 new Timer(LongPeriodTimerCallback, backupTaskDetails, MaxTimerTimeout, Timeout.InfiniteTimeSpan);
 
             return timer;
+        }
+
+        private NextBackup GetNextBackupDetails(
+            PeriodicBackupConfiguration configuration, 
+            PeriodicBackupStatus backupStatus,
+            bool skipErrorLog = false)
+        {
+            var now = SystemTime.UtcNow;
+            var lastFullBackup = backupStatus.LastFullBackup ?? now;
+            var lastIncrementalBackup = backupStatus.LastIncrementalBackup ?? backupStatus.LastFullBackup ?? now;
+            var nextFullBackup = GetNextBackupOccurrence(configuration.FullBackupFrequency, 
+                lastFullBackup, configuration, skipErrorLog: skipErrorLog);
+            var nextIncrementalBackup = GetNextBackupOccurrence(configuration.IncrementalBackupFrequency, 
+                lastIncrementalBackup, configuration, skipErrorLog: skipErrorLog);
+
+            if (nextFullBackup == null && nextIncrementalBackup == null)
+                return null;
+
+            Debug.Assert(configuration.TaskId != 0);
+
+            var nextBackupDateTime = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup);
+            var nextBackupTimeSpan = (nextBackupDateTime - now).Ticks <= 0 ? TimeSpan.Zero : nextBackupDateTime - now;
+            var isFullBackup = IsFullBackup(backupStatus, configuration, nextFullBackup, nextIncrementalBackup);
+            return new NextBackup
+            {
+                TimeSpan = nextBackupTimeSpan,
+                IsFull = isFullBackup
+            };
         }
 
         private bool IsFullBackup(PeriodicBackupStatus backupStatus, 
@@ -181,17 +203,23 @@ namespace Raven.Server.Documents.PeriodicBackup
                         _logger.Info($"Creating {(isFullBackup ? fullBackupText : "an incremental backup")}");
                     }
 
-                    if (isFullBackup == false)
+                    switch (isFullBackup)
                     {
-                        var currentLastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
-                        // no-op if nothing has changed
-                        if (currentLastEtag == status.LastEtag)
-                        {
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info("Skipping incremental backup because " +
-                                             $"last etag ({currentLastEtag}) hasn't changed since last backup");
-                            return;
-                        }
+                        case true:
+                            status.LastFullBackup = SystemTime.UtcNow;
+                            break;
+                        default:
+                            status.LastIncrementalBackup = SystemTime.UtcNow;
+                            var currentLastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
+                            // no-op if nothing has changed
+                            if (currentLastEtag == status.LastEtag)
+                            {
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info("Skipping incremental backup because " +
+                                                 $"last etag ({currentLastEtag}) hasn't changed since last backup");
+                                return;
+                            }
+                            break;
                     }
 
                     var startDocumentEtag = isFullBackup == false ? status.LastEtag : null;
@@ -315,7 +343,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             long lastEtag;
             var exception = new Reference<Exception>();
-            using (status.LocalBackup.Update(isFullBackup, exception))
+            using (status.LocalBackup.UpdateStats(isFullBackup, exception))
             {
                 try
                 {
@@ -427,7 +455,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         backupStatus.UploadToS3 = new UploadToS3();
 
                     var exception = new Reference<Exception>();
-                    using (backupStatus.UploadToS3.Update(isFullBackup, exception))
+                    using (backupStatus.UploadToS3.UpdateStats(isFullBackup, exception))
                     {
                         try
                         {
@@ -450,7 +478,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         backupStatus.UploadToGlacier = new UploadToGlacier();
 
                     var exception = new Reference<Exception>();
-                    using (backupStatus.UploadToGlacier.Update(isFullBackup, exception))
+                    using (backupStatus.UploadToGlacier.UpdateStats(isFullBackup, exception))
                     {
                         try
                         {
@@ -473,7 +501,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         backupStatus.UploadToAzure = new UploadToAzure();
 
                     var exception = new Reference<Exception>();
-                    using (backupStatus.UploadToAzure.Update(isFullBackup, exception))
+                    using (backupStatus.UploadToAzure.UpdateStats(isFullBackup, exception))
                     {
                         try
                         {
@@ -575,7 +603,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             return nextBackup;
         }
 
-        private DateTime? GetNextBackupOccurrence(string backupFrequency, DateTime now, PeriodicBackupConfiguration configuration)
+        private DateTime? GetNextBackupOccurrence(string backupFrequency, 
+            DateTime now, PeriodicBackupConfiguration configuration, bool skipErrorLog)
         {
             if (backupFrequency == null)
                 return null;
@@ -587,16 +616,22 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
             catch (Exception e)
             {
-                var message = "Couldn't parse periodic backup " +
-                              $"frequency {backupFrequency}, task id: {configuration.TaskId}";
-                if (string.IsNullOrWhiteSpace(configuration.Name) == false)
-                    message += $", backup name: {configuration.Name}";
+                if (skipErrorLog == false)
+                {
+                    var message = "Couldn't parse periodic backup " +
+                                  $"frequency {backupFrequency}, task id: {configuration.TaskId}";
+                    if (string.IsNullOrWhiteSpace(configuration.Name) == false)
+                        message += $", backup name: {configuration.Name}";
 
-                _database.NotificationCenter.Add(AlertRaised.Create("Backup frequency parsing error",
-                    message,
-                    AlertType.PeriodicBackup,
-                    NotificationSeverity.Error,
-                    details: new ExceptionDetails(e)));
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info(message);
+
+                    _database.NotificationCenter.Add(AlertRaised.Create("Backup frequency parsing error",
+                        message,
+                        AlertType.PeriodicBackup,
+                        NotificationSeverity.Error,
+                        details: new ExceptionDetails(e)));
+                }
 
                 return null;
             }
@@ -939,6 +974,41 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             return false;
+        }
+
+        public BackupInfo GetBackupInfo()
+        {
+            if (_periodicBackups.Count == 0)
+                return null;
+
+            var allBackupTicks = new List<long>();
+            var allNextBackupTimeSpanSeconds = new List<int>();
+            foreach (var periodicBackup in _periodicBackups)
+            {
+                var configuration = periodicBackup.Value.Configuration;
+                var backupStatus = GetBackupStatus(configuration.TaskId);
+                if (backupStatus == null)
+                    continue;
+
+                if (backupStatus.LastFullBackup != null)
+                    allBackupTicks.Add(backupStatus.LastFullBackup.Value.Ticks);
+
+                if (backupStatus.LastIncrementalBackup != null)
+                    allBackupTicks.Add(backupStatus.LastIncrementalBackup.Value.Ticks);
+
+                var nextBackup = GetNextBackupDetails(configuration, backupStatus, skipErrorLog: true);
+                if (nextBackup != null)
+                {
+                    allNextBackupTimeSpanSeconds.Add(nextBackup.TimeSpan.Seconds);
+                }
+            }
+
+            return new BackupInfo
+            {
+                LastBackup = allBackupTicks.Count == 0 ? (DateTime?)null : new DateTime(allBackupTicks.Max()),
+                IntervalUntilNextBackupInSeconds = allNextBackupTimeSpanSeconds.Count == 0 ?
+                    0 : allNextBackupTimeSpanSeconds.Min()
+            };
         }
     }
 }

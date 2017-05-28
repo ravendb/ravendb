@@ -679,7 +679,7 @@ namespace Raven.Server.ServerWide
                             resourceTask != null &&
                             resourceTask.Status == TaskStatus.RanToCompletion &&
                             resourceTask.Result.BundleLoader != null &&
-                            resourceTask.Result.BundleLoader.PeriodicBackupRunner.HasBackupsInProgress())
+                            resourceTask.Result.BundleLoader.PeriodicBackupRunner.HasRunningBackups())
                         {
                             // there are running backups for this database
                             continue;

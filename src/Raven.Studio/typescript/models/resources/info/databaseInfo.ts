@@ -75,33 +75,12 @@ class databaseInfo {
         return { qualifier: input.substr(0, 2), name: input.substr(3) };
     }
 
-    static findLastBackupDate(dto: Raven.Client.Server.Operations.BackupInfo) {
-        const lastFull = dto.LastFullBackup;
-        const lastIncrementalBackup = dto.LastIncrementalBackup;
-
-        if (lastFull && lastIncrementalBackup) {
-            return lastFull > lastIncrementalBackup ? lastFull : lastIncrementalBackup;
-        } else if (lastFull) {
-            return lastFull;
-        }
-        return lastIncrementalBackup;
-    }
-
-    private computeBackupStatus(dto: Raven.Client.Server.Operations.BackupInfo) {
-        if (!dto.LastFullBackup && !dto.LastIncrementalBackup) {
+    private computeBackupStatus(dto: Raven.Client.Server.Operations.BackupInfo, lastBackup: Date) {
+        if (!dto.LastBackup) {
             return "text-danger";
         }
 
-        const fullBackupInterval = moment.duration(dto.FullBackupInterval).asSeconds();
-        const incrementalBackupInterval = moment.duration(dto.IncrementalBackupInterval).asSeconds();
-
-        const interval = (incrementalBackupInterval === 0) ? fullBackupInterval : Math.min(incrementalBackupInterval, fullBackupInterval);
-
-        const lastBackup = new Date(databaseInfo.findLastBackupDate(dto));
-
-        const secondsSinceLastBackup = moment.duration(moment().diff(moment(lastBackup))).asSeconds();
-
-        return (interval * 1.2 < secondsSinceLastBackup) ? "text-warning" : "text-success";
+        return dto.IntervalUntilNextBackupInSeconds === 0 ? "text-warning" : "text-success";
     }
 
     private initializeObservables() {
@@ -185,9 +164,10 @@ class databaseInfo {
         this.uptime(generalUtils.timeSpanAsAgo(dto.UpTime, false));
         this.backupEnabled(!!dto.BackupInfo);
         if (this.backupEnabled()) {
-            const lastBackup = databaseInfo.findLastBackupDate(dto.BackupInfo);
-            this.lastFullOrIncrementalBackup(moment(new Date(lastBackup)).fromNow());
-            this.backupStatus(this.computeBackupStatus(dto.BackupInfo));
+            const lastBackup = dto.BackupInfo.LastBackup;
+            const lastBackupDate = new Date(lastBackup);
+            this.lastFullOrIncrementalBackup(moment(lastBackupDate).fromNow());
+            this.backupStatus(this.computeBackupStatus(dto.BackupInfo, lastBackupDate));
         }
 
         this.rejectClients(dto.RejectClients);

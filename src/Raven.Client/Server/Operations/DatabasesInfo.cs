@@ -14,27 +14,15 @@ namespace Raven.Client.Server.Operations
 
     public class BackupInfo : IDynamicJson
     {
-        public DateTime LastIncrementalBackup { get; set; }
-        public DateTime LastFullBackup { get; set; }
-        public TimeSpan IncrementalBackupInterval { get; set; }
-        public TimeSpan FullBackupInterval { get; set; }
-
-        public BackupInfo()
-        {
-            LastIncrementalBackup = new DateTime();
-            LastFullBackup = new DateTime();
-            IncrementalBackupInterval = new TimeSpan();
-            FullBackupInterval = new TimeSpan();
-        }
+        public DateTime? LastBackup { get; set; }
+        public int IntervalUntilNextBackupInSeconds { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(LastIncrementalBackup)] = LastIncrementalBackup,
-                [nameof(LastFullBackup)] = LastFullBackup,
-                [nameof(IncrementalBackupInterval)] = IncrementalBackupInterval,
-                [nameof(FullBackupInterval)] = FullBackupInterval,
+                [nameof(LastBackup)] = LastBackup,
+                [nameof(IntervalUntilNextBackupInSeconds)] = IntervalUntilNextBackupInSeconds
             };
         }
     }
