@@ -6,6 +6,7 @@ using FastTests.Server.NotificationCenter;
 using Orders;
 using Raven.Client.Documents;
 using SlowTests.Smuggler;
+using FastTests.Client.Subscriptions;
 
 namespace Tryouts
 {
@@ -20,9 +21,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new FastTests.Server.Documents.Patching.AdvancedPatching())
+                using (var a = new SubscriptionOperationsSignaling())
                 {
-                    a.CanCreateDocument().Wait();
+                    a.WaitOnSubscriptionStopDueToSubscriberError();
                 }
             }
         }

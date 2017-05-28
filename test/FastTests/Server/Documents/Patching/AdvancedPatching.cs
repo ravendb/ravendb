@@ -468,7 +468,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
                     await session.SaveChangesAsync();
                 }
 
-                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1-A", null, new PatchRequest
+                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                 {
                     Script = @"
 var another = LoadDocument(anotherId);
@@ -476,13 +476,13 @@ this.Value = another.Value;
 ",
                     Values =
                     {
-                        {"anotherId", "CustomTypes/2-A"}
+                        {"anotherId", "CustomTypes/2"}
                     }
                 }));
 
                 using (var commands = store.Commands())
                 {
-                    var doc = await commands.GetAsync("CustomTypes/1-A");
+                    var doc = await commands.GetAsync("CustomTypes/1");
 
                     var result = commands.Deserialize<CustomType>(doc.BlittableJson);
                     Assert.Equal(1, result.Value);
@@ -577,17 +577,17 @@ this.Value = another.Value;
                     await session.SaveChangesAsync();
                 }
 
-                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1-A", null, new PatchRequest
+                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                 {
                     Script = @"PutDocument(
-        'NewTypes/1-A', 
+        'NewTypes/1', 
         { 'CopiedValue':  this.Value },
         {'CreatedBy': 'JS_Script'});",
                 }));
 
                 using (var commands = store.Commands())
                 {
-                    dynamic doc = await commands.GetAsync("NewTypes/1-A");
+                    dynamic doc = await commands.GetAsync("NewTypes/1");
                     dynamic metadata = doc[Constants.Documents.Metadata.Key];
                     var copiedValue = (int)doc.CopiedValue;
                     var createdBy = metadata.CreatedBy.ToString();
@@ -609,7 +609,7 @@ this.Value = another.Value;
                     await session.SaveChangesAsync();
                 }
 
-                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1-A", null, new PatchRequest
+                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                 {
                     Script = @"PutDocument(
         'NewTypes/1', 
@@ -728,7 +728,7 @@ this.Value = another.Value;
 
                 var exception = await Assert.ThrowsAsync<JavaScriptException>(async () =>
                 {
-                    await store.Operations.SendAsync(new PatchOperation("CustomTypes/1-A", null, new PatchRequest
+                    await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                     {
                         Script = @"PutDocument(
     'Items/1', 
