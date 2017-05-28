@@ -21,9 +21,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new SubscriptionOperationsSignaling())
+                using (var a = new SlowTests.Issues.RavenDB937())
                 {
-                    a.WaitOnSubscriptionStopDueToSubscriberError();
+                    a.LowLevelEmbeddedStreamAsync().Wait();
                 }
             }
         }
