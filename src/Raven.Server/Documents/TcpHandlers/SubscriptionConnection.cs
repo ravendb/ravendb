@@ -494,8 +494,6 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 long startEtag = 0;
 
-
-
                 if (subscription.LastEtagReachedInServer?.TryGetValue(TcpConnection.DocumentDatabase.DbId.ToString(), out startEtag) == true)
                 {
                     return startEtag;
@@ -504,16 +502,6 @@ namespace Raven.Server.Documents.TcpHandlers
                 if (subscription.ChangeVector == null || subscription.ChangeVector.Length == 0)
                 {
                     return startEtag;
-                }
-
-                var glovalChangeVector = TcpConnection.DocumentDatabase.DocumentsStorage.GetDatabaseChangeVector(docsContext);
-                var globalVsSubscripitnoConflictStatus = ConflictsStorage.GetConflictStatus(
-                    remote: glovalChangeVector,
-                    local: subscription.ChangeVector);
-
-                if (globalVsSubscripitnoConflictStatus == ConflictsStorage.ConflictStatus.AlreadyMerged)
-                {
-                    startEtag = TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext, subscription.Criteria.Collection);
                 }
                 return startEtag;
             }
