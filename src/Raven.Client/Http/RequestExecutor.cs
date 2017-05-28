@@ -35,9 +35,8 @@ namespace Raven.Client.Http
         //Monitor.TryEnter/Monitor.Exit won't work here because we need a mutex without thread affinity
         private readonly SemaphoreSlim _updateTopologySemaphore = new SemaphoreSlim(1, 1);
 
-        protected readonly SemaphoreSlim _clusterTopologySemaphore = new SemaphoreSlim(1, 1);
         private readonly string _apiKey;
-        protected readonly string _databaseName;
+        private readonly string _databaseName;
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecutor>("Client");
         private DateTime _lastReturnedResponse;
@@ -61,18 +60,18 @@ namespace Raven.Client.Http
 
         private Timer _updateCurrentTokenTimer;
 
-        public NodeSelector _nodeSelector;
+        private NodeSelector _nodeSelector;
 
         private TimeSpan? _defaultTimeout;
 
         //note: the condition for non empty nodes is precaution, should never happen..
-        public string Url => _nodeSelector.CurrentNode?.Url;
+        public string Url => _nodeSelector?.CurrentNode?.Url;
 
         public long TopologyEtag;
 
         public bool HasUpdatedTopologyOnce { get; private set; }
 
-        protected bool _withoutTopology;
+        private bool _withoutTopology;
 
         public TimeSpan? DefaultTimeout
         {
@@ -131,7 +130,7 @@ namespace Raven.Client.Http
             return executor;
         }
 
-        public async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout)
+        public virtual async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout)
         {
             if (_disposed)
                 return false;
@@ -238,9 +237,9 @@ namespace Raven.Client.Http
             }));
         }
 
-        protected virtual async Task FirstTopologyUpdate(string[] initialUrls)
+        protected async Task FirstTopologyUpdate(string[] initialUrls)
         {
-            var list = new List<Exception>();
+            var list = new List<(string, Exception)>();
             foreach (var url in initialUrls)
             {
                 try
@@ -257,7 +256,12 @@ namespace Raven.Client.Http
                 }
                 catch (Exception e)
                 {
-                    list.Add(new Exception($"{url} - {e.Message}", e));
+                    if (initialUrls.Length == 0)
+                    {
+                        _lastKnownUrls = initialUrls;
+                        throw new InvalidOperationException("Cannot get topology from server: " + url, e);
+                    }
+                    list.Add((url, e));
                 }
             }
 
@@ -275,7 +279,9 @@ namespace Raven.Client.Http
 
             _lastKnownUrls = initialUrls;
             
-            throw new AggregateException("Unable to get initial topology for " + _databaseName, list);
+            throw new AggregateException("Failed to retrieve cluster topology from all known nodes" + Environment.NewLine + 
+                                         string.Join(Environment.NewLine, list.Select(x=> x.Item1 + " -> " + x.Item2?.Message))
+                , list.Select(x=>x.Item2));
         }
 
         private void IntializeUpdateTopologyTimer()
@@ -292,7 +298,7 @@ namespace Raven.Client.Http
             }
         }
 
-        private bool TryLoadFromCache(string url, JsonOperationContext context)
+        protected virtual bool TryLoadFromCache(string url, JsonOperationContext context)
         {
             var serverHash = ServerHash.GetServerHash(url, _databaseName);
             var cachedTopology = TopologyLocalCache.TryLoadTopologyFromLocalCache(serverHash, context);
@@ -729,6 +735,11 @@ namespace Raven.Client.Http
                     oldTopology = changed;
                 } while (true);
             }
+        }
+
+        public ServerNode GetCurrentNode()
+        {
+            return _nodeSelector?.CurrentNode;
         }
     }
 }

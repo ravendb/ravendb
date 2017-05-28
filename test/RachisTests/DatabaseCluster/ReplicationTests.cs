@@ -48,7 +48,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var store = new DocumentStore()
             {
-                Url = databaseResult.NodesAddedTo[0],
+                Urls = new[]{databaseResult.NodesAddedTo[0]},
                 Database = databaseName
             }.Initialize())
             {

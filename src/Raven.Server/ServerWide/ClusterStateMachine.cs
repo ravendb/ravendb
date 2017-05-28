@@ -757,7 +757,7 @@ namespace Raven.Server.ServerWide
                 else if (timeoutTask == await Task.WhenAny(task, timeoutTask))
                 {
                     ThrowTimeoutException(timeout.Value, index, _lastModifiedIndex);
-        }
+                }
             }
         }
 

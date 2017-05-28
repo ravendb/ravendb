@@ -57,44 +57,7 @@ namespace Raven.Client.Http
             return executor;
         }
 
-        protected override async Task FirstTopologyUpdate(string[] initialUrls)
-        {
-            var list = new List<Exception>();
-            foreach (var url in initialUrls)
-            {
-                try
-                {
-                    await GetClusterTopologyAsync(new ServerNode
-                    {
-                        Url = url,
-                        Database = _databaseName
-                    }, Timeout.Infinite)
-                        .ConfigureAwait(false);
-                    return;
-                }
-                catch (Exception e)
-                {
-                    list.Add(new Exception($"{url} - {e.Message}", e));
-                }
-            }
-
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                foreach (var url in initialUrls)
-                {
-                    if (TryLoadFromCache(url, context) == false)
-                        continue;
-
-                    return;
-                }
-            }
-
-            _lastKnownUrls = initialUrls;
-
-            throw new AggregateException("Failed to retrieve cluster topology from all known nodes", list);
-        }
-
-        public async Task<bool> GetClusterTopologyAsync(ServerNode node, int timeout)
+        public override async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout)
         {
             if (_disposed)
                 return false;
@@ -116,16 +79,17 @@ namespace Raven.Client.Http
                     ClusterTopologyLocalCache.TrySavingTopologyToLocalCache(serverHash, command.Result, context);
 
                     var results = command.Result;
+
                     _nodeSelector = new NodeSelector(new Topology
                     {
-                        Nodes = new List<ServerNode>
-                        {
-                            new ServerNode
+                        Nodes = new List<ServerNode>(
+                            from member in results.Topology.Members
+                            select new ServerNode
                             {
-                                Url = results.Topology.Members.First().Value,
-                                ClusterTag = results.Topology.Members.First().Key
+                                Url = member.Value,
+                                ClusterTag = member.Key
                             }
-                        }
+                            )
                     });
                 }
             }
@@ -135,8 +99,9 @@ namespace Raven.Client.Http
             }
             return true;
         }
-
-        private bool TryLoadFromCache(string url, JsonOperationContext context)
+        
+        
+        protected override bool TryLoadFromCache(string url, JsonOperationContext context)
         {
             var serverHash = ServerHash.GetServerHash(url);
             var cachedTopology = ClusterTopologyLocalCache.TryLoadClusterTopologyFromLocalCache(serverHash, context);
@@ -146,17 +111,16 @@ namespace Raven.Client.Http
 
             _nodeSelector = new NodeSelector(new Topology
             {
-                Nodes = new List<ServerNode>
-                {
-                    new ServerNode
+                Nodes = new List<ServerNode>(
+                    from member in cachedTopology.Topology.Members
+                    select new ServerNode
                     {
-                        Url = cachedTopology.Topology.Members.First().Value,
-                        ClusterTag = cachedTopology.Topology.Members.First().Key
+                        Url = member.Value,
+                        ClusterTag = member.Key
                     }
-                }
+                    )
             });
             return true;
         }
-
     }
 }

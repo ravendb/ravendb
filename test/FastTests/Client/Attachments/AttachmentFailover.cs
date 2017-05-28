@@ -58,7 +58,7 @@ namespace FastTests.Client.Attachments
                     var saveChangesOperation = new BatchOperation(session);
                     using (var command = saveChangesOperation.CreateRequest())
                     {
-                        var currentNode = session.RequestExecutor._nodeSelector.CurrentNode;
+                        var currentNode = session.RequestExecutor.GetCurrentNode();
                         var task = session.RequestExecutor.ExecuteAsync(currentNode, session.Context, command);
                         var currentServer = Servers.Single(x => x.ServerStore.NodeTag == currentNode.ClusterTag);
                         DisposeServerAndWaitForFinishOfDisposal(currentServer);
