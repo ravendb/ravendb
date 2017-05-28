@@ -149,12 +149,6 @@ namespace Raven.Server
                     })
                     // ReSharper disable once AccessToDisposedClosure
                     .Build();
-
-                var serverAddressesFeature = _webHost.ServerFeatures.Get<IServerAddressesFeature>();
-                WebUrls = serverAddressesFeature.Addresses.ToArray();
-
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Initialized Server... {string.Join(", ", WebUrls)}");
             }
             catch (Exception e)
             {
@@ -169,6 +163,13 @@ namespace Raven.Server
             try
             {
                 _webHost.Start();
+                
+                var serverAddressesFeature = _webHost.ServerFeatures.Get<IServerAddressesFeature>();
+                WebUrls = serverAddressesFeature.Addresses.ToArray();
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Initialized Server... {string.Join(", ", WebUrls)}");
+                
                 _tcpListenerTask = StartTcpListener();
             }
             catch (Exception e)
