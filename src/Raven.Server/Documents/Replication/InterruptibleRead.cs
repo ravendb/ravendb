@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Replication
         {
             if (_prevCall == null)
             {
-                _prevCall = ReadNextObject(debugTag, buffer);
+                _prevCall = ReadNextObject(debugTag, buffer, token);
                 _previousWait.Clear();
             }
 
@@ -96,13 +96,12 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private async Task<Result> ReadNextObject(string debugTag, JsonOperationContext.ManagedPinnedBuffer buffer)
+        private async Task<Result> ReadNextObject(string debugTag, JsonOperationContext.ManagedPinnedBuffer buffer, CancellationToken token)
         {
-            DocumentsOperationContext context;
-            var retCtx = _contextPool.AllocateOperationContext(out context);
+            var retCtx = _contextPool.AllocateOperationContext(out DocumentsOperationContext context);
             try
             {
-                var jsonReaderObject = await context.ParseToMemoryAsync(_stream, debugTag, BlittableJsonDocumentBuilder.UsageMode.None, buffer);
+                var jsonReaderObject = await context.ParseToMemoryAsync(_stream, debugTag, BlittableJsonDocumentBuilder.UsageMode.None, buffer, token);
                 return new Result
                 {
                     Document = jsonReaderObject,

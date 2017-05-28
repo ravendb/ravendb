@@ -446,10 +446,9 @@ namespace Raven.Server.Documents
             if (databaseRecord.Disabled && ignoreDisabledDatabase == false)
                 throw new DatabaseDisabledException(databaseName + " has been disabled");
 
-            DeletionInProgressStatus deletionInProgress;
             var databaseIsBeenDeleted = databaseRecord.DeletionInProgress != null &&
-                                        databaseRecord.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
-                                        deletionInProgress != DeletionInProgressStatus.No;
+                            databaseRecord.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out DeletionInProgressStatus deletionInProgress) &&
+                            deletionInProgress != DeletionInProgressStatus.No;
             if (ignoreBeenDeleted == false && databaseIsBeenDeleted)
                 throw new DatabaseDisabledException(databaseName + " is currently being deleted on " + _serverStore.NodeTag);
 
