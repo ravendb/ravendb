@@ -27,6 +27,7 @@ using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
+using Sparrow.Collections;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.PeriodicBackup
@@ -41,7 +42,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly PathSetting _tempBackupPath;
         private readonly ConcurrentDictionary<long, PeriodicBackup> _periodicBackups
             = new ConcurrentDictionary<long, PeriodicBackup>();
-        private readonly List<Task> _inactiveRunningPeriodicBackupsTasks = new List<Task>();
+        private readonly ConcurrentSet<Task> _inactiveRunningPeriodicBackupsTasks = new ConcurrentSet<Task>();
         private bool _disposed;
 
         //interval can be 2^32-2 milliseconds at most
@@ -773,7 +774,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private void RemoveInactiveCompletedTasks()
+        public void RemoveInactiveCompletedTasks()
         {
             var tasksToRemove = new List<Task>();
             foreach (var inactiveTask in _inactiveRunningPeriodicBackupsTasks)
@@ -786,7 +787,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             foreach (var taskToRemove in tasksToRemove)
             {
-                _inactiveRunningPeriodicBackupsTasks.Remove(taskToRemove);
+                _inactiveRunningPeriodicBackupsTasks.TryRemove(taskToRemove);
             }
         }
 
@@ -924,6 +925,18 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Error when disposing periodic backup runner task", e);
             }
+        }
+
+        public bool HasRunningBackups()
+        {
+            foreach (var periodicBackup in _periodicBackups)
+            {
+                if (periodicBackup.Value.RunningTask != null &&
+                    periodicBackup.Value.RunningTask.IsCompleted == false)
+                    return true;
+            }
+
+            return false;
         }
     }
 }

@@ -506,8 +506,8 @@ namespace Raven.Server.Documents
                 _lastIdleTicks = DateTime.UtcNow.Ticks;
                 IndexStore?.RunIdleOperations();
                 Operations?.CleanupOperations();
+                BundleLoader?.PeriodicBackupRunner?.RemoveInactiveCompletedTasks();
             }
-
             finally
             {
                 Monitor.Exit(_idleLocker);
