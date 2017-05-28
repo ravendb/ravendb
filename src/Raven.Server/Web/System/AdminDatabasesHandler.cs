@@ -298,8 +298,10 @@ namespace Raven.Server.Web.System
                 "update-periodic-backup-config",
                 fillJson: (json, readerObject, index) =>
                 {
-                    readerObject.TryGet("TaskId", out long? taskId);
-                    json[nameof(PeriodicBackupStatus.TaskId)] = taskId ?? index;
+                    readerObject.TryGet("TaskId", out long taskId);
+                    if (taskId == 0)
+                        taskId = index;
+                    json[nameof(PeriodicBackupStatus.TaskId)] = taskId;
                 });
         }
 
@@ -313,7 +315,8 @@ namespace Raven.Server.Web.System
         public Task GetPeriodicBackupBundleStatus()
         {
             var taskId = GetLongQueryString("taskId", required: true);
-            Debug.Assert(taskId != null);
+            Debug.Assert(taskId != 0);
+
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             string errorMessage;
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)

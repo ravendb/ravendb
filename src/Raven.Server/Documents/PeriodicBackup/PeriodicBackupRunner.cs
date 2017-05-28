@@ -50,6 +50,8 @@ namespace Raven.Server.Documents.PeriodicBackup
         //this is the maximum interval acceptable in .Net's threading timer
         public readonly TimeSpan MaxTimerTimeout = TimeSpan.FromMilliseconds(Math.Pow(2, 32) - 2);
 
+        public ICollection<PeriodicBackup> PeriodicBackups => _periodicBackups.Values;
+
         public PeriodicBackupRunner(DocumentDatabase database, ServerStore serverStore)
         {
             _database = database;
@@ -123,9 +125,21 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             Debug.Assert(configuration.TaskId != 0);
 
-            var nextBackupDateTime = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup);
-            var nextBackupTimeSpan = (nextBackupDateTime - now).Ticks <= 0 ? TimeSpan.Zero : nextBackupDateTime - now;
             var isFullBackup = IsFullBackup(backupStatus, configuration, nextFullBackup, nextIncrementalBackup);
+            var nextBackupDateTime = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup);
+            TimeSpan nextBackupTimeSpan;
+            if (isFullBackup && backupStatus.LastFullBackup == null)
+            {
+                // it's a full backup and there was no previous backup
+                nextBackupTimeSpan = TimeSpan.Zero;
+            }
+            else
+            {
+                // we already have an existing backup
+                nextBackupTimeSpan = (nextBackupDateTime - now).Ticks <= 0 ? 
+                    TimeSpan.Zero : nextBackupDateTime - now;
+            }
+
             return new NextBackup
             {
                 TimeSpan = nextBackupTimeSpan,
@@ -165,6 +179,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             try
             {
                 var totalSw = Stopwatch.StartNew();
+                var backupStarted = SystemTime.UtcNow;
                 DocumentsOperationContext context;
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
                 using (var tx = context.OpenReadTransaction())
@@ -172,15 +187,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                     var backupToLocalFolder = CanBackupUsing(configuration.LocalSettings);
 
                     var now = SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture);
-                    var backupDirectory = backupToLocalFolder
-                        ? GetLocalFolderPath(configuration, now)
-                        : _tempBackupPath;
-
-                    if (Directory.Exists(backupDirectory.FullPath) == false)
-                        Directory.CreateDirectory(backupDirectory.FullPath);
+                    
 
                     if (status.LocalBackup == null)
                         status.LocalBackup = new LocalBackup();
+
+                    PathSetting backupDirectory;
 
                     // check if we need to do a new full backup
                     if (isFullBackup ||
@@ -193,8 +205,21 @@ namespace Raven.Server.Documents.PeriodicBackup
                     {
                         isFullBackup = true;
 
+                        backupDirectory = backupToLocalFolder ? 
+                            GetLocalFolderPath(configuration, now) : 
+                            _tempBackupPath;
+
+                        if (Directory.Exists(backupDirectory.FullPath) == false)
+                            Directory.CreateDirectory(backupDirectory.FullPath);
+
                         status.LocalBackup.TempFolderUsed = backupToLocalFolder == false;
                         status.LocalBackup.BackupDirectory = backupToLocalFolder ? backupDirectory.FullPath : null;
+                    }
+                    else
+                    {
+                        backupDirectory = backupToLocalFolder ? 
+                            new PathSetting(status.LocalBackup.BackupDirectory) : 
+                            _tempBackupPath;
                     }
 
                     if (_logger.IsInfoEnabled)
@@ -203,23 +228,17 @@ namespace Raven.Server.Documents.PeriodicBackup
                         _logger.Info($"Creating {(isFullBackup ? fullBackupText : "an incremental backup")}");
                     }
 
-                    switch (isFullBackup)
+                    if (isFullBackup == false)
                     {
-                        case true:
-                            status.LastFullBackup = SystemTime.UtcNow;
-                            break;
-                        default:
-                            status.LastIncrementalBackup = SystemTime.UtcNow;
-                            var currentLastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
-                            // no-op if nothing has changed
-                            if (currentLastEtag == status.LastEtag)
-                            {
-                                if (_logger.IsInfoEnabled)
-                                    _logger.Info("Skipping incremental backup because " +
-                                                 $"last etag ({currentLastEtag}) hasn't changed since last backup");
-                                return;
-                            }
-                            break;
+                        // no-op if nothing has changed
+                        var currentLastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
+                        if (currentLastEtag == status.LastEtag)
+                        {
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info("Skipping incremental backup because " +
+                                             $"last etag ({currentLastEtag}) hasn't changed since last backup");
+                            return;
+                        }
                     }
 
                     var startDocumentEtag = isFullBackup == false ? status.LastEtag : null;
@@ -255,7 +274,12 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 status.DurationInMs = totalSw.ElapsedMilliseconds;
                 status.NodeTag = _serverStore.NodeTag;
-                
+
+                if (isFullBackup)
+                    status.LastFullBackup = backupStarted;
+                else
+                    status.LastIncrementalBackup = backupStarted;
+
                 await WriteStatus(status);
             }
             catch (OperationCanceledException)
@@ -316,7 +340,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private static string GetFileNameFor(Func<string> getBackupExtension,
             string now, string backupFolder, out string backupFilePath)
         {
-            var fileName = $"{now}.{getBackupExtension()}";
+            var fileName = $"{now}{getBackupExtension()}";
             backupFilePath = Path.Combine(backupFolder, fileName);
 
             if (File.Exists(backupFilePath))
@@ -324,7 +348,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 var counter = 1;
                 while (true)
                 {
-                    fileName = $"{now}-{counter}.${getBackupExtension()}";
+                    fileName = $"{now}-{counter}${getBackupExtension()}";
                     backupFilePath = Path.Combine(backupFolder, fileName);
 
                     if (File.Exists(backupFilePath) == false)
@@ -670,7 +694,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             periodicBackup.RunningTask = Task.Run(async () =>
             {
-                var backupStatus = GetBackupStatus(periodicBackup.Configuration.TaskId);
+                var backupStatus = GetBackupStatus(periodicBackup.Configuration.TaskId) ?? new PeriodicBackupStatus();
                 backupStatus.TaskId = periodicBackup.Configuration.TaskId;
 
                 try

@@ -13,6 +13,10 @@ namespace Raven.Client.Server.PeriodicBackup
 
         public string NodeTag { get; set; }
 
+        public DateTime? LastFullBackup { get; set; }
+
+        public DateTime? LastIncrementalBackup { get; set; }
+
         public LocalBackup LocalBackup { get; set; }
 
         public UploadToS3 UploadToS3 { get; set; }
@@ -20,10 +24,6 @@ namespace Raven.Client.Server.PeriodicBackup
         public UploadToGlacier UploadToGlacier { get; set; }
 
         public UploadToAzure UploadToAzure { get; set; }
-
-        public DateTime? LastFullBackup { get; set; }
-
-        public DateTime? LastIncrementalBackup { get; set; }
 
         public long? LastEtag { get; set; }
 
@@ -41,6 +41,8 @@ namespace Raven.Client.Server.PeriodicBackup
             json[nameof(TaskId)] = TaskId;
             json[nameof(BackupType)] = BackupType;
             json[nameof(NodeTag)] = NodeTag;
+            json[nameof(LastFullBackup)] = LastFullBackup;
+            json[nameof(LastIncrementalBackup)] = LastIncrementalBackup;
             json[nameof(LocalBackup)] = LocalBackup?.ToJson();
             json[nameof(UploadToS3)] = UploadToS3?.ToJson();
             json[nameof(UploadToGlacier)] = UploadToGlacier?.ToJson();

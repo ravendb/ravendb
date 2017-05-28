@@ -28,41 +28,40 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             using (var store = GetDocumentStore())
             {
+                var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.PeriodicBackupRunner;
+
+                // get by reflection the maxTimerTimeoutInMilliseconds field
+                // this field is the maximum interval acceptable in .Net's threading timer
+                // if the requested backup interval is bigger than this maximum interval, 
+                // a timer with maximum interval will be used several times until the interval cumulatively
+                // will be equal to requested interval
+                typeof(PeriodicBackupRunner)
+                    .GetField(nameof(PeriodicBackupRunner.MaxTimerTimeout), BindingFlags.Instance | BindingFlags.Public)
+                    .SetValue(periodicBackupRunner, TimeSpan.FromMilliseconds(100));
+
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "oren" });
-                    var config = new PeriodicBackupConfiguration
-                    {
-                        LocalSettings = new LocalSettings
-                        {
-                            FolderPath = _backupPath
-                        },
-                        //TODO: IncrementalIntervalInMilliseconds = 25
-                    };
-
-                    await store.Admin.Server.SendAsync(new UpdatePeriodicBackupOperation(config, store.Database));                    
+                    await session.StoreAsync(new User { Name = "oren" });               
                     await session.SaveChangesAsync();
                 }
 
-                var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.PeriodicBackupRunner;
+                var config = new PeriodicBackupConfiguration
+                {
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = _backupPath
+                    },
+                    IncrementalBackupFrequency = "* * * * *" //every minute
+                };
 
-                //get by reflection the maxTimerTimeoutInMilliseconds field
-                //this field is the maximum interval acceptable in .Net's threading timer
-                //if the requested backup interval is bigger than this maximum interval, 
-                //a timer with maximum interval will be used several times until the interval cumulatively
-                //will be equal to requested interval
-                typeof(PeriodicBackupRunner)
-                    .GetField(nameof(PeriodicBackupRunner.MaxTimerTimeout), BindingFlags.Instance | BindingFlags.NonPublic)
-                    .SetValue(periodicBackupRunner, TimeSpan.FromMilliseconds(5));
+                var result = await store.Admin.Server.SendAsync(new UpdatePeriodicBackupOperation(config, store.Database));
+                var periodicBackupTaskId = result.TaskId;
 
-                var operation = new GetPeriodicBackupStatusOperation(store.Database, 1); //TODO
-                    //await store.Admin.Server.SendAsync(new UpdatePeriodicBackupOperation(config, store.DefaultDatabase));
+                var operation = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
                 SpinWait.SpinUntil(() =>
                 {
-                    var result = store.Admin.Server.Send(operation);
-                    if (result.Status == null)
-                        return false;
-                    return result.Status.LastEtag > 0;
+                    var getPeriodicBackupResult = store.Admin.Server.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag > 0;
                 }, TimeSpan.FromSeconds(10));
 
                 var etagForBackups = store.Admin.Server.Send(operation).Status.LastEtag;
@@ -76,7 +75,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     var newLastEtag = store.Admin.Server.Send(operation).Status.LastEtag;
                     return newLastEtag != etagForBackups;
-                }, 10000);
+                }, TimeSpan.FromMinutes(2));
             }
 
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
@@ -99,14 +98,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             {
                 var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.PeriodicBackupRunner;
 
-                //get by reflection the maxTimerTimeoutInMilliseconds field
-                //this field is the maximum interval acceptable in .Net's threading timer
-                //if the requested backup interval is bigger than this maximum interval, 
-                //a timer with maximum interval will be used several times until the interval cumulatively
-                //will be equal to requested interval
+                // get by reflection the maxTimerTimeoutInMilliseconds field
+                // this field is the maximum interval acceptable in .Net's threading timer
+                // if the requested backup interval is bigger than this maximum interval, 
+                // a timer with maximum interval will be used several times until the interval cumulatively
+                // will be equal to requested interval
                 typeof(PeriodicBackupRunner)
                     .GetField(nameof(PeriodicBackupRunner.MaxTimerTimeout), BindingFlags.Instance | BindingFlags.Public)
-                    .SetValue(periodicBackupRunner, TimeSpan.FromMilliseconds(5));
+                    .SetValue(periodicBackupRunner, TimeSpan.FromMilliseconds(100));
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -147,7 +146,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
                     var status = store.Admin.Server.Send(getPeriodicBackupStatus).Status;
                     return status?.LastFullBackup != null && status.LastIncrementalBackup != null;
-                }, TimeSpan.FromMinutes(1));
+                }, TimeSpan.FromMinutes(2));
             }
 
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
@@ -173,31 +172,29 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "oren" });
-                    var config = new PeriodicBackupConfiguration
-                    {
-                        LocalSettings = new LocalSettings
-                        {
-                            FolderPath = _backupPath
-                        },
-                        //TODO: IncrementalIntervalInMilliseconds = 25
-                    };
-                    var operation = new UpdatePeriodicBackupOperation(config, store.Database);
-                    await store.Admin.Server.SendAsync(operation);
                     await session.SaveChangesAsync();
                 }
-                var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(store.Database, 1); //TODO
 
+                var config = new PeriodicBackupConfiguration
+                {
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = _backupPath
+                    },
+                    IncrementalBackupFrequency = "* * * * *" //every minute
+                };
+
+                var result = await store.Admin.Server.SendAsync(new UpdatePeriodicBackupOperation(config, store.Database));
+                var periodicBackupTaskId = result.TaskId;
+
+                var operation = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
                 SpinWait.SpinUntil(() =>
                 {
-                    var result = store.Admin.Server.Send(getPeriodicBackupStatus);
-                    if (result.Status == null)
-                        return false;                        
-                    return result.Status.LastEtag > 0;
+                    var getPeriodicBackupResult = store.Admin.Server.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag > 0;
                 }, TimeSpan.FromSeconds(10));
 
-
-                var res = await store.Admin.Server.SendAsync(getPeriodicBackupStatus);
-                var etagForExports = res.Status.LastEtag;
+                var etagForBackups = store.Admin.Server.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "ayende" });
@@ -206,17 +203,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 SpinWait.SpinUntil(() =>
                 {
-                    res = store.Admin.Server.Send(getPeriodicBackupStatus);
-                    return res.Status.LastEtag != etagForExports;
-                }, 10000);
-
+                    var newLastEtag = store.Admin.Server.Send(operation).Status.LastEtag;
+                    return newLastEtag != etagForBackups;
+                }, TimeSpan.FromMinutes(2));
             }
 
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
             {
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
                     Directory.GetDirectories(_backupPath).First());
-
                 using (var session = store.OpenAsyncSession())
                 {
                     var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });

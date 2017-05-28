@@ -18,11 +18,11 @@ namespace FastTests.Server.Documents.PeriodicBackup
 {
     public class PeriodicBackupTests : RavenTestBase
     {
-        private readonly string _exportPath;
+        private readonly string _backupPath;
 
         public PeriodicBackupTests()
         {
-            _exportPath = NewDataPath(suffix: "ExportFolder");
+            _backupPath = NewDataPath(suffix: "BackupFolder");
         }
 
         [Fact, Trait("Category", "Smuggler")]
@@ -34,49 +34,52 @@ namespace FastTests.Server.Documents.PeriodicBackup
                 {
                     LocalSettings = new LocalSettings
                     {
-                        FolderPath = _exportPath
+                        FolderPath = _backupPath
                     },
-                    //TODO: FullBackupFrequency = 
-                    //FullBackupIntervalInMilliseconds = (long)TimeSpan.FromDays(50).TotalMilliseconds,
-                    //IncrementalIntervalInMilliseconds = (long)TimeSpan.FromDays(50).TotalMilliseconds
+                    FullBackupFrequency = "* */1 * * *",
+                    IncrementalBackupFrequency = "* */2 * * *"
                 };
+
                 await store.Admin.Server.SendAsync(new UpdatePeriodicBackupOperation(config, store.Database));
 
                 var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.PeriodicBackupRunner;
-                //TODO: Assert.Equal(50, periodicBackupRunner.IncrementalInterval.TotalDays);
-                //TODO: Assert.Equal(50, periodicBackupRunner.FullExportInterval.TotalDays);
+                var backups = periodicBackupRunner.PeriodicBackups;
+                Assert.Equal("* */1 * * *", backups.First().Configuration.FullBackupFrequency);
+                Assert.Equal("* */2 * * *", backups.First().Configuration.IncrementalBackupFrequency);
             }
         }
 
         [Fact, Trait("Category", "Smuggler")]
-        public async Task CanExportToDirectory()
+        public async Task CanBackupToDirectory()
         {
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "oren" });
-                    var config = new PeriodicBackupConfiguration
-                    {
-                        LocalSettings = new LocalSettings
-                        {
-                            FolderPath = _exportPath
-                        },
-                        //TODO: FullBackupFrequency = 
-                        //IncrementalIntervalInMilliseconds = 25
-                    };
-                    await store.Admin.Server.SendAsync(new UpdatePeriodicBackupOperation(config, store.Database));
                     await session.SaveChangesAsync();
-
                 }
-                var operation = new GetPeriodicBackupStatusOperation(store.Database, 1);//TODO
-                SpinWait.SpinUntil(() => store.Admin.Server.Send(operation).Status != null, 10000);
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = _backupPath
+                    },
+                    IncrementalBackupFrequency = "* * * * *" //every minute
+                };
+                var operation = new UpdatePeriodicBackupOperation(config, store.Database);
+                var result = await store.Admin.Server.SendAsync(operation);
+                var periodicBackupTaskId = result.TaskId;
+
+                var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
+                SpinWait.SpinUntil(() => store.Admin.Server.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, 10000);
             }
 
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
             {
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
-                    Directory.GetDirectories(_exportPath).First());
+                    Directory.GetDirectories(_backupPath).First());
 
                 using (var session = store.OpenAsyncSession())
                 {
