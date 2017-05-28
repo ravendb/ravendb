@@ -469,7 +469,8 @@ namespace Raven.Server.Documents.Replication
                 _outgoing.TryRemove(instance);
                 _lastSendEtagPerDestination.TryRemove(instance.Destination, out LastEtagPerDestination etag);
                 _outgoingFailureInfo.TryRemove(instance.Destination, out ConnectionShutdownInfo info);
-                _reconnectQueue.TryRemove(info);
+                if(info != null)
+                    _reconnectQueue.TryRemove(info);
                 _numberOfSiblings--;
             }
         }

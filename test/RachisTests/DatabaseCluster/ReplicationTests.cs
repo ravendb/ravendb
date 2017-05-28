@@ -21,9 +21,11 @@ namespace RachisTests.DatabaseCluster
         [Fact]
         public async Task EnsureDocumentsReplication()
         {
+            NoTimeouts();
             var clusterSize = 5;
             var databaseName = "ReplicationTestDB";
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize);
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize,false);
+            CreateDatabaseResult databaseResult;
             using (var store = new DocumentStore()
             {
                 Url = leader.WebUrls[0],
@@ -31,16 +33,24 @@ namespace RachisTests.DatabaseCluster
             }.Initialize())
             {
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
-                var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
-                Assert.Equal(clusterSize, databaseResult.Topology.AllReplicationNodes().Count());
-                foreach (var server in Servers)
-                {
-                    await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag ?? -1);
-                }
-                foreach (var server in Servers)
-                {
-                    await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-                }
+                databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+            }
+            Assert.Equal(clusterSize, databaseResult.Topology.AllReplicationNodes().Count());
+            foreach (var server in Servers)
+            {
+                await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag ?? -1);
+            }
+            foreach (var server in Servers.Where(s=> databaseResult.NodesAddedTo.Any(n=> n == s.WebUrls[0])))
+            {
+                await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+            }
+
+            using (var store = new DocumentStore()
+            {
+                Url = databaseResult.NodesAddedTo[0],
+                Database = databaseName
+            }.Initialize())
+            {
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User {Name = "Karmel"}, "users/1");
@@ -51,6 +61,7 @@ namespace RachisTests.DatabaseCluster
                     "users/1",
                     u => u.Name.Equals("Karmel"),
                     TimeSpan.FromSeconds(clusterSize + 5)));
+
             }
         }
 

@@ -112,13 +112,13 @@ namespace Raven.Server.ServerWide
         private bool _disposed;
         public RachisConsensus<ClusterStateMachine> Engine => _engine;
 
-        private ClusterMaintenanceSupervisor _clusterMaintenanceSupervisor;
+        public ClusterMaintenanceSupervisor ClusterMaintenanceSupervisor;
 
         public Dictionary<string, ClusterNodeStatusReport> ClusterStats()
         {
             if (_engine.LeaderTag != NodeTag)
                 throw new NotLeadingException($"Stats can be requested only from the raft leader {_engine.LeaderTag}");
-            return _clusterMaintenanceSupervisor?.GetStats();
+            return ClusterMaintenanceSupervisor?.GetStats();
         }
 
         public async Task ClusterMaintanceSetupTask()
@@ -133,8 +133,8 @@ namespace Raven.Server.ServerWide
                                      .WithCancellation(_shutdownNotification.Token);
                         continue;
                     }
-                    using (_clusterMaintenanceSupervisor = new ClusterMaintenanceSupervisor(this, _engine.Tag, _engine.CurrentTerm))
-                    using (new ClusterObserver(this, _clusterMaintenanceSupervisor, _engine, ContextPool, ServerShutdown))
+                    using (ClusterMaintenanceSupervisor = new ClusterMaintenanceSupervisor(this, _engine.Tag, _engine.CurrentTerm))
+                    using (new ClusterObserver(this, ClusterMaintenanceSupervisor, _engine, ContextPool, ServerShutdown))
                     {
                         var oldNodes = new Dictionary<string, string>();
                         while (_engine.LeaderTag == NodeTag)
@@ -151,11 +151,11 @@ namespace Raven.Server.ServerWide
                             oldNodes = newNodes;
                             foreach (var node in nodesChanges.removedValues)
                             {
-                                _clusterMaintenanceSupervisor.RemoveFromCluster(node.Key);
+                                ClusterMaintenanceSupervisor.RemoveFromCluster(node.Key);
                             }
                             foreach (var node in nodesChanges.addedValues)
                             {
-                                var task = _clusterMaintenanceSupervisor.AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key)).ContinueWith(t =>
+                                var task = ClusterMaintenanceSupervisor.AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key)).ContinueWith(t =>
                                         {
                                             if (Logger.IsInfoEnabled)
                                                 Logger.Info($"ClusterMaintenanceSupervisor() => Failed to add to cluster node key = {node.Key}", t.Exception);

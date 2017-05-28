@@ -593,15 +593,22 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public enum IndexProgressStatus
+        {
+            Faulty = -1,
+            Compacting = -2,
+            Stale = -3
+        }
+
         public virtual (bool isStale, long lastProcessedEtag) GetIndexStats(DocumentsOperationContext databaseContext)
         {
             Debug.Assert(databaseContext.Transaction != null);
 
             if (Type == IndexType.Faulty)
-                return (true, -1);
+                return (true, (long)IndexProgressStatus.Faulty);
 
             if (_isCompactionInProgress)
-                return (true, -1);
+                return (true, (long)IndexProgressStatus.Compacting);
 
             TransactionOperationContext indexContext;
             using (_contextPool.AllocateOperationContext(out indexContext))
@@ -609,8 +616,8 @@ namespace Raven.Server.Documents.Indexes
             {
                 var isStale = IsStale(databaseContext, indexContext);
 
-                if (isStale == false)
-                    return (false, -1);
+                if (isStale)
+                    return (true, (long)IndexProgressStatus.Stale);
 
                 long lastEtag = 0;
                 foreach (var collection in Collections)
@@ -618,7 +625,7 @@ namespace Raven.Server.Documents.Indexes
                     lastEtag  = Math.Max(lastEtag , _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection));
                 }
 
-                return (true, lastEtag);
+                return (false, lastEtag);
             }
         }
 
