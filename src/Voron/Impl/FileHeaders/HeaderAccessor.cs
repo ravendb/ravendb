@@ -66,10 +66,10 @@ namespace Voron.Impl.FileHeaders
                 }
 
                 if (f1->MagicMarker != Constants.MagicMarker && f2->MagicMarker != Constants.MagicMarker)
-                    throw new InvalidDataException("None of the header files start with the magic marker, probably not db files opr");
+                    throw new InvalidDataException("None of the header files start with the magic marker, probably not db files or fatal corruption on " + _env.Options.BasePath);
 
                 if (!ValidHash(f1) && !ValidHash(f2))
-                    throw new InvalidDataException("None of the header files have a valid hash, possible corruption.");
+                    throw new InvalidDataException("None of the header files have a valid hash, possible corruption on " + _env.Options.BasePath);
 
                 // if one of the files is corrupted, but the other isn't, restore to the valid file
                 if (f1->MagicMarker != Constants.MagicMarker || !ValidHash(f1))
@@ -83,10 +83,11 @@ namespace Voron.Impl.FileHeaders
                 }
 
                 if (f1->Version != Constants.CurrentVersion)
-                    throw new InvalidDataException($"The db file is for version {f1->Version}, which is not compatible with the current version {Constants.CurrentVersion}");
+                    throw new InvalidDataException(
+                        $"The db file is for version {f1->Version}, which is not compatible with the current version {Constants.CurrentVersion} on {_env.Options.BasePath}");
 
                 if (f1->TransactionId < 0)
-                    throw new InvalidDataException("The transaction number cannot be negative");
+                    throw new InvalidDataException("The transaction number cannot be negative on " + _env.Options.BasePath);
 
 
                 if (f1->HeaderRevision > f2->HeaderRevision)

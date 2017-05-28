@@ -1,34 +1,19 @@
 using System.ComponentModel;
 using Raven.Server.Config.Attributes;
+using Raven.Server.Config.Settings;
 
 namespace Raven.Server.Config.Categories
 {
-    public class EncryptionConfiguration : ConfigurationCategory
+    public class SecurityConfiguration : ConfigurationCategory
     {
-        [Description("Use FIPS compliant encryption algorithms.")]
-        [DefaultValue(false)]
-        [ConfigurationEntry("Raven/Encryption/FIPS")]
-        public bool UseFips { get; set; }
-
-        [DefaultValue(128)]
-        [ConfigurationEntry("Raven/Encryption/KeyBitsPreference")]
-        public int EncryptionKeyBitsPreference { get; set; }
-
-        [Description("Whether we should use SSL for this connection")]
-        [DefaultValue(false)]
-        [ConfigurationEntry("Raven/UseSsl")]
-        public bool UseSsl { get; set; }
-
+        [Description("The path of the .pfx certificate file. If specified, RavenDB will use HTTPS / SSL for all network activities. You can use the ~/ prefix to refer to RavenDB's base directory.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Raven/Encryption/Algorithm")]
-        public string AlgorithmType { get; set; }
+        [ConfigurationEntry("Raven/Certificate/Path")]
+        public string CertificateFilePath { get; set; }
 
+        [Description("The (optional) password of the .pfx certificate file.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Raven/Encryption/Key")]
-        public string EncryptionKey { get; set; }
-
-        [DefaultValue(true)]
-        [ConfigurationEntry("Raven/Encryption/EncryptIndexes")]
-        public bool EncryptIndexes { get; set; }
+        [ConfigurationEntry("Raven/Certificate/Password")]
+        public string CertificatePassword { get; set; }
     }
 }

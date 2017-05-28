@@ -14,12 +14,14 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.Kestrel;
 using Microsoft.Extensions.DependencyInjection;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Replication;
@@ -130,12 +132,22 @@ namespace Raven.Server
 
             try
             {
+                Action<KestrelServerOptions> kestrelOptions = options => options.ShutdownTimeout = TimeSpan.FromSeconds(1);
+
+                if (Configuration.Security.CertificateFilePath != null)
+                {
+                    ServerCertificate = LoadCertificate(Configuration.Security);
+                    
+                    kestrelOptions += options => options.UseHttps(ServerCertificate.Certificate);
+                    
+                    // Enforce https in all network activities
+                    if (Configuration.Core.ServerUrl.StartsWith("http:", StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidOperationException("When the `Raven/Certificate/Path` is specified, the `Raven/ServerUrl` must be using https, but was " + Configuration.Core.ServerUrl);
+                }
+
                 _webHost = new WebHostBuilder()
                     .CaptureStartupErrors(captureStartupErrors: true)
-                    .UseKestrel(options =>
-                    {
-                        options.ShutdownTimeout = TimeSpan.FromSeconds(1);
-                    })
+                    .UseKestrel(kestrelOptions)
                     .UseUrls(Configuration.Core.ServerUrl)
                     .UseStartup<RavenServerStartup>()
                     .ConfigureServices(services =>
@@ -193,25 +205,35 @@ namespace Raven.Server
         public string[] WebUrls { get; set; }
 
         private readonly JsonContextPool _tcpContextPool = new JsonContextPool();
-
-        internal readonly Lazy<CertificateHolder> ServerCertificate = new Lazy<CertificateHolder>(GenerateSelfSignedCertificate);
+        
+        internal CertificateHolder ServerCertificate;
 
         public class CertificateHolder
         {
-            public string CertificateForclients;
+            public string CertificateForClients;
             public X509Certificate2 Certificate;
         }
 
-        private static CertificateHolder GenerateSelfSignedCertificate()
+        private static CertificateHolder LoadCertificate(SecurityConfiguration config)
         {
-            var generateSelfSignedCertificate = CertificateUtils.CreateSelfSignedCertificate("RavenDB", "Hibernating Rhinos");
-            return new CertificateHolder
+            try
             {
-                Certificate = generateSelfSignedCertificate,
-                CertificateForclients = Convert.ToBase64String(generateSelfSignedCertificate.Export(X509ContentType.Cert))
-            };
-        }
+                var loadedCertificate = config.CertificatePassword == null
+                    ? new X509Certificate2(File.ReadAllBytes(config.CertificateFilePath))
+                    : new X509Certificate2(File.ReadAllBytes(config.CertificateFilePath), config.CertificatePassword);
 
+                return new CertificateHolder
+                {
+                    Certificate = loadedCertificate,
+                    CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert))
+                };
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Could not load certificate file {config.CertificateFilePath}, please check the path and password", e);
+            }
+        }
+        
         public class TcpListenerStatus
         {
             public readonly List<TcpListener> Listeners = new List<TcpListener>();
@@ -392,7 +414,7 @@ namespace Raven.Server
                             }
                         }
 
-                        if (await DispatchServerwideTcpConnection(tcp, header, tcpClient))
+                        if (await DispatchServerwideTcpConnection(tcp, header))
                         {
                             tcp = null; //do not keep reference -> tcp will be disposed by server-wide connection handlers
                             return;
@@ -433,12 +455,12 @@ namespace Raven.Server
 
         private ClusterMaintenanceWorker _clusterMaintainanceWorker;
 
-        private async Task<bool> DispatchServerwideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, TcpClient tcpClient)
+        private async Task<bool> DispatchServerwideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header)
         {
             tcp.Operation = header.Operation;
             if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster)
             {
-                ServerStore.ClusterAcceptNewConnection(tcpClient);
+                ServerStore.ClusterAcceptNewConnection(tcp.Stream);
                 return true;
             }
 
@@ -531,7 +553,7 @@ namespace Raven.Server
 
         private async Task<Stream> AuthenticateAsServerIfSslNeeded(Stream stream)
         {
-            if (Configuration.Encryption.UseSsl)
+            if (ServerCertificate != null)
             {
                 SslStream sslStream = new SslStream(stream, false, (sender, certificate, chain, errors) =>
                 {
@@ -541,7 +563,7 @@ namespace Raven.Server
                            errors == SslPolicyErrors.RemoteCertificateNotAvailable;
                 });
                 stream = sslStream;
-                await sslStream.AuthenticateAsServerAsync(ServerCertificate.Value.Certificate, true, SslProtocols.Tls12, false);
+                await sslStream.AuthenticateAsServerAsync(ServerCertificate.Certificate, true, SslProtocols.Tls12, false);
             }
 
             return stream;

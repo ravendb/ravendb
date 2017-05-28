@@ -6,7 +6,9 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Security;
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
@@ -602,10 +604,22 @@ namespace Raven.Client.Http
         private static HttpClient CreateClient(TimeSpan timeout)
         {
             var httpMessageHandler = new HttpClientHandler();
+            httpMessageHandler.ServerCertificateCustomValidationCallback += OnServerCertificateCustomValidationCallback;
+
             return new HttpClient(httpMessageHandler)
             {
                 Timeout = timeout
             };
+        }
+
+        public static event Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool> ServerCertificateCustomValidationCallback;
+
+        private static bool OnServerCertificateCustomValidationCallback(HttpRequestMessage msg, X509Certificate2 cert, X509Chain chain, SslPolicyErrors errors)
+        {
+            var onServerCertificateCustomValidationCallback = ServerCertificateCustomValidationCallback;
+            if (onServerCertificateCustomValidationCallback == null)
+                return errors == SslPolicyErrors.None;
+            return onServerCertificateCustomValidationCallback(msg, cert, chain, errors);
         }
 
         private static HttpClient GetHttpClientForCommand<T>(RavenCommand<T> command)

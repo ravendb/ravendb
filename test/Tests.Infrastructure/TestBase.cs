@@ -1,14 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
+using Raven.Client.Http;
 using Raven.Client.Util.Helpers;
 using Raven.Server;
 using Raven.Server.Config;
@@ -19,6 +22,7 @@ using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Tests.Infrastructure;
 
 namespace FastTests
 {
@@ -63,6 +67,16 @@ namespace FastTests
         {
             _customServerSettings = customSettings;
             _doNotReuseServer = true;
+        }
+
+        protected static string GenerateAndSaveSelfSignedCertificate()
+        {
+            var tempPath = @"C:\temp\TestCert.pfx";
+            var selfCertificate = CertificateUtils.CreateSelfSignedCertificate(Environment.MachineName, "ReplicationBasicTestsSlow");
+            byte[] certData = selfCertificate.Export(X509ContentType.Pfx);
+            File.WriteAllBytes(tempPath, certData);
+            RequestExecutor.ServerCertificateCustomValidationCallback += (message, certificate2, arg3, arg4) => true;
+            return tempPath;
         }
 
         private static int _serverCounter;

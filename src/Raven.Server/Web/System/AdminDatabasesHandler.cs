@@ -27,8 +27,10 @@ using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Raven.Client.Http;
 
 namespace Raven.Server.Web.System
 {
@@ -118,17 +120,25 @@ namespace Raven.Server.Web.System
                 long etag;
                 var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out etag);
                 var clusterTopology = ServerStore.GetClusterTopology(context);
+                
                 //The case where an explicit node was requested 
                 if (string.IsNullOrEmpty(node) == false)
                 {
                     if (databaseRecord.Topology.RelevantFor(node))
                         throw new InvalidOperationException($"Can't add node {node} to {name} topology because it is already part of it");
 
+                    var url = clusterTopology.GetUrlFromTag(node);
+                    if (url == null)
+                        throw new InvalidOperationException($"Can't add node {node} to {name} topology because node {node} is not part of the cluster");
+                    
+                    if (databaseRecord.Encrypted && NotUsingSsl(url))
+                        throw new InvalidOperationException($"Can't add node {node} to database {name} topology because database {name} is encrypted but node {node} doesn't have an SSL certificate.");
+
                     databaseRecord.Topology.Promotables.Add(new DatabaseTopologyNode
                     {
                         Database = name,
                         NodeTag = node,
-                        Url = clusterTopology.GetUrlFromTag(node)
+                        Url = url
                     });
                 }
 
@@ -139,7 +149,23 @@ namespace Raven.Server.Web.System
                         .Concat(clusterTopology.Promotables.Keys)
                         .Concat(clusterTopology.Watchers.Keys)
                         .ToList();
+
                     allNodes.RemoveAll(n => databaseRecord.Topology.AllNodes.Contains(n));
+
+                    if (databaseRecord.Encrypted)
+                    {
+                        var nodeCount = allNodes.Count;
+                        var removed = allNodes.RemoveAll(n =>
+                        {
+                            var u = clusterTopology.GetUrlFromTag(n);
+                            return NotUsingSsl(u);
+                        });
+
+                        if (nodeCount == removed)
+                            throw new InvalidOperationException(
+                                $"Database {name} is encrypted and requires a node which supports SSL. There is no such node available in the cluster.");
+                    }
+
                     var rand = new Random().Next();
                     var newNode = allNodes[rand % allNodes.Count];
 
@@ -170,7 +196,12 @@ namespace Raven.Server.Web.System
                 }
             }
         }
-        
+
+        public bool NotUsingSsl(string url)
+        {
+            return url.Contains("https:") == false;
+        }
+
         [RavenAction("/admin/databases", "PUT", "/admin/databases/{databaseName:string}")]
         public async Task Put()
         {

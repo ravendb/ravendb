@@ -715,13 +715,12 @@ namespace Raven.Server.ServerWide
             return ((now - maxLastWork).TotalMinutes > 5) || ((now - database.LastIdleTime).TotalMinutes > 10);
         }
 
-        public async Task<(long, BlittableJsonReaderObject)> WriteDbAsync(string databaseName, BlittableJsonReaderObject databaseRecord, long? etag, bool encrypted = false)
+        public async Task<(long, BlittableJsonReaderObject)> WriteDbAsync(string databaseName, BlittableJsonReaderObject databaseRecord, long? etag)
         {
             var addDatabaseCommand = new AddDatabaseCommand()
             {
                 Name = databaseName,
                 Etag = etag,
-                Encrypted = encrypted,
                 Record = databaseRecord
             };
             return await SendToLeaderAsync(addDatabaseCommand);
@@ -893,7 +892,7 @@ namespace Raven.Server.ServerWide
             return _engine.WaitForState(state);
         }
 
-        public void ClusterAcceptNewConnection(TcpClient client)
+        public void ClusterAcceptNewConnection(Stream client)
         {
             _engine.AcceptNewConnection(client);
         }

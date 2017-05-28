@@ -31,7 +31,7 @@ namespace Voron.Impl.Backup
             }
 
             if (!success)
-                throw new InvalidDataException("Failed to read both file headers, possible corruption.");
+                throw new InvalidDataException($"Failed to read both file headers (headers.one & headers.two) from path: {basePath}, possible corruption.");
         }
     }
 }

@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
@@ -635,11 +636,11 @@ namespace Raven.Server.ServerWide
 
             var tcpInfo = new Uri(info.Url);
             var tcpClient = new TcpClient();
-            NetworkStream stream = null;
+            Stream stream = null;
             try
             {
                 await tcpClient.ConnectAsync(tcpInfo.Host, tcpInfo.Port);
-                stream = tcpClient.GetStream();
+                stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info);
 
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out JsonOperationContext context))
                 {

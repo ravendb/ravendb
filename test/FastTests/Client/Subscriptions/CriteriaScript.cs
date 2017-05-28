@@ -20,7 +20,12 @@ namespace FastTests.Client.Subscriptions
         {
             if (useSsl)
             {
-                DoNotReuseServer(new ConcurrentDictionary<string, string> { ["Raven/UseSsl"] = "true" });
+                var tempPath = GenerateAndSaveSelfSignedCertificate();
+                DoNotReuseServer(new ConcurrentDictionary<string, string>
+                {
+                    ["Raven/Certificate/Path"] = tempPath,
+                    ["Raven/ServerUrl"] = "https://127.0.0.1:0"
+                });
             }
             using (var store = GetDocumentStore())
             using (var subscriptionManager = new DocumentSubscriptions(store))
@@ -63,7 +68,12 @@ namespace FastTests.Client.Subscriptions
         {
             if (useSsl)
             {
-                DoNotReuseServer(new ConcurrentDictionary<string, string> { ["Raven/UseSsl"] = "true" });
+                var tempPath = GenerateAndSaveSelfSignedCertificate();
+                DoNotReuseServer(new ConcurrentDictionary<string, string>
+                {
+                    ["Raven/Certificate/Path"] = tempPath,
+                    ["Raven/ServerUrl"] = "https://127.0.0.1:0"
+                });
             }
 
             using (var store = GetDocumentStore())
