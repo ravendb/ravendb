@@ -27,7 +27,7 @@ using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.BackgroundTasks;
-using Raven.Server.ServerWide.Maintance;
+using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
@@ -363,8 +363,7 @@ namespace Raven.Server
                     try
                     {
                         TcpConnectionHeaderMessage header;
-                        JsonOperationContext context;
-                        using (_tcpContextPool.AllocateOperationContext(out context))
+                        using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
                         {
                             using (var headerJson = await context.ParseToMemoryAsync(
                                 stream,
@@ -403,22 +402,9 @@ namespace Raven.Server
                     catch (Exception e)
                     {
                         if (_tcpLogger.IsInfoEnabled)
-                        {
                             _tcpLogger.Info("Failed to process TCP connection run", e);
-                        }
-                        if (tcp != null)
-                        {
-                            using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
-                            using (var errorWriter = new BlittableJsonTextWriter(context, tcp.Stream))
-                            {
-                                context.Write(errorWriter, new DynamicJsonValue
-                                {
-                                    ["Type"] = "Error",
-                                    ["Exception"] = e.ToString(),
-                                    ["Message"] = e.Message
-                                });
-                            }
-                        }
+
+                        SendErrorIfPossible(tcp, e);
                     }
                 }
                 catch (Exception e)
@@ -431,7 +417,33 @@ namespace Raven.Server
             });
         }
 
-        private ClusterMaintenanceWorker _clusterMaintainanceWorker;
+        private void SendErrorIfPossible(TcpConnectionOptions tcp, Exception e)
+        {
+            var tcpStream = tcp?.Stream;
+            if (tcpStream == null)
+                return;
+
+            try
+            {
+                using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
+                using (var errorWriter = new BlittableJsonTextWriter(context, tcpStream))
+                {
+                    context.Write(errorWriter, new DynamicJsonValue
+                    {
+                        ["Type"] = "Error",
+                        ["Exception"] = e.ToString(),
+                        ["Message"] = e.Message
+                    });
+                }
+            }
+            catch (Exception inner)
+            {
+                if (_tcpLogger.IsInfoEnabled)
+                    _tcpLogger.Info("Failed to send error in TCP connection", inner);
+            }
+        }
+
+        private ClusterMaintenanceWorker _clusterMaintenanceWorker;
 
         private async Task<bool> DispatchServerwideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, TcpClient tcpClient)
         {
@@ -448,7 +460,7 @@ namespace Raven.Server
                 using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
                 using (var headerJson = await context.ParseToMemoryAsync(
                     tcp.Stream,
-                    "maintance-heartbeat-header",
+                    "maintenance-heartbeat-header",
                     BlittableJsonDocumentBuilder.UsageMode.None,
                     tcp.PinnedBuffer
                 ))
@@ -456,21 +468,21 @@ namespace Raven.Server
                     
                     var maintenanceHeader = JsonDeserializationRachis<ClusterMaintenanceSupervisor.ClusterMaintenanceConnectionHeader>.Deserialize(headerJson);
                     
-                    if (_clusterMaintainanceWorker?.CurrentTerm > maintenanceHeader.Term)
+                    if (_clusterMaintenanceWorker?.CurrentTerm > maintenanceHeader.Term)
                     {
                         if (_tcpLogger.IsInfoEnabled)
                         {
                             _tcpLogger.Info($"Request for maintainance with term {maintenanceHeader.Term} was rejected, " +
-                                            $"because we are already connected to the recent leader with the term {_clusterMaintainanceWorker.CurrentTerm}");
+                                            $"because we are already connected to the recent leader with the term {_clusterMaintenanceWorker.CurrentTerm}");
                         }
                         tcp.Dispose();
                         return true;
                     }
-                    var old = _clusterMaintainanceWorker;
+                    var old = _clusterMaintenanceWorker;
                     using (old)
                     {
-                        _clusterMaintainanceWorker = new ClusterMaintenanceWorker(tcp, ServerStore.ServerShutdown, ServerStore, maintenanceHeader.Term);
-                        _clusterMaintainanceWorker.Start();
+                        _clusterMaintenanceWorker = new ClusterMaintenanceWorker(tcp, ServerStore.ServerShutdown, ServerStore, maintenanceHeader.Term);
+                        _clusterMaintenanceWorker.Start();
                     }
                     return true;
                 }

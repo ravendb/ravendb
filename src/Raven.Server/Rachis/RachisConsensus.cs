@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using Raven.Client.Exceptions;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.ServerWide.Maintance;
+using Raven.Server.ServerWide.Maintenance;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;

@@ -24,7 +24,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.ServerWide.Maintance;
+using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
@@ -121,7 +121,7 @@ namespace Raven.Server.ServerWide
             return ClusterMaintenanceSupervisor?.GetStats();
         }
 
-        public async Task ClusterMaintanceSetupTask()
+        public async Task ClusterMaintenanceSetupTask()
         {
             while (true)
             {
@@ -331,7 +331,7 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            Task.Run(ClusterMaintanceSetupTask, ServerShutdown);
+            Task.Run(ClusterMaintenanceSetupTask, ServerShutdown);
         }
 
         private void OnTopologyChanged(object sender, ClusterTopology topologyJson)
@@ -838,7 +838,7 @@ namespace Raven.Server.ServerWide
             return (command.Result.ETag, command.Result.Data);
         }
 
-        protected internal class PutRaftCommand : RavenCommand<PutRaftCommandResult>
+        private class PutRaftCommand : RavenCommand<PutRaftCommandResult>
         {
             private readonly JsonOperationContext _context;
             private readonly BlittableJsonReaderObject _command;

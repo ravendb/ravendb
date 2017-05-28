@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
@@ -12,7 +11,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
 
-namespace Raven.Server.ServerWide.Maintance
+namespace Raven.Server.ServerWide.Maintenance
 {
     public class ClusterMaintenanceWorker : IDisposable
     {
