@@ -281,13 +281,13 @@ namespace Voron.Recovery
                 catch (Exception e)
                 {
                     logWriter.WriteLine(
-                        $"Found invalid blittable document at pos={GetFilePosition(startOffest, mem)} with key={document?.Key ?? "null"}{Environment.NewLine}{e}");
+                        $"Found invalid blittable document at pos={GetFilePosition(startOffest, mem)} with key={document?.Id ?? "null"}{Environment.NewLine}{e}");
                     return false;
                 }
                 context.Write(writer, document.Data);
                 _numberOfDocumentsRetrived++;
-                logWriter.WriteLine($"Found Document with key={document.Key}");
-                _lastRecoveredDocumentKey = document.Key;
+                logWriter.WriteLine($"Found Document with key={document.Id}");
+                _lastRecoveredDocumentKey = document.Id;
                 return true;
             }
             catch (Exception e)

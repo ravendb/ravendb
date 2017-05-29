@@ -54,7 +54,7 @@ namespace SlowTests.Bugs.LiveProjections
 
                     var first = rep.FirstOrDefault();
 
-                    Assert.Equal(first.Id, "ProductSkus/1");
+                    Assert.Equal(first.Id, "ProductSkus/1-A");
 
                     Assert.Equal(first.Name, "variant 1");
                 }
@@ -105,7 +105,7 @@ namespace SlowTests.Bugs.LiveProjections
                     var first = rep.FirstOrDefault();
 
                     Assert.Equal(first.Name, "product 1");
-                    Assert.Equal(first.Id, "products/1");
+                    Assert.Equal(first.Id, "products/1-A");
                     Assert.Equal(first.Variants[0].Name, "variant 1");
                 }
             }

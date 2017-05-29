@@ -37,7 +37,7 @@ namespace SlowTests.MailingList
                 }
                 using (var session = store.OpenSession())
                 {
-                    var load = session.Load<A>("as/1");
+                    var load = session.Load<A>("as/1-A");
                     Assert.Equal("a", load.Items[dateTimeOffset]);
                 }
             }

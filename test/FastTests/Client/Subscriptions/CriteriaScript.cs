@@ -27,7 +27,7 @@ namespace FastTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastChangeVector;
+                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).DatabaseChangeVector;
                 await CreateDocuments(store, 5);
 
                 var subscriptionCreationParams = new SubscriptionCreationOptions()
@@ -71,7 +71,7 @@ namespace FastTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastChangeVector;
+                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).DatabaseChangeVector;
                 await CreateDocuments(store, 6);
 
                 var subscriptionCreationParams = new SubscriptionCreationOptions()
@@ -89,7 +89,7 @@ namespace FastTests.Client.Subscriptions
                     else if (namSuffix == 4){
                     return this;
                     }
-                    return {Name: 'foo', OtherDoc:LoadDocument('things/6')}",
+                    return {Name: 'foo', OtherDoc:LoadDocument('things/6-A')}",
                     },
                     ChangeVector = lastChangeVector
                 };

@@ -46,11 +46,11 @@ namespace FastTests.Client.MoreLikeThis
             public Transformer2()
             {
                 TransformResults = results => from result in results
-                                              let _ = Include<Person>("people/1")
+                                              let _ = Include<Person>(result.PersonId)
                                               select new
                                               {
                                                   TransformedBody = result.Body + "321",
-                                                  Name = LoadDocument<Person>("people/1").Name
+                                                  Name = LoadDocument<Person>(result.PersonId).Name
                                               };
             }
         }
@@ -130,7 +130,7 @@ namespace FastTests.Client.MoreLikeThis
 
         public void TransformersShouldWorkWithMoreLikeThis2()
         {
-            string id;
+            string id, personId;
 
             new Transformer2().Execute(_store);
 
@@ -138,10 +138,17 @@ namespace FastTests.Client.MoreLikeThis
             {
                 new DataIndex(true, false).Execute(_store);
 
-                session.Store(new Person { Name = "Name1" });
+                var person = new Person { Name = "Name1" };
+                session.Store(person);
+                personId = person.Id;
 
                 var list = GetDataList();
-                list.ForEach(session.Store);
+                list.ForEach(x =>
+                {
+                    x.PersonId = personId;
+                    session.Store(x);
+                });
+
                 session.SaveChanges();
 
                 id = session.Advanced.GetDocumentId(list.First());
@@ -165,7 +172,7 @@ namespace FastTests.Client.MoreLikeThis
                 }
 
                 var numberOfRequests = session.Advanced.NumberOfRequests;
-                var person = session.Load<Person>("people/1");
+                var person = session.Load<Person>("people/1-A");
                 Assert.NotNull(person);
                 Assert.Equal("Name1", person.Name);
                 Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
@@ -328,7 +335,7 @@ namespace FastTests.Client.MoreLikeThis
         [Fact]
         public void CanGetResultsWhenIndexHasSlashInIt()
         {
-            const string key = "datas/1";
+            const string key = "datas/1-A";
 
             using (var session = _store.OpenSession())
             {
@@ -346,7 +353,7 @@ namespace FastTests.Client.MoreLikeThis
         [Fact]
         public void Query_On_Document_That_Does_Not_Have_High_Enough_Word_Frequency()
         {
-            const string key = "datas/4";
+            const string key = "datas/4-A";
 
             using (var session = _store.OpenSession())
             {
@@ -374,7 +381,7 @@ namespace FastTests.Client.MoreLikeThis
         [Fact]
         public void Test_With_Lots_Of_Random_Data()
         {
-            var key = "datas/1";
+            var key = "datas/1-A";
             using (var session = _store.OpenSession())
             {
                 new DataIndex().Execute(_store);
@@ -395,7 +402,7 @@ namespace FastTests.Client.MoreLikeThis
         [Fact]
         public void Do_Not_Pass_FieldNames()
         {
-            var key = "datas/1";
+            var key = "datas/1-A";
             using (var session = _store.OpenSession())
             {
                 new DataIndex().Execute(_store);
@@ -421,7 +428,7 @@ namespace FastTests.Client.MoreLikeThis
         [Fact]
         public void Each_Field_Should_Use_Correct_Analyzer()
         {
-            var key = "datas/1";
+            var key = "datas/1-A";
             using (var session = _store.OpenSession())
             {
                 new DataIndex().Execute(_store);
@@ -443,7 +450,7 @@ namespace FastTests.Client.MoreLikeThis
                 Assert.Empty(list);
             }
 
-            key = "datas/11";
+            key = "datas/11-A";
             using (var session = _store.OpenSession())
             {
                 new DataIndex().Execute(_store);
@@ -469,7 +476,7 @@ namespace FastTests.Client.MoreLikeThis
         [Fact]
         public void Can_Use_Min_Doc_Freq_Param()
         {
-            const string key = "datas/1";
+            const string key = "datas/1-A";
 
             using (var session = _store.OpenSession())
             {
@@ -505,7 +512,7 @@ namespace FastTests.Client.MoreLikeThis
         [Fact]
         public void Can_Use_Boost_Param()
         {
-            const string key = "datas/1";
+            const string key = "datas/1-A";
 
             using (var session = _store.OpenSession())
             {
@@ -544,7 +551,7 @@ namespace FastTests.Client.MoreLikeThis
         [Fact]
         public void Can_Use_Stop_Words()
         {
-            const string key = "datas/1";
+            const string key = "datas/1-A";
 
             using (var session = _store.OpenSession())
             {
@@ -709,6 +716,7 @@ namespace FastTests.Client.MoreLikeThis
             public string Id { get; set; }
             public string Body { get; set; }
             public string WhitespaceAnalyzerField { get; set; }
+            public string PersonId { get; set; }
         }
 
         public class DataWithIntegerId

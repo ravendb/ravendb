@@ -18,6 +18,7 @@ using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Exceptions.Compilation;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
+using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Routing;
 using Raven.Server.TrafficWatch;
@@ -143,9 +144,9 @@ namespace Raven.Server
 
         private static readonly string[] UnsafeWarning = {
             "Running in a potentially unsafe mode.",
-            "Server is exposed to the world and the security option Raven/AnonymousUserAccessMode is set to Admin.",
+            $"Server is exposed to the world and the security option { RavenConfiguration.GetKey(x => x.Server.AnonymousUserAccessMode) } is set to { nameof(AnonymousUserAccessModeValues.Admin) }.",
             "Please find the RavenDB settings file settings.json in the server directory and set this option to None to prevent unauthorized access. In order to gain administrative access to the server please access it through localhost.",
-            "If you intended to grant administrative access to the server for anonymous users set Raven/AllowAnonymousUserToAccessTheServer security option to true."
+            $"If you intended to grant administrative access to the server for anonymous users set { RavenConfiguration.GetKey(x => x.Server.AllowAnonymousUserToAccessTheServer) } security option to true."
         };
 
         private async Task RequestHandler(HttpContext context)

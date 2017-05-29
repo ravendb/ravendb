@@ -21,12 +21,12 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.Store(new User
                     {
                         Name = "Joe Doe"
-                    });
+                    },"users/1");
 
                     session.Store(new Person
                     {
                         Name = "James Smith"
-                    });
+                    },"people/1");
 
                     session.SaveChanges();
                 }

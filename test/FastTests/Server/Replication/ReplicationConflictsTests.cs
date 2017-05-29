@@ -659,6 +659,28 @@ namespace FastTests.Server.Replication
             }
         }
 
+        [Fact]
+        public void LocalIsLongerThanRemote()
+        {
+            var dbIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
+
+            var local = new[]
+            {
+                new ChangeVectorEntry { DbId = dbIds[2], Etag = 95 },
+                new ChangeVectorEntry { DbId = dbIds[1], Etag = 2 },
+                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10 },
+            };
+
+            var remote = new[]
+            {
+                new ChangeVectorEntry { DbId = dbIds[0], Etag = 75 },
+
+                
+            };
+
+            Assert.Equal(ConflictsStorage.ConflictStatus.Conflict, ConflictsStorage.GetConflictStatus(remote, local));
+        }
+
         private class UserIndex : AbstractIndexCreationTask<User>
         {
             public UserIndex()

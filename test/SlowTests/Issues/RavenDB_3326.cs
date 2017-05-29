@@ -50,7 +50,7 @@ namespace SlowTests.Issues
                         //TODO - Add when we have query with projection 
                         Assert.Equal("Tel Aviv", enumerator.Current.Document.OtherThanName);
 
-                        Assert.NotNull(enumerator.Current.Key);
+                        Assert.NotNull(enumerator.Current.Id);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.IndexScore]);
                     }
                 }
@@ -90,7 +90,7 @@ namespace SlowTests.Issues
                         Assert.Equal("John", enumerator.Current.Document.Name);
                         Assert.Equal("Tel Aviv", enumerator.Current.Document.OtherThanName);
 
-                        Assert.NotNull(enumerator.Current.Key);
+                        Assert.NotNull(enumerator.Current.Id);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.IndexScore]);
                     }
                 }

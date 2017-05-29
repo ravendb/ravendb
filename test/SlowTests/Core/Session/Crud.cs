@@ -39,7 +39,7 @@ namespace SlowTests.Core.Session
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var user = await session.LoadAsync<User>("users/1");
+                    var user = await session.LoadAsync<User>("users/1-A");
                     Assert.NotNull(user);
                     Assert.Equal("Fitzchak", user.Name);
 
@@ -151,7 +151,7 @@ namespace SlowTests.Core.Session
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var user = await session.Include<User>(x => x.AddressId).LoadAsync<User>("users/1");
+                    var user = await session.Include<User>(x => x.AddressId).LoadAsync<User>("users/1-A");
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
@@ -164,7 +164,7 @@ namespace SlowTests.Core.Session
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var user = await session.Include("AddressId").LoadAsync<User>("users/1");
+                    var user = await session.Include("AddressId").LoadAsync<User>("users/1-A");
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 

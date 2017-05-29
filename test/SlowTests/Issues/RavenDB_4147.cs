@@ -31,14 +31,14 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                store.Operations.Send(new PatchOperation("dates/1", null, new PatchRequest
+                store.Operations.Send(new PatchOperation("dates/1-A", null, new PatchRequest
                 {
                     Script = "this.Date1 = this[\"@metadata\"][\"@last-modified\"]; this.Date2 = this[\"@metadata\"][\"@last-modified\"];"
                 }));
 
                 using (var session = store.OpenSession())
                 {
-                    var dates = session.Load<Dates>("dates/1");
+                    var dates = session.Load<Dates>("dates/1-A");
                     Assert.NotNull(dates.Date1);
                     Assert.NotNull(dates.Date2);
                 }

@@ -15,32 +15,41 @@ namespace Raven.Client.Documents.Commands.Batches
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentNullException(nameof(name));
 
-            Key = documentId;
+            Id = documentId;
             Name = name;
             Stream = stream;
             ContentType = contentType;
             Etag = etag;
 
+            if (Stream.CanRead == false)
+                ThrowNotReadableStream();
             if (Stream.CanSeek == false)
                 ThrowNotSeekableStream();
             if (Stream.Position != 0)
                 ThrowPositionNotZero(Stream.Position);
         }
 
-        private void ThrowPositionNotZero(long streamPosition)
+        public static void ThrowPositionNotZero(long streamPosition)
         {
             throw new InvalidOperationException($"Cannot put an attachment with a stream that have position which isn't zero (The position is: {streamPosition}) " +
                                                 "since this is most of the time not intended and it is a common mistake.");
         }
 
-        private void ThrowNotSeekableStream()
+        public static void ThrowNotSeekableStream()
         {
             throw new InvalidOperationException(
                 "Cannot put an attachment with a not seekable stream. " +
                 "We require a seekable stream because we might failover to a different node if the current one is unavailable during the operation.");
         }
 
-        public string Key { get; }
+        public static void ThrowNotReadableStream()
+        {
+            throw new InvalidOperationException(
+                "Cannot put an attachment with a not readable stream. " +
+                "Make sure that the specified stream is readable and was not disposed.");
+        }
+
+        public string Id { get; }
         public string Name { get; }
         public Stream Stream { get; }
         public string ContentType { get; }
@@ -51,7 +60,7 @@ namespace Raven.Client.Documents.Commands.Batches
         {
             return new DynamicJsonValue
             {
-                [nameof(Key)] = Key,
+                [nameof(Id)] = Id,
                 [nameof(Name)] = Name,
                 [nameof(ContentType)] = ContentType,
                 [nameof(Etag)] = Etag,

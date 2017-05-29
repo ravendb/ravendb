@@ -48,9 +48,9 @@ namespace SlowTests.Issues
 
                     using (var session = store.OpenSession())
                     {
-                        var product1 = session.Load<Product>("products/1");
-                        var product2 = session.Load<Product>("products/2");
-                        var product3 = session.Load<Product>("products/3");
+                        var product1 = session.Load<Product>("products/1-A");
+                        var product2 = session.Load<Product>("products/2-A");
+                        var product3 = session.Load<Product>("products/3-A");
 
                         Assert.NotNull(product1);
                         Assert.NotNull(product2);
@@ -84,9 +84,9 @@ namespace SlowTests.Issues
 
                     using (var session = store.OpenSession())
                     {
-                        var product1 = session.Load<Product>("products/1");
-                        var product2 = session.Load<Product>("products/2");
-                        var product3 = session.Load<Product>("products/3");
+                        var product1 = session.Load<Product>("products/1-A");
+                        var product2 = session.Load<Product>("products/2-A");
+                        var product3 = session.Load<Product>("products/3-A");
 
                         Assert.NotNull(product1);
                         Assert.Null(product2);
@@ -123,9 +123,9 @@ namespace SlowTests.Issues
 
                     using (var session = store.OpenSession())
                     {
-                        var product1 = session.Load<Product>("products/1");
-                        var product2 = session.Load<Product>("products/2");
-                        var product3 = session.Load<Product>("products/3");
+                        var product1 = session.Load<Product>("products/1-A");
+                        var product2 = session.Load<Product>("products/2-A");
+                        var product3 = session.Load<Product>("products/3-A");
 
                         Assert.NotNull(product1);
                         Assert.Null(product2);

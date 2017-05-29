@@ -67,7 +67,7 @@ namespace SubscriptionsBenchmark
     public class SingleSubscriptionBenchmark : IDisposable
     {
         private int _batchSize;
-        private long? _subscriptionId;
+        private string _subscriptionId;
         private readonly string _collectionName;
         private DocumentStore _store;
 
@@ -103,7 +103,7 @@ namespace SubscriptionsBenchmark
         {
             try
             {
-                if (_subscriptionId.HasValue == false)
+                if (string.IsNullOrEmpty(_subscriptionId))
                 {
                     var subscriptionCreationParams = new SubscriptionCreationOptions
                     {
@@ -113,7 +113,7 @@ namespace SubscriptionsBenchmark
                 }
 
 
-                using (var subscription = _store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(_subscriptionId.Value)
+                using (var subscription = _store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(_subscriptionId)
                 {
                     Strategy = SubscriptionOpeningStrategy.WaitForFree
                 }))

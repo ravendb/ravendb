@@ -6,21 +6,13 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
-using System.IO.MemoryMappedFiles;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
 using Voron;
-using Voron.Global;
-using Voron.Impl.Compaction;
-using Voron.Impl.FileHeaders;
 using Voron.Platform.Win32;
 using Xunit;
-using Sparrow;
 using Voron.Data;
 using Voron.Impl.Paging;
+using Voron.Util.Settings;
 
 namespace SlowTests.Voron
 {
@@ -69,7 +61,7 @@ namespace SlowTests.Voron
 
             // Lets corrupt something
             using (var options = StorageEnvironmentOptions.ForPath(DataDir))
-            using (var pager = new WindowsMemoryMapPager(options, Path.Combine(DataDir, "Raven.Voron")))
+            using (var pager = new WindowsMemoryMapPager(options, new VoronPathSetting(Path.Combine(DataDir, "Raven.Voron"))))
             using (var tempTX = new TempPagerTransaction())
             {
                 var writePtr = pager.AcquirePagePointer(tempTX, 2) + PageHeader.SizeOf + 43; // just some random place on page #2

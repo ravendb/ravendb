@@ -25,11 +25,12 @@ namespace SlowTests.Server.Rachis
             {
                 for (var i = 0; i < 5; i++)
                 {
-                    lastIndex =  await leader.PutAsync(ctx.ReadObject(new DynamicJsonValue
+                    var (index,_) =  await leader.PutAsync(ctx.ReadObject(new DynamicJsonValue
                     {
                         ["Name"] = "test",
                         ["Value"] = i 
                     }, "test"));
+                    lastIndex = index;
                 }
             }
 

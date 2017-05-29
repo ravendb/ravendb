@@ -14,7 +14,14 @@
                         </div>
 
                         <div class="settings-group" data-bind="foreach: getAvailableSections()">
-                            <div class="checkbox settings-item" data-bind="css: { 'active': $root.currentAdvancedSection() === name, 'hide-check': alwaysEnabled }">
+                            <div class="checkbox settings-item nocheck" data-bind="css: { 'active': $root.currentAdvancedSection() === name }, visible: alwaysEnabled">
+                                <label data-bind="text: name, click: _.partial($root.showAdvancedConfigurationFor, name)"></label>
+                                <button type="button" class="btn pull-right btn-toggle"
+                                        data-bind="click: _.partial($root.showAdvancedConfigurationFor, name), css: { 'btn-danger': enabled() && validationGroup && !validationGroup.isValid() }">
+                                    <i data-bind="attr: { 'class' : validationGroup && !validationGroup.isValid() ? 'icon-danger' : 'icon-settings' }"></i>
+                                </button>
+                            </div>
+                            <div class="checkbox settings-item" data-bind="css: { 'active': $root.currentAdvancedSection() === name }, visible: !alwaysEnabled">
                                 <input class="styled" type="checkbox" data-bind="checked: enabled, attr: { id: 'section_' + $index() }">
                                 <label data-bind="text: name, attr: { 'for': 'section_' + $index() }"></label>
                                 <button type="button" class="btn pull-right btn-toggle"

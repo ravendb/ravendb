@@ -134,7 +134,7 @@ namespace FastTests.Server
                         ["Foo"] = "Bar"
                     };
 
-                    await Server.ServerStore.PutValueInClusterAsync(context, "foo/bar", context.ReadObject(foo, "read test stuff"));
+                    await Server.ServerStore.PutValueInClusterAsync("foo/bar", context.ReadObject(foo, "read test stuff"));
                 }
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
@@ -165,7 +165,7 @@ namespace FastTests.Server
 
                     using (var obj = context.ReadObject(foo, "read test stuff"))
                     {
-                        Server.ServerStore.PutValueInClusterAsync(context, "foo/bar", obj).Wait();
+                        Server.ServerStore.PutValueInClusterAsync("foo/bar", obj).Wait();
                     }
                 }
 
@@ -178,7 +178,7 @@ namespace FastTests.Server
 
                     using (var obj = context.ReadObject(foo, "read test stuff"))
                     {
-                        Server.ServerStore.PutValueInClusterAsync(context, "foo/bar", obj).Wait();
+                        Server.ServerStore.PutValueInClusterAsync("foo/bar", obj).Wait();
                     }
                 }
 

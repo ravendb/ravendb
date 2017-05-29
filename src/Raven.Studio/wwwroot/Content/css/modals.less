@@ -3,13 +3,12 @@
 
 .modal-dialog {
     transition: all 0.3s ease-in-out !important;
-
     .slidein-style;
 
     .modal-body {
         section {
             h4, h5, h6 {
-                text-transform:uppercase;
+                text-transform: uppercase;
                 color: @brand-info;
                 font-weight: bold;
             }
@@ -20,6 +19,7 @@
         @media (min-width: @screen-sm) {
             display: flex;
         }
+
         margin-left: (@grid-gutter-width / -2);
         margin-right: (@grid-gutter-width / -2);
 
@@ -27,6 +27,7 @@
             padding-left: (@grid-gutter-width / 2);
             padding-right: (@grid-gutter-width / 2);
             flex-shrink: 0;
+
             @media (min-width: @screen-sm) {
                 width: @modal-sm - 2;
             }
@@ -40,12 +41,24 @@
                     padding-left: (@grid-gutter-width / 2);
                     padding-right: (@grid-gutter-width / 2);
                     border-top: 2px solid @gray-darker;
+                    display: flex;
+                    align-items: stretch;
+
                     &:last-of-type {
                         border-bottom: 2px solid @gray-darker;
                     }
 
-                    &>.btn {
-                        border:none;
+                    label {
+                        flex-grow: 1;
+                        line-height: 40px;
+
+                        &::before {
+                            top: 11px;
+                        }
+                    }
+
+                    & > .btn {
+                        border: none;
                         box-shadow: none;
                     }
                 }
@@ -53,7 +66,6 @@
                 .checkbox {
                     margin-top: 0;
                     margin-bottom: 0;
-                    padding-bottom: 5px;
                     margin-left: -15px;
                     padding-left: 36px;
                     margin-right: -15px;
@@ -61,8 +73,6 @@
                     transition: background-color 0.2s ease;
 
                     .btn {
-                        margin-top: -2px;
-                        margin-bottom: -2px;
                         margin-right: (@grid-gutter-width / -2);
                         padding-left: (@grid-gutter-width / 2);
                         padding-right: (@grid-gutter-width / 2);
@@ -74,16 +84,26 @@
 
                     &:hover, &.active {
                         background-color: @gray-darker;
+
                         .btn {
                             z-index: 1;
                             position: relative;
                             border-left-color: darken(@gray-darker,2%);
-                            background-color: @gray-dark;
+
+                            &:not(.btn-danger) {
+                                background-color: @gray-dark;
+                            }
+                        }
+                    }
+
+                    &.active {
+                        .btn:not(.btn-danger) {
+                            .btn.active;
                         }
                     }
                 }
 
-                .btn:hover {
+                .btn:not(.btn-danger):hover {
                     background-color: @gray-dark;
                 }
             }
@@ -99,6 +119,7 @@
 
             padding: (@grid-gutter-width / 2);
             .fadeindelay-style;
+
             @media (min-width: @screen-sm) {
                 width: (@modal-lg / 3 * 2);
             }
@@ -181,7 +202,6 @@
 
     .modal-body {
         overflow: hidden;
-
     }
 
     .form-container {
@@ -192,7 +212,6 @@
         -ms-transition: all .3s ease-in-out;
         -o-transition: all .3s ease-in-out;
         transition: all .3s ease-in-out;
-
         -moz-transform: translateX(0);
         -webkit-transform: translateX(0);
         -o-transform: translateX(0);
@@ -233,7 +252,6 @@
             }
         }
     }
-
 }
 
 #index-performance-operation-details {
@@ -247,7 +265,6 @@
         margin-left: 10px;
         font-size: 20px;
     }
-
 }
 
 .modal-details {

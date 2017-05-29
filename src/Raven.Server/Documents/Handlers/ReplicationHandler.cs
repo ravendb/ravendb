@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Handlers
                 var conflicts = Database.DocumentsStorage.ConflictsStorage.GetConflictsAfter(context, etag);
                 foreach (var conflict in conflicts)
                 {
-                    if (alreadyAdded.Add(conflict.Key))
+                    if (alreadyAdded.Add(conflict.Id))
                     {
                         if (skip > 0)
                         {
@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Handlers
                             break;
                         array.Add(new DynamicJsonValue
                         {
-                            [nameof(GetConflictsResult.Key)] = conflict.Key,
+                            [nameof(GetConflictsResult.Id)] = conflict.Id,
                             [nameof(conflict.LastModified)] = conflict.LastModified
                         });
                     }
@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Handlers
 
                 context.Write(writer, new DynamicJsonValue
                 {
-                    [nameof(GetConflictsResult.Key)] = docId,
+                    [nameof(GetConflictsResult.Id)] = docId,
                     [nameof(GetConflictsResult.LargestEtag)] = maxEtag,
                     [nameof(GetConflictsResult.Results)] = array
                 });
@@ -224,10 +224,14 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ms))
             {
+                writer.WriteStartObject();
+
                 writer.WriteArray(context, "Results", tuple.Item2, (w, c, p) =>
                 {
                     p.Write(c, w);
                 });
+
+                writer.WriteEndObject();
             }
 
             ms.TryGetBuffer(out ArraySegment<byte> bytes);
@@ -308,7 +312,7 @@ namespace Raven.Server.Documents.Handlers
                         ["Value"] = new DynamicJsonValue
                         {
                             ["ErrorCount"] = item.Value.ErrorCount,
-                            ["NextTimout"] = item.Value.NextTimout
+                            ["NextTimeout"] = item.Value.NextTimeout
                         }
                     });
                 }

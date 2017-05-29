@@ -66,7 +66,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var user = await session.LoadAsync<Users_FullName, Users_FullName.Result>("users/1");
+                    var user = await session.LoadAsync<Users_FullName, Users_FullName.Result>("users/1-A");
 
                     Assert.NotNull(user.Id);
                 }

@@ -39,7 +39,7 @@ class quotas extends viewModelBase {
             // fetch current quotas from the database
             this.fetchQuotas(db)
                 .done(() => deferred.resolve({ can: true }))
-                .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(this.activeDatabase()) }));
+                .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseRecord(this.activeDatabase()) }));
         } else {
             deferred.resolve({ can: true });
         }

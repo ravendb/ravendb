@@ -68,7 +68,11 @@ class databaseInfo {
     }
 
     asDatabase(): database {
-        return databasesManager.default.getDatabaseByName(this.name);
+        const casted = databasesManager.default.getDatabaseByName(this.name);
+        if (!casted) {
+            throw new Error("Unable to find database: " + this.name + " in database manager");
+        }
+        return casted;
     }
 
     static extractQualifierAndNameFromNotification(input: string): { qualifier: string, name: string } {
@@ -180,9 +184,8 @@ class databaseInfo {
         const topologyDto = dto.NodesTopology;
         const members = this.mapNodes("Member", topologyDto.Members);
         const promotables = this.mapNodes("Promotable", topologyDto.Promotables);
-        const watchers = this.mapNodes("Watcher", topologyDto.Watchers);
 
-        this.nodes(_.concat<clusterNode>(members, promotables, watchers));
+        this.nodes(_.concat<clusterNode>(members, promotables));
         //TODO: consider in place update? of nodes?
     }
 

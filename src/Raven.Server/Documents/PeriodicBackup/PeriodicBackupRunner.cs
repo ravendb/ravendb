@@ -453,12 +453,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                 PeriodicBackupStatus = status
             };
 
-            var etag = await _serverStore.SendToLeaderAsync(command.ToJson());
+            var result = await _serverStore.SendToLeaderAsync(command);
 
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Periodic backup status with task id {status.TaskId} was updated");
 
-            await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, etag);
+            await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Item1);
         }
 
         private async Task UploadToServer(

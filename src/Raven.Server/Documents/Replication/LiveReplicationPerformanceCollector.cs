@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Replication
             {
                 while (token.IsCancellationRequested == false)
                 {
-                    await TimeoutManager.WaitFor(3000, token).ConfigureAwait(false);
+                    await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(3000), token).ConfigureAwait(false);
 
                     if (token.IsCancellationRequested)
                         break;

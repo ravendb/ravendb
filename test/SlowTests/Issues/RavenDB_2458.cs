@@ -26,7 +26,7 @@ namespace SlowTests.Issues
                 using (var commands = store.Commands())
                 {
                     commands.Put(
-                        Constants.Json.CustomFunctionsKey,
+                        Constants.Json.CustomFunctionsId,
                         null,
                         new { Functions = "exports.test = function(value) { return 'test ' + value; };" });
                 }
@@ -46,11 +46,11 @@ namespace SlowTests.Issues
 
                 store
                     .Operations
-                    .Send(new PatchOperation("people/1", null, new PatchRequest { Script = "this.Name = test(this.Name);" }));
+                    .Send(new PatchOperation("people/1-A", null, new PatchRequest { Script = "this.Name = test(this.Name);" }));
 
                 using (var session = store.OpenSession())
                 {
-                    var person = session.Load<Person>("people/1");
+                    var person = session.Load<Person>("people/1-A");
                     Assert.Equal("test Name1", person.Name);
                 }
             }
@@ -64,7 +64,7 @@ namespace SlowTests.Issues
                 using (var commands = store.Commands())
                 {
                     commands.Put(
-                        Constants.Json.CustomFunctionsKey,
+                        Constants.Json.CustomFunctionsId,
                         null,
                         new { Functions = "exports.test = function(value) { return 'test ' + value; };" });
 
@@ -83,25 +83,25 @@ namespace SlowTests.Issues
 
                     store
                         .Operations
-                        .Send(new PatchOperation("people/1", null, new PatchRequest { Script = "this.Name = test(this.Name);" }));
+                        .Send(new PatchOperation("people/1-A", null, new PatchRequest { Script = "this.Name = test(this.Name);" }));
 
                     using (var session = store.OpenSession())
                     {
-                        var person = session.Load<Person>("people/1");
+                        var person = session.Load<Person>("people/1-A");
                         Assert.Equal("test Name1", person.Name);
                     }
 
                     commands
-                        .Delete(Constants.Json.CustomFunctionsKey, null);
+                        .Delete(Constants.Json.CustomFunctionsId, null);
 
                     Assert.True(SpinWait.SpinUntil(() => database.Patcher.CustomFunctions == null, TimeSpan.FromSeconds(10)));
 
                     Assert.Throws<JavaScriptException>(
-                        () => store.Operations.Send(new PatchOperation("people/1", null, new PatchRequest { Script = "this.Name = test(this.Name);" })));
+                        () => store.Operations.Send(new PatchOperation("people/1-A", null, new PatchRequest { Script = "this.Name = test(this.Name);" })));
 
                     using (var session = store.OpenSession())
                     {
-                        var person = session.Load<Person>("people/1");
+                        var person = session.Load<Person>("people/1-A");
                         Assert.Equal("test Name1", person.Name);
                     }
                 }

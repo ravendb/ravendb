@@ -41,10 +41,14 @@ namespace Raven.Client.Server
 
         public DynamicJsonValue ToJson()
         {
-            var resolveByCollection = new DynamicJsonValue();
-            foreach (var scriptResolver in ResolveByCollection)
+            DynamicJsonValue resolveByCollection = null;
+            if(ResolveByCollection != null)
             {
-                resolveByCollection[scriptResolver.Key] = scriptResolver.Value.ToJson();
+                resolveByCollection = new DynamicJsonValue();
+                foreach (var scriptResolver in ResolveByCollection)
+                {
+                    resolveByCollection[scriptResolver.Key] = scriptResolver.Value.ToJson();
+                }
             }
             return new DynamicJsonValue
             {
@@ -165,23 +169,21 @@ namespace Raven.Client.Server
                 while (hasNewValues && hasOldValues)
                 {
                     var res = oldEnum.Current.CompareTo(newEnum.Current);
-                    switch (res)
+                    if (res > 0)
                     {
-                        case 1:
-                            addDestinations.Add(newEnum.Current);
-                            hasNewValues = newEnum.MoveNext();
-                            break;
-                        case -1:
-                            removeDestinations.Add(oldEnum.Current);
-                            hasOldValues = oldEnum.MoveNext();
-                            break;
-                        case 0:
-                            hasNewValues = newEnum.MoveNext();
-                            hasOldValues = oldEnum.MoveNext();
-                            break;
-                        default:// should never happen
-                            throw new InvalidDataException($"{res} is an invalid comparison result between {oldEnum.Current.Humane} and {newEnum.Current.Humane}");
+                        addDestinations.Add(newEnum.Current);
+                        hasNewValues = newEnum.MoveNext();
+                        continue;
                     }
+                    if (res < 0)
+                    {
+                        removeDestinations.Add(oldEnum.Current);
+                        hasOldValues = oldEnum.MoveNext();
+                        continue;
+                    }
+
+                    hasNewValues = newEnum.MoveNext();
+                    hasOldValues = oldEnum.MoveNext();
                 }
 
                 // the remaining nodes of the old destinations should be removed
@@ -241,7 +243,7 @@ namespace Raven.Client.Server
         public void RemoveFromTopology(string delDbFromNode)
         {
             Members.RemoveAll(m => m.NodeTag == delDbFromNode);
-            Promotables.RemoveAll(p=> p.NodeTag == delDbFromNode);
+            Promotables.RemoveAll(p => p.NodeTag == delDbFromNode);
         }
 
         public string WhoseTaskIsIt(IDatabaseTask task)

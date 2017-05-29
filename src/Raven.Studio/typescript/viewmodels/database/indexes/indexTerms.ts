@@ -29,7 +29,7 @@ class indexTerms extends viewModelBase {
         this.bindToCurrentInstance("navigateToQuery");
     }
 
-    activate(indexName: string): JQueryPromise<string[]> {
+    activate(indexName: string): JQueryPromise<resultsDto<string>> {
         super.activate(indexName);
 
         this.indexName = indexName;
@@ -40,7 +40,7 @@ class indexTerms extends viewModelBase {
     fetchIndexEntriesFields(indexName: string) {
         return new getIndexEntriesFieldsCommand(indexName, this.activeDatabase())
             .execute()
-            .done((fields: string[]) => this.processFields(fields));
+            .done((fields) => this.processFields(fields.Results));
     }
 
     navigateToQuery(fieldName: string, term: string) {

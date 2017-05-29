@@ -7,7 +7,7 @@
                     <div class="documentId">
                         <div data-bind="if: isCreatingNewDocument()">
                             <div class="input-group" data-bind="validationElement: userSpecifiedId">
-                                <div class="input-group-addon">ID</div>
+                                <div class="input-group-addon">Id</div>
                                 <input class="form-control"
                                        name="documentId"
                                        id="documentIdInput"
@@ -22,6 +22,8 @@
                             <span class="obj-name" data-bind="text: userSpecifiedId"></span>
                             
                             <span data-bind="visible: inReadOnlyMode" class="text-primary revision"> | REVISION</span>
+                            
+                            <a target="_blank" href="#" title="Show raw output" data-bind="attr: { href: rawJsonUrl }"><i class="icon-link"></i></a>
                         </div>
                     </div>
                 </div>

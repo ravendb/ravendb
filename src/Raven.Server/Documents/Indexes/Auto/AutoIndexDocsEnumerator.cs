@@ -29,6 +29,10 @@ namespace Raven.Server.Documents.Indexes.Auto
             }
         }
 
+        public void OnError()
+        {
+        }
+
         public Document Current => _docsEnumerator.Current;
 
         public void Dispose()

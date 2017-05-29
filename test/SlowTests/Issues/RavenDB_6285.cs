@@ -16,7 +16,7 @@ namespace SlowTests.Issues
             {
                 var mre = new ManualResetEventSlim();
 
-                var allDocs = store.Changes()
+                store.Changes()
                     .ForAllDocuments()
                     .Subscribe(x => mre.Set());
 

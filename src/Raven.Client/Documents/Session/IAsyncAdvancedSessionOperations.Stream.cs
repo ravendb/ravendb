@@ -55,13 +55,13 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="startsWith">prefix for which documents should be returned e.g. "products/"</param>
         /// <param name="matches">
-        ///     pipe ('|') separated values for which document keys (after 'keyPrefix') should be matched ('?'
+        ///     pipe ('|') separated values for which document IDs (after 'idPrefix') should be matched ('?'
         ///     any single character, '*' any characters)
         /// </param>
         /// <param name="start">number of documents that should be skipped</param>
         /// <param name="pageSize">maximum number of documents that will be retrieved</param>
         /// <param name="startAfter">
-        ///     skip document fetching until given key is found and return documents after that key (default:
+        ///     skip document fetching until given ID is found and return documents after that ID (default:
         ///     null)
         /// </param>
         /// <param name="token">The cancellation token.</param>

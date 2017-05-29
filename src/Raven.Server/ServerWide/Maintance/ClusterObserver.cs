@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Notifications;
@@ -54,11 +53,10 @@ namespace Raven.Server.ServerWide.Maintance
             var prevStats = new Dictionary<string, ClusterNodeStatusReport>();
             while (token.IsCancellationRequested == false)
             {
+                var delay = TimeoutManager.WaitFor(SupervisorSamplePeriod, token);
                 try
                 {
                     var newStats = _maintenance.GetStats();
-
-                    var delay = TimeoutManager.WaitFor((uint)SupervisorSamplePeriod.TotalMilliseconds, token);
                     await AnalyzeLatestStats(newStats, prevStats);
                     prevStats = newStats;
                     await delay;
@@ -69,7 +67,10 @@ namespace Raven.Server.ServerWide.Maintance
                     {
                         _logger.Info($"Closing observer on {_nodeTag}, caused by an interrupt.", e);
                     }
-                    return;
+                }
+                finally
+                {
+                    await delay;
                 }
             }
         }
@@ -108,7 +109,7 @@ namespace Raven.Server.ServerWide.Maintance
             }
         }
 
-        private bool _hasLivingNodesFlag = false;
+        private bool _hasLivingNodesFlag;
         private bool UpdateDatabaseTopology(string dbName, DatabaseTopology topology,
             Dictionary<string, ClusterNodeStatusReport> currentClusterStats,
             Dictionary<string, ClusterNodeStatusReport> previousClusterStats)
@@ -158,6 +159,7 @@ namespace Raven.Server.ServerWide.Maintance
                     {
                         topology.Members.Remove(member);
                         topology.Promotables.Add(member);
+
                         if (_logger.IsOperationsEnabled)
                         {
                             _logger.Operations($"We demote the database {dbName} on {member.NodeTag}");
@@ -173,6 +175,7 @@ namespace Raven.Server.ServerWide.Maintance
                         {
                             topology.Members.Remove(member);
                             topology.Promotables.Add(member);
+
                             if (_logger.IsOperationsEnabled)
                             {
                                 _logger.Operations($"We demote the database {dbName} on {member.NodeTag}, because it is too long in Loading state.");
@@ -216,6 +219,18 @@ namespace Raven.Server.ServerWide.Maintance
                         }
                         return true;
                     }
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info($"The database {dbName} on {promotable.NodeTag} not ready to be promoted, because the indexes are not up-to-date.\n");
+                    }
+                }
+                else
+                {
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info($"The database {dbName} on {promotable.NodeTag} not ready to be promoted, because the change vectors are {status}.\n" +
+                                           $"mentor's change vector : {mentorPrevDbStats.LastDocumentChangeVector}, node's change vector : {promotableDbStats.LastDocumentChangeVector}");
+                    }
                 }
             }
             return false;
@@ -249,7 +264,7 @@ namespace Raven.Server.ServerWide.Maintance
                 if(currentIndexStatus.Value.IsStale == false)
                     continue;
 
-                if (previous.TryGetValue(currentIndexStatus.Key, out var prevIndexStatus) == false)
+                if (previous.TryGetValue(currentIndexStatus.Key, out var _) == false)
                     return false;
 
                 if (lastPrevEtag > currentIndexStatus.Value.LastIndexedEtag)
@@ -259,7 +274,7 @@ namespace Raven.Server.ServerWide.Maintance
             return true;
         }
 
-        private Task<long> UpdateTopology(BlittableJsonReaderObject cmd)
+        private Task<(long, BlittableJsonReaderObject)> UpdateTopology(BlittableJsonReaderObject cmd)
         {
             
             if (_engine.LeaderTag != _server.NodeTag)

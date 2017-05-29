@@ -41,7 +41,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "oren" });               
+                    await session.StoreAsync(new User { Name = "oren" }, "users/1");               
                     await session.SaveChangesAsync();
                 }
 
@@ -67,7 +67,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var etagForBackups = store.Admin.Server.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "ayende" });
+                    await session.StoreAsync(new User { Name = "ayende" }, "users/2");
                     await session.SaveChangesAsync();
                 }
 
@@ -109,7 +109,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "oren 1" });
+                    await session.StoreAsync(new User { Name = "oren 1" }, "users/1");
                     await session.SaveChangesAsync();
                 }
 
@@ -136,7 +136,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "oren 2" });
+                    await session.StoreAsync(new User { Name = "oren 2" }, "users/2");
                     await session.SaveChangesAsync();
                 }
 
@@ -171,7 +171,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "oren" });
+                    await session.StoreAsync(new User { Name = "oren" }, "users/1");
                     await session.SaveChangesAsync();
                 }
 
@@ -197,7 +197,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var etagForBackups = store.Admin.Server.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "ayende" });
+                    await session.StoreAsync(new User { Name = "ayende" }, "users/2");
                     await session.SaveChangesAsync();
                 }
 

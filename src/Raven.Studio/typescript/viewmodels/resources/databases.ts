@@ -18,6 +18,7 @@ import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import databaseInfo = require("models/resources/info/databaseInfo");
 import messagePublisher = require("common/messagePublisher");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import clusterNode = require("models/database/cluster/clusterNode");
 
 class databases extends viewModelBase {
 
@@ -80,14 +81,12 @@ class databases extends viewModelBase {
         this.addNotification(this.changesContext.serverNotifications().watchAllDatabaseChanges((e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) => this.fetchDatabase(e)));
         this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.fetchDatabases()));
 
-        return $.when<any>(this.fetchDatabases(), clusterTopologyManager.default.forceRefresh()); //TODO: remove me - temporary refresh cluster topology each time we enter this view 
-        //TODO: revert me: return this.fetchDatabases();
+        return this.fetchDatabases();
     }
 
     attached() {
         super.attached();
         this.updateHelpLink("Z8DC3Q");
-        ko.postbox.publish("SetRawJSONUrl", appUrl.forDatabasesRawData());
         this.updateUrl(appUrl.forDatabases());
     }
 
@@ -153,11 +152,10 @@ class databases extends viewModelBase {
 
     createManageDbGroupUrlObsevable(dbInfo: databaseInfo): KnockoutComputed<string> {
         const isLocalObservable = this.createIsLocalDatabaseObservable(dbInfo.name);
-        const db = dbInfo.asDatabase();
 
         return ko.pureComputed(() => {
             const isLocal = isLocalObservable();
-            const link = appUrl.forManageDatabaseGroup(db);
+            const link = appUrl.forManageDatabaseGroup(dbInfo);
             if (isLocal) {
                 return link;
             } else {
@@ -168,15 +166,27 @@ class databases extends viewModelBase {
 
     createAllDocumentsUrlObservable(dbInfo: databaseInfo): KnockoutComputed<string> {
         const isLocalObservable = this.createIsLocalDatabaseObservable(dbInfo.name);
-        const db = dbInfo.asDatabase();
 
         return ko.pureComputed(() => {
             const isLocal = isLocalObservable();
-            const link = appUrl.forDocuments(null, db);
+            const link = appUrl.forDocuments(null, dbInfo);
             if (isLocal) {
                 return link;
             } else {
                 return databases.toExternalUrl(dbInfo, link);
+            }
+        });
+    }
+
+    createAllDocumentsUrlObservableForNode(dbInfo: databaseInfo, node: clusterNode) {
+        return ko.pureComputed(() => {
+            const currentNodeTag = this.clusterManager.nodeTag();
+            const nodeTag = node.tag();
+            const link = appUrl.forDocuments(null, dbInfo);
+            if (currentNodeTag === nodeTag) {
+                return link;
+            } else {
+                return appUrl.toExternalUrl(node.serverUrl(), link);
             }
         });
     }
@@ -189,28 +199,23 @@ class databases extends viewModelBase {
     }
 
     indexErrorsUrl(dbInfo: databaseInfo): string {
-        const db = dbInfo.asDatabase();
-        return appUrl.forIndexErrors(db);
+        return appUrl.forIndexErrors(dbInfo);
     }
 
     storageReportUrl(dbInfo: databaseInfo): string {
-        const db = dbInfo.asDatabase();
-        return appUrl.forStatusStorageReport(db);
+        return appUrl.forStatusStorageReport(dbInfo);
     }
 
     indexesUrl(dbInfo: databaseInfo): string {
-        const db = dbInfo.asDatabase();
-        return appUrl.forIndexes(db);
+        return appUrl.forIndexes(dbInfo);
     } 
 
     periodicExportUrl(dbInfo: databaseInfo): string {
-        const db = dbInfo.asDatabase();
-        return appUrl.forPeriodicExport(db);
+        return appUrl.forPeriodicExport(dbInfo);
     }
 
     manageDatabaseGroupUrl(dbInfo: databaseInfo): string {
-        const db = dbInfo.asDatabase();
-        return appUrl.forManageDatabaseGroup(db);
+        return appUrl.forManageDatabaseGroup(dbInfo);
     }
 
     private getSelectedDatabases() {
@@ -263,27 +268,11 @@ class databases extends viewModelBase {
                     });
                                     
                     new deleteDatabaseCommand(dbsList, !confirmResult.keepFiles)
-                                             .execute()                                            
-                                             .done((deletedDatabases: Array<Raven.Server.Web.System.DatabaseDeleteResult>) => {
-                                                    deletedDatabases.forEach(rs => this.onDatabaseDeleted(rs));                            
-                                              });
+                        .execute();
                 }
             });
 
         app.showBootstrapDialog(confirmDeleteViewModel);
-    }
-
-    private onDatabaseDeleted(deletedDatabaseResult: Raven.Server.Web.System.DatabaseDeleteResult) {
-        const matchedDatabase = this.databases()
-            .sortedDatabases()
-            .find(x => x.name.toLowerCase() === deletedDatabaseResult.Name.toLowerCase());
-
-        // Databases will be removed from the sortedDatabases in method removeDatabase through the global changes api flow..
-        // So only enable the 'delete' button and display err msg if relevant                                
-        if (matchedDatabase && (deletedDatabaseResult.Reason)) {                           
-                matchedDatabase.isBeingDeleted(false);
-                messagePublisher.reportError(`Failed to delete ${matchedDatabase.name}, reason: ${deletedDatabaseResult.Reason}`);
-        }        
     }
 
     private removeDatabase(dbInfo: databaseInfo) {
@@ -401,26 +390,14 @@ class databases extends viewModelBase {
             });
     }
 
-    toggleRejectDatabaseClients(db: databaseInfo) {
-        const rejectClients = !db.rejectClients();
-
-        const message = rejectClients ? "reject clients mode" : "accept clients mode";
-        this.confirmationMessage("Are you sure?", "Switch to " + message)
-            .done(result => {
-                if (result.can) {
-                    //TODO: progress (this.spinners.toggleRejectMode), command, update db object, etc
-                }
-            });
-    }
-
     newDatabase() {
         const createDbView = new createDatabase();
         app.showBootstrapDialog(createDbView);
     }
 
     activateDatabase(dbInfo: databaseInfo) {
-        let db = this.databasesManager.getDatabaseByName(dbInfo.name);
-        if (!db || db.disabled())
+        const db = this.databasesManager.getDatabaseByName(dbInfo.name);
+        if (!db || db.disabled() || !db.relevant())
             return;
 
         this.databasesManager.activate(db);

@@ -6,8 +6,8 @@ namespace Raven.Client.Documents.Changes
 {
     internal class DatabaseConnectionState : ConnectionStateBase
     {
-        public DatabaseConnectionState(Func<Task> onConnect, Func<Task> onDisconnect)
-            : base(onConnect, onDisconnect)
+        public DatabaseConnectionState(IDatabaseChanges changes, Func<Task<bool>> onConnect, Func<Task> onDisconnect)
+            : base(changes, onConnect, onDisconnect)
         {
         }
 

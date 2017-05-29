@@ -31,10 +31,9 @@ namespace SlowTests.Bugs
 
                 using (var session = store.OpenSession())
                 {
-                    var load = session.Load<Profile>("profiles/1");
+                    var load = session.Load<Profile>("profiles/1-A");
 
                     var meta = session.Advanced.GetMetadataFor(load);
-
 
                     var result = session.Query<Profile>()
                                    .Customize(c => c.WaitForNonStaleResults())
@@ -42,7 +41,9 @@ namespace SlowTests.Bugs
                                    .ToList();
                     
                     var transformed = result.First();
-                    Assert.True(DateTime.UtcNow - transformed.DateUpdated < TimeSpan.FromSeconds(5), transformed.DateUpdated.ToString("O"));
+                    var now = DateTime.UtcNow;
+                    var timeSpan = TimeSpan.FromSeconds(15);
+                    Assert.True(now - transformed.DateUpdated < timeSpan, $"{now} - {transformed.DateUpdated:O} < {timeSpan} failed");
                 }
             }
         }

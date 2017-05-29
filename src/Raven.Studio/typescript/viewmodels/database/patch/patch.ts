@@ -24,6 +24,7 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
 import executeBulkDocsCommand = require("commands/database/documents/executeBulkDocsCommand");
 import popoverUtils = require("common/popoverUtils");
+import documentMetadata = require("models/database/documents/documentMetadata");
 import deleteDocumentsCommand = require("commands/database/documents/deleteDocumentsCommand");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
@@ -111,7 +112,6 @@ class patchTester extends viewModelBase {
 
     testMode = ko.observable<boolean>(false);
     script: KnockoutObservable<string>;
-    private scriptCopy: string;
     documentId = ko.observable<string>();
     private db: KnockoutObservable<database>;
 
@@ -141,7 +141,7 @@ class patchTester extends viewModelBase {
         this.db = db;
         this.initObservables();
 
-        this.bindToCurrentInstance("closeTestMode", "enterTestMode", "applyTestScript", "runTest", "onAutocompleteOptionSelected");
+        this.bindToCurrentInstance("closeTestMode", "enterTestMode", "runTest", "onAutocompleteOptionSelected");
 
         this.validationGroup = ko.validatedObservable({
             script: this.script,
@@ -178,12 +178,10 @@ class patchTester extends viewModelBase {
     }
 
     closeTestMode() {
-        this.script(this.scriptCopy);
         this.testMode(false);
     }
 
     enterTestMode(documentIdToUse: string) {
-        this.scriptCopy = this.script();
         this.testMode(true);
         this.documentId(documentIdToUse);
 
@@ -222,10 +220,6 @@ class patchTester extends viewModelBase {
                 }
             })
             .always(() => this.spinners.loadingDocument(false));
-    }
-
-    applyTestScript() {
-        this.testMode(false);
     }
 
     onAutocompleteOptionSelected(item: string) {
@@ -659,7 +653,7 @@ class patch extends viewModelBase {
             .done(result => {
                 if (result.can) {
                     const bulkDocs = documentIds.map(docId => ({
-                        Key: docId,
+                        Id: docId,
                         Type: 'PATCH' as Raven.Client.Documents.Commands.Batches.CommandType,
                         Patch: {
                             Script: this.patchDocument().script()
@@ -756,7 +750,10 @@ class patch extends viewModelBase {
                 new getDocumentWithMetadataCommand(this.patchDocument().selectedItem(), this.activeDatabase())
                     .execute()
                     .done((doc: document) => {
-                        const text = JSON.stringify(doc, null, 4);
+                        const docDto = doc.toDto(true);
+                        const metaDto = docDto["@metadata"];
+                        documentMetadata.filterMetadata(metaDto);
+                        const text = JSON.stringify(docDto, null, 4);
                         app.showBootstrapDialog(new showDataDialog("Document: " + doc.getId(), text, "javascript"));
                     })
                     .always(() => this.spinners.preview(false));

@@ -94,7 +94,7 @@ namespace SlowTests.MailingList
                     // Filter by section
                     if (sectionId != null)
                     {
-                        var ravenId = "Sections/" + sectionId;
+                        var ravenId = "Sections/" + sectionId + "-A";
                         query = query.Where(x => x.Sections == ravenId);
                     }
 
@@ -147,8 +147,8 @@ namespace SlowTests.MailingList
             };
             var articles = new[]
             {
-                new Article {Title = "How to fix your TV", Description = "How to", Sections = new[] {"Sections/1", "Sections/2"}},
-                new Article {Title = "How to do something", Description = "How to", Sections = new[] {"Sections/2"}}
+                new Article {Title = "How to fix your TV", Description = "How to", Sections = new[] {"Sections/1-A", "Sections/2-A"}},
+                new Article {Title = "How to do something", Description = "How to", Sections = new[] {"Sections/2-A"}}
             };
             foreach (var section in sections) session.Store(section);
             foreach (var article in articles) session.Store(article);

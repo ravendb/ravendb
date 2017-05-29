@@ -276,17 +276,17 @@ namespace Raven.Server.Documents.Replication
                     stats.RecordArtificialDocumentSkip();
 
                     if (_log.IsInfoEnabled)
-                        _log.Info($"Skipping replication of {item.Key} because it is an artificial document");
+                        _log.Info($"Skipping replication of {item.Id} because it is an artificial document");
                     return false;
                 }
 
                 bool isHiLo;
-                if (CollectionName.IsSystemDocument(item.Key.Buffer, item.Key.Size, out isHiLo) && isHiLo == false)
+                if (CollectionName.IsSystemDocument(item.Id.Buffer, item.Id.Size, out isHiLo) && isHiLo == false)
                 {
                     stats.RecordSystemDocumentSkip();
 
                     if (_log.IsInfoEnabled)
-                        _log.Info($"Skipping replication of {item.Key} because it is a system document");
+                        _log.Info($"Skipping replication of {item.Id} because it is a system document");
                     return false;
                 }
 
@@ -296,7 +296,7 @@ namespace Raven.Server.Documents.Replication
                     stats.RecordDocumentChangeVectorSkip();
 
                     if (_log.IsInfoEnabled)
-                        _log.Info($"Skipping replication of {item.Key} because destination has a higher change vector. Doc: {item.ChangeVector.Format()} < Dest: {_parent._destinationLastKnownDocumentChangeVectorAsString} ");
+                        _log.Info($"Skipping replication of {item.Id} because destination has a higher change vector. Doc: {item.ChangeVector.Format()} < Dest: {_parent._destinationLastKnownDocumentChangeVectorAsString} ");
                     return false;
                 }
             }
@@ -388,12 +388,12 @@ namespace Raven.Server.Documents.Replication
                                sizeof(short) + // transaction marker
                                sizeof(long) + // Last modified ticks
                                sizeof(DocumentFlags) +
-                               sizeof(int) + // size of document key
-                               item.Key.Size +
+                               sizeof(int) + // size of document ID
+                               item.Id.Size +
                                sizeof(int); // size of document
 
             if (requiredSize > _tempBuffer.Length)
-                ThrowTooManyChangeVectorEntries(item.Key, item.ChangeVector);
+                ThrowTooManyChangeVectorEntries(item.Id, item.ChangeVector);
 
             fixed (byte* pTemp = _tempBuffer)
             {
@@ -417,11 +417,11 @@ namespace Raven.Server.Documents.Replication
                 *(DocumentFlags*)(pTemp + tempBufferPos) = item.Flags;
                 tempBufferPos += sizeof(DocumentFlags);
 
-                *(int*)(pTemp + tempBufferPos) = item.Key.Size;
+                *(int*)(pTemp + tempBufferPos) = item.Id.Size;
                 tempBufferPos += sizeof(int);
 
-                Memory.Copy(pTemp + tempBufferPos, item.Key.Buffer, item.Key.Size);
-                tempBufferPos += item.Key.Size;
+                Memory.Copy(pTemp + tempBufferPos, item.Id.Buffer, item.Id.Size);
+                tempBufferPos += item.Id.Size;
 
                 //if data == null --> this is a tombstone, and a document otherwise
                 if (item.Data != null)
@@ -469,8 +469,8 @@ namespace Raven.Server.Documents.Replication
         {
             var requiredSize = sizeof(byte) + // type
                                sizeof(short) + // transaction marker
-                               sizeof(int) + // size of key
-                               item.Key.Size +
+                               sizeof(int) + // size of ID
+                               item.Id.Size +
                                sizeof(int) + // size of name
                                item.Name.Size +
                                sizeof(int) + // size of ContentType
@@ -480,7 +480,7 @@ namespace Raven.Server.Documents.Replication
 
             if (requiredSize > _tempBuffer.Length)
                 throw new ArgumentOutOfRangeException(nameof(item),
-                    $"Attachment name {item.Name} or content type {item.ContentType} or the key ({item.Key.Size} - {item.Key}) " +
+                    $"Attachment name {item.Name} or content type {item.ContentType} or the key ({item.Id.Size} - {item.Id}) " +
                     $"(which might include the change vector for revisions or conflicts) is too big.");
 
             fixed (byte* pTemp = _tempBuffer)
@@ -491,10 +491,10 @@ namespace Raven.Server.Documents.Replication
                 *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
                 tempBufferPos += sizeof(short);
 
-                *(int*)(pTemp + tempBufferPos) = item.Key.Size;
+                *(int*)(pTemp + tempBufferPos) = item.Id.Size;
                 tempBufferPos += sizeof(int);
-                Memory.Copy(pTemp + tempBufferPos, item.Key.Buffer, item.Key.Size);
-                tempBufferPos += item.Key.Size;
+                Memory.Copy(pTemp + tempBufferPos, item.Id.Buffer, item.Id.Size);
+                tempBufferPos += item.Id.Size;
 
                 *(int*)(pTemp + tempBufferPos) = item.Name.Size;
                 tempBufferPos += sizeof(int);
@@ -519,10 +519,10 @@ namespace Raven.Server.Documents.Replication
             var requiredSize = sizeof(byte) + // type
                                sizeof(short) + // transaction marker
                                sizeof(int) + // size of key
-                               item.Key.Size;
+                               item.Id.Size;
 
             if (requiredSize > _tempBuffer.Length)
-                throw new ArgumentOutOfRangeException(nameof(item), $"Attachment key ({item.Key.Size} - {item.Key}) " +
+                throw new ArgumentOutOfRangeException(nameof(item), $"Attachment key ({item.Id.Size} - {item.Id}) " +
                                                               "(which might include the change vector for revisions or conflicts) is too big.");
 
             fixed (byte* pTemp = _tempBuffer)
@@ -533,10 +533,10 @@ namespace Raven.Server.Documents.Replication
                 *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
                 tempBufferPos += sizeof(short);
 
-                *(int*)(pTemp + tempBufferPos) = item.Key.Size;
+                *(int*)(pTemp + tempBufferPos) = item.Id.Size;
                 tempBufferPos += sizeof(int);
-                Memory.Copy(pTemp + tempBufferPos, item.Key.Buffer, item.Key.Size);
-                tempBufferPos += item.Key.Size;
+                Memory.Copy(pTemp + tempBufferPos, item.Id.Buffer, item.Id.Size);
+                tempBufferPos += item.Id.Size;
 
                 _stream.Write(_tempBuffer, 0, tempBufferPos);
             }
@@ -578,10 +578,10 @@ namespace Raven.Server.Documents.Replication
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void ThrowTooManyChangeVectorEntries(LazyStringValue key, ChangeVectorEntry[] changeVector)
+        private static void ThrowTooManyChangeVectorEntries(LazyStringValue id, ChangeVectorEntry[] changeVector)
         {
             throw new ArgumentOutOfRangeException("doc",
-                "Document " + key + " has too many change vector entries to replicate: " +
+                "Document " + id + " has too many change vector entries to replicate: " +
                 changeVector.Length);
         }
 

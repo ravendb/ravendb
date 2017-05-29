@@ -18,6 +18,7 @@ using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Voron.Util;
+using Voron.Util.Settings;
 using static Voron.Platform.Win32.Win32NativeMethods;
 
 namespace Voron.Platform.Win32
@@ -49,7 +50,7 @@ namespace Voron.Platform.Win32
             public uint High;
         }
 
-        public WindowsMemoryMapPager(StorageEnvironmentOptions options,string file,
+        public WindowsMemoryMapPager(StorageEnvironmentOptions options, VoronPathSetting file,
             long? initialFileSize = null,
             Win32NativeFileAttributes fileAttributes = Win32NativeFileAttributes.Normal,
             Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite,
@@ -62,7 +63,7 @@ namespace Voron.Platform.Win32
             _logger = LoggingSource.Instance.GetLogger<StorageEnvironment>($"Pager-{file}");
 
             _access = access;
-            _copyOnWriteMode = Options.CopyOnWriteMode && FileName.EndsWith(Constants.DatabaseFilename);
+            _copyOnWriteMode = Options.CopyOnWriteMode && FileName.FullPath.EndsWith(Constants.DatabaseFilename);
             if (_copyOnWriteMode)
             {
                 _memoryMappedFileAccess = MemoryMappedFileAccess.Read | MemoryMappedFileAccess.CopyOnWrite;
@@ -77,7 +78,7 @@ namespace Voron.Platform.Win32
             }
             _fileAttributes = fileAttributes;
 
-            _handle = Win32NativeFileMethods.CreateFile(file, access,
+            _handle = Win32NativeFileMethods.CreateFile(file.FullPath, access,
                                                         Win32NativeFileShare.Read | Win32NativeFileShare.Write | Win32NativeFileShare.Delete, IntPtr.Zero,
                                                         Win32NativeFileCreationDisposition.OpenAlways, fileAttributes, IntPtr.Zero);
             if (_handle.IsInvalid)
@@ -87,7 +88,7 @@ namespace Voron.Platform.Win32
                     new Win32Exception(lastWin32ErrorCode));
             }
 
-            _fileInfo = new FileInfo(file);
+            _fileInfo = new FileInfo(file.FullPath);
             var drive = _fileInfo.Directory.Root.Name.TrimEnd('\\');
 
             try
@@ -130,7 +131,7 @@ namespace Voron.Platform.Win32
                 _totalAllocationSize = fileLength;
             }
 
-            NumberOfAllocatedPages = _totalAllocationSize/Constants.Storage.PageSize;
+            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
 
             SetPagerState(CreatePagerState());
         }
@@ -250,7 +251,7 @@ namespace Voron.Platform.Win32
                 _memoryMappedFileAccess,
                  HandleInheritability.None, true);
             Win32MemoryMapNativeMethods.NativeFileMapAccessType mmfAccessType = _copyOnWriteMode
-                ? Win32MemoryMapNativeMethods.NativeFileMapAccessType.Copy 
+                ? Win32MemoryMapNativeMethods.NativeFileMapAccessType.Copy
                 : Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read |
                   Win32MemoryMapNativeMethods.NativeFileMapAccessType.Write;
             var newMappingBaseAddress = Win32MemoryMapNativeMethods.MapViewOfFileEx(mmf.SafeMemoryMappedFileHandle.DangerousGetHandle(),
@@ -288,7 +289,7 @@ namespace Voron.Platform.Win32
             Win32MemoryMapNativeMethods.NativeFileMapAccessType mmFileAccessType;
             if (_copyOnWriteMode)
             {
-                mmFileAccessType =  Win32MemoryMapNativeMethods.NativeFileMapAccessType.Copy;
+                mmFileAccessType = Win32MemoryMapNativeMethods.NativeFileMapAccessType.Copy;
             }
             else
             {
@@ -357,7 +358,7 @@ namespace Voron.Platform.Win32
             var currentState = GetPagerStateAndAddRefAtomically();
             try
             {
-                using (var metric = Options.IoMetrics.MeterIoRate(FileName, IoMetrics.MeterType.DataSync, 0))
+                using (var metric = Options.IoMetrics.MeterIoRate(FileName.FullPath, IoMetrics.MeterType.DataSync, 0))
                 {
                     foreach (var allocationInfo in currentState.AllocationInfos)
                     {

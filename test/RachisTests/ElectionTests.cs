@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Rachis;
@@ -16,7 +17,7 @@ namespace SlowTests.Server.Rachis
             var nodeCurrentState = node.CurrentState;
             Assert.True(nodeCurrentState == RachisConsensus.State.LeaderElect ||
                         nodeCurrentState == RachisConsensus.State.Leader);
-            Assert.True(await node.WaitForState(RachisConsensus.State.Leader).WaitAsync(node.ElectionTimeoutMs), "Node didn't become leader although he is alone in his cluster.");
+            Assert.True(await node.WaitForState(RachisConsensus.State.Leader).WaitAsync(node.ElectionTimeout), "Node didn't become leader although he is alone in his cluster.");
         }
 
         /// <summary>
@@ -34,7 +35,7 @@ namespace SlowTests.Server.Rachis
         public async Task OnNetworkDisconnectionANewLeaderIsElectedAfterReconnectOldLeaderStepsDownAndRollBackHisLog(int numberOfNodes)        
         {
             var firstLeader = await CreateNetworkAndGetLeader(numberOfNodes);
-            var timeToWait = firstLeader.ElectionTimeoutMs * 4;
+            var timeToWait = TimeSpan.FromMilliseconds(firstLeader.ElectionTimeout.TotalMilliseconds * 4);
             await IssueCommandsAndWaitForCommit(firstLeader, 3, "test", 1);
            
             DisconnectFromNode(firstLeader);

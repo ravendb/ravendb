@@ -41,7 +41,14 @@ namespace Raven.Client.Documents.Subscriptions
             Accepted,
             InUse,
             Closed,
-            NotFound
+            NotFound,
+            Redirect
+        }
+
+        internal class SubscriptionRedirectData
+        {
+            public string CurrentTag;
+            public string RedirectedTag;
         }
 
         public MessageType Type { get; set; }
@@ -57,19 +64,19 @@ namespace Raven.Client.Documents.Subscriptions
             // for deserialization
         }
 
-        public SubscriptionConnectionOptions(long subscriptionId)
+        public SubscriptionConnectionOptions(string subscriptionId)
         {
-            if (subscriptionId <= 0)
+            if (string.IsNullOrWhiteSpace(subscriptionId))
                 throw new ArgumentOutOfRangeException(nameof(subscriptionId));
 
             SubscriptionId = subscriptionId;
             Strategy = SubscriptionOpeningStrategy.OpenIfFree;
             MaxDocsPerBatch = 4096;
-            TimeToWaitBeforeConnectionRetryMilliseconds = 5000;
+            TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(5000);
         }
 
-        public long SubscriptionId { get; private set; }
-        public uint TimeToWaitBeforeConnectionRetryMilliseconds { get; set; }
+        public string SubscriptionId { get; private set; }
+        public TimeSpan TimeToWaitBeforeConnectionRetry { get; set; }
         public bool IgnoreSubscriberErrors { get; set; }
         public SubscriptionOpeningStrategy Strategy { get; set; }
         public int MaxDocsPerBatch { get; set; }

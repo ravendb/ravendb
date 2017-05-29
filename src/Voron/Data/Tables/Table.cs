@@ -129,10 +129,8 @@ namespace Voron.Data.Tables
 
         public bool VerifyKeyExists(Slice key)
         {
-            long id;
-            return TryFindIdFromPrimaryKey(key, out id);
+            return TryFindIdFromPrimaryKey(key, out long id);
         }
-
 
         private bool TryFindIdFromPrimaryKey(Slice key, out long id)
         {
@@ -408,15 +406,12 @@ namespace Voron.Data.Tables
 
         private void UpdateValuesFromIndex(long id, ref TableValueReader oldVer, TableValueBuilder newVer)
         {
-            Slice idAsSlice;
-            using (Slice.External(_tx.Allocator, (byte*)&id, sizeof(long), out idAsSlice))
+            using (Slice.External(_tx.Allocator, (byte*)&id, sizeof(long), out Slice idAsSlice))
             {
                 if (_schema.Key != null)
                 {
-                    Slice oldKeySlice;
-                    Slice newKeySlice;
-                    using (_schema.Key.GetSlice(_tx.Allocator, ref oldVer, out oldKeySlice))
-                    using (_schema.Key.GetSlice(_tx.Allocator, newVer, out newKeySlice))
+                    using (_schema.Key.GetSlice(_tx.Allocator, ref oldVer, out Slice oldKeySlice))
+                    using (_schema.Key.GetSlice(_tx.Allocator, newVer, out Slice newKeySlice))
                     {
                         if (SliceComparer.AreEqual(oldKeySlice, newKeySlice) == false)
                         {
@@ -514,13 +509,11 @@ namespace Voron.Data.Tables
         private void InsertIndexValuesFor(long id, ref TableValueReader value)
         {
             var pk = _schema.Key;
-            Slice idAsSlice;
-            using (Slice.External(_tx.Allocator, (byte*)&id, sizeof(long), out idAsSlice))
+            using (Slice.External(_tx.Allocator, (byte*)&id, sizeof(long), out Slice idAsSlice))
             {
                 if (pk != null)
                 {
-                    Slice pkVal;
-                    using (pk.GetSlice(_tx.Allocator, ref value, out pkVal))
+                    using (pk.GetSlice(_tx.Allocator, ref value, out Slice pkVal))
                     {
                         var pkIndex = GetTree(pk);
 
@@ -531,8 +524,7 @@ namespace Voron.Data.Tables
                 foreach (var indexDef in _schema.Indexes.Values)
                 {
                     // For now we wont create secondary indexes on Compact trees.
-                    Slice val;
-                    using (indexDef.GetSlice(_tx.Allocator, ref value, out val))
+                    using (indexDef.GetSlice(_tx.Allocator, ref value, out Slice val))
                     {
                         var indexTree = GetTree(indexDef);
                         var index = GetFixedSizeTree(indexTree, val, 0);
@@ -661,7 +653,7 @@ namespace Voron.Data.Tables
                 return false;
 
             // This is an implementation detail. We read the absolute location pointer (absolute offset on the file)
-            long id = readResult.Reader.ReadLittleEndianInt64();
+            var id = readResult.Reader.ReadLittleEndianInt64();
 
             // And delete the element accordingly.
             Delete(id);
@@ -1306,7 +1298,6 @@ namespace Voron.Data.Tables
 #if DEBUG
             private readonly Transaction _tx;
 #endif
-            private readonly TableValueBuilder _builder;
 
             public ReturnTableValueBuilderToCache(Transaction tx)
             {
@@ -1317,14 +1308,14 @@ namespace Voron.Data.Tables
                 if (environmentWriteTransactionPool.BuilderUsages++ != 0)
                     throw new InvalidOperationException("Cannot use a cached table value builder when it is already in use");
 #endif
-                _builder = environmentWriteTransactionPool.TableValueBuilder;
+                Builder = environmentWriteTransactionPool.TableValueBuilder;
             }
 
-            public TableValueBuilder Builder => _builder;
+            public TableValueBuilder Builder { get; }
 
             public void Dispose()
             {
-                _builder.Reset();
+                Builder.Reset();
 #if DEBUG
                 Debug.Assert(_tx.LowLevelTransaction.IsDisposed == false);
                 if (_tx.LowLevelTransaction.Environment.WriteTransactionPool.BuilderUsages-- != 1)

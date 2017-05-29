@@ -9,6 +9,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
 using Voron.Impl.FileHeaders;
+using Voron.Util.Settings;
 
 namespace Voron.Platform.Win32
 {
@@ -16,9 +17,9 @@ namespace Voron.Platform.Win32
     {
         public static IntPtr CurrentProcess = Win32NativeMethods.GetCurrentProcess();
 
-        public static unsafe void WriteFileHeader(FileHeader* header, string path)
+        public static unsafe void WriteFileHeader(FileHeader* header, VoronPathSetting path)
         {
-            using (var fs = new FileStream(path, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.None))
+            using (var fs = new FileStream(path.FullPath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.None))
             {
                 var ptr = (byte*)header;
                 int remaining = sizeof(FileHeader);
@@ -35,9 +36,9 @@ namespace Voron.Platform.Win32
             }
         }
 
-        public static unsafe bool TryReadFileHeader(FileHeader* header, string path)
+        public static unsafe bool TryReadFileHeader(FileHeader* header, VoronPathSetting path)
         {
-            using (var fs = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.None))
+            using (var fs = new FileStream(path.FullPath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.None))
             {
                 if (fs.Length != sizeof(FileHeader))
                     return false; // wrong file size

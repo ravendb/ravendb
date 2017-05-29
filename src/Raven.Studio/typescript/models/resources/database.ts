@@ -9,9 +9,13 @@ class database {
     disabled = ko.observable<boolean>(false);
     errored = ko.observable<boolean>(false);
     isAdminCurrentTenant = ko.observable<boolean>(false);
+    relevant = ko.observable<boolean>(true);
+
+    private clusterNodeTag: KnockoutObservable<string>;
 
 
-    constructor(dbInfo: Raven.Client.Server.Operations.DatabaseInfo) {
+    constructor(dbInfo: Raven.Client.Server.Operations.DatabaseInfo, clusterNodeTag: KnockoutObservable<string>) {
+        this.clusterNodeTag = clusterNodeTag;
 
         this.updateUsing(dbInfo);
         /* TODO
@@ -35,6 +39,12 @@ class database {
         this.name = incomingCopy.Name;
         this.disabled(incomingCopy.Disabled);
         this.errored(!!incomingCopy.LoadError);
+
+        const nodeTag = this.clusterNodeTag();
+        const inMemberList = _.some(incomingCopy.NodesTopology.Members, x => x.NodeTag === nodeTag);
+        const inPromotableList = _.some(incomingCopy.NodesTopology.Promotables, x => x.NodeTag === nodeTag);
+
+        this.relevant(inMemberList || inPromotableList);
     }
 
     private attributeValue(attributes: any, bundleName: string) {

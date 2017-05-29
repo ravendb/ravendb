@@ -122,7 +122,7 @@ namespace Raven.Server.Rachis
                         if (rv.IsTrialElection)
                         {
                             string currentLeader;
-                            if (_engine.Timeout.ExpiredLastDeferral(_engine.ElectionTimeoutMs / 2,out currentLeader) == false)
+                            if (_engine.Timeout.ExpiredLastDeferral(_engine.ElectionTimeout.TotalMilliseconds / 2, out currentLeader) == false)
                             {
                                 _connection.Send(context, new RequestVoteResponse
                                 {

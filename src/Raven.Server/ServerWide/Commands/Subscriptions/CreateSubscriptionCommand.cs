@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication.Messages;
@@ -10,14 +11,14 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
-    public class CreateSubscriptionCommand: UpdateValueForDatabaseCommand
+    public class CreateSubscriptionCommand : UpdateValueForDatabaseCommand
     {
         public SubscriptionCriteria Criteria;
         public ChangeVectorEntry[] InitialChangeVector;
 
         private long? _subscriptionId;
         // for serialization
-        private CreateSubscriptionCommand():base(null){}
+        private CreateSubscriptionCommand() : base(null) { }
 
         public CreateSubscriptionCommand(string databaseName) : base(databaseName)
         {
@@ -26,24 +27,23 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public override string GetItemId()
         {
             if (_subscriptionId.HasValue)
-                return SubscriptionRaftState.GenerateSubscriptionItemName(DatabaseName, _subscriptionId.Value);
-            return $"noValue";
+                return SubscriptionState.GenerateSubscriptionItemName(DatabaseName, _subscriptionId.Value);
+            return "does/not/exists/" + Guid.NewGuid(); // missing value
         }
 
-        public override DynamicJsonValue GetUpdatedValue(long index, DatabaseRecord record, BlittableJsonReaderObject existingValue)
+        public override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
         {
-            if (existingValue != null)
-                throw new InvalidOperationException(); // todo: should not happen
+            Debug.Assert(existingValue == null);
+
             _subscriptionId = index;
-            var rafValue = new SubscriptionRaftState()
+            var rafValue = new SubscriptionState
             {
                 Criteria = Criteria,
                 ChangeVector = InitialChangeVector,
-                SubscriptionId = index
+                SubscriptionId = SubscriptionState.GenerateSubscriptionItemName(record.DatabaseName, index)
             };
 
-            return rafValue.ToJson();
-
+            return context.ReadObject(rafValue.ToJson(), GetItemId());
         }
 
         public override void FillJson(DynamicJsonValue json)

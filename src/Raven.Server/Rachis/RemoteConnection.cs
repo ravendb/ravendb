@@ -194,10 +194,10 @@ namespace Raven.Server.Rachis
                 _log.Info("Sending an error (and aborting connection)", e);
             }
 
-            ;
             Send(context, new DynamicJsonValue
             {
                 ["Type"] = "Error",
+                ["ExceptionType"] = e.GetType().Name,
                 ["Message"] = e.Message,
                 ["Exception"] = e.ToString()
             });
@@ -345,11 +345,19 @@ namespace Raven.Server.Rachis
         {
             string type;
             if (json.TryGet("Type", out type) == false || type != expectedType)
-                ThrowUnexpectedMessage(expectedType, json);
+                ThrowUnexpectedMessage(type, expectedType, json);
         }
 
-        private static void ThrowUnexpectedMessage(string expectedType, BlittableJsonReaderObject json)
+        private static void ThrowUnexpectedMessage(string type, string expectedType, BlittableJsonReaderObject json)
         {
+            if (type == "Error")
+            {
+                if (json.TryGet("ExceptionType", out string errorType) && errorType == typeof(TopologyMismatchException).Name)
+                {
+                    json.TryGet("Message", out string message);
+                    throw new TopologyMismatchException(message);
+                }
+            }
             throw new InvalidDataException(
                 $"Expected to get type of \'{expectedType}\' message, but got unkonwn message: {json}");
         }

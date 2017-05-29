@@ -30,7 +30,7 @@ namespace Raven.Client.Http
         private static readonly Lazy<HttpClient> GlobalHttpClient = new Lazy<HttpClient>(() => CreateClient(GlobalHttpClientTimeout));
 
         //Monitor.TryEnter/Monitor.Exit won't work here because we need a mutex without thread affinity
-        private readonly SemaphoreSlim _updateTopologySemaphore = new SemaphoreSlim(1,1);        
+        private readonly SemaphoreSlim _updateTopologySemaphore = new SemaphoreSlim(1, 1);
         private readonly AsyncManualResetEvent _firstTimeTopologyUpdateFlag = new AsyncManualResetEvent();
         private readonly string _initialUrl;
         private readonly string _apiKey;
@@ -39,14 +39,14 @@ namespace Raven.Client.Http
 
         public readonly JsonContextPool ContextPool;
 
-        public class AggresiveCacheOptions
+        public class AggressiveCacheOptions
         {
             public TimeSpan? Duration;
         }
 
         private readonly ApiKeyAuthenticator _authenticator = new ApiKeyAuthenticator();
 
-        public readonly AsyncLocal<AggresiveCacheOptions> AggressiveCaching = new AsyncLocal<AggresiveCacheOptions>();
+        public readonly AsyncLocal<AggressiveCacheOptions> AggressiveCaching = new AsyncLocal<AggressiveCacheOptions>();
 
         public readonly HttpCache Cache = new HttpCache();
 
@@ -58,12 +58,27 @@ namespace Raven.Client.Http
 
         private Timer _updateCurrentTokenTimer;
 
-        private readonly NodeSelector _nodeSelector;
+        public readonly NodeSelector _nodeSelector;
+
+        private bool _disposed;
+        private TimeSpan? _defaultTimeout;
 
         //note: the condition for non empty nodes is precaution, should never happen..
         public string Url => _nodeSelector.CurrentNode?.Url;
-        
+
         public bool HasUpdatedTopologyOnce { get; private set; }
+
+        public TimeSpan? DefaultTimeout
+        {
+            get => _defaultTimeout;
+            set
+            {
+                if (value.HasValue && value.Value > GlobalHttpClientTimeout)
+                    throw new InvalidOperationException($"Maximum request timeout is set to '{GlobalHttpClientTimeout}' but was '{value}'.");
+
+                _defaultTimeout = value;
+            }
+        }
 
         private RequestExecutor(string url, string databaseName, string apiKey, bool requiresTopologyUpdates)
         {
@@ -132,7 +147,7 @@ namespace Raven.Client.Http
         {
             if (_disposed)
                 return false;
-            
+
             //prevent double topology updates if execution takes too much time
             // --> in cases with transient issues
             var lockTaken = _updateTopologySemaphore.Wait(0);
@@ -149,11 +164,11 @@ namespace Raven.Client.Http
                 {
                     var node = _nodeSelector.CurrentNode;
                     var serverHash = ServerHash.GetServerHash(node.Url, node.Database);
-                    
+
                     var command = new GetTopologyCommand();
                     try
                     {
-                        await ExecuteAsync(node, context, command, shouldRetry:false);
+                        await ExecuteAsync(node, context, command, shouldRetry: false);
 
                         if (command.Result.Nodes.Count > 0 && _nodeSelector.OnUpdateTopology(command.Result))
                         {
@@ -163,15 +178,15 @@ namespace Raven.Client.Http
                     }
                     catch (HttpRequestException e)
                     {
-                        command.FailedNodes.Add(node,null);
+                        command.FailedNodes.Add(node, null);
 
                         _nodeSelector.OnFailedRequest();
-                        var errors = new List<Exception> {e};
+                        var errors = new List<Exception> { e };
                         while (command.FailedNodes.ContainsKey(_nodeSelector.CurrentNode) == false)
                         {
                             try
                             {
-                                await ExecuteAsync(_nodeSelector.CurrentNode, context, command, shouldRetry:false);
+                                await ExecuteAsync(_nodeSelector.CurrentNode, context, command, shouldRetry: false);
                             }
                             catch (Exception e2)
                             {
@@ -182,7 +197,7 @@ namespace Raven.Client.Http
 
                             //because we failed to contact a server, force update topology because it is likely that the etag 
                             //hadn't changed, since the topology itself didn't change, it's a node that went down
-                            if (command.Result.Nodes.Count > 0 && _nodeSelector.OnUpdateTopology(command.Result, forceUpdate:true))
+                            if (command.Result.Nodes.Count > 0 && _nodeSelector.OnUpdateTopology(command.Result, forceUpdate: true))
                             {
                                 OnTopologyChange();
                                 TopologyLocalCache.TrySavingTopologyToLocalCache(serverHash, _nodeSelector.Topology, context);
@@ -215,7 +230,7 @@ namespace Raven.Client.Http
                 _updateTopologySemaphore.Release();
             }
             return true;
-        }       
+        }
 
         public void Execute<TResult>(RavenCommand<TResult> command, JsonOperationContext context, CancellationToken token = default(CancellationToken))
         {
@@ -258,7 +273,7 @@ namespace Raven.Client.Http
         }
 
         public async Task ExecuteAsync<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, CancellationToken token = default(CancellationToken), bool shouldRetry = true)
-        {         
+        {
             string url;
             var request = CreateRequest(chosenNode, command, out url);
 
@@ -269,8 +284,8 @@ namespace Raven.Client.Http
             {
                 if (cachedEtag != 0)
                 {
-                    var aggresiveCacheOptions = AggressiveCaching.Value;
-                    if (aggresiveCacheOptions != null && cachedItem.Age < aggresiveCacheOptions.Duration)
+                    var aggressiveCacheOptions = AggressiveCaching.Value;
+                    if (aggressiveCacheOptions != null && cachedItem.Age < aggressiveCacheOptions.Duration)
                     {
                         command.SetResponse(cachedValue, fromCache: true);
                         return;
@@ -284,19 +299,20 @@ namespace Raven.Client.Http
                 try
                 {
                     var client = GetHttpClientForCommand(command);
-                    if (command.Timeout.HasValue)
+                    var timeout = command.Timeout ?? _defaultTimeout;
+                    if (timeout.HasValue)
                     {
                         using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, CancellationToken.None))
                         {
-                            cts.CancelAfter(command.Timeout.Value);
+                            cts.CancelAfter(timeout.Value);
                             try
                             {
                                 response = await command.SendAsync(client, request, cts.Token).ConfigureAwait(false);
                             }
                             catch (OperationCanceledException e)
                             {
-                                if(cts.IsCancellationRequested && token.IsCancellationRequested == false) // only when we timed out
-                                    throw new TimeoutException($"The request for {request.RequestUri} failed with timeout after {command.Timeout}", e);
+                                if (cts.IsCancellationRequested && token.IsCancellationRequested == false) // only when we timed out
+                                    throw new TimeoutException($"The request for {request.RequestUri} failed with timeout after {timeout}", e);
                                 throw;
                             }
                         }
@@ -344,7 +360,7 @@ namespace Raven.Client.Http
                 }
                 await command.ProcessResponse(context, Cache, response, url).ConfigureAwait(false);
             }
-        }      
+        }
 
         private HttpCache.ReleaseCacheItem GetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, string url, out long cachedEtag, out BlittableJsonReaderObject cachedValue)
         {
@@ -411,7 +427,7 @@ namespace Raven.Client.Http
                 case HttpStatusCode.RequestTimeout:
                 case HttpStatusCode.BadGateway:
                 case HttpStatusCode.ServiceUnavailable:
-                    await HandleServerDown(chosenNode, context, command, request,response,  null).ConfigureAwait(false);
+                    await HandleServerDown(chosenNode, context, command, request, response, null).ConfigureAwait(false);
                     break;
                 case HttpStatusCode.Conflict:
                     await HandleConflict(context, response).ConfigureAwait(false);
@@ -482,11 +498,11 @@ namespace Raven.Client.Http
                 try
                 {
                     ms.Position = 0;
-                    using (var responseJson = context.ReadForMemory(ms,"RequestExecutor/HandleServerDown/ReadResponseContent"))
+                    using (var responseJson = context.ReadForMemory(ms, "RequestExecutor/HandleServerDown/ReadResponseContent"))
                     {
                         command.FailedNodes.Add(chosenNode, JsonDeserializationClient.ExceptionSchema(responseJson));
                     }
-               }
+                }
                 catch
                 {
                     // we failed to parse the error
@@ -511,10 +527,10 @@ namespace Raven.Client.Http
             });
         }
 
-        public string UrlFor(string documentKey)
+        public string UrlFor(string documentId)
         {
             var node = _nodeSelector.CurrentNode;
-            return $"{node.Url}/databases/{node.Database}/docs?id={documentKey}";
+            return $"{node.Url}/databases/{node.Database}/docs?id={documentId}";
         }       
 
         private static void ThrowEmptyTopology()
@@ -554,7 +570,7 @@ namespace Raven.Client.Http
             JsonOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var topology = _nodeSelector.Topology;         
+                var topology = _nodeSelector.Topology;
                 foreach (var node in topology.Nodes)
                 {
 #pragma warning disable 4014
@@ -564,13 +580,11 @@ namespace Raven.Client.Http
             }
         }
 
-        private bool _disposed;
-
         public void Dispose()
         {
             if (_disposed)
                 return;
-            
+
             _updateTopologySemaphore.Wait();
 
             if (_disposed)
@@ -608,7 +622,7 @@ namespace Raven.Client.Http
             HasUpdatedTopologyOnce = true;
         }
 
-        private class NodeSelector
+        public class NodeSelector
         {
             private Topology _topology;
 

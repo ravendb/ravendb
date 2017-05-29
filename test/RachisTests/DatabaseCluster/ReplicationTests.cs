@@ -21,9 +21,58 @@ namespace RachisTests.DatabaseCluster
         [Fact]
         public async Task EnsureDocumentsReplication()
         {
+            NoTimeouts();
             var clusterSize = 5;
             var databaseName = "ReplicationTestDB";
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize,false);
+            CreateDatabaseResult databaseResult;
+            using (var store = new DocumentStore()
+            {
+                Url = leader.WebUrls[0],
+                Database = databaseName
+            }.Initialize())
+            {
+                var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
+                databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+            }
+            Assert.Equal(clusterSize, databaseResult.Topology.AllReplicationNodes().Count());
+            foreach (var server in Servers)
+            {
+                await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag ?? -1);
+            }
+            foreach (var server in Servers.Where(s=> databaseResult.NodesAddedTo.Any(n=> n == s.WebUrls[0])))
+            {
+                await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+            }
+
+            using (var store = new DocumentStore()
+            {
+                Url = databaseResult.NodesAddedTo[0],
+                Database = databaseName
+            }.Initialize())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User {Name = "Karmel"}, "users/1");
+                    await session.SaveChangesAsync();
+                }
+                Assert.True(await WaitForDocumentInClusterAsync<User>(
+                    databaseResult.Topology,
+                    "users/1",
+                    u => u.Name.Equals("Karmel"),
+                    TimeSpan.FromSeconds(clusterSize + 5)));
+
+            }
+        }
+
+        [Fact]
+        public async Task EnsureReplicationToWatchers()
+        {
+            var clusterSize = 3;
+            var databaseName = "ReplicationTestDB";
             var leader = await CreateRaftClusterAndGetLeader(clusterSize);
+            var watchers = new List<DatabaseWatcher>();
+
             using (var store = new DocumentStore()
             {
                 Url = leader.WebUrls[0],
@@ -43,7 +92,7 @@ namespace RachisTests.DatabaseCluster
                 }
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Karmel"}, "users/1");
+                    await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
                     await session.SaveChangesAsync();
                 }
                 Assert.True(await WaitForDocumentInClusterAsync<User>(
@@ -51,6 +100,35 @@ namespace RachisTests.DatabaseCluster
                     "users/1",
                     u => u.Name.Equals("Karmel"),
                     TimeSpan.FromSeconds(clusterSize + 5)));
+
+                for (var i = 0; i < 5; i++)
+                {
+                    doc = MultiDatabase.CreateDatabaseDocument($"Watcher{i}");
+                    var res = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc));
+                    var server = Servers.Single(x => x.WebUrls[0] == res.NodesAddedTo[0]);
+                    await server.ServerStore.Cluster.WaitForIndexNotification(res.ETag ?? -1);
+                    await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore($"Watcher{i}");
+
+                    watchers.Add(new DatabaseWatcher
+                    {
+                        Database = $"Watcher{i}",
+                        Url = res.NodesAddedTo[0]
+                    });
+                }
+
+                await UpdateReplicationTopology((DocumentStore)store, watchers);
+            }
+
+            foreach (var watcher in watchers)
+            {
+                using (var store = new DocumentStore()
+                {
+                    Url = watcher.Url,
+                    Database = watcher.Database
+                }.Initialize())
+                {
+                    Assert.True(WaitForDocument<User>(store, "users/1", u => u.Name == "Karmel"));
+                }
             }
         }
 
@@ -76,9 +154,6 @@ namespace RachisTests.DatabaseCluster
                     var db = s.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
                     return db.ReplicationLoader?.OutgoingConnections.Count();
                 }, clusterSize - 1);
-
-                WaitForUserToContinueTheTest((DocumentStore)store);
-
 
                 using (var session = store.OpenAsyncSession())
                 {

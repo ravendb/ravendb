@@ -16,6 +16,7 @@ using Sparrow.Utils;
 using Voron.Data;
 using Voron.Global;
 using Voron.Platform.Win32;
+using Voron.Util.Settings;
 using static Voron.Platform.Win32.Win32MemoryMapNativeMethods;
 using static Voron.Platform.Win32.Win32NativeFileMethods;
 
@@ -65,7 +66,7 @@ namespace Voron.Impl.Paging
         private IntPtr _hFileMappingObject;
         private long _fileStreamLength;
 
-        public Windows32BitsMemoryMapPager(StorageEnvironmentOptions options, string file, long? initialFileSize = null,
+        public Windows32BitsMemoryMapPager(StorageEnvironmentOptions options, VoronPathSetting file, long? initialFileSize = null,
             Win32NativeFileAttributes fileAttributes = Win32NativeFileAttributes.Normal,
             Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite,
             bool usePageProtection = false)
@@ -83,10 +84,10 @@ namespace Voron.Impl.Paging
             FileName = file;
 
             if (Options.CopyOnWriteMode)
-                ThrowNotSupportedOption(file);
+                ThrowNotSupportedOption(file.FullPath);
 
             _fileAttributes = fileAttributes;
-            _handle = CreateFile(file, access,
+            _handle = CreateFile(file.FullPath, access,
                 Win32NativeFileShare.Read | Win32NativeFileShare.Write | Win32NativeFileShare.Delete, IntPtr.Zero,
                 Win32NativeFileCreationDisposition.OpenAlways,
                 fileAttributes, IntPtr.Zero);
@@ -99,7 +100,7 @@ namespace Voron.Impl.Paging
                     new Win32Exception(lastWin32ErrorCode));
             }
 
-            _fileInfo = new FileInfo(file);
+            _fileInfo = new FileInfo(file.FullPath);
 
             var streamAccessType = access == Win32NativeFileAccess.GenericRead
                  ? FileAccess.Read
@@ -233,6 +234,11 @@ namespace Voron.Impl.Paging
         public override I4KbBatchWrites BatchWriter()
         {
             return new Windows32Bit4KbBatchWrites(this);
+        }
+
+        public override byte* AcquirePagePointerForNewPage(IPagerLevelTransactionState tx, long pageNumber, int numberOfPages, PagerState pagerState = null)
+        {
+            return AcquirePagePointer(tx, pageNumber, pagerState);
         }
 
         public override byte* AcquirePagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
@@ -530,7 +536,7 @@ namespace Voron.Impl.Paging
                 (_fileAttributes & Win32NativeFileAttributes.DeleteOnClose) == Win32NativeFileAttributes.DeleteOnClose)
                 return;
 
-            using (var metric = Options.IoMetrics.MeterIoRate(FileName, IoMetrics.MeterType.DataSync, 0))
+            using (var metric = Options.IoMetrics.MeterIoRate(FileName.FullPath, IoMetrics.MeterType.DataSync, 0))
             {
                 metric.IncrementSize(totalUnsynced);
                 metric.SetFileSize(_totalAllocationSize);

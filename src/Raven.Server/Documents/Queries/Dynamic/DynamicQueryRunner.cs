@@ -235,7 +235,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                             }
                         }
                     });
-                GC.KeepAlive(t);// we expicitly don't care about this instance, this line is here to make the compiler happy
+                GC.KeepAlive(t);// we explicitly don't care about this instance, this line is here to make the compiler happy
 
                 if (query.WaitForNonStaleResultsTimeout.HasValue == false)
                     query.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // allow new auto indexes to have some results
@@ -281,7 +281,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     // and because it make it easier to demonstrate how we auto
                     // clear the old auto indexes.
 
-                    await TimeoutManager.WaitFor(15000).ConfigureAwait(false);
+                    await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(15000)).ConfigureAwait(false);
 
                     foreach (var supercededIndex in map.SupercededIndexes)
                     {

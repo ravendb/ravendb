@@ -112,7 +112,7 @@ namespace FastTests.Client.Lazy.Async
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Name = "oren" });
+                    session.Store(new User { Name = "oren" }, "users/1");
                     session.SaveChanges();
                 }
 
@@ -234,8 +234,8 @@ namespace FastTests.Client.Lazy.Async
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Item { Position = 1 });
-                    session.Store(new Item { Position = 2 });
+                    session.Store(new Item { Position = 1 }, "items/1");
+                    session.Store(new Item { Position = 2 }, "items/2");
                     session.SaveChanges();
                 }
 
@@ -257,8 +257,8 @@ namespace FastTests.Client.Lazy.Async
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Item { Position = 1 });
-                    session.Store(new Item { Position = 2 });
+                    session.Store(new Item { Position = 1 },"items/1");
+                    session.Store(new Item { Position = 2 }, "items/2");
                     session.SaveChanges();
                 }
 

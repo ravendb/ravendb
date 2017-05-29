@@ -7,8 +7,8 @@ namespace Raven.Server.Documents
 {
     public class DocumentConflict
     {
-        public LazyStringValue LoweredKey;
-        public LazyStringValue Key;
+        public LazyStringValue LowerId;
+        public LazyStringValue Id;
         public BlittableJsonReaderObject Doc;
         public long StorageId;
         public ChangeVectorEntry[] ChangeVector;
@@ -23,13 +23,13 @@ namespace Raven.Server.Documents
 
             return new DocumentConflict
             {
-                LoweredKey = doc.LoweredKey,
-                Key = doc.Key,
+                LowerId = doc.LowerId,
+                Id = doc.Id,
                 Doc = doc.Data,
                 StorageId = doc.StorageId,
                 ChangeVector = doc.ChangeVector,
                 LastModified = doc.LastModified,
-                Collection = ctx.GetLazyStringForFieldWithCaching(CollectionName.GetCollectionName(doc.Key, doc.Data))
+                Collection = ctx.GetLazyStringForFieldWithCaching(CollectionName.GetCollectionName(doc.Id, doc.Data))
             };
         }
 
@@ -42,8 +42,8 @@ namespace Raven.Server.Documents
 
             return new DocumentConflict
             {
-                LoweredKey = tombstone.LoweredKey,
-                Key = tombstone.LoweredKey,
+                LowerId = tombstone.LowerId,
+                Id = tombstone.LowerId,
                 Doc = null,
                 StorageId = tombstone.StorageId,
                 ChangeVector = tombstone.ChangeVector,

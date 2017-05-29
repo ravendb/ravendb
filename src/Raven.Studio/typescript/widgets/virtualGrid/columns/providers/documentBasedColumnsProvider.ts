@@ -10,6 +10,7 @@ import document = require("models/database/documents/document");
 import virtualGridUtils = require("widgets/virtualGrid/virtualGridUtils");
 import app = require("durandal/app");
 import showDataDialog = require("viewmodels/common/showDataDialog");
+import documentMetadata = require("models/database/documents/documentMetadata");
 
 type documentBasedColumnsProviderOpts = {
     showRowSelectionCheckbox?: boolean;
@@ -70,7 +71,13 @@ class documentBasedColumnsProvider {
     }
 
     private showPreview(doc: document) {
-        const text = JSON.stringify(doc, null, 4);
+        const docDto = doc.toDto(true);
+        if ("@metadata" in docDto) {
+            const metaDto = docDto["@metadata"];
+            documentMetadata.filterMetadata(metaDto);
+        }
+        
+        const text = JSON.stringify(docDto, null, 4);
         const title = doc.getId() ? "Document: " + doc.getId() : "Document preview";
         app.showBootstrapDialog(new showDataDialog(title, text, "javascript"));
     }

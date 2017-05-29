@@ -63,17 +63,18 @@ namespace Raven.Server.ServerWide.Maintance
                             ctx.Write(writer, djv);
                         }
                     }
-                    await TimeoutManager.WaitFor((uint)WorkerSamplePeriod.TotalMilliseconds, _token).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
                     if (_logger.IsInfoEnabled)
                     {
-                        _logger.Info($"Exception occured while collecting info from {_server.NodeTag}", e);
+                        _logger.Info($"Exception occurred while collecting info from {_server.NodeTag}", e);
                     }
-                    return;
                 }
-
+                finally
+                {
+                    await TimeoutManager.WaitFor(WorkerSamplePeriod, _token);
+                }
             }
         }
 
@@ -104,7 +105,7 @@ namespace Raven.Server.ServerWide.Maintance
                 if (dbTask.IsCanceled || dbTask.IsFaulted)
                 {
                     report.Status = DatabaseStatus.Faulted;
-                    report.FailureToLoad = dbTask.Exception.ToString();
+                    report.Error = dbTask.Exception.ToString();
                     yield return (dbName, report);
                     continue;
                 }
@@ -128,30 +129,37 @@ namespace Raven.Server.ServerWide.Maintance
                 }
 
                 report.Status = DatabaseStatus.Loaded;
-
-                using (documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (var tx = context.OpenReadTransaction())
+                try
                 {
-                    report.LastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
-                    report.LastTombstoneEtag = DocumentsStorage.ReadLastTombstoneEtag(tx.InnerTransaction);
-                    report.NumberOfConflicts = documentsStorage.ConflictsStorage.ConflictsCount;
-                    report.LastDocumentChangeVector = documentsStorage.GetDatabaseChangeVector(context);
-
-                    if (indexStorage != null)
+                    using (documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (var tx = context.OpenReadTransaction())
                     {
-                        foreach (var index in indexStorage.GetIndexes())
-                        {
-                            var stats = index.GetIndexStats(context);
+                        report.LastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
+                        report.LastTombstoneEtag = DocumentsStorage.ReadLastTombstoneEtag(tx.InnerTransaction);
+                        report.NumberOfConflicts = documentsStorage.ConflictsStorage.ConflictsCount;
+                        report.LastDocumentChangeVector = documentsStorage.GetDatabaseChangeVector(context);
 
-                            report.LastIndexStats.Add(index.Name, new DatabaseStatusReport.ObservedIndexStatus
+                        if (indexStorage != null)
+                        {
+                            foreach (var index in indexStorage.GetIndexes())
                             {
-                                LastIndexedEtag = stats.lastProcessedEtag,
-                                IsSideBySide = false, // TODO: fix this so it get whatever this has side by side or not
-                                IsStale = stats.isStale
-                            });
+                                var stats = index.GetIndexStats(context);
+
+                                report.LastIndexStats.Add(index.Name, new DatabaseStatusReport.ObservedIndexStatus
+                                {
+                                    LastIndexedEtag = stats.lastProcessedEtag,
+                                    IsSideBySide = false, // TODO: fix this so it get whatever this has side by side or not
+                                    IsStale = stats.isStale
+                                });
+                            }
                         }
                     }
                 }
+                catch(Exception e)
+                {
+                    report.Error = e.ToString();
+                }
+               
                 yield return (dbName, report);
             }
         }
@@ -177,3 +185,4 @@ namespace Raven.Server.ServerWide.Maintance
 
     }
 }
+

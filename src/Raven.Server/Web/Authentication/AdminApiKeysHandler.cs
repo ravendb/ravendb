@@ -31,7 +31,7 @@ namespace Raven.Server.Web.Authentication
                     return;
                 }
 
-                await ServerStore.PutValueInClusterAsync(ctx, Constants.ApiKeys.Prefix + name, apiKey);
+                await ServerStore.PutValueInClusterAsync(Constants.ApiKeys.Prefix + name, apiKey);
 
                 AccessToken value;
                 if (Server.AccessTokensByName.TryRemove(name, out value))
@@ -51,7 +51,7 @@ namespace Raven.Server.Web.Authentication
             TransactionOperationContext ctx;
             using (ServerStore.ContextPool.AllocateOperationContext(out ctx))
             {
-                await ServerStore.DeleteValueInClusterAsync(ctx, Constants.ApiKeys.Prefix + name);
+                await ServerStore.DeleteValueInClusterAsync(Constants.ApiKeys.Prefix + name);
 
                 AccessToken value;
                 if (Server.AccessTokensByName.TryRemove(name, out value))

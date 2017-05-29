@@ -19,7 +19,6 @@ using Raven.Client.Documents.Exceptions.Session;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session.Operations.Lazy;
-using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -41,7 +40,7 @@ namespace Raven.Client.Documents.Session
         protected readonly Dictionary<ILazyOperation, Action<object>> OnEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
         private static int _instancesCounter;
         private readonly int _hash = Interlocked.Increment(ref _instancesCounter);
-        protected bool GenerateDocumentKeysOnStore = true;
+        protected bool GenerateDocumentIdsOnStore = true;
         private BatchOptions _saveChangesOptions;
 
         /// <summary>
@@ -69,14 +68,14 @@ namespace Raven.Client.Documents.Session
         public IDictionary<string, object> ExternalState => _externalState ?? (_externalState = new Dictionary<string, object>());
 
         /// <summary>
-        /// Translate between a key and its associated entity
+        /// Translate between an ID and its associated entity
         /// </summary>
         internal readonly DocumentsById DocumentsById = new DocumentsById();
 
         /// <summary>
-        /// Translate between a key and its associated entity
+        /// Translate between an ID and its associated entity
         /// </summary>
-        internal readonly Dictionary<string, DocumentInfo> IncludedDocumentsByKey = new Dictionary<string, DocumentInfo>(StringComparer.OrdinalIgnoreCase);
+        internal readonly Dictionary<string, DocumentInfo> IncludedDocumentsById = new Dictionary<string, DocumentInfo>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// hold the data required to manage the data for RavenDB's Unit of Work
@@ -158,7 +157,7 @@ namespace Raven.Client.Documents.Session
             _releaseOperationContext = requestExecutor.ContextPool.AllocateOperationContext(out _context);
             UseOptimisticConcurrency = documentStore.Conventions.UseOptimisticConcurrency;
             MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
-            GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore.Conventions, GenerateKey);
+            GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore.Conventions, GenerateId);
             EntityToBlittable = new EntityToBlittable(this);
         }
 
@@ -238,7 +237,7 @@ namespace Raven.Client.Documents.Session
         {
             return (DocumentsById.TryGetValue(id, out DocumentInfo documentInfo) && documentInfo.Document != null) || 
                 IsDeleted(id) || 
-                IncludedDocumentsByKey.ContainsKey(id);
+                IncludedDocumentsById.ContainsKey(id);
         }
 
         /// <summary>
@@ -270,7 +269,7 @@ namespace Raven.Client.Documents.Session
             if (++NumberOfRequests > MaxNumberOfRequestsPerSession)
                 throw new InvalidOperationException($@"The maximum number of requests ({MaxNumberOfRequestsPerSession}) allowed for this session has been reached.
 Raven limits the number of remote calls that a session is allowed to make as an early warning system. Sessions are expected to be short lived, and 
-Raven provides facilities like Load(string[] keys) to load multiple documents at once and batch saves (call SaveChanges() only once).
+Raven provides facilities like Load(string[] ids) to load multiple documents at once and batch saves (call SaveChanges() only once).
 You can increase the limit by setting DocumentConventions.MaxNumberOfRequestsPerSession or MaxNumberOfRequestsPerSession, but it is
 advisable that you'll look into reducing the number of remote calls first, since that will speed up your application significantly and result in a 
 more responsive application.
@@ -292,14 +291,14 @@ more responsive application.
         /// Tracks the entity.
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="key">The key.</param>
+        /// <param name="id">The document id.</param>
         /// <param name="document">The document.</param>
         /// <param name="metadata">The metadata.</param>'
         /// <param name="noTracking"></param>
         /// <returns></returns>
-        public T TrackEntity<T>(string key, BlittableJsonReaderObject document, BlittableJsonReaderObject metadata, bool noTracking)
+        public T TrackEntity<T>(string id, BlittableJsonReaderObject document, BlittableJsonReaderObject metadata, bool noTracking)
         {
-            var entity = TrackEntity(typeof(T), key, document, metadata, noTracking);
+            var entity = TrackEntity(typeof(T), id, document, metadata, noTracking);
             try
             {
                 return (T)entity;
@@ -329,49 +328,49 @@ more responsive application.
         /// Tracks the entity.
         /// </summary>
         /// <param name="entityType">The entity type.</param>
-        /// <param name="key">The key.</param>
+        /// <param name="id">The document ID.</param>
         /// <param name="document">The document.</param>
         /// <param name="metadata">The metadata.</param>
         /// <param name="noTracking">Entity tracking is enabled if true, disabled otherwise.</param>
         /// <returns></returns>
-        private object TrackEntity(Type entityType, string key, BlittableJsonReaderObject document, BlittableJsonReaderObject metadata, bool noTracking)
+        private object TrackEntity(Type entityType, string id, BlittableJsonReaderObject document, BlittableJsonReaderObject metadata, bool noTracking)
         {
-            if (string.IsNullOrEmpty(key))
+            if (string.IsNullOrEmpty(id))
             {
                 return DeserializeFromTransformer(entityType, null, document);
             }
 
             DocumentInfo docInfo;
-            if (DocumentsById.TryGetValue(key, out docInfo))
+            if (DocumentsById.TryGetValue(id, out docInfo))
             {
                 // the local instance may have been changed, we adhere to the current Unit of Work
                 // instance, and return that, ignoring anything new.
                 if (docInfo.Entity == null)
-                    docInfo.Entity = ConvertToEntity(entityType, key, document);
+                    docInfo.Entity = ConvertToEntity(entityType, id, document);
 
                 if (noTracking == false)
                 {
-                    IncludedDocumentsByKey.Remove(key);
+                    IncludedDocumentsById.Remove(id);
                     DocumentsByEntity[docInfo.Entity] = docInfo;
                 }
                 return docInfo.Entity;
             }
 
-            if (IncludedDocumentsByKey.TryGetValue(key, out docInfo))
+            if (IncludedDocumentsById.TryGetValue(id, out docInfo))
             {
                 if (docInfo.Entity == null)
-                    docInfo.Entity = ConvertToEntity(entityType, key, document);
+                    docInfo.Entity = ConvertToEntity(entityType, id, document);
 
                 if (noTracking == false)
                 {
-                    IncludedDocumentsByKey.Remove(key);
+                    IncludedDocumentsById.Remove(id);
                     DocumentsById.Add(docInfo);
                     DocumentsByEntity[docInfo.Entity] = docInfo;
                 }
                 return docInfo.Entity;
             }
 
-            var entity = ConvertToEntity(entityType, key, document);
+            var entity = ConvertToEntity(entityType, id, document);
 
             long etag;
             if (metadata.TryGet(Constants.Documents.Metadata.Etag, out etag) == false)
@@ -381,7 +380,7 @@ more responsive application.
             {
                 var newDocumentInfo = new DocumentInfo
                 {
-                    Id = key,
+                    Id = id,
                     Document = document,
                     Metadata = metadata,
                     Entity = entity,
@@ -408,7 +407,7 @@ more responsive application.
             return EntityToBlittable.ConvertToEntity(entityType, id, documentFound);
         }
 
-        private void RegisterMissingProperties(object o, string key, object value)
+        private void RegisterMissingProperties(object o, string id, object value)
         {
             Dictionary<string, object> dictionary;
             if (EntityToBlittable.MissingDictionary.TryGetValue(o, out dictionary) == false)
@@ -416,7 +415,7 @@ more responsive application.
                 EntityToBlittable.MissingDictionary[o] = dictionary = new Dictionary<string, object>();
             }
 
-            dictionary[key] = value;
+            dictionary[id] = value;
         }
 
         /// <summary>
@@ -439,13 +438,12 @@ more responsive application.
             if (ReferenceEquals(entity, null))
                 throw new ArgumentNullException(nameof(entity));
 
-            DocumentInfo value;
-            if (DocumentsByEntity.TryGetValue(entity, out value) == false)
+            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo value) == false)
             {
                 throw new InvalidOperationException(entity + " is not associated with the session, cannot delete unknown entity instance");
             }
             DeletedEntities.Add(entity);
-            IncludedDocumentsByKey.Remove(value.Id);
+            IncludedDocumentsById.Remove(value.Id);
             KnownMissingIds.Add(value.Id);
         }
 
@@ -550,13 +548,13 @@ more responsive application.
 
             if (id == null)
             {
-                if (GenerateDocumentKeysOnStore)
+                if (GenerateDocumentIdsOnStore)
                 {
-                    id = GenerateEntityIdOnTheClient.GenerateDocumentKeyForStorage(entity);
+                    id = GenerateEntityIdOnTheClient.GenerateDocumentIdForStorage(entity);
                 }
                 else
                 {
-                    RememberEntityForDocumentKeyGeneration(entity);
+                    RememberEntityForDocumentIdGeneration(entity);
                 }
             }
             else
@@ -565,14 +563,14 @@ more responsive application.
                 GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
             }
 
-            if (_deferredCommands.Any(c => c.Key == id))
+            if (_deferredCommands.Any(c => c.Id == id))
                 throw new InvalidOperationException("Can't store document, there is a deferred command registered for this document in the session. Document id: " + id);
 
             if (DeletedEntities.Contains(entity))
                 throw new InvalidOperationException("Can't store object, it was already deleted in this session.  Document id: " + id);
 
-            // we make the check here even if we just generated the key
-            // users can override the key generation behavior, and we need
+            // we make the check here even if we just generated the ID
+            // users can override the ID generation behavior, and we need
             // to detect if they generate duplicates.
             AssertNoNonUniqueInstance(entity, id);
 
@@ -620,40 +618,39 @@ more responsive application.
 
             if (id == null)
             {
-                id = await GenerateDocumentKeyForStorageAsync(entity).WithCancellation(token).ConfigureAwait(false);
+                id = await GenerateDocumentIdForStorageAsync(entity).WithCancellation(token).ConfigureAwait(false);
             }
 
             StoreInternal(entity, etag, id, forceConcurrencyCheck);
         }
 
-        protected abstract string GenerateKey(object entity);
+        protected abstract string GenerateId(object entity);
 
-        protected virtual void RememberEntityForDocumentKeyGeneration(object entity)
+        protected virtual void RememberEntityForDocumentIdGeneration(object entity)
         {
-            throw new NotImplementedException("You cannot set GenerateDocumentKeysOnStore to false without implementing RememberEntityForDocumentKeyGeneration");
+            throw new NotImplementedException("You cannot set GenerateDocumentIdsOnStore to false without implementing RememberEntityForDocumentIdGeneration");
         }
 
-        protected internal async Task<string> GenerateDocumentKeyForStorageAsync(object entity)
+        protected internal async Task<string> GenerateDocumentIdForStorageAsync(object entity)
         {
             if (entity is IDynamicMetaObjectProvider)
             {
-                string id;
-                if (GenerateEntityIdOnTheClient.TryGetIdFromDynamic(entity, out id))
+                if (GenerateEntityIdOnTheClient.TryGetIdFromDynamic(entity, out string id))
                     return id;
 
-                var key = await GenerateKeyAsync(entity).ConfigureAwait(false);
+                id = await GenerateIdAsync(entity).ConfigureAwait(false);
                 // If we generated a new id, store it back into the Id field so the client has access to it                    
-                if (key != null)
-                    GenerateEntityIdOnTheClient.TrySetIdOnDynamic(entity, key);
-                return key;
+                if (id != null)
+                    GenerateEntityIdOnTheClient.TrySetIdOnDynamic(entity, id);
+                return id;
             }
 
-            var result = await GetOrGenerateDocumentKeyAsync(entity).ConfigureAwait(false);
+            var result = await GetOrGenerateDocumentIdAsync(entity).ConfigureAwait(false);
             GenerateEntityIdOnTheClient.TrySetIdentity(entity, result);
             return result;
         }
 
-        protected abstract Task<string> GenerateKeyAsync(object entity);
+        protected abstract Task<string> GenerateIdAsync(object entity);
 
         protected virtual void StoreEntityInUnitOfWork(string id, object entity, long? etag, DynamicJsonValue metadata, ConcurrencyCheckMode forceConcurrencyCheck)
         {
@@ -686,7 +683,7 @@ more responsive application.
             throw new NonUniqueObjectException("Attempted to associate a different object with id '" + id + "'.");
         }
 
-        protected async Task<string> GetOrGenerateDocumentKeyAsync(object entity)
+        protected async Task<string> GetOrGenerateDocumentIdAsync(object entity)
         {
             string id;
             GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id);
@@ -694,7 +691,7 @@ more responsive application.
             Task<string> generator =
                 id != null
                 ? Task.FromResult(id)
-                : GenerateKeyAsync(entity);
+                : GenerateIdAsync(entity);
 
             var result = await generator.ConfigureAwait(false);
             if (result != null && result.StartsWith("/"))
@@ -756,7 +753,7 @@ more responsive application.
                 {
                     foreach (var resultCommand in result.DeferredCommands)
                     {
-                        if (resultCommand.Key == documentInfo.Id)
+                        if (resultCommand.Id == documentInfo.Id)
                             ThrowInvalidDeletedDocumentWithDeferredCommand(resultCommand);
                     }
 
@@ -797,7 +794,7 @@ more responsive application.
                 foreach (var resultCommand in result.DeferredCommands)
                 {
                     if (resultCommand.Type != CommandType.AttachmentPUT &&
-                        resultCommand.Key == entity.Value.Id)
+                        resultCommand.Id == entity.Value.Id)
                         ThrowInvalidModifiedDocumentWithDeferredCommand(resultCommand);
                 }
 
@@ -827,13 +824,13 @@ more responsive application.
         private static void ThrowInvalidDeletedDocumentWithDeferredCommand(ICommandData resultCommand)
         {
             throw new InvalidOperationException(
-                $"Cannot perform save because document {resultCommand.Key} has been deleted by the session and is also taking part in deferred {resultCommand.Type} command");
+                $"Cannot perform save because document {resultCommand.Id} has been deleted by the session and is also taking part in deferred {resultCommand.Type} command");
         }
 
         private static void ThrowInvalidModifiedDocumentWithDeferredCommand(ICommandData resultCommand)
         {
             throw new InvalidOperationException(
-                $"Cannot perform save because document {resultCommand.Key} has been modified by the session and is also taking part in deferred {resultCommand.Type} command");
+                $"Cannot perform save because document {resultCommand.Id} has been modified by the session and is also taking part in deferred {resultCommand.Type} command");
         }
 
         protected bool EntityChanged(BlittableJsonReaderObject newObj, DocumentInfo documentInfo, IDictionary<string, DocumentsChanges[]> changes)
@@ -957,7 +954,7 @@ more responsive application.
             DeletedEntities.Clear();
             DocumentsById.Clear();
             KnownMissingIds.Clear();
-            IncludedDocumentsByKey.Clear();
+            IncludedDocumentsById.Clear();
         }
 
         /// <summary>
@@ -1137,7 +1134,7 @@ more responsive application.
                 DocumentInfo documentInfo;
 
                 // Check if document was already loaded, the check if we've received it through include
-                if (DocumentsById.TryGetValue(id, out documentInfo) == false && IncludedDocumentsByKey.TryGetValue(id, out documentInfo) == false)
+                if (DocumentsById.TryGetValue(id, out documentInfo) == false && IncludedDocumentsById.TryGetValue(id, out documentInfo) == false)
                     return false;
 
                 if (documentInfo.Entity == null)

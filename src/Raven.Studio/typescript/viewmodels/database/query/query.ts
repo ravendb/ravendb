@@ -466,7 +466,6 @@ class query extends viewModelBase {
         this.updateUrl(url);
 
         queryUtil.fetchIndexFields(this.activeDatabase(), indexName, this.indexFields);
-       
     }
 
     private resetFilterSettings() {
@@ -623,6 +622,8 @@ class query extends viewModelBase {
         }
 
         this.runQuery();
+
+        queryUtil.fetchIndexFields(this.activeDatabase(), storedQuery.indexName, this.indexFields);
     }
 
     private fillTransformerParameters(transformerParameters: Array<transformerParamDto>) {

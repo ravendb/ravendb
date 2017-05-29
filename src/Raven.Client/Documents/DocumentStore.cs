@@ -33,7 +33,7 @@ namespace Raven.Client.Documents
 
         private readonly ConcurrentDictionary<string, Lazy<RequestExecutor>> _requestExecutors = new ConcurrentDictionary<string, Lazy<RequestExecutor>>(StringComparer.OrdinalIgnoreCase);
 
-        private AsyncMultiDatabaseHiLoKeyGenerator _asyncMultiDbHiLo;
+        private AsyncMultiDatabaseHiLoIdGenerator _asyncMultiDbHiLo;
 
         private AdminOperationExecutor _adminOperationExecutor;
 
@@ -122,7 +122,7 @@ namespace Raven.Client.Documents
                 {
                     // failed, because server is down.
                 }
-            }               
+            }
 
             Subscriptions?.Dispose();
 
@@ -133,9 +133,9 @@ namespace Raven.Client.Documents
 
             foreach (var kvp in _requestExecutors)
             {
-                if(kvp.Value.IsValueCreated == false)
+                if (kvp.Value.IsValueCreated == false)
                     continue;
-                
+
                 kvp.Value.Value.Dispose();
             }
         }
@@ -196,6 +196,20 @@ namespace Raven.Client.Documents
             return lazy.Value;
         }
 
+        public override IDisposable SetRequestsTimeout(TimeSpan timeout, string database = null)
+        {
+            AssertInitialized();
+
+            var requestExecutor = GetRequestExecutor(database);
+            var oldTimeout = requestExecutor.DefaultTimeout;
+            requestExecutor.DefaultTimeout = timeout;
+
+            return new DisposableAction(() =>
+            {
+                requestExecutor.DefaultTimeout = oldTimeout;
+            });
+        }
+
         /// <summary>
         /// Initializes this instance.
         /// </summary>
@@ -211,9 +225,9 @@ namespace Raven.Client.Documents
             {
                 if (Conventions.AsyncDocumentIdGenerator == null) // don't overwrite what the user is doing
                 {
-                    var generator = new AsyncMultiDatabaseHiLoKeyGenerator(this, Conventions);
+                    var generator = new AsyncMultiDatabaseHiLoIdGenerator(this, Conventions);
                     _asyncMultiDbHiLo = generator;
-                    Conventions.AsyncDocumentIdGenerator = (dbName, entity) => generator.GenerateDocumentKeyAsync(dbName, entity);
+                    Conventions.AsyncDocumentIdGenerator = (dbName, entity) => generator.GenerateDocumentIdAsync(dbName, entity);
                 }
 
                 Initialized = true;

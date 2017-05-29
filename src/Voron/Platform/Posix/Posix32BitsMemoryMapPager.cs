@@ -12,6 +12,7 @@ using Voron.Data;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
+using Voron.Util.Settings;
 
 namespace Voron.Platform.Posix
 {
@@ -32,21 +33,21 @@ namespace Voron.Platform.Posix
         private const int NumberOfPagesInAllocationGranularity = AllocationGranularity / Constants.Storage.PageSize;
         public override long TotalAllocationSize => _totalAllocationSize;
 
-        public Posix32BitsMemoryMapPager(StorageEnvironmentOptions options, string file, long? initialFileSize = null,
+        public Posix32BitsMemoryMapPager(StorageEnvironmentOptions options, VoronPathSetting file, long? initialFileSize = null,
             bool usePageProtection = false) : base(options, usePageProtection)
         {
             _options = options;
             FileName = file;
 
             if (Options.CopyOnWriteMode)
-                ThrowNotSupportedOption(file);
+                ThrowNotSupportedOption(file.FullPath);
 
-            _copyOnWriteMode = options.CopyOnWriteMode && file.EndsWith(Constants.DatabaseFilename);
-            _isSyncDirAllowed = Syscall.CheckSyncDirectoryAllowed(FileName);
+            _copyOnWriteMode = options.CopyOnWriteMode && file.FullPath.EndsWith(Constants.DatabaseFilename);
+            _isSyncDirAllowed = Syscall.CheckSyncDirectoryAllowed(FileName.FullPath);
 
-            PosixHelper.EnsurePathExists(FileName);
+            PosixHelper.EnsurePathExists(FileName.FullPath);
 
-            _fd = Syscall.open(file, OpenFlags.O_RDWR | OpenFlags.O_CREAT | PerPlatformValues.OpenFlags.O_LARGEFILE,
+            _fd = Syscall.open(file.FullPath, OpenFlags.O_RDWR | OpenFlags.O_CREAT | PerPlatformValues.OpenFlags.O_LARGEFILE,
                               FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
             if (_fd == -1)
             {
@@ -64,10 +65,10 @@ namespace Voron.Platform.Posix
                 _totalAllocationSize != GetFileSize())
             {
                 _totalAllocationSize = NearestSizeToAllocationGranularity(_totalAllocationSize);
-                PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize, file);
+                PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize, file.FullPath);
             }
 
-            if (_isSyncDirAllowed && Syscall.SyncDirectory(file) == -1)
+            if (_isSyncDirAllowed && Syscall.SyncDirectory(file.FullPath) == -1)
             {
                 var err = Marshal.GetLastWin32Error();
                 Syscall.ThrowLastError(err, "sync dir for " + file);
@@ -101,7 +102,7 @@ namespace Voron.Platform.Posix
 
         private long GetFileSize()
         {
-            FileInfo fi = new FileInfo(FileName);
+            FileInfo fi = new FileInfo(FileName.FullPath);
             return fi.Length;
         }
 
@@ -193,6 +194,11 @@ namespace Voron.Platform.Posix
             return new Posix32Bit4KbBatchWrites(this);
         }
 
+        public override byte* AcquirePagePointerForNewPage(IPagerLevelTransactionState tx, long pageNumber, int numberOfPages, PagerState pagerState = null)
+        {
+            return AcquirePagePointer(tx, pageNumber, pagerState);
+        }
+
         public override byte* AcquirePagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
         {
             if (Disposed)
@@ -253,13 +259,13 @@ namespace Voron.Platform.Posix
                         $"Unable to map {size/Constants.Size.Kilobyte:#,#} kb starting at {startPage} on {FileName}");
                 }
 
-                NativeMemory.RegisterFileMapping(FileName, startingBaseAddressPtr, size);
+                NativeMemory.RegisterFileMapping(FileName.FullPath, startingBaseAddressPtr, size);
 
                 Interlocked.Add(ref _totalMapped, size);
                 var mappedAddresses = new MappedAddresses
                 {
                     Address = startingBaseAddressPtr,
-                    File = FileName,
+                    File = FileName.FullPath,
                     Size = size,
                     StartPage = startPage,
                     Usages = 1
@@ -455,7 +461,7 @@ namespace Voron.Platform.Posix
 
         public override void Sync(long totalUnsynced)
         {
-            using (var metric = Options.IoMetrics.MeterIoRate(FileName, IoMetrics.MeterType.DataSync, 0))
+            using (var metric = Options.IoMetrics.MeterIoRate(FileName.FullPath, IoMetrics.MeterType.DataSync, 0))
             {
                 metric.IncrementSize(totalUnsynced);
                 metric.IncrementFileSize(_totalAllocationSize);
@@ -482,9 +488,9 @@ namespace Voron.Platform.Posix
 
             var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-            PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize + allocationSize, FileName);
+            PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize + allocationSize, FileName.FullPath);
 
-            if (_isSyncDirAllowed && Syscall.SyncDirectory(FileName) == -1)
+            if (_isSyncDirAllowed && Syscall.SyncDirectory(FileName.FullPath) == -1)
             {
                 var err = Marshal.GetLastWin32Error();
                 Syscall.ThrowLastError(err);
@@ -498,7 +504,7 @@ namespace Voron.Platform.Posix
 
         public override string ToString()
         {
-            return FileName;
+            return FileName.FullPath;
         }
 
         public override void ReleaseAllocationInfo(byte* baseAddress, long size)

@@ -500,11 +500,10 @@ namespace FastTests.Server.Replication
                 var result = new List<string>();
                 foreach (BlittableJsonReaderObject json in array)
                 {
-                    string key;
-                    if (json.TryGet("Key", out key) == false)
+                    if (json.TryGet("Id", out string id) == false)
                         ThrowInvalidResponse();
 
-                    result.Add(key);
+                    result.Add(id);
                 }
 
                 Result = result;

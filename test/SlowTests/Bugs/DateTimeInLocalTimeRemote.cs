@@ -26,7 +26,7 @@ namespace SlowTests.Bugs
 
                 using (var session = store.OpenSession())
                 {
-                    var log = session.Load<ServiceExecutionLog>("ServiceExecutionLogs/1");
+                    var log = session.Load<ServiceExecutionLog>("ServiceExecutionLogs/1-A");
                     Assert.Equal(new DateTime(2010, 2, 17, 19, 06, 06), log.LastDateChecked);
                 }
             }
@@ -52,7 +52,7 @@ namespace SlowTests.Bugs
 
                 using (var session = store.OpenSession())
                 {
-                    var log = session.Load<ServiceExecutionLog>("ServiceExecutionLogs/1");
+                    var log = session.Load<ServiceExecutionLog>("ServiceExecutionLogs/1-A");
                     Assert.Equal(new DateTime(2010, 2, 17, 19, 06, 06), log.LastDateChecked);
                 }
             }
@@ -78,7 +78,7 @@ namespace SlowTests.Bugs
 
                 using (var session = store.OpenSession())
                 {
-                    var log = session.Load<ServiceExecutionLog>("ServiceExecutionLogs/1");
+                    var log = session.Load<ServiceExecutionLog>("ServiceExecutionLogs/1-A");
                     Assert.Equal(new DateTime(2010, 2, 17, 19, 06, 06), log.LastDateChecked);
                 }
             }

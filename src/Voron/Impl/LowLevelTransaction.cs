@@ -60,13 +60,13 @@ namespace Voron.Impl
 #if DEBUG
             public int BuilderUsages;
 #endif
-            public TableValueBuilder TableValueBuilder = new TableValueBuilder();
+            public readonly TableValueBuilder TableValueBuilder = new TableValueBuilder();
 
             public int ScratchPagesTablePoolIndex = 0;
             public FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer> ScratchPagesTablePool1 = new FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer>(new NumericEqualityComparer());
             public FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer> ScratchPagesTablePool2 = new FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer>(new NumericEqualityComparer());
-            public FastDictionary<long, long, NumericEqualityComparer> DirtyOverflowPagesPool = new FastDictionary<long, long, NumericEqualityComparer>(new NumericEqualityComparer());
-            public HashSet<long> DirtyPagesPool = new HashSet<long>(NumericEqualityComparer.Instance);
+            public readonly FastDictionary<long, long, NumericEqualityComparer> DirtyOverflowPagesPool = new FastDictionary<long, long, NumericEqualityComparer>(new NumericEqualityComparer());
+            public readonly HashSet<long> DirtyPagesPool = new HashSet<long>(NumericEqualityComparer.Instance);
 
             public void Reset()
             {

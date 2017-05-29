@@ -1,13 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
-using FastTests.Client.Indexing;
-using FastTests.Client.Subscriptions;
-using FastTests.Server.Documents;
-using FastTests.Server.Documents.Queries;
-using SlowTests.Issues;
-using SlowTests.MailingList;
+using System.Linq;
+using FastTests.Server.NotificationCenter;
+using Orders;
+using Raven.Client.Documents;
 using SlowTests.Smuggler;
-using SlowTests.Tests.Faceted;
+using FastTests.Client.Subscriptions;
+using System.Threading.Tasks;
 
 namespace Tryouts
 {
@@ -18,14 +18,17 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
 
-            for (int i = 0; i < 800; i++)
+            for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
 
-                using (var a = new LegacySmugglerTests())
+                Parallel.For(0, 10, async _ =>
                 {
-                    a.CanImportIndexesAndTransformers("SlowTests.Smuggler.Indexes_And_Transformers_3.5.ravendbdump").Wait();
-                }
+                    using (var a = new SlowTests.Issues.RavenDB937())
+                    {
+                        await a.LowLevelEmbeddedStreamAsync();
+                    }
+                });
             }
         }
     }

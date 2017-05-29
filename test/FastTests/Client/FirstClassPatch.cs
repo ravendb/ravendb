@@ -6,7 +6,7 @@ namespace FastTests.Client
 {
     public class FirstClassPatch : RavenTestBase
     {
-        private string _docId = "users/1";
+        private string _docId = "users/1-A";
 
         private class User
         {

@@ -45,7 +45,7 @@ namespace Raven.Client.Documents.Smuggler
             }
         }
 
-        private async Task ExportAsync(DatabaseSmugglerOptions options, Action<Stream> handleStreamResponse, CancellationToken token = default(CancellationToken))
+        private async Task ExportAsync(DatabaseSmugglerOptions options, Func<Stream, Task> handleStreamResponse, CancellationToken token = default(CancellationToken))
         {
             if (options == null)
                 throw new ArgumentNullException(nameof(options));
@@ -63,7 +63,7 @@ namespace Raven.Client.Documents.Smuggler
                 throw new ArgumentNullException(nameof(options));
             if (toDatabase == null)
                 throw new ArgumentNullException(nameof(toDatabase));
-
+                
             await ExportAsync(options, async stream =>
             {
                 await toDatabase.ImportAsync(options, stream, token).ConfigureAwait(false);
@@ -134,10 +134,10 @@ namespace Raven.Client.Documents.Smuggler
         {
             private readonly JsonOperationContext _context;
             private readonly BlittableJsonReaderObject _options;
-            private readonly Action<Stream> _handleStreamResponse;
+            private readonly Func<Stream, Task> _handleStreamResponse;
 
-            public ExportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerOptions options, 
-                Action<Stream> handleStreamResponse)
+            public ExportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerOptions options,
+                Func<Stream, Task> handleStreamResponse)
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));
@@ -165,9 +165,13 @@ namespace Raven.Client.Documents.Smuggler
                 };
             }
 
-            public override void SetResponseRaw(HttpResponseMessage response, Stream stream, JsonOperationContext context)
+            public override async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
             {
-                _handleStreamResponse(stream);
+                using(response)
+                using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                {
+                    await _handleStreamResponse(stream).ConfigureAwait(false);
+                }
             }
         }
 

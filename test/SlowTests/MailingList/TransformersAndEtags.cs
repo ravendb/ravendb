@@ -51,25 +51,25 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Company { Name = "A" });
-                    session.Store(new Company { Name = "B", Parent = "companies/1" });
+                    session.Store(new Company { Name = "B", Parent = "companies/1-A" });
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var load = session.Load<AllNames, Item>("companies/2");
+                    var load = session.Load<AllNames, Item>("companies/2-A");
                     Assert.Equal(new[]{"B","A"}, load.Names);
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    session.Load<Company>("companies/1").Name = "C";
+                    session.Load<Company>("companies/1-A").Name = "C";
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var load = session.Load<AllNames, Item>("companies/2");
+                    var load = session.Load<AllNames, Item>("companies/2-A");
                     Assert.Equal(new[] { "B", "C" }, load.Names);
                 }
 

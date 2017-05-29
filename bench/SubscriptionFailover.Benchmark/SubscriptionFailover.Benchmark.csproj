@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp1.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />
+    <ProjectReference Include="..\..\test\FastTests\FastTests.csproj" />
+    <ProjectReference Include="..\..\test\Tests.Infrastructure\Tests.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

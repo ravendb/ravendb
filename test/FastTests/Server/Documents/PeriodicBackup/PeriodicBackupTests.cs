@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -56,7 +57,7 @@ namespace FastTests.Server.Documents.PeriodicBackup
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "oren" });
+                    await session.StoreAsync(new User { Name = "oren" }, "users/1");
                     await session.SaveChangesAsync();
                 }
 
@@ -73,7 +74,7 @@ namespace FastTests.Server.Documents.PeriodicBackup
                 var periodicBackupTaskId = result.TaskId;
 
                 var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
-                SpinWait.SpinUntil(() => store.Admin.Server.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, 10000);
+                SpinWait.SpinUntil(() => store.Admin.Server.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, TimeSpan.FromSeconds(60));
             }
 
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
@@ -84,6 +85,7 @@ namespace FastTests.Server.Documents.PeriodicBackup
                 using (var session = store.OpenAsyncSession())
                 {
                     var user = await session.LoadAsync<User>("users/1");
+                    Assert.NotNull(user);
                     Assert.Equal("oren", user.Name);
                 }
             }

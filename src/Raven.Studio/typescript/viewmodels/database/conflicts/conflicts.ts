@@ -98,7 +98,7 @@ class conflicts extends viewModelBase {
         grid.headerVisible(true);
         grid.init((s, t) => this.fetchConflicts(s, t), () =>
             [
-                new hyperlinkColumn<replicationConflictListItemDto>(x => x.Key, x => appUrl.forConflicts(this.activeDatabase(), x.Key), "Document", "50%",
+                new hyperlinkColumn<replicationConflictListItemDto>(x => x.Id, x => appUrl.forConflicts(this.activeDatabase(), x.Id), "Document", "50%",
                     {
                         handler: (item, event) => this.handleLoadAction(item, event)
                     }),
@@ -125,9 +125,9 @@ class conflicts extends viewModelBase {
     // watch for conflicts until we find item to highlight
     private syncSelection(items: Array<replicationConflictListItemDto>) {
         const alreadyHasSelection = this.gridController().getSelectedItems().length;
-        if (!alreadyHasSelection && this.documentId() && items.find(x => x.Key === this.documentId())) {
+        if (!alreadyHasSelection && this.documentId() && items.find(x => x.Id === this.documentId())) {
             setTimeout(() => {
-                const itemToSelect = this.gridController().findItem(x => x.Key === this.documentId());
+                const itemToSelect = this.gridController().findItem(x => x.Id === this.documentId());
                 this.gridController().setSelectedItems([itemToSelect]);
             }, 0);
         }
@@ -136,7 +136,7 @@ class conflicts extends viewModelBase {
     private handleLoadAction(conflictToLoad: replicationConflictListItemDto, event: JQueryEventObject) {
         event.preventDefault();
 
-        const documentId = conflictToLoad.Key;
+        const documentId = conflictToLoad.Id;
         this.updateUrl(appUrl.forConflicts(this.activeDatabase(), documentId));
 
         this.loadConflictForDocument(documentId);
@@ -163,7 +163,7 @@ class conflicts extends viewModelBase {
 
     private selectCurrentItem(documentId: string) {
         if (this.gridController()) {
-            const item = this.gridController().findItem(x => x.Key === documentId);
+            const item = this.gridController().findItem(x => x.Id === documentId);
             this.gridController().setSelectedItems([item]);
         }
         

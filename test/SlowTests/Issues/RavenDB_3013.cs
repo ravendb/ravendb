@@ -25,7 +25,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var loadedEntity = session.Load<TestEntity>("TestEntities/1");
+                    var loadedEntity = session.Load<TestEntity>("TestEntities/1-A");
                     Assert.Contains("one", loadedEntity.Property);
                     Assert.Contains("two", loadedEntity.Property);
                 }
@@ -50,7 +50,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var loadedEntity = session.Load<TestEntity2>("TestEntity2s/1");
+                    var loadedEntity = session.Load<TestEntity2>("TestEntity2s/1-A");
                     var array = loadedEntity.Property.ToList();
                     Assert.Equal(0, array[0]);
                     Assert.Equal(1, array[1]);

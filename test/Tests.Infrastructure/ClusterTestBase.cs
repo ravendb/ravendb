@@ -288,7 +288,7 @@ namespace Tests.Infrastructure
             var serversToPorts = new Dictionary<RavenServer,string>();
             for (var i = 0; i < numberOfNodes; i++)
             {
-                var serverUrl = $"http://localhost:{GetPort()}";
+                var serverUrl = UseFiddler($"http://127.0.0.1:{GetPort()}");
                 var server = GetNewServer(new Dictionary<string, string>()
                 {                    
                     {"Raven/ServerUrl", serverUrl}
@@ -367,6 +367,40 @@ namespace Tests.Infrastructure
             throw new TimeoutException(
                 message
                 );
+        }
+
+        public async Task<Tuple<long, List<RavenServer>>> CreateDatabaseInCluster(string databaseName, int replicationFactor, string leasderUrl)
+        {
+            CreateDatabaseResult databaseResult;
+            using (var store = new DocumentStore()
+            {
+                Url = leasderUrl,
+                Database = databaseName
+            }.Initialize())
+            {
+                var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
+                databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
+            }
+            int numberOfInstances = 0;
+            foreach (var server in Servers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)))
+            {
+                await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag ?? 0);
+                try
+                {
+                    await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+                    numberOfInstances++;
+                }
+                catch
+                {
+
+                }
+            }
+            if (numberOfInstances != replicationFactor)
+                throw new InvalidOperationException("Couldn't create the db on all nodes, just on " + numberOfInstances + " out of " + replicationFactor);
+            return Tuple.Create(databaseResult.ETag.Value,
+                Servers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)).ToList());
+
+
         }
 
         public override void Dispose()

@@ -41,7 +41,7 @@ namespace FastTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastChangeVector;
+                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).DatabaseChangeVector;
                 await CreateDocuments(store, 5);
 
                 var subscriptionCreationParams = new SubscriptionCreationOptions()
@@ -76,7 +76,7 @@ namespace FastTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastChangeVector ?? null;
+                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).DatabaseChangeVector ?? null;
                 await CreateDocuments(store, 5);
 
                 var subscriptionCreationParams = new SubscriptionCreationOptions()
@@ -88,44 +88,38 @@ namespace FastTests.Client.Subscriptions
                 using (
                     var acceptedSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)
                     {
-                        TimeToWaitBeforeConnectionRetryMilliseconds = 20000
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(20)
                     }))
                 {
+                    var acceptedSubscriptionList = new BlockingCollection<Thing>();
+                    acceptedSubscription.Subscribe(x => { acceptedSubscriptionList.Add(x); });
+                    await acceptedSubscription.StartAsync();
 
-                    var acceptedSusbscriptionList = new BlockingCollection<Thing>();
-                    using (acceptedSubscription.Subscribe(x =>
+                    Thing thing;
+
+                    // wait until we know that connection was established
+                    for (var i = 0; i < 5; i++)
                     {
-                        acceptedSusbscriptionList.Add(x);
-                    }))
-                    {
-                        await acceptedSubscription.StartAsync();
-
-                        Thing thing;
-
-                        // wait until we know that connection was established
-                        for (var i = 0; i < 5; i++)
-                        {
-                            Assert.True(acceptedSusbscriptionList.TryTake(out thing, 1000));
-                        }
-
-                        Assert.False(acceptedSusbscriptionList.TryTake(out thing, 50));
+                        Assert.True(acceptedSubscriptionList.TryTake(out thing, 1000));
                     }
+
+                    Assert.False(acceptedSubscriptionList.TryTake(out thing, 50));
                     // open second subscription
-                    using (var rejectedSusbscription =
-                            store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)
-                            {
-                                Strategy = SubscriptionOpeningStrategy.OpenIfFree,
-                                TimeToWaitBeforeConnectionRetryMilliseconds = 2000
-                            }))
+                    using (var rejectedSubscription =
+                        store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)
+                        {
+                            Strategy = SubscriptionOpeningStrategy.OpenIfFree,
+                            TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(2000)
+                        }))
                     {
-                        rejectedSusbscription.Subscribe(thing1 => { });
+                        rejectedSubscription.Subscribe(thing1 => { });
 
                         // sometime not throwing (on linux) when written like this:
-                        // await Assert.ThrowsAsync<SubscriptionInUseException>(async () => await rejectedSusbscription.StartAsync());
+                        // await Assert.ThrowsAsync<SubscriptionInUseException>(async () => await rejectedSubscription.StartAsync());
                         // so we put this in a try block
                         try
                         {
-                            await rejectedSusbscription.StartAsync();
+                            await rejectedSubscription.StartAsync();
                             Assert.False(true, "Exepcted a throw here");
                         }
                         catch (SubscriptionInUseException)
@@ -143,14 +137,15 @@ namespace FastTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastChangeVector;
-                await CreateDocuments(store, 5);
+                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).DatabaseChangeVector;
 
                 var subscriptionCreationParams = new SubscriptionCreationOptions()
                 {
                     Criteria = new SubscriptionCriteria("Things"),
                     ChangeVector = lastChangeVector
                 };
+
+                await CreateDocuments(store, 5);
                 var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCreationParams);
                 using (
                     var acceptedSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
@@ -187,7 +182,7 @@ namespace FastTests.Client.Subscriptions
                             store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)
                             {
                                 Strategy = SubscriptionOpeningStrategy.WaitForFree,
-                                TimeToWaitBeforeConnectionRetryMilliseconds = 250
+                                TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(250)
                             }))
                     {
 
@@ -223,7 +218,7 @@ namespace FastTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastChangeVector ?? null;
+                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).DatabaseChangeVector ?? null;
                 await CreateDocuments(store, 5);
 
                 var subscriptionCreationParams = new SubscriptionCreationOptions()

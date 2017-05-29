@@ -80,8 +80,8 @@ namespace Raven.Server.Documents.Transformers
 
                         var document = new Document
                         {
-                            Key = docsEnumerator.Current.Key,
-                            Data = _context.ReadObject(result, docsEnumerator.Current.Key ?? string.Empty),
+                            Id = docsEnumerator.Current.Id,
+                            Data = _context.ReadObject(result, docsEnumerator.Current.Id ?? string.Empty),
                             Etag = docsEnumerator.Current.Etag,
                             StorageId = docsEnumerator.Current.StorageId
                         };

@@ -166,9 +166,9 @@ namespace Raven.Client.Documents.Conventions
         public Func<string, string> FindIdentityPropertyNameFromEntityName { get; set; }
 
         /// <summary>
-        ///     Gets or sets the document key generator.
+        ///     Gets or sets the document ID generator.
         /// </summary>
-        /// <value>The document key generator.</value>
+        /// <value>The document ID generator.</value>
         public Func<string, object, Task<string>> AsyncDocumentIdGenerator { get; set; }
 
         /// <summary>
@@ -275,7 +275,7 @@ namespace Raven.Client.Documents.Conventions
 
         /// <summary>
         ///     Register an async id convention for a single type (and all of its derived types.
-        ///     Note that you can still fall back to the DocumentKeyGenerator if you want.
+        ///     Note that you can still fall back to the DocumentIdGenerator if you want.
         /// </summary>
         public DocumentConventions RegisterAsyncIdConvention<TEntity>(Func<string, TEntity, Task<string>> func)
         {
@@ -301,7 +301,7 @@ namespace Raven.Client.Documents.Conventions
         /// <summary>
         ///     Register an id convention for a single type (and all its derived types) to be used when calling
         ///     session.Load{TEntity}(TId id)
-        ///     It is used by the default implementation of FindFullDocumentKeyFromNonStringIdentifier.
+        ///     It is used by the default implementation of FindFullDocumentIdFromNonStringIdentifier.
         /// </summary>
         public DocumentConventions RegisterIdLoadConvention<TEntity>(Func<ValueType, string> func)
         {

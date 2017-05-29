@@ -102,8 +102,7 @@ class ongoingTasks extends viewModelBase {
     }
 
     manageDatabaseGroupUrl(dbInfo: databaseInfo): string {
-        const db = dbInfo.asDatabase();
-        return appUrl.forManageDatabaseGroup(db);
+        return appUrl.forManageDatabaseGroup(dbInfo);
     }
 
     removeOngoingTask(db: databaseInfo) {
@@ -124,7 +123,7 @@ class ongoingTasks extends viewModelBase {
         app.showBootstrapDialog(confirmDeleteViewModel);
     }
 
-    private onTaskRemoved(deletedDatabaseResult: Raven.Server.Web.System.DatabaseDeleteResult) {
+    private onTaskRemoved() {
         // ...
     }
 

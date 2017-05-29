@@ -132,7 +132,7 @@ namespace Raven.Server.Utils
             var merged = new List<ChangeVectorEntry>();
             while (ia < vectorA.Length && ib < vectorB.Length)
             {
-                int res = vectorA[ia].CompareTo(vectorB[ib]);
+                int res = vectorA[ia].DbId.CompareTo(vectorB[ib].DbId);
                 if (res == 0)
                 {
                     merged.Add(new ChangeVectorEntry

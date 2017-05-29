@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Changes
         private readonly Uri _url;
 
         private readonly Action _onDispose;
-        private readonly ClientWebSocket _client;
+        private ClientWebSocket _client;
 
         private readonly Task _task;
         private readonly CancellationTokenSource _cts;
@@ -75,7 +75,7 @@ namespace Raven.Client.Documents.Changes
             }
         }
 
-        public bool Connected => _client.State == WebSocketState.Open;
+        public bool Connected => _client?.State == WebSocketState.Open;
 
         public Task<IDatabaseChanges> EnsureConnectedNow()
         {
@@ -84,7 +84,7 @@ namespace Raven.Client.Documents.Changes
 
         public event EventHandler ConnectionStatusChanged;
 
-        public IObservable<IndexChange> ForIndex(string indexName)
+        public IChangesObservable<IndexChange> ForIndex(string indexName)
         {
             var counter = GetOrAddConnectionState("indexes/" + indexName, "watch-index", "unwatch-index", indexName);
 
@@ -98,13 +98,13 @@ namespace Raven.Client.Documents.Changes
             return taskedObservable;
         }
 
-        public IObservable<DocumentChange> ForDocument(string docId)
+        public IChangesObservable<DocumentChange> ForDocument(string docId)
         {
             var counter = GetOrAddConnectionState("docs/" + docId, "watch-doc", "unwatch-doc", docId);
 
             var taskedObservable = new ChangesObservable<DocumentChange, DatabaseConnectionState>(
                 counter,
-                notification => string.Equals(notification.Key, docId, StringComparison.OrdinalIgnoreCase));
+                notification => string.Equals(notification.Id, docId, StringComparison.OrdinalIgnoreCase));
 
             counter.OnDocumentChangeNotification += taskedObservable.Send;
             counter.OnError += taskedObservable.Error;
@@ -112,7 +112,7 @@ namespace Raven.Client.Documents.Changes
             return taskedObservable;
         }
 
-        public IObservable<DocumentChange> ForAllDocuments()
+        public IChangesObservable<DocumentChange> ForAllDocuments()
         {
             var counter = GetOrAddConnectionState("all-docs", "watch-docs", "unwatch-docs", null);
 
@@ -126,7 +126,7 @@ namespace Raven.Client.Documents.Changes
             return taskedObservable;
         }
 
-        public IObservable<OperationStatusChange> ForOperationId(long operationId)
+        public IChangesObservable<OperationStatusChange> ForOperationId(long operationId)
         {
             var counter = GetOrAddConnectionState("operations/" + operationId, "watch-operation", "unwatch-operation", operationId.ToString());
 
@@ -140,7 +140,7 @@ namespace Raven.Client.Documents.Changes
             return taskedObservable;
         }
 
-        public IObservable<OperationStatusChange> ForAllOperations()
+        public IChangesObservable<OperationStatusChange> ForAllOperations()
         {
             var counter = GetOrAddConnectionState("all-operations", "watch-operations", "unwatch-operations", null);
 
@@ -154,7 +154,7 @@ namespace Raven.Client.Documents.Changes
             return taskedObservable;
         }
 
-        public IObservable<IndexChange> ForAllIndexes()
+        public IChangesObservable<IndexChange> ForAllIndexes()
         {
             var counter = GetOrAddConnectionState("all-indexes", "watch-indexes", "unwatch-indexes", null);
 
@@ -168,7 +168,7 @@ namespace Raven.Client.Documents.Changes
             return taskedObservable;
         }
 
-        public IObservable<TransformerChange> ForAllTransformers()
+        public IChangesObservable<TransformerChange> ForAllTransformers()
         {
             var counter = GetOrAddConnectionState("all-transformers", "watch-transformers", "unwatch-transformers", null);
 
@@ -182,13 +182,13 @@ namespace Raven.Client.Documents.Changes
             return taskedObservable;
         }
 
-        public IObservable<DocumentChange> ForDocumentsStartingWith(string docIdPrefix)
+        public IChangesObservable<DocumentChange> ForDocumentsStartingWith(string docIdPrefix)
         {
             var counter = GetOrAddConnectionState("prefixes/" + docIdPrefix, "watch-prefix", "unwatch-prefix", docIdPrefix);
 
             var taskedObservable = new ChangesObservable<DocumentChange, DatabaseConnectionState>(
                 counter,
-                notification => notification.Key != null && notification.Key.StartsWith(docIdPrefix, StringComparison.OrdinalIgnoreCase));
+                notification => notification.Id != null && notification.Id.StartsWith(docIdPrefix, StringComparison.OrdinalIgnoreCase));
 
             counter.OnDocumentChangeNotification += taskedObservable.Send;
             counter.OnError += taskedObservable.Error;
@@ -196,7 +196,7 @@ namespace Raven.Client.Documents.Changes
             return taskedObservable;
         }
 
-        public IObservable<DocumentChange> ForDocumentsInCollection(string collectionName)
+        public IChangesObservable<DocumentChange> ForDocumentsInCollection(string collectionName)
         {
             if (collectionName == null)
                 throw new ArgumentNullException(nameof(collectionName));
@@ -213,13 +213,13 @@ namespace Raven.Client.Documents.Changes
             return taskedObservable;
         }
 
-        public IObservable<DocumentChange> ForDocumentsInCollection<TEntity>()
+        public IChangesObservable<DocumentChange> ForDocumentsInCollection<TEntity>()
         {
             var collectionName = _conventions.GetCollectionName(typeof(TEntity));
             return ForDocumentsInCollection(collectionName);
         }
 
-        public IObservable<DocumentChange> ForDocumentsOfType(string typeName)
+        public IChangesObservable<DocumentChange> ForDocumentsOfType(string typeName)
         {
             if (typeName == null) throw new ArgumentNullException(nameof(typeName));
             var encodedTypeName = Uri.EscapeDataString(typeName);
@@ -236,7 +236,7 @@ namespace Raven.Client.Documents.Changes
             return taskedObservable;
         }
 
-        public IObservable<DocumentChange> ForDocumentsOfType(Type type)
+        public IChangesObservable<DocumentChange> ForDocumentsOfType(Type type)
         {
             if (type == null)
                 throw new ArgumentNullException(nameof(type));
@@ -245,7 +245,7 @@ namespace Raven.Client.Documents.Changes
             return ForDocumentsOfType(typeName);
         }
 
-        public IObservable<DocumentChange> ForDocumentsOfType<TEntity>()
+        public IChangesObservable<DocumentChange> ForDocumentsOfType<TEntity>()
         {
             var typeName = _conventions.FindClrTypeName(typeof(TEntity));
             return ForDocumentsOfType(typeName);
@@ -284,25 +284,30 @@ namespace Raven.Client.Documents.Changes
                         // because connections drops with all subscriptions
                     }
 
-                    _counters.Remove(s);
+                    DatabaseConnectionState state;
+                    if (_counters.TryRemove(s, out state))
+                        state.Dispose();
                 }
 
-                Task OnConnect()
+                async Task<bool> OnConnect()
                 {
                     try
                     {
                         if (Connected)
-                            return Send(watchCommand, value);
+                        {
+                            await Send(watchCommand, value).ConfigureAwait(false);
+                            return true;
+                        }
                     }
                     catch (WebSocketException)
                     {
                         // if we are not connected then we will subscribe again after connection be established
                     }
 
-                    return Task.CompletedTask;
+                    return false;
                 }
 
-                return new DatabaseConnectionState(OnConnect, OnDisconnect);
+                return new DatabaseConnectionState(this, OnConnect, OnDisconnect);
             });
 
             return counter;
@@ -353,8 +358,6 @@ namespace Raven.Client.Documents.Changes
                         await _client.ConnectAsync(_url, _cts.Token).ConfigureAwait(false);
 
                         ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
-
-                        await Subscribe().ConfigureAwait(false);
                     }
 
                     await ProcessChanges().ConfigureAwait(false);
@@ -370,6 +373,9 @@ namespace Raven.Client.Documents.Changes
                 }
                 catch (Exception e)
                 {
+                    using (var client = _client)
+                        _client = new ClientWebSocket();
+
                     ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
 
                     NotifyAboutError(e);
@@ -483,14 +489,6 @@ namespace Raven.Client.Documents.Changes
                     break;
                 default:
                     throw new NotSupportedException(type);
-            }
-        }
-
-        private async Task Subscribe()
-        {
-            foreach (var state in _counters.ValuesSnapshot)
-            {
-                await state.OnConnect().ConfigureAwait(false);
             }
         }
 

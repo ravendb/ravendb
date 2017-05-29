@@ -119,6 +119,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(NotificationUpdated));
             scripter.AddType(typeof(OperationChanged));
             scripter.AddType(typeof(DatabaseChanged));
+            scripter.AddType(typeof(ClusterTopologyChanged));
             scripter.AddType(typeof(DatabaseStatsChanged));
             scripter.AddType(typeof(PerformanceHint));
             scripter.AddType(typeof(PagingPerformanceDetails));
@@ -200,9 +201,6 @@ namespace TypingsGenerator
 
             // feedback form
             scripter.AddType(typeof(FeedbackForm));
-
-            // database admin
-            scripter.AddType(typeof(DatabaseDeleteResult));
 
             // io metrics stats
             scripter.AddType(typeof(IOMetricsHistoryStats));

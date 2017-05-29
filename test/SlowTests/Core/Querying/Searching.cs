@@ -128,8 +128,8 @@ namespace SlowTests.Core.Querying
                             .ToList();
 
                     Assert.Equal(2, nosqlOrQuerying.Count);
-                    Assert.NotNull(nosqlOrQuerying.FirstOrDefault(x => x.Id == "posts/1"));
-                    Assert.NotNull(nosqlOrQuerying.FirstOrDefault(x => x.Id == "posts/2"));
+                    Assert.NotNull(nosqlOrQuerying.FirstOrDefault(x => x.Id == "posts/1-A"));
+                    Assert.NotNull(nosqlOrQuerying.FirstOrDefault(x => x.Id == "posts/2-A"));
 
                     var notNosqlOrQuerying =
                         session.Query<Post>("Posts/ByTitleAndDescription")
@@ -138,8 +138,8 @@ namespace SlowTests.Core.Querying
                             .ToList();
 
                     Assert.Equal(2, notNosqlOrQuerying.Count);
-                    Assert.NotNull(notNosqlOrQuerying.FirstOrDefault(x => x.Id == "posts/1"));
-                    Assert.NotNull(notNosqlOrQuerying.FirstOrDefault(x => x.Id == "posts/3"));
+                    Assert.NotNull(notNosqlOrQuerying.FirstOrDefault(x => x.Id == "posts/1-A"));
+                    Assert.NotNull(notNosqlOrQuerying.FirstOrDefault(x => x.Id == "posts/3-A"));
 
                     var nosqlAndModeling =
                         session.Query<Post>("Posts/ByTitleAndDescription")
@@ -148,7 +148,7 @@ namespace SlowTests.Core.Querying
                             .ToList();
 
                     Assert.Equal(1, nosqlAndModeling.Count);
-                    Assert.NotNull(nosqlAndModeling.FirstOrDefault(x => x.Id == "posts/2"));
+                    Assert.NotNull(nosqlAndModeling.FirstOrDefault(x => x.Id == "posts/2-A"));
                 }
             }
         }

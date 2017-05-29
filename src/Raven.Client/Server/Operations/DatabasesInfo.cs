@@ -83,13 +83,11 @@ namespace Raven.Client.Server.Operations
     {
         public List<NodeId> Members { get; set; }
         public List<NodeId> Promotables { get; set; }
-        public List<NodeId> Watchers { get; set; }
 
         public NodesTopology()
         {
             Members = new List<NodeId>();
             Promotables = new List<NodeId>();
-            Watchers = new List<NodeId>();
         }
 
         public DynamicJsonValue ToJson()
@@ -98,7 +96,6 @@ namespace Raven.Client.Server.Operations
             {
                 [nameof(Members)] = new DynamicJsonArray(Members.Select(x => x.ToJson())),
                 [nameof(Promotables)] = new DynamicJsonArray(Promotables.Select(x => x.ToJson())),
-                [nameof(Watchers)] = new DynamicJsonArray(Watchers.Select(x => x.ToJson()))
             };
         }
     }
@@ -107,13 +104,15 @@ namespace Raven.Client.Server.Operations
     {
         public string NodeTag;
         public string NodeUrl;
+        public string ResponsibleNode;
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(NodeTag)] = NodeTag,
-                [nameof(NodeUrl)] = NodeUrl
+                [nameof(NodeUrl)] = NodeUrl,
+                [nameof(ResponsibleNode)] = ResponsibleNode,
             };
         }
     }

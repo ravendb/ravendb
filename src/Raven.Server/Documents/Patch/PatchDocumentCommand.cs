@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.Patch
                 throw;
             }
 
-            var modifiedDocument = context.ReadObject(_scope.ToBlittable(_scope.PatchObject.AsObject()), document.Key,
+            var modifiedDocument = context.ReadObject(_scope.ToBlittable(_scope.PatchObject.AsObject()), document.Id,
                 BlittableJsonDocumentBuilder.UsageMode.ToDisk, new BlittableMetadataModifier(context));
 
             var result = new PatchResult
@@ -150,7 +150,7 @@ namespace Raven.Server.Documents.Patch
             else if (DocumentCompare.IsEqualTo(originalDocument.Data, modifiedDocument, true) == DocumentCompareResult.NotEqual) // http://issues.hibernatingrhinos.com/issue/RavenDB-6408
             {
                 if (_isTest == false || _scriptIsPuttingDocument)
-                    putResult = _database.DocumentsStorage.Put(context, originalDocument.Key, originalDocument.Etag, modifiedDocument);
+                    putResult = _database.DocumentsStorage.Put(context, originalDocument.Id, originalDocument.Etag, modifiedDocument);
 
                 result.Status = PatchStatus.Patched;
             }

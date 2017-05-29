@@ -192,7 +192,7 @@ namespace Raven.Server.Documents.Indexes
                 options.SchemaVersion = 1;
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                 options.TimeToSyncAfterFlashInSeconds = documentDatabase.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
-                options.NumOfCocurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
+                options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
                 options.MasterKey = documentDatabase.MasterKey;
 
                 environment = new StorageEnvironment(options);
@@ -309,7 +309,7 @@ namespace Raven.Server.Documents.Indexes
                 options.SchemaVersion = 1;
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                 options.TimeToSyncAfterFlashInSeconds = documentDatabase.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
-                options.NumOfCocurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
+                options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
                 options.MasterKey = documentDatabase.MasterKey;
 
                 try
@@ -593,15 +593,22 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public enum IndexProgressStatus
+        {
+            Faulty = -1,
+            Compacting = -2,
+            Stale = -3
+        }
+
         public virtual (bool isStale, long lastProcessedEtag) GetIndexStats(DocumentsOperationContext databaseContext)
         {
             Debug.Assert(databaseContext.Transaction != null);
 
             if (Type == IndexType.Faulty)
-                return (true, -1);
+                return (true, (long)IndexProgressStatus.Faulty);
 
             if (_isCompactionInProgress)
-                return (true, -1);
+                return (true, (long)IndexProgressStatus.Compacting);
 
             TransactionOperationContext indexContext;
             using (_contextPool.AllocateOperationContext(out indexContext))
@@ -609,8 +616,8 @@ namespace Raven.Server.Documents.Indexes
             {
                 var isStale = IsStale(databaseContext, indexContext);
 
-                if (isStale == false)
-                    return (false, -1);
+                if (isStale)
+                    return (true, (long)IndexProgressStatus.Stale);
 
                 long lastEtag = 0;
                 foreach (var collection in Collections)
@@ -618,7 +625,7 @@ namespace Raven.Server.Documents.Indexes
                     lastEtag  = Math.Max(lastEtag , _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection));
                 }
 
-                return (true, lastEtag);
+                return (false, lastEtag);
             }
         }
 
@@ -1332,8 +1339,8 @@ namespace Raven.Server.Documents.Indexes
                 if (State == IndexState.Disabled)
                     return;
 
-                SetState(IndexState.Disabled);
                 Stop();
+                SetState(IndexState.Disabled);
             }
         }
 
@@ -2308,13 +2315,13 @@ namespace Raven.Server.Documents.Indexes
                 {
                     var environmentOptions =
                         (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)_environment.Options;
-                    var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath, null, null, DocumentDatabase.IoChanges,
+                    var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath.FullPath, null, null, DocumentDatabase.IoChanges,
                         DocumentDatabase.CatastrophicFailureNotification);
                     srcOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                     srcOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
                     srcOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
                     srcOptions.TimeToSyncAfterFlashInSeconds = DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
-                    srcOptions.NumOfCocurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
+                    srcOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
                     srcOptions.MasterKey = DocumentDatabase.MasterKey;
 
                     var wasRunning = _indexingThread != null;
@@ -2331,7 +2338,7 @@ namespace Raven.Server.Documents.Indexes
 
                         compactOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                         compactOptions.TimeToSyncAfterFlashInSeconds = DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
-                        compactOptions.NumOfCocurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
+                        compactOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
                         srcOptions.MasterKey = DocumentDatabase.MasterKey;
 
                         StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
@@ -2343,8 +2350,8 @@ namespace Raven.Server.Documents.Indexes
                         });
                     }
 
-                    IOExtensions.DeleteDirectory(environmentOptions.BasePath);
-                    IOExtensions.MoveDirectory(compactPath.FullPath, environmentOptions.BasePath);
+                    IOExtensions.DeleteDirectory(environmentOptions.BasePath.FullPath);
+                    IOExtensions.MoveDirectory(compactPath.FullPath, environmentOptions.BasePath.FullPath);
 
                     _initialized = false;
                     _disposed = false;

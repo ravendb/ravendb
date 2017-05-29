@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections.Generic;
+
 namespace Raven.Client.Server.Operations
 {
     /// <summary>
@@ -22,6 +24,9 @@ namespace Raven.Client.Server.Operations
         public long? ETag { get; set; }
 
         public DatabaseTopology Topology { get; set; }
+
+        public List<string> NodesAddedTo { get; set; }
+
     }
 
     public class ModifyDatabaseWatchersResult : CreateDatabaseResult

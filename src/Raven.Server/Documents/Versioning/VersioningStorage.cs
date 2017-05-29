@@ -21,11 +21,11 @@ namespace Raven.Server.Documents.Versioning
 {
     public unsafe class VersioningStorage
     {
-        private static readonly Slice KeyAndChangeVectorSlice;
-        public static readonly Slice KeyAndEtagSlice;
+        private static readonly Slice ChangeVectorSlice;
+        private static readonly Slice IdAndEtagSlice;
         public static readonly Slice RevisionsEtagsSlice;
-        public static readonly Slice RevisionDocumentsSlice;
-        public static readonly Slice RevisionsCountSlice;
+        private static readonly Slice RevisionDocumentsSlice;
+        private static readonly Slice RevisionsCountSlice;
 
         private static readonly TableSchema DocsSchema;
 
@@ -34,23 +34,16 @@ namespace Raven.Server.Documents.Versioning
         private readonly DocumentsStorage _documentsStorage;
         private readonly VersioningConfiguration _versioningConfiguration;
 
-        internal VersioningConfiguration VersioningConfiguration => _versioningConfiguration;
-        
-        // The documents schema is as follows
-        // (lowered key, recored separator, etag, lowered key, recored separator, change vector, lazy string key, document)
-        // We are you using the record separator in order to avoid loading another documents that has the same key prefix, 
-        //      e.g. fitz(record-separator)01234567 and fitz0(record-separator)01234567, without the record separator we would have to load also fitz0 and filter it.
-        // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
-
-        // We have to fetch versions based on it's change vector as well as by it's insert order.
-        // To do so, we duplicate the key and indexing both (key,etag) and (key,cv)
         private enum Columns
         {
+            /* ChangeVector is the table's key as it's unique and will avoid conflicts (by replication) */
             ChangeVector = 0,
-            LoweredKey = 1,
+            LowerId = 1,
+            /* We are you using the record separator in order to avoid loading another documents that has the same ID prefix, 
+                e.g. fitz(record-separator)01234567 and fitz0(record-separator)01234567, without the record separator we would have to load also fitz0 and filter it. */
             RecordSeparator = 2,
             Etag = 3, // etag to keep the insertion order
-            Key = 4,
+            Id = 4,
             Document = 5,
             Flags = 6,
             LastModified = 7,
@@ -77,8 +70,8 @@ namespace Raven.Server.Documents.Versioning
 
         static VersioningStorage()
         {
-            Slice.From(StorageEnvironment.LabelsContext, "KeyAndChangeVector", ByteStringType.Immutable, out KeyAndChangeVectorSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "KeyAndEtag", ByteStringType.Immutable, out KeyAndEtagSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "ChangeVector", ByteStringType.Immutable, out ChangeVectorSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "IdAndEtag", ByteStringType.Immutable, out IdAndEtagSlice);
             Slice.From(StorageEnvironment.LabelsContext, "RevisionsEtags", ByteStringType.Immutable, out RevisionsEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "RevisionDocuments", ByteStringType.Immutable, out RevisionDocumentsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "RevisionsCount", ByteStringType.Immutable, out RevisionsCountSlice);
@@ -88,13 +81,13 @@ namespace Raven.Server.Documents.Versioning
             {
                 StartIndex = (int)Columns.ChangeVector,
                 Count = 1,
-                Name = KeyAndChangeVectorSlice
+                Name = ChangeVectorSlice
             });
             DocsSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
-                StartIndex = (int)Columns.LoweredKey,
+                StartIndex = (int)Columns.LowerId,
                 Count = 3,
-                Name = KeyAndEtagSlice
+                Name = IdAndEtagSlice
             });
             DocsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
@@ -110,7 +103,7 @@ namespace Raven.Server.Documents.Versioning
             {
                 if (dbRecord.Versioning == null)
                     return null;
-                if (dbRecord.Versioning.Equals(versioningStorage?.VersioningConfiguration))
+                if (dbRecord.Versioning.Equals(versioningStorage?._versioningConfiguration))
                     return versioningStorage;                    
                 var config = new VersioningStorage(database, dbRecord.Versioning);
                 if (logger.IsInfoEnabled)
@@ -145,7 +138,9 @@ namespace Raven.Server.Documents.Versioning
             return _emptyConfiguration;
         }
 
-        public bool ShouldVersionDocument(CollectionName collectionName, NonPersistentDocumentFlags nonPersistentFlags, BlittableJsonReaderObject existingDocument, BlittableJsonReaderObject document, ref DocumentFlags documentFlags, out VersioningConfigurationCollection configuration, DocumentsOperationContext context, string key)
+        public bool ShouldVersionDocument(CollectionName collectionName, NonPersistentDocumentFlags nonPersistentFlags, 
+            BlittableJsonReaderObject existingDocument, BlittableJsonReaderObject document, ref DocumentFlags documentFlags, 
+            out VersioningConfigurationCollection configuration)
         {
             configuration = GetVersioningConfiguration(collectionName);
             if (configuration.Active == false)
@@ -177,15 +172,15 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
-        public void Put(DocumentsOperationContext context, string key, BlittableJsonReaderObject document, 
+        public void Put(DocumentsOperationContext context, string id, BlittableJsonReaderObject document, 
             DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, ChangeVectorEntry[] changeVector, long lastModifiedTicks,
             VersioningConfigurationCollection configuration = null)
         {
-            Debug.Assert(changeVector != null, "Chagen vector must be set");
+            Debug.Assert(changeVector != null, "Change vector must be set");
 
-            BlittableJsonReaderObject.AssertNoModifications(document, key, assertChildren: true);
+            BlittableJsonReaderObject.AssertNoModifications(document, id, assertChildren: true);
 
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out Slice lowerKey, out Slice keyPtr);
+            DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr);
 
             var notFromSmuggler = (nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) != NonPersistentDocumentFlags.FromSmuggler;
 
@@ -193,32 +188,32 @@ namespace Raven.Server.Documents.Versioning
             fixed (ChangeVectorEntry* pChangeVector = changeVector)
             {
                 var changeVectorPtr = (byte*)pChangeVector;
-                var chagneVectorSize = sizeof(ChangeVectorEntry) * changeVector.Length;
+                var changeVectorSize = sizeof(ChangeVectorEntry) * changeVector.Length;
 
-                // We want the revision's attachments to have a lower etag than the reivion itself
+                // We want the revision's attachments to have a lower etag than the revision itself
                 if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments &&
                     notFromSmuggler)
                 {
-                    using (Slice.External(context.Allocator, changeVectorPtr, chagneVectorSize, out Slice changeVectorSlice))
+                    using (Slice.External(context.Allocator, changeVectorPtr, changeVectorSize, out Slice changeVectorSlice))
                     {
                         if (table.VerifyKeyExists(changeVectorSlice) == false)
                         {
-                            _documentsStorage.AttachmentsStorage.RevisionAttachments(context, lowerKey, changeVector);
+                            _documentsStorage.AttachmentsStorage.RevisionAttachments(context, lowerId, changeVector);
                         }
                     }
                 }
 
                 flags |= DocumentFlags.Revision;
-                var data = context.ReadObject(document, key);
+                var data = context.ReadObject(document, id);
                 var newEtag = _database.DocumentsStorage.GenerateNextEtag();
 
                 using (table.Allocate(out TableValueBuilder tbv))
                 {
-                    tbv.Add(changeVectorPtr, chagneVectorSize);
-                    tbv.Add(lowerKey);
+                    tbv.Add(changeVectorPtr, changeVectorSize);
+                    tbv.Add(lowerId);
                     tbv.Add(SpecialChars.RecordSeparator);
                     tbv.Add(Bits.SwapBytes(newEtag));
-                    tbv.Add(keyPtr);
+                    tbv.Add(idPtr);
                     tbv.Add(data.BasePointer, data.Size);
                     tbv.Add((int)flags);
                     tbv.Add(lastModifiedTicks);
@@ -230,11 +225,11 @@ namespace Raven.Server.Documents.Versioning
             {
                 if (configuration == null)
                 {
-                    var collectionName = _database.DocumentsStorage.ExtractCollectionName(context, key, document);
+                    var collectionName = _database.DocumentsStorage.ExtractCollectionName(context, id, document);
                     configuration = GetVersioningConfiguration(collectionName);
                 }
 
-                using (GetKeyPrefix(context, lowerKey, out Slice prefixSlice))
+                using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
                 {
                     // We delete the old revisions after we put the current one, 
                     // because in case that MaxRevisions is 3 or lower we may get a revision document from replication
@@ -263,7 +258,7 @@ namespace Raven.Server.Documents.Versioning
         {
             long maxEtagDeleted = 0;
 
-            var deletedRevisionsCount = table.DeleteForwardFrom(DocsSchema.Indexes[KeyAndEtagSlice], prefixSlice, true,
+            var deletedRevisionsCount = table.DeleteForwardFrom(DocsSchema.Indexes[IdAndEtagSlice], prefixSlice, true,
                 numberOfRevisionsToDelete,
                 deleted =>
                 {
@@ -278,19 +273,19 @@ namespace Raven.Server.Documents.Versioning
             return deletedRevisionsCount;
         }
 
-        private long IncrementCountOfRevisions(DocumentsOperationContext context, Slice prefixedLoweredKey, long delta)
+        private long IncrementCountOfRevisions(DocumentsOperationContext context, Slice prefixedLowerId, long delta)
         {
             var numbers = context.Transaction.InnerTransaction.ReadTree(RevisionsCountSlice);
-            return numbers.Increment(prefixedLoweredKey, delta);
+            return numbers.Increment(prefixedLowerId, delta);
         }
 
-        private void DeleteCountOfRevisions(DocumentsOperationContext context, Slice prefixedLoweredKey)
+        private void DeleteCountOfRevisions(DocumentsOperationContext context, Slice prefixedLowerId)
         {
             var numbers = context.Transaction.InnerTransaction.ReadTree(RevisionsCountSlice);
-            numbers.Delete(prefixedLoweredKey);
+            numbers.Delete(prefixedLowerId);
         }
 
-        public void Delete(DocumentsOperationContext context, CollectionName collectionName, Slice loweredKey)
+        public void Delete(DocumentsOperationContext context, CollectionName collectionName, Slice lowerId)
         {
             var configuration = GetVersioningConfiguration(collectionName);
             if (configuration.Active == false)
@@ -300,8 +295,7 @@ namespace Raven.Server.Documents.Versioning
                 return;
 
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
-            Slice prefixSlice;
-            using (GetKeyPrefix(context, loweredKey, out prefixSlice))
+            using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
             {
                 DeleteRevisions(context, table, prefixSlice, long.MaxValue);
                 DeleteCountOfRevisions(context, prefixSlice);
@@ -309,35 +303,33 @@ namespace Raven.Server.Documents.Versioning
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ByteStringContext.InternalScope GetKeyPrefix(DocumentsOperationContext context, Slice loweredKey, out Slice prefixSlice)
+        private ByteStringContext.InternalScope GetKeyPrefix(DocumentsOperationContext context, Slice lowerId, out Slice prefixSlice)
         {
-            return GetKeyPrefix(context, loweredKey.Content.Ptr, loweredKey.Size, out prefixSlice);
+            return GetKeyPrefix(context, lowerId.Content.Ptr, lowerId.Size, out prefixSlice);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ByteStringContext.InternalScope GetKeyPrefix(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, out Slice prefixSlice)
+        private ByteStringContext.InternalScope GetKeyPrefix(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, out Slice prefixSlice)
         {
-            ByteString keyMem;
-            var scope = context.Allocator.Allocate(lowerKeySize + 1, out keyMem);
+            var scope = context.Allocator.Allocate(lowerIdSize + 1, out ByteString keyMem);
 
-            Memory.Copy(keyMem.Ptr, lowerKey, lowerKeySize);
-            keyMem.Ptr[lowerKeySize] = SpecialChars.RecordSeparator;
+            Memory.Copy(keyMem.Ptr, lowerId, lowerIdSize);
+            keyMem.Ptr[lowerIdSize] = SpecialChars.RecordSeparator;
 
             prefixSlice = new Slice(SliceOptions.Key, keyMem);
             return scope;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ByteStringContext.InternalScope GetLastKey(DocumentsOperationContext context, Slice lowerKey, out Slice prefixSlice)
+        private ByteStringContext.InternalScope GetLastKey(DocumentsOperationContext context, Slice lowerId, out Slice prefixSlice)
         {
-            ByteString keyMem;
-            var scope = context.Allocator.Allocate(lowerKey.Size + 1 + sizeof(long), out keyMem);
+            var scope = context.Allocator.Allocate(lowerId.Size + 1 + sizeof(long), out ByteString keyMem);
 
-            Memory.Copy(keyMem.Ptr, lowerKey.Content.Ptr, lowerKey.Size);
-            keyMem.Ptr[lowerKey.Size] = SpecialChars.RecordSeparator;
+            Memory.Copy(keyMem.Ptr, lowerId.Content.Ptr, lowerId.Size);
+            keyMem.Ptr[lowerId.Size] = SpecialChars.RecordSeparator;
 
             var maxValue = Bits.SwapBytes(long.MaxValue);
-            Memory.Copy(keyMem.Ptr + lowerKey.Size + 1, (byte*)&maxValue, sizeof(long));
+            Memory.Copy(keyMem.Ptr + lowerId.Size + 1, (byte*)&maxValue, sizeof(long));
 
             prefixSlice = new Slice(SliceOptions.Key, keyMem);
             return scope;
@@ -349,12 +341,11 @@ namespace Raven.Server.Documents.Versioning
             return numbers.Read(prefix)?.Reader.ReadLittleEndianInt64() ?? 0;
         }
 
-        public (Document[] Revisions, long Count) GetRevisions(DocumentsOperationContext context, string key, int start, int take)
+        public (Document[] Revisions, long Count) GetRevisions(DocumentsOperationContext context, string id, int start, int take)
         {
-            Slice lowerKey, prefixSlice, lastKey;
-            using (DocumentKeyWorker.GetSliceFromKey(context, key, out lowerKey))
-            using (GetKeyPrefix(context, lowerKey, out prefixSlice))
-            using (GetLastKey(context, lowerKey, out lastKey))
+            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
+            using (GetLastKey(context, lowerId, out Slice lastKey))
             {
                 var revisions = GetRevisions(context, prefixSlice, lastKey, start, take).ToArray();
                 var count = CountOfRevisions(context, prefixSlice);
@@ -365,7 +356,7 @@ namespace Raven.Server.Documents.Versioning
         private IEnumerable<Document> GetRevisions(DocumentsOperationContext context, Slice prefixSlice, Slice lastKey, int start, int take)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
-            foreach (var tvr in table.SeekBackwardFrom(DocsSchema.Indexes[KeyAndEtagSlice], prefixSlice, lastKey, start))
+            foreach (var tvr in table.SeekBackwardFrom(DocsSchema.Indexes[IdAndEtagSlice], prefixSlice, lastKey, start))
             {
                 if (take-- <= 0)
                     yield break;
@@ -404,8 +395,8 @@ namespace Raven.Server.Documents.Versioning
             var result = new Document
             {
                 StorageId = tvr.Id,
-                LoweredKey = DocumentsStorage.TableValueToString(context, (int)Columns.LoweredKey, ref tvr),
-                Key = DocumentsStorage.TableValueToKey(context, (int)Columns.Key, ref tvr),
+                LowerId = DocumentsStorage.TableValueToString(context, (int)Columns.LowerId, ref tvr),
+                Id = DocumentsStorage.TableValueToId(context, (int)Columns.Id, ref tvr),
                 Etag = DocumentsStorage.TableValueToEtag((int)Columns.Etag, ref tvr)
             };
 
@@ -414,9 +405,9 @@ namespace Raven.Server.Documents.Versioning
             result.LastModified = new DateTime(*(long*)tvr.Read((int)Columns.LastModified, out size));
 
             var ptr = tvr.Read((int)Columns.ChangeVector, out size);
-            int changeVecotorCount = size / sizeof(ChangeVectorEntry);
-            result.ChangeVector = new ChangeVectorEntry[changeVecotorCount];
-            for (var i = 0; i < changeVecotorCount; i++)
+            int changeVectorCount = size / sizeof(ChangeVectorEntry);
+            result.ChangeVector = new ChangeVectorEntry[changeVectorCount];
+            for (var i = 0; i < changeVectorCount; i++)
             {
                 result.ChangeVector[i] = ((ChangeVectorEntry*)ptr)[i];
             }

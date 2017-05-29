@@ -18,13 +18,12 @@ namespace Raven.Server.Documents.Handlers
         public struct CommandData
         {
             public CommandType Type;
-            // TODO: Change to ID
-            public string Key;
+            public string Id;
             public BlittableJsonReaderObject Document;
             public PatchRequest Patch;
             public PatchRequest PatchIfMissing;
             public long? Etag;
-            public bool KeyPrefixed;
+            public bool IdPrefixed;
 
             public PatchDocumentCommand PatchCommand;
 
@@ -105,7 +104,7 @@ namespace Raven.Server.Documents.Handlers
 
                     if (commandData.Type == CommandType.PATCH)
                     {
-                        commandData.PatchCommand = patcher.GetPatchDocumentCommand(commandData.Key, commandData.Etag, commandData.Patch, commandData.PatchIfMissing,
+                        commandData.PatchCommand = patcher.GetPatchDocumentCommand(commandData.Id, commandData.Etag, commandData.Patch, commandData.PatchIfMissing,
                             skipPatchIfEtagMismatch: false, debugMode: false);
                     }
 
@@ -219,16 +218,16 @@ namespace Raven.Server.Documents.Handlers
                         }
                         commandData.Type = GetCommandType(state, ctx);
                         break;
-                    case CommandPropertyName.Key:
+                    case CommandPropertyName.Id:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
                         switch (state.CurrentTokenType)
                         {
                             case JsonParserToken.Null:
-                                commandData.Key = null;
+                                commandData.Id = null;
                                 break;
                             case JsonParserToken.String:
-                                commandData.Key = GetStringPropertyValue(state);
+                                commandData.Id = GetStringPropertyValue(state);
                                 break;
                             default:
                                 ThrowUnexpectedToken(JsonParserToken.String, state);
@@ -270,18 +269,18 @@ namespace Raven.Server.Documents.Handlers
                     case CommandPropertyName.Document:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
-                        commandData.Document = await ReadJsonObject(ctx, stream, commandData.Key, parser, state, buffer, token);
+                        commandData.Document = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, token);
                         break;
                     case CommandPropertyName.Patch:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
-                        var patch = await ReadJsonObject(ctx, stream, commandData.Key, parser, state, buffer, token);
+                        var patch = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, token);
                         commandData.Patch = PatchRequest.Parse(patch);
                         break;
                     case CommandPropertyName.PatchIfMissing:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
-                        var patchIfMissing = await ReadJsonObject(ctx, stream, commandData.Key, parser, state, buffer, token);
+                        var patchIfMissing = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, token);
                         commandData.PatchIfMissing = PatchRequest.Parse(patchIfMissing);
                         break;
                     case CommandPropertyName.Etag:
@@ -301,7 +300,7 @@ namespace Raven.Server.Documents.Handlers
                             commandData.Etag = state.Long;
                         }
                         break;
-                    case CommandPropertyName.KeyPrefixed:
+                    case CommandPropertyName.IdPrefixed:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
 
@@ -310,7 +309,7 @@ namespace Raven.Server.Documents.Handlers
                             ThrowUnexpectedToken(JsonParserToken.True, state);
                         }
 
-                        commandData.KeyPrefixed = state.CurrentTokenType == JsonParserToken.True;
+                        commandData.IdPrefixed = state.CurrentTokenType == JsonParserToken.True;
                         break;
                     case CommandPropertyName.NoSuchProperty:
                         // unknown command - ignore it
@@ -319,7 +318,7 @@ namespace Raven.Server.Documents.Handlers
                         if (state.CurrentTokenType == JsonParserToken.StartObject ||
                             state.CurrentTokenType == JsonParserToken.StartArray)
                         {
-                            await ReadJsonObject(ctx, stream, commandData.Key, parser, state, buffer, token);
+                            await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, token);
                         }
                         break;
                 }
@@ -388,7 +387,7 @@ namespace Raven.Server.Documents.Handlers
             throw new InvalidOperationException($"Attachment PUT command must have a '{nameof(CommandData.Name)}' property");
         }
 
-        private static async Task<BlittableJsonReaderObject> ReadJsonObject(JsonOperationContext ctx, Stream stream, string key, UnmanagedJsonParser parser,
+        private static async Task<BlittableJsonReaderObject> ReadJsonObject(JsonOperationContext ctx, Stream stream, string id, UnmanagedJsonParser parser,
             JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer, CancellationToken token)
         {
             if (state.CurrentTokenType == JsonParserToken.Null)
@@ -397,7 +396,7 @@ namespace Raven.Server.Documents.Handlers
             BlittableJsonReaderObject reader;
             using (var builder = new BlittableJsonDocumentBuilder(ctx,
                 BlittableJsonDocumentBuilder.UsageMode.ToDisk,
-                key, parser, state, modifier: new BlittableMetadataModifier(ctx)))
+                id, parser, state, modifier: new BlittableMetadataModifier(ctx)))
             {
                 ctx.CachedProperties.NewDocument();
                 builder.ReadNestedObject();
@@ -423,12 +422,12 @@ namespace Raven.Server.Documents.Handlers
         {
             NoSuchProperty,
             Type,
-            Key,
+            Id,
             Document,
             Etag,
             Patch,
             PatchIfMissing,
-            KeyPrefixed,
+            IdPrefixed,
 
             #region Attachment
 
@@ -446,11 +445,10 @@ namespace Raven.Server.Documents.Handlers
             // we compare directly against the precomputed values
             switch (state.StringSize)
             {
-                case 3:
-                    if (*(short*)state.StringBuffer != 25931 ||
-                        state.StringBuffer[2] != (byte)'y')
+                case 2:
+                    if (*(short*)state.StringBuffer != 25673)
                         return CommandPropertyName.NoSuchProperty;
-                    return CommandPropertyName.Key;
+                    return CommandPropertyName.Id;
 
                 case 8:
                     if (*(long*)state.StringBuffer != 8389754676633104196)
@@ -479,11 +477,13 @@ namespace Raven.Server.Documents.Handlers
                         return CommandPropertyName.NoSuchProperty;
                     return CommandPropertyName.PatchIfMissing;
 
+                case 10:
+                    if (*(long*)state.StringBuffer == 8676578743001572425 &&
+                        *(short*)(state.StringBuffer + sizeof(long)) == 25701)
+                        return CommandPropertyName.IdPrefixed;
+                    return CommandPropertyName.NoSuchProperty;
+
                 case 11:
-                    if (*(long*)state.StringBuffer == 7594869363257730379 &&
-                        *(short*)(state.StringBuffer + sizeof(long)) == 25976 &&
-                        state.StringBuffer[sizeof(long) + sizeof(short)] == (byte)'d')
-                        return CommandPropertyName.KeyPrefixed;
                     if (*(long*)state.StringBuffer == 6085610378508529475 &&
                         *(short*)(state.StringBuffer + sizeof(long)) == 28793 &&
                         state.StringBuffer[sizeof(long) + sizeof(short)] == (byte)'e')
@@ -529,6 +529,13 @@ namespace Raven.Server.Documents.Handlers
                         ThrowInvalidProperty(state, ctx);
 
                     return CommandType.AttachmentPUT;
+
+                case 16:
+                    if (*(long*)state.StringBuffer != 7308612546338255937 ||
+                        *(long*)(state.StringBuffer + sizeof(long)) != 4995694080542667886)
+                        ThrowInvalidProperty(state, ctx);
+
+                    return CommandType.AttachmentDELETE;
 
                 default:
                     ThrowInvalidProperty(state, ctx);

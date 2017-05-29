@@ -2,10 +2,7 @@
   "profiles": {
     "Raven.Server": {
       "commandName": "Project",
-      "commandLineArgs": "--Raven/ServerUrl=http://0.0.0.0:8080 --Raven/AllowAnonymousUserToAccessTheServer=True",
-      "environmentVariables": {
-        "COMPlus_ReadyToRunExcludeList": "System.Security.Cryptography.X509Certificates"
-      }
+      "commandLineArgs": "--Raven/ServerUrl=http://0.0.0.0:8080 --Raven/AllowAnonymousUserToAccessTheServer=True"
     }
   }
 }

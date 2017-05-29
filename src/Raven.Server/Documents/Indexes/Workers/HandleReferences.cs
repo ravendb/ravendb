@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                             .GetDocumentsFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize)
                                             .Select(document =>
                                             {
-                                                _reference.Key = document.Key;
+                                                _reference.Key = document.Id;
                                                 _reference.Etag = document.Etag;
 
                                                 return _reference;
@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                             .GetTombstonesFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize)
                                             .Select(tombstone =>
                                             {
-                                                _reference.Key = tombstone.LoweredKey;
+                                                _reference.Key = tombstone.LowerId;
                                                 _reference.Etag = tombstone.Etag;
 
                                                 return _reference;
@@ -175,7 +175,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     foreach (var key in _indexStorage
                                         .GetDocumentKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction))
                                     {
-                                        var doc = _documentsStorage.Get(databaseContext, key);
+                                        var doc = _documentsStorage.Get(databaseContext, key.ToString().ToLowerInvariant());
                                         if (doc != null && doc.Etag <= lastIndexedEtag)
                                             documents.Add(doc);
                                     }
@@ -194,16 +194,16 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                 indexWriter = writeOperation.Value;
 
                                             if (_logger.IsInfoEnabled)
-                                                _logger.Info($"Executing handle references for '{_index.Name} ({_index.Etag})'. Processing document: {current.Key}.");
+                                                _logger.Info($"Executing handle references for '{_index.Name} ({_index.Etag})'. Processing document: {current.Id}.");
 
                                             try
                                             {
-                                                _index.HandleMap(current.LoweredKey, mapResults, indexWriter, indexContext, collectionStats);
+                                                _index.HandleMap(current.LowerId, mapResults, indexWriter, indexContext, collectionStats);
                                             }
                                             catch (Exception e)
                                             {
                                                 if (_logger.IsInfoEnabled)
-                                                    _logger.Info($"Failed to execute mapping function on '{current.Key}' for '{_index.Name} ({_index.Etag})'.", e);
+                                                    _logger.Info($"Failed to execute mapping function on '{current.Id}' for '{_index.Name} ({_index.Etag})'.", e);
                                             }
 
                                             if (CanContinueBatch(databaseContext, indexContext, collectionStats, lastEtag, lastCollectionEtag) == false)
@@ -253,7 +253,7 @@ namespace Raven.Server.Documents.Indexes.Workers
         {
             Slice tombstoneKeySlice;
             var tx = indexContext.Transaction.InnerTransaction;
-            var loweredKey = tombstone.LoweredKey;
+            var loweredKey = tombstone.LowerId;
             using (Slice.External(tx.Allocator, loweredKey.Buffer, loweredKey.Size, out tombstoneKeySlice))
                 _indexStorage.RemoveReferences(tombstoneKeySlice, collection, null, indexContext.Transaction);
         }

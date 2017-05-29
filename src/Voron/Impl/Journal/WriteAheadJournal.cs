@@ -106,7 +106,7 @@ namespace Voron.Impl.Journal
 
             _lastFile = now;
 
-            _journalPath = Path.Combine(_env.Options.JournalPath ?? "", StorageEnvironmentOptions.JournalName(_journalIndex));
+            _journalPath = Path.Combine(_env.Options.JournalPath?.FullPath ?? _env.Options.BasePath?.FullPath ?? string.Empty, StorageEnvironmentOptions.JournalName(_journalIndex));
 
             var journal = new JournalFile(_env, journalPager, _journalIndex);
             journal.AddRef(); // one reference added by a creator - write ahead log
@@ -183,6 +183,7 @@ namespace Voron.Impl.Journal
                         {
                             var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber,
                                 pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+                            _journalPath = Path.Combine(_env.Options.JournalPath?.FullPath ?? _env.Options.BasePath?.FullPath ?? string.Empty, StorageEnvironmentOptions.JournalName(journalNumber));
                             var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber);
                             jrnlFile.InitFrom(journalReader);
                             jrnlFile.AddRef(); // creator reference - write ahead log
@@ -843,7 +844,15 @@ namespace Voron.Impl.Journal
                 {
                     GatherInformationToStartSync();
 
+                    if (_parent._waj._env.Disposed)
+                        return;
+
                     CallPagerSync();
+
+
+                    // can take a long time, need to check again
+                    if (_parent._waj._env.Disposed)
+                        return;
 
                     UpdateDatabaseStateAfterSync();
                 }
@@ -873,6 +882,9 @@ namespace Voron.Impl.Journal
                 {
                     lock (_parent._flushingLock)
                     {
+                        if (_parent._waj._env.Disposed)
+                            return;
+
                         _parent._totalWrittenButUnsyncedBytes -= _currentTotalWrittenBytes;
                         _parent.UpdateFileHeaderAfterDataFileSync(_lastSyncedJournal, _lastSyncedTransactionId, ref _transactionHeader);
 
@@ -988,7 +1000,7 @@ namespace Voron.Impl.Journal
                 {
                     long written = 0;
                     var sp = Stopwatch.StartNew();
-                    using (var meter = _waj._dataPager.Options.IoMetrics.MeterIoRate(_waj._dataPager.FileName, IoMetrics.MeterType.DataFlush, 0))
+                    using (var meter = _waj._dataPager.Options.IoMetrics.MeterIoRate(_waj._dataPager.FileName.FullPath, IoMetrics.MeterType.DataFlush, 0))
                     {
                         using (var batchWrites = _waj._dataPager.BatchWriter())
                         {
@@ -1507,7 +1519,7 @@ namespace Voron.Impl.Journal
 
         private DateTime _lastCompressionBufferReduceCheck = DateTime.UtcNow;
         private CompressionAccelerationStats _lastCompressionAccelerationInfo = new CompressionAccelerationStats();
-        private string _journalPath;
+        private string _journalPath; // this field is for web use only. It does not necessary reflects the current used journal path.
 
         public void ReduceSizeOfCompressionBufferIfNeeded()
         {

@@ -12,6 +12,7 @@ using Raven.Client.Documents.Transformers;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Http.OAuth;
+using Raven.Client.Server;
 using Raven.Client.Server.Commands;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.PeriodicBackup;
@@ -111,6 +112,8 @@ namespace Raven.Client.Json.Converters
         internal static readonly Func<BlittableJsonReaderObject, PeriodicBackupStatus> PeriodicBackupStatus = GenerateJsonDeserializationRoutine<PeriodicBackupStatus>();
 
         internal static readonly Func<BlittableJsonReaderObject, ConfigureVersioningOperationResult> ConfigureVersioningOperationResult = GenerateJsonDeserializationRoutine<ConfigureVersioningOperationResult>();
-        internal static readonly Func<BlittableJsonReaderObject, SubscriptionRaftState> SubscriptionRaftState = GenerateJsonDeserializationRoutine<SubscriptionRaftState>();
+        internal static readonly Func<BlittableJsonReaderObject, SubscriptionState> SubscriptionState = GenerateJsonDeserializationRoutine<SubscriptionState>();
+
+        internal static readonly Func<BlittableJsonReaderObject, DatabaseWatcher> DatabaseWatcher= GenerateJsonDeserializationRoutine<DatabaseWatcher>();
     }
 }

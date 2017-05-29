@@ -29,7 +29,7 @@ namespace SlowTests.Bugs
 
                 using (var session = store.OpenSession())
                 {
-                    var arrayHolder = session.Load<ArrayHolder>("arrayholders/1");
+                    var arrayHolder = session.Load<ArrayHolder>("arrayholders/1-A");
 
                     Assert.Equal(arrayValue, arrayHolder.ArrayValue);
                 }

@@ -53,7 +53,7 @@ namespace SlowTests.Issues
                     var lazy1 = session
                         .Advanced
                         .Lazily
-                        .Load<People_FirstName, Person>("people/1", configure => configure.AddTransformerParameter("value", 10));
+                        .Load<People_FirstName, Person>("people/1-A", configure => configure.AddTransformerParameter("value", 10));
 
                     var value1 = lazy1.Value;
 
@@ -62,12 +62,12 @@ namespace SlowTests.Issues
                     var lazy2 = session
                         .Advanced
                         .Lazily
-                        .Load<People_FirstName, Person>(new List<string> { "people/1", "people/2" }, configure => configure.AddTransformerParameter("value", 15));
+                        .Load<People_FirstName, Person>(new List<string> { "people/1-A", "people/2-A" }, configure => configure.AddTransformerParameter("value", 15));
 
                     var value2 = lazy2.Value;
 
-                    Assert.Equal("John15", value2["people/1"].FirstName);
-                    Assert.Equal("Alfred15", value2["people/2"].FirstName);
+                    Assert.Equal("John15", value2["people/1-A"].FirstName);
+                    Assert.Equal("Alfred15", value2["people/2-A"].FirstName);
                 }
             }
         }

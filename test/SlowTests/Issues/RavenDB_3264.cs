@@ -41,7 +41,7 @@ namespace SlowTests.Issues
                 {
                     var document = new Document
                     {
-                        Key = context.GetLazyString("keys/1"),
+                        Id = context.GetLazyString("keys/1"),
                         Data = context.ReadObject(new DynamicJsonValue(), "keys/1")
                     };
 

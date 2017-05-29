@@ -9,10 +9,10 @@ using Voron;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public abstract class UpdateValueForDatabaseCommand
+    public abstract class UpdateValueForDatabaseCommand : CommandBase
     {
         public abstract string GetItemId();
-        public abstract DynamicJsonValue GetUpdatedValue(long idnex, DatabaseRecord record, BlittableJsonReaderObject existingValue);
+        public abstract BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue);
         public abstract void FillJson(DynamicJsonValue json);
         public string DatabaseName { get; set; }
 
@@ -21,7 +21,7 @@ namespace Raven.Server.ServerWide.Commands
             DatabaseName = databaseName;
         }
 
-        public DynamicJsonValue ToJson()
+        public override DynamicJsonValue ToJson()
         {
             var json = new DynamicJsonValue
             {

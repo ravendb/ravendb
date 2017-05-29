@@ -19,8 +19,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class HiLoHandler : DatabaseRequestHandler
     {
-        private const string RavenKeyGeneratorsHilo = "Raven/Hilo/";
-        private const string RavenKeyServerPrefix = "Raven/ServerPrefixForHilo";
+        private const string RavenIdGeneratorsHilo = "Raven/Hilo/";
 
         private static long CalculateCapacity(long lastSize, string lastRangeAtStr)
         {
@@ -80,6 +79,7 @@ namespace Raven.Server.Documents.Handlers
                         ["Low"] = cmd.OldMax + 1,
                         ["High"] = cmd.OldMax + capacity,
                         ["LastSize"] = capacity,
+                        ["ServerTag"] = ServerStore.NodeTag,
                         ["LastRangeAt"] = DateTime.UtcNow.ToString("o")
                     });
                 }
@@ -98,31 +98,24 @@ namespace Raven.Server.Documents.Handlers
 
             public override int Execute(DocumentsOperationContext context)
             {
-                var hiLoDocumentKey = RavenKeyGeneratorsHilo + Key;
+                var hiLoDocumentId = RavenIdGeneratorsHilo + Key;
                 var prefix = Key + Separator;
 
                 long oldMax = 0;
                 var newDoc = new DynamicJsonValue();
-                BlittableJsonReaderObject hiloDocReader = null, serverPrefixDocReader = null;
+                BlittableJsonReaderObject hiloDocReader = null;
                 try
                 {
                     try
                     {
-                        serverPrefixDocReader = Database.DocumentsStorage.Get(context, RavenKeyServerPrefix)?.Data;
-                        hiloDocReader = Database.DocumentsStorage.Get(context, hiLoDocumentKey)?.Data;
+                        hiloDocReader = Database.DocumentsStorage.Get(context, hiLoDocumentId)?.Data;
                     }
                     catch (DocumentConflictException e)
                     {
-                        throw new InvalidDataException(@"Failed to fetch HiLo document due to a conflict 
-                                                            on the document. This shouldn't happen, since
-                                                            it this conflict should've been resolved during replication.
-                                                             This exception should not happen and is likely a bug.", e);
+                        throw new InvalidDataException("Failed to fetch HiLo document due to a conflict on the document. " +
+                                                       "This shouldn't happen, since it this conflict should've been resolved during replication. " +
+                                                       "This exception should not happen and is likely a bug.", e);
                     }
-
-                    string serverPrefix;
-                    if (serverPrefixDocReader != null &&
-                        serverPrefixDocReader.TryGet("ServerPrefix", out serverPrefix))
-                        prefix += serverPrefix;
 
                     if (hiloDocReader != null)
                     {
@@ -144,15 +137,14 @@ namespace Raven.Server.Documents.Handlers
 
                     newDoc["Max"] = oldMax + Capacity;
 
-                    using (var freshHilo = context.ReadObject(newDoc, hiLoDocumentKey, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
-                        Database.DocumentsStorage.Put(context, hiLoDocumentKey, null, freshHilo);
+                    using (var freshHilo = context.ReadObject(newDoc, hiLoDocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                        Database.DocumentsStorage.Put(context, hiLoDocumentId, null, freshHilo);
 
                     OldMax = oldMax;
                     Prefix = prefix;
                 }
                 finally
                 {
-                    serverPrefixDocReader?.Dispose();
                     hiloDocReader?.Dispose();
                 }
                 return 1;
@@ -192,9 +184,9 @@ namespace Raven.Server.Documents.Handlers
 
             public override int Execute(DocumentsOperationContext context)
             {
-                var hiLoDocumentKey = RavenKeyGeneratorsHilo + Key;
+                var hiLoDocumentId = RavenIdGeneratorsHilo + Key;
 
-                var document = Database.DocumentsStorage.Get(context, hiLoDocumentKey);
+                var document = Database.DocumentsStorage.Get(context, hiLoDocumentId);
 
                 if (document == null)
                     return 1;
@@ -211,9 +203,9 @@ namespace Raven.Server.Documents.Handlers
                     ["Max"] = Last,
                 };
 
-                using (var hiloReader = context.ReadObject(document.Data, hiLoDocumentKey, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                using (var hiloReader = context.ReadObject(document.Data, hiLoDocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    Database.DocumentsStorage.Put(context, hiLoDocumentKey, null, hiloReader);
+                    Database.DocumentsStorage.Put(context, hiLoDocumentId, null, hiloReader);
                 }
 
                 return 1;

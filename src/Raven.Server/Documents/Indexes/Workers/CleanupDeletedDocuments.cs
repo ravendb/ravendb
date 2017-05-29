@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     indexWriter = writeOperation.Value;
 
                                 if (_logger.IsInfoEnabled)
-                                    _logger.Info($"Executing cleanup for '{_index} ({_index.Name})'. Processing tombstone {tombstone.LoweredKey} ({tombstone.Etag}).");
+                                    _logger.Info($"Executing cleanup for '{_index} ({_index.Name})'. Processing tombstone {tombstone.LowerId} ({tombstone.Etag}).");
 
                                 count++;
                                 batchCount++;

@@ -46,7 +46,7 @@ namespace Raven.Server.Smuggler.Documents
                     return null;
                 }
 
-                var newDocument = context.ReadObject(scope.ToBlittable(jsObjectTransformed.AsObject()), document.Key);
+                var newDocument = context.ReadObject(scope.ToBlittable(jsObjectTransformed.AsObject()), document.Id);
                 if (newDocument.Equals(document.Data))
                 {
                     newDocument.Dispose();
@@ -58,7 +58,7 @@ namespace Raven.Server.Smuggler.Documents
                 return new Document
                 {
                     Data = newDocument,
-                    Key = document.Key,
+                    Id = document.Id,
                     Flags = document.Flags,
                     NonPersistentFlags = document.NonPersistentFlags
                 };
@@ -72,17 +72,17 @@ namespace Raven.Server.Smuggler.Documents
             {
             }
 
-            public override JsValue LoadDocument(string documentKey, Engine engine, ref int totalStatements)
+            public override JsValue LoadDocument(string documentId, Engine engine, ref int totalStatements)
             {
                 throw new NotSupportedException("LoadDocument is not supported.");
             }
 
-            public override string PutDocument(string key, JsValue document, JsValue metadata, JsValue etagJs, Engine engine)
+            public override string PutDocument(string id, JsValue document, JsValue metadata, JsValue etagJs, Engine engine)
             {
                 throw new NotSupportedException("PutDocument is not supported.");
             }
 
-            public override void DeleteDocument(string documentKey)
+            public override void DeleteDocument(string documentId)
             {
                 throw new NotSupportedException("DeleteDocument is not supported.");
             }

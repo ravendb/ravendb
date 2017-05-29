@@ -12,5 +12,16 @@ namespace Voron.Impl.Extensions
                 return null;
             return result;
         }
+
+        // This function does not ensure thread-safty, so the size will not be exact. But it bound the queue without locking. 
+        public static ConcurrentQueue<T> Reduce<T>(this ConcurrentQueue<T> queue, int size)
+        {
+            var canDequeu = true;
+            while (canDequeu && queue.Count > size)
+            {
+                canDequeu = queue.TryDequeue(out var el);
+            }
+            return queue;
+        }
     }
 }

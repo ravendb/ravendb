@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent;
+using System.Collections.Concurrent; // TODO: Use our own fast ConcurrentDictionary
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,6 +15,7 @@ namespace Sparrow.Utils
     public static class TimeoutManager
     {
         private static readonly ConcurrentDictionary<uint, TimerTaskHolder> Values = new ConcurrentDictionary<uint, TimerTaskHolder>();
+        private static readonly Task InfiniteTask = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously).Task;
 
         private class TimerTaskHolder  : IDisposable
         {
@@ -46,10 +47,13 @@ namespace Sparrow.Utils
 
             public TimerTaskHolder(uint timeout)
             {
-                var period = TimeSpan.FromMilliseconds(timeout);
+                if (timeout > uint.MaxValue - 1) // Timer cannot have an interval bigger than this value
+                    timeout = uint.MaxValue - 1;
                 // TODO: Use the ctor which take uint once it is available.
+                // https://github.com/dotnet/corefx/blob/master/src/System.Threading.Timer/ref/System.Threading.Timer.cs#L18
                 // https://github.com/dotnet/coreclr/blob/master/src/mscorlib/src/System/Threading/Timer.cs#L710
                 // https://github.com/dotnet/coreclr/blob/c55f023f542e63e93a300752432de7bcc4104b3b/src/mscorlib/src/System/Threading/Timer.cs#L710
+                var period = TimeSpan.FromMilliseconds(timeout);
                 _timer = new Timer(TimerCallback, null, period, period);
             }
 
@@ -59,14 +63,20 @@ namespace Sparrow.Utils
             }
         }
 
-        public static async Task WaitFor(uint duration)
+        private static async Task WaitForInternal(TimeSpan time, CancellationToken token)
         {
+            if (time.TotalMilliseconds < 0)
+                ThrowOutOfRange();
+
+            var duration = (uint)Math.Min(time.TotalMilliseconds, uint.MaxValue - 45);
             if (duration == 0)
                 return;
 
             var mod = duration % 50;
             if (mod != 0)
+            {
                 duration += 50 - mod;
+            }
 
             var value = GetHolderForDuration(duration);
 
@@ -82,10 +92,14 @@ namespace Sparrow.Utils
 
             do
             {
+                token.ThrowIfCancellationRequested();
                 await value.NextTask;
             } while (sp.ElapsedMilliseconds < (duration - step));
+        }
 
-
+        private static void ThrowOutOfRange()
+        {
+            throw new ArgumentOutOfRangeException("time");
         }
 
         private static TimerTaskHolder GetHolderForDuration(uint duration)
@@ -97,19 +111,23 @@ namespace Sparrow.Utils
             return value;
         }
 
-        public static Task WaitFor(TimeSpan duration, CancellationToken token)
+        public static async Task WaitFor(TimeSpan duration, CancellationToken token = default(CancellationToken))
         {
-            return WaitFor((uint)duration.TotalMilliseconds, token);
-        }
-
-        public static async Task WaitFor(uint duration, CancellationToken token)
-        {
-            if (duration == 0)
+            if (duration == TimeSpan.Zero)
                 return;
 
-            token.ThrowIfCancellationRequested();
-            // ReSharper disable once MethodSupportsCancellation
-            var task = WaitFor(duration);
+            if (token.IsCancellationRequested)
+            {
+                return;
+            }
+
+            Task task;
+            // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
+            if (duration != Timeout.InfiniteTimeSpan)
+                task = WaitForInternal(duration, token);
+            else
+                task = InfiniteTask;
+            
             if (token == CancellationToken.None || token.CanBeCanceled == false)
             {
                 await task;

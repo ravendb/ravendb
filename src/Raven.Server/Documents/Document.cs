@@ -16,8 +16,8 @@ namespace Raven.Server.Documents
         private bool _metadataEnsured;
 
         public long Etag;
-        public LazyStringValue Key;
-        public LazyStringValue LoweredKey;
+        public LazyStringValue Id;
+        public LazyStringValue LowerId;
         public long StorageId;
         public BlittableJsonReaderObject Data;
         public float? IndexScore;
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents
             }
 
             mutatedMetadata[Constants.Documents.Metadata.Etag] = Etag;
-            mutatedMetadata[Constants.Documents.Metadata.Id] = Key;
+            mutatedMetadata[Constants.Documents.Metadata.Id] = Id;
             if (ChangeVector != null)
                 mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector.ToJson();
             if (Flags != DocumentFlags.None)

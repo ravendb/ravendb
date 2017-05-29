@@ -6,7 +6,7 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     public interface ICommandData
     {
-        string Key { get; }
+        string Id { get; }
 
         long? Etag { get; }
 
@@ -21,6 +21,7 @@ namespace Raven.Client.Documents.Commands.Batches
         PUT,
         PATCH,
         DELETE,
-        AttachmentPUT
+        AttachmentPUT,
+        AttachmentDELETE,
     }
 }

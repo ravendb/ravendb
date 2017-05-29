@@ -30,8 +30,11 @@ class columnItem {
 class customColumnForm {
     formVisible = ko.observable<boolean>(false);
 
+    expressionHasFocus = ko.observable<boolean>(false);
+
     header = ko.observable<string>();
     expression = ko.observable<string>();
+    expressionWasChanged = ko.observable<boolean>(false);
 
     parseError: KnockoutComputed<string>;
 
@@ -45,9 +48,11 @@ class customColumnForm {
     constructor() {
         this.initValidation();
 
+        this.expression.subscribe(() => this.expressionWasChanged(true));
+
         this.parseError = ko.pureComputed(() => {
             const exp = this.expression();
-            if (exp) {
+            if (exp && this.expressionWasChanged()) {
                 return this.tryParse(exp);
             }
             return null;
@@ -126,6 +131,7 @@ class columnsSelector<T> {
     customColumnForm = new customColumnForm();
     columnLayout = ko.observableArray<columnItem>();
     selectionState: KnockoutComputed<checkbox>;
+
 
     constructor() {
         this.initObservables();
@@ -224,8 +230,14 @@ class columnsSelector<T> {
             // if form is open assume user wants to submit form
             this.addCustomColumn();
         } else {
-            this.customColumnForm.reset();
-            this.customColumnForm.formVisible(true);            
+            const form = this.customColumnForm;
+            form.reset();
+            form.formVisible(true);
+            form.expression("this.");
+            // don't show errors by default
+            form.expressionWasChanged(false);
+
+            form.expressionHasFocus(true);
         }
     }
 

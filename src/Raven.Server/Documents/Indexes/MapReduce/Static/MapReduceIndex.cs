@@ -278,6 +278,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             private readonly HashSet<string> _groupByFields;
             private readonly bool _isMultiMap;
             private PropertyAccessor _propertyAccessor;
+            private readonly StaticIndexBase _compiledIndex;
 
             public AnonymousObjectToBlittableMapResultsEnumerableWrapper(MapReduceIndex index, TransactionOperationContext indexContext)
             {
@@ -285,6 +286,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 _groupByFields = index.Definition.GroupByFields;
                 _isMultiMap = index.IsMultiMap;
                 _reduceKeyProcessor = new ReduceKeyProcessor(index.Definition.GroupByFields.Count, index._unmanagedBuffersPool);
+                _compiledIndex = index.Compiled;
             }
 
             public void InitializeForEnumeration(IEnumerable items, TransactionOperationContext indexContext, IndexingStatsScope stats)
@@ -336,7 +338,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     if (_enumerator.MoveNext() == false)
                         return false;
 
-                    var document = _enumerator.Current;
+                    var output = _enumerator.Current;
 
                     using (_createBlittableResult.Start())
                     {
@@ -344,30 +346,31 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                         if (_parent._isMultiMap == false)
                             accessor = _parent._propertyAccessor ??
-                                       (_parent._propertyAccessor = PropertyAccessor.CreateMapReduceOutputAccessor(document.GetType(), _groupByFields));
+                                       (_parent._propertyAccessor = PropertyAccessor.CreateMapReduceOutputAccessor(output.GetType(), _groupByFields));
                         else
-                            accessor = TypeConverter.GetPropertyAccessorForMapReduceOutput(document, _groupByFields);
+                            accessor = TypeConverter.GetPropertyAccessorForMapReduceOutput(output, _groupByFields);
 
                         var mapResult = new DynamicJsonValue();
 
                         _reduceKeyProcessor.Reset();
-
-
+                        
                         var propertiesInOrder = accessor.PropertiesInOrder;
                         int properties = propertiesInOrder.Count;
+
                         for (int i = 0; i < properties; i++)
                         {
                             var field = propertiesInOrder[i];
 
-                            var value = field.Value.GetValue(document);
+                            var value = field.Value.GetValue(output);
                             var blittableValue = TypeConverter.ToBlittableSupportedType(value);
                             mapResult[field.Key] = blittableValue;
 
                             if (field.Value.IsGroupByField)
-                            {
                                 _reduceKeyProcessor.Process(_parent._indexContext.Allocator, blittableValue);
-                            }
                         }
+
+                        if (_reduceKeyProcessor.ProcessedFields != _groupByFields.Count)
+                            ThrowMissingGroupByFieldsInMapOutput(output, _groupByFields, _parent._compiledIndex);
 
                         var reduceHashKey = _reduceKeyProcessor.Hash;
 
@@ -390,6 +393,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 public void Dispose()
                 {
                     _reduceKeyProcessor.ReleaseBuffer();
+                }
+
+                private static void ThrowMissingGroupByFieldsInMapOutput(object output, HashSet<string> groupByFields, StaticIndexBase compiledIndex)
+                {
+                    throw new InvalidOperationException(
+                        $"The output of the mapping function does not contain all fields that the index is supposed to group by.{Environment.NewLine}" +
+                        $"Output: {output}{Environment.NewLine}" +
+                        $"Group by fields: {string.Join(",", groupByFields)}{Environment.NewLine}" +
+                        $"Compiled index def:{Environment.NewLine}{compiledIndex.Source}");
                 }
             }
         }

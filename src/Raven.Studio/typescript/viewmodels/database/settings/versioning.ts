@@ -35,7 +35,7 @@ class versioning extends viewModelBase {
 
         this.fetchVersioningEntries(this.activeDatabase())
             .done(() => deferred.resolve({ can: true }))
-            .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(this.activeDatabase()) }));
+            .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseRecord(this.activeDatabase()) }));
 
         return deferred;
     }

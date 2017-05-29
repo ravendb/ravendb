@@ -747,42 +747,44 @@ class ioStats extends viewModelBase {
         const range = [] as Array<number>;
         let firstIndex = true;
 
-        // TODO: Maybe refactor this method so it can handle any incoming number of environments,
-        // But, as discussed, this will be left out for now in order to avoid extra string comparisons
-
         // 1. Database main path
-        domain.push(this.data.Environments[0].Path);
-        range.push(currentOffset);
-        currentOffset += ioStats.openedTrackHeight + ioStats.trackMargin;
+        const documentsEnv = this.data.Environments.find(x => x.Type === "Documents");
+        if (documentsEnv) {
+            domain.push(documentsEnv.Path);
+            range.push(currentOffset);
+            currentOffset += ioStats.openedTrackHeight + ioStats.trackMargin;
+        }
 
         // 2. We want indexes to show in second track even though they are last in the endpoint info..       
         if (this.indexesVisible()) {
-            for (let i = 3; i < this.data.Environments.length; i++) {
-
-                // 2.1 indexes closed
-                if (!this.isIndexesExpanded()) {
-                    if (firstIndex) {
-                        domain.push(ioStats.indexesString);
+            for (let i = 0; i < this.data.Environments.length; i++) {
+                const env = this.data.Environments[i];
+                if (env.Type === "Index") {
+                    // 2.1 indexes closed
+                    if (!this.isIndexesExpanded()) {
+                        if (firstIndex) {
+                            domain.push(ioStats.indexesString);
+                            range.push(currentOffset);
+                            firstIndex = false;
+                        }
+                        domain.push(env.Path);
                         range.push(currentOffset);
-                        firstIndex = false;
                     }
-                    domain.push(this.data.Environments[i].Path);
-                    range.push(currentOffset);
-                }
-                // 2.2 indexes opened
-                else {
-                    // If first index.... push the special indexes header ...
-                    if (firstIndex) {
-                        domain.push(ioStats.indexesString);
-                        range.push(currentOffset);
-                        currentOffset += ioStats.closedTrackHeight + ioStats.trackMargin;
-                        firstIndex = false;
-                    }
-                    // Push the index path - only if not filtered out..
-                    if (!this.filtered(this.data.Environments[i].Path)) {
-                        domain.push(this.data.Environments[i].Path);
-                        range.push(currentOffset);
-                        currentOffset += ioStats.openedTrackHeight + ioStats.trackMargin;
+                    // 2.2 indexes opened
+                    else {
+                        // If first index.... push the special indexes header ...
+                        if (firstIndex) {
+                            domain.push(ioStats.indexesString);
+                            range.push(currentOffset);
+                            currentOffset += ioStats.closedTrackHeight + ioStats.trackMargin;
+                            firstIndex = false;
+                        }
+                        // Push the index path - only if not filtered out..
+                        if (!this.filtered(env.Path)) {
+                            domain.push(env.Path);
+                            range.push(currentOffset);
+                            currentOffset += ioStats.openedTrackHeight + ioStats.trackMargin;
+                        }
                     }
                 }
             }
@@ -790,16 +792,22 @@ class ioStats extends viewModelBase {
             if (!this.isIndexesExpanded()) {
                 currentOffset += ioStats.openedTrackHeight + ioStats.trackMargin;
             }
-        }        
+        }
 
         // 3. Subscriptions path
-        domain.push(this.data.Environments[1].Path);
-        range.push(currentOffset);
-        currentOffset += ioStats.openedTrackHeight + ioStats.trackMargin;
+        const subscriptionsEnv = this.data.Environments.find(x => x.Type === "Subscriptions");
+        if (subscriptionsEnv) {
+            domain.push(subscriptionsEnv.Path);
+            range.push(currentOffset);
+            currentOffset += ioStats.openedTrackHeight + ioStats.trackMargin;
+        }
 
         // 4. Configuration path
-        domain.push(this.data.Environments[2].Path);
-        range.push(currentOffset);
+        const configurationEnv = this.data.Environments.find(x => x.Type === "Configuration");
+        if (configurationEnv) {
+            domain.push(configurationEnv.Path);
+            range.push(currentOffset);
+        }
        
         this.yScale = d3.scale.ordinal<string, number>()
             .domain(domain)

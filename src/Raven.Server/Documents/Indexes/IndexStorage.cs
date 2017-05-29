@@ -501,7 +501,8 @@ namespace Raven.Server.Documents.Indexes
             Slice referenceKeyAsSlice;
             using (CreateKey(tx, referenceKey, out referenceKeyAsSlice))
             {
-                using (var it = collectionTree.MultiRead(referenceKeyAsSlice))
+                var k = referenceKeyAsSlice.ToString().ToLowerInvariant();
+                using (var it = collectionTree.MultiRead(k))
                 {
                     if (it.Seek(Slices.BeforeAllKeys) == false)
                         yield break;

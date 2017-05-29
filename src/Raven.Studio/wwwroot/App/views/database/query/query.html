@@ -130,7 +130,7 @@
         </div>
         <h2 class="pull-left-sm">
             Results
-            <a target="_blank" href="#" data-bind="attr: { href: rawJsonUrl }"><i class="icon-link"></i></a>
+            <a target="_blank" href="#" title="Show raw output" data-bind="attr: { href: rawJsonUrl }"><i class="icon-link"></i></a>
         </h2>
     </div>
 
@@ -258,12 +258,16 @@
             </div>
             <div class="scroll-stretch">
                 <div class="panel-body">
-                    <virtual-grid class="resizable" params="controller: gridController"></virtual-grid>
+                    <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-query-template'"></virtual-grid>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script type="text/html" id="empty-query-template">
+    No results found.
+</script>
 
 <div class="backdrop" data-bind="click: closeAddFilter"></div>
 

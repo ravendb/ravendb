@@ -7,11 +7,14 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Extensions;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
+using Voron.Impl.Extensions;
 
 namespace Raven.Server.Rachis
 {
@@ -33,8 +36,9 @@ namespace Raven.Server.Rachis
         private class CommandState
         {
             public long CommandIndex;
-            public TaskCompletionSource<long> TaskCompletionSource;
-            public Action<TaskCompletionSource<long>> OnNotify;
+            public BlittableJsonReaderObject Result;
+            public TaskCompletionSource<(long, BlittableJsonReaderObject)> TaskCompletionSource;
+            public Action<TaskCompletionSource<(long, BlittableJsonReaderObject)>> OnNotify;
         }
 
         private int _hasNewTopology;
@@ -75,8 +79,7 @@ namespace Raven.Server.Rachis
         {
             Running = true;
             ClusterTopology clusterTopology;
-            TransactionOperationContext context;
-            using (_engine.ContextPool.AllocateOperationContext(out context))
+            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 clusterTopology = _engine.GetTopology(context);
@@ -137,8 +140,7 @@ namespace Raven.Server.Rachis
                     if (voter.Key == _engine.Tag)
                         continue; // we obviously won't be applying to ourselves
 
-                    FollowerAmbassador existingInstance;
-                    if (old.TryGetValue(voter.Key, out existingInstance))
+                    if (old.TryGetValue(voter.Key, out FollowerAmbassador existingInstance))
                     {
                         existingInstance.UpdateLeaderWake(_voterResponded);
                         _voters.Add(voter.Key, existingInstance);
@@ -158,8 +160,7 @@ namespace Raven.Server.Rachis
 
                 foreach (var promotable in clusterTopology.Promotables)
                 {
-                    FollowerAmbassador existingInstance;
-                    if (old.TryGetValue(promotable.Key, out existingInstance))
+                    if (old.TryGetValue(promotable.Key, out FollowerAmbassador existingInstance))
                     {
                         existingInstance.UpdateLeaderWake(_promotableUpdated);
                         _promotables.Add(promotable.Key, existingInstance);
@@ -179,8 +180,7 @@ namespace Raven.Server.Rachis
 
                 foreach (var nonVoter in clusterTopology.Watchers)
                 {
-                    FollowerAmbassador existingInstance;
-                    if (_nonVoters.TryGetValue(nonVoter.Key, out existingInstance))
+                    if (_nonVoters.TryGetValue(nonVoter.Key, out FollowerAmbassador existingInstance))
                     {
                         existingInstance.UpdateLeaderWake(_noop);
 
@@ -232,8 +232,7 @@ namespace Raven.Server.Rachis
                 {
                     ["Command"] = "noop"
                 };
-                TransactionOperationContext context;
-                using (_engine.ContextPool.AllocateOperationContext(out context))
+                using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenWriteTransaction())
                 using (var cmd = context.ReadObject(noopCmd, "noop-cmd"))
                 {
@@ -243,7 +242,7 @@ namespace Raven.Server.Rachis
                 _newEntry.Set(); //This is so the noop would register right away
                 while (_running)
                 {
-                    switch (WaitHandle.WaitAny(handles, _engine.ElectionTimeoutMs))
+                    switch (WaitHandle.WaitAny(handles, _engine.ElectionTimeout))
                     {
                         case 0: // new entry
                             _newEntry.Reset();
@@ -274,7 +273,7 @@ namespace Raven.Server.Rachis
                     var lowestIndexInEntireCluster = GetLowestIndexInEntireCluster();
                     if (lowestIndexInEntireCluster != LowestIndexInEntireCluster)
                     {
-                        using (_engine.ContextPool.AllocateOperationContext(out context))
+                        using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                         using (context.OpenWriteTransaction())
                         {
                             _engine.TruncateLogBefore(context, lowestIndexInEntireCluster);
@@ -314,7 +313,7 @@ namespace Raven.Server.Rachis
             sb.AppendLine("Triggered because of:");
             foreach (var timeoutsForVoter in _timeoutsForVoters)
             {
-                sb.Append($"\t{timeoutsForVoter.voter.Tag} - {Math.Round(timeoutsForVoter.time, 3)} ms").AppendLine();
+                sb.Append($"\t{timeoutsForVoter.voter.Tag} - {Math.Round(timeoutsForVoter.time.TotalMilliseconds, 3)} ms").AppendLine();
             }
             foreach (var ambassador in _voters)
             {
@@ -386,8 +385,7 @@ namespace Raven.Server.Rachis
                 if (kvp.Key > _lastCommit)
                     continue;
 
-                CommandState value;
-                if (_entries.TryRemove(kvp.Key, out value))
+                if (_entries.TryRemove(kvp.Key, out CommandState value))
                 {
                     TaskExecutor.Execute(o =>
                     {
@@ -397,7 +395,7 @@ namespace Raven.Server.Rachis
                             tuple.OnNotify(tuple.TaskCompletionSource);
                             return;
                         }
-                        tuple.TaskCompletionSource.TrySetResult(tuple.CommandIndex);
+                        tuple.TaskCompletionSource.TrySetResult((tuple.CommandIndex, tuple.Result));
                     }, value);
                 }
             }
@@ -409,7 +407,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private readonly List<(FollowerAmbassador voter, double time)> _timeoutsForVoters = new List<(FollowerAmbassador, double)>();
+        private readonly List<(FollowerAmbassador voter, TimeSpan time)> _timeoutsForVoters = new List<(FollowerAmbassador, TimeSpan)>();
         private void EnsureThatWeHaveLeadership(int majority)
         {
             var now = DateTime.UtcNow;
@@ -417,9 +415,9 @@ namespace Raven.Server.Rachis
             _timeoutsForVoters.Clear();
             foreach (var voter in _voters.Values)
             {
-                var time = (now - voter.LastReplyFromFollower).TotalMilliseconds;
+                var time = (now - voter.LastReplyFromFollower);
                 _timeoutsForVoters.Add((voter, time));
-                if (time < _engine.ElectionTimeoutMs)
+                if (time < _engine.ElectionTimeout)
                     peersHeardFromInElectionTimeout++;
             }
             if (peersHeardFromInElectionTimeout < majority)
@@ -449,8 +447,7 @@ namespace Raven.Server.Rachis
         protected long GetLowestIndexInEntireCluster()
         {
             long lowestIndex;
-            TransactionOperationContext context;
-            using (_engine.ContextPool.AllocateOperationContext(out context))
+            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 lowestIndex = _engine.GetLastEntryIndex(context);
@@ -477,8 +474,7 @@ namespace Raven.Server.Rachis
         protected long GetMaxIndexOnQuorum(int minSize)
         {
             _nodesPerIndex.Clear();
-            TransactionOperationContext context;
-            using (_engine.ContextPool.AllocateOperationContext(out context))
+            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 _nodesPerIndex[_engine.GetLastEntryIndex(context)] = 1;
@@ -486,9 +482,8 @@ namespace Raven.Server.Rachis
 
             foreach (var voter in _voters.Values)
             {
-                int count;
                 var voterIndex = voter.FollowerMatchIndex;
-                _nodesPerIndex.TryGetValue(voterIndex, out count);
+                _nodesPerIndex.TryGetValue(voterIndex, out int count);
                 _nodesPerIndex[voterIndex] = count + 1;
             }
             var votesSoFar = 0;
@@ -505,8 +500,7 @@ namespace Raven.Server.Rachis
         private void CheckPromotables()
         {
             long lastIndex;
-            TransactionOperationContext context;
-            using (_engine.ContextPool.AllocateOperationContext(out context))
+            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 lastIndex = _engine.GetLastEntryIndex(context);
@@ -517,16 +511,14 @@ namespace Raven.Server.Rachis
                 if (ambasaddor.Value.FollowerMatchIndex != lastIndex)
                     continue;
 
-                Task task;
-                TryModifyTopology(ambasaddor.Key, ambasaddor.Value.Url, TopologyModification.Voter, out task);
+                TryModifyTopology(ambasaddor.Key, ambasaddor.Value.Url, TopologyModification.Voter, out Task task);
 
                 _promotableUpdated.Set();
                 break;
             }
-
         }
 
-        public Task<long> PutAsync(BlittableJsonReaderObject cmd)
+        public Task<(long index, BlittableJsonReaderObject result)> PutAsync(BlittableJsonReaderObject cmd)
         {
             long index;
 
@@ -536,7 +528,7 @@ namespace Raven.Server.Rachis
                 index = _engine.InsertToLeaderLog(context, cmd, RachisEntryFlags.StateMachineCommand);
                 context.Transaction.Commit();
             }
-            var tcs = new TaskCompletionSource<long>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var tcs = new TaskCompletionSource<(long, BlittableJsonReaderObject)>(TaskCreationOptions.RunContinuationsAsynchronously);
             _entries[index] = new CommandState
             {
                 CommandIndex = index,
@@ -547,6 +539,19 @@ namespace Raven.Server.Rachis
             return tcs.Task;
         }
         
+        public ConcurrentQueue<(string node,AlertRaised error)> ErrorsList = new ConcurrentQueue<(string,AlertRaised)>();
+
+        public void NotifyAboutException(FollowerAmbassador node, Exception e)
+        {
+            var alert = AlertRaised.Create($"Node {node.Tag} encountered an error",
+                node.Status,
+                AlertType.ClusterTopologyWarning,
+                NotificationSeverity.Warning,
+                details: new ExceptionDetails(e));
+            ErrorsList.Enqueue((node.Tag,alert));
+            ErrorsList.Reduce(25);
+        }
+
         public void Dispose()
         {
             bool lockTaken = false;
@@ -641,8 +646,7 @@ namespace Raven.Server.Rachis
 
         public bool TryModifyTopology(string nodeTag, string nodeUrl, TopologyModification modification, out Task task, bool validateNotInTopology = false)
         {
-            TransactionOperationContext context;
-            using (_engine.ContextPool.AllocateOperationContext(out context))
+            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction())
             {
                 var existing = Interlocked.CompareExchange(ref _topologyModification, null, null);
@@ -710,7 +714,7 @@ namespace Raven.Server.Rachis
                 var topologyJson = _engine.SetTopology(context, clusterTopology);
 
                 var index = _engine.InsertToLeaderLog(context, topologyJson, RachisEntryFlags.Topology);
-                var tcs = new TaskCompletionSource<long>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var tcs = new TaskCompletionSource<(long, BlittableJsonReaderObject)>(TaskCreationOptions.RunContinuationsAsynchronously);
                 _entries[index] = new CommandState
                 {
                     TaskCompletionSource = tcs,
@@ -745,12 +749,19 @@ namespace Raven.Server.Rachis
             return clusterTopology.LastNodeId.Substring(0, clusterTopology.LastNodeId.Length - 1) + lastChar;
         }
 
-        public void SetStateOf(long index, Action<TaskCompletionSource<long>> onNotify)
+        public void SetStateOf(long index, Action<TaskCompletionSource<(long, BlittableJsonReaderObject)>> onNotify)
         {
-            CommandState value;
-            if (_entries.TryGetValue(index, out value))
+            if (_entries.TryGetValue(index, out CommandState value))
             {
                 value.OnNotify = onNotify;
+            }
+        }
+
+        public void SetStateOf(long index, BlittableJsonReaderObject result)
+        {
+            if (_entries.TryGetValue(index, out CommandState value))
+            {
+                value.Result = result;
             }
         }
     }

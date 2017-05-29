@@ -35,16 +35,16 @@
        
         <div class="form-group form-group-dropdown" data-bind="visible: hasIndexSelected() && !detailsGraph.viewActive()">
             <div class="input-group">
-                <input id="docKey" type="text" data-bind="textInput: documents.docKey, hasFocus: documents.hasFocusDocKey" class="form-control" placeholder="Document Id" autocomplete="off">
+                <input id="documentId" type="text" data-bind="textInput: documents.documentId, hasFocus: documents.hasFocusDocumentId" class="form-control" placeholder="Document Id" autocomplete="off">
                 <span class="input-group-btn" style="width: auto">
-                    <button data-bind="click: addCurrentDocumentKey, enable: !!documents.docKey() && !documents.loadingDocKeySearchResults()" class="btn btn-default" type="button">
-                        <i data-bind="visible: !documents.loadingDocKeySearchResults()" class="icon-plus"></i>
-                        <i data-bind="visible: documents.loadingDocKeySearchResults" class="fa fa-spinner fa-spin"></i>
+                    <button data-bind="click: addCurrentDocumentId, enable: !!documents.documentId() && !documents.loadingDocumentIdSearchResults()" class="btn btn-default" type="button">
+                        <i data-bind="visible: !documents.loadingDocumentIdSearchResults()" class="icon-plus"></i>
+                        <i data-bind="visible: documents.loadingDocumentIdSearchResults" class="fa fa-spinner fa-spin"></i>
                     </button>
                 </span>
             </div>
-            <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#docKey', foreach: documents.docKeysSearchResults">
-                <li role="presentation" data-bind="click: $root.selectDocKey">
+            <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#documentId', foreach: documents.documentIdsSearchResults">
+                <li role="presentation" data-bind="click: $root.selectDocumentId">
                     <a role="menuitem" tabindex="-1" href="#">
                         <span data-bind="text: $data"></span>
                     </a>

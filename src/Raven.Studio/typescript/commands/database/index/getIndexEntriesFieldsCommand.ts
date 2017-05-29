@@ -8,7 +8,7 @@ class getIndexEntriesFieldsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<string[]> {
+    execute(): JQueryPromise<resultsDto<string>> {
         const args = {
             name: this.indexName,
             op: "entries-fields"

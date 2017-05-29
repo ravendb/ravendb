@@ -21,7 +21,7 @@ namespace FastTests.Client
                 using (var stream = new MemoryStream())
                 using (var session = store.OpenSession())
                 {
-                    var ids = new List<string> { "employees/1", "employees/4", "employees/7" };
+                    var ids = new List<string> { "employees/1-A", "employees/4-A", "employees/7-A" };
                     session.Advanced.LoadIntoStream(ids, stream);
 
                     stream.Position = 0;
@@ -52,7 +52,7 @@ namespace FastTests.Client
                 using (var stream = new MemoryStream())
                 using (var session = store.OpenSession())
                 {
-                    var ids = new[] { "TestDocuments/1", "TestDocuments/2" };
+                    var ids = new[] { "TestDocuments/1-A", "TestDocuments/2-A" };
                     session.Advanced.LoadIntoStream<TestDocumentTransformer>(ids, stream);
 
                     stream.Position = 0;
@@ -78,7 +78,7 @@ namespace FastTests.Client
                 using (var stream = new MemoryStream())
                 using (var session = store.OpenSession())
                 {
-                    var ids = new[] { "TestDocuments/1", "TestDocuments/2" };
+                    var ids = new[] { "TestDocuments/1-A", "TestDocuments/2-A" };
                     session.Advanced.LoadIntoStream(ids, transformer.TransformerName, stream);
 
                     stream.Position = 0;
@@ -104,7 +104,7 @@ namespace FastTests.Client
                 using (var stream = new MemoryStream())
                 using (var session = store.OpenSession())
                 {
-                    var ids = new[] { "TestDocuments/1", "TestDocuments/2" };
+                    var ids = new[] { "TestDocuments/1-A", "TestDocuments/2-A" };
                     session.Advanced.LoadIntoStream(ids, transformer.GetType(), stream);
 
                     stream.Position = 0;

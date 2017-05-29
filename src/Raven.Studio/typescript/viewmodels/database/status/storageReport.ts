@@ -52,7 +52,7 @@ class storageReport extends viewModelBase {
         return new getStorageReportCommand(this.activeDatabase())
             .execute()
             .done(result => {
-                this.rawData = result;
+                this.rawData = result.Results;
             });
     }
 

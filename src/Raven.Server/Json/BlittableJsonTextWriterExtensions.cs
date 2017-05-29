@@ -704,9 +704,9 @@ namespace Raven.Server.Json
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(statistics.LastChangeVector));
-            if (statistics.LastChangeVector != null)
-                context.Write(writer, statistics.LastChangeVector.ToJson());
+            writer.WritePropertyName((nameof(statistics.DatabaseChangeVector)));
+            if (statistics.DatabaseChangeVector != null)
+                context.Write(writer, statistics.DatabaseChangeVector.ToJson());
             else
                 writer.WriteNull();
             writer.WriteComma();
@@ -1180,11 +1180,11 @@ namespace Raven.Server.Json
                 writer.WritePropertyName(Constants.Documents.Metadata.Etag);
                 writer.WriteInteger(document.Etag);
             }
-            if (document.Key != null)
+            if (document.Id != null)
             {
                 writer.WriteComma();
                 writer.WritePropertyName(Constants.Documents.Metadata.Id);
-                writer.WriteString(document.Key);
+                writer.WriteString(document.Id);
 
             }
             if (document.IndexScore != null)

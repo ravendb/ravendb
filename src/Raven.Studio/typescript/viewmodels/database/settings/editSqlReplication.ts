@@ -286,7 +286,7 @@ class editSqlReplication extends viewModelBase {
         var saveTask = saveCommand.execute();
         saveTask.done((saveResult: saveDocumentResponseDto) => {
             var savedDocumentDto: saveDocumentResponseItemDto = saveResult.Results[0];
-            var sqlReplicationKey = savedDocumentDto.Key.substring(editSqlReplication.sqlReplicationDocumentPrefix.length);
+            var sqlReplicationKey = savedDocumentDto.Id.substring(editSqlReplication.sqlReplicationDocumentPrefix.length);
             this.loadSqlReplication(sqlReplicationKey)
                 .done(() => this.dirtyFlag().reset());
             this.updateUrl(sqlReplicationKey);

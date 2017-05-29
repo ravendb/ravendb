@@ -12,6 +12,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private readonly IEnumerator<Document> _docsEnumerator;
         protected EnumerationType _enumerationType;
         protected IEnumerable _resultsOfCurrentDocument;
+        private readonly MultipleIndexingFunctionsEnumerator _multipleIndexingFunctionsEnumerator;
 
         protected StaticIndexDocsEnumerator(IEnumerable<Document> docs)
         {
@@ -33,9 +34,8 @@ namespace Raven.Server.Documents.Indexes.Static
             }
             else
             {
-                _resultsOfCurrentDocument =
-                    new TimeCountingEnumerable(
-                        new MultipleIndexingFunctionsEnumerator(funcs, new DynamicIteratonOfCurrentDocumentWrapper(this)), linqStats);
+                _multipleIndexingFunctionsEnumerator = new MultipleIndexingFunctionsEnumerator(funcs, new DynamicIteratonOfCurrentDocumentWrapper(this));
+                _resultsOfCurrentDocument = new TimeCountingEnumerable(_multipleIndexingFunctionsEnumerator, linqStats);
             }
 
             CurrentIndexingScope.Current.SetSourceCollection(collection, linqStats);
@@ -60,6 +60,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 return true;
             }
+        }
+
+        public void OnError()
+        {
+            _multipleIndexingFunctionsEnumerator?.Reset();
         }
 
         public Document Current { get; private set; }
@@ -163,6 +168,11 @@ namespace Raven.Server.Documents.Indexes.Static
                 return _enumerator;
             }
 
+            public void Reset()
+            {
+                _enumerator.Reset();
+            }
+
             private class Enumerator : IEnumerator
             {
                 private readonly List<IndexingFunc> _funcs;
@@ -180,7 +190,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 public bool MoveNext()
                 {
-                    if (_moveNextDoc &&_docEnumerator.MoveNext() == false)
+                    if (_moveNextDoc && _docEnumerator.MoveNext() == false)
                         return false;
 
                     _moveNextDoc = false;
@@ -214,10 +224,12 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 public void Reset()
                 {
-                    throw new NotImplementedException();
+                    _index = 0;
+                    _moveNextDoc = true;
+                    _currentFuncEnumerator = null;
                 }
 
-                public object Current { get; private set;  }
+                public object Current { get; private set; }
             }
         }
     }

@@ -22,7 +22,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
-  </ItemGroup>  
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="wwwroot\App\views\database\settings\databaseRecord.html" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics" Version="1.1.1" />
     <PackageReference Include="Microsoft.AspNetCore.Server.IISIntegration" Version="1.1.1" />
@@ -47,5 +50,10 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\tools\TypingsGenerator\TypingsGenerator.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="wwwroot\App\commands\database\dbGroup" />
+    <Folder Include="wwwroot\App\commands\database\tasks" />
+    <Folder Include="wwwroot\lib\favico.js" />
   </ItemGroup>
 </Project>

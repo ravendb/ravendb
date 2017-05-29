@@ -61,17 +61,17 @@ class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Do
     }
 
     private mergeIncomingData(e: Raven.Server.Documents.Handlers.IOMetricsResponse) { 
-        e.Environments.forEach(env => {                     
+        e.Environments.forEach(env => {
 
             env.Files.forEach(file => {
                 file.Recent.forEach(x => liveIOStatsWebSocketClient.fillCache(x));
             });
 
             const existingEnv = this.mergedData.Environments.find(x => x.Path === env.Path);
-          
+
             if (!existingEnv) {
                 // A new 'environment', add it to mergedData
-                this.mergedData.Environments.push({ Path: env.Path, Files: env.Files });
+                this.mergedData.Environments.push(env);
             }
             else {
                 // An existing 'environment', add the new recent items to mergedData

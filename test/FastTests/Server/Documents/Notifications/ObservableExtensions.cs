@@ -88,9 +88,9 @@ namespace FastTests.Server.Documents.Notifications
             return filteredObserver;
             
         } 
-        public static IDisposable Subscribe<T>(this IObservable<T> self, Action<T> action)
+        public static void Subscribe<T>(this IObservable<T> self, Action<T> action)
         {
-            return self.Subscribe(new ActionObserver<T>(action));
+            self.Subscribe(new ActionObserver<T>(action));
         }
 
         public static IDisposable Subscribe<T>(this IObservable<T> self, Action<T> onNext, Action<Exception> onError)
