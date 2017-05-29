@@ -683,44 +683,38 @@ namespace Raven.Client.Documents.Subscriptions
 
         private async Task<bool> TryHandleRejectedConnectionOrDispose(Exception ex)
         {
-            if (ex is SubscriptionInUseException || // another client has connected to the subscription
-                ex is SubscriptionDoesNotExistException || // subscription has been deleted meanwhile
-                ex is SubscriptionClosedException || // subscription has been booted by another subscription
-                ex is DatabaseDoesNotExistException ||
-                ex is AuthorizationException) 
+            switch (ex)
             {
-                IsConnectionClosed = true;
-                _taskCompletionSource.TrySetException(ex);
-                SubscriptionConnectionInterrupted(ex, false);
-                _processingCts.Cancel();
-
-                await DisposeAsync(false).ConfigureAwait(false);
-
-                return true;
-            }
-
-            // ReSharper disable once InvertIf
-            if (ex is SubscriptionDoesNotBelongToNodeException se)
-            {
-                var requestExecuter = _store.GetRequestExecutor(_dbName);
-                var nodeToRedirectTo = requestExecuter.TopologyNodes
-                    .FirstOrDefault(x => x.ClusterTag == se.AppropriateNode);
-                if (nodeToRedirectTo == null)
-                {
-                    await requestExecuter.UpdateTopologyAsync();
-                    nodeToRedirectTo = requestExecuter.TopologyNodes.FirstOrDefault(x => x.ClusterTag == se.AppropriateNode);
-
+                case SubscriptionInUseException _:
+                case SubscriptionDoesNotExistException _:
+                case SubscriptionClosedException _:
+                case DatabaseDoesNotExistException _:
+                case AuthorizationException _:
+                    IsConnectionClosed = true;
+                    _taskCompletionSource.TrySetException(ex);
+                    SubscriptionConnectionInterrupted(ex, false);
+                    _processingCts.Cancel();
+                    await DisposeAsync(false).ConfigureAwait(false);
+                    return true;
+                case SubscriptionDoesNotBelongToNodeException se:
+                    var requestExecuter = _store.GetRequestExecutor(_dbName);
+                    var nodeToRedirectTo = requestExecuter.TopologyNodes
+                        .FirstOrDefault(x => x.ClusterTag == se.AppropriateNode);
                     if (nodeToRedirectTo == null)
                     {
-                        SubscriptionConnectionInterrupted(new AggregateException(ex,
-                            new InvalidOperationException($"Could not redirect to {se.AppropriateNode}, because it was not found in local topology, even after retrying")), false);
-                        return true;
+                        await requestExecuter.UpdateTopologyAsync();
+                        nodeToRedirectTo = requestExecuter.TopologyNodes.FirstOrDefault(x => x.ClusterTag == se.AppropriateNode);
+
+                        if (nodeToRedirectTo == null)
+                        {
+                            SubscriptionConnectionInterrupted(new AggregateException(ex,
+                                new InvalidOperationException($"Could not redirect to {se.AppropriateNode}, because it was not found in local topology, even after retrying")), false);
+                            return true;
+                        }
                     }
-
-                }
-
-                _redirectNode = nodeToRedirectTo;
-                SubscriptionConnectionInterrupted(ex, true);
+                    _redirectNode = nodeToRedirectTo;
+                    SubscriptionConnectionInterrupted(ex, true);
+                    break;
             }
 
             return false;
