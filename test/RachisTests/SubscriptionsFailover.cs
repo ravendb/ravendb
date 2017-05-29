@@ -94,7 +94,7 @@ namespace RachisTests
             
             using (var store = new DocumentStore
             {
-                Url = leader.WebUrls[0],
+                Urls = leader.WebUrls,
                 Database = defaultDatabase
             }.Initialize())
             {

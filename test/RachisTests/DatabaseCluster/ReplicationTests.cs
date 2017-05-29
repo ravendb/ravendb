@@ -145,7 +145,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var store = new DocumentStore()
             {
-                Url = leader.WebUrls[0],
+                Urls = leader.WebUrls,
                 Database = databaseName
             }.Initialize())
             {
@@ -189,7 +189,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var store = new DocumentStore()
             {
-                Url = watcher.Url,
+                Urls = new [] { watcher.Url },
                 Database = watcher.Database
             }.Initialize())
             {

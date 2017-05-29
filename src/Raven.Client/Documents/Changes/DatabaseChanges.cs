@@ -344,7 +344,26 @@ namespace Raven.Client.Documents.Changes
 
         private async Task DoWork()
         {
-            await _requestExecutor.GetCurrentNode();
+            try
+            {
+                await _requestExecutor.GetCurrentNode();
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            catch (ChangeProcessingException e)
+            {
+                NotifyAboutError(e);
+                return;
+            }
+            catch (Exception e)
+            {
+                ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
+                NotifyAboutError(e);
+                return;
+            }
+
             var url = new Uri($"{_requestExecutor.Url}/databases/{_database}/changes"
                 .ToLower()
                 .ToWebSocketPath(), UriKind.Absolute);
