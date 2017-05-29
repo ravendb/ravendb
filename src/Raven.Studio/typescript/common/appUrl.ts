@@ -40,6 +40,7 @@ class appUrl {
         transformers: ko.pureComputed(() => appUrl.forTransformers(appUrl.currentDatabase())),
         newIndex: ko.pureComputed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
         editIndex: (indexName?: string) => ko.pureComputed(() => appUrl.forEditIndex(indexName, appUrl.currentDatabase())),
+        editExternalReplication: (taskId?: string) => ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase(), taskId)),
         newTransformer: ko.pureComputed(() => appUrl.forNewTransformer(appUrl.currentDatabase())),
         editTransformer: (transformerName?: string) => ko.pureComputed(() => appUrl.forEditTransformer(transformerName, appUrl.currentDatabase())),
         query: (indexName?: string) => ko.pureComputed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
@@ -608,6 +609,16 @@ class appUrl {
     static forOngoingTasks(db: database | databaseInfo): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/ongoingTasks?" + databasePart;
+    }
+
+    static forNewExternalReplication(db: database | databaseInfo): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases/tasks/editExternalReplicationTask?" + databasePart; 
+    }
+
+    static forEditExternalReplication(db: database | databaseInfo, taskId: string): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases/tasks/editExternalReplicationTask?" + databasePart + "&taskId=" + taskId;
     }
 
     static forSampleData(db: database | databaseInfo): string {

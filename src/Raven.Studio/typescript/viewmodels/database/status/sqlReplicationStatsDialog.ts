@@ -6,7 +6,7 @@ import getSqlReplicationStatsCommand = require("commands/database/sqlReplication
 class sqlReplicationStatsDialog extends dialogViewModelBase {
     repData = ko.observable<Raven.Server.Documents.ETL.EtlProcessStatistics>();
 
-    constructor(private activeDatabase: database, private sqlReplicationName:string) {
+    constructor(private sqlReplicationName:string) {
         super();
     }
 
@@ -19,7 +19,7 @@ class sqlReplicationStatsDialog extends dialogViewModelBase {
     }
 
     fetchSqlReplicationStats(): JQueryPromise<Raven.Server.Documents.ETL.EtlProcessStatistics> {
-        return new getSqlReplicationStatsCommand(this.activeDatabase, this.sqlReplicationName)
+        return new getSqlReplicationStatsCommand(this.activeDatabase(), this.sqlReplicationName)
             .execute()
             .done((result: Raven.Server.Documents.ETL.EtlProcessStatistics) => {
                 this.repData(result);

@@ -103,7 +103,7 @@ class indexDefinition {
             required: {
                 onlyIf: () => this.hasReduce()
             }
-        })
+        });
 
         this.validationGroup = ko.validatedObservable({
             name: this.name,

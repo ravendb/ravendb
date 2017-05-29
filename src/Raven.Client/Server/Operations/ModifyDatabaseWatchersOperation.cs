@@ -11,7 +11,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Server.Operations
 {
-    public class ModifyDatabaseWatchersOperation : IServerOperation<ModifyDatabaseWatchersResult>
+    public class ModifyDatabaseWatchersOperation : IServerOperation<ModifyExternalReplicationResult>
     {
         private readonly List<DatabaseWatcher> _newWatchers;
         private readonly string _database;
@@ -23,12 +23,12 @@ namespace Raven.Client.Server.Operations
             _newWatchers = newWatchers;
         }
 
-        public RavenCommand<ModifyDatabaseWatchersResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<ModifyExternalReplicationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new ModifyDatabaseWatchersCommand(conventions, context, _database, _newWatchers);
         }
 
-        private class ModifyDatabaseWatchersCommand : RavenCommand<ModifyDatabaseWatchersResult>
+        private class ModifyDatabaseWatchersCommand : RavenCommand<ModifyExternalReplicationResult>
         {
             private readonly JsonOperationContext _context;
             private readonly DocumentConventions _conventions;

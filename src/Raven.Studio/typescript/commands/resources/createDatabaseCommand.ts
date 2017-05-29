@@ -7,7 +7,7 @@ class createDatabaseCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Server.Web.System.DatabasePutResult> {
+    execute(): JQueryPromise<Raven.Client.Server.Operations.DatabasePutResult> {
         const args = {
             name: this.databaseDocument.DatabaseName,
             'replication-factor': this.replicationFactor

@@ -11,6 +11,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
     const exportDatabaseUrl = ko.pureComputed(() => appUrl.forExportDatabase(activeDatabase()));
     const sampleDataUrl = ko.pureComputed(() => appUrl.forSampleData(activeDatabase()));
     const ongoingTasksUrl = ko.pureComputed(() => appUrl.forOngoingTasks(activeDatabase()));
+    const editExternalReplicationTasksUrl = ko.pureComputed(() => appUrl.forNewExternalReplication(activeDatabase()));
     const csvImportUrl = ko.pureComputed(() => appUrl.forCsvImport(activeDatabase()));
 
     const submenu: leafMenuItem[] = [
@@ -48,6 +49,13 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-manage-ongoing-tasks', 
             dynamicHash: ongoingTasksUrl
+        }),
+        new leafMenuItem({
+            route: 'databases/tasks/editExternalReplicationTask', 
+            moduleId: 'viewmodels/database/tasks/editExternalReplicationTask',
+            title: 'Create External Replication Task',
+            nav: false,
+            dynamicHash: editExternalReplicationTasksUrl
         }),
         /* TODO:
         new leafMenuItem({

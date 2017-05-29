@@ -1,5 +1,5 @@
 /// <reference path="../../typings/tsd.d.ts"/>
-
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import dialog = require("plugins/dialog");
 
@@ -9,6 +9,8 @@ type dialogViewModelBaseOptions = {
 }
 
 abstract class dialogViewModelBase {
+
+    protected activeDatabase = activeDatabaseTracker.default.database;
     static readonly dialogSelector = ".modal-dialog";
 
     private onEnterBinding: JwertySubscription;

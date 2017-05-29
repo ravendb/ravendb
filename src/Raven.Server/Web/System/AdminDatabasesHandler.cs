@@ -18,6 +18,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Client.Server.Commands;
+using Raven.Client.Server.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Extensions;
@@ -404,9 +405,9 @@ namespace Raven.Server.Web.System
                     {
                         context.Write(writer, new DynamicJsonValue
                         {
-                            [nameof(DatabasePutResult.ETag)] = index,
-                            [nameof(DatabasePutResult.Key)] = name,
-                            [nameof(DatabasePutResult.Topology)] = databaseRecord.Topology.ToJson()
+                            [nameof(ModifyExternalReplicationResult.ETag)] = index,
+                            [nameof(ModifyExternalReplicationResult.Key)] = name,
+                            [nameof(ModifyExternalReplicationResult.Topology)] = databaseRecord.Topology.ToJson()
                         });
                         writer.Flush();
                     }
@@ -573,12 +574,12 @@ namespace Raven.Server.Web.System
         }
     }
 
-    public class DatabasePutResult
-    {
-        public long ETag { get; set; }
-        public string Key { get; set; }
-        public DatabaseTopology Topology { get; set; }
-        public List<string> NodesAddedTo { get; set; }
-    }
+    //public class DatabasePutResult
+    //{
+    //    public long ETag { get; set; }
+    //    public string Key { get; set; }
+    //    public DatabaseTopology Topology { get; set; }
+    //    public List<string> NodesAddedTo { get; set; }
+    //}
 
 }
