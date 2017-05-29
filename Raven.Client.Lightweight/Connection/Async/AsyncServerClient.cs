@@ -201,9 +201,11 @@ namespace Raven.Client.Connection.Async
                 var serverHash = ServerHash.GetServerHash(Url);
                 var prevLeader = clusterAwareRequestExecuter.LeaderNode;
                 clusterAwareRequestExecuter.UpdateTopology(this, new OperationMetadata(Url, PrimaryCredentials, topology.ClusterInformation), topology, serverHash, prevLeader);
+
                 //When the leader is not resposive to its follower but clients may still communicate to the leader node we have
                 //a problem, we will send requests to the leader and they will fail, we must fetch the topology from all nodes 
                 //to make sure we have the latest one, since our primary may be a non-responsive leader.
+
                 await clusterAwareRequestExecuter.UpdateReplicationInformationIfNeededAsync(this,force:true).ConfigureAwait(false);
             }
             else

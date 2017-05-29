@@ -850,6 +850,7 @@
     <Compile Include="Suggestions\LegacySuggestionsHandling.cs" />
     <Compile Include="Subscriptions\SubscriptionsBasic.cs" />
     <Compile Include="Subscriptions\SubscriptionsPaths.cs" />
+    <Compile Include="Suggestions\SuggestionsLazyAsync.cs" />
     <Compile Include="Suggestions\SuggestionsUsingAnIndex.cs" />
     <Compile Include="Synchronization\ConcurrentJsonDocumentSortedListTests.cs" />
     <Compile Include="T1.cs" />
