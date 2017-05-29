@@ -246,6 +246,7 @@ namespace Sparrow.Json
                 obj = default(T);
                 return false;
             }
+
             ConvertType(result, out obj);
             return true;
         }

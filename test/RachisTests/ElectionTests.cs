@@ -35,7 +35,7 @@ namespace SlowTests.Server.Rachis
         public async Task OnNetworkDisconnectionANewLeaderIsElectedAfterReconnectOldLeaderStepsDownAndRollBackHisLog(int numberOfNodes)        
         {
             var firstLeader = await CreateNetworkAndGetLeader(numberOfNodes);
-            var timeToWait = TimeSpan.FromMilliseconds(firstLeader.ElectionTimeout.TotalMilliseconds * 4);
+            var timeToWait = TimeSpan.FromMilliseconds(firstLeader.ElectionTimeout.TotalMilliseconds * 8); // was 'TotalMilliseconds * 4', changed to *8 for low end machines RavenDB-7263
             await IssueCommandsAndWaitForCommit(firstLeader, 3, "test", 1);
            
             DisconnectFromNode(firstLeader);

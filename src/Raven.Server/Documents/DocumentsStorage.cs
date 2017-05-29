@@ -1387,6 +1387,12 @@ namespace Raven.Server.Documents
             if (_collectionsCache.TryGetValue(collectionName, out name))
                 return name;
 
+            if (context.Transaction == null)
+            {
+                ThrowNoActiveTransactionException(); //this throws, return null in the next row is there so intellisense will be happy
+                return null;
+            }
+
             var collections = context.Transaction.InnerTransaction.OpenTable(CollectionsSchema, CollectionsSlice);
 
             name = new CollectionName(collectionName);
@@ -1419,6 +1425,11 @@ namespace Raven.Server.Documents
                 };
             }
             return name;
+        }
+
+        private static void ThrowNoActiveTransactionException()
+        {
+            throw new InvalidOperationException("This method requires active transaction, and no active transactions in the current context...");
         }
 
         private FastDictionary<string, CollectionName, OrdinalIgnoreCaseStringStructComparer> ReadCollections(Transaction tx)

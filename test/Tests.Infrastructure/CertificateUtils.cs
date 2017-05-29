@@ -78,7 +78,7 @@ namespace Tests.Infrastructure
             return convertedCertificate;
         }
 
-        private static X509Certificate2 CreateCertificateAuthorityCertificate(string subjectName, out AsymmetricKeyParameter CaPrivateKey)
+        private static void CreateCertificateAuthorityCertificate(string subjectName, out AsymmetricKeyParameter CaPrivateKey)
         {
             const int keyStrength = 2048;
 
@@ -122,12 +122,9 @@ namespace Tests.Infrastructure
             // selfsign certificate
             Org.BouncyCastle.X509.X509Certificate certificate = certificateGenerator.Generate(signatureFactory);
 
-            X509Certificate2 x509 = new X509Certificate2(certificate.GetEncoded());
-            x509.FriendlyName = subjectName;
-
             CaPrivateKey = issuerKeyPair.Private;
 
-            return x509;
+            return;
         }
 
     }

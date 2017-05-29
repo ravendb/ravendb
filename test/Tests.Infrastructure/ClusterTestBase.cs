@@ -174,7 +174,7 @@ namespace Tests.Infrastructure
             return stores;
         }
 
-        protected bool WaitForDocument<T>(DocumentStore store,
+        protected bool WaitForDocument<T>(IDocumentStore store,
             string docId,
             Func<T, bool> predicate,
             int timeout = 10000)

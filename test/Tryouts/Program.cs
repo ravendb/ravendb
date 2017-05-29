@@ -8,6 +8,7 @@ using Orders;
 using Raven.Client.Documents;
 using SlowTests.Issues;
 using SlowTests.Smuggler;
+using System.Threading.Tasks;
 
 namespace Tryouts
 {
@@ -21,10 +22,13 @@ namespace Tryouts
             for (int i = 0; i < 1000000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new RavenDB937())
+                Parallel.For(0, 15, _ =>
                 {
-                    a.LowLevelEmbeddedStreamAsync().Wait();
-                }
+                    using (var a = new RavenDB937())
+                    {
+                        a.LowLevelEmbeddedStreamAsync().Wait();
+                    }
+                });
             }
         }
     }

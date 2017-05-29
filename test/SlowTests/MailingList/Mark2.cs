@@ -4,6 +4,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using SlowTests.Utils;
+using Sparrow.Utils;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -27,7 +28,7 @@ namespace SlowTests.MailingList
 
                 using (var commands = store.Commands())
                 {
-                    var json = commands.ParseJson(@"{
+                    var json = commands.ParseJson(Dos2Linux.String(@"{
  ""Warnings"": {
    ""AccessoryWarnings"": [
      {
@@ -40,7 +41,7 @@ namespace SlowTests.MailingList
      }
    ]
  }
-}");
+}"));
 
                     commands.Put("TestCases/TST00001", null, json, new Dictionary<string, object>
                     {

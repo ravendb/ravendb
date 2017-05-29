@@ -11,6 +11,8 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using System;
+using System.Threading;
 
 namespace SlowTests.Issues
 {
@@ -141,7 +143,7 @@ namespace SlowTests.Issues
                 }
             }
         }
-
+        static int index = 0;
         [Fact]
         public async Task LowLevelEmbeddedStreamAsync()
         {
@@ -159,16 +161,26 @@ namespace SlowTests.Issues
                 }
 
                 WaitForIndexing(store);
-
+                var cur = Interlocked.Increment(ref index);
+                var start = DateTime.UtcNow;
+                System.Console.WriteLine( DateTime.UtcNow + " starting to query " + cur);
                 using (var session = store.OpenAsyncSession())
                 {
                     var enumerator = await session.Advanced
                         .StreamAsync(session.Query<User, Users_ByActive>().Customize(x => x.AddOrder(Constants.Documents.Indexing.Fields.DocumentIdFieldName)));
-
+                    System.Console.WriteLine(DateTime.UtcNow + " got the stream " + cur + " " + (DateTime.UtcNow - start));
                     var count = 0;
-                    while (await enumerator.MoveNextAsync())
+                    try
                     {
-                        count++;
+                        while (await enumerator.MoveNextAsync())
+                        {
+                            count++;
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        Console.WriteLine(DateTime.UtcNow + " got " + count + " items" + cur);
+                        throw;
                     }
 
                     Assert.Equal(1500, count);

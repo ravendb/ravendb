@@ -381,6 +381,11 @@ namespace Raven.Server.Documents.Handlers
 
                 var doc = await context.ReadForDiskAsync(RequestBodyStream(), id);
 
+                if (id.EndsWith("/"))
+                {
+                    id = await ServerStore.GenerateClusterIdentityAsync(id, Database.Name);
+                }
+
                 var etag = GetLongFromHeaders("If-Match");
 
                 var cmd = new MergedPutCommand(doc, id, etag, Database);

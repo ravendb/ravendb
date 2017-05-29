@@ -86,6 +86,17 @@ namespace Raven.Server.ServerWide
                 case nameof(DeleteValueCommand):
                     DeleteValue(context, cmd, index, leader);
                     break;
+                case nameof(IncrementClusterIdentityCommand):
+                    var updatedDatabaseRecord = UpdateDatabase(context, type, cmd, index, leader);
+                    if (!cmd.TryGet(nameof(IncrementClusterIdentityCommand.Prefix), out string prefix))
+                    {
+                        NotifyLeaderAboutError(index, leader, 
+                            new InvalidDataException($"Expected to find {nameof(IncrementClusterIdentityCommand)}.{nameof(IncrementClusterIdentityCommand.Prefix)} property in the Raft command but didn't find it..."));
+                        return;
+                    }
+
+                    leader?.SetStateOf(index,updatedDatabaseRecord.Identities[prefix]);
+                    break;
                 case nameof(PutIndexCommand):
                 case nameof(PutAutoIndexCommand):
                 case nameof(DeleteIndexCommand):
@@ -429,11 +440,12 @@ namespace Raven.Server.ServerWide
 
         private static readonly StringSegment DatabaseName = new StringSegment("DatabaseName");
 
-        private void UpdateDatabase(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private DatabaseRecord UpdateDatabase(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             if (cmd.TryGet(DatabaseName, out string databaseName) == false)
                 throw new ArgumentException("Update database command must contain a DatabaseName property");
 
+            DatabaseRecord databaseRecord;
             try
             {
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
@@ -447,17 +459,17 @@ namespace Raven.Server.ServerWide
                     if (doc == null)
                     {
                         NotifyLeaderAboutError(index, leader, new DatabaseDoesNotExistException($"Cannot execute update command of type {type} for {databaseName} because it does not exists"));
-                        return;
+                        return null;
                     }
 
-                    var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
+                    databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
                     var updateCommand = JsonDeserializationCluster.UpdateDatabaseCommands[type](cmd);
 
                     if (updateCommand.Etag != null && etag != updateCommand.Etag.Value)
                     {
                         NotifyLeaderAboutError(index, leader,
                             new ConcurrencyException($"Concurrency violation at executing {type} command, the database {databaseRecord.DatabaseName} has etag {etag} but was expecting {updateCommand.Etag}"));
-                        return;
+                        return null;
                     }
 
                     try
@@ -467,7 +479,7 @@ namespace Raven.Server.ServerWide
                     catch (Exception e)
                     {
                         NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute command of type {type} for database {databaseName}", e));
-                        return;
+                        return null;
                     }
 
                     var updatedDatabaseBlittable = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
@@ -479,6 +491,8 @@ namespace Raven.Server.ServerWide
             {
                 NotifyDatabaseChanged(context, databaseName, index, type);
             }
+
+            return databaseRecord;
         }
 
         private static void NotifyLeaderAboutError(long index, Leader leader, Exception e)

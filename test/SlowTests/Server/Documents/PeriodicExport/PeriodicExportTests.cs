@@ -123,7 +123,7 @@ namespace SlowTests.Server.Documents.PeriodicExport
                     .GetField(nameof(PeriodicExportRunner.MaxTimerTimeout), BindingFlags.Instance | BindingFlags.Public)
                     .SetValue(periodicExportRunner, TimeSpan.FromMilliseconds(5));
                 var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation();
-                SpinWait.SpinUntil(() => store.Admin.Server.Send(getPeriodicBackupStatus).Status != null, 10000);
+                SpinWait.SpinUntil(() => store.Admin.Server.Send(getPeriodicBackupStatus).Status != null, 20000);
             }
 
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
