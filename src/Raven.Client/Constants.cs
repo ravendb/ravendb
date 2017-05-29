@@ -222,18 +222,6 @@ namespace Raven.Client
                 public const string DataCouldNotBeDecrypted = "<data could not be decrypted>";
             }
 
-            public class Replication
-            {
-                public const string ReplicationDestinationsId = "Raven/Replication/Destinations";
-
-                public const string ReplicationConfigurationDocument = "Raven/Replication/Documents/Configuration";
-            }
-
-            public class Versioning
-            {
-                public const string ConfigurationId = "Raven/Versioning/Configuration";
-            }
-
             public class ETL
             {
                 public const string RavenEtlProcessStatusPrefix = "Raven/Etl/Status/";
