@@ -49,7 +49,7 @@ namespace FastTests
             Func<string, string> modifyName = null,
             string apiKey = null,
             bool ignoreDisabledDatabase = false,
-            int replicationFacotr = 1,
+            int replicationFactor = 1,
             RavenServer defaultServer = null,
             bool waitForDatabasesToBeCreated = false,
             bool deleteDatabaseWhenDisposed = true,
@@ -113,7 +113,7 @@ namespace FastTests
 
                 if (createDatabase)
                 {
-                    var result = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFacotr));
+                    var result = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
                     defaultServer.ServerStore.Cluster.WaitForIndexNotification(result.ETag ?? 0).Wait();
                 }
 

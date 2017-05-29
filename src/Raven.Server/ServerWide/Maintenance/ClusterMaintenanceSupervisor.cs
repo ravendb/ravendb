@@ -15,7 +15,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Utils;
 
-namespace Raven.Server.ServerWide.Maintance
+namespace Raven.Server.ServerWide.Maintenance
 {
     public class ClusterMaintenanceSupervisor : IDisposable
     {
@@ -145,7 +145,7 @@ namespace Raven.Server.ServerWide.Maintance
             {
                 bool needToWait = false;
                 var onErrorDelayTime = _parent.Config.OnErrorDelayTime.AsTimeSpan;
-                var receiveFromWorkerTimeout = _parent.Config.RecieveFromWorkerTimeout.AsTimeSpan;
+                var receiveFromWorkerTimeout = _parent.Config.ReceiveFromWorkerTimeout.AsTimeSpan;
 
                 while (_token.IsCancellationRequested == false)
                 {

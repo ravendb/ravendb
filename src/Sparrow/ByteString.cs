@@ -1054,6 +1054,22 @@ namespace Sparrow
         {
             return From(value, ByteStringType.Mutable, out str);
         }
+        
+        public InternalScope From(char* value, int charCount, ByteStringType type, out ByteString str)
+        {
+            Debug.Assert(value != null, $"{nameof(value)} cant be null.");
+
+            var byteCount = Encodings.Utf8.GetByteCount(value, charCount);
+            str = AllocateInternal(byteCount, type);
+            int length = Encodings.Utf8.GetBytes(value, charCount, str.Ptr, byteCount);
+
+            // We can do this because it is internal. See if it makes sense to actually give this ability. 
+            str._pointer->Length = length;
+
+            RegisterForValidation(str);
+            return new InternalScope(this, str);
+        }
+
 
         public InternalScope From(string value, ByteStringType type, out ByteString str)
         {

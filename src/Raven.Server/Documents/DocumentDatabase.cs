@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Server;
 using Raven.Client.Util;
@@ -138,6 +139,8 @@ namespace Raven.Server.Documents
 
         public CancellationToken DatabaseShutdown => _databaseShutdown.Token;
 
+        public AsyncManualResetEvent DatabaseShutdownCompleted { get; } = new AsyncManualResetEvent();
+
         public DocumentsStorage DocumentsStorage { get; private set; }
 
         public BundleLoader BundleLoader { get; private set; }
@@ -168,7 +171,7 @@ namespace Raven.Server.Documents
 
         public EtlLoader EtlLoader { get; private set; }
 
-        public ConcurrentSet<TcpConnectionOptions> RunningTcpConnections = new ConcurrentSet<TcpConnectionOptions>();
+        public readonly ConcurrentSet<TcpConnectionOptions> RunningTcpConnections = new ConcurrentSet<TcpConnectionOptions>();
 
         public DateTime StartTime { get; }
 
@@ -216,9 +219,9 @@ namespace Raven.Server.Documents
             return new DatabaseUsage(this, skipUsagesCount);
         }
 
-        internal void ThrowOperationCancelled()
+        internal void ThrowDatabaseShutdown()
         {
-            throw new OperationCanceledException("The database " + Name + " is shutting down");
+            throw new DatabaseDisabledException("The database " + Name + " is shutting down");
         }
 
         public struct DatabaseUsage : IDisposable
@@ -234,10 +237,10 @@ namespace Raven.Server.Documents
                 if (_skipUsagesCount == false)
                     Interlocked.Increment(ref _parent._usages);
 
-                if (_parent._databaseShutdown.IsCancellationRequested)
+                if (_parent.DatabaseShutdown.IsCancellationRequested)
                 {
                     Dispose();
-                    _parent.ThrowOperationCancelled();
+                    _parent.ThrowDatabaseShutdown();
                 }
             }
 
@@ -572,7 +575,7 @@ namespace Raven.Server.Documents
             try
             {
                 if (_databaseShutdown.IsCancellationRequested)
-                    ThrowOperationCancelled();
+                    ThrowDatabaseShutdown();
 
                 TransformerStore.HandleDatabaseRecordChange();
                 BundleLoader.HandleDatabaseRecordChange();
@@ -583,15 +586,13 @@ namespace Raven.Server.Documents
             catch
             {
                 if (_databaseShutdown.IsCancellationRequested)
-                    ThrowOperationCancelled();
+                    ThrowDatabaseShutdown();
             }
             finally
             {
                 _rachisLogIndexNotifications.NotifyListenersAbout(index);
             }
         }
-
-
 
         public Task WaitForIndexNotification(long index) => _rachisLogIndexNotifications.WaitForIndexNotification(index, Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan);
 

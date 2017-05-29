@@ -1185,8 +1185,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         private async Task ModifyDatabaseSettings(string databaseName, Action<DatabaseRecord> modifySettings)
         {
-            TransactionOperationContext context;
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 context.OpenReadTransaction();
 

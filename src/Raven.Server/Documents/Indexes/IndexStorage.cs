@@ -498,20 +498,16 @@ namespace Raven.Server.Documents.Indexes
             if (collectionTree == null)
                 yield break;
 
-            Slice referenceKeyAsSlice;
-            using (CreateKey(tx, referenceKey, out referenceKeyAsSlice))
+            using (DocumentIdWorker.GetLower(tx.InnerTransaction.Allocator, referenceKey, out var k))
+            using (var it = collectionTree.MultiRead(k))
             {
-                var k = referenceKeyAsSlice.ToString().ToLowerInvariant();
-                using (var it = collectionTree.MultiRead(k))
-                {
-                    if (it.Seek(Slices.BeforeAllKeys) == false)
-                        yield break;
+                if (it.Seek(Slices.BeforeAllKeys) == false)
+                    yield break;
 
-                    do
-                    {
-                        yield return it.CurrentKey;
-                    } while (it.MoveNext());
-                }
+                do
+                {
+                    yield return it.CurrentKey;
+                } while (it.MoveNext());
             }
         }
 

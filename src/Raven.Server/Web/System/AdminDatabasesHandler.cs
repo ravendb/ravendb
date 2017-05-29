@@ -373,27 +373,23 @@ namespace Raven.Server.Web.System
         }
         
         [RavenAction("/admin/modify-watchers", "POST", "/admin/modify-watchers?name={databaseName:string}")]
-        public async Task ModifyWathcers()
+        public async Task ModifyWatchers()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");  
-
-            string errorMessage;
-            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
             ServerStore.EnsureNotPassive();
-            TransactionOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-modify-watchers").ThrowOnTimeout();
                 if (updateJson.TryGet(nameof(DatabaseTopology.Watchers), out BlittableJsonReaderArray watchersBlittable) == false)
-                {                    
+                {
                     throw new InvalidDataException("NewWatchers property was not found.");
                 }
                 using (context.OpenReadTransaction())
-                {              
-                    long etag;
-                    var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out etag);
+                {
+                    var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out long _);
                     var watchers = new List<DatabaseWatcher>(watchersBlittable.Length);
                     foreach (BlittableJsonReaderObject watcher in watchersBlittable)
                     {
@@ -422,9 +418,7 @@ namespace Raven.Server.Web.System
         public async Task ChangeConflictResolver()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
-            string errorMessage;
-            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
             ServerStore.EnsureNotPassive();
@@ -435,10 +429,9 @@ namespace Raven.Server.Web.System
 
                 using (context.OpenReadTransaction())
                 {
-                    long etag;
-                    var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out etag);
+                    var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out _);
 
-                    var (index,_) = await ServerStore.ModifyConflictSolverAsync(name, conflictResolver).ThrowOnTimeout();
+                    var (index, _) = await ServerStore.ModifyConflictSolverAsync(name, conflictResolver).ThrowOnTimeout();
                     await ServerStore.Cluster.WaitForIndexNotification(index).ThrowOnTimeout();
                     
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -458,13 +451,12 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/databases", "DELETE", "/admin/databases?name={databaseName:string|multiple}&hard-delete={isHardDelete:bool|optional(false)}&from-node={nodeToDelete:string|optional(null)}")]
-        public async Task DeleteQueryString()
+        public async Task Delete()
         {
             var names = GetStringValuesQueryString("name");
             var fromNode = GetStringValuesQueryString("from-node", required: false).FirstOrDefault();
             var isHardDelete = GetBoolValueQueryString("hard-delete", required: false) ?? false;
-            TransactionOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 if (string.IsNullOrEmpty(fromNode) == false)
                 {
@@ -562,7 +554,7 @@ namespace Raven.Server.Web.System
 
                     var json = EntityToBlittable.ConvertEntityToBlittable(dbDoc, DocumentConventions.Default, context);
 
-                    var (index, result) = await ServerStore.WriteDbAsync(name, json, null).ThrowOnTimeout();
+                    var (index, _) = await ServerStore.WriteDbAsync(name, json, null).ThrowOnTimeout();
                     await ServerStore.Cluster.WaitForIndexNotification(index).ThrowOnTimeout();
 
                     context.Write(writer, new DynamicJsonValue

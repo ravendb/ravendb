@@ -2,16 +2,14 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
-using Lucene.Net;
 using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
-using Raven.Server.Rachis;
 using Xunit;
 
 namespace RachisTests.DatabaseCluster
 {
-    public class ClusterDatabaseMaintance : ReplicationTestsBase
+    public class ClusterDatabaseMaintenance : ReplicationTestsBase
     {
         [Fact]
         public async Task DemoteOnServerDown()
@@ -19,7 +17,7 @@ namespace RachisTests.DatabaseCluster
             var clusterSize = 3;
             var databaseName = "DemoteOnServerDown";
             var leader = await CreateRaftClusterAndGetLeader(clusterSize,true,0);
-            using (var store = new DocumentStore()
+            using (var store = new DocumentStore
             {
                 Url = leader.WebUrls[0],
                 Database = databaseName

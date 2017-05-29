@@ -1,6 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Text;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Transformers;
@@ -76,8 +74,7 @@ namespace FastTests.Server.Documents.Transformers
                     Name = "Transformer1"
                 }));
 
-                TransactionOperationContext context;
-                using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
                     context.OpenReadTransaction();
 
@@ -86,9 +83,8 @@ namespace FastTests.Server.Documents.Transformers
 
                     var blittableJsonReaderObject = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
-                    var (index,result) = await Server.ServerStore.WriteDbAsync(store.Database, blittableJsonReaderObject, null);
+                    var (index, _) = await Server.ServerStore.WriteDbAsync(store.Database, blittableJsonReaderObject, null);
                     await Server.ServerStore.Cluster.WaitForIndexNotification(index);
-
                 }
 
                 var database = await GetDocumentDatabaseInstanceFor(store);

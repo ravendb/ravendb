@@ -24,7 +24,7 @@ using Raven.Server.Documents.Studio;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.BackgroundTasks;
-using Raven.Server.ServerWide.Maintance;
+using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 using Facet = Raven.Client.Documents.Queries.Facets.Facet;

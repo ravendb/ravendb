@@ -182,6 +182,7 @@ namespace Raven.Server.ServerWide
         }
 
         private readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
+
         public async Task WaitForIndexNotification(long index)
         {
             await _rachisLogIndexNotifications.WaitForIndexNotification(index, _parent.RemoteOperationTimeout);
@@ -726,14 +727,15 @@ namespace Raven.Server.ServerWide
                 }
                 else if (timeoutTask == await Task.WhenAny(task, timeoutTask))
                 {
-                    ThrowTimeoutException(timeout.Value, index);
+                    ThrowTimeoutException(timeout.Value, index, _lastModifiedIndex);
                 }
             }
         }
 
-        private static void ThrowTimeoutException(TimeSpan value, long index)
+        private static void ThrowTimeoutException(TimeSpan value, long index, long lastModifiedIndex)
         {
-            throw new TimeoutException("Waited for " + value + " but didn't get index notification for " + index);
+            throw new TimeoutException($"Waited for {value} but didn't get index notification for {index}. " +
+                                       $"Last commit index is: {lastModifiedIndex}.");
         }
 
         public void NotifyListenersAbout(long index)

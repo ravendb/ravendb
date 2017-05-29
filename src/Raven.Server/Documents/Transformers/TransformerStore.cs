@@ -217,7 +217,7 @@ namespace Raven.Server.Documents.Transformers
 
                 try
                 {
-                    var (index,result) = await _serverStore.SendToLeaderAsync(command);
+                    var (index, result) = await _serverStore.SendToLeaderAsync(command);
 
                     await _documentDatabase.WaitForIndexNotification(index);
 
