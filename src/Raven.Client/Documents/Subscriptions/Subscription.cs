@@ -309,6 +309,7 @@ namespace Raven.Client.Documents.Subscriptions
                     switch (reply.Status)
                     {
                         case TcpConnectionHeaderResponse.AuthorizationStatus.Forbidden:
+                        case TcpConnectionHeaderResponse.AuthorizationStatus.ForbiddenReadOnly:
                             throw AuthorizationException.Forbidden(_store.Url);
                         case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
                             break;
@@ -684,8 +685,9 @@ namespace Raven.Client.Documents.Subscriptions
         {
             if (ex is SubscriptionInUseException || // another client has connected to the subscription
                 ex is SubscriptionDoesNotExistException || // subscription has been deleted meanwhile
-                ex is SubscriptionClosedException // subscription has been booted by another subscription
-                || ex is DatabaseDoesNotExistException) 
+                ex is SubscriptionClosedException || // subscription has been booted by another subscription
+                ex is DatabaseDoesNotExistException ||
+                ex is AuthorizationException) 
             {
                 IsConnectionClosed = true;
                 _taskCompletionSource.TrySetException(ex);
