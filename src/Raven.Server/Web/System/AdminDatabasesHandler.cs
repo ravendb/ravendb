@@ -608,13 +608,4 @@ namespace Raven.Server.Web.System
             }
         }
     }
-
-    //public class DatabasePutResult
-    //{
-    //    public long ETag { get; set; }
-    //    public string Key { get; set; }
-    //    public DatabaseTopology Topology { get; set; }
-    //    public List<string> NodesAddedTo { get; set; }
-    //}
-
 }

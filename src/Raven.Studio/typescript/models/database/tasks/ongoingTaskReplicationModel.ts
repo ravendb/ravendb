@@ -25,7 +25,8 @@ class ongoingTaskReplicationModel extends  ongoingTask {
         super.initializeObservables();
 
         const urls = appUrl.forCurrentDatabase();
-        this.editUrl = urls.editExternalReplication(this.taskId.toString()); // ???
+        const taskIdStr = this.taskId ? this.taskId.toString() : null;
+        this.editUrl = urls.editExternalReplication(taskIdStr); 
         
         this.destDBText = ko.pureComputed(() => {
             return `(${this.destinationDB()})`;
@@ -115,7 +116,7 @@ class ongoingTaskReplicationModel extends  ongoingTask {
             TaskType: "Replication",
             DestinationDB: "simulationDB",
             DestinationURL: "http://localhost:8083",
-            TaskId: null
+            TaskId: 123456789
         });
     }
 }

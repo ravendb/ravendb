@@ -51,8 +51,7 @@ abstract class ongoingTaskModel {
     }
 
     protected update(dto: Raven.Server.Web.System.OngoingTask) {
-        // this.taskId = dto.TaskId;
-        this.taskId = 123456789; // temp....
+        this.taskId = dto.TaskId;
         this.taskType(dto.TaskType);
         this.responsibleNode(dto.ResponsibleNode);
         this.taskState(dto.TaskState);

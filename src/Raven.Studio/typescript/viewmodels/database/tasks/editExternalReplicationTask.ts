@@ -37,7 +37,8 @@ class editExternalReplicationTask extends viewModelBase {
             //    .fail(() => { ... })
             //    });
 
-            // todo: call the new ep to get info from server if there is task id in url ==> an edit action
+            // TODO: call the new ep to get info from server if there is task id in url ==> an edit action
+            // Now the following is just simulation....
             alert("Simulating getting data from server...");
             let tempTask = ongoingTaskReplication.Simulation();
             tempTask.taskId = this.taskId;
@@ -75,9 +76,6 @@ class editExternalReplicationTask extends viewModelBase {
                 this.goToOngoingTasksView();
             });
     }
-
-    //updateExternalReplication() {
-    //}
    
     cancelOperation() {
         this.goToOngoingTasksView();

@@ -30,7 +30,7 @@ class deleteOngoingTaskConfirm extends confirmViewModelBase<deleteDatabaseConfir
     }
 
     cancel() { 
-        this.deleteTask.resolve(false); // ???
+        this.deleteTask.resolve(false); 
         dialog.close(this);
     }
 }

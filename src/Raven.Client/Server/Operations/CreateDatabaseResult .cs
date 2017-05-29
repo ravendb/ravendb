@@ -29,9 +29,6 @@ namespace Raven.Client.Server.Operations
 
     }
 
-    //public class ModifyDatabaseWatchersResult : CreateDatabaseResult
-    //{
-    //}
     public class ModifyExternalReplicationResult : CreateDatabaseResult
     {
     }
