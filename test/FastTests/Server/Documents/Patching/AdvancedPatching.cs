@@ -649,7 +649,7 @@ this.Value = another.Value;
                 await store.Operations.SendAsync(new PatchOperation("Items/1", null, new PatchRequest
                 {
                     Script = @"_.forEach(this.Comments, function(comment){
-                                     PutDocument('Comments/', { 'Comment':comment });
+                                     PutDocument('Comments/' + comment, { 'Comment':comment });
                                  })",
                 }));
 
@@ -658,7 +658,7 @@ this.Value = another.Value;
                     var docs = await commands.GetAsync(0, 10);
                     Assert.Equal(4, docs.Length);
 
-                    docs = await commands.GetAsync(new[] { "Comments/1", "Comments/2", "Comments/3" });
+                    docs = await commands.GetAsync(new[] { "Comments/one", "Comments/two", "Comments/three" });
                     Assert.Equal("one", docs.ElementAt(0).Comment.ToString());
                     Assert.Equal("two", docs.ElementAt(1).Comment.ToString());
                     Assert.Equal("three", docs.ElementAt(2).Comment.ToString());
