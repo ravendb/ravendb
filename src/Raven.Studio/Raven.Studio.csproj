@@ -22,17 +22,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="wwwroot\App\views\database\settings\databaseRecord.html" />
-  </ItemGroup>
-    <Content Include="wwwroot\App\views\database\tasks\deleteOngoingTaskConfirm.html">
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </Content>
-    <Content Include="wwwroot\App\views\database\tasks\editExternalReplicationTask.html" />
-    <Content Include="wwwroot\App\views\database\tasks\ExternalReplicationTask.html">
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </Content>
   </ItemGroup>  
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics" Version="1.1.1" />

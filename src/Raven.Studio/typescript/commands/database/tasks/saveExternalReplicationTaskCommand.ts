@@ -3,13 +3,15 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class saveOngoingTasksCommand extends commandBase {
-
-    private replicationTasksToSend: Array<Raven.Client.Server.DatabaseWatcher> = [];
+   
+    private externalReplicationToSend: Raven.Client.Server.DatabaseWatcher;
 
     constructor(private newRepTask: externalReplicationDataFromUI, private db: database, private taskId?: number) {
         super();
 
-        const replicatonWatcherObject: Raven.Client.Server.DatabaseWatcher = {
+        const taskIdToSend = this.taskId ? this.taskId.toString() : null;
+
+        this.externalReplicationToSend = {
             // From UI:
             ApiKey: newRepTask.ApiKey,
             Database: newRepTask.DestinationDB,
@@ -21,10 +23,8 @@ class saveOngoingTasksCommand extends commandBase {
             IgnoredClient: false,
             NodeTag: null,
             SpecifiedCollections: null,
-            TransitiveReplicationBehavior: null,
-            CurrentTaskId: taskId
+            CurrentTaskId: taskIdToSend
         };
-        this.replicationTasksToSend.push(replicatonWatcherObject);
     }
 
     execute(): JQueryPromise<Raven.Client.Server.Operations.ModifyExternalReplicationResult> {
@@ -38,13 +38,13 @@ class saveOngoingTasksCommand extends commandBase {
     }
 
     private addReplication(): JQueryPromise<Raven.Client.Server.Operations.ModifyExternalReplicationResult> {
-        const url = endpoints.global.adminDatabases.adminModifyWatchers + this.urlEncodeArgs({ name: this.db.name });
-        // Just for now... to be changed later to a dedicated ep...
 
+        const url = endpoints.global.ongoingTasks.adminUpdateWatcher + this.urlEncodeArgs({ name: this.db.name });
+        
         const addRepTask = $.Deferred<Raven.Client.Server.Operations.ModifyExternalReplicationResult>();
 
-        const payload = {
-            Watchers: this.replicationTasksToSend
+        const payload = {          
+            DatabaseWatcher: this.externalReplicationToSend
         };
 
         this.post(url, JSON.stringify(payload))

@@ -10,14 +10,8 @@ class createOngoingTask extends dialogViewModelBase {
         super();
     }
 
-    //activate() {
-    //}
-
     compositionComplete() {
         super.compositionComplete();
-    }
-
-    protected initObservables() {
     }
 
     newReplicationTask(task: createOngoingTask) {

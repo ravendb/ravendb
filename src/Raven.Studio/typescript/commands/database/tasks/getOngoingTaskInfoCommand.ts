@@ -8,23 +8,6 @@ class getOngoingTaskInfoCommand extends commandBase {
 
     constructor(private db: database, private taskType: Raven.Server.Web.System.OngoingTaskType, private taskId: number) {
         super();
-
-        //const replicatonWatcherObject: Raven.Client.Server.DatabaseWatcher = {
-        //    // From UI:
-        //    ApiKey: newRepTask.ApiKey,
-        //    Database: newRepTask.DestinationDB,
-        //    Url: newRepTask.DestinationURL,
-        //    // Other vals:
-        //    ClientVisibleUrl: null,
-        //    Disabled: false,
-        //    Humane: null,
-        //    IgnoredClient: false,
-        //    NodeTag: null,
-        //    SpecifiedCollections: null,
-        //    TransitiveReplicationBehavior: null,
-        //    CurrentTaskId: taskId
-        //};
-        //this.replicationTasksToSend.push(replicatonWatcherObject);
     }
 
     execute(): JQueryPromise<Raven.Client.Server.Operations.ModifyExternalReplicationResult> {
@@ -39,23 +22,9 @@ class getOngoingTaskInfoCommand extends commandBase {
 
     private getTaskInfo(): JQueryPromise<Raven.Client.Server.Operations.ModifyExternalReplicationResult> {
 
-        // TODO: Change to the dedicated ep...!!
-
-        const url = endpoints.global.adminDatabases.adminModifyWatchers + this.urlEncodeArgs({ name: this.db.name });
-
-        const addRepTask = $.Deferred<Raven.Client.Server.Operations.ModifyExternalReplicationResult>();
-
-        const payload = {
-            Watchers: this.replicationTasksToSend
-        };
-
-        this.post(url, JSON.stringify(payload))
-            .done((results: Array<Raven.Client.Server.Operations.ModifyExternalReplicationResult>) => {
-                addRepTask.resolve(results[0]);
-            })
-            .fail(response => addRepTask.reject(response));
-
-        return addRepTask;
+        // TODO: Call the dedicated ep...!!!
+       
+        return $.Deferred<Raven.Client.Server.Operations.ModifyExternalReplicationResult>();
     }
 }
 
