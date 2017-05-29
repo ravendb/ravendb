@@ -64,6 +64,7 @@ namespace TypingsGenerator
                 .WithTypeMapping(TsPrimitive.String, typeof(Guid))
                 .WithTypeMapping(TsPrimitive.String, typeof(TimeSpan))
                 .WithTypeMapping(TsPrimitive.Number, typeof(UInt32))
+                .WithTypeMapping(TsPrimitive.Number, typeof(UInt64))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(HashSet<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(List<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(IEnumerable<>))
