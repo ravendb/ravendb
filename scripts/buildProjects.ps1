@@ -1,28 +1,34 @@
 
-function BuildServer ( $srcDir, $outDir, $runtime, $specName ) {
-    if ($specName -ne 'raspberry-pi') {
-        BuildServerRegular $srcDir $outDir $runtime $specName
+function BuildServer ( $srcDir, $outDir, $spec ) {
+    if ($spec.TargetId -eq 'rpi') {
+        BuildServerArm $srcDir $outDir $spec
     } else {
-        BuildServerArm $srcDir $outDir $runtime $specName
+        BuildServerRegular $srcDir $outDir $spec
     }
 }
 
-function BuildServerRegular ( $srcDir, $outDir, $runtime, $specName ) {
+function BuildServerRegular ( $srcDir, $outDir, $spec ) {
     write-host "Building Server for $specName..."
-    #build server
+
     $output = [io.path]::combine($outDir, "Server");
-    $build = [io.path]::combine($buildDir, $runtime)
-    & dotnet publish --output $output `
-                 --runtime $runtime `
-                 --configuration "Release" $srcDir;
+    if ([string]::IsNullOrEmpty($spec.Arch)) {
+        & dotnet publish --output $output `
+            --runtime $($spec.Runtime) `
+            --configuration "Release" $srcDir;
+    } else {
+            & dotnet publish --output $output `
+                --runtime $($spec.Runtime) `
+                --configuration "Release" $srcDir `
+                /p:Platform=$($spec.Arch);
+    }
+
     CheckLastExitCode
 }
 
-function BuildServerArm ( $srcDir, $outDir, $runtime, $specName ) {
-    write-host "Building Server for $specName"
-    #build server
+function BuildServerArm ( $srcDir, $outDir, $spec ) {
+    write-host "Building Server for $($spec.Name)"
+
     $output = [io.path]::combine($outDir, "Server");
-    $build = [io.path]::combine($buildDir, $runtime);
     $bin = [io.path]::combine($srcDir, "bin");
 
     Remove-Item -Recurse -Force $bin
@@ -33,8 +39,8 @@ function BuildServerArm ( $srcDir, $outDir, $runtime, $specName ) {
     CheckLastExitCode
 }
 
-function BuildClient ( $srcDir, $specName ) {
-    write-host "Building Client for $specName..."
+function BuildClient ( $srcDir ) {
+    write-host "Building Client"
     & dotnet build --no-incremental `
                 --configuration "Release" $srcDir;
     CheckLastExitCode
@@ -61,7 +67,7 @@ function BuildStudio ( $srcDir, $version ) {
         & npm install
         CheckLastExitCode
 
-        echo "Update version.json..."
+        Write-Host "Update version.json..."
         $versionJsonPath = [io.path]::combine($srcDir, "wwwroot", "version.json")
         "{ ""Version"": ""$version"" }" | Out-File $versionJsonPath -Encoding UTF8
 
