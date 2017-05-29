@@ -16,17 +16,6 @@
                                 <!-- ko foreach: existingTasksArray() -->
                                 <li data-bind="click: $root.setSelectedTaskType.bind($root, $data)"><a data-bind="text: $data"></a></li>
                                 <!-- /ko -->
-                                
-                                <!-- todo: can be romoved... because not visible if <= 1 ...-->
-                                <!-- ko if: existingTasksArray().length === 0 -->
-                                <li data-bind="click: function() { }"><a>No tasks defined</a></li>
-                                <!-- /ko -->
-                                <!-- ko if: existingTasksArray().length > 1 -->
-                                <li class="divider"></li>
-                                <li data-bind="click: $root.setSelectedTaskType('All')"><a>All</a></li>
-                                <!-- /ko -->
-                                <!-- end of can be removed...-->
-                                
                             </ul>
                         </div>
                     </div>
@@ -56,7 +45,7 @@
                                             <h5>DESTINATION</h5>
                                             <h3>
                                                 <a title="Destination Url" class="destination-name"><i class="icon-external-replication"></i><span data-bind="text: destinationURL"></span></a>
-                                                <span title="Destination database" class="location" data-bind="text: destDBText"></span>
+                                                <span title="Destination database" class="location" data-bind="text: '(' + destinationDB() + ')'"></span>
                                                 <!-- Todo: change 'location' class name to 'destination db' ; change 'dest name' to 'dest url' ..... -->
                                             </h3>
                                         </div>
@@ -69,7 +58,7 @@
                                     <div class="actions-container">
                                         <div class="actions">
                                             <button class="btn btn-default" data-bind="click: editTask"><i class="icon-edit"></i></button>
-                                            <button class="btn btn-danger" data-bind="click: $root.removeOngoingTask.bind($root, $data)"><i class="icon-trash"></i></button> 
+                                            <button class="btn btn-danger" data-bind="click: $root.removeOngoingTask"><i class="icon-trash"></i></button> 
                                         </div>
                                     </div>
                                 </div>

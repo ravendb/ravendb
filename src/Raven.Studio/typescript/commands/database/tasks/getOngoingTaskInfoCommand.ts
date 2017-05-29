@@ -4,8 +4,6 @@ import endpoints = require("endpoints");
 
 class getOngoingTaskInfoCommand extends commandBase {
 
-    private replicationTasksToSend: Array<Raven.Client.Server.DatabaseWatcher> = [];
-
     constructor(private db: database, private taskType: Raven.Server.Web.System.OngoingTaskType, private taskId: number) {
         super();
     }
@@ -16,7 +14,7 @@ class getOngoingTaskInfoCommand extends commandBase {
                 this.reportError("Failed to get info for task of type: " + this.taskType, response.responseText, response.statusText);
             })
             .done(() => {
-                this.reportSuccess(`Info retrieved successfully for task of type: ${this.taskType}`);
+                this.reportSuccess(`Successfully retrieved information for task of type: ${this.taskType}`);
             });
     }
 

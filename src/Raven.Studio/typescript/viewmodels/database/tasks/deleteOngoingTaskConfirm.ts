@@ -7,7 +7,7 @@ import messagePublisher = require("common/messagePublisher");
 class deleteOngoingTaskConfirm extends confirmViewModelBase<deleteDatabaseConfirmResult> {
    
     deleteTask = $.Deferred<boolean>();
-    taskTypeStr = ko.observable<Raven.Server.Web.System.OngoingTaskType>("SQL");
+    taskTypeStr = ko.observable<Raven.Server.Web.System.OngoingTaskType>();
 
     constructor(private db: database, taskType: Raven.Server.Web.System.OngoingTaskType, private taskId: number) {
         super();

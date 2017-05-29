@@ -6,10 +6,6 @@ import dialogViewModelBase = require("viewModels/dialogViewModelBase");
 
 class createOngoingTask extends dialogViewModelBase {
 
-    constructor() {
-        super();
-    }
-
     compositionComplete() {
         super.compositionComplete();
     }

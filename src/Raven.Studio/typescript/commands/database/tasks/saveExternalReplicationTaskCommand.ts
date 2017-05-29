@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
-class saveOngoingTasksCommand extends commandBase {
+class saveExternalReplicationTaskCommand extends commandBase {
    
     private externalReplicationToSend: Raven.Client.Server.DatabaseWatcher;
 
@@ -17,14 +17,8 @@ class saveOngoingTasksCommand extends commandBase {
             Database: newRepTask.DestinationDB,
             Url: newRepTask.DestinationURL,
             // Other vals:
-            ClientVisibleUrl: null,
-            Disabled: false,
-            Humane: null,
-            IgnoredClient: false,
-            NodeTag: null,
-            SpecifiedCollections: null,
             CurrentTaskId: taskIdToSend
-        };
+        } as Raven.Client.Server.DatabaseWatcher;
     }
 
     execute(): JQueryPromise<Raven.Client.Server.Operations.ModifyExternalReplicationResult> {
@@ -57,5 +51,5 @@ class saveOngoingTasksCommand extends commandBase {
     }
 }
 
-export = saveOngoingTasksCommand; 
+export = saveExternalReplicationTaskCommand; 
 
