@@ -31,6 +31,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Client.Http;
+using Raven.Client.Json;
 
 namespace Raven.Server.Web.System
 {
@@ -371,7 +372,41 @@ namespace Raven.Server.Web.System
                 }
             }
         }
-        
+
+        [RavenAction("/admin/modify-custom-function", "POST", "/admin/modify-custom-function?name={databaseName:string}")]
+        public async Task ModifyCustomFunctions()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            ServerStore.EnsureNotPassive();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-modify-custom-function").ThrowOnTimeout();
+                string functions;
+                if (updateJson.TryGet("Functions", out functions) == false)
+                {
+                    throw new InvalidDataException("Functions property was not found.");
+                }
+
+                var (index, _) = await ServerStore.ModifyCustomFunctions(name, functions).ThrowOnTimeout();
+                await ServerStore.Cluster.WaitForIndexNotification(index).ThrowOnTimeout();
+
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(DatabasePutResult.ETag)] = index,
+                    });
+                    writer.Flush();
+                }                
+            }
+        }
+
         [RavenAction("/admin/modify-watchers", "POST", "/admin/modify-watchers?name={databaseName:string}")]
         public async Task ModifyWatchers()
         {

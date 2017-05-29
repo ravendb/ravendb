@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Exceptions.Patching;
+using Raven.Client.Server.Operations;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Xunit;
@@ -35,25 +36,13 @@ namespace SlowTests.Issues
                     session.Store(new SimpleUser { FirstName = "John", LastName = "Smith" });
                     session.SaveChanges();
                 }
-
-                using (var commands = store.Commands())
-                {
-                    commands
-                        .Put(
-                            Constants.Json.CustomFunctionsId,
-                            null,
-                            new
-                            {
-                                Functions =
-                                @"exports.a = function(value) { return  b(value); };
+                var functions = @"exports.a = function(value) { return  b(value); };
 exports.b = function(v) { return c(v); }
 exports.c = function(v) { throw 'oops'; }
-"
-                            });
-                }
+";
+                await store.Admin.Server.SendAsync(new ModifyCustomFunctionsOperation(store.Database, functions)).ConfigureAwait(false);
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
-                Assert.True(SpinWait.SpinUntil(() => database.Patcher.CustomFunctions != null, TimeSpan.FromSeconds(10)));
 
                 DocumentsOperationContext context;
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))

@@ -7,7 +7,6 @@ namespace Raven.Client
     {
         public class Json
         {
-            public const string CustomFunctionsId = "Raven/Javascript/Functions";
 
             private Json()
             {

@@ -534,6 +534,15 @@ namespace Raven.Server.ServerWide
             return await SendToLeaderAsync(watcherCommand);
         }
 
+        public async Task<(long, BlittableJsonReaderObject)> ModifyCustomFunctions(string dbName, string customFunctions)
+        {
+            var customFunctionsCommand = new ModifyCustomFunctionsCommand(dbName)
+            {
+                CustomFunctions = customFunctions
+            };
+            return await SendToLeaderAsync(customFunctionsCommand);
+        }
+
         public async Task<(long, BlittableJsonReaderObject)> UpdateDatabaseWatcher(string dbName, DatabaseWatcher watcher)
         {
             var addWatcherCommand = new UpdateDatabaseWatcherCommand(dbName)

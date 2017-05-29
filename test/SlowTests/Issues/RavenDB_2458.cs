@@ -11,6 +11,8 @@ using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Exceptions.Patching;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Server.Operations;
+using Raven.Client.Server.Operations.ApiKeys;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -23,16 +25,8 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                using (var commands = store.Commands())
-                {
-                    commands.Put(
-                        Constants.Json.CustomFunctionsId,
-                        null,
-                        new { Functions = "exports.test = function(value) { return 'test ' + value; };" });
-                }
-
-                var database = await GetDocumentDatabaseInstanceFor(store);
-                Assert.True(SpinWait.SpinUntil(() => database.Patcher.CustomFunctions != null, TimeSpan.FromSeconds(10)));
+                var functions = "exports.test = function(value) { return 'test ' + value; };";
+                await store.Admin.Server.SendAsync(new ModifyCustomFunctionsOperation(store.Database, functions)).ConfigureAwait(false);
 
                 using (var session = store.OpenSession())
                 {
@@ -60,50 +54,41 @@ namespace SlowTests.Issues
         public async Task CustomJavascriptFunctionsShouldBeRemovedFromPatcher()
         {
             using (var store = GetDocumentStore())
-            {
-                using (var commands = store.Commands())
+            {                
+
+                var functions = "exports.test = function(value) { return 'test ' + value; };";
+                await store.Admin.Server.SendAsync(new ModifyCustomFunctionsOperation(store.Database, functions)).ConfigureAwait(false);
+
+                using (var session = store.OpenSession())
                 {
-                    commands.Put(
-                        Constants.Json.CustomFunctionsId,
-                        null,
-                        new { Functions = "exports.test = function(value) { return 'test ' + value; };" });
-
-                    var database = await GetDocumentDatabaseInstanceFor(store);
-                    Assert.True(SpinWait.SpinUntil(() => database.Patcher.CustomFunctions != null, TimeSpan.FromSeconds(10)));
-
-                    using (var session = store.OpenSession())
+                    session.Store(new Person
                     {
-                        session.Store(new Person
-                        {
-                            Name = "Name1"
-                        });
+                        Name = "Name1"
+                    });
 
-                        session.SaveChanges();
-                    }
+                    session.SaveChanges();
+                }
 
-                    store
-                        .Operations
-                        .Send(new PatchOperation("people/1-A", null, new PatchRequest { Script = "this.Name = test(this.Name);" }));
+                store
+                    .Operations
+                    .Send(new PatchOperation("people/1-A", null, new PatchRequest { Script = "this.Name = test(this.Name);" }));
 
-                    using (var session = store.OpenSession())
-                    {
-                        var person = session.Load<Person>("people/1-A");
-                        Assert.Equal("test Name1", person.Name);
-                    }
+                using (var session = store.OpenSession())
+                {
+                    var person = session.Load<Person>("people/1-A");
+                    Assert.Equal("test Name1", person.Name);
+                }
 
-                    commands
-                        .Delete(Constants.Json.CustomFunctionsId, null);
+                await store.Admin.Server.SendAsync(new ModifyCustomFunctionsOperation(store.Database, string.Empty)).ConfigureAwait(false);
 
-                    Assert.True(SpinWait.SpinUntil(() => database.Patcher.CustomFunctions == null, TimeSpan.FromSeconds(10)));
 
-                    Assert.Throws<JavaScriptException>(
-                        () => store.Operations.Send(new PatchOperation("people/1-A", null, new PatchRequest { Script = "this.Name = test(this.Name);" })));
+                Assert.Throws<JavaScriptException>(
+                    () => store.Operations.Send(new PatchOperation("people/1-A", null, new PatchRequest { Script = "this.Name = test(this.Name);" })));
 
-                    using (var session = store.OpenSession())
-                    {
-                        var person = session.Load<Person>("people/1-A");
-                        Assert.Equal("test Name1", person.Name);
-                    }
+                using (var session = store.OpenSession())
+                {
+                    var person = session.Load<Person>("people/1-A");
+                    Assert.Equal("test Name1", person.Name);
                 }
             }
         }

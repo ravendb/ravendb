@@ -119,6 +119,8 @@ namespace Raven.Server.Documents
             }
         }
 
+        public ServerStore ServerStore => _serverStore;
+
         public DateTime LastIdleTime => new DateTime(_lastIdleTicks);
 
         public DatabaseInfoCache DatabaseInfoCache { get; set; }
@@ -570,6 +572,12 @@ namespace Raven.Server.Documents
             BackupMethods.Incremental.ToFile(GetAllStoragesEnvironmentInformation(), backupPath);
         }
 
+        /// <summary>
+        /// this event is intended for entities that are not singeltons 
+        /// per database and still need to be informed on changes to the database record.
+        /// </summary>
+        public event Action DatabaseRecordchanged;
+
         public void StateChanged(long index)
         {
             try
@@ -582,6 +590,7 @@ namespace Raven.Server.Documents
                 IndexStore.HandleDatabaseRecordChange();
                 ReplicationLoader?.HandleDatabaseRecordChange();
                 SubscriptionStorage?.HandleDatabaseValueChange();
+                OnDatabaseRecordchanged();
             }
             catch
             {
@@ -603,6 +612,11 @@ namespace Raven.Server.Documents
         {
             yield return TxMerger.GeneralWaitPerformanceMetrics;
             yield return TxMerger.TransactionPerformanceMetrics;
+        }
+
+        private void OnDatabaseRecordchanged()
+        {
+            DatabaseRecordchanged?.Invoke();
         }
     }
 

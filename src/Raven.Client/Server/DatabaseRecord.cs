@@ -55,6 +55,8 @@ namespace Raven.Client.Server
 
         public PeriodicBackupConfiguration PeriodicBackup { get; set; }
 
+        public string CustomFunctions { get; set; }
+
         public void AddIndex(IndexDefinition definition)
         {
             if (Transformers != null && Transformers.ContainsKey(definition.Name))
