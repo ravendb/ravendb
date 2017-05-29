@@ -64,8 +64,7 @@ namespace Raven.Server.Documents
                 // response to changed database.
                 // if disabled, unload
 
-                TransactionOperationContext context;
-                using (_serverStore.ContextPool.AllocateOperationContext(out context))
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
                     context.OpenReadTransaction();
                     var record = _serverStore.Cluster.ReadDatabase(context, t.dbName);
@@ -76,9 +75,8 @@ namespace Raven.Server.Documents
                         return;
                     }
 
-                    DeletionInProgressStatus deletionInProgress;
                     if (record.DeletionInProgress != null &&
-                        record.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
+                        record.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out DeletionInProgressStatus deletionInProgress) &&
                         deletionInProgress != DeletionInProgressStatus.No)
                     {
                         UnloadDatabase(t.dbName);
@@ -94,7 +92,7 @@ namespace Raven.Server.Documents
                             {
                                 configuration = null;
                                 if (_logger.IsInfoEnabled)
-                                    _logger.Info("Could not create database configuration",ex);
+                                    _logger.Info("Could not create database configuration", ex);
                             }
                             //this can happen if the database record was already deleted
                             if (configuration != null)
@@ -214,7 +212,7 @@ namespace Raven.Server.Documents
 
                             try
                             {
-                                ((IDisposable)task.Result).Dispose();
+                                task.Result.Dispose();
                             }
                             catch (Exception e)
                             {
@@ -223,7 +221,7 @@ namespace Raven.Server.Documents
                             }
                         });
                     else if (dbTask.Status == TaskStatus.RanToCompletion && dbTask.Result != null)
-                        exceptionAggregator.Execute(((IDisposable)dbTask.Result).Dispose);
+                        exceptionAggregator.Execute(dbTask.Result.Dispose);
                     // there is no else, the db is probably faulted
                 });
                 DatabasesCache.Clear();
@@ -529,17 +527,15 @@ namespace Raven.Server.Documents
 
         public void UnloadDatabase(string dbName, TimeSpan? skipIfActiveInDuration = null, Func<DocumentDatabase, bool> shouldSkip = null)
         {
-            DateTime time;
-            Task<DocumentDatabase> dbTask;
-            if (DatabasesCache.TryGetValue(dbName, out dbTask) == false)
+            if (DatabasesCache.TryGetValue(dbName, out Task<DocumentDatabase> dbTask) == false)
             {
-                LastRecentlyUsed.TryRemove(dbName, out time);
+                LastRecentlyUsed.TryRemove(dbName, out _);
                 return;
             }
             var dbTaskStatus = dbTask.Status;
             if (dbTaskStatus == TaskStatus.Faulted || dbTaskStatus == TaskStatus.Canceled)
             {
-                LastRecentlyUsed.TryRemove(dbName, out time);
+                LastRecentlyUsed.TryRemove(dbName, out _);
                 DatabasesCache.TryRemove(dbName, out dbTask);
                 return;
             }
@@ -555,7 +551,7 @@ namespace Raven.Server.Documents
 
             try
             {
-                ((IDisposable)database).Dispose();
+                database.Dispose();
             }
             catch (Exception e)
             {
@@ -563,8 +559,10 @@ namespace Raven.Server.Documents
                     _logger.Info("Could not dispose database: " + dbName, e);
             }
 
-            LastRecentlyUsed.TryRemove(dbName, out time);
+            LastRecentlyUsed.TryRemove(dbName, out _);
             DatabasesCache.TryRemove(dbName, out dbTask);
+
+            database.DatabaseShutdownCompleted.Set();
         }
     }
 }

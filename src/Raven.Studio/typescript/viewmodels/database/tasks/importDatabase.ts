@@ -50,7 +50,9 @@ class importDatabase extends viewModelBase {
             }
         });
         this.showTransformScript.subscribe(v => {
-            if (!v) {
+            if (v) {
+                this.model.transformScript("function transform(doc) {\r\n  var id = doc['@metadata']['@id'];\r\n  return doc;\r\n}");
+            } else {
                 this.model.transformScript("");
             }
         });
@@ -124,13 +126,19 @@ class importDatabase extends viewModelBase {
 
     attached() {
         super.attached();
-        $(".use-transform-script small").popover({
+        $(".scriptPopover").popover({
             html: true,
             trigger: "hover",
             template: popoverUtils.longPopoverTemplate,
             container: "body",
-            content: "Transform scripts are written in JavaScript. <br/>" +
-                "Example:<pre><span class=\"token keyword\">function</span>(doc) {<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">var</span> id = doc['@metadata']['@id'];<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">if</span> (id === 'orders/999')<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">return null</span>;<br /><br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">return</span> doc;<br />}</pre>"
+            content:
+            "<div class=\"text-center\">Transform scripts are written in JavaScript </div>" +
+            "<pre><span class=\"token keyword\">function </span>transform(doc) " +
+            "{<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">var</span> id = doc['@metadata']['@id'];<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" +
+            "<span class=\"token keyword\">if</span> (id === 'orders/999')<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" +
+            "<span class=\"token keyword\">return null</span>; <span class=\"token comment\">// filter-out</span><br /><br />" +
+            "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">this</span>.Freight = <span class=\"token number\">15.3</span>;<br />" +
+            "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">return</span> doc;<br />}</pre>"
         });
         this.updateHelpLink("YD9M1R");
     }

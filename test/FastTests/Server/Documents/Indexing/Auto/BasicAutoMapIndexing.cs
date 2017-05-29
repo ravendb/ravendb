@@ -115,9 +115,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.True(etag2 > 0);
 
                 var index2 = database.IndexStore.GetIndex(etag2);
-                index2.SetLock(IndexLockMode.LockedError);
-                index2.SetPriority(IndexPriority.Low);
+
+                var task =  Task.WhenAll(database.IndexStore.SetLock(index2.Name, IndexLockMode.LockedError), 
+                    database.IndexStore.SetPriority(index2.Name, IndexPriority.Low));
                 index2.SetState(IndexState.Disabled);
+                await task;
 
                 Server.ServerStore.DatabasesLandlord.UnloadDatabase(dbName);
 
@@ -157,13 +159,13 @@ namespace FastTests.Server.Documents.Indexing.Auto
         public async Task CanDelete()
         {
             using (var database = CreateDocumentDatabase())
-                await CanDelete(database);
+                await CanDeleteInternal(database);
 
             using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
-                await CanDelete(database);
+                await CanDeleteInternal(database);
         }
 
-        private static async Task CanDelete(DocumentDatabase database)
+        private static async Task CanDeleteInternal(DocumentDatabase database)
         {
             var def1 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } });
             var index1 =
@@ -209,13 +211,13 @@ namespace FastTests.Server.Documents.Indexing.Auto
         public async Task CanReset()
         {
             using (var database = CreateDocumentDatabase())
-                await CanReset(database);
+                await CanResetInternal(database);
 
             using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
-                await CanReset(database);
+                await CanResetInternal(database);
         }
 
-        private static async Task CanReset(DocumentDatabase database)
+        private static async Task CanResetInternal(DocumentDatabase database)
         {
             var def1 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } });
             var index1 = await database.IndexStore.CreateIndex(def1);
@@ -1183,8 +1185,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         private async Task ModifyDatabaseSettings(string databaseName, Action<DatabaseRecord> modifySettings)
         {
-            TransactionOperationContext context;
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 context.OpenReadTransaction();
 

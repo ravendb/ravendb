@@ -20,7 +20,7 @@
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" Version="0.10.4" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.10.6" />
     <PackageReference Include="xunit" Version="2.3.0-beta2-build3656" />
   </ItemGroup>
   <ItemGroup>

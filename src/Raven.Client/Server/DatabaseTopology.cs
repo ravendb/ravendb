@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Replication;
+using Raven.Client.Extensions;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Server
@@ -99,15 +101,26 @@ namespace Raven.Client.Server
     {
     }
 
-    public class DatabaseWatcher : ReplicationNode, IDatabaseTask
+    public class DatabaseWatcher : ReplicationNode, IDatabaseTask, IDynamicJsonValueConvertible
     {
         public string ApiKey;
+        public string CurrentTaskId;
+        //TODO: change to ulong after grisha's fix is merged
+
 
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(ApiKey)] = ApiKey;
+            json[nameof(CurrentTaskId)] = CurrentTaskId;
             return json;
+        }
+
+        public override ulong GetTaskKey()
+        {
+            var hashCode = CalculateStringHash(Database);
+            hashCode = (hashCode * 397) ^ CalculateStringHash(Url);
+            return hashCode;
         }
     }
     
@@ -115,7 +128,8 @@ namespace Raven.Client.Server
     {
         public List<DatabaseTopologyNode> Members = new List<DatabaseTopologyNode>(); // Member of the master to master replication inside cluster
         public List<DatabaseTopologyNode> Promotables = new List<DatabaseTopologyNode>(); // Promotable is in a receive state until Leader decides it can become a Member
-        public List<DatabaseWatcher> Watchers = new List<DatabaseWatcher>(); // Watcher only receives (slave)
+        public Dictionary<string, DatabaseWatcher> Watchers = new Dictionary<string, DatabaseWatcher>(); // Watcher only receives (slave)
+        //TODO: change from string to ulong after grisha's fix is merged
 
         public bool RelevantFor(string nodeTag)
         {
@@ -137,7 +151,7 @@ namespace Raven.Client.Server
                 if (WhoseTaskIsIt(promotable) == nodeTag)
                     list.Add(promotable);
             }
-            foreach (var watcher in Watchers)
+            foreach (var watcher in Watchers.Values)
             {
                 if (WhoseTaskIsIt(watcher) == nodeTag)
                     list.Add(watcher);
@@ -236,7 +250,7 @@ namespace Raven.Client.Server
             {
                 [nameof(Members)] = new DynamicJsonArray(Members.Select(m => m.ToJson())),
                 [nameof(Promotables)] = new DynamicJsonArray(Promotables.Select(p => p.ToJson())),
-                [nameof(Watchers)] = new DynamicJsonArray(Watchers.Select(w => w.ToJson())),
+                [nameof(Watchers)] = Watchers.ToJsonWithConvertible()
             };
         }
 

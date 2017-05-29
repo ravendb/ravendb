@@ -7,8 +7,10 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
@@ -85,6 +87,17 @@ namespace Raven.Server.ServerWide
                 case nameof(DeleteValueCommand):
                     DeleteValue(context, cmd, index, leader);
                     break;
+                case nameof(IncrementClusterIdentityCommand):
+                    var updatedDatabaseRecord = UpdateDatabase(context, type, cmd, index, leader);
+                    if (!cmd.TryGet(nameof(IncrementClusterIdentityCommand.Prefix), out string prefix))
+                    {
+                        NotifyLeaderAboutError(index, leader, 
+                            new InvalidDataException($"Expected to find {nameof(IncrementClusterIdentityCommand)}.{nameof(IncrementClusterIdentityCommand.Prefix)} property in the Raft command but didn't find it..."));
+                        return;
+                    }
+
+                    leader?.SetStateOf(index,updatedDatabaseRecord.Identities[prefix]);
+                    break;
                 case nameof(PutIndexCommand):
                 case nameof(PutAutoIndexCommand):
                 case nameof(DeleteIndexCommand):
@@ -102,6 +115,8 @@ namespace Raven.Server.ServerWide
                 case nameof(ModifyConflictSolverCommand):
                 case nameof(UpdateTopologyCommand):
                 case nameof(DeleteDatabaseCommand):
+                case nameof(ModifyCustomFunctionsCommand):
+                case nameof(UpdateDatabaseWatcherCommand):
                     UpdateDatabase(context, type, cmd, index, leader);
                     break;
                 case nameof(UpdatePeriodicBackupStatusCommand):
@@ -182,6 +197,7 @@ namespace Raven.Server.ServerWide
         }
 
         private readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
+
         public async Task WaitForIndexNotification(long index)
         {
             await _rachisLogIndexNotifications.WaitForIndexNotification(index, _parent.RemoteOperationTimeout);
@@ -192,7 +208,8 @@ namespace Raven.Server.ServerWide
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             var remove = JsonDeserializationCluster.RemoveNodeFromDatabaseCommand(cmd);
             var databaseName = remove.DatabaseName;
-            using (Slice.From(context.Allocator, "db/" + databaseName.ToLowerInvariant(), out Slice lowerKey))
+            var databaseNameLowered = databaseName.ToLowerInvariant();
+            using (Slice.From(context.Allocator, "db/" + databaseNameLowered, out Slice lowerKey))
             using (Slice.From(context.Allocator, "db/" + databaseName, out Slice key))
             {
                 if (items.ReadByKey(lowerKey, out TableValueReader reader) == false)
@@ -216,7 +233,13 @@ namespace Raven.Server.ServerWide
                     databaseRecord.Topology.Promotables.Count == 0 &&
                     databaseRecord.Topology.Watchers.Count == 0)
                 {
+                    // delete database record
                     items.DeleteByKey(lowerKey);
+
+                    // delete all values linked to database record - for subscription, etl etc.
+                    CleanupDatabaseRelatedValues(context, items, databaseName);
+
+                    items.DeleteByPrimaryKeyPrefix(lowerKey);
                     NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
                     return;
                 }
@@ -226,6 +249,16 @@ namespace Raven.Server.ServerWide
                 UpdateValue(index, items, lowerKey, key, updated);
 
                 NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
+            }
+        }
+
+        private void CleanupDatabaseRelatedValues(TransactionOperationContext context, Table items, string dbNameLowered)
+        {
+            var subscriptionItemsPrefix = SubscriptionState.GenerateSubscriptionPrefix(dbNameLowered).ToLowerInvariant();
+            using (Slice.From(context.Allocator, subscriptionItemsPrefix, out Slice loweredKey))
+            {
+                
+                items.DeleteByPrimaryKeyPrefix(loweredKey);
             }
         }
 
@@ -410,11 +443,12 @@ namespace Raven.Server.ServerWide
 
         private static readonly StringSegment DatabaseName = new StringSegment("DatabaseName");
 
-        private void UpdateDatabase(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private DatabaseRecord UpdateDatabase(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             if (cmd.TryGet(DatabaseName, out string databaseName) == false)
                 throw new ArgumentException("Update database command must contain a DatabaseName property");
 
+            DatabaseRecord databaseRecord;
             try
             {
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
@@ -428,17 +462,17 @@ namespace Raven.Server.ServerWide
                     if (doc == null)
                     {
                         NotifyLeaderAboutError(index, leader, new DatabaseDoesNotExistException($"Cannot execute update command of type {type} for {databaseName} because it does not exists"));
-                        return;
+                        return null;
                     }
 
-                    var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
+                    databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
                     var updateCommand = JsonDeserializationCluster.UpdateDatabaseCommands[type](cmd);
 
                     if (updateCommand.Etag != null && etag != updateCommand.Etag.Value)
                     {
                         NotifyLeaderAboutError(index, leader,
                             new ConcurrencyException($"Concurrency violation at executing {type} command, the database {databaseRecord.DatabaseName} has etag {etag} but was expecting {updateCommand.Etag}"));
-                        return;
+                        return null;
                     }
 
                     try
@@ -457,7 +491,7 @@ namespace Raven.Server.ServerWide
                     catch (Exception e)
                     {
                         NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute command of type {type} for database {databaseName}", e));
-                        return;
+                        return null;
                     }
 
                     var updatedDatabaseBlittable = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
@@ -469,6 +503,8 @@ namespace Raven.Server.ServerWide
             {
                 NotifyDatabaseChanged(context, databaseName, index, type);
             }
+
+            return databaseRecord;
         }
 
         private static void NotifyLeaderAboutError(long index, Leader leader, Exception e)
@@ -629,11 +665,11 @@ namespace Raven.Server.ServerWide
 
             var tcpInfo = new Uri(info.Url);
             var tcpClient = new TcpClient();
-            NetworkStream stream = null;
+            Stream stream = null;
             try
             {
                 await tcpClient.ConnectAsync(tcpInfo.Host, tcpInfo.Port);
-                stream = tcpClient.GetStream();
+                stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info);
 
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out JsonOperationContext context))
                 {
@@ -718,14 +754,15 @@ namespace Raven.Server.ServerWide
                 }
                 else if (timeoutTask == await Task.WhenAny(task, timeoutTask))
                 {
-                    ThrowTimeoutException(timeout.Value, index);
+                    ThrowTimeoutException(timeout.Value, index, _lastModifiedIndex);
                 }
             }
         }
 
-        private static void ThrowTimeoutException(TimeSpan value, long index)
+        private static void ThrowTimeoutException(TimeSpan value, long index, long lastModifiedIndex)
         {
-            throw new TimeoutException("Waited for " + value + " but didn't get index notification for " + index);
+            throw new TimeoutException($"Waited for {value} but didn't get index notification for {index}. " +
+                                       $"Last commit index is: {lastModifiedIndex}.");
         }
 
         public void NotifyListenersAbout(long index)

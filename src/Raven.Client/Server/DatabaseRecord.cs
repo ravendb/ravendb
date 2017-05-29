@@ -47,6 +47,8 @@ namespace Raven.Client.Server
         //todo: see how we can protect this
         public Dictionary<string, TransformerDefinition> Transformers;
 
+        public Dictionary<string, long> Identities;
+
         public Dictionary<string, string> Settings;
 
         public Dictionary<string, string> SecuredSettings { get; set; }
@@ -56,6 +58,8 @@ namespace Raven.Client.Server
         public ExpirationConfiguration Expiration { get; set; }
 
         public List<PeriodicBackupConfiguration> PeriodicBackups { get; set; }
+
+        public string CustomFunctions { get; set; }
 
         public void AddIndex(IndexDefinition definition)
         {

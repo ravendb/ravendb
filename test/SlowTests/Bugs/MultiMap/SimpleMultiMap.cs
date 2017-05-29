@@ -3,6 +3,7 @@ using FastTests;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Sparrow.Utils;
 using Xunit;
 
 namespace SlowTests.Bugs.MultiMap
@@ -20,12 +21,12 @@ namespace SlowTests.Bugs.MultiMap
                 var indexDefinition = store.Admin.Send(new GetIndexOperation("CatsAndDogs"));
 
                 Assert.Equal(2, indexDefinition.Maps.Count);
-                Assert.Equal(@"docs.Cats.Select(cat => new {
+                Assert.Equal(Dos2Linux.String(@"docs.Cats.Select(cat => new {
     Name = cat.Name
-})", indexDefinition.Maps.First());
-                Assert.Equal(@"docs.Dogs.Select(dog => new {
+})"), indexDefinition.Maps.First());
+                Assert.Equal(Dos2Linux.String(@"docs.Dogs.Select(dog => new {
     Name = dog.Name
-})", indexDefinition.Maps.Skip(1).First());
+})"), indexDefinition.Maps.Skip(1).First());
             }
         }
 

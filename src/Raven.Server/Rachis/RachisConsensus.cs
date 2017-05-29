@@ -10,7 +10,8 @@ using System.Threading.Tasks;
 using Raven.Client.Exceptions;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.ServerWide.Maintance;
+using Raven.Server.ServerWide.Maintenance;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -88,7 +89,9 @@ namespace Raven.Server.Rachis
 
         public State CurrentState { get; private set; }
         public TimeoutEvent Timeout { get; private set; }
-        public TimeSpan RemoteOperationTimeout { get; private set; }
+
+
+        public TimeSpan RemoteOperationTimeout;
 
         public string LastStateChangeReason => _lastStateChangeReason;
 
@@ -152,6 +155,7 @@ namespace Raven.Server.Rachis
         public TimeSpan ElectionTimeout;
 
         private Leader _currentLeader;
+        public Leader CurrentLeader => _currentLeader;
         private TaskCompletionSource<object> _topologyChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         private TaskCompletionSource<object> _stateChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         private TaskCompletionSource<object> _commitIndexChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -169,12 +173,13 @@ namespace Raven.Server.Rachis
             try
             {
                 _persistentState = env;
+
                 RemoteOperationTimeout = configuration.ClusterOperationTimeout.AsTimeSpan;
                 ElectionTimeout = configuration.ElectionTimeout.AsTimeSpan;
-                if (Debugger.IsAttached)
-                {
-                    ElectionTimeout = TimeSpan.FromMilliseconds(ElectionTimeout.TotalMilliseconds * 10);
-                }
+
+                MiscUtils.LongTimespanIfDebugging(ref RemoteOperationTimeout);
+                MiscUtils.LongTimespanIfDebugging(ref ElectionTimeout);
+
                 ContextPool = new TransactionContextPool(_persistentState);
 
                 ClusterTopology topology;
@@ -187,7 +192,6 @@ namespace Raven.Server.Rachis
                     _tag = readResult == null ? "?" : readResult.Reader.ToStringValue();
 
                     Log = LoggingSource.Instance.GetLogger<RachisConsensus>(_tag);
-
                     LogsTable.Create(tx.InnerTransaction, EntriesSlice, 16);
 
                     var read = state.Read(CurrentTermSlice);
@@ -207,8 +211,7 @@ namespace Raven.Server.Rachis
                 }
                 //We want to be able to reproduce rare issues that are related to timing
                 var rand = _seed.HasValue ? new Random(_seed.Value) : new Random();
-                Timeout = new TimeoutEvent(rand.Next((int)Math.Max(int.MaxValue, ElectionTimeout.TotalMilliseconds / 3 * 2),
-                    (int)Math.Max(int.MaxValue, ElectionTimeout.TotalMilliseconds)));
+                Timeout = new TimeoutEvent(rand.Next((int)(ElectionTimeout.TotalMilliseconds / 3 * 2),(int)ElectionTimeout.TotalMilliseconds));
 
                 // if we don't have a topology id, then we are passive
                 // an admin needs to let us know that it is fine, either
@@ -425,7 +428,7 @@ namespace Raven.Server.Rachis
             leader.Start();
         }
 
-        public Task<(long, BlittableJsonReaderObject)> PutAsync(BlittableJsonReaderObject cmd)
+        public Task<(long, object)> PutAsync(BlittableJsonReaderObject cmd)
         {
             var leader = _currentLeader;
             if (leader == null)
@@ -550,12 +553,12 @@ namespace Raven.Server.Rachis
         /// This method is expected to run for a long time (lifetime of the connection)
         /// and can never throw. We expect this to be on a separate thread
         /// </summary>
-        public void AcceptNewConnection(TcpClient tcpClient, Action<RachisHello> sayHello = null)
+        public void AcceptNewConnection(Stream stream, Action<RachisHello> sayHello = null)
         {
             RemoteConnection remoteConnection = null;
             try
             {
-                remoteConnection = new RemoteConnection(_tag, tcpClient.GetStream());
+                remoteConnection = new RemoteConnection(_tag, stream);
                 try
                 {
                     RachisHello initialMessage;
@@ -613,15 +616,19 @@ namespace Raven.Server.Rachis
                                                                   initialMessage.InitialMessageType +
                                                                   ", no idea how to handle it");
                     }
-
-                    //initialMessage.AppendEntries
-                    // validate that can handle this
-                    // start listening thread
                 }
                 catch (Exception e)
                 {
-                    using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                        remoteConnection.Send(context, e);
+                    try
+                    {
+                        using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                            remoteConnection.Send(context, e);
+                    }
+                    catch 
+                    {
+                        // errors here do not matter
+                    }
+                    throw;
                 }
             }
             catch (Exception e)
@@ -641,7 +648,7 @@ namespace Raven.Server.Rachis
 
                 try
                 {
-                    tcpClient?.Dispose();
+                    stream?.Dispose();
                 }
                 catch (Exception)
                 {

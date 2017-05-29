@@ -12,7 +12,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Utils;
 
-namespace Raven.Server.ServerWide.Maintance
+namespace Raven.Server.ServerWide.Maintenance
 {
     class ClusterObserver : IDisposable
     {
@@ -65,7 +65,7 @@ namespace Raven.Server.ServerWide.Maintance
                 {
                     if (_logger.IsInfoEnabled)
                     {
-                        _logger.Info($"Closing observer on {_nodeTag}, caused by an interrupt.", e);
+                        _logger.Info($"An error occured while analyzing maintainance stats on node {_nodeTag}.", e);
                     }
                 }
                 finally
@@ -215,7 +215,7 @@ namespace Raven.Server.ServerWide.Maintance
                         topology.Members.Add(promotable);
                         if (_logger.IsOperationsEnabled)
                         {
-                            _logger.Operations($"We promte the database {dbName} on {promotable.NodeTag} to be a full member");
+                            _logger.Operations($"We promote the database {dbName} on {promotable.NodeTag} to be a full member");
                         }
                         return true;
                     }
@@ -251,7 +251,7 @@ namespace Raven.Server.ServerWide.Maintance
             will be either fully caught up (non stale) or that they are at most a single cycle behind.
 
             This is check by looking at the global etag from the previous round, and comparing it to the 
-            last etag that each index indexed in the current round. Note that techincally, we need to compare
+            last etag that each index indexed in the current round. Note that technically, we need to compare
             on a per collection basis, but we can avoid it by noting that if the collection's last etag is
             not beyond the previous max etag, then the index will therefor not be non stale.
 
@@ -274,7 +274,7 @@ namespace Raven.Server.ServerWide.Maintance
             return true;
         }
 
-        private Task<(long, BlittableJsonReaderObject)> UpdateTopology(BlittableJsonReaderObject cmd)
+        private Task<(long, object)> UpdateTopology(BlittableJsonReaderObject cmd)
         {
             
             if (_engine.LeaderTag != _server.NodeTag)

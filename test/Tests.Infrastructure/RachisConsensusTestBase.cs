@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using Raven.Server.Config.Settings;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.ServerWide.Maintance;
+using Raven.Server.ServerWide.Maintenance;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -156,7 +156,7 @@ namespace Tests.Infrastructure
                 {
                     break;
                 }
-                rachis.AcceptNewConnection(tcpClient, hello =>
+                rachis.AcceptNewConnection(tcpClient.GetStream(), hello =>
                 {
                     lock (this)
                     {

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.ServerWide.Maintance
+namespace Raven.Server.ServerWide.Maintenance
 {
     public enum DatabaseStatus
     {

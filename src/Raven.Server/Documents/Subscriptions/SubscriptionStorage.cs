@@ -57,13 +57,13 @@ namespace Raven.Server.Documents.Subscriptions
                 InitialChangeVector = options.ChangeVector
             };
             
-            var (etag,result) = await _serverStore.SendToLeaderAsync(command);
+            var (etag, _) = await _serverStore.SendToLeaderAsync(command);
 
             if (_logger.IsInfoEnabled)
                 _logger.Info($"New Subscription with index {etag} was created");
             
             await _db.WaitForIndexNotification(etag);
-            return SubscriptionState.GenerateSubscriptionItemName(_db.Name, etag); ;
+            return SubscriptionState.GenerateSubscriptionItemName(_db.Name, etag);
         }
 
         public SubscriptionConnectionState OpenSubscription(SubscriptionConnection connection)
@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Subscriptions
                 DbId = _db.DbId
             };
 
-            var (etag, result) = await _serverStore.SendToLeaderAsync(command);
+            var (etag, _) = await _serverStore.SendToLeaderAsync(command);
             await _db.WaitForIndexNotification(etag);            
         }
 

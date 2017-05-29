@@ -29,7 +29,7 @@ namespace Raven.Server.Web.System
                 var output = new DynamicJsonValue
                 {
                     ["Url"] = new UriBuilder("tcp", host, tcpListenerStatus.Port).Uri.ToString(),
-                    ["Certificate"] = Server.Configuration.Encryption.UseSsl ? Server.ServerCertificate.Value.CertificateForclients : null
+                    ["Certificate"] = Server.ServerCertificate?.CertificateForClients
                 };
 
                 context.Write(writer, output);

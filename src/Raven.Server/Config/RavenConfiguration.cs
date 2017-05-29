@@ -14,7 +14,7 @@ using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Maintance;
+using Raven.Server.ServerWide.Maintenance;
 using ExpressionExtensions = Raven.Server.Extensions.ExpressionExtensions;
 using Sparrow.Platform;
 
@@ -36,7 +36,7 @@ namespace Raven.Server.Config
 
         public StorageConfiguration Storage { get; }
 
-        public EncryptionConfiguration Encryption { get; }
+        public SecurityConfiguration Security { get; }
 
         public IndexingConfiguration Indexing { get; set; }
 
@@ -88,7 +88,7 @@ namespace Raven.Server.Config
             Cluster = new ClusterConfiguration();
             Etl = new EtlConfiguration();
             Storage = new StorageConfiguration();
-            Encryption = new EncryptionConfiguration();
+            Security = new SecurityConfiguration();
             PerformanceHints = new PerformanceHintsConfiguration();
             Indexing = new IndexingConfiguration(this);
             WebSockets = new WebSocketsConfiguration();
@@ -156,7 +156,7 @@ namespace Raven.Server.Config
             BulkInsert.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Memory.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Storage.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Encryption.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Security.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Indexing.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Monitoring.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Expiration.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
@@ -181,8 +181,8 @@ namespace Raven.Server.Config
 
         public void CopyParentSettings(RavenConfiguration serverConfiguration)
         {
-            Encryption.UseSsl = serverConfiguration.Encryption.UseSsl;
-            Encryption.UseFips = serverConfiguration.Encryption.UseFips;
+            Security.CertificatePassword = serverConfiguration.Security.CertificatePassword;
+            Security.CertificateFilePath = serverConfiguration.Security.CertificateFilePath;
 
             Storage.ForceUsing32BitsPager = serverConfiguration.Storage.ForceUsing32BitsPager;
 

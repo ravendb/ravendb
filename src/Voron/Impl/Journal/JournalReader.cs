@@ -145,7 +145,7 @@ namespace Voron.Impl.Journal
                     _diffApplier.Diff = outputPage + totalRead;
                     _diffApplier.Size = pageInfoPtr[i].Size;
                     _diffApplier.DiffSize = pageInfoPtr[i].DiffSize;
-                    _diffApplier.Apply();
+                    _diffApplier.Apply(pageInfoPtr[i].IsNewDiff);
                     totalRead += pageInfoPtr[i].DiffSize;
                 }
 

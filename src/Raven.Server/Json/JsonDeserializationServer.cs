@@ -18,7 +18,7 @@ using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Studio;
 using Raven.Server.ServerWide.BackgroundTasks;
-using Raven.Server.ServerWide.Maintance;
+using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 using Facet = Raven.Client.Documents.Queries.Facets.Facet;

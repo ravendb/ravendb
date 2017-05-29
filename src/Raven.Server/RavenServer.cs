@@ -14,12 +14,14 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.Kestrel;
 using Microsoft.Extensions.DependencyInjection;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Replication;
@@ -27,7 +29,7 @@ using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.BackgroundTasks;
-using Raven.Server.ServerWide.Maintance;
+using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
@@ -130,12 +132,22 @@ namespace Raven.Server
 
             try
             {
+                Action<KestrelServerOptions> kestrelOptions = options => options.ShutdownTimeout = TimeSpan.FromSeconds(1);
+
+                if (Configuration.Security.CertificateFilePath != null)
+                {
+                    ServerCertificate = LoadCertificate(Configuration.Security);
+                    
+                    kestrelOptions += options => options.UseHttps(ServerCertificate.Certificate);
+                    
+                    // Enforce https in all network activities
+                    if (Configuration.Core.ServerUrl.StartsWith("http:", StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidOperationException("When the `Raven/Certificate/Path` is specified, the `Raven/ServerUrl` must be using https, but was " + Configuration.Core.ServerUrl);
+                }
+
                 _webHost = new WebHostBuilder()
                     .CaptureStartupErrors(captureStartupErrors: true)
-                    .UseKestrel(options =>
-                    {
-                        options.ShutdownTimeout = TimeSpan.FromSeconds(1);
-                    })
+                    .UseKestrel(kestrelOptions)
                     .UseUrls(Configuration.Core.ServerUrl)
                     .UseStartup<RavenServerStartup>()
                     .ConfigureServices(services =>
@@ -193,25 +205,35 @@ namespace Raven.Server
         public string[] WebUrls { get; set; }
 
         private readonly JsonContextPool _tcpContextPool = new JsonContextPool();
-
-        internal readonly Lazy<CertificateHolder> ServerCertificate = new Lazy<CertificateHolder>(GenerateSelfSignedCertificate);
+        
+        internal CertificateHolder ServerCertificate;
 
         public class CertificateHolder
         {
-            public string CertificateForclients;
+            public string CertificateForClients;
             public X509Certificate2 Certificate;
         }
 
-        private static CertificateHolder GenerateSelfSignedCertificate()
+        private static CertificateHolder LoadCertificate(SecurityConfiguration config)
         {
-            var generateSelfSignedCertificate = CertificateUtils.CreateSelfSignedCertificate("RavenDB", "Hibernating Rhinos");
-            return new CertificateHolder
+            try
             {
-                Certificate = generateSelfSignedCertificate,
-                CertificateForclients = Convert.ToBase64String(generateSelfSignedCertificate.Export(X509ContentType.Cert))
-            };
-        }
+                var loadedCertificate = config.CertificatePassword == null
+                    ? new X509Certificate2(File.ReadAllBytes(config.CertificateFilePath))
+                    : new X509Certificate2(File.ReadAllBytes(config.CertificateFilePath), config.CertificatePassword);
 
+                return new CertificateHolder
+                {
+                    Certificate = loadedCertificate,
+                    CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert))
+                };
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Could not load certificate file {config.CertificateFilePath}, please check the path and password", e);
+            }
+        }
+        
         public class TcpListenerStatus
         {
             public readonly List<TcpListener> Listeners = new List<TcpListener>();
@@ -363,8 +385,7 @@ namespace Raven.Server
                     try
                     {
                         TcpConnectionHeaderMessage header;
-                        JsonOperationContext context;
-                        using (_tcpContextPool.AllocateOperationContext(out context))
+                        using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
                         {
                             using (var headerJson = await context.ParseToMemoryAsync(
                                 stream,
@@ -392,7 +413,7 @@ namespace Raven.Server
                             }
                         }
 
-                        if (await DispatchServerwideTcpConnection(tcp, header, tcpClient))
+                        if (await DispatchServerwideTcpConnection(tcp, header))
                         {
                             tcp = null; //do not keep reference -> tcp will be disposed by server-wide connection handlers
                             return;
@@ -403,22 +424,9 @@ namespace Raven.Server
                     catch (Exception e)
                     {
                         if (_tcpLogger.IsInfoEnabled)
-                        {
                             _tcpLogger.Info("Failed to process TCP connection run", e);
-                        }
-                        if (tcp != null)
-                        {
-                            using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
-                            using (var errorWriter = new BlittableJsonTextWriter(context, tcp.Stream))
-                            {
-                                context.Write(errorWriter, new DynamicJsonValue
-                                {
-                                    ["Type"] = "Error",
-                                    ["Exception"] = e.ToString(),
-                                    ["Message"] = e.Message
-                                });
-                            }
-                        }
+
+                        SendErrorIfPossible(tcp, e);
                     }
                 }
                 catch (Exception e)
@@ -431,14 +439,40 @@ namespace Raven.Server
             });
         }
 
-        private ClusterMaintenanceWorker _clusterMaintainanceWorker;
+        private void SendErrorIfPossible(TcpConnectionOptions tcp, Exception e)
+        {
+            var tcpStream = tcp?.Stream;
+            if (tcpStream == null)
+                return;
 
-        private async Task<bool> DispatchServerwideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, TcpClient tcpClient)
+            try
+            {
+                using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
+                using (var errorWriter = new BlittableJsonTextWriter(context, tcpStream))
+                {
+                    context.Write(errorWriter, new DynamicJsonValue
+                    {
+                        ["Type"] = "Error",
+                        ["Exception"] = e.ToString(),
+                        ["Message"] = e.Message
+                    });
+                }
+            }
+            catch (Exception inner)
+            {
+                if (_tcpLogger.IsInfoEnabled)
+                    _tcpLogger.Info("Failed to send error in TCP connection", inner);
+            }
+        }
+
+        private ClusterMaintenanceWorker _clusterMaintenanceWorker;
+
+        private async Task<bool> DispatchServerwideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header)
         {
             tcp.Operation = header.Operation;
             if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster)
             {
-                ServerStore.ClusterAcceptNewConnection(tcpClient);
+                ServerStore.ClusterAcceptNewConnection(tcp.Stream);
                 return true;
             }
 
@@ -448,7 +482,7 @@ namespace Raven.Server
                 using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
                 using (var headerJson = await context.ParseToMemoryAsync(
                     tcp.Stream,
-                    "maintance-heartbeat-header",
+                    "maintenance-heartbeat-header",
                     BlittableJsonDocumentBuilder.UsageMode.None,
                     tcp.PinnedBuffer
                 ))
@@ -456,21 +490,21 @@ namespace Raven.Server
                     
                     var maintenanceHeader = JsonDeserializationRachis<ClusterMaintenanceSupervisor.ClusterMaintenanceConnectionHeader>.Deserialize(headerJson);
                     
-                    if (_clusterMaintainanceWorker?.CurrentTerm > maintenanceHeader.Term)
+                    if (_clusterMaintenanceWorker?.CurrentTerm > maintenanceHeader.Term)
                     {
                         if (_tcpLogger.IsInfoEnabled)
                         {
                             _tcpLogger.Info($"Request for maintainance with term {maintenanceHeader.Term} was rejected, " +
-                                            $"because we are already connected to the recent leader with the term {_clusterMaintainanceWorker.CurrentTerm}");
+                                            $"because we are already connected to the recent leader with the term {_clusterMaintenanceWorker.CurrentTerm}");
                         }
                         tcp.Dispose();
                         return true;
                     }
-                    var old = _clusterMaintainanceWorker;
+                    var old = _clusterMaintenanceWorker;
                     using (old)
                     {
-                        _clusterMaintainanceWorker = new ClusterMaintenanceWorker(tcp, ServerStore.ServerShutdown, ServerStore, maintenanceHeader.Term);
-                        _clusterMaintainanceWorker.Start();
+                        _clusterMaintenanceWorker = new ClusterMaintenanceWorker(tcp, ServerStore.ServerShutdown, ServerStore, maintenanceHeader.Term);
+                        _clusterMaintenanceWorker.Start();
                     }
                     return true;
                 }
@@ -531,7 +565,7 @@ namespace Raven.Server
 
         private async Task<Stream> AuthenticateAsServerIfSslNeeded(Stream stream)
         {
-            if (Configuration.Encryption.UseSsl)
+            if (ServerCertificate != null)
             {
                 SslStream sslStream = new SslStream(stream, false, (sender, certificate, chain, errors) =>
                 {
@@ -541,7 +575,7 @@ namespace Raven.Server
                            errors == SslPolicyErrors.RemoteCertificateNotAvailable;
                 });
                 stream = sslStream;
-                await sslStream.AuthenticateAsServerAsync(ServerCertificate.Value.Certificate, true, SslProtocols.Tls12, false);
+                await sslStream.AuthenticateAsServerAsync(ServerCertificate.Certificate, true, SslProtocols.Tls12, false);
             }
 
             return stream;

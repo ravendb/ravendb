@@ -7,19 +7,16 @@ namespace Micro.Benchmark.Tests
 {
     public class PageLocatorTests
     {
-        public static IEnumerable<int> CacheSize
+        public static IEnumerable<object[]> CacheSize => new[]
         {
-            get
-            {
-                yield return 1;
-                yield return 4;
-                yield return 8;
-                yield return 16;
-                yield return 33;
-                yield return 122;
-                yield return 128;
-            }
-        }
+            new object[] {1},
+            new object[] {4},
+            new object[] {8},
+            new object[] {16},
+            new object[] {33},
+            new object[] {122},
+            new object[] {128}
+        };
 
         [Theory]
         [MemberData(nameof(CacheSize))]

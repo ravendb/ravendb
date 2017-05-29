@@ -1,14 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
+using Raven.Client.Http;
 using Raven.Client.Util.Helpers;
 using Raven.Server;
 using Raven.Server.Config;
@@ -19,6 +22,7 @@ using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Tests.Infrastructure;
 
 namespace FastTests
 {
@@ -65,6 +69,27 @@ namespace FastTests
             _doNotReuseServer = true;
         }
 
+        private static volatile string _selfSignedCertFileName;
+        protected static string GenerateAndSaveSelfSignedCertificate()
+        {
+            if (_selfSignedCertFileName != null)
+                return _selfSignedCertFileName;
+
+            lock (typeof(TestBase))
+            {
+                if (_selfSignedCertFileName != null)
+                    return _selfSignedCertFileName;
+
+                var selfCertificate = CertificateUtils.CreateSelfSignedCertificate(Environment.MachineName, "ReplicationBasicTestsSlow");
+                RequestExecutor.ServerCertificateCustomValidationCallback += (message, certificate2, arg3, arg4) => true;
+                var tempFileName = Path.GetTempFileName();
+                byte[] certData = selfCertificate.Export(X509ContentType.Pfx);
+                File.WriteAllBytes(tempFileName, certData);
+                _selfSignedCertFileName = tempFileName;
+                return tempFileName;
+            }
+        }
+
         private static int _serverCounter;
 
         public Task<DocumentDatabase> GetDatabase(string databaseName)
@@ -96,7 +121,7 @@ namespace FastTests
                     {
                         var globalServer = GetNewServer();
                         Console.WriteLine($"\tTo attach debugger to test process ({(PlatformDetails.Is32Bits ? "x86" : "x64")}), use proc-id: {Process.GetCurrentProcess().Id}. Url {globalServer.WebUrls[0]}");
-                        
+
                         AssemblyLoadContext.Default.Unloading += UnloadServer;
                         _globalServer = globalServer;
                     }
@@ -158,12 +183,12 @@ namespace FastTests
                 configuration.Server.Name = ServerName;
                 configuration.Core.RunInMemory = runInMemory;
                 configuration.Core.DataDirectory =
-                    configuration.Core.DataDirectory.Combine(partialPath??$"Tests{Interlocked.Increment(ref _serverCounter)}");
+                    configuration.Core.DataDirectory.Combine(partialPath ?? $"Tests{Interlocked.Increment(ref _serverCounter)}");
                 configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
-                configuration.Replication.ReplicationMinimalHeartbeat = new TimeSetting(100,TimeUnit.Milliseconds);
+                configuration.Replication.ReplicationMinimalHeartbeat = new TimeSetting(100, TimeUnit.Milliseconds);
 
                 if (deletePrevious)
-                    IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);                
+                    IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);
 
                 var server = new RavenServer(configuration);
                 server.Initialize();

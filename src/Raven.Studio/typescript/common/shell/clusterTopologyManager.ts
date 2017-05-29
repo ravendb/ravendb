@@ -19,7 +19,7 @@ class clusterTopologyManager {
     }
 
     private fetchTopology() {
-        return new getClusterTopologyCommand(window.location.host)
+        return new getClusterTopologyCommand()
             .execute()
             .done(topology => {
                 this.topology(topology);

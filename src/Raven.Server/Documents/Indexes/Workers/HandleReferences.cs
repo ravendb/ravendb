@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             return true;
         }
 
-        private bool HandleDocuments(ActionType actionType, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, int pageSize, TimeSpan maxTimeForDocumentTransactionToRemainOpen, CancellationToken token)
+        private unsafe bool HandleDocuments(ActionType actionType, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, int pageSize, TimeSpan maxTimeForDocumentTransactionToRemainOpen, CancellationToken token)
         {
             var moreWorkFound = false;
             Dictionary<string, long> lastIndexedEtagsByCollection = null;
@@ -175,9 +175,12 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     foreach (var key in _indexStorage
                                         .GetDocumentKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction))
                                     {
-                                        var doc = _documentsStorage.Get(databaseContext, key.ToString().ToLowerInvariant());
-                                        if (doc != null && doc.Etag <= lastIndexedEtag)
-                                            documents.Add(doc);
+                                        using (DocumentIdWorker.GetLower(databaseContext.Allocator, key.Content.Ptr, key.Size, out var loweredKey))
+                                        {
+                                            var doc = _documentsStorage.Get(databaseContext, loweredKey);
+                                            if (doc != null && doc.Etag <= lastIndexedEtag)
+                                                documents.Add(doc);
+                                        }
                                     }
 
                                     using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext, collectionStats))

@@ -10,6 +10,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using FastTests.Server.Documents.Notifications;
+using Raven.Client.Extensions;
 using Raven.Client.Server.Operations;
 using Raven.Server;
 using Raven.Server.Rachis;
@@ -25,14 +26,16 @@ namespace RachisTests
         {
             public int MaxId;
         }
-        private readonly TimeSpan _reasonableWaitTime = TimeSpan.FromSeconds(6000);
+        private readonly TimeSpan _reasonableWaitTime = TimeSpan.FromSeconds(20);
+
         [Fact]
         public async Task ContinueFromThePointIStopped()
         {
-            var leader = await this.CreateRaftClusterAndGetLeader(5);
+            const int nodesAmount = 5;
+            var leader = await this.CreateRaftClusterAndGetLeader(nodesAmount);
 
             var defaultDatabase = "ContinueFromThePointIStopped";
-            const int nodesAmount = 5;
+            
             await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrls[0]).ConfigureAwait(false);
             
             string tag1, tag2, tag3;
@@ -76,6 +79,75 @@ namespace RachisTests
                 Assert.NotEqual(tag1, tag3);
                 Assert.NotEqual(tag2, tag3);
 
+            }
+        }
+
+        [Fact]
+        public async Task SubscripitonDeletionFromCluster()
+        {
+            const int nodesAmount = 5;
+            var leader = await this.CreateRaftClusterAndGetLeader(nodesAmount);
+
+            var defaultDatabase = "ContinueFromThePointIStopped";
+
+            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrls[0]).ConfigureAwait(false);
+            
+            using (var store = new DocumentStore
+            {
+                Url = leader.WebUrls[0],
+                Database = defaultDatabase
+            }.Initialize())
+            {
+                var usersCount = new List<User>();
+                var reachedMaxDocCountMre = new AsyncManualResetEvent();
+
+                var subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCreationOptions<User>(){});
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Peter"
+                    });
+                    await session.SaveChangesAsync();
+                }
+
+                var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
+
+                subscription.AfterAcknowledgment += () => reachedMaxDocCountMre.Set();
+                subscription.Subscribe(x => { });
+                await subscription.StartAsync();
+
+                await reachedMaxDocCountMre.WaitAsync();
+
+
+                foreach (var ravenServer in Servers)
+                {
+                    using (ravenServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        Assert.NotNull(ravenServer.ServerStore.Cluster.Read(context, subscriptionId));
+                    }
+                }
+
+                await subscription.DisposeAsync();
+
+                var deleteResult = store.Admin.Server.Send(new DeleteDatabaseOperation(defaultDatabase, hardDelete: true));
+
+                foreach (var ravenServer in Servers)
+                {
+                    await ravenServer.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, deleteResult.ETag + nodesAmount).WaitWithTimeout(TimeSpan.FromSeconds(60));
+                }
+                Thread.Sleep(2000);
+                
+                foreach (var ravenServer in Servers)
+                {
+                    using (ravenServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        Assert.Null(ravenServer.ServerStore.Cluster.Read(context, subscriptionId.ToLowerInvariant()));
+                    }
+                }
             }
         }
 

@@ -13,11 +13,10 @@ using Org.BouncyCastle.X509;
 using BigInteger = Org.BouncyCastle.Math.BigInteger;
 using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
-namespace Raven.Server
+namespace Tests.Infrastructure
 {
     public class CertificateUtils
     {
-
         public static X509Certificate2 CreateSelfSignedCertificate(string subjectName, string issuerName)
         {
             AsymmetricKeyParameter caPrivateKey;
@@ -79,7 +78,7 @@ namespace Raven.Server
             return convertedCertificate;
         }
 
-        private static X509Certificate2 CreateCertificateAuthorityCertificate(string subjectName, out AsymmetricKeyParameter CaPrivateKey)
+        private static void CreateCertificateAuthorityCertificate(string subjectName, out AsymmetricKeyParameter CaPrivateKey)
         {
             const int keyStrength = 2048;
 
@@ -123,12 +122,9 @@ namespace Raven.Server
             // selfsign certificate
             Org.BouncyCastle.X509.X509Certificate certificate = certificateGenerator.Generate(signatureFactory);
 
-            X509Certificate2 x509 = new X509Certificate2(certificate.GetEncoded());
-            x509.FriendlyName = subjectName;
-
             CaPrivateKey = issuerKeyPair.Private;
 
-            return x509;
+            return;
         }
 
     }

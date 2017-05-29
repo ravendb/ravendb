@@ -65,7 +65,6 @@ namespace Raven.Server.Documents.TcpHandlers
             if (_isDisposed)
                 return;
 
-
             Stream?.Dispose();
             TcpClient?.Dispose();
 

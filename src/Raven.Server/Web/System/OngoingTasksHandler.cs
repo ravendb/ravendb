@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Replication;
+using Raven.Client.Exceptions;
+using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.PeriodicBackup;
@@ -60,7 +64,7 @@ namespace Raven.Server.Web.System
             if (dbTopology == null)
                 return;
 
-            foreach (var watcher in dbTopology.Watchers)
+            foreach (var watcher in dbTopology.Watchers.Values)
             {
                 var tag = dbTopology.WhoseTaskIsIt(watcher);
                 var task = GetReplicationTaskInfo(clusterTopology, tag, watcher);
@@ -82,6 +86,44 @@ namespace Raven.Server.Web.System
                 TaskState = replicationNode.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
                 DestinationURL = replicationNode.Url,
             };
+        }
+
+        [RavenAction("/admin/update-watcher", "POST", "/admin/update-watcher?name={databaseName:string}")]
+        public async Task UpdateWatcher()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            ServerStore.EnsureNotPassive();
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-update-watcher");
+                if (updateJson.TryGet(nameof(DatabaseWatcher), out BlittableJsonReaderObject watcherBlittable) == false)
+                {
+                    throw new InvalidDataException("NewWatcher property was not found.");
+                }
+                using (context.OpenReadTransaction())
+                {
+                    var watcher = JsonDeserializationClient.DatabaseWatcher(watcherBlittable);
+                    var (index, _) = await ServerStore.UpdateDatabaseWatcher(name, watcher);
+                    await ServerStore.Cluster.WaitForIndexNotification(index);
+
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            [nameof(DatabasePutResult.ETag)] = index,
+                            [nameof(DatabasePutResult.Key)] = name,
+                            [nameof(OngoingTask.TaskId)] = watcher?.GetTaskKey().ToString(),
+                        });
+                        writer.Flush();
+                    }
+                }
+            }
         }
     }
 
@@ -107,6 +149,7 @@ namespace Raven.Server.Web.System
 
     public abstract class OngoingTask : IDynamicJson // Single task info - Common to all tasks types
     {
+        public ulong? TaskId { get; set; }
         public OngoingTaskType TaskType { get; set; }
         public NodeId ResponsibleNode { get; set; }
         public OngoingTaskState TaskState { get; set; }
@@ -116,6 +159,7 @@ namespace Raven.Server.Web.System
         {
             return new DynamicJsonValue 
             {
+                [nameof(TaskId)] = TaskId?.ToString(),
                 [nameof(TaskType)] = TaskType,
                 [nameof(ResponsibleNode)] = ResponsibleNode.ToJson(),
                 [nameof(TaskState)] = TaskState,

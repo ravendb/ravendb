@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Server;
 using Raven.Client.Util;
@@ -118,6 +119,8 @@ namespace Raven.Server.Documents
             }
         }
 
+        public ServerStore ServerStore => _serverStore;
+
         public DateTime LastIdleTime => new DateTime(_lastIdleTicks);
 
         public DatabaseInfoCache DatabaseInfoCache { get; set; }
@@ -137,6 +140,8 @@ namespace Raven.Server.Documents
         public RavenConfiguration Configuration { get; }
 
         public CancellationToken DatabaseShutdown => _databaseShutdown.Token;
+
+        public AsyncManualResetEvent DatabaseShutdownCompleted { get; } = new AsyncManualResetEvent();
 
         public DocumentsStorage DocumentsStorage { get; private set; }
 
@@ -168,7 +173,7 @@ namespace Raven.Server.Documents
 
         public EtlLoader EtlLoader { get; private set; }
 
-        public ConcurrentSet<TcpConnectionOptions> RunningTcpConnections = new ConcurrentSet<TcpConnectionOptions>();
+        public readonly ConcurrentSet<TcpConnectionOptions> RunningTcpConnections = new ConcurrentSet<TcpConnectionOptions>();
 
         public DateTime StartTime { get; }
 
@@ -216,9 +221,9 @@ namespace Raven.Server.Documents
             return new DatabaseUsage(this, skipUsagesCount);
         }
 
-        internal void ThrowOperationCancelled()
+        internal void ThrowDatabaseShutdown()
         {
-            throw new OperationCanceledException("The database " + Name + " is shutting down");
+            throw new DatabaseDisabledException("The database " + Name + " is shutting down");
         }
 
         public struct DatabaseUsage : IDisposable
@@ -234,10 +239,10 @@ namespace Raven.Server.Documents
                 if (_skipUsagesCount == false)
                     Interlocked.Increment(ref _parent._usages);
 
-                if (_parent._databaseShutdown.IsCancellationRequested)
+                if (_parent.DatabaseShutdown.IsCancellationRequested)
                 {
                     Dispose();
-                    _parent.ThrowOperationCancelled();
+                    _parent.ThrowDatabaseShutdown();
                 }
             }
 
@@ -567,31 +572,36 @@ namespace Raven.Server.Documents
             BackupMethods.Incremental.ToFile(GetAllStoragesEnvironmentInformation(), backupPath);
         }
 
+        /// <summary>
+        /// this event is intended for entities that are not singeltons 
+        /// per database and still need to be informed on changes to the database record.
+        /// </summary>
+        public event Action DatabaseRecordchanged;
+
         public void StateChanged(long index)
         {
             try
             {
                 if (_databaseShutdown.IsCancellationRequested)
-                    ThrowOperationCancelled();
+                    ThrowDatabaseShutdown();
 
                 TransformerStore.HandleDatabaseRecordChange();
                 BundleLoader.HandleDatabaseRecordChange();
                 IndexStore.HandleDatabaseRecordChange();
                 ReplicationLoader?.HandleDatabaseRecordChange();
                 SubscriptionStorage?.HandleDatabaseValueChange();
+                OnDatabaseRecordchanged();
             }
             catch
             {
                 if (_databaseShutdown.IsCancellationRequested)
-                    ThrowOperationCancelled();
+                    ThrowDatabaseShutdown();
             }
             finally
             {
                 _rachisLogIndexNotifications.NotifyListenersAbout(index);
             }
         }
-
-
 
         public Task WaitForIndexNotification(long index) => _rachisLogIndexNotifications.WaitForIndexNotification(index, Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan);
 
@@ -602,6 +612,11 @@ namespace Raven.Server.Documents
         {
             yield return TxMerger.GeneralWaitPerformanceMetrics;
             yield return TxMerger.TransactionPerformanceMetrics;
+        }
+
+        private void OnDatabaseRecordchanged()
+        {
+            DatabaseRecordchanged?.Invoke();
         }
     }
 

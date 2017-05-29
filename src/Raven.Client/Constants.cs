@@ -7,7 +7,6 @@ namespace Raven.Client
     {
         public class Json
         {
-            public const string CustomFunctionsId = "Raven/Javascript/Functions";
 
             private Json()
             {
@@ -219,18 +218,6 @@ namespace Raven.Client
                 }
 
                 public const int DefaultGeneratedEncryptionKeyLength = 256 / 8;
-            }
-
-            public class Replication
-            {
-                public const string ReplicationDestinationsId = "Raven/Replication/Destinations";
-
-                public const string ReplicationConfigurationDocument = "Raven/Replication/Documents/Configuration";
-            }
-
-            public class Versioning
-            {
-                public const string ConfigurationId = "Raven/Versioning/Configuration";
             }
 
             public class ETL

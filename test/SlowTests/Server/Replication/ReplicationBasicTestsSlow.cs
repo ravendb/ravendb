@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.IO;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using Raven.Client.Http;
+using Raven.Server;
 using Xunit;
 
 namespace SlowTests.Server.Replication
@@ -17,8 +21,14 @@ namespace SlowTests.Server.Replication
         {
             if (useSsl)
             {
-                DoNotReuseServer(new ConcurrentDictionary<string, string> { ["Raven/UseSsl"] = "true" });
+                var tempPath = GenerateAndSaveSelfSignedCertificate();
+                DoNotReuseServer(new ConcurrentDictionary<string, string>
+                {
+                    ["Raven/Certificate/Path"] = tempPath,
+                    ["Raven/ServerUrl"] = "https://127.0.0.1:0"
+                });
             }
+
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))

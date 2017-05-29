@@ -33,29 +33,30 @@
                                 </label>
                             </div>
                             <div class="toggle">
+                                <input id="toggle6" type="checkbox" data-bind="checked: includeRevisionDocuments">
+                                <label for="toggle6">
+                                    Include Document Revisions
+                                </label>
+                            </div>
+                            <div class="toggle">
                                 <input id="toggle2" type="checkbox" data-bind="checked: includeIndexes">
                                 <label for="toggle2">
                                     Include Indexes
                                 </label>
                             </div>
-                            <div class="toggle">
-                                <input id="toggle6" type="checkbox" data-bind="checked: includeRevisionDocuments">
-                                <label for="toggle6">
-                                    Include revision documents
-                                </label>
-                            </div>
+                            
                         </div>
                         <div class="col-sm-6 col-lg-4">
-                            <div class="toggle">
-                                <input id="toggle4" type="checkbox" data-bind="checked: includeTransformers">
-                                <label for="toggle4">
-                                    Include Transformers
-                                </label>
-                            </div>
                             <div class="toggle">
                                 <input id="toggle5" type="checkbox" data-bind="checked: removeAnalyzers">
                                 <label for="toggle5">
                                     Remove Analyzers
+                                </label>
+                            </div>
+                            <div class="toggle">
+                                <input id="toggle4" type="checkbox" data-bind="checked: includeTransformers">
+                                <label for="toggle4">
+                                    Include Transformers
                                 </label>
                             </div>
                             <div class="toggle">
@@ -74,7 +75,7 @@
                 <div class="toggle">
                     <input id="includeExpiredDocuments" type="checkbox" data-bind="checked: includeExpiredDocuments">
                     <label for="includeExpiredDocuments">
-                        Include Expired documents
+                        Include Expired Documents
                     </label>
                 </div>
 
@@ -82,8 +83,9 @@
                     <div class="toggle">
                         <input id="useTransformScript" type="checkbox" data-bind="checked: $root.showTransformScript">
                         <label for="useTransformScript" class="use-transform-script">
-                            Use Transform script <small><i class="icon-info"></i></small>
+                            Use Transform script 
                         </label>
+                        <small class="scriptPopover"><i class="icon-info text-info"></i></small>
                     </div>
                     <div data-bind="collapse: $root.showTransformScript">
                         <pre class="form-control" style="height: 200px;" data-bind="aceEditor: { code: transformScript, lang: 'ace/mode/javascript' }"></pre>

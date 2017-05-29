@@ -12,7 +12,6 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
@@ -20,18 +19,13 @@ using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Client.Server.Commands;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Replication;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
-using Raven.Server.NotificationCenter.Notifications.Server;
-using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Raven.Client.Http;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.PeriodicBackup;
 
@@ -39,7 +33,6 @@ namespace Raven.Server.Web.System
 {
     public class AdminDatabasesHandler : RequestHandler
     {
-
         [RavenAction("/admin/databases/is-loaded", "GET", "/admin/databases/is-loaded?name={databaseName:string}")]
         public Task IsDatabaseLoaded()
         {
@@ -123,7 +116,7 @@ namespace Raven.Server.Web.System
                 long etag;
                 var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out etag);
                 var clusterTopology = ServerStore.GetClusterTopology(context);
-
+                
                 //The case where an explicit node was requested 
                 if (string.IsNullOrEmpty(node) == false)
                 {
@@ -133,7 +126,7 @@ namespace Raven.Server.Web.System
                     var url = clusterTopology.GetUrlFromTag(node);
                     if (url == null)
                         throw new InvalidOperationException($"Can't add node {node} to {name} topology because node {node} is not part of the cluster");
-
+                    
                     if (databaseRecord.Encrypted && NotUsingSsl(url))
                         throw new InvalidOperationException($"Can't add node {node} to database {name} topology because database {name} is encrypted but node {node} doesn't have an SSL certificate.");
 
@@ -377,7 +370,7 @@ namespace Raven.Server.Web.System
         }
 
         private async Task DatabaseConfigurations(Func<TransactionOperationContext, string, 
-            BlittableJsonReaderObject, Task<(long, BlittableJsonReaderObject)>> setupConfigurationFunc, 
+            BlittableJsonReaderObject, Task<(long, object)>> setupConfigurationFunc, 
             string debug,
             Action<DynamicJsonValue, BlittableJsonReaderObject, long> fillJson = null)
         {
@@ -419,6 +412,40 @@ namespace Raven.Server.Web.System
                     context.Write(writer, json);
                     writer.Flush();
                 }
+            }
+        }
+
+        [RavenAction("/admin/modify-custom-function", "POST", "/admin/modify-custom-function?name={databaseName:string}")]
+        public async Task ModifyCustomFunctions()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            ServerStore.EnsureNotPassive();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-modify-custom-function").ThrowOnTimeout();
+                string functions;
+                if (updateJson.TryGet("Functions", out functions) == false)
+                {
+                    throw new InvalidDataException("Functions property was not found.");
+                }
+
+                var (index, _) = await ServerStore.ModifyCustomFunctions(name, functions).ThrowOnTimeout();
+                await ServerStore.Cluster.WaitForIndexNotification(index).ThrowOnTimeout();
+
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(DatabasePutResult.ETag)] = index,
+                    });
+                    writer.Flush();
+                }                
             }
         }
 

@@ -15,7 +15,6 @@ namespace RachisTests
         [Fact]
         public async Task FailOnAddingNonPassiveNode()
         {
-            NoTimeouts();
             var raft1 = await CreateRaftClusterAndGetLeader(1);
             var raft2 = await CreateRaftClusterAndGetLeader(1);
             

@@ -57,7 +57,7 @@ class createDatabase extends dialogViewModelBase {
         //TODO: fetchClusterWideConfig
         //TODO: fetchCustomBundles
 
-        const getTopologyTask = new getClusterTopologyCommand(window.location.host)
+        const getTopologyTask = new getClusterTopologyCommand()
             .execute()
             .done(topology => {
                 this.onTopologyLoaded(topology);
@@ -77,7 +77,11 @@ class createDatabase extends dialogViewModelBase {
         super.compositionComplete();
 
         this.syncQrCode();
-        this.databaseModel.encryption.key.subscribe(() => this.syncQrCode());
+        this.databaseModel.encryption.key.subscribe(() => {
+            this.syncQrCode();
+            // reset confirmation
+            this.databaseModel.encryption.confirmation(false);
+        });
     }
 
     private onTopologyLoaded(topology: clusterTopology) {

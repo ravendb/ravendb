@@ -18,7 +18,7 @@ namespace SlowTests.Issues
 
         private static readonly List<MethodInfo> _asyncTests = new List<MethodInfo>();
 
-        private static IEnumerable<object[]> Cultures()
+        public static IEnumerable<object[]> Cultures()
         {
             yield return new object[] { "he-IL" };
             yield return new object[] { "pl-PL" };

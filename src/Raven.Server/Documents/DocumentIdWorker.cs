@@ -3,6 +3,7 @@ using System.Text;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
 
@@ -70,6 +71,59 @@ namespace Raven.Server.Documents
 
 
         private static readonly UTF8Encoding Encoding = new UTF8Encoding();
+
+
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetLower(ByteStringContext byteStringContext, LazyStringValue str, out Slice loweredKey)
+        {
+            return GetLower(byteStringContext, str.Buffer, str.Size, out loweredKey);
+        }
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetLower(ByteStringContext byteStringContext,  byte* str, int size, out Slice loweredKey)
+        {
+            var release = byteStringContext.Allocate(size, out var ptr);
+            for (int i = 0; i < size; i++)
+            {
+                var ch = str[i];
+                if ((ch < 65) || (ch > 90))
+                {
+                    if (ch > 127) // not ASCII, use slower mode
+                        goto UnlikelyUnicode;
+
+                    ptr.Ptr[i] = ch;
+                }
+                else
+                {
+                    ptr.Ptr[i] = (byte)(ch | 0x20);
+                }
+            }
+            loweredKey = new Slice(ptr);
+            return release;
+            
+            UnlikelyUnicode:
+            release.Dispose();
+            return UnlikelyGetLowerUnicode(byteStringContext, str, size, out loweredKey);
+        }
+
+        private static ByteStringContext<ByteStringMemoryCache>.InternalScope UnlikelyGetLowerUnicode(ByteStringContext byteStringContext, byte* str, int size, out Slice loweredKey)
+        {
+            var maxCharCount = Encoding.GetMaxCharCount(size);
+            var bufferSize = maxCharCount* sizeof(char);
+            using (byteStringContext.Allocate(bufferSize, out var ptr))
+            {
+                var chars = (char*)ptr.Ptr;
+                var charCount = Encoding.GetChars(str, size, chars, maxCharCount);
+
+                for (int i = 0; i < charCount; i++)
+                {
+                    chars[i] = char.ToLowerInvariant(chars[i]);
+                }
+
+                var release = byteStringContext.From(chars, charCount, ByteStringType.Immutable, out var result);
+                loweredKey = new Slice(result);
+                return release;
+            }
+
+        }
+
 
         public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetLowerIdSliceAndStorageKey<TTransaction>(
             TransactionOperationContext<TTransaction> context, string str, out Slice lowerIdSlice, out Slice idSlice)

@@ -26,33 +26,13 @@ namespace Raven.Server.Documents
 
         public void Initialize()
         {
-            Database.Changes.OnSystemDocumentChange += HandleDocumentChange;
+            Database.DatabaseRecordchanged += LoadCustomFunctions;
             LoadCustomFunctions();
         }
 
         public void Dispose()
         {
-            Database.Changes.OnSystemDocumentChange -= HandleDocumentChange;
-        }
-
-        private void HandleDocumentChange(DocumentChange change)
-        {
-            if (change.IsSystemDocument == false)
-                return;
-
-            if (change.Type != DocumentChangeTypes.Put && change.Type != DocumentChangeTypes.Delete)
-                return;
-
-            if (string.Equals(change.Id, Constants.Json.CustomFunctionsId, StringComparison.OrdinalIgnoreCase) == false)
-                return;
-
-            if (change.Type == DocumentChangeTypes.Delete)
-            {
-                CustomFunctions = null;
-                return;
-            }
-
-            LoadCustomFunctions();
+            Database.DatabaseRecordchanged -= LoadCustomFunctions;
         }
 
         protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
@@ -71,20 +51,18 @@ namespace Raven.Server.Documents
         {
             lock (_locker)
             {
-                using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using(Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))                
                 using (context.OpenReadTransaction())
                 {
-                    var json = Database.DocumentsStorage.Get(context, Constants.Json.CustomFunctionsId);
+                    var dbrecord = Database.ServerStore.Cluster.ReadDatabase(context, Database.Name);
 
-                    if (json == null || 
-                        json.Data.TryGet("Functions", out string functions) == false || 
-                        string.IsNullOrWhiteSpace(functions))
+                    if (string.IsNullOrEmpty(dbrecord?.CustomFunctions))
                     {
                         CustomFunctions = null;
                         return;
                     }
 
-                    CustomFunctions = functions;
+                    CustomFunctions = dbrecord.CustomFunctions;
                 }
             }
         }

@@ -212,7 +212,7 @@ namespace Raven.Server.Rachis
                             _engine.Log.Info("Failed to talk to remote follower: " + _tag, e);
                         }
                         // notify leader about an error
-                        _leader.NotifyAboutException(this,e);
+                        _leader?.NotifyAboutException(this,e);
                         _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
                     }
                     finally
