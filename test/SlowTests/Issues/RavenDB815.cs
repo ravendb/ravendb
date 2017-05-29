@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using FastTests;
+using FastTests.Utils;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
@@ -79,7 +80,7 @@ namespace SlowTests.Issues
                 {
                     var doc = GetJsonString(commands, "foos/1");
 
-                    Assert.Equal(Dos2Linux.String(@"{
+                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"{
   ""Strings"": [
     ""A"",
     ""B"",
@@ -105,7 +106,7 @@ namespace SlowTests.Issues
                 {
                     var doc = GetJsonString(commands, "foos/1");
 
-                    Assert.Equal(Dos2Linux.String(@"{
+                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"{
   ""Strings"": [
     ""A"",
     ""B"",
@@ -131,7 +132,7 @@ namespace SlowTests.Issues
                 {
                     var doc = GetJsonString(commands, "foos/1");
 
-                    Assert.Equal(Dos2Linux.String(@"{
+                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"{
   ""Strings"": [
     ""A"",
     ""B"",
@@ -157,7 +158,7 @@ namespace SlowTests.Issues
                 {
                     var doc = GetJsonString(commands, "foos/1");
 
-                    Assert.Equal(Dos2Linux.String(@"{
+                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"{
   ""Strings"": [
     ""A"",
     ""B"",
@@ -183,7 +184,7 @@ namespace SlowTests.Issues
                 {
                     var doc = GetJsonString(commands, "foos/1");
 
-                    Assert.Equal(Dos2Linux.String(@"{
+                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"{
   ""Strings"": [
     ""A"",
     ""B"",
@@ -209,7 +210,7 @@ namespace SlowTests.Issues
                 {
                     var doc = GetJsonString(commands, "foos/1");
 
-                    Assert.Equal(Dos2Linux.String(@"{
+                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"{
   ""Strings"": [
     ""A"",
     ""B"",
@@ -235,7 +236,7 @@ namespace SlowTests.Issues
                 {
                     var doc = GetJsonString(commands, "foos/1");
 
-                    Assert.Equal(Dos2Linux.String(@"{
+                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"{
   ""Bars"": [
     {
       ""Baz"": ""A""
@@ -267,7 +268,7 @@ namespace SlowTests.Issues
                 {
                     var doc = GetJsonString(commands, "foos/1");
 
-                    Assert.Equal(Dos2Linux.String(@"{
+                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"{
   ""Bars"": [
     {
       ""Baz"": ""A""
@@ -299,7 +300,7 @@ namespace SlowTests.Issues
                 {
                     var doc = GetJsonString(commands, "foos/1");
 
-                    Assert.Equal(Dos2Linux.String(@"{
+                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"{
   ""Bars"": [
     {
       ""Baz"": ""A""
@@ -331,7 +332,7 @@ namespace SlowTests.Issues
                 {
                     var doc = GetJsonString(commands, "foos/1");
 
-                    Assert.Equal(Dos2Linux.String(@"{
+                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"{
   ""Bars"": [
     {
       ""Baz"": ""A""
@@ -363,7 +364,7 @@ namespace SlowTests.Issues
                 {
                     var doc = GetJsonString(commands, "foos/1");
 
-                    Assert.Equal(Dos2Linux.String(@"{
+                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"{
   ""Bars"": [
     {
       ""Baz"": ""A""
@@ -395,7 +396,7 @@ namespace SlowTests.Issues
                 {
                     var doc = GetJsonString(commands, "foos/1");
 
-                    Assert.Equal(Dos2Linux.String(@"{
+                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"{
   ""Bars"": [
     {
       ""Baz"": ""A""

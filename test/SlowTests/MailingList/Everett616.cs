@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using FastTests;
+using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -18,7 +19,7 @@ namespace SlowTests.MailingList
             {
                 using (var commands = store.Commands())
                 {
-                    var json = commands.ParseJson(Dos2Linux.String(@"{
+                    var json = commands.ParseJson(LinuxTestUtils.Dos2Unix(@"{
   '$type': 'Domain.Model.Clicks.ClickAllocation, Domain',
   'AccountId': 'accounts/4',
   'Quantity': 90,
@@ -36,7 +37,7 @@ namespace SlowTests.MailingList
 
                     commands.Put("test/1", null, json, new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "ClickAllocations" } });
 
-                    json = commands.ParseJson(Dos2Linux.String(@"{
+                    json = commands.ParseJson(LinuxTestUtils.Dos2Unix(@"{
   '$type': 'Domain.Model.Clicks.ClickAllocation, Domain',
   'AccountId': 'accounts/4',
   'Quantity': 20,
@@ -60,11 +61,11 @@ namespace SlowTests.MailingList
                                                 {
                                                     Name = "test",
                                                     Maps = {
-                                                        Dos2Linux.String(@"docs.ClickAllocations
+                                                        LinuxTestUtils.Dos2Unix(@"docs.ClickAllocations
     .Select(doc => new {AccountId = doc.AccountId, Date = doc.Date, Id = doc.__document_id, Key = doc.Key, LastSavedDate = doc.LastSavedDate, LastSavedUser = doc.LastSavedUser, OrderNumber = doc.OrderNumber, PurchaseDate = doc.PurchaseDate, PurchaseOrderNumber = doc.PurchaseOrderNumber, Quantity = doc.Quantity, ReorderQuantity = doc.ReorderQuantity, Type = doc.Type})
 ") },
                                                     Reduce =
-                                                        Dos2Linux.String(@"results
+                                                        LinuxTestUtils.Dos2Unix(@"results
     .GroupBy(result => result.AccountId)
     .Select(a => new {a = a, clickAllocation = a.OrderByDescending(x => x.Date).FirstOrDefault()})
     .Select(__h__TransparentIdentifier0 => new {AccountId = __h__TransparentIdentifier0.clickAllocation.AccountId, Date = __h__TransparentIdentifier0.clickAllocation.Date, Id = __h__TransparentIdentifier0.clickAllocation.Id, Key = __h__TransparentIdentifier0.clickAllocation.Key, LastSavedDate = __h__TransparentIdentifier0.clickAllocation.LastSavedDate, LastSavedUser = __h__TransparentIdentifier0.clickAllocation.LastSavedUser, OrderNumber = __h__TransparentIdentifier0.clickAllocation.OrderNumber, PurchaseDate = __h__TransparentIdentifier0.clickAllocation.PurchaseDate, PurchaseOrderNumber = __h__TransparentIdentifier0.clickAllocation.PurchaseOrderNumber, Quantity = __h__TransparentIdentifier0.clickAllocation.Quantity, ReorderQuantity = __h__TransparentIdentifier0.clickAllocation.ReorderQuantity, Type = __h__TransparentIdentifier0.clickAllocation.Type})")
@@ -82,7 +83,7 @@ namespace SlowTests.MailingList
             {
                 using (var commands = store.Commands())
                 {
-                    var json = commands.ParseJson(Dos2Linux.String(@"{
+                    var json = commands.ParseJson(LinuxTestUtils.Dos2Unix(@"{
   '$type': 'Domain.Model.Clicks.ClickAllocation, Domain',
   'AccountId': 'accounts/4',
   'Quantity': 90,
@@ -100,7 +101,7 @@ namespace SlowTests.MailingList
 
                     commands.Put("test/1", null, json, new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "ClickAllocations" } });
 
-                    json = commands.ParseJson(Dos2Linux.String(@"{
+                    json = commands.ParseJson(LinuxTestUtils.Dos2Unix(@"{
   '$type': 'Domain.Model.Clicks.ClickAllocation, Domain',
   'AccountId': 'accounts/4',
   'Quantity': 20,
@@ -124,11 +125,11 @@ namespace SlowTests.MailingList
                                                 {
                                                     Name = "test",
                                                     Maps = {
-                                                        Dos2Linux.String(@"docs.ClickAllocations
+                                                        LinuxTestUtils.Dos2Unix(@"docs.ClickAllocations
     .Select(doc => new {AccountId = doc.AccountId, Date = doc.Date, Id = doc.__document_id, Key = doc.Key, LastSavedDate = doc.LastSavedDate, LastSavedUser = doc.LastSavedUser, OrderNumber = doc.OrderNumber, PurchaseDate = doc.PurchaseDate, PurchaseOrderNumber = doc.PurchaseOrderNumber, Quantity = doc.Quantity, ReorderQuantity = doc.ReorderQuantity, Type = doc.Type})
 ") },
                                                     Reduce =
-                                                        Dos2Linux.String(@"results
+                                                        LinuxTestUtils.Dos2Unix(@"results
     .GroupBy(result => result.AccountId)
     .Select(a => new {a = a, clickAllocation = a.OrderByDescending(x => x.Date).FirstOrDefault()})
     .Select(__h__TransparentIdentifier0 => new {AccountId = __h__TransparentIdentifier0.clickAllocation.AccountId, Date = __h__TransparentIdentifier0.clickAllocation.Date, Id = __h__TransparentIdentifier0.clickAllocation.Id, Key = __h__TransparentIdentifier0.clickAllocation.Key, LastSavedDate = __h__TransparentIdentifier0.clickAllocation.LastSavedDate, LastSavedUser = __h__TransparentIdentifier0.clickAllocation.LastSavedUser, OrderNumber = __h__TransparentIdentifier0.clickAllocation.OrderNumber, PurchaseDate = __h__TransparentIdentifier0.clickAllocation.PurchaseDate, PurchaseOrderNumber = __h__TransparentIdentifier0.clickAllocation.PurchaseOrderNumber, Quantity = __h__TransparentIdentifier0.clickAllocation.Quantity, ReorderQuantity = __h__TransparentIdentifier0.clickAllocation.ReorderQuantity, Type = __h__TransparentIdentifier0.clickAllocation.Type})")

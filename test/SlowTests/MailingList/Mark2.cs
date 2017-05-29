@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using FastTests;
+using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -28,7 +29,7 @@ namespace SlowTests.MailingList
 
                 using (var commands = store.Commands())
                 {
-                    var json = commands.ParseJson(Dos2Linux.String(@"{
+                    var json = commands.ParseJson(LinuxTestUtils.Dos2Unix(@"{
  ""Warnings"": {
    ""AccessoryWarnings"": [
      {
