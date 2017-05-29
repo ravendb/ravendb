@@ -114,7 +114,7 @@ namespace FastTests.Sparrow
                     Diff = tmp,
                     Size = 4096,
                     DiffSize = diffPages.OutputSize
-                }.Apply();
+                }.Apply(false);
 
                 Assert.Equal(0, Memory.Compare(tri, two, 4096));
             }
@@ -142,6 +142,52 @@ namespace FastTests.Sparrow
 
                 Assert.False(diffPages.IsDiff);
             }
+        }
+
+        [Fact]
+        public void Applying_diff_calculated_as_new_multiple_times()
+        {
+            const int size = 4096;
+
+            var fst = new byte[size];
+            var sec = new byte[size];
+
+            var r = new Random(1);
+
+            for (int i = 0; i < 10; i++)
+            {
+                fst[i] = (byte)r.Next(0, 255);
+                sec[(size - 1) - i] = (byte)r.Next(0, 255);
+            }
+
+            var result = new byte[size];
+
+            foreach (var page in new[] { fst, sec })
+            {
+                fixed (byte* ptr = page)
+                fixed (byte* diffPtr = new byte[size])
+                fixed (byte* resultPtr = result)
+                {
+                    var diffPages = new DiffPages
+                    {
+                        Output = diffPtr,
+                    };
+
+                    diffPages.ComputeNew(ptr, size);
+
+                    Assert.True(diffPages.IsDiff);
+
+                    new DiffApplier
+                    {
+                        Destination = resultPtr,
+                        Diff = diffPtr,
+                        Size = page.Length,
+                        DiffSize = diffPages.OutputSize
+                    }.Apply(true);
+                }
+            }
+
+            Assert.Equal(sec, result);
         }
     }
 }
