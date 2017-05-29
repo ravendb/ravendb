@@ -39,7 +39,7 @@ namespace SlowTests.Server.Documents.PeriodicExport
                         LocalFolderName = _exportPath,
                         IntervalMilliseconds = 25
                     };
-                    await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.Database));                    
+                    await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.Database));
                     await session.SaveChangesAsync();
                 }
 
@@ -55,7 +55,7 @@ namespace SlowTests.Server.Documents.PeriodicExport
                     .SetValue(periodicExportRunner, TimeSpan.FromMilliseconds(5));
 
                 var operation = new GetPeriodicBackupStatusOperation();
-                    //await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.Database));
+                //await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.Database));
                 SpinWait.SpinUntil(() =>
                 {
                     var result = store.Admin.Server.Send(operation);
@@ -96,7 +96,6 @@ namespace SlowTests.Server.Documents.PeriodicExport
         {
             using (var store = GetDocumentStore())
             {
-                
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "oren" });
@@ -106,9 +105,11 @@ namespace SlowTests.Server.Documents.PeriodicExport
                         LocalFolderName = _exportPath,
                         IntervalMilliseconds = 25
                     };
+
+                    await session.SaveChangesAsync();
+
                     var operation = new ConfigurePeriodicBackupOperation(config, store.Database);
                     await store.Admin.Server.SendAsync(operation);
-                    await session.SaveChangesAsync();
                 }
 
                 var periodicExportRunner = (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.PeriodicExportRunner;
@@ -162,7 +163,7 @@ namespace SlowTests.Server.Documents.PeriodicExport
                 {
                     var result = store.Admin.Server.Send(getPeriodicBackupStatus);
                     if (result.Status == null)
-                        return false;                        
+                        return false;
                     return result.Status.LastDocsEtag > 0;
                 }, TimeSpan.FromSeconds(10));
 
