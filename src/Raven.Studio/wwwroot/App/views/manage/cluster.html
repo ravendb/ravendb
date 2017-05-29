@@ -24,7 +24,7 @@
                                             </h3>
                                         </div>
                                         <div data-bind="visible: $root.topology().leader() === tag()">
-                                            <span class="label label-warning">LEADER</span>
+                                            <i class="icon-crown text-warning" title="Leader"></i>
                                         </div>
                                     </div>
                                 </div>
@@ -35,8 +35,7 @@
                             </div>
                             <div class="address">
                                 <h5>ADDRESS</h5>
-                                <small data-bind="text: serverUrl">
-                                </small>
+                                <a target="_blank" data-bind="attr: { href: serverUrl }"><small data-bind="text: serverUrl"></small></a>
                             </div>
                         </div>
                         <div class="flex-separator"></div>
@@ -47,7 +46,7 @@
                                 <button class="btn btn-default"><i class="icon-arrow-filled-down"></i> <span>Demote</span></button>
                                     <button class="btn btn-default"><i class="icon-stepdown"></i> <span>Step down</span></button>
                                     -->
-                                <button class="btn btn-danger" data-bind="click: _.partial($parent.deleteNode, $data)"><i class="icon-disconnected"></i></button>
+                                <button class="btn btn-danger" data-bind="click: _.partial($parent.deleteNode, $data), enable: $root.canDeleteNodes"><i class="icon-trash"></i></button>
                             </div>
                         </div>
                     </div>
