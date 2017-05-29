@@ -213,7 +213,7 @@ namespace Voron.Impl.Paging
             if (Disposed)
                 return;
 
-            _options.IoMetrics.FileClosed(FileName.FullPath);
+            _options?.IoMetrics?.FileClosed(FileName.FullPath);
 
             if (_pagerState != null)
             {
