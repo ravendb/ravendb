@@ -55,6 +55,7 @@ namespace Raven.Client.Documents.Subscriptions
         public ConnectionStatus Status { get; set; }
         public BlittableJsonReaderObject Data { get; set; }
         public string Exception { get; set; }
+        public string Message { get; set; }
     }
 
     public class SubscriptionConnectionOptions

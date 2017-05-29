@@ -17,6 +17,7 @@ using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
@@ -324,6 +325,11 @@ namespace Raven.Client.Documents.Subscriptions
 
         private void AssertConnectionState(SubscriptionConnectionServerMessage connectionStatus)
         {
+            if (connectionStatus.Type == SubscriptionConnectionServerMessage.MessageType.Error)
+            {
+                if (connectionStatus.Exception.Contains(nameof(DatabaseDoesNotExistException)))
+                    throw new DatabaseDoesNotExistException(connectionStatus.Message);
+            }
             if (connectionStatus.Type != SubscriptionConnectionServerMessage.MessageType.ConnectionStatus)
                 throw new Exception("Server returned illegal type message when expecting connection status, was: " +
                                     connectionStatus.Type);
@@ -678,7 +684,8 @@ namespace Raven.Client.Documents.Subscriptions
         {
             if (ex is SubscriptionInUseException || // another client has connected to the subscription
                 ex is SubscriptionDoesNotExistException || // subscription has been deleted meanwhile
-                ex is SubscriptionClosedException) // subscription has been booted by another subscription
+                ex is SubscriptionClosedException // subscription has been booted by another subscription
+                || ex is DatabaseDoesNotExistException) 
             {
                 IsConnectionClosed = true;
                 _taskCompletionSource.TrySetException(ex);
