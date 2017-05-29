@@ -54,7 +54,7 @@ namespace FastTests.Client.Subscriptions
         }
 
         [Fact]
-        public async Task ValidateSubscriptionAuthorizationOnAcceptOnCreation()
+        public async Task ValidateSubscriptionAuthorizationAcceptOnCreation()
         {
             DoNotReuseServer();
             Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
@@ -74,7 +74,10 @@ namespace FastTests.Client.Subscriptions
 
                     var subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
 
-                    var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
+                    var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
+                    {
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(200)
+                    });
 
                     var mre = new AsyncManualResetEvent();
                     subscription.Subscribe(x => { });
@@ -110,7 +113,10 @@ namespace FastTests.Client.Subscriptions
 
                     Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
 
-                    var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
+                    var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
+                    {
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(200)
+                    });
                     subscription.Subscribe(x => { });
                     Assert.Throws<AuthorizationException>(() => AsyncHelpers.RunSync(() => subscription.StartAsync()));
                 }
@@ -139,7 +145,10 @@ namespace FastTests.Client.Subscriptions
 
                     Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
 
-                    var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
+                    var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
+                    {
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(200)
+                    });
 
                     var mre = new AsyncManualResetEvent();
                     subscription.Subscribe(x => { });
@@ -150,8 +159,6 @@ namespace FastTests.Client.Subscriptions
 
                     await mre.WaitAsync(TimeSpan.FromSeconds(20));
                 }
-
-
             }
         }
     }
