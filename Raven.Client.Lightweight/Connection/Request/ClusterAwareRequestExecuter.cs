@@ -219,8 +219,8 @@ namespace Raven.Client.Connection.Request
                     Log.Debug($"Fetching topology, {serverClient.Url}: Retries={numberOfRetries} When={DateTime.UtcNow}");
                 }
 #pragma warning disable 4014
-                // If withClusterFailover set to true we will need to force the update and choose another leader.
-                UpdateReplicationInformationIfNeededAsync(serverClient, force:true); // maybe start refresh task
+                //We always want to fetch a new topology if we don't know who the leader is.
+                UpdateReplicationInformationIfNeededAsync(serverClient, force:true);
 #pragma warning restore 4014
                 switch (serverClient.convention.FailoverBehavior)
                 {
