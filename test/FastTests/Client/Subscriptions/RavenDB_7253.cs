@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client.Attachments;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Subscriptions;
 using Xunit;
 using FastTests.Server.Documents.Notifications;
@@ -24,7 +20,10 @@ namespace FastTests.Client.Subscriptions
                     
                 var subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
 
-                var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
+                var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(200)
+                });
 
                 var mre = new AsyncManualResetEvent();
                 subscription.Subscribe(x => { });
@@ -35,7 +34,7 @@ namespace FastTests.Client.Subscriptions
 
                 await mre.WaitAsync(TimeSpan.FromSeconds(20));
 
-                var deleteResult = await store.Admin.Server.SendAsync(new DeleteDatabaseOperation(store.Database, hardDelete: true));
+                await store.Admin.Server.SendAsync(new DeleteDatabaseOperation(store.Database, hardDelete: true));
 
                 Assert.True(await subscription.SubscriptionLifetimeTask.WaitWithTimeout(TimeSpan.FromSeconds(20)));
             }
