@@ -45,6 +45,8 @@ namespace Raven.Client.Server
         //todo: see how we can protect this
         public Dictionary<string, TransformerDefinition> Transformers;
 
+        public Dictionary<string, long> Identities;
+
         public Dictionary<string, string> Settings;
 
         public Dictionary<string, string> SecuredSettings { get; set; }

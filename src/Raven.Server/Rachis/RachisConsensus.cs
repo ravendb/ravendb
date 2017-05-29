@@ -11,6 +11,7 @@ using Raven.Client.Exceptions;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -88,7 +89,9 @@ namespace Raven.Server.Rachis
 
         public State CurrentState { get; private set; }
         public TimeoutEvent Timeout { get; private set; }
-        public TimeSpan RemoteOperationTimeout { get; private set; }
+
+
+        public TimeSpan RemoteOperationTimeout;
 
         public string LastStateChangeReason => _lastStateChangeReason;
 
@@ -170,12 +173,13 @@ namespace Raven.Server.Rachis
             try
             {
                 _persistentState = env;
+
                 RemoteOperationTimeout = configuration.ClusterOperationTimeout.AsTimeSpan;
                 ElectionTimeout = configuration.ElectionTimeout.AsTimeSpan;
-                if (Debugger.IsAttached)
-                {
-                    ElectionTimeout = TimeSpan.FromMilliseconds(ElectionTimeout.TotalMilliseconds * 10);
-                }
+
+                MiscUtils.LongTimespanIfDebugging(ref RemoteOperationTimeout);
+                MiscUtils.LongTimespanIfDebugging(ref ElectionTimeout);
+
                 ContextPool = new TransactionContextPool(_persistentState);
 
                 ClusterTopology topology;
@@ -188,7 +192,6 @@ namespace Raven.Server.Rachis
                     _tag = readResult == null ? "?" : readResult.Reader.ToStringValue();
 
                     Log = LoggingSource.Instance.GetLogger<RachisConsensus>(_tag);
-
                     LogsTable.Create(tx.InnerTransaction, EntriesSlice, 16);
 
                     var read = state.Read(CurrentTermSlice);
@@ -425,7 +428,7 @@ namespace Raven.Server.Rachis
             leader.Start();
         }
 
-        public Task<(long, BlittableJsonReaderObject)> PutAsync(BlittableJsonReaderObject cmd)
+        public Task<(long, object)> PutAsync(BlittableJsonReaderObject cmd)
         {
             var leader = _currentLeader;
             if (leader == null)

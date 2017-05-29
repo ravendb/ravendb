@@ -246,10 +246,10 @@ namespace Raven.Server.Documents
                 var lastChar = id[id.Length - 1];
                 if (lastChar == '/')
                 {
-                    knownNewId = true;
-                    id = _documentsStorage.Identities.GetNextIdentityValueWithoutOverwritingOnExistingDocuments(id, table, context, out _);
+                    ThrowInvalidDocumentId(id);
                 }
-                else if (lastChar == '|')
+
+                if (lastChar == '|')
                 {
                     knownNewId = true;
                     id = _documentsStorage.Identities.AppendNumericValueToId(id, newEtag);
@@ -262,6 +262,12 @@ namespace Raven.Server.Documents
 
             // Intentionally have just one return statement here for better inlining
             return id;
+        }
+
+        private static void ThrowInvalidDocumentId(string id)
+        {
+            throw new NotSupportedException("Document ids cannot end with '/', but was called with " + id +
+                                            ". Identities are only generated for external requests, not calls to PutDocument and such.");
         }
 
         private bool ShouldRecreateAttachment(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject oldDoc, BlittableJsonReaderObject document, DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags)

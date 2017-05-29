@@ -331,7 +331,7 @@ namespace Raven.Server.Web.System
             await DatabaseConfigurations(ServerStore.ModifyDatabasePeriodicBackup, "read-periodic-backup-config").ThrowOnTimeout();
         }
 
-        private async Task DatabaseConfigurations(Func<TransactionOperationContext, string, BlittableJsonReaderObject, Task<(long, BlittableJsonReaderObject)>> setupConfigurationFunc, string debug)
+        private async Task DatabaseConfigurations(Func<TransactionOperationContext, string, BlittableJsonReaderObject, Task<(long, object)>> setupConfigurationFunc, string debug)
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             string errorMessage;

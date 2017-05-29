@@ -83,8 +83,9 @@ namespace FastTests.Server.Documents.Transformers
 
                     var blittableJsonReaderObject = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
-                    var (index, _) = await Server.ServerStore.WriteDbAsync(store.Database, blittableJsonReaderObject, null);
+                    var (index,_) = await Server.ServerStore.WriteDbAsync(store.Database, blittableJsonReaderObject, null);
                     await Server.ServerStore.Cluster.WaitForIndexNotification(index);
+
                 }
 
                 var database = await GetDocumentDatabaseInstanceFor(store);

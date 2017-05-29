@@ -70,10 +70,7 @@ namespace Sparrow.Json
             }
             catch (Exception e)
             {
-                return o =>
-                {
-                    throw new InvalidOperationException($"Could not build json parser for {typeof(T).FullName}", e);
-                };
+                return o => throw new InvalidOperationException($"Could not build json parser for {typeof(T).FullName}", e);
             }
         }
 
@@ -190,6 +187,13 @@ namespace Sparrow.Json
                 var converterExpression = Expression.Constant(GetConverterFromCache(valueType));
                 var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToArray), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType);
                 return Expression.Call(methodToCall, json, Expression.Constant(propertyName), converterExpression);
+            }
+
+// extract proper value from blittable if we have relevant type
+            if (propertyType == typeof(object) || propertyType.GetTypeInfo().IsPrimitive)
+            {
+                var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(GetPrimitiveProperty), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(propertyType);
+                return Expression.Call(methodToCall, json, Expression.Constant(propertyName));                
             }
 
             // ToObject
@@ -445,12 +449,17 @@ namespace Sparrow.Json
             return collection.ToArray();
         }
 
+        private static T GetPrimitiveProperty<T>(BlittableJsonReaderObject json, string prop)
+        {
+            return !json.TryGet(prop, out T val) ? default(T) : val;
+        }
 
         private static T ToObject<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter) where T : new()
         {
-            BlittableJsonReaderObject obj;
-            if (json.TryGet(name, out obj) == false || obj == null)
+            if (json.TryGet(name, out BlittableJsonReaderObject obj) == false || obj == null)
+            {
                 return default(T);
+            }
 
             return converter(obj);
         }
