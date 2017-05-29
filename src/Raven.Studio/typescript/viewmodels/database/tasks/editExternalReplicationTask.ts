@@ -40,7 +40,7 @@ class editExternalReplicationTask extends viewModelBase {
             // TODO: call the new ep to get info from server if there is task id in url ==> an edit action
             // Now the following is just simulation....
             alert("Simulating getting data from server...");
-            let tempTask = ongoingTaskReplication.Simulation();
+            const tempTask = ongoingTaskReplication.Simulation();
             tempTask.taskId = this.taskId;
 
             this.editedExternalReplication(tempTask);
@@ -51,10 +51,6 @@ class editExternalReplicationTask extends viewModelBase {
             // No task id in url, init an empty model ==> create action
             this.editedExternalReplication(ongoingTaskReplication.empty());
         }
-    }
-
-    attached() {
-        super.attached(); 
     }
     
     saveExternalReplication() {
@@ -81,7 +77,7 @@ class editExternalReplicationTask extends viewModelBase {
         this.goToOngoingTasksView();
     }
 
-    goToOngoingTasksView() {
+    private goToOngoingTasksView() {
         router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
     }
 

@@ -3,15 +3,14 @@ import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import ongoingTask = require("models/database/tasks/ongoingTaskModel"); 
 
-class ongoingTaskReplicationModel extends  ongoingTask {
+class ongoingTaskReplicationModel extends ongoingTask {
 
     editUrl: KnockoutComputed<string>; 
 
     apiKey = ko.observable<string>();
     destinationDB = ko.observable<string>();
     destinationURL = ko.observable<string>();
-
-    destDBText: KnockoutComputed<string>; // just for ui..
+  
     validationGroup: KnockoutValidationGroup;
 
     constructor(dto: Raven.Server.Web.System.OngoingTaskReplication) {
@@ -27,10 +26,6 @@ class ongoingTaskReplicationModel extends  ongoingTask {
         const urls = appUrl.forCurrentDatabase();
         const taskIdStr = this.taskId ? this.taskId.toString() : null;
         this.editUrl = urls.editExternalReplication(taskIdStr); 
-        
-        this.destDBText = ko.pureComputed(() => {
-            return `(${this.destinationDB()})`;
-        });
     }
 
     update(dto: Raven.Server.Web.System.OngoingTaskReplication) {
@@ -41,22 +36,16 @@ class ongoingTaskReplicationModel extends  ongoingTask {
 
     enableTask() {
         alert("enabling task replication");
-        // ...
+        // TODO: ...
     }
 
     disableTask() {
         alert("disabling task replication");
-        // ...
+        // TODO: ...
     }
 
     editTask() {
         router.navigate(this.editUrl());
-    }
-
-    removeTask() {
-        alert("remove task replication");
-
-        // todo ... implement on the view model not on the model , pass data from html to view model !
     }
 
     private initValidation() {
@@ -65,7 +54,7 @@ class ongoingTaskReplicationModel extends  ongoingTask {
             required: true,
             validation: [
                 {
-                    validator: (val: string) => val !== null, // todo: validate db name format like in db creation !
+                    validator: (val: string) => val !== null, // TODO: validate db name format like in db creation !
                     message: "Please enter destination database name for replication"
                 }]
         });
@@ -74,7 +63,7 @@ class ongoingTaskReplicationModel extends  ongoingTask {
             required: true,
             validation: [
                 {
-                    validator: (val: string) => val !== null,  // todo: validate url format !
+                    validator: (val: string) => val !== null,  // TODO: validate url format !
                     message: "Please enter valid Url"
                 }]
         });
@@ -82,8 +71,8 @@ class ongoingTaskReplicationModel extends  ongoingTask {
         this.apiKey.extend({
             validation: [
                 {
-                    validator: (val: string) => val !== "1",  // todo: validate apiKey format ! I put 1 just for now... but can be null
-                    message: "Please enter valid api key format"
+                    validator: (val: string) => val !== "1",  // TODO: validate ApiKey format, as the server expects it to be ! I put '1' just for now... it can be null !
+                    message: "Please enter valid Api key format"
                 }]
         });
 
@@ -115,7 +104,7 @@ class ongoingTaskReplicationModel extends  ongoingTask {
             TaskState: null,
             TaskType: "Replication",
             DestinationDB: "simulationDB",
-            DestinationURL: "http://localhost:8083",
+            DestinationURL: "http://localhost:8080",
             TaskId: 123456789
         });
     }

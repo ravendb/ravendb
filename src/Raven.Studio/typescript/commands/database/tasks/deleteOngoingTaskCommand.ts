@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
-class deleteExternalReplicationTaskCommand extends commandBase {
+class deleteOngoingTaskCommand extends commandBase {
     
     constructor(private db: database, private taskType: Raven.Server.Web.System.OngoingTaskType, private taskId: number) {
         super();
@@ -14,7 +14,7 @@ class deleteExternalReplicationTaskCommand extends commandBase {
                 this.reportError("Failed to delete task of type: " + this.taskType, response.responseText, response.statusText);
             })
             .done(() => {
-                this.reportSuccess(`Task of deleted From: ${this.db.name}`);
+                this.reportSuccess(`${this.taskType} task was deleted from: ${this.db.name}`);
             });
     }
 
@@ -26,4 +26,4 @@ class deleteExternalReplicationTaskCommand extends commandBase {
     }
 }
 
-export = deleteExternalReplicationTaskCommand; 
+export = deleteOngoingTaskCommand; 
