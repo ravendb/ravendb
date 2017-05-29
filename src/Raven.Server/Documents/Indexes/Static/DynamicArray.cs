@@ -383,6 +383,11 @@ namespace Raven.Server.Documents.Indexes.Static
             return new DynamicArray(Enumerable.Where(this, func));
         }
 
+        public IEnumerable<object> Distinct()
+        {
+            return new DynamicArray(Enumerable.Distinct(this));
+        }
+
         public dynamic DefaultIfEmpty(object defaultValue = null)
         {
             return Enumerable.DefaultIfEmpty(this, defaultValue ?? DynamicNullObject.Null);
