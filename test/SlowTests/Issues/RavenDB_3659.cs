@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Utils;
 using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
@@ -19,10 +20,21 @@ namespace SlowTests.Issues
 {
     public class RavenDB_3659 : RavenTestBase
     {
-        private readonly Dictionary<string, string> _invalidCustomSettings = new Dictionary<string, string>
+        private readonly Dictionary<string, string> _invalidCustomSettings;
+
+        public RavenDB_3659()
         {
-            { RavenConfiguration.GetKey(x => x.Storage.TempPath), "V:\\" }
-        };
+            if (LinuxTestUtils.RunningOnPosix)
+                _invalidCustomSettings = new Dictionary<string, string>
+                {
+                    {RavenConfiguration.GetKey(x => x.Storage.TempPath), "/mnt/noSuchDir"}
+                };
+            else
+                _invalidCustomSettings = new Dictionary<string, string>
+                {
+                    {RavenConfiguration.GetKey(x => x.Storage.TempPath), "V:\\"}
+                };
+        }
 
         [Fact]
         public void IfTempPathCannotBeAccessedThenServerShouldThrowDuringStartup()
