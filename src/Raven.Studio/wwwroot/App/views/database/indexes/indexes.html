@@ -178,7 +178,7 @@
                 </div>
                 <div class="properties-item staleness" data-bind="visible: isStale()">
                     <div class="properties-value value-only">
-                        <div class="set-size">
+                        <div class="set-size text-warning">
                             <i class="icon-reset"></i><span>Stale</span>
                         </div>
                     </div>
@@ -235,10 +235,10 @@
 <script type="text/html" id="indexing-progress-template">
     <hr class="small" />
     <div class="progress-container">
-        <div class="progress-ovarall">
+        <div class="progress-overall">
             <div class="flex-horizontal" data-bind="with: globalProgress">
                 <h3 class="flex-grow">Overall progress</h3>
-                <div class="percentage" data-bind="text: percentageFormatted, attr: { title: textualProgress }"></div>
+                <div class="percentage" data-bind="text: percentageFormatted,  css: { 'text-success': completed }, attr: { title: textualProgress }"></div>
             </div>
             <div class="progress" data-bind="template: { name: 'progress-bar-template', data: globalProgress }"></div>
         </div>
