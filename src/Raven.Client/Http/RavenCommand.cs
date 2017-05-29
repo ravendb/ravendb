@@ -35,7 +35,7 @@ namespace Raven.Client.Http
         public HttpStatusCode StatusCode;
 
         public RavenCommandResponseType ResponseType { get; protected set; }
-        public bool RefreshTopology;
+        public bool RefreshTopology { get; private set; }
 
         public TimeSpan? Timeout { get; protected set; }
 
@@ -95,7 +95,8 @@ namespace Raven.Client.Http
                 if (response.Headers.TryGetValues("Refresh-Topology", out IEnumerable<string> values))
                 {
                     var value = values.FirstOrDefault();
-                    bool.TryParse(value, out RefreshTopology);
+                    bool.TryParse(value, out bool refreshTopology);
+                    RefreshTopology = refreshTopology;
                 }
 
 

@@ -1124,14 +1124,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
         [Fact]
         public async Task CanDeleteFaultyIndex()
         {
-            string indexStoragePath;
-            string indexSafeName;
-            string dbName;
-            long etag;
-
             using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
-                dbName = database.Name;
+                var dbName = database.Name;
 
                 var name1 = new IndexField
                 {
@@ -1140,12 +1135,12 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Sort = SortOptions.String
                 };
 
-                etag = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 }));
+                var etag = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 }));
                 Assert.True(etag > 0);
                 var index = database.IndexStore.GetIndex(etag);
-                indexSafeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Name);
+                var indexSafeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Name);
 
-                indexStoragePath = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath,
+                var indexStoragePath = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath,
                     IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Name));
 
 

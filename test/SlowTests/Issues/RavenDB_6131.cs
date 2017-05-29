@@ -83,7 +83,7 @@ namespace SlowTests.Issues
                 {RavenConfiguration.GetKey(x => x.Indexing.JournalsStoragePath), path4}
             });
 
-            using (var server = GetNewServer())
+            using (GetNewServer())
             {
                 using (var store = GetDocumentStore(path: path1))
                 {

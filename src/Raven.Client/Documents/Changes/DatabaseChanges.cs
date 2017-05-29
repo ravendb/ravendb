@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Changes
 
         private readonly RequestExecutor _requestExecutor;
         private readonly DocumentConventions _conventions;
-        private readonly Uri _url;
+        private readonly string _database;
 
         private readonly Action _onDispose;
         private ClientWebSocket _client;
@@ -38,13 +38,8 @@ namespace Raven.Client.Documents.Changes
         {
             _requestExecutor = requestExecutor;
             _conventions = conventions;
-
-            var url = $"{requestExecutor.Url}/databases/{databaseName}/changes"
-                .ToLower()
-                .ToWebSocketPath();
-
-            _url = new Uri(url, UriKind.Absolute);
-
+            _database = databaseName;
+           
             _tcs = new TaskCompletionSource<IDatabaseChanges>(TaskCreationOptions.RunContinuationsAsynchronously);
             _cts = new CancellationTokenSource();
             _client = new ClientWebSocket();
@@ -52,7 +47,7 @@ namespace Raven.Client.Documents.Changes
             _onDispose = onDispose;
             ConnectionStatusChanged += OnConnectionStatusChanged;
 
-            _task = DoWork();
+            _task = DoWork();   
         }
 
         private void OnConnectionStatusChanged(object sender, EventArgs e)
@@ -349,13 +344,18 @@ namespace Raven.Client.Documents.Changes
 
         private async Task DoWork()
         {
+            await _requestExecutor.GetCurrentNode();
+            var url = new Uri($"{_requestExecutor.Url}/databases/{_database}/changes"
+                .ToLower()
+                .ToWebSocketPath(), UriKind.Absolute);
+
             while (_cts.IsCancellationRequested == false)
             {
                 try
                 {
                     if (Connected == false)
                     {
-                        await _client.ConnectAsync(_url, _cts.Token).ConfigureAwait(false);
+                        await _client.ConnectAsync(url, _cts.Token).ConfigureAwait(false);
 
                         ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
                     }

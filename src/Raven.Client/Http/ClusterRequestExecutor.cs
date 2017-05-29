@@ -10,6 +10,7 @@ namespace Raven.Client.Http
 {
     public class ClusterRequestExecutor : RequestExecutor
     {
+        private readonly SemaphoreSlim _clusterTopologySemaphore = new SemaphoreSlim(1, 1);
 
         protected ClusterRequestExecutor(string apiKey) : base(null, apiKey)
         {

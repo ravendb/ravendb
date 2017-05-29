@@ -294,7 +294,7 @@ namespace FastTests.Smuggler
                     Active = true,
                     DeleteFrequencySeconds = 100,
                 };
-                await store.Admin.Server.SendAsync(new ConfigureExpirationOperation(config));
+                await store.Admin.Server.SendAsync(new ConfigureExpirationOperation(config, store.Database));
                 await session.SaveChangesAsync();
             }
         }

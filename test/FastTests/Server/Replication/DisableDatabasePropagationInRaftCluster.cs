@@ -32,7 +32,7 @@ namespace FastTests.Server.Replication
             })
             using (var slave = new DocumentStore
             {
-                Urls = leaderServer.WebUrls,
+                Urls = slaveServer.WebUrls,
                 Database = databaseName
             })
             {

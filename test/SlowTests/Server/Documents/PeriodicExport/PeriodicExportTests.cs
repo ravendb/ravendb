@@ -39,7 +39,7 @@ namespace SlowTests.Server.Documents.PeriodicExport
                         LocalFolderName = _exportPath,
                         IntervalMilliseconds = 25
                     };
-                    await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.Database));
+                    await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.Database));                    
                     await session.SaveChangesAsync();
                 }
 
@@ -54,8 +54,8 @@ namespace SlowTests.Server.Documents.PeriodicExport
                     .GetField(nameof(PeriodicExportRunner.MaxTimerTimeout), BindingFlags.Instance | BindingFlags.Public)
                     .SetValue(periodicExportRunner, TimeSpan.FromMilliseconds(5));
 
-                var operation = new GetPeriodicBackupStatusOperation();
-                //await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.Database));
+                var operation = new GetPeriodicBackupStatusOperation(store.Database);
+                    //await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.Database));
                 SpinWait.SpinUntil(() =>
                 {
                     var result = store.Admin.Server.Send(operation);
@@ -122,7 +122,7 @@ namespace SlowTests.Server.Documents.PeriodicExport
                 typeof(PeriodicExportRunner)
                     .GetField(nameof(PeriodicExportRunner.MaxTimerTimeout), BindingFlags.Instance | BindingFlags.Public)
                     .SetValue(periodicExportRunner, TimeSpan.FromMilliseconds(5));
-                var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation();
+                var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(store.Database);
                 SpinWait.SpinUntil(() => store.Admin.Server.Send(getPeriodicBackupStatus).Status != null, 20000);
             }
 
@@ -157,13 +157,13 @@ namespace SlowTests.Server.Documents.PeriodicExport
                     await store.Admin.Server.SendAsync(operation);
                     await session.SaveChangesAsync();
                 }
-                var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation();
+                var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(store.Database);
 
                 SpinWait.SpinUntil(() =>
                 {
                     var result = store.Admin.Server.Send(getPeriodicBackupStatus);
                     if (result.Status == null)
-                        return false;
+                        return false;                        
                     return result.Status.LastDocsEtag > 0;
                 }, TimeSpan.FromSeconds(10));
 

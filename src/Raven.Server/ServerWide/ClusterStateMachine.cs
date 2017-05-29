@@ -749,7 +749,6 @@ namespace Raven.Server.ServerWide
             while (index > Volatile.Read(ref _lastModifiedIndex.Val) && 
                     (timeout.HasValue == false || timeoutTask.IsCompleted == false))
             {
-                var task = _notifiedListeners.WaitAsync();
                 if (timeout.HasValue == false)
                 {
                     await task;

@@ -171,7 +171,7 @@ namespace SlowTests.Issues
                     Active = true,
                     DeleteFrequencySeconds = 100,
                 };
-                store.Admin.Server.Send(new ConfigureExpirationOperation(config));
+                store.Admin.Server.Send(new ConfigureExpirationOperation(config, store.Database));
                 session.SaveChanges();
             }
         }

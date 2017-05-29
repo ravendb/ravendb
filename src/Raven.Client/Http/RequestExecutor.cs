@@ -60,7 +60,7 @@ namespace Raven.Client.Http
 
         private Timer _updateCurrentTokenTimer;
 
-        private NodeSelector _nodeSelector;
+        protected NodeSelector _nodeSelector;
 
         private TimeSpan? _defaultTimeout;
 
@@ -71,7 +71,7 @@ namespace Raven.Client.Http
 
         public bool HasUpdatedTopologyOnce { get; private set; }
 
-        private bool _withoutTopology;
+        protected bool _withoutTopology;
 
         public TimeSpan? DefaultTimeout
         {
@@ -737,9 +737,14 @@ namespace Raven.Client.Http
             }
         }
 
-        public ServerNode GetCurrentNode()
+        public async Task<ServerNode> GetCurrentNode()
         {
-            return _nodeSelector?.CurrentNode;
+            if(_firstTopologyUpdate.Status != TaskStatus.RanToCompletion)
+                await _firstTopologyUpdate;
+
+            return _nodeSelector.CurrentNode;
+
+            
         }
     }
 }
