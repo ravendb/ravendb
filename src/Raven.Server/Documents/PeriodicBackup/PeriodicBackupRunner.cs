@@ -804,15 +804,14 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
 
                 var allBackupTaskIds = new List<long>();
-                foreach (var periodicBackup in databaseRecord.PeriodicBackups)
+                foreach (var periodicBackupConfiguration in databaseRecord.PeriodicBackups)
                 {
-                    var newBackupTaskId = periodicBackup.Key;
+                    var newBackupTaskId = periodicBackupConfiguration.TaskId;
                     allBackupTaskIds.Add(newBackupTaskId);
 
-                    var newConfiguration = periodicBackup.Value;
-                    var taskState = GetTaskStatus(databaseRecord, newConfiguration);
+                    var taskState = GetTaskStatus(databaseRecord, periodicBackupConfiguration);
 
-                    UpdatePeriodicBackups(newBackupTaskId, newConfiguration, taskState);
+                    UpdatePeriodicBackups(newBackupTaskId, periodicBackupConfiguration, taskState);
                 }
 
                 RemoveInactiveCompletedTasks();

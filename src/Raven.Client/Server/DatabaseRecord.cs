@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Transformers;
@@ -54,7 +55,7 @@ namespace Raven.Client.Server
 
         public ExpirationConfiguration Expiration { get; set; }
 
-        public Dictionary<long, PeriodicBackupConfiguration> PeriodicBackups { get; set; }
+        public List<PeriodicBackupConfiguration> PeriodicBackups { get; set; }
 
         public void AddIndex(IndexDefinition definition)
         {
@@ -170,12 +171,23 @@ namespace Raven.Client.Server
         public void AddPeriodicBackupConfiguration(PeriodicBackupConfiguration configuration)
         {
             Debug.Assert(configuration.TaskId != 0);
-            PeriodicBackups[configuration.TaskId] = configuration;
+
+            DeletePeriodicBackupConfiguration(configuration.TaskId);
+            PeriodicBackups.Add(configuration);
         }
 
         public void DeletePeriodicBackupConfiguration(long backupTaskId)
         {
-            PeriodicBackups?.Remove(backupTaskId);
+            Debug.Assert(backupTaskId != 0);
+
+            foreach (var periodicBackup in PeriodicBackups)
+            {
+                if (periodicBackup.TaskId == backupTaskId)
+                {
+                    PeriodicBackups.Remove(periodicBackup);
+                    break;
+                }
+            }
         }
     }
 
