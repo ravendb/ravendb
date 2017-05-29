@@ -21,7 +21,7 @@
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" Version="0.10.4" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.10.6" />
     <PackageReference Include="Microsoft.CSharp" Version="4.3.0" />
   </ItemGroup>
   <ItemGroup>

@@ -37,9 +37,9 @@
   <ItemGroup>
     <PackageReference Include="DotNetCross.Memory.Unsafe" Version="0.2.3.4" />
     <PackageReference Include="Lambda2Js" Version="2.1.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Http.Features" Version="1.1.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Http.Features" Version="1.1.2" />
     <PackageReference Include="Microsoft.CSharp" Version="4.3.0" />
-    <PackageReference Include="Microsoft.Extensions.Primitives" Version="1.1.0" />
+    <PackageReference Include="Microsoft.Extensions.Primitives" Version="1.1.1" />
     <PackageReference Include="Microsoft.Win32.Primitives" Version="4.3.0" />
     <PackageReference Include="Newtonsoft.Json" Version="10.0.2" />
     <PackageReference Include="System.Collections" Version="4.3.0" />
@@ -54,13 +54,13 @@
     <PackageReference Include="System.IO.FileSystem" Version="4.3.0" />
     <PackageReference Include="System.Linq" Version="4.3.0" />
     <PackageReference Include="System.Linq.Queryable" Version="4.3.0" />
-    <PackageReference Include="System.Net.Http" Version="4.3.1" />
+    <PackageReference Include="System.Net.Http" Version="4.3.2" />
     <PackageReference Include="System.Net.NameResolution" Version="4.3.0" />
     <PackageReference Include="System.Net.Requests" Version="4.3.0" />
-    <PackageReference Include="System.Net.Security" Version="4.3.0" />
+    <PackageReference Include="System.Net.Security" Version="4.3.1" />
     <PackageReference Include="System.Net.Sockets" Version="4.3.0" />
     <PackageReference Include="System.Net.WebSockets" Version="4.3.0" />
-    <PackageReference Include="System.Net.WebSockets.Client" Version="4.3.0" />
+    <PackageReference Include="System.Net.WebSockets.Client" Version="4.3.1" />
     <PackageReference Include="System.Reflection.Extensions" Version="4.3.0" />
     <PackageReference Include="System.Reflection.TypeExtensions" Version="4.3.0" />
     <PackageReference Include="System.Resources.ResourceManager" Version="4.3.0" />

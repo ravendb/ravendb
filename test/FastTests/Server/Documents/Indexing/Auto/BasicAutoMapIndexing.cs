@@ -159,13 +159,13 @@ namespace FastTests.Server.Documents.Indexing.Auto
         public async Task CanDelete()
         {
             using (var database = CreateDocumentDatabase())
-                await CanDelete(database);
+                await CanDeleteInternal(database);
 
             using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
-                await CanDelete(database);
+                await CanDeleteInternal(database);
         }
 
-        private static async Task CanDelete(DocumentDatabase database)
+        private static async Task CanDeleteInternal(DocumentDatabase database)
         {
             var def1 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } });
             var index1 =
@@ -211,13 +211,13 @@ namespace FastTests.Server.Documents.Indexing.Auto
         public async Task CanReset()
         {
             using (var database = CreateDocumentDatabase())
-                await CanReset(database);
+                await CanResetInternal(database);
 
             using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
-                await CanReset(database);
+                await CanResetInternal(database);
         }
 
-        private static async Task CanReset(DocumentDatabase database)
+        private static async Task CanResetInternal(DocumentDatabase database)
         {
             var def1 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } });
             var index1 = await database.IndexStore.CreateIndex(def1);
