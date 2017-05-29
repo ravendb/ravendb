@@ -353,11 +353,11 @@ namespace Raven.Server.Documents.Indexes
                 _initialized = true;
             }
 
-            return Task.Factory.StartNew(() =>
+            return Task.Run(() =>
             {
                 OpenIndexes(record);
                 HandleDatabaseRecordChange();
-            }, TaskCreationOptions.LongRunning);
+            });
         }
 
         public Index GetIndex(long etag)

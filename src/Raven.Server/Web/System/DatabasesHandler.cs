@@ -121,21 +121,7 @@ namespace Raven.Server.Web.System
         private string GetUrl(DatabaseTopologyNode node, string clientUrl, ClusterTopology clusterTopology)
         {
             var url = (Server.ServerStore.NodeTag == node.NodeTag ? clientUrl : null) ??  clusterTopology.GetUrlFromTag(node.NodeTag);
-            if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
-            {
-                switch (uri.Host)
-                {
-                    case "::":
-                    case "::0":
-                    case "0.0.0.0":
-                        url = new UriBuilder(uri)
-                        {
-                            Host = Environment.MachineName
-                        }.Uri.ToString();
-                        break;
-                }
-            }
-            return url.TrimEnd('/');
+            return ServerStore.EnsureValidExternalUrl(url);
         }
 
         private Task DbInfo(string dbName)

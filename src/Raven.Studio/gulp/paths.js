@@ -62,7 +62,8 @@ var paths = {
         "jquery-fullscreen/jquery.fullscreen.js",
         "spin.js/spin.js",
         "google-analytics/index.js",
-        "qrcode.js/qrcode.js"
+        "qrcode.js/qrcode.js",
+        "favico.js/favico.js"
     ]
 };
 

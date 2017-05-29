@@ -349,7 +349,15 @@ namespace Raven.Server.Rachis
                 {
                     clusterTopology = _engine.GetTopology(context);
                 }
-                RefreshAmbassadors(clusterTopology);
+                if (clusterTopology.Contains(_engine.LeaderTag) == false)
+                {
+                    _engine.SetNewState(RachisConsensus.State.Passive, this, _engine.CurrentTerm,
+                        "I was kicked out of the cluster and moved to passive mode");
+                }
+                else
+                {
+                    RefreshAmbassadors(clusterTopology);
+                }
             }
 
             var maxIndexOnQuorum = GetMaxIndexOnQuorum(VotersMajority);
@@ -740,6 +748,7 @@ namespace Raven.Server.Rachis
                 return "A";
             }
 
+            //TODO: handle properly
             if (clusterTopology.LastNodeId[clusterTopology.LastNodeId.Length - 1] + 1 > 'Z')
             {
                 return clusterTopology.LastNodeId + "A";

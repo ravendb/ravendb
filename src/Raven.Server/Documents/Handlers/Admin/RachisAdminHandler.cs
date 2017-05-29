@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     var serverUrl = GetStringQueryString("url");
                     topology = new ClusterTopology(
-                        Guid.NewGuid().ToString(),
+                        "dummy",
                         null,
                         new Dictionary<string, string>
                         {
@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/cluster/maintenance-stats", "Get", "/cluster/maintenance-stats")]
+        [RavenAction("/cluster/maintenance-stats", "GET", "/cluster/maintenance-stats")]
         public Task ClusterMaintenanceStats()
         {
             if (ServerStore.LeaderTag == null)
@@ -107,15 +107,23 @@ namespace Raven.Server.Documents.Handlers.Admin
                     writer.Flush();
                     return Task.CompletedTask;
                 }
-                // redirect to leader
-                ClusterTopology topology;
-                using (context.OpenReadTransaction())
-                {
-                    topology = ServerStore.GetClusterTopology(context);
-                }
-                var url = topology.GetUrlFromTag(ServerStore.LeaderTag);
-                HttpContext.Response.Redirect(Path.Combine(url,"cluster/maintenance-stats"));
+                RedirectToLeader();
             }
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/admin/cluster/add-node", "OPTIONS", "/admin/cluster/add-node?url={nodeUrl:string}")]
+        [RavenAction("/admin/cluster/remove-node", "OPTIONS", "/admin/cluster/remove-node?nodeTag={nodeTag:string}")]
+        [RavenAction("/admin/cluster/reelect", "OPTIONS", "/admin/cluster/reelect")]
+        public Task AllowPreflightReuqest()
+        {
+            // TODO: handle this properly when using https
+            // https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS
+            HttpContext.Response.Headers.Add("Access-Control-Allow-Origin", HttpContext.Request.Headers["Origin"]);
+            HttpContext.Response.Headers.Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE");
+            HttpContext.Response.Headers.Add("Access-Control-Allow-Headers", HttpContext.Request.Headers["Access-Control-Request-Headers"]);
+            HttpContext.Response.Headers.Add("Access-Control-Max-Age", "86400");
+            HttpContext.Response.Headers.Remove("Content-Type");
             return Task.CompletedTask;
         }
 
@@ -124,19 +132,54 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             var serverUrl = GetStringQueryString("url");
             ServerStore.EnsureNotPassive();
-            await ServerStore.AddNodeToClusterAsync(serverUrl).ThrowOnTimeout();
-
-            NoContentStatus();
+            if (ServerStore.IsLeader())
+            {
+                await ServerStore.AddNodeToClusterAsync(serverUrl).ThrowOnTimeout();
+                NoContentStatus();
+                return;
+            }
+            RedirectToLeader();
         }
-
+        
         [RavenAction("/admin/cluster/remove-node", "DELETE", "/admin/cluster/remove-node?nodeTag={nodeTag:string}")]
         public async Task DeleteNode()
         {
             var serverUrl = GetStringQueryString("nodeTag");
             ServerStore.EnsureNotPassive();
-            await ServerStore.RemoveFromClusterAsync(serverUrl).ThrowOnTimeout();
+            if (ServerStore.IsLeader())
+            {
+                await ServerStore.RemoveFromClusterAsync(serverUrl).ThrowOnTimeout();
+                NoContentStatus();
+                return;
+            }
+            RedirectToLeader();
+        }
 
-            NoContentStatus();
+        [RavenAction("/admin/cluster/reelect", "POST", "/admin/cluster/reelect")]
+        public Task EnforceReelection()
+        {
+            if (ServerStore.IsLeader())
+            {
+                ServerStore.Engine.CurrentLeader.StepDown();
+                return Task.CompletedTask;
+            }
+            RedirectToLeader();
+            return Task.CompletedTask;
+        }
+
+        private void RedirectToLeader()
+        {
+            ClusterTopology topology;
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                topology = ServerStore.GetClusterTopology(context);
+            }
+            var url = topology.GetUrlFromTag(ServerStore.LeaderTag);
+            var leaderLocation = url + HttpContext.Request.Path + HttpContext.Request.QueryString;
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.TemporaryRedirect;
+            HttpContext.Response.Headers.Remove("Content-Type");
+            HttpContext.Response.Headers.Add("Location",leaderLocation);
         }
     }
 }

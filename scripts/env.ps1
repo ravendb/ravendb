@@ -6,6 +6,8 @@ function SetVersionEnvironmentVariableInTeamCity($version) {
     SetTeamCityEnvironmentVariable 'env.informationalVersion' $version
 }
 
+$DEV_BUILD_NUMBER = 40
+
 function GetBuildNumber () {
     if ($env:BUILD_NUMBER) {
         $result = $env:BUILD_NUMBER

@@ -26,6 +26,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
+using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -740,8 +741,28 @@ namespace Raven.Server.ServerWide
         {
             if (_engine.CurrentState == RachisConsensus.State.Passive)
             {
-                _engine.Bootstarp(_ravenServer.WebUrls[0]);
+                _engine.Bootstarp(EnsureValidExternalUrl(_ravenServer.WebUrls[0]));
             }
+        }
+        
+        
+        public static string EnsureValidExternalUrl(string url)
+        {
+            if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                switch (uri.Host)
+                {
+                    case "::":
+                    case "::0":
+                    case "0.0.0.0":
+                        url = new UriBuilder(uri)
+                        {
+                            Host = Environment.MachineName
+                        }.Uri.ToString();
+                        break;
+                }
+            }
+            return url.TrimEnd('/');
         }
 
         public Task<(long, BlittableJsonReaderObject)> PutCommandAsync(BlittableJsonReaderObject cmd)

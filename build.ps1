@@ -1,34 +1,14 @@
 param(
-    $TargetPlatform="",
-    [switch]$Windows,
+    $Target="",
+    [switch]$WinX64,
+    [switch]$WinX86,
     [switch]$Ubuntu14,
     [switch]$Ubuntu16,
     [switch]$Rpi,
     [switch]$DontRebuildStudio,
     [switch]$Help)
 
-if ($Help) {
-    Write-Host -NoNewline -ForegroundColor Cyan "-Windows "
-    Write-Host " - build only Windows artifacts"
-
-    Write-Host -NoNewline -ForegroundColor Cyan "-Ubuntu14"
-    Write-Host " - build only Ubuntu 14.04 artifacts"
-    
-    Write-Host -NoNewline -ForegroundColor Cyan "-Ubuntu16"
-    Write-Host " - build only Ubuntu 16.04 artifacts"
-    
-    Write-Host -NoNewline -ForegroundColor Cyan "-Rpi"
-    Write-Host " - build only Raspberry Pie artifacts"
-
-    Write-Host -NoNewline -ForegroundColor Cyan "-DontRebuildStudio"
-    Write-Host " - skip building studio if it was build before"
-
-    exit 0
-}
-
 $ErrorActionPreference = "Stop"
-
-$DEV_BUILD_NUMBER = 40
 
 . '.\scripts\checkLastExitCode.ps1'
 . '.\scripts\checkPrerequisites.ps1'
@@ -43,7 +23,12 @@ $DEV_BUILD_NUMBER = 40
 . '.\scripts\env.ps1'
 . '.\scripts\updateSourceWithBuildInfo.ps1'
 . '.\scripts\nuget.ps1'
-. '.\scripts\platform.ps1'
+. '.\scripts\target.ps1'
+. '.\scripts\help.ps1'
+
+if ($Help) {
+    Help
+}
 
 CheckPrerequisites
 
@@ -53,6 +38,8 @@ $buildType = GetBuildType
 # TODO @gregolsky create a function for this - stable does not have label
 $versionSuffix = "$buildType-$buildNumber"
 $version = "4.0.0-$versionSuffix"
+
+Write-Host -ForegroundColor Green "Building $version"
 
 $PROJECT_DIR = Get-ScriptDirectory
 $RELEASE_DIR = [io.path]::combine($PROJECT_DIR, "artifacts")
@@ -72,23 +59,40 @@ $TYPINGS_GENERATOR_BIN_DIR = [io.path]::combine($TYPINGS_GENERATOR_SRC_DIR, "bin
 $STUDIO_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio")
 $STUDIO_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio", "build")
 
-if ($Windows) {
-    $TargetPlatform = "windows";
+if ([string]::IsNullOrEmpty($Target) -eq $false) {
+    $Target = $Target.Split(",")
+} else {
+    $Target = $null
+
+    if ($WinX64) {
+        $Target = @( "win-x64" );
+    }
+
+    if ($WinX86) {
+        $Target = @( "win-x86" );
+    }
+
+    if ($Ubuntu14) {
+        $Target = @( "ubuntu14" );
+    } 
+
+    if ($Ubuntu16) {
+        $Target = @( "ubuntu16" );
+    }
+
+    if ($Rpi) {
+        $Target = @( "rpi" );
+    }
 }
 
-if ($Ubuntu14) {
-    $TargetPlatform = "ubuntu14";
-} 
+$targets = GetBuildTargets $Target
 
-if ($Ubuntu16) {
-    $TargetPlatform = "ubuntu16";
+if ($targets.Count -eq 0) {
+    write-host "No targets specified."
+    exit 0;
+} else {
+    Write-Host -ForegroundColor Magenta "Build targets: $($targets.Name)"
 }
-
-if ($Rpi) {
-    $TargetPlatform = "rpi";
-}
-
-$specs = GetTargetPlatforms $TargetPlatform
 
 SetVersionEnvironmentVariableInTeamCity $version
 
@@ -101,7 +105,7 @@ UpdateSourceWithBuildInfo $PROJECT_DIR $buildNumber $version
 
 BuildSparrow $SPARROW_SRC_DIR
 
-BuildClient $CLIENT_SRC_DIR $CLIENT_OUT_DIR $spec.Name
+BuildClient $CLIENT_SRC_DIR
 
 CreateNugetPackage $CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
 
@@ -112,11 +116,10 @@ if (ShouldBuildStudio $STUDIO_OUT_DIR $DontRebuildStudio) {
     write-host "Not rebuilding studio..."
 }
 
-Foreach ($spec in $SPECS) {
-    $runtime = $spec.Runtime
+Foreach ($spec in $targets) {
     $specOutDir = [io.path]::combine($OUT_DIR, $spec.Name)
 
-    BuildServer $SERVER_SRC_DIR $specOutDir $runtime $spec.Name
+    BuildServer $SERVER_SRC_DIR $specOutDir $spec
 
     $specOutDirs = @{
         "Main" = $specOutDir;
