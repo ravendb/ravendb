@@ -36,9 +36,9 @@ namespace Raven.Server.Rachis
         private class CommandState
         {
             public long CommandIndex;
-            public BlittableJsonReaderObject Result;
-            public TaskCompletionSource<(long, BlittableJsonReaderObject)> TaskCompletionSource;
-            public Action<TaskCompletionSource<(long, BlittableJsonReaderObject)>> OnNotify;
+            public object Result;
+            public TaskCompletionSource<(long, object)> TaskCompletionSource;
+            public Action<TaskCompletionSource<(long, object)>> OnNotify;
         }
 
         private int _hasNewTopology;
@@ -526,7 +526,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public Task<(long index, BlittableJsonReaderObject result)> PutAsync(BlittableJsonReaderObject cmd)
+        public Task<(long index, object result)> PutAsync(BlittableJsonReaderObject cmd)
         {
             long index;
 
@@ -536,7 +536,7 @@ namespace Raven.Server.Rachis
                 index = _engine.InsertToLeaderLog(context, cmd, RachisEntryFlags.StateMachineCommand);
                 context.Transaction.Commit();
             }
-            var tcs = new TaskCompletionSource<(long, BlittableJsonReaderObject)>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var tcs = new TaskCompletionSource<(long, object)>(TaskCreationOptions.RunContinuationsAsynchronously);
             _entries[index] = new CommandState
             {
                 CommandIndex = index,
@@ -722,7 +722,7 @@ namespace Raven.Server.Rachis
                 var topologyJson = _engine.SetTopology(context, clusterTopology);
 
                 var index = _engine.InsertToLeaderLog(context, topologyJson, RachisEntryFlags.Topology);
-                var tcs = new TaskCompletionSource<(long, BlittableJsonReaderObject)>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var tcs = new TaskCompletionSource<(long, object)>(TaskCreationOptions.RunContinuationsAsynchronously);
                 _entries[index] = new CommandState
                 {
                     TaskCompletionSource = tcs,
@@ -758,7 +758,7 @@ namespace Raven.Server.Rachis
             return clusterTopology.LastNodeId.Substring(0, clusterTopology.LastNodeId.Length - 1) + lastChar;
         }
 
-        public void SetStateOf(long index, Action<TaskCompletionSource<(long, BlittableJsonReaderObject)>> onNotify)
+        public void SetStateOf(long index, Action<TaskCompletionSource<(long, object)>> onNotify)
         {
             if (_entries.TryGetValue(index, out CommandState value))
             {
@@ -766,7 +766,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public void SetStateOf(long index, BlittableJsonReaderObject result)
+        public void SetStateOf(long index, object result)
         {
             if (_entries.TryGetValue(index, out CommandState value))
             {

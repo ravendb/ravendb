@@ -175,6 +175,11 @@ namespace Raven.Server.Documents
 
         public DateTime StartTime { get; }
 
+        public ServerStore ServerStore
+        {
+            get { return _serverStore; }
+        }
+
         public void Initialize()
         {
             try

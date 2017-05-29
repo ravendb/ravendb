@@ -10,8 +10,11 @@ using Microsoft.Net.Http.Headers;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Rachis;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler;
 using Sparrow;
@@ -41,6 +44,18 @@ namespace Raven.Server.Documents.Handlers
                 }
                 else
                     ThrowNotSupportedType(contentType);
+
+                for (int i = 0; i < command.ParsedCommands.Count; i++)
+                {
+                    if (command.ParsedCommands.Array[i + command.ParsedCommands.Offset].Type != CommandType.PUT)
+                        continue;
+
+                    if (command.ParsedCommands.Array[i + command.ParsedCommands.Offset].Id?.EndsWith("/") != true)
+                        continue;
+
+                    command.ParsedCommands.Array[i + command.ParsedCommands.Offset].Id =
+                        await ServerStore.GenerateClusterIdentityAsync(command.ParsedCommands.Array[i + command.ParsedCommands.Offset].Id, Database.Name);
+                }
 
                 var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
                 if (waitForIndexesTimeout != null)
@@ -276,38 +291,35 @@ namespace Raven.Server.Documents.Handlers
                     switch (cmd.Type)
                     {
                         case CommandType.PUT:
-                        {
-                            var putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.Etag, cmd.Document);
-
-                            context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);
-
-                            LastEtag = putResult.Etag;
-
-                            ModifiedCollections?.Add(putResult.Collection.Name);
-
-                            var changeVector = new DynamicJsonArray();
-                            if (putResult.ChangeVector != null)
                             {
-                                foreach (var entry in putResult.ChangeVector)
-                                    changeVector.Add(entry.ToJson());
+                                var putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.Etag, cmd.Document);
+                                context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);
+                                LastEtag = putResult.Etag;
+                                ModifiedCollections?.Add(putResult.Collection.Name);
+
+                                var changeVector = new DynamicJsonArray();
+                                if (putResult.ChangeVector != null)
+                                {
+                                    foreach (var entry in putResult.ChangeVector)
+                                        changeVector.Add(entry.ToJson());
+                                }
+
+                                // Make sure all the metadata fields are always been add
+                                var putReply = new DynamicJsonValue
+                                {
+                                    ["Type"] = CommandType.PUT.ToString(),
+                                    [Constants.Documents.Metadata.Id] = putResult.Id,
+                                    [Constants.Documents.Metadata.Etag] = putResult.Etag,
+                                    [Constants.Documents.Metadata.Collection] = putResult.Collection.Name,
+                                    [Constants.Documents.Metadata.ChangeVector] = changeVector,
+                                    [Constants.Documents.Metadata.LastModified] = putResult.LastModified,
+                                };
+
+                                if (putResult.Flags != DocumentFlags.None)
+                                    putReply[Constants.Documents.Metadata.Flags] = putResult.Flags;
+
+                                Reply.Add(putReply);
                             }
-
-                            // Make sure all the metadata fields are always been add
-                            var putReply = new DynamicJsonValue
-                            {
-                                ["Type"] = CommandType.PUT.ToString(),
-                                [Constants.Documents.Metadata.Id] = putResult.Id,
-                                [Constants.Documents.Metadata.Etag] = putResult.Etag,
-                                [Constants.Documents.Metadata.Collection] = putResult.Collection.Name,
-                                [Constants.Documents.Metadata.ChangeVector] = changeVector,
-                                [Constants.Documents.Metadata.LastModified] = putResult.LastModified,
-                            };
-
-                            if (putResult.Flags != DocumentFlags.None)
-                                putReply[Constants.Documents.Metadata.Flags] = putResult.Flags;
-
-                            Reply.Add(putReply);
-                        }
                             break;
                         case CommandType.PATCH:
                             cmd.PatchCommand.Execute(context);
