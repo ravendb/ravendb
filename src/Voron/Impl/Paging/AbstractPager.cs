@@ -213,7 +213,8 @@ namespace Voron.Impl.Paging
             if (Disposed)
                 return;
 
-            _options?.IoMetrics?.FileClosed(FileName.FullPath);
+            if (FileName?.FullPath != null)
+                _options?.IoMetrics?.FileClosed(FileName.FullPath);
 
             if (_pagerState != null)
             {
@@ -222,7 +223,8 @@ namespace Voron.Impl.Paging
             }
 
             Disposed = true;
-            NativeMemory.UnregisterFileMapping(FileName.FullPath);
+            if (FileName?.FullPath != null)
+                NativeMemory.UnregisterFileMapping(FileName.FullPath);
             GC.SuppressFinalize(this);
         }
 
