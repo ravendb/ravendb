@@ -1,9 +1,9 @@
 
 function BuildServer ( $srcDir, $outDir, $spec ) {
-    if ($specName -ne 'raspberry-pi') {
-        BuildServerRegular $srcDir $outDir $spec
-    } else {
+    if ($spec.TargetId -eq 'rpi') {
         BuildServerArm $srcDir $outDir $spec
+    } else {
+        BuildServerRegular $srcDir $outDir $spec
     }
 }
 
@@ -11,9 +11,17 @@ function BuildServerRegular ( $srcDir, $outDir, $spec ) {
     write-host "Building Server for $specName..."
 
     $output = [io.path]::combine($outDir, "Server");
-    & dotnet publish --output $output `
-                 --runtime $($spec.Runtime) `
-                 --configuration "Release" $srcDir;
+    if ([string]::IsNullOrEmpty($spec.Arch)) {
+        & dotnet publish --output $output `
+            --runtime $($spec.Runtime) `
+            --configuration "Release" $srcDir;
+    } else {
+            & dotnet publish --output $output `
+                --runtime $($spec.Runtime) `
+                --configuration "Release" $srcDir `
+                /p:Platform=$($spec.Arch);
+    }
+
     CheckLastExitCode
 }
 
@@ -59,7 +67,7 @@ function BuildStudio ( $srcDir, $version ) {
         & npm install
         CheckLastExitCode
 
-        echo "Update version.json..."
+        Write-Host "Update version.json..."
         $versionJsonPath = [io.path]::combine($srcDir, "wwwroot", "version.json")
         "{ ""Version"": ""$version"" }" | Out-File $versionJsonPath -Encoding UTF8
 
