@@ -28,7 +28,7 @@ namespace FastTests.Tasks
             var leaderServer = await CreateRaftClusterAndGetLeader(clusterSize);
             using (var leaderStore = new DocumentStore()
             {
-                Url = leaderServer.WebUrls[0],
+                Urls = leaderServer.WebUrls,
                 Database = databaseName
             }.Initialize())
             {
@@ -62,17 +62,17 @@ namespace FastTests.Tasks
             var followers = Servers.Where(s => s != leaderServer).ToList();
             using (var leaderStore = new DocumentStore
             {
-                Url = leaderServer.WebUrls[0],
+                Urls = leaderServer.WebUrls,
                 Database = databaseName
             }.Initialize())
             using (var followerA = new DocumentStore
             {
-                Url = followers[0].WebUrls[0],
+                Urls = followers[0].WebUrls,
                 Database = databaseName
             }.Initialize())
             using (var followerB = new DocumentStore
             {
-                Url = followers[1].WebUrls[0],
+                Urls = followers[1].WebUrls,
                 Database = databaseName
             }.Initialize())
             {
@@ -165,17 +165,17 @@ namespace FastTests.Tasks
             var followers = Servers.Where(s => s != leaderServer).ToList();
             using (var leaderStore = new DocumentStore
             {
-                Url = leaderServer.WebUrls[0],
+                Urls = leaderServer.WebUrls,
                 Database = databaseName
             }.Initialize())
             using (var followerA = new DocumentStore
             {
-                Url = followers[0].WebUrls[0],
+                Urls = followers[0].WebUrls,
                 Database = databaseName
             }.Initialize())
             using (var followerB = new DocumentStore
             {
-                Url = followers[1].WebUrls[0],
+                Urls = followers[1].WebUrls,
                 Database = databaseName
             }.Initialize())
             {
@@ -243,7 +243,7 @@ namespace FastTests.Tasks
             var leaderServer = await CreateRaftClusterAndGetLeader(clusterSize);
             using (var leaderStore = new DocumentStore()
             {
-                Url = leaderServer.WebUrls[0],
+                Urls = leaderServer.WebUrls,
                 Database = databaseName
             }.Initialize())
             {

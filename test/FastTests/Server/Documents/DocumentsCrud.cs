@@ -506,9 +506,9 @@ namespace FastTests.Server.Documents
                     using (var doc = ctx.ReadObject(new DynamicJsonValue
                     {
                         ["ThisDocId"] = $"{i}"
-                    }, id +i, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                    }, id + i, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                     {
-                        var putResult = _documentDatabase.DocumentsStorage.Put(ctx, id+i, null, doc);
+                        var putResult = _documentDatabase.DocumentsStorage.Put(ctx, id + i, null, doc);
                         Assert.Equal(i, putResult.Etag);
                     }
                 }
@@ -533,7 +533,7 @@ namespace FastTests.Server.Documents
                     ["ThisDocId"] = "2"
                 }, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    var putResult = _documentDatabase.DocumentsStorage.Put(ctx, id+5, null, doc);
+                    var putResult = _documentDatabase.DocumentsStorage.Put(ctx, id + 5, null, doc);
                     Assert.True(putResult.Etag >= 5);
                     Assert.Equal("users/5", putResult.Id);
                 }

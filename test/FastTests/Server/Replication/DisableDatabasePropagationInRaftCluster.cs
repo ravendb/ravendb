@@ -27,12 +27,12 @@ namespace FastTests.Server.Replication
             const string databaseName = "DisableDatabaseToggleOperation_should_propagate_through_raft_cluster";
             using (var master = new DocumentStore
             {
-                Urls = leaderServer.WebUrls,
+                Urls = UseFiddler(leaderServer.WebUrls),
                 Database = databaseName
             })
             using (var slave = new DocumentStore
             {
-                Urls = slaveServer.WebUrls,
+                Urls = UseFiddler(slaveServer.WebUrls),
                 Database = databaseName
             })
             {
@@ -46,8 +46,6 @@ namespace FastTests.Server.Replication
                 await WaitForRaftIndexToBeAppliedInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
 
                 var requestExecutor = master.GetRequestExecutor();
-                //await Task.WhenAny(requestExecutor.UpdateTopologyAsync(), Task.Delay(TimeSpan.FromSeconds(10)));
-                
                 using (var session = master.OpenSession())
                 {
                     session.Advanced.WaitForReplicationAfterSaveChanges();
