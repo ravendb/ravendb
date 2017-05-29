@@ -5,13 +5,10 @@ using System.Threading.Tasks;
 using FastTests.Client.Attachments;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Operations;
-using Raven.Client.Exceptions.Security;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.Operations.ApiKeys;
 using Raven.Server.Config.Attributes;
-using Sparrow.Logging;
 using Xunit;
 
 namespace RachisTests.DatabaseCluster
