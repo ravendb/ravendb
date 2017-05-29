@@ -152,6 +152,7 @@ namespace Raven.Server.Rachis
         public TimeSpan ElectionTimeout;
 
         private Leader _currentLeader;
+        public Leader CurrentLeader => _currentLeader;
         private TaskCompletionSource<object> _topologyChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         private TaskCompletionSource<object> _stateChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         private TaskCompletionSource<object> _commitIndexChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -207,8 +208,7 @@ namespace Raven.Server.Rachis
                 }
                 //We want to be able to reproduce rare issues that are related to timing
                 var rand = _seed.HasValue ? new Random(_seed.Value) : new Random();
-                Timeout = new TimeoutEvent(rand.Next((int)Math.Max(int.MaxValue, ElectionTimeout.TotalMilliseconds / 3 * 2),
-                    (int)Math.Max(int.MaxValue, ElectionTimeout.TotalMilliseconds)));
+                Timeout = new TimeoutEvent(rand.Next((int)(ElectionTimeout.TotalMilliseconds / 3 * 2),(int)ElectionTimeout.TotalMilliseconds));
 
                 // if we don't have a topology id, then we are passive
                 // an admin needs to let us know that it is fine, either
