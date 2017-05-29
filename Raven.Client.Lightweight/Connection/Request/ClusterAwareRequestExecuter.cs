@@ -32,7 +32,7 @@ namespace Raven.Client.Connection.Request
 {
     public class ClusterAwareRequestExecuter : IRequestExecuter
     {
-        public TimeSpan WaitForLeaderTimeout { get; set; }= TimeSpan.FromSeconds(5);
+        public TimeSpan WaitForLeaderTimeout { get; set; }= TimeSpan.FromSeconds(10);
 
         public TimeSpan ReplicationDestinationsTopologyTimeout { get; set; } = TimeSpan.FromSeconds(2);
 
@@ -96,10 +96,10 @@ namespace Raven.Client.Connection.Request
             {
                 if (Log.IsDebugEnabled)
                 {
-                    Log.Debug($"Leader node is changing from null to null.");
-                }
-                leaderNodeSelected.Reset();
-            }
+                    Log.Debug($"Leader node is changing from {realPrevValue} to null.");
+                }                
+				leaderNodeSelected.Reset();
+            }            
             return res;
         }
 
@@ -207,16 +207,20 @@ namespace Raven.Client.Connection.Request
             this.readStripingBase = strippingBase;
         }
 
-        private async Task<T> ExecuteWithinClusterInternalAsync<T>(AsyncServerClient serverClient, HttpMethod method, Func<OperationMetadata, IRequestTimeMetric, Task<T>> operation, CancellationToken token, int numberOfRetries = 2, bool withClusterFailoverHeader = false)
+        private async Task<T> ExecuteWithinClusterInternalAsync<T>(AsyncServerClient serverClient, HttpMethod method, Func<OperationMetadata, IRequestTimeMetric, Task<T>> operation, CancellationToken token, int numberOfRetries = 3, bool withClusterFailoverHeader = false)
         {
             token.ThrowIfCancellationRequested();
             
             var node = LeaderNode;
             if (node == null)
             {
+                if(Log.IsDebugEnabled)
+                {
+                    Log.Debug($"Fetching topology, {serverClient.Url}: Retries={numberOfRetries} When={DateTime.UtcNow}");
+                }
 #pragma warning disable 4014
                 // If withClusterFailover set to true we will need to force the update and choose another leader.
-                UpdateReplicationInformationIfNeededAsync(serverClient, force:withClusterFailoverHeader); // maybe start refresh task
+                UpdateReplicationInformationIfNeededAsync(serverClient, force:true); // maybe start refresh task
 #pragma warning restore 4014
                 switch (serverClient.convention.FailoverBehavior)
                 {
@@ -226,7 +230,7 @@ namespace Raven.Client.Connection.Request
                         if(Log.IsDebugEnabled && waitResult == false)
                             Log.Debug($"Failover behavior is {serverClient.convention.FailoverBehavior}, waited for {WaitForLeaderTimeout.TotalSeconds} seconds and no leader was selected.");
                         break;
-                    default:
+                    default:                        
                         if (leaderNodeSelected.Wait(WaitForLeaderTimeout) == false)
                         {
                             if (Log.IsDebugEnabled)
@@ -453,7 +457,7 @@ namespace Raven.Client.Connection.Request
                     }
                 }
 
-                return refreshReplicationInformationTask = Task.Factory.StartNew(() =>
+                return refreshReplicationInformationTask = Task.Factory.StartNew(async () =>
                 {
                     var tryFailoverServers = false;
                     var triedFailoverServers = FailoverServers == null || FailoverServers.Length == 0;
@@ -515,7 +519,9 @@ namespace Raven.Client.Connection.Request
                             })
                             .FirstOrDefault();
 
-
+                        var hasLeaderCount = replicationDocuments
+                            .Count(x => x.Task.IsCompleted && x.Task.Result != null && x.Task.Result.HasLeader);
+                       
                         if (newestTopology == null && FailoverServers != null && FailoverServers.Length > 0 && tryFailoverServers == false)
                             tryFailoverServers = true;
 
@@ -538,8 +544,16 @@ namespace Raven.Client.Connection.Request
                                 };
                             return;
                         }
-
-                        if (newestTopology != null)
+                        if (Log.IsDebugEnabled)
+                        {
+                            foreach (var x in replicationDocuments)
+                            {
+                                Log.Debug($"Topology fetched from {x.Node.Url}");
+                                Log.Debug($"{JsonConvert.SerializeObject(x.Task?.Result)}");
+                            }
+                        }
+                        var majorityOfNodesAgreeThereIsLeader = Nodes.Count == 1 || hasLeaderCount > (newestTopology?.Task.Result.Destinations.Count + 1) / 2;
+                        if (newestTopology != null && majorityOfNodesAgreeThereIsLeader)
                         {
                             var replicationDocument = newestTopology.Task.Result;
                             var node = newestTopology.Node;
@@ -548,8 +562,7 @@ namespace Raven.Client.Connection.Request
                                 return;
                             }
                         }
-
-                        Thread.Sleep(500);
+                        await Task.Delay(3000).ConfigureAwait(false);
                     }
                 }).ContinueWith(t =>
                 {
