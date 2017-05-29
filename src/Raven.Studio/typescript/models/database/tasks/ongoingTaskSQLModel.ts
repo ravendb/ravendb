@@ -1,8 +1,8 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
-import ongoingTask = require("models/database/tasks/ongoingTask"); 
+import ongoingTask = require("models/database/tasks/ongoingTaskModel"); 
 
-class ongoingTaskSQL extends ongoingTask {
+class ongoingTaskSQLModel extends ongoingTask {
 
     sqlProvider = ko.observable<string>();
     sqlTable = ko.observable<string>();
@@ -49,4 +49,4 @@ class ongoingTaskSQL extends ongoingTask {
     }
 }
 
-export = ongoingTaskSQL;
+export = ongoingTaskSQLModel;

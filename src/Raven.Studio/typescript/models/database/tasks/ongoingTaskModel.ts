@@ -1,7 +1,8 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
-abstract class ongoingTask { 
+abstract class ongoingTaskModel { 
 
+    taskId: number;
     taskType = ko.observable<Raven.Server.Web.System.OngoingTaskType>();
     responsibleNode = ko.observable<Raven.Client.Server.Operations.NodeId>();
     taskState = ko.observable<Raven.Server.Web.System.OngoingTaskState>();
@@ -50,6 +51,8 @@ abstract class ongoingTask {
     }
 
     protected update(dto: Raven.Server.Web.System.OngoingTask) {
+        // this.taskId = dto.TaskId;
+        this.taskId = 123456789; // temp....
         this.taskType(dto.TaskType);
         this.responsibleNode(dto.ResponsibleNode);
         this.taskState(dto.TaskState);
@@ -58,4 +61,4 @@ abstract class ongoingTask {
     }
 }
 
-export = ongoingTask;
+export = ongoingTaskModel;

@@ -1,19 +1,22 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
-import ongoingTask = require("models/database/tasks/ongoingTask"); 
+import ongoingTask = require("models/database/tasks/ongoingTaskModel"); 
 
-class ongoingTaskReplication extends  ongoingTask {
-    
+class ongoingTaskETLModel extends ongoingTask {
+
+    apiKey = ko.observable<string>();
     destinationDB = ko.observable<string>();
     destinationURL = ko.observable<string>();
     destDBText: KnockoutComputed<string>;
 
-    constructor(dto: Raven.Server.Web.System.OngoingTaskReplication) {
+    // Todo: Add support for the collections scripts dictionary
+
+    constructor(dto: Raven.Server.Web.System.OngoingTaskETL) {
         super(dto);
         this.initializeObservables();
         this.update(dto);
     }
-    
+
     initializeObservables() {
         super.initializeObservables();
         
@@ -22,31 +25,31 @@ class ongoingTaskReplication extends  ongoingTask {
         });
     }
 
-    update(dto: Raven.Server.Web.System.OngoingTaskReplication) {
+    update(dto: Raven.Server.Web.System.OngoingTaskETL) {
         super.update(dto);
         this.destinationDB(dto.DestinationDB);
         this.destinationURL(dto.DestinationURL);
     }
 
     enableTask() {
-        alert("enabling task replication");
+        alert("enabling task etl");
         // ...
     }
 
     disableTask() {
-        alert("disabling task replication");
+        alert("disabling task etl");
         // ...
     }
 
     editTask() {
-        alert("edit task replication");
+        alert("edit task etl");
         // ...
     }
 
     removeTask() {
-        alert("remove task replication");
+        alert("remove task etl");
         // ...
     }
 }
 
-export = ongoingTaskReplication;
+export = ongoingTaskETLModel;

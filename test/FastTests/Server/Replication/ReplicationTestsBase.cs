@@ -290,7 +290,7 @@ namespace FastTests.Server.Replication
         }
 
 
-        protected static async Task<ModifyDatabaseWatchersResult> UpdateReplicationTopology(
+        protected static async Task<ModifyExternalReplicationResult> UpdateReplicationTopology(
             DocumentStore store,
             List<DatabaseWatcher> watchers)
         {

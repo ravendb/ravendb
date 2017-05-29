@@ -1,8 +1,8 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
-import ongoingTask = require("models/database/tasks/ongoingTask"); 
+import ongoingTask = require("models/database/tasks/ongoingTaskModel"); 
 
-class ongoingTaskBackup extends ongoingTask {
+class ongoingTaskBackupModel extends ongoingTask {
 
     backupType = ko.observable<Raven.Server.Web.System.BackupType>();
     backupDestinations = ko.observableArray<string>();
@@ -45,4 +45,4 @@ class ongoingTaskBackup extends ongoingTask {
     }
 }
 
-export = ongoingTaskBackup;
+export = ongoingTaskBackupModel;
