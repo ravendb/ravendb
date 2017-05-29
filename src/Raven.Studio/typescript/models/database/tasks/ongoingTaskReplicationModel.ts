@@ -85,28 +85,19 @@ class ongoingTaskReplicationModel extends ongoingTask {
 
     static empty(): ongoingTaskReplicationModel {
         return new ongoingTaskReplicationModel({
-            LastModificationTime: null,
-            ResponsibleNode: null,        // todo: how to define & take from super ?
-            TaskConnectionStatus:null,
-            TaskState: null,
             TaskType: "Replication",
             DestinationDB: null,
-            DestinationURL: null,
-            TaskId: null
-        });
+            DestinationURL: null
+        } as Raven.Server.Web.System.OngoingTaskReplication);
     }
 
     static Simulation(): ongoingTaskReplicationModel {
         return new ongoingTaskReplicationModel({
-            LastModificationTime: null,
-            ResponsibleNode: null,        // todo: how to define & take from super ?
-            TaskConnectionStatus: null,
-            TaskState: null,
             TaskType: "Replication",
             DestinationDB: "simulationDB",
             DestinationURL: "http://localhost:8080",
             TaskId: 123456789
-        });
+        } as Raven.Server.Web.System.OngoingTaskReplication);
     }
 }
 
