@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Net;
 using System.Runtime.InteropServices;
 using Voron.Data.BTrees;
 using Voron.Global;
@@ -22,6 +21,9 @@ namespace Voron.Impl.Journal
         public long Size;
 
         [FieldOffset(16)]
+        public bool IsNewDiff;
+
+        [FieldOffset(18)]
         public long DiffSize;
     }
 

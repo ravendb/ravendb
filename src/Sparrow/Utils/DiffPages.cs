@@ -231,12 +231,15 @@ namespace Sparrow.Utils
         public long DiffSize;
         public long Size;
 
-        public void Apply()
+        public void Apply(bool isNewDiff)
         {
             long diffSize = DiffSize;
             long size = Size;
             byte* diffPtr = Diff;
             byte* destPtr = Destination;
+
+            if (isNewDiff)
+                Memory.SetInline(destPtr, 0, size);
 
             long pos = 0;
             while (pos < diffSize)

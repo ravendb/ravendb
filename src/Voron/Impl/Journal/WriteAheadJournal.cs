@@ -1320,6 +1320,7 @@ namespace Voron.Impl.Journal
 
                     write += _diffPage.OutputSize;
                     pagesInfo[pageSequencialNumber].Size = _diffPage.OutputSize == 0 ? 0 : diffPageSize;
+                    pagesInfo[pageSequencialNumber].IsNewDiff = txPage.PreviousVersion == null;
                     pagesInfo[pageSequencialNumber].DiffSize = _diffPage.IsDiff ? _diffPage.OutputSize : 0;
                     Debug.Assert(Math.Max(pagesInfo[pageSequencialNumber].Size, pagesInfo[pageSequencialNumber].DiffSize) <= diffPageSize);
                 }
