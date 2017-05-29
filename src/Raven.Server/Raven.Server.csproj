@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>Raven.Server is the database server for RavenDB</Description>
-    <VersionPrefix>4.0.0</VersionPrefix>
+    <Version>4.0.0-custom-40</Version>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>netcoreapp1.1</TargetFramework>
     <DefineConstants>$(DefineConstants);PORTABLE</DefineConstants>

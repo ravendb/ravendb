@@ -6,6 +6,7 @@ param(
     [switch]$Ubuntu16,
     [switch]$Rpi,
     [switch]$DontRebuildStudio,
+    [switch]$JustNuget,
     [switch]$Help)
 
 $ErrorActionPreference = "Stop"
@@ -47,6 +48,9 @@ $OUT_DIR = [io.path]::combine($PROJECT_DIR, "artifacts")
 
 $CLIENT_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Client")
 $CLIENT_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Client", "bin", "Release")
+
+$TESTDRIVER_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.TestDriver")
+$TESTDRIVER_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.TestDriver", "bin", "Release")
 
 $SERVER_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Server")
 
@@ -99,15 +103,20 @@ SetVersionEnvironmentVariableInTeamCity $version
 CleanBuildDirectories $RELEASE_DIR
 CleanBuildDirectories $TYPINGS_GENERATOR_BIN_DIR
 
-DownloadDependencies
-
 UpdateSourceWithBuildInfo $PROJECT_DIR $buildNumber $version
 
-BuildSparrow $SPARROW_SRC_DIR
+DownloadDependencies
 
+BuildSparrow $SPARROW_SRC_DIR
 BuildClient $CLIENT_SRC_DIR
+BuildTestDriver $TESTDRIVER_SRC_DIR
 
 CreateNugetPackage $CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
+CreateNugetPackage $TESTDRIVER_SRC_DIR $RELEASE_DIR $versionSuffix
+
+if ($JustNuget) {
+    exit 0
+}
 
 if (ShouldBuildStudio $STUDIO_OUT_DIR $DontRebuildStudio) {
     BuildTypingsGenerator $TYPINGS_GENERATOR_SRC_DIR
