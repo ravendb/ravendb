@@ -82,6 +82,9 @@
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="4.3.0" />
     <PackageReference Include="System.Threading.Tasks.Parallel" Version="4.3.0" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="ServerWide\Maintenance" />
+  </ItemGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DebugType>portable</DebugType>
   </PropertyGroup>
