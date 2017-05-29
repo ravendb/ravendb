@@ -317,27 +317,21 @@ body {
         }
 
         .navbar-brand {
-            filter: saturate(0%);
             color: @brand-primary;
-            font-size: 34px;
+            font-size: 54px;
             margin: 0 !important;
-            background-image: url('../img/ravendb_logo.png');
-            background-image: url('../img/ravendb_logo.svg'),none;
             background-repeat: no-repeat;
             background-size: contain;
             background-position: center;
-            text-indent: -9999px;
+            width: 100%;
             height: 100%;
             -webkit-transition: opacity @menu-transition-ease;
             -moz-transition: opacity @menu-transition-ease;
             -ms-transition: opacity @menu-transition-ease;
             -o-transition: opacity @menu-transition-ease;
             transition: opacity @menu-transition-ease;
-            width: 130px;
-
-            @media (min-width:@screen-md) {
-                width: 230px;
-            }
+            display: block;
+            text-align:center;
         }
     }
 
