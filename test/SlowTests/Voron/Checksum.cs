@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using FastTests.Utils;
 using Voron;
 using Voron.Platform.Win32;
 using Xunit;
@@ -61,7 +62,7 @@ namespace SlowTests.Voron
 
             // Lets corrupt something
             using (var options = StorageEnvironmentOptions.ForPath(DataDir))
-            using (var pager = new WindowsMemoryMapPager(options, new VoronPathSetting(Path.Combine(DataDir, "Raven.Voron"))))
+            using (var pager = LinuxTestUtils.GetNewPager(options, DataDir, "Raven.Voron"))
             using (var tempTX = new TempPagerTransaction())
             {
                 var writePtr = pager.AcquirePagePointer(tempTX, 2) + PageHeader.SizeOf + 43; // just some random place on page #2
