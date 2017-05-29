@@ -77,7 +77,11 @@ class createDatabase extends dialogViewModelBase {
         super.compositionComplete();
 
         this.syncQrCode();
-        this.databaseModel.encryption.key.subscribe(() => this.syncQrCode());
+        this.databaseModel.encryption.key.subscribe(() => {
+            this.syncQrCode();
+            // reset confirmation
+            this.databaseModel.encryption.confirmation(false);
+        });
     }
 
     private onTopologyLoaded(topology: clusterTopology) {

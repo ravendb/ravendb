@@ -7,6 +7,11 @@ class databaseCreationModel {
 
     readonly configurationSections: Array<availableConfigurationSection> = [
         {
+            name: "Encryption",
+            alwaysEnabled: false,
+            enabled: ko.observable<boolean>(false)
+        },
+        {
             name: "Replication",
             alwaysEnabled: true,
             enabled: ko.observable<boolean>(true)
@@ -15,11 +20,6 @@ class databaseCreationModel {
             name: "Path",
             alwaysEnabled: true,
             enabled: ko.observable<boolean>(true)
-        },
-        {
-            name: "Encryption",
-            alwaysEnabled: false,
-            enabled: ko.observable<boolean>(false)
         }
     ];
 
