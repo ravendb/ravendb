@@ -115,7 +115,7 @@ namespace SlowTests.Issues
                 WaitForIndexing(store);
 
                 result = store.Operations.Send(new DeleteByIndexOperation("Users/ByName", new IndexQuery(), new QueryOperationOptions { RetrieveDetails = true }))
-                    .WaitForCompletion<BulkOperationResult>(TimeSpan.FromSeconds(15));
+                    .WaitForCompletion<BulkOperationResult>(TimeSpan.FromSeconds(30));
 
                 Assert.NotEmpty(result.Details);
             }
