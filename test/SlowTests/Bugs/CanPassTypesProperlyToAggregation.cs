@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
+using FastTests.Utils;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Xunit;
@@ -32,10 +33,10 @@ namespace SlowTests.Bugs
 
             var code = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<Coin, Coin>(query, new DocumentConventions(), "docs", false);
 
-            Assert.Equal(@"docs.GroupBy(y => y.Denomination).Select(g => new {
+            Assert.Equal(LinuxTestUtils.Dos2Unix(@"docs.GroupBy(y => y.Denomination).Select(g => new {
     Denomination = g.Key,
     Cost = Enumerable.Sum(g, z => ((double) z.Cost))
-})", code);
+})"), code);
         }
 
         [Fact]
@@ -54,10 +55,10 @@ namespace SlowTests.Bugs
 
             var code = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<Coin, Coin>(query, new DocumentConventions(), "docs", false);
 
-            Assert.Equal(@"docs.GroupBy(y => y.Denomination).Select(g => new {
+            Assert.Equal(LinuxTestUtils.Dos2Unix(@"docs.GroupBy(y => y.Denomination).Select(g => new {
     Denomination = g.Key,
     Cost = (DynamicEnumerable.FirstOrDefault(g)).Cost.ToString()
-})", code);
+})"), code);
         }
     }
 }

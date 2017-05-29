@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Utils;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Xunit;
@@ -62,9 +63,9 @@ namespace SlowTests.Issues
                 Map = persons => from p in persons select new {DateTime = (DateTime?) null}
             }.ToIndexDefinition(new DocumentConventions{PrettifyGeneratedLinqExpressions = false});
 
-            const string expected = @"docs.People.Select(p => new {
+            var expected = LinuxTestUtils.Dos2Unix(@"docs.People.Select(p => new {
     DateTime = ((DateTime ? ) null)
-})";
+})");
             Assert.Equal(expected, indexDefinition.Maps.First());
         }
     }

@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents.Exceptions.Patching;
 using Raven.Client.Server.Operations;
@@ -36,10 +37,10 @@ namespace SlowTests.Issues
                     session.Store(new SimpleUser { FirstName = "John", LastName = "Smith" });
                     session.SaveChanges();
                 }
-                var functions = @"exports.a = function(value) { return  b(value); };
+                var functions = LinuxTestUtils.Dos2Unix(@"exports.a = function(value) { return  b(value); };
 exports.b = function(v) { return c(v); }
 exports.c = function(v) { throw 'oops'; }
-";
+");
                 await store.Admin.Server.SendAsync(new ModifyCustomFunctionsOperation(store.Database, functions)).ConfigureAwait(false);
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
@@ -54,12 +55,12 @@ exports.c = function(v) { throw 'oops'; }
 
                         database.Patcher.Apply(context, document, new PatchRequest
                         {
-                            Script = @"var s = 1234; 
-a(s);"
+                            Script = LinuxTestUtils.Dos2Unix(@"var s = 1234; 
+a(s);")
                         });
                     });
 
-                    Assert.Equal(@"Unable to execute JavaScript: 
+                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"Unable to execute JavaScript: 
 var s = 1234; 
 a(s);
 
@@ -70,7 +71,7 @@ c@customFunctions.js:3
 b@customFunctions.js:2
 a@customFunctions.js:1
 apply@main.js:2
-anonymous function@main.js:1", e.Message);
+anonymous function@main.js:1"), e.Message);
                 }
             }
         }
