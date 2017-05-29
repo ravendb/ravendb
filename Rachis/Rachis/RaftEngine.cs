@@ -323,7 +323,7 @@ namespace Rachis
             Debug.Assert(StateBehavior != null, "StateBehavior != null");
             OnStateChanged(state);
             if (_log.IsDebugEnabled)
-                _log.Debug("{0} ==> {1}", oldState, state);
+                _log.Debug("{2}:{0} ==> {1}", oldState, state,this.Options.SelfConnection.Uri);
         }
 
 

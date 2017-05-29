@@ -159,7 +159,7 @@ namespace Raven.Abstractions.Replication
             public bool HasGlobal { get; set; }
 
             public bool HasLocal { get; set; }
-    }
+        }
 
         public class ReplicationDestinationWithClusterInformation : ReplicationDestination
         {

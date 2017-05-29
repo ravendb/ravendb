@@ -23,6 +23,7 @@ using Raven.Tests.Helpers;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -142,9 +143,12 @@ namespace Raven.Tests.Raft
             var documentStores = nodes
                 .Select(node => NewRemoteDocumentStore(ravenDbServer: node, fiddler: fiddler,activeBundles: activeBundles, configureStore: configureStore, databaseName: databaseName))
                 .ToList();
-            foreach (var documentStore in documentStores)
+            if(Debugger.IsAttached)
             {
-                ((ClusterAwareRequestExecuter)((ServerClient)documentStore.DatabaseCommands).RequestExecuter).WaitForLeaderTimeout = TimeSpan.FromSeconds(30);
+                foreach (var documentStore in documentStores)
+                {
+                    ((ClusterAwareRequestExecuter)((ServerClient)documentStore.DatabaseCommands).RequestExecuter).WaitForLeaderTimeout = TimeSpan.FromSeconds(30);
+                }
             }
             return documentStores;
         }
