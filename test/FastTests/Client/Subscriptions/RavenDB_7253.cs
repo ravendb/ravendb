@@ -1,0 +1,44 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using FastTests.Client.Attachments;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Subscriptions;
+using Xunit;
+using FastTests.Server.Documents.Notifications;
+using Raven.Client.Extensions;
+using Raven.Client.Server.Operations;
+using Sparrow;
+
+namespace FastTests.Client.Subscriptions
+{
+    public class RavenDB_7253:RavenTestBase
+    {
+        [Fact]
+        public async Task SubscriptionShouldStopUponDatabaseDeletion()
+        {
+            using (var store = GetDocumentStore())
+            {
+                    
+                var subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
+
+                var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
+
+                var mre = new AsyncManualResetEvent();
+                subscription.Subscribe(x => { });
+
+                subscription.AfterAcknowledgment += mre.Set;
+
+                await subscription.StartAsync();
+
+                await mre.WaitAsync(TimeSpan.FromSeconds(20));
+
+                var deleteResult = await store.Admin.Server.SendAsync(new DeleteDatabaseOperation(store.Database, hardDelete: true));
+
+                Assert.True(await subscription.SubscriptionLifetimeTask.WaitWithTimeout(TimeSpan.FromSeconds(20)));
+            }
+        }
+    }
+}
