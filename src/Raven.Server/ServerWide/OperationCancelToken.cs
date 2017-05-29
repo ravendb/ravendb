@@ -6,8 +6,6 @@ namespace Raven.Server.ServerWide
 {
     public class OperationCancelToken : IDisposable
     {
-        private static readonly TimeSpan Infinity = TimeSpan.FromMilliseconds(-1);
-
         public static OperationCancelToken None = new OperationCancelToken(CancellationToken.None);
 
         private readonly CancellationTokenSource _cts;
@@ -20,7 +18,7 @@ namespace Raven.Server.ServerWide
 
         public OperationCancelToken(TimeSpan cancelAfter, CancellationToken shutdown)
         {
-            if (cancelAfter != Infinity && cancelAfter < TimeSpan.Zero)
+            if (cancelAfter != Timeout.InfiniteTimeSpan && cancelAfter < TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException(nameof(cancelAfter));
 
             _cts = CancellationTokenSource.CreateLinkedTokenSource(shutdown);
@@ -31,7 +29,7 @@ namespace Raven.Server.ServerWide
         }
 
         public OperationCancelToken(CancellationToken shutdown)
-            : this(Infinity, shutdown)
+            : this(Timeout.InfiniteTimeSpan, shutdown)
         {
         }
 
@@ -45,7 +43,7 @@ namespace Raven.Server.ServerWide
             if (_disposed)
                 return;
 
-            if (_cancelAfter == Infinity)
+            if (_cancelAfter == Timeout.InfiniteTimeSpan)
                 throw new InvalidOperationException("Cannot delay cancellation without timeout set.");
 
             const int minimumDelayTime = 25;
