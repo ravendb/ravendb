@@ -4,7 +4,14 @@ $TARGET_PLATFORM_SPECS = (
         "Runtime"   = "win10-x64";
         "PkgType"   = "zip";
         "IsUnix"    = $False;
-        "ShortName" = "windows";
+        "ShortName" = "win-x64";
+    },
+    @{
+        "Name"      = "windows-x86";
+        "Runtime"   = "win10-x86";
+        "PkgType"   = "zip";
+        "IsUnix"    = $False;
+        "ShortName" = "win-x86";
     },
     @{
         "Name"      = "ubuntu.14.04-x64";

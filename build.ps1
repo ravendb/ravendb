@@ -1,6 +1,7 @@
 param(
     $TargetPlatform="",
-    [switch]$Windows,
+    [switch]$WinX64,
+    [switch]$WinX86,
     [switch]$Ubuntu14,
     [switch]$Ubuntu16,
     [switch]$Rpi,
@@ -72,8 +73,12 @@ $TYPINGS_GENERATOR_BIN_DIR = [io.path]::combine($TYPINGS_GENERATOR_SRC_DIR, "bin
 $STUDIO_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio")
 $STUDIO_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio", "build")
 
-if ($Windows) {
-    $TargetPlatform = "windows";
+if ($WinX64) {
+    $TargetPlatform = "win-x64";
+}
+
+if ($WinX86) {
+    $TargetPlatform = "win-x86";
 }
 
 if ($Ubuntu14) {
@@ -101,7 +106,7 @@ UpdateSourceWithBuildInfo $PROJECT_DIR $buildNumber $version
 
 BuildSparrow $SPARROW_SRC_DIR
 
-BuildClient $CLIENT_SRC_DIR $CLIENT_OUT_DIR $spec.Name
+BuildClient $CLIENT_SRC_DIR
 
 CreateNugetPackage $CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
 
@@ -113,10 +118,9 @@ if (ShouldBuildStudio $STUDIO_OUT_DIR $DontRebuildStudio) {
 }
 
 Foreach ($spec in $SPECS) {
-    $runtime = $spec.Runtime
     $specOutDir = [io.path]::combine($OUT_DIR, $spec.Name)
 
-    BuildServer $SERVER_SRC_DIR $specOutDir $runtime $spec.Name
+    BuildServer $SERVER_SRC_DIR $specOutDir $spec
 
     $specOutDirs = @{
         "Main" = $specOutDir;
