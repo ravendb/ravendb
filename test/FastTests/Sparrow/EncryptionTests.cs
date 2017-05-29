@@ -2,6 +2,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using FastTests.Utils;
 using FastTests.Voron;
 using FastTests.Voron.FixedSize;
 using Raven.Server.ServerWide;
@@ -26,7 +27,7 @@ namespace FastTests.Sparrow
             {
                 options.MasterKey = Sodium.GenerateMasterKey();
 
-                using (var innerPager = GetPager(options))
+                using (var innerPager = LinuxTestUtils.GetNewPager(options, DataDir, "Raven.Voron"))
                 {
                     AbstractPager cryptoPager;
                     using (cryptoPager = new CryptoPager(innerPager))
@@ -55,19 +56,6 @@ namespace FastTests.Sparrow
                     }
                 }
             }
-        }
-
-        public static readonly bool RunningOnPosix = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
-                                                     RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
-
-        private AbstractPager GetPager(StorageEnvironmentOptions options)
-        {
-            // tests on windows 64bits or linux 64bits only
-            if (RunningOnPosix)
-            {
-                return new PosixMemoryMapPager(options, new VoronPathSetting(Path.Combine(DataDir, "Raven.Voron")));
-            }
-            return new WindowsMemoryMapPager(options, new VoronPathSetting(Path.Combine(DataDir, "Raven.Voron")));
         }
 
         [Theory]
