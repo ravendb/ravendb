@@ -57,7 +57,7 @@ class createDatabase extends dialogViewModelBase {
         //TODO: fetchClusterWideConfig
         //TODO: fetchCustomBundles
 
-        const getTopologyTask = new getClusterTopologyCommand(window.location.host)
+        const getTopologyTask = new getClusterTopologyCommand()
             .execute()
             .done(topology => {
                 this.onTopologyLoaded(topology);

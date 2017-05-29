@@ -11,7 +11,7 @@ class getClusterTopologyCommand extends commandBase {
     execute(): JQueryPromise<clusterTopology> {
         
         const args = {
-            url: this.serverUrl
+            url: window.location.origin
         };
         const url = endpoints.global.rachisAdmin.adminClusterTopology;
 

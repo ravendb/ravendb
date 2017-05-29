@@ -31,9 +31,17 @@ class cluster extends viewModelBase {
 
     topology = clusterTopologyManager.default.topology;
 
+    canDeleteNodes: KnockoutComputed<boolean>;
+
     constructor() {
         super();
         this.bindToCurrentInstance("deleteNode");
+
+        this.initObservables();
+    }
+
+    private initObservables() {
+        this.canDeleteNodes = ko.pureComputed(() => this.topology().nodes().length > 1);
     }
 
     addAnotherServerToCluster() {
