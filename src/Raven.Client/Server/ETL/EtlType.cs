@@ -1,4 +1,4 @@
-﻿namespace Raven.Server.Documents.ETL
+﻿namespace Raven.Client.Server.ETL
 {
     public enum EtlType
     {
