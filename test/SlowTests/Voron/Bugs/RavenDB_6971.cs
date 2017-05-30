@@ -22,7 +22,7 @@ namespace SlowTests.Voron.Bugs
                 {
                     store.Operations.Send(new PatchCollectionOperation("Orders", new PatchRequest()
                     {
-                        Script = @"PutDocument(""orders/"", this);"
+                        Script = @"PutDocument(""orders|"", this);"
                     })).WaitForCompletion(TimeSpan.FromSeconds(30));
                 }
 
@@ -32,7 +32,7 @@ namespace SlowTests.Voron.Bugs
 
                 store.Operations.Send(new PatchCollectionOperation("Orders", new PatchRequest()
                 {
-                    Script = @"PutDocument(""orders/"", this);"
+                    Script = @"PutDocument(""orders|"", this);"
                 })).WaitForCompletion(TimeSpan.FromSeconds(30));
 
                 WaitForIndexing(store);
@@ -57,7 +57,7 @@ namespace SlowTests.Voron.Bugs
                 {
                     store.Operations.Send(new PatchCollectionOperation("Orders", new PatchRequest()
                     {
-                        Script = @"PutDocument(""orders/"", this);"
+                        Script = @"PutDocument(""orders|"", this);"
                     })).WaitForCompletion(TimeSpan.FromSeconds(30));
                 }
 
@@ -65,7 +65,7 @@ namespace SlowTests.Voron.Bugs
                 {
                     store.Operations.Send(new PatchCollectionOperation("Orders", new PatchRequest()
                     {
-                        Script = @"PutDocument(""orders/"", this);"
+                        Script = @"PutDocument(""orders|"", this);"
                     })).WaitForCompletion(TimeSpan.FromSeconds(10));
                 }
                 catch (TimeoutException e)
