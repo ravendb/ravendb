@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Raven.Client.Documents;
-using Raven.Client.Server;
+﻿using Raven.Client.Server;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Voron;
 
 namespace Raven.Server.ServerWide.Commands
 {
@@ -16,22 +11,19 @@ namespace Raven.Server.ServerWide.Commands
         public abstract void FillJson(DynamicJsonValue json);
         public string DatabaseName { get; set; }
 
-        public UpdateValueForDatabaseCommand(string databaseName)
+        protected UpdateValueForDatabaseCommand(string databaseName)
         {
             DatabaseName = databaseName;
         }
 
-        public override DynamicJsonValue ToJson()
+        public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
-            var json = new DynamicJsonValue
-            {
-                ["Type"] = GetType().Name,
-                [nameof(DatabaseName)] = DatabaseName
-            };
+            var djv = base.ToJson(context);
+            djv[nameof(DatabaseName)] = DatabaseName;
 
-            FillJson(json);
+            FillJson(djv);
 
-            return json;
+            return djv;
         }
     }
 }

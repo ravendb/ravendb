@@ -25,7 +25,7 @@ namespace Raven.Client.Extensions
         {
             return token == default(CancellationToken) ? 
                 task : 
-                task.ContinueWith(t => t.GetAwaiter().GetResult(), token);
+                task.ContinueWith(t => t.ConfigureAwait(false).GetAwaiter().GetResult(), token);
         }
 
         public static Task<T> WithCancellation<T>(this Task<T> task,

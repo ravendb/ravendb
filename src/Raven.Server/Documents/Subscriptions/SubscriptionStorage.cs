@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Subscriptions
                 Criteria = options.Criteria,
                 InitialChangeVector = options.ChangeVector
             };
-            
+
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
 
             if (_logger.IsInfoEnabled)
@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.Subscriptions
                 SubscriptionId = id                
             };
 
-            var (etag, result) = await _serverStore.SendToLeaderAsync(command);
+            var (etag, _) = await _serverStore.SendToLeaderAsync(command);
 
             if (_logger.IsInfoEnabled)
             {

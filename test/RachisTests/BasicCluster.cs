@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -37,15 +36,11 @@ namespace SlowTests.Server.Rachis
             {
                 for (int i = 0; i < 10; i++)
                 {
-                    await a.PutAsync(ctx.ReadObject(new DynamicJsonValue
-                    {
-                        ["Name"] = "test",
-                        ["Value"] = i
-                    }, "test"));
+                    await a.PutAsync(new TestCommand { Name = "test", Value = i });
                 }
             }
 
-           
+
             foreach (var follower in followers)
             {
                 Disconnect(follower.Url, a.Url);
@@ -53,24 +48,20 @@ namespace SlowTests.Server.Rachis
 
             var leader = await await Task.WhenAny(leaderSelected);
 
-         
+
 
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 for (int i = 10; i < 20; i++)
                 {
-                    await leader.PutAsync(ctx.ReadObject(new DynamicJsonValue
-                    {
-                        ["Name"] = "test",
-                        ["Value"] = i
-                    }, "test"));
+                    await leader.PutAsync(new TestCommand { Name = "test", Value = i });
                 }
             }
 
             followers = followers.Except(new[] { leader }).ToArray();
 
             leaderSelected = followers.Select(x => x.WaitForState(RachisConsensus.State.Leader).ContinueWith(_ => x)).ToArray();
-           
+
             foreach (var follower in followers)
             {
                 Disconnect(follower.Url, leader.Url);
@@ -78,17 +69,13 @@ namespace SlowTests.Server.Rachis
 
             leader = await await Task.WhenAny(leaderSelected);
 
-          
+
 
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 for (int i = 20; i < 30; i++)
                 {
-                    await leader.PutAsync(ctx.ReadObject(new DynamicJsonValue
-                    {
-                        ["Name"] = "test",
-                        ["Value"] = i
-                    }, "test"));
+                    await leader.PutAsync(new TestCommand { Name = "test", Value = i });
                 }
             }
 
@@ -127,11 +114,7 @@ namespace SlowTests.Server.Rachis
             {
                 for (int i = 0; i < 10; i++)
                 {
-                    await a.PutAsync(ctx.ReadObject(new DynamicJsonValue
-                    {
-                        ["Name"] = "test",
-                        ["Value"] = i
-                    }, "test"));
+                    await a.PutAsync(new TestCommand { Name = "test", Value = i });
                 }
             }
 
@@ -152,11 +135,7 @@ namespace SlowTests.Server.Rachis
             {
                 for (var i = 0; i < 5; i++)
                 {
-                    await a.PutAsync(ctx.ReadObject(new DynamicJsonValue
-                    {
-                        ["Name"] = "test",
-                        ["Value"] = i
-                    }, "test"));
+                    await a.PutAsync(new TestCommand { Name = "test", Value = i });
                 }
             }
 
@@ -169,12 +148,8 @@ namespace SlowTests.Server.Rachis
             {
                 for (var i = 0; i < 5; i++)
                 {
-                    var (index,_)  = await a.PutAsync(ctx.ReadObject(new DynamicJsonValue
-                    {
-                        ["Name"] = "test",
-                        ["Value"] = i + 5
-                    }, "test"));
-                    lastIndex = index;
+                    var (etag, _) = await a.PutAsync(new TestCommand { Name = "test", Value = i + 5 });
+                    lastIndex = etag;
                 }
             }
 
@@ -202,18 +177,10 @@ namespace SlowTests.Server.Rachis
                 var tasks = new List<Task>();
                 for (var i = 0; i < 9; i++)
                 {
-                    tasks.Add(a.PutAsync(ctx.ReadObject(new DynamicJsonValue
-                    {
-                        ["Name"] = "test",
-                        ["Value"] = i
-                    }, "test")));
+                    tasks.Add(a.PutAsync(new TestCommand { Name = "test", Value = i }));
                 }
 
-                var (lastIndex,_) = await a.PutAsync(ctx.ReadObject(new DynamicJsonValue
-                {
-                    ["Name"] = "test",
-                    ["Value"] = 9
-                }, "test"));
+                var (lastIndex, _) = await a.PutAsync(new TestCommand { Name = "test", Value = 9 });
 
                 foreach (var task in tasks)
                 {
@@ -242,11 +209,7 @@ namespace SlowTests.Server.Rachis
             {
                 for (var i = 0; i < 10; i++)
                 {
-                    await rachis.PutAsync(ctx.ReadObject(new DynamicJsonValue
-                    {
-                        ["Name"] = "test",
-                        ["Value"] = i
-                    }, "test"));
+                    await rachis.PutAsync(new TestCommand { Name = "test", Value = i });
                 }
 
                 TransactionOperationContext context;

@@ -1,9 +1,7 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -15,8 +13,8 @@ namespace SlowTests.Server.Rachis
         [InlineData(2)]
         [InlineData(3)]
         [InlineData(4)]
-        [InlineData(5)] 
-        [InlineData(7)] 
+        [InlineData(5)]
+        [InlineData(7)]
         public async Task CanApplyCommitAcrossAllCluster(int amount)
         {
             var leader = await CreateNetworkAndGetLeader(amount);
@@ -25,11 +23,7 @@ namespace SlowTests.Server.Rachis
             {
                 for (var i = 0; i < 5; i++)
                 {
-                    var (index,_) =  await leader.PutAsync(ctx.ReadObject(new DynamicJsonValue
-                    {
-                        ["Name"] = "test",
-                        ["Value"] = i 
-                    }, "test"));
+                    var (index, _) = await leader.PutAsync(new TestCommand { Name = "test", Value = i });
                     lastIndex = index;
                 }
             }
@@ -47,7 +41,7 @@ namespace SlowTests.Server.Rachis
                     Assert.True(condition, $"Last commit is {commitIndex} wanted {lastIndex}");
                 }
             }
-            
+
         }
     }
 }

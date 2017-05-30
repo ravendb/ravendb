@@ -81,11 +81,8 @@ namespace FastTests.Server.Documents.Transformers
                     var databaseRecord = Server.ServerStore.Cluster.ReadDatabase(context, store.Database);
                     databaseRecord.Transformers["Transformer1"].TransformResults = "yellow world";
 
-                    var blittableJsonReaderObject = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
-
-                    var (index,_) = await Server.ServerStore.WriteDbAsync(store.Database, blittableJsonReaderObject, null);
-                    await Server.ServerStore.Cluster.WaitForIndexNotification(index);
-
+                    var (etag, _) = await Server.ServerStore.WriteDatabaseRecordAsync(store.Database, databaseRecord, null);
+                    await Server.ServerStore.Cluster.WaitForIndexNotification(etag);
                 }
 
                 var database = await GetDocumentDatabaseInstanceFor(store);

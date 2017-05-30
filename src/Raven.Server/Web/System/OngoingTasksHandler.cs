@@ -28,16 +28,16 @@ namespace Raven.Server.Web.System
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("databaseName");
             var result = GetOngoingTasksAndDbTopology(name, ServerStore).tasks;
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context)) 
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, result.ToJson());
             }
-           
+
             return Task.CompletedTask;
         }
 
-        public static (OngoingTasksResult tasks , DatabaseTopology topology) GetOngoingTasksAndDbTopology(string dbName, ServerStore serverStore)
+        public static (OngoingTasksResult tasks, DatabaseTopology topology) GetOngoingTasksAndDbTopology(string dbName, ServerStore serverStore)
         {
             var ongoingTasksResult = new OngoingTasksResult();
             using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -107,8 +107,8 @@ namespace Raven.Server.Web.System
                 using (context.OpenReadTransaction())
                 {
                     var watcher = JsonDeserializationClient.DatabaseWatcher(watcherBlittable);
-                    var (index, _) = await ServerStore.UpdateDatabaseWatcher(name, watcher);
-                    await ServerStore.Cluster.WaitForIndexNotification(index);
+                    var (etag, _) = await ServerStore.UpdateDatabaseWatcher(name, watcher);
+                    await ServerStore.Cluster.WaitForIndexNotification(etag);
 
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -116,7 +116,7 @@ namespace Raven.Server.Web.System
                     {
                         context.Write(writer, new DynamicJsonValue
                         {
-                            [nameof(DatabasePutResult.ETag)] = index,
+                            [nameof(DatabasePutResult.ETag)] = etag,
                             [nameof(DatabasePutResult.Key)] = name,
                             [nameof(OngoingTask.TaskId)] = watcher?.GetTaskKey().ToString(),
                         });
@@ -139,7 +139,7 @@ namespace Raven.Server.Web.System
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue 
+            return new DynamicJsonValue
             {
                 [nameof(OngoingTasksList)] = new DynamicJsonArray(OngoingTasksList.Select(x => x.ToJson())),
                 [nameof(SubscriptionsCount)] = SubscriptionsCount
@@ -157,7 +157,7 @@ namespace Raven.Server.Web.System
         public OngoingTaskConnectionStatus TaskConnectionStatus { get; set; }
         public virtual DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue 
+            return new DynamicJsonValue
             {
                 [nameof(TaskId)] = TaskId?.ToString(),
                 [nameof(TaskType)] = TaskType,
@@ -171,9 +171,9 @@ namespace Raven.Server.Web.System
 
     public class OngoingTaskReplication : OngoingTask
     {
-        public string DestinationURL { get; set; }  
+        public string DestinationURL { get; set; }
         public string DestinationDB { get; set; }
-        
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
@@ -216,7 +216,7 @@ namespace Raven.Server.Web.System
     {
         public BackupType BackupType { get; set; }
         public List<string> BackupDestinations { get; set; }
-        
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
@@ -225,7 +225,7 @@ namespace Raven.Server.Web.System
             return json;
         }
     }
-   
+
     public enum OngoingTaskType
     {
         Replication,

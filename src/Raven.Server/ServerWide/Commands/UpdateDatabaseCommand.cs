@@ -1,13 +1,13 @@
+using System;
 using Raven.Client.Server;
-using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands
 {
     public abstract class UpdateDatabaseCommand : CommandBase
     {
-        public string DatabaseName;        
+        public string DatabaseName;
 
         protected UpdateDatabaseCommand(string databaseName)
         {
@@ -18,23 +18,41 @@ namespace Raven.Server.ServerWide.Commands
 
         public abstract void FillJson(DynamicJsonValue json);
 
-        public override DynamicJsonValue ToJson()
+        public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
-            var json = new DynamicJsonValue
-            {
-                ["Type"] = GetType().Name,
-                [nameof(DatabaseName)] = DatabaseName
-            };
+            var djv = base.ToJson(context);
+            djv[nameof(DatabaseName)] = DatabaseName;
 
-            FillJson(json);
+            FillJson(djv);
 
-            return json;
+            return djv;
         }
     }
 
     public abstract class CommandBase
     {
-        public abstract DynamicJsonValue ToJson();
+        public virtual DynamicJsonValue ToJson(JsonOperationContext context)
+        {
+            return new DynamicJsonValue
+            {
+                ["Type"] = GetType().Name
+            };
+        }
+
         public long? Etag;
+
+        public static CommandBase CreateFrom(BlittableJsonReaderObject json)
+        {
+            if (json.TryGet("Type", out string type) == false)
+            {
+                // TODO: maybe add further validation?
+                throw new ArgumentException("Command must contain 'Type' field.");
+            }
+
+            if (JsonDeserializationCluster.Commands.TryGetValue(type, out Func<BlittableJsonReaderObject, CommandBase> deserializer) == false)
+                throw new InvalidOperationException($"There is not deserializer for '{type}' command.");
+
+            return deserializer(json);
+        }
     }
 }

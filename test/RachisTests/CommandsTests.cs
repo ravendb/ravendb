@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -28,11 +25,7 @@ namespace SlowTests.Server.Rachis
             {
                 for (var i = 0; i < commandCount; i++)
                 {
-                    tasks.Add(leader.PutAsync(context.ReadObject(new DynamicJsonValue
-                    {
-                        ["Name"] = "test",
-                        ["Value"] = i
-                    }, "test")));
+                    tasks.Add(leader.PutAsync(new TestCommand { Name = "test", Value = i }));
                 }
                 using (context.OpenReadTransaction())
                     lastIndex = leader.GetLastEntryIndex(context);
@@ -58,11 +51,7 @@ namespace SlowTests.Server.Rachis
             {
                 for (var i = 0; i < commandCount; i++)
                 {
-                    tasks.Add(leader.PutAsync(context.ReadObject(new DynamicJsonValue
-                    {
-                        ["Name"] = "test",
-                        ["Value"] = i
-                    }, "test")));
+                    tasks.Add(leader.PutAsync(new TestCommand { Name = "test", Value = i }));
                 }
                 using (context.OpenReadTransaction())
                     lastIndex = leader.GetLastEntryIndex(context);
@@ -76,11 +65,7 @@ namespace SlowTests.Server.Rachis
             {
                 try
                 {
-                    var task = leader.PutAsync(context.ReadObject(new DynamicJsonValue
-                    {
-                        ["Name"] = "test",
-                        ["Value"] = commandCount
-                    }, "test"));
+                    var task = leader.PutAsync(new TestCommand { Name = "test", Value = commandCount });
                     Assert.True(await task.WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 5)));
                     await task;
                     Assert.True(false, "We should have gotten an error");
