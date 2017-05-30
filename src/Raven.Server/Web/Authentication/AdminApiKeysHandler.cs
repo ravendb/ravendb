@@ -4,8 +4,12 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
+using Raven.Client.Json.Converters;
 using Raven.Client.Server.Operations.ApiKeys;
+using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -22,16 +26,17 @@ namespace Raven.Server.Web.Authentication
             TransactionOperationContext ctx;
             using (ServerStore.ContextPool.AllocateOperationContext(out ctx))
             {
-                var apiKey = ctx.ReadForDisk(RequestBodyStream(), name);
+                var apiKeyJson = ctx.ReadForDisk(RequestBodyStream(), name);
 
-                var errorTask = ValidateApiKeyStructure(name, apiKey);
+                var errorTask = ValidateApiKeyStructure(name, apiKeyJson);
                 if (errorTask != null)
                 {
                     await errorTask;
                     return;
                 }
 
-                await ServerStore.PutValueInClusterAsync(Constants.ApiKeys.Prefix + name, apiKey);
+                var apiKey = JsonDeserializationServer.ApiKeyDefinition(apiKeyJson);
+                await ServerStore.PutValueInClusterAsync(new PutApiKeyCommand(Constants.ApiKeys.Prefix + name, apiKey));
 
                 AccessToken value;
                 if (Server.AccessTokensByName.TryRemove(name, out value))

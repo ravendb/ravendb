@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Server.Operations.ApiKeys
 {
@@ -9,6 +10,22 @@ namespace Raven.Client.Server.Operations.ApiKeys
         public string Secret;
         public bool ServerAdmin;
         public Dictionary<string, AccessModes> ResourcesAccessMode = new Dictionary<string, AccessModes>(StringComparer.OrdinalIgnoreCase);
+
+        internal virtual DynamicJsonValue ToJson()
+        {
+            var ram = new DynamicJsonValue();
+            foreach (var kvp in ResourcesAccessMode)
+                ram[kvp.Key] = kvp.Value.ToString();
+
+            return new DynamicJsonValue
+            {
+                [nameof(Enabled)] = Enabled,
+                [nameof(Secret)] = Secret,
+                [nameof(ServerAdmin)] = ServerAdmin,
+                [nameof(Enabled)] = Enabled,
+                [nameof(ResourcesAccessMode)] = ram
+            };
+        }
     }
 
 
@@ -23,5 +40,13 @@ namespace Raven.Client.Server.Operations.ApiKeys
     public class NamedApiKeyDefinition : ApiKeyDefinition
     {
         public string UserName;
+
+        internal override DynamicJsonValue ToJson()
+        {
+            var djv = base.ToJson();
+            djv[nameof(UserName)] = UserName;
+
+            return djv;
+        }
     }
 }

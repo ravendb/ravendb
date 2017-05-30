@@ -12,7 +12,8 @@ fi
 
 if [[ "$ASSEMBLY_VERSION" != "$VERSION" ]]; then
     echo "$ASSEMBLY_VERSION" > "$VERSION_PATH"
-    xdg-open "http://ravendb.net/first-run?type=start&ver=$VERSION";
+    xdg-open "http://ravendb.net/first-run?type=start&ver=$ASSEMBLY_VERSION";
 fi
 
+sleep 2 # avoid Firefox already open warning preventing from launching the Studio tab
 eval "$EXEC_PATH --browser";

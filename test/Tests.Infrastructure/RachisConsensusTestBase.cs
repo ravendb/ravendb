@@ -10,6 +10,8 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Raven.Server.Config.Settings;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Sparrow.Collections;
@@ -25,6 +27,11 @@ namespace Tests.Infrastructure
     [Trait("Category", "Rachis")]
     public class RachisConsensusTestBase : IDisposable
     {
+        static RachisConsensusTestBase()
+        {
+            JsonDeserializationCluster.Commands.Add(nameof(TestCommand), JsonDeserializationBase.GenerateJsonDeserializationRoutine<TestCommand>());
+        }
+
         protected bool PredictableSeeds;
 
         protected Logger Log = LoggingSource.Instance.GetLogger<RachisConsensusTestBase>("RachisConsensusTest");
@@ -38,7 +45,7 @@ namespace Tests.Infrastructure
             for (var i = 0; i < nodeCount; i++)
             {
                 // ReSharper disable once ExplicitCallerInfoArgument
-                SetupServer(i == leaderIndex,caller: caller);
+                SetupServer(i == leaderIndex, caller: caller);
             }
             var leader = RachisConsensuses[leaderIndex + initialCount];
             for (var i = 0; i < nodeCount; i++)
@@ -117,13 +124,13 @@ namespace Tests.Infrastructure
 
 
             var server = StorageEnvironmentOptions.CreateMemoryOnly();
-        
+
             int seed = PredictableSeeds ? _random.Next(int.MaxValue) : _count;
             var rachis = new RachisConsensus<CountingStateMachine>(seed);
             var storageEnvironment = new StorageEnvironment(server);
-            rachis.Initialize(storageEnvironment,new ClusterConfiguration
+            rachis.Initialize(storageEnvironment, new ClusterConfiguration
             {
-                ElectionTimeout = new TimeSetting(300,TimeUnit.Milliseconds)
+                ElectionTimeout = new TimeSetting(300, TimeUnit.Milliseconds)
             });
             rachis.OnDispose += (sender, args) =>
             {
@@ -133,7 +140,7 @@ namespace Tests.Infrastructure
             {
                 rachis.Bootstarp(url);
             }
-                
+
             rachis.Url = url;
             _listeners.Add(tcpListener);
             RachisConsensuses.Add(rachis);
@@ -167,7 +174,7 @@ namespace Tests.Infrastructure
                             {
                                 throw new InvalidComObjectException("Simulated failure");
                             }
-                        }                            
+                        }
                         var connections = _connections.GetOrAdd(rachis.Url, _ => new ConcurrentSet<Tuple<string, TcpClient>>());
                         connections.Add(Tuple.Create(hello.DebugSourceIdentifier, tcpClient));
                     }
@@ -185,7 +192,7 @@ namespace Tests.Infrastructure
                 rejections.Add(from);
                 ConcurrentSet<Tuple<string, TcpClient>> set;
                 if (_connections.TryGetValue(to, out set))
-                {                    
+                {
                     foreach (var tuple in set)
                     {
                         if (tuple.Item1 == from || tuple.Item1 == fromTag)
@@ -211,25 +218,22 @@ namespace Tests.Infrastructure
             }
         }
 
-        protected async Task<long> IssueCommandsAndWaitForCommit(RachisConsensus<CountingStateMachine> leader, int numberOfCommands, String Name, int value)
+        protected async Task<long> IssueCommandsAndWaitForCommit(RachisConsensus<CountingStateMachine> leader, int numberOfCommands, string name, int value)
         {
             Assert.True(leader.CurrentState == RachisConsensus.State.Leader || leader.CurrentState == RachisConsensus.State.LeaderElect, "Can't append commands from non leader");
             using (leader.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 for (var i = 0; i < 3; i++)
                 {
-                    await leader.PutAsync(context.ReadObject(new DynamicJsonValue
-                    {
-                        ["Name"] = Name,
-                        ["Value"] = value
-                    }, Name));
+                    await leader.PutAsync(new TestCommand { Name = name, Value = value });
                 }
+
                 using (context.OpenReadTransaction())
                     return leader.GetLastEntryIndex(context);
             }
         }
 
-        protected List<Task> IssueCommandsWithoutWaitingForCommits(RachisConsensus<CountingStateMachine> leader, int inumberOfCommands, string Name, int value)
+        protected List<Task> IssueCommandsWithoutWaitingForCommits(RachisConsensus<CountingStateMachine> leader, int numberOfCommands, string name, int value)
         {
             Assert.True(leader.CurrentState == RachisConsensus.State.Leader, "Can't append commands from non leader");
             TransactionOperationContext context;
@@ -238,15 +242,12 @@ namespace Tests.Infrastructure
             {
                 for (var i = 0; i < 3; i++)
                 {
-                    waitingList.Add(leader.PutAsync(context.ReadObject(new DynamicJsonValue
-                    {
-                        ["Name"] = Name,
-                        ["Value"] = value
-                    }, Name)));
+                    waitingList.Add(leader.PutAsync(new TestCommand { Name = name, Value = value }));
                 }
             }
             return waitingList;
         }
+
         private readonly ConcurrentDictionary<string, ConcurrentSet<string>> _rejectionList = new ConcurrentDictionary<string, ConcurrentSet<string>>();
         private readonly ConcurrentDictionary<string, ConcurrentSet<Tuple<string, TcpClient>>> _connections = new ConcurrentDictionary<string, ConcurrentSet<Tuple<string, TcpClient>>>();
         private readonly List<TcpListener> _listeners = new List<TcpListener>();
@@ -295,7 +296,7 @@ namespace Tests.Infrastructure
                 tree.Increment(name, val);
 
             }
-            
+
 
             public override bool ShouldSnapshot(Slice slice, RootObjectType type)
             {
@@ -308,6 +309,22 @@ namespace Tests.Infrastructure
                 var tcpClient = new TcpClient();
                 await tcpClient.ConnectAsync(tcpInfo.Host, tcpInfo.Port);
                 return tcpClient.GetStream();
+            }
+        }
+
+        public class TestCommand : CommandBase
+        {
+            public string Name;
+
+            public object Value;
+
+            public override DynamicJsonValue ToJson(JsonOperationContext context)
+            {
+                var djv = base.ToJson(context);
+                djv[nameof(Name)] = Name;
+                djv[nameof(Value)] = Value;
+
+                return djv;
             }
         }
     }

@@ -4,7 +4,9 @@ using System.Threading.Tasks;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.Server.Operations.ApiKeys;
 using Raven.Client.Util.Helpers;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -129,57 +131,45 @@ namespace FastTests.Server
                 TransactionOperationContext context;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
                 {
-                    var foo = new DynamicJsonValue
+                    await Server.ServerStore.PutValueInClusterAsync(new PutApiKeyCommand("foo/bar", new ApiKeyDefinition
                     {
-                        ["Foo"] = "Bar"
-                    };
-
-                    await Server.ServerStore.PutValueInClusterAsync("foo/bar", context.ReadObject(foo, "read test stuff"));
+                        Secret = "123"
+                    }));
                 }
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
-                using (var tx = context.OpenReadTransaction())
+                using (context.OpenReadTransaction())
                 {
                     var fetched = Server.ServerStore.Cluster.Read(context, "foo/bar");
                     string val;
-                    Assert.True(fetched.TryGet("Foo", out val));
-                    Assert.Equal("Bar", val);
+                    Assert.True(fetched.TryGet("Secret", out val));
+                    Assert.Equal("123", val);
                 }
 
             }
         }
 
         [Fact(Skip = "Should be restored")]
-        public void Server_store_write_should_throw_concurrency_exception_if_relevant()
+        public async Task Server_store_write_should_throw_concurrency_exception_if_relevant()
         {
             using (GetDocumentStore())
             {
                 TransactionOperationContext context;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
-                using (var tx = context.OpenWriteTransaction())
+                using (context.OpenWriteTransaction())
                 {
-                    var foo = new DynamicJsonValue
+                    await Server.ServerStore.PutValueInClusterAsync(new PutApiKeyCommand("foo/bar", new ApiKeyDefinition
                     {
-                        ["Foo"] = "Bar"
-                    };
-
-                    using (var obj = context.ReadObject(foo, "read test stuff"))
-                    {
-                        Server.ServerStore.PutValueInClusterAsync("foo/bar", obj).Wait();
-                    }
+                        Secret = "123"
+                    }));
                 }
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
                 {
-                    var foo = new DynamicJsonValue
+                    await Server.ServerStore.PutValueInClusterAsync(new PutApiKeyCommand("foo/bar", new ApiKeyDefinition
                     {
-                        ["Foo"] = "Bar2"
-                    };
-
-                    using (var obj = context.ReadObject(foo, "read test stuff"))
-                    {
-                        Server.ServerStore.PutValueInClusterAsync("foo/bar", obj).Wait();
-                    }
+                        Secret = "321"
+                    }));
                 }
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))

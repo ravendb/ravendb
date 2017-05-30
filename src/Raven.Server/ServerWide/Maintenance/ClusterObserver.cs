@@ -8,7 +8,6 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Utils;
 
@@ -65,7 +64,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     if (_logger.IsInfoEnabled)
                     {
-                        _logger.Info($"An error occured while analyzing maintainance stats on node {_nodeTag}.", e);
+                        _logger.Info($"An error occurred while analyzing maintenance stats on node {_nodeTag}.", e);
                     }
                 }
                 finally
@@ -81,7 +80,7 @@ namespace Raven.Server.ServerWide.Maintenance
         {
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var updateCommands = new List<BlittableJsonReaderObject>();
+                var updateCommands = new List<UpdateTopologyCommand>();
 
                 using (context.OpenReadTransaction())
                 {
@@ -97,15 +96,13 @@ namespace Raven.Server.ServerWide.Maintenance
                                 Etag = etag
                             };
 
-                            updateCommands.Add(context.ReadObject(cmd.ToJson(), "update-topology"));
+                            updateCommands.Add(cmd);
                         }
                     }
                 }
 
                 foreach (var command in updateCommands)
-                {
                     await UpdateTopology(command);
-                }
             }
         }
 
@@ -261,7 +258,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             foreach (var currentIndexStatus in current)
             {
-                if(currentIndexStatus.Value.IsStale == false)
+                if (currentIndexStatus.Value.IsStale == false)
                     continue;
 
                 if (previous.TryGetValue(currentIndexStatus.Key, out var _) == false)
@@ -274,9 +271,8 @@ namespace Raven.Server.ServerWide.Maintenance
             return true;
         }
 
-        private Task<(long, object)> UpdateTopology(BlittableJsonReaderObject cmd)
+        private Task<(long Etag, object Result)> UpdateTopology(UpdateTopologyCommand cmd)
         {
-            
             if (_engine.LeaderTag != _server.NodeTag)
             {
                 throw new NotLeadingException("This node is no longer the leader, so we abort updating the database topology");

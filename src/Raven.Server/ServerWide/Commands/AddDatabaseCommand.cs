@@ -1,4 +1,7 @@
-﻿using Sparrow.Json;
+﻿using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
+using Raven.Client.Server;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
@@ -6,17 +9,16 @@ namespace Raven.Server.ServerWide.Commands
     public class AddDatabaseCommand : CommandBase
     {
         public string Name;
-        public BlittableJsonReaderObject Record;
+        public DatabaseRecord Record;
         public bool Encrypted;
-        public override DynamicJsonValue ToJson()
+
+        public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
-            //this is just for validating that this is a valid database record
-            JsonDeserializationCluster.DatabaseRecord(Record);
             return new DynamicJsonValue
             {
                 ["Type"] = nameof(AddDatabaseCommand),
                 [nameof(Name)] = Name,
-                [nameof(Record)] = Record,
+                [nameof(Record)] = EntityToBlittable.ConvertEntityToBlittable(Record, DocumentConventions.Default, context),
                 [nameof(Etag)] = Etag,
                 [nameof(Encrypted)] = Encrypted
             };

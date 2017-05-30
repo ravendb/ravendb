@@ -217,9 +217,9 @@ namespace Raven.Server.Documents.Transformers
 
                 try
                 {
-                    var (index, result) = await _serverStore.SendToLeaderAsync(command);
+                    var (etag, _) = await _serverStore.SendToLeaderAsync(command);
 
-                    await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index);
+                    await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
 
                     var instance = GetTransformer(definition.Name);
                     return instance.Etag;
@@ -263,7 +263,7 @@ namespace Raven.Server.Documents.Transformers
                 if (transformer == null)
                     return false;
 
-                var (etag, result) = await _serverStore.SendToLeaderAsync(new DeleteTransformerCommand(transformer.Name, _documentDatabase.Name));
+                var (etag, _) = await _serverStore.SendToLeaderAsync(new DeleteTransformerCommand(transformer.Name, _documentDatabase.Name));
 
                 await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
 
@@ -285,7 +285,7 @@ namespace Raven.Server.Documents.Transformers
                 if (transformer == null)
                     TransformerDoesNotExistException.ThrowFor(name);
 
-                var (etag, result) = await _serverStore.SendToLeaderAsync(new DeleteTransformerCommand(transformer.Name, _documentDatabase.Name));
+                var (etag, _) = await _serverStore.SendToLeaderAsync(new DeleteTransformerCommand(transformer.Name, _documentDatabase.Name));
 
                 await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
             }
@@ -324,7 +324,7 @@ namespace Raven.Server.Documents.Transformers
 
                 var command = new SetTransformerLockCommand(name, mode, _documentDatabase.Name);
 
-                var (etag, result) = await _serverStore.SendToLeaderAsync(command);
+                var (etag, _) = await _serverStore.SendToLeaderAsync(command);
 
                 await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
             }
@@ -346,7 +346,7 @@ namespace Raven.Server.Documents.Transformers
 
                 var command = new RenameTransformerCommand(name, newName, _documentDatabase.Name);
 
-                var (etag, result) = await _serverStore.SendToLeaderAsync(command);
+                var (etag, _) = await _serverStore.SendToLeaderAsync(command);
 
                 await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
             }

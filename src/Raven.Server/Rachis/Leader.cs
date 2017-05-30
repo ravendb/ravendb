@@ -7,9 +7,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Http;
-using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -87,7 +87,7 @@ namespace Raven.Server.Rachis
             }
 
             RefreshAmbassadors(clusterTopology);
-           
+
             _thread = new Thread(Run)
             {
                 Name =
@@ -110,7 +110,7 @@ namespace Raven.Server.Rachis
         private void RefreshAmbassadors(ClusterTopology clusterTopology)
         {
             bool lockTaken = false;
-            Monitor.TryEnter(this, ref lockTaken);            
+            Monitor.TryEnter(this, ref lockTaken);
             try
             {
                 //This only means we are been disposed so we can quit now
@@ -209,7 +209,7 @@ namespace Raven.Server.Rachis
             }
             finally
             {
-                if(lockTaken)
+                if (lockTaken)
                     Monitor.Exit(this);
             }
         }
@@ -515,29 +515,33 @@ namespace Raven.Server.Rachis
                 lastIndex = _engine.GetLastEntryIndex(context);
             }
 
-            foreach (var ambasaddor in _promotables)
+            foreach (var ambassador in _promotables)
             {
-                if (ambasaddor.Value.FollowerMatchIndex != lastIndex)
+                if (ambassador.Value.FollowerMatchIndex != lastIndex)
                     continue;
 
-                TryModifyTopology(ambasaddor.Key, ambasaddor.Value.Url, TopologyModification.Voter, out Task task);
+                TryModifyTopology(ambassador.Key, ambassador.Value.Url, TopologyModification.Voter, out Task task);
 
                 _promotableUpdated.Set();
                 break;
             }
         }
 
-        public Task<(long index, object result)> PutAsync(BlittableJsonReaderObject cmd)
+        public Task<(long Etag, object Result)> PutAsync(CommandBase cmd)
         {
             long index;
 
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction())
             {
-                index = _engine.InsertToLeaderLog(context, cmd, RachisEntryFlags.StateMachineCommand);
+                var djv = cmd.ToJson(context);
+                var cmdJson = context.ReadObject(djv, "raft/command");
+
+                index = _engine.InsertToLeaderLog(context, cmdJson, RachisEntryFlags.StateMachineCommand);
                 context.Transaction.Commit();
             }
-            var tcs = new TaskCompletionSource<(long, object)>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            var tcs = new TaskCompletionSource<(long Etag, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
             _entries[index] = new CommandState
             {
                 CommandIndex = index,
@@ -547,8 +551,8 @@ namespace Raven.Server.Rachis
             _newEntry.Set();
             return tcs.Task;
         }
-        
-        public ConcurrentQueue<(string node,AlertRaised error)> ErrorsList = new ConcurrentQueue<(string,AlertRaised)>();
+
+        public ConcurrentQueue<(string node, AlertRaised error)> ErrorsList = new ConcurrentQueue<(string, AlertRaised)>();
 
         public void NotifyAboutException(FollowerAmbassador node, Exception e)
         {
@@ -557,7 +561,7 @@ namespace Raven.Server.Rachis
                 AlertType.ClusterTopologyWarning,
                 NotificationSeverity.Warning,
                 details: new ExceptionDetails(e));
-            ErrorsList.Enqueue((node.Tag,alert));
+            ErrorsList.Enqueue((node.Tag, alert));
             ErrorsList.Reduce(25);
         }
 
@@ -574,7 +578,7 @@ namespace Raven.Server.Rachis
                     {
                         var message = $"Leader {_engine.Tag}: Refresh ambassador is taking the lock for 15 sec giving up on leader dispose";
                         if (_engine.Log.IsInfoEnabled)
-                        {                            
+                        {
                             _engine.Log.Info(message);
                         }
                         throw new TimeoutException(message);
@@ -633,11 +637,11 @@ namespace Raven.Server.Rachis
             }
             finally
             {
-                if(lockTaken)
+                if (lockTaken)
                     Monitor.Exit(this);
             }
 
-           
+
         }
 
         public Task WaitForNewEntries()
@@ -723,7 +727,7 @@ namespace Raven.Server.Rachis
                 var topologyJson = _engine.SetTopology(context, clusterTopology);
 
                 var index = _engine.InsertToLeaderLog(context, topologyJson, RachisEntryFlags.Topology);
-                var tcs = new TaskCompletionSource<(long, object)>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var tcs = new TaskCompletionSource<(long Etag, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
                 _entries[index] = new CommandState
                 {
                     TaskCompletionSource = tcs,
@@ -759,7 +763,7 @@ namespace Raven.Server.Rachis
             return clusterTopology.LastNodeId.Substring(0, clusterTopology.LastNodeId.Length - 1) + lastChar;
         }
 
-        public void SetStateOf(long index, Action<TaskCompletionSource<(long, object)>> onNotify)
+        public void SetStateOf(long index, Action<TaskCompletionSource<(long Etag, object Result)>> onNotify)
         {
             if (_entries.TryGetValue(index, out CommandState value))
             {
