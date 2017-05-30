@@ -171,7 +171,7 @@ namespace SlowTests.Core.Commands
         }
 
         [Fact]
-        public void CanGenerteDynamicIdsOnPutDocument()
+        public void CanGenerateDynamicIdsOnPutDocument()
         {
             using (var store = GetDocumentStore())
             {
@@ -191,7 +191,7 @@ namespace SlowTests.Core.Commands
                         new PatchRequest
                         {
                             Script = @"
-                            var postId = PutDocument('posts/',
+                            var postId = PutDocument('posts|',
                                 { 'Title' : 'unknown post id' }
                             );
                             this.Title = postId;
