@@ -7,12 +7,16 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import appUrl = require("common/appUrl");
 import timeHelpers = require("common/timeHelpers");
+import awesomeMultiselect = require("common/awesomeMultiselect");
 
 class indexErrors extends viewModelBase {
 
-    private allIndexErrors: IndexErrorPerDocument[] = null; 
+    private allIndexErrors: IndexErrorPerDocument[] = null;
     private gridController = ko.observable<virtualGridController<IndexErrorPerDocument>>();
-    private columnPreview = new columnPreviewPlugin<IndexErrorPerDocument>(); 
+    private columnPreview = new columnPreviewPlugin<IndexErrorPerDocument>();
+
+    private allErroredIndexNames = ko.observableArray<string>([]);
+    private selectedIndexNames = ko.observableArray<string>([]);
     searchText = ko.observable<string>();
 
     constructor() {
@@ -25,14 +29,23 @@ class indexErrors extends viewModelBase {
         this.updateHelpLink('ABUXGF');
     }
 
+    attached() {
+        super.attached();
+        awesomeMultiselect.build($("#visibleIndexesSelector"));
+    }
+
+    private syncMultiSelect() {
+        awesomeMultiselect.rebuild($("#visibleIndexesSelector"));
+    }
+
     compositionComplete() {
         super.compositionComplete();
         const grid = this.gridController();
         grid.headerVisible(true);
-        grid.init((s, t) => this.fetchIndexErrors(s, t), () => 
+        grid.init((s, t) => this.fetchIndexErrors(s, t), () =>
             [
                 new hyperlinkColumn<IndexErrorPerDocument>(x => x.IndexName, x => appUrl.forQuery(this.activeDatabase(), x.IndexName), "Index name", "25%"),
-                new hyperlinkColumn<IndexErrorPerDocument>(x => x.Document, x => appUrl.forEditDoc(x.Document, this.activeDatabase()), "Document Id", "25%"),
+                new hyperlinkColumn<IndexErrorPerDocument>(x => x.Document, x => appUrl.forEditDoc(x.Document, this.activeDatabase()), "Document id", "25%"),
                 new textColumn<IndexErrorPerDocument>(x => this.formatTimestampAsAgo(x.Timestamp), "Timestamp", "25%"),
                 new textColumn<IndexErrorPerDocument>(x => x.Error, "Error", "25%")
             ]
@@ -51,10 +64,12 @@ class indexErrors extends viewModelBase {
         });
 
         this.registerDisposable(timeHelpers.utcNowWithMinutePrecision.subscribe(() => this.onTick()));
+        this.syncMultiSelect();
     }
-  
+
     private initObservables() {
         this.searchText.throttle(200).subscribe(() => this.filterIndexes());
+        this.selectedIndexNames.subscribe(() => this.filterIndexes());
     }
 
     private onTick() {
@@ -76,23 +91,35 @@ class indexErrors extends viewModelBase {
     private fetchRemoteIndexesError(): JQueryPromise<IndexErrorPerDocument[]> {
         return new getIndexesErrorCommand(this.activeDatabase())
             .execute()
-            .then((result: Raven.Client.Documents.Indexes.IndexErrors[]) => this.mapItems(result));
+            .then((result: Raven.Client.Documents.Indexes.IndexErrors[]) => {
+                this.allErroredIndexNames(this.extractIndexNames(result));
+                this.selectedIndexNames(this.allErroredIndexNames().slice());
+                this.syncMultiSelect();
+                return this.mapItems(result);
+            });
     }
 
     private filterItems(list: IndexErrorPerDocument[]): JQueryPromise<pagedResult<IndexErrorPerDocument>> {
         const deferred = $.Deferred<pagedResult<IndexErrorPerDocument>>();
         let filteredItems = list;
-        if (this.searchText()) {
-            filteredItems = list.filter((error) => {
-                return (error.Document.toLowerCase().indexOf(this.searchText().toLowerCase()) !== -1 || 
-                    error.Error.toLowerCase().indexOf(this.searchText().toLowerCase()) !== -1);
-            });
+        if (this.selectedIndexNames().length !== this.allErroredIndexNames().length) {
+            filteredItems = filteredItems.filter(error => _.includes(this.selectedIndexNames(), error.IndexName));
         }
 
+        if (this.searchText()) {
+            const searchText = this.searchText().toLowerCase();
+            filteredItems = filteredItems.filter(error => error.Document.toLowerCase().includes(searchText) ||
+                error.Error.toLowerCase().includes(searchText));
+        }
+        
         return deferred.resolve({
             items: filteredItems,
             totalResultCount: filteredItems.length
         });
+    }
+
+    private extractIndexNames(indexErrors: Raven.Client.Documents.Indexes.IndexErrors[]): string[] {
+        return _.uniq(indexErrors.filter(error => error.Errors.length > 0).map(x => x.Name));
     }
 
     private mapItems(indexErrors: Raven.Client.Documents.Indexes.IndexErrors[]): IndexErrorPerDocument[] {
