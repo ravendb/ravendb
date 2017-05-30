@@ -233,24 +233,6 @@ namespace SlowTests.Core.Session
         }
 
         [Fact]
-        public void CanGetDocumentUrl()
-        {
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Company { Id = "companies/1" });
-                    session.SaveChanges();
-
-                    var company = session.Load<Company>("companies/1");
-                    Assert.NotNull(company);
-                    var uri = new Uri(session.Advanced.GetDocumentUrl(company));
-                    Assert.Equal(store.Urls.First() + "/databases/" + store.Database + "/docs?id=companies/1", uri.AbsoluteUri);
-                }
-            }
-        }
-
-        [Fact]
         public void CanGetDocumentMetadata()
         {
             const string companyId = "companies/1";
