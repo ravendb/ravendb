@@ -20,15 +20,16 @@ namespace Raven.Server.ServerWide.Commands
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            record.Topology.Watchers = new Dictionary<string, DatabaseWatcher>();
+            record.Topology.Watchers = new List<DatabaseWatcher>();
 
-            if (Watchers != null)
+            if (Watchers == null)
+                return null;
+
+            foreach (var watcher in Watchers)
             {
-                foreach (var watcher in Watchers)
-                {
-                    watcher.CurrentTaskId = watcher.GetTaskKey().ToString();
-                    record.Topology.Watchers[watcher.CurrentTaskId] = watcher;
-                }
+                watcher.TaskId = (watcher.Database + watcher.Url).ToLower();
+                record.Topology.RemoveWatcherIfExists(watcher.TaskId);
+                record.Topology.Watchers.Add(watcher);
             }
 
             return null;
@@ -64,14 +65,22 @@ namespace Raven.Server.ServerWide.Commands
             if (Watcher == null)
                 return null;
 
-            var newTaskKey = Watcher.GetTaskKey().ToString();
-            if (Watcher.CurrentTaskId != null && Watcher.CurrentTaskId != newTaskKey)
+            var newTaskId = (Watcher.Database + Watcher.Url).ToLower();
+
+            if (Watcher.TaskId != newTaskId)
             {
-                //TODO: change to ulong after grish's fix is merged
-                record.Topology.Watchers.Remove(Watcher.CurrentTaskId); 
+                //make sure that the new taskId is unique
+                record.Topology.RemoveWatcherIfExists(newTaskId);
             }
 
-            record.Topology.Watchers[newTaskKey] = Watcher;
+            if (Watcher.TaskId != null)
+            {
+                //modified watcher, need to remove the old one
+                record.Topology.RemoveWatcherIfExists(Watcher.TaskId);
+            }
+
+            Watcher.TaskId = newTaskId;
+            record.Topology.Watchers.Add(Watcher);
             return null;
         }
 
