@@ -206,6 +206,7 @@
                         <div class="btn-group" role="group" data-bind="if: !isFaulty(), visible: isStale()">
                             <button class="btn btn-default" 
                                     data-bind="click: $root.showProgress, css: { 'btn-spinner': _.includes($root.spinners.indexingProgress(), name) }, disable: _.includes($root.spinners.indexingProgress(), name)">
+                                <i class="icon-percent"></i>
                                 <span>Progress</span>
                             </button>
                         </div>
