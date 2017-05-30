@@ -35,15 +35,6 @@ namespace Raven.Client.Documents.Session
             GenerateDocumentIdsOnStore = false;
         }
 
-        public string GetDocumentUrl(object entity)
-        {
-            DocumentInfo document;
-            if (DocumentsByEntity.TryGetValue(entity, out document) == false)
-                throw new InvalidOperationException("Could not figure out identifier for transient instance");
-
-            return RequestExecutor.UrlFor(document.Id);
-        }
-
         public async Task<bool> ExistsAsync(string id)
         {
             if (id == null)

@@ -107,20 +107,6 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        /// Gets the document URL for the specified entity.
-        /// </summary>
-        /// <param name="entity">The entity.</param>
-        /// <returns></returns>
-        public string GetDocumentUrl(object entity)
-        {
-            DocumentInfo document;
-            if (DocumentsByEntity.TryGetValue(entity, out document) == false)
-                throw new InvalidOperationException("Could not figure out identifier for transient instance");
-
-            return RequestExecutor.UrlFor(document.Id);
-        }
-
-        /// <summary>
         /// Generates the document ID.
         /// </summary>
         /// <param name="entity">The entity.</param>

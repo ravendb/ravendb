@@ -93,15 +93,5 @@ namespace SlowTests.Core.Commands
                 }
             }
         }
-
-        [Fact]
-        public void CanGetUrlForDocument()
-        {
-            using (var store = GetDocumentStore())
-            {
-                Assert.Equal(store.Urls.First() + "/databases/" + store.Database + "/docs?id=items/1", store.GetRequestExecutor().UrlFor("items/1"));
-            }
-        }
-
     }
 }

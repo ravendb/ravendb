@@ -581,12 +581,6 @@ namespace Raven.Client.Http
             });
         }
 
-        public string UrlFor(string documentId)
-        {
-            var node = _nodeSelector?.CurrentNode ?? AsyncHelpers.RunSync(GetCurrentNode);
-            return $"{node.Url}/databases/{node.Database}/docs?id={documentId}";
-        }
-
         private static void ThrowEmptyTopology()
         {
             throw new InvalidOperationException("Empty database topology, this shouldn't happen.");

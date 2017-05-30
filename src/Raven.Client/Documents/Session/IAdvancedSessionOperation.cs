@@ -24,12 +24,6 @@ namespace Raven.Client.Documents.Session
         ILazySessionOperations Lazily { get; }
 
         /// <summary>
-        ///     Returns full document url for a given entity
-        /// </summary>
-        /// <param name="entity">Instance of an entity for which url will be returned</param>
-        string GetDocumentUrl(object entity);
-
-        /// <summary>
         ///     Updates entity with latest changes from server
         /// </summary>
         /// <param name="entity">Instance of an entity that will be refreshed</param>
