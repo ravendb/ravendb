@@ -470,7 +470,8 @@ namespace Voron
             protected override void Disposing()
             {
                 if (Disposed)
-                    return;
+                    return;                
+
                 Disposed = true;
                 if (_dataPager.IsValueCreated)
                     _dataPager.Value.Dispose();
@@ -983,7 +984,12 @@ namespace Voron
                 File.Move(filename.FullPath, newName);
                 lock (_journalsForReuse)
                 {
-                    _journalsForReuse[fileModifiedDate.Ticks] = newName;
+                    var ticks = fileModifiedDate.Ticks;
+
+                    while (_journalsForReuse.ContainsKey(ticks))
+                        ticks++;
+
+                    _journalsForReuse[ticks] = newName;
                 }
             }
             catch (Exception ex)
