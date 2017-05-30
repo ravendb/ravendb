@@ -2,12 +2,16 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
-namespace Raven.Server.Documents.ETL
+namespace Raven.Client.Server.ETL
 {
     public class Transformation
     {
-        private static readonly Regex LoadToMethodRegex = new Regex($@"{EtlTransformer<ExtractedItem, object>.LoadTo}(\w+)", RegexOptions.Compiled);
-        private static readonly Regex LoadAttachmentMethodRegex = new Regex(EtlTransformer<ExtractedItem, object>.LoadAttachment, RegexOptions.Compiled);
+        internal const string LoadTo = "loadTo";
+
+        internal const string LoadAttachment = "loadAttachment";
+
+        private static readonly Regex LoadToMethodRegex = new Regex($@"{LoadTo}(\w+)", RegexOptions.Compiled);
+        private static readonly Regex LoadAttachmentMethodRegex = new Regex(LoadAttachment, RegexOptions.Compiled);
 
         private string[] _collections;
 
@@ -69,7 +73,7 @@ namespace Raven.Server.Documents.ETL
 
             for (var i = 0; i < match.Count; i++)
             {
-                _collections[i] = match[i].Value.Substring(EtlTransformer<ExtractedItem, object>.LoadTo.Length);
+                _collections[i] = match[i].Value.Substring(LoadTo.Length);
             }
 
             return _collections;

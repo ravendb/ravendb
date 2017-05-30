@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Raven.Server.Documents.ETL
+namespace Raven.Client.Server.ETL
 {
     public class EtlConfiguration<T> where T : EtlDestination
     {

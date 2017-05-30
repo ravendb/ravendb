@@ -18,6 +18,7 @@ using FastTests.Voron.Util;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Extensions;
+using Raven.Client.Server.ETL;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
@@ -25,6 +26,8 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Platform;
 using Xunit;
+using SqlDestination = Raven.Server.Documents.ETL.Providers.SQL.SqlDestination;
+using SqlEtlTable = Raven.Server.Documents.ETL.Providers.SQL.SqlEtlTable;
 
 namespace SlowTests.Server.Documents.ETL.SQL
 {
@@ -755,7 +758,7 @@ CREATE TABLE [dbo].[Attachments]
 
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
 
-                SetupEtl(store, new EtlDestinationsConfig
+                SetupEtl(store, new EtlDestinationsConfiguration
                 {
                     SqlDestinations =
                     {
@@ -962,7 +965,7 @@ loadToOrders(orderData);
 
         protected static void SetupSqlEtl(DocumentStore store, string script, bool insertOnly = false, List<string> collections = null)
         {
-            SetupEtl(store, new EtlDestinationsConfig
+            SetupEtl(store, new EtlDestinationsConfiguration
             {
                 SqlDestinations =
                 {

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Jint;
 using Jint.Native;
+using Raven.Client.Server.ETL;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 
@@ -9,10 +10,6 @@ namespace Raven.Server.Documents.ETL
 {
     public abstract class EtlTransformer<TExtracted, TTransformed> : DocumentPatcherBase where TExtracted : ExtractedItem
     {
-        internal const string LoadTo = "loadTo";
-
-        internal const string LoadAttachment = "loadAttachment";
-
         protected readonly DocumentsOperationContext Context;
 
         protected TExtracted Current;
@@ -26,24 +23,24 @@ namespace Raven.Server.Documents.ETL
 
         protected override void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope)
         {
-            engine.Global.Delete(LoadTo, true);
+            engine.Global.Delete(Transformation.LoadTo, true);
 
             // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < LoadToDestinations.Length; i++)
             {
-                engine.Global.Delete(LoadTo + LoadToDestinations[i], true);
+                engine.Global.Delete(Transformation.LoadTo + LoadToDestinations[i], true);
             }
         }
 
         protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
         {
-            engine.SetValue(LoadTo, new Action<string, JsValue>((tableName, colsAsObject) => LoadToFunction(tableName, colsAsObject, scope)));
+            engine.SetValue(Transformation.LoadTo, new Action<string, JsValue>((tableName, colsAsObject) => LoadToFunction(tableName, colsAsObject, scope)));
 
             // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < LoadToDestinations.Length; i++)
             {
                 var collection = LoadToDestinations[i];
-                engine.SetValue(LoadTo + collection, (Action<JsValue>)(cols =>
+                engine.SetValue(Transformation.LoadTo + collection, (Action<JsValue>)(cols =>
                 {
                     LoadToFunction(collection, cols, scope);
                 }));

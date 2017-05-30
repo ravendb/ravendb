@@ -1,4 +1,4 @@
-﻿namespace Raven.Server.Documents.ETL.Providers.SQL
+﻿namespace Raven.Client.Server.ETL
 {
     public class SqlEtlConnection
     {

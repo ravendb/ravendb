@@ -833,6 +833,16 @@ namespace Raven.Server.ServerWide
             return id + result;
         }
 
+        public DatabaseRecord LoadDatabaseRecord(string databaseName)
+        {
+            TransactionOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
+            {
+                return Cluster.ReadDatabase(context, databaseName);
+            }
+        }
+
 
         private async Task<(long Etag, object Result)> SendToLeaderAsyncInternal(CommandBase cmd)
         {

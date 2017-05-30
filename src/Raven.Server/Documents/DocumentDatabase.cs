@@ -93,7 +93,7 @@ namespace Raven.Server.Documents
             DocumentsStorage = new DocumentsStorage(this);
             IndexStore = new IndexStore(this, serverStore, _indexAndTransformerLocker);
             TransformerStore = new TransformerStore(this, serverStore, _indexAndTransformerLocker);
-            EtlLoader = new EtlLoader(this);
+            EtlLoader = new EtlLoader(this, serverStore);
             if(serverStore != null)
                 ReplicationLoader = new ReplicationLoader(this, serverStore);
             SubscriptionStorage = new SubscriptionStorage(this, serverStore);
@@ -590,6 +590,7 @@ namespace Raven.Server.Documents
                 IndexStore.HandleDatabaseRecordChange();
                 ReplicationLoader?.HandleDatabaseRecordChange();
                 SubscriptionStorage?.HandleDatabaseValueChange();
+                EtlLoader?.HandleDatabaseRecordChange();
                 OnDatabaseRecordchanged();
             }
             catch

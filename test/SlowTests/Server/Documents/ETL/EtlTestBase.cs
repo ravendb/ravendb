@@ -5,6 +5,7 @@ using System.Threading;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Server.ETL;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Xunit;
@@ -14,7 +15,7 @@ namespace SlowTests.Server.Documents.ETL
     [Trait("Category", "ETL")]
     public class EtlTestBase : RavenTestBase
     {
-        protected static void SetupEtl(DocumentStore src, EtlDestinationsConfig configuration)
+        protected static void SetupEtl(DocumentStore src, EtlDestinationsConfiguration configuration)
         {
             using (var session = src.OpenSession())
             {
@@ -31,7 +32,7 @@ namespace SlowTests.Server.Documents.ETL
 
         protected static void SetupEtl(DocumentStore src, DocumentStore dst, IEnumerable<string> collections, string script, bool applyToAllDocuments = false, bool disabled = false)
         {
-            SetupEtl(src, new EtlDestinationsConfig
+            SetupEtl(src, new EtlDestinationsConfiguration
             {
                 RavenDestinations =
                 {

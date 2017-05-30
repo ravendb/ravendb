@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Raven.Client.Server.ETL;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.NotificationCenter.Notifications;
@@ -20,7 +21,7 @@ namespace SlowTests.Server.Documents.ETL
                 var notifications = new AsyncQueue<Notification>();
                 using (database.NotificationCenter.TrackActions(notifications, null))
                 {
-                    SetupEtl(store, new EtlDestinationsConfig
+                    SetupEtl(store, new EtlDestinationsConfiguration
                     {
                         RavenDestinations =
                         {
@@ -62,7 +63,7 @@ namespace SlowTests.Server.Documents.ETL
                 var notifications = new AsyncQueue<Notification>();
                 using (database.NotificationCenter.TrackActions(notifications, null))
                 {
-                    SetupEtl(store, new EtlDestinationsConfig
+                    SetupEtl(store, new EtlDestinationsConfiguration
                     {
                         RavenDestinations =
                             {
@@ -109,7 +110,7 @@ namespace SlowTests.Server.Documents.ETL
                 var notifications = new AsyncQueue<Notification>();
                 using (database.NotificationCenter.TrackActions(notifications, null))
                 {
-                    SetupEtl(store, new EtlDestinationsConfig
+                    SetupEtl(store, new EtlDestinationsConfiguration
                     {
                         RavenDestinations =
                         {

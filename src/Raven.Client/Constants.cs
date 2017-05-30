@@ -218,12 +218,6 @@ namespace Raven.Client
                 public const int DefaultGeneratedEncryptionKeyLength = 256 / 8;
             }
 
-            public class ETL
-            {
-                public const string RavenEtlProcessStatusPrefix = "Raven/Etl/Status/";
-                public const string RavenEtlDocument = "Raven/ETL";
-            }
-
             public class PeriodicBackup
             {
                 public const string FullBackupExtension = ".ravendb-full-backup";

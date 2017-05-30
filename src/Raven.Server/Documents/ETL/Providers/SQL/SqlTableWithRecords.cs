@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Raven.Client.Server.ETL;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL
 {

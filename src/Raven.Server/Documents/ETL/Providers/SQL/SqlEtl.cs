@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
+using Raven.Client.Server.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL.Enumerators;
 using Raven.Server.Documents.ETL.Providers.SQL.Metrics;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
@@ -149,7 +150,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             List<string> errors;
             if (simulateSqlEtl.Configuration.Validate(out errors) == false)
             {
-                throw new InvalidOperationException($"Invalid ETL configuration for destination {simulateSqlEtl.Configuration.Destination}. " +
+                throw new InvalidOperationException($"Invalid ETL configuration for destination {EtlDestinationNameRetriever.GetName(simulateSqlEtl.Configuration.Destination)}. " +
                                                     $"Reason{(errors.Count > 1 ? "s" : string.Empty)}: {string.Join(";", errors)}.");
             }
             
