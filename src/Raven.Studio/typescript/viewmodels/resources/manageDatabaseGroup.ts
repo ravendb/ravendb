@@ -3,8 +3,8 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import databaseInfo = require("models/resources/info/databaseInfo");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
-import clusterNode = require("models/database/cluster/clusterNode");
 import addNodeToDatabaseGroupCommand = require("commands/database/dbGroup/addNodeToDatabaseGroupCommand");
+import databaseGroupNode = require("models/resources/info/databaseGroupNode");
 
 class manageDatabaseGroup extends viewModelBase {
 
@@ -12,7 +12,7 @@ class manageDatabaseGroup extends viewModelBase {
     selectedClusterNode = ko.observable<string>();
 
     nodeTag = clusterTopologyManager.default.nodeTag;
-    nodes: KnockoutComputed<clusterNode[]>;
+    nodes: KnockoutComputed<databaseGroupNode[]>;
     additionalNodes: KnockoutComputed<string[]>;
     addNodeEnabled: KnockoutComputed<boolean>;
 
@@ -85,7 +85,7 @@ class manageDatabaseGroup extends viewModelBase {
             .always(() => this.spinners.addNode(false));
     }
 
-    deleteNodeFromGroup(node: clusterNode, hardDelete: boolean) {
+    deleteNodeFromGroup(node: databaseGroupNode, hardDelete: boolean) {
         //TODO: implemenent me!
         console.log("deleting: " + node.tag());
 

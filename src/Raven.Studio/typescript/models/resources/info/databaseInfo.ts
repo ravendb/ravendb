@@ -4,7 +4,7 @@ import database = require("models/resources/database");
 import databasesManager = require("common/shell/databasesManager");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import generalUtils = require("common/generalUtils");
-import clusterNode = require("models/database/cluster/clusterNode");
+import databaseGroupNode = require("models/resources/info/databaseGroupNode");
 
 class databaseInfo {
 
@@ -47,7 +47,7 @@ class databaseInfo {
     documentsCount = ko.observable<number>();
     indexesCount = ko.observable<number>();
 
-    nodes = ko.observableArray<clusterNode>([]);
+    nodes = ko.observableArray<databaseGroupNode>([]);
 
     constructor(dto: Raven.Client.Server.Operations.DatabaseInfo) {
         this.initializeObservables();
@@ -185,12 +185,12 @@ class databaseInfo {
         const members = this.mapNodes("Member", topologyDto.Members);
         const promotables = this.mapNodes("Promotable", topologyDto.Promotables);
 
-        this.nodes(_.concat<clusterNode>(members, promotables));
+        this.nodes(_.concat<databaseGroupNode>(members, promotables));
         //TODO: consider in place update? of nodes?
     }
 
-    private mapNodes(type: clusterNodeType, nodes: Array<Raven.Client.Server.Operations.NodeId>): Array<clusterNode> {
-        return _.map(nodes, v => clusterNode.for(v.NodeTag, v.NodeUrl, type));
+    private mapNodes(type: databaseGroupNodeType, nodes: Array<Raven.Client.Server.Operations.NodeId>): Array<databaseGroupNode> {
+        return _.map(nodes, v => databaseGroupNode.for(v.NodeTag, v.NodeUrl, type));
     }
 }
 

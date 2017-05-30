@@ -18,7 +18,7 @@
                                         <div>
                                             <h3>
                                                 <a class="destination-name" data-bind="attr: { href: serverUrl }" target="_blank">
-                                                    <i data-bind="attr : { class: $root.topology().nodeTag() === tag() ? 'icon-home' : 'icon-dbgroup' }"></i>
+                                                    <i data-bind="attr : { class: $root.topology().nodeTag() === tag() ? 'icon-home' : 'icon-cluster-node' }"></i>
                                                     <span data-bind="text: 'Node ' + tag()"></span>
                                                 </a>
                                             </h3>
@@ -88,9 +88,9 @@
                                 <div><i class="icon-circle-filled text-warning"></i> <span>CLUSTER LEADER</span></div>
                             </div>
                             <div class="col-xs-6">
-                                <div><i class="icon-member"></i> <span>Member</span></div>
-                                <div><i class="icon-watcher"></i> <span>Watcher</span></div>
-                                <div><i class="icon-promotable"></i> <span>Promotable</span></div>
+                                <div><i class="icon-cluster-member"></i> <span>Member</span></div>
+                                <div><i class="icon-cluster-watcher"></i> <span>Watcher</span></div>
+                                <div><i class="icon-cluster-promotable"></i> <span>Promotable</span></div>
                             </div>
                         </div>
                     </div>
