@@ -1,4 +1,5 @@
-﻿using Raven.Server.ServerWide.Context;
+﻿using Raven.Client.Server.ETL;
+using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Logging;
 using Voron;
@@ -76,7 +77,7 @@ namespace Raven.Server.Documents.ETL
 
         private string GetTreeName(EtlDestination destination)
         {
-            return $"__etl/{destination.UniqueName}";
+            return $"__etl/{EtlConfigurationNameRetriever.GetName(destination)}";
         }
     }
 }

@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Server.ETL;
+using Raven.Client.Server.Operations.ETL;
 using Raven.Server.Documents.ETL;
-using Raven.Server.Documents.ETL.Providers.Raven;
 using Xunit;
 
 namespace SlowTests.Server.Documents.ETL
@@ -14,47 +14,35 @@ namespace SlowTests.Server.Documents.ETL
     [Trait("Category", "ETL")]
     public class EtlTestBase : RavenTestBase
     {
-        protected static void SetupEtl(DocumentStore src, EtlDestinationsConfig configuration)
+        protected static void AddEtl<T>(DocumentStore src, EtlConfiguration<T> configuration) where T : EtlDestination
         {
-            using (var session = src.OpenSession())
-            {
-                session.Store(configuration, Constants.Documents.ETL.RavenEtlDocument);
-
-                session.SaveChanges();
-            }
+            src.Admin.Server.Send(new AddEtlOperation<T>(configuration, src.Database));
         }
 
-        protected static void SetupEtl(DocumentStore src, DocumentStore dst, string collection, string script, bool applyToAllDocuments = false, bool disabled = false)
+        protected static void AddEtl(DocumentStore src, DocumentStore dst, string collection, string script, bool applyToAllDocuments = false, bool disabled = false)
         {
-            SetupEtl(src, dst, new[] { collection }, script, applyToAllDocuments, disabled);
+            AddEtl(src, dst, new[] { collection }, script, applyToAllDocuments, disabled);
         }
 
-        protected static void SetupEtl(DocumentStore src, DocumentStore dst, IEnumerable<string> collections, string script, bool applyToAllDocuments = false, bool disabled = false)
+        protected static void AddEtl(DocumentStore src, DocumentStore dst, IEnumerable<string> collections, string script, bool applyToAllDocuments = false, bool disabled = false)
         {
-            SetupEtl(src, new EtlDestinationsConfig
+            AddEtl(src, new EtlConfiguration<RavenDestination>()
             {
-                RavenDestinations =
+                Destination = new RavenDestination
                 {
-                    new EtlConfiguration<RavenDestination>()
+                    Database = dst.Database,
+                    Url = dst.Urls.First()
+                },
+                Transforms =
+                {
+                    new Transformation
                     {
-                        Destination = new RavenDestination
-                        {
-                            Database = dst.Database,
-                            Url = dst.Urls.First()
-                        },
-                        Transforms =
-                        {
-                            new Transformation
-                            {
-                                Name = $"ETL : {src.Database}@{src.Urls.First()} to {dst.Database}@{dst.Urls.First()}",
-                                Collections = new List<string>(collections),
-                                Script = script,
-                                ApplyToAllDocuments = applyToAllDocuments,
-                                Disabled = disabled
-                            }
-                        }
+                        Name = $"ETL : {src.Database}@{src.Urls.First()} to {dst.Database}@{dst.Urls.First()}",
+                        Collections = new List<string>(collections),
+                        Script = script,
+                        ApplyToAllDocuments = applyToAllDocuments,
+                        Disabled = disabled
                     }
-
                 }
             });
         }

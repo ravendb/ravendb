@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Raven.Client.Server.ETL;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.NotificationCenter.Notifications;
@@ -20,25 +21,19 @@ namespace SlowTests.Server.Documents.ETL
                 var notifications = new AsyncQueue<Notification>();
                 using (database.NotificationCenter.TrackActions(notifications, null))
                 {
-                    SetupEtl(store, new EtlDestinationsConfig
+                    AddEtl(store, new EtlConfiguration<RavenDestination>()
                     {
-                        RavenDestinations =
-                        {
-                            new EtlConfiguration<RavenDestination>()
+                        Destination =
+                            new RavenDestination
                             {
-                                Destination =
-                                    new RavenDestination
-                                    {
-                                        Url = "http://127.0.0.1:8080",
-                                        Database = "Northwind",
-                                    },
-                                Transforms =
-                                {
-                                    new Transformation()
-                                    {
-                                        Collections = {"Users"}
-                                    }
-                                }
+                                Url = "http://127.0.0.1:8080",
+                                Database = "Northwind",
+                            },
+                        Transforms =
+                        {
+                            new Transformation()
+                            {
+                                Collections = {"Users"}
                             }
                         }
                     });
@@ -62,32 +57,26 @@ namespace SlowTests.Server.Documents.ETL
                 var notifications = new AsyncQueue<Notification>();
                 using (database.NotificationCenter.TrackActions(notifications, null))
                 {
-                    SetupEtl(store, new EtlDestinationsConfig
+                    AddEtl(store, new EtlConfiguration<RavenDestination>()
                     {
-                        RavenDestinations =
+                        Destination = new RavenDestination()
+                        {
+                            Url = "http://127.0.0.1:8080",
+                            Database = "Northwind",
+                        },
+                        Transforms =
+                        {
+                            new Transformation()
                             {
-                                new EtlConfiguration<RavenDestination>()
-                                {
-                                    Destination = new RavenDestination()
-                                    {
-                                        Url = "http://127.0.0.1:8080",
-                                        Database = "Northwind",
-                                    },
-                                    Transforms =
-                                    {
-                                        new Transformation()
-                                        {
-                                            Name = "MyEtl",
-                                            Collections = { "Users"}
-                                        },
-                                        new Transformation()
-                                        {
-                                            Name = "MyEtl",
-                                            Collections = {"People"}
-                                        }
-                                    }
-                                }
+                                Name = "MyEtl",
+                                Collections = { "Users"}
+                            },
+                            new Transformation()
+                            {
+                                Name = "MyEtl",
+                                Collections = {"People"}
                             }
+                        }
                     });
 
                     var alert = await notifications.TryDequeueOfTypeAsync<AlertRaised>(TimeSpan.FromSeconds(30));
@@ -109,41 +98,36 @@ namespace SlowTests.Server.Documents.ETL
                 var notifications = new AsyncQueue<Notification>();
                 using (database.NotificationCenter.TrackActions(notifications, null))
                 {
-                    SetupEtl(store, new EtlDestinationsConfig
+                    AddEtl(store, new EtlConfiguration<RavenDestination>()
                     {
-                        RavenDestinations =
+                        Destination = new RavenDestination()
                         {
-                            new EtlConfiguration<RavenDestination>()
+                            Url = "http://127.0.0.1:8080",
+                            Database = "Northwind",
+                        },
+                        Transforms =
+                        {
+                            new Transformation()
                             {
-                                Destination = new RavenDestination()
-                                {
-                                    Url = "http://127.0.0.1:8080",
-                                    Database = "Northwind",
-                                },
-                                Transforms =
-                                {
-                                    new Transformation()
-                                    {
-                                        Name = "TransformUsers",
-                                        Collections = { "Users"}
-                                    }
-                                }
-                            },
-                            new EtlConfiguration<RavenDestination>()
+                                Name = "TransformUsers",
+                                Collections = { "Users"}
+                            }
+                        }
+                    });
+
+                    AddEtl(store, new EtlConfiguration<RavenDestination>()
+                    {
+                        Destination = new RavenDestination()
+                        {
+                            Url = "http://127.0.0.1:8080",
+                            Database = "Northwind",
+                        },
+                        Transforms =
+                        {
+                            new Transformation()
                             {
-                                Destination = new RavenDestination()
-                                {
-                                    Url = "http://127.0.0.1:8080",
-                                    Database = "Northwind",
-                                },
-                                Transforms =
-                                {
-                                    new Transformation()
-                                    {
-                                        Name = "TransformOrders",
-                                        Collections = { "Orders" }
-                                    }
-                                }
+                                Name = "TransformOrders",
+                                Collections = { "Orders" }
                             }
                         }
                     });

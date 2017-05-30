@@ -12,7 +12,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                SetupEtl(src, dest, new [] { "Users", "People" }, script: @"loadToUsers({Name: this.Name});");
+                AddEtl(src, dest, new [] { "Users", "People" }, script: @"loadToUsers({Name: this.Name});");
 
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 

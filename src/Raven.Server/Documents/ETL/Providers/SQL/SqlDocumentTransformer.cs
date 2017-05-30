@@ -5,6 +5,7 @@ using System.IO;
 using Jint;
 using Jint.Native;
 using Raven.Client.Documents.Attachments;
+using Raven.Client.Server.ETL;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -48,7 +49,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             
             engine.Global.Delete("varchar", true);
             engine.Global.Delete("nVarchar", true);
-            engine.Global.Delete(LoadAttachment, true);
+            engine.Global.Delete(Transformation.LoadAttachment, true);
         }
         
         protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
@@ -57,7 +58,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
             engine.SetValue("varchar", (Func<string, double?, ValueTypeLengthTriple>)(ToVarchar));
             engine.SetValue("nVarchar", (Func<string, double?, ValueTypeLengthTriple>)(ToNVarchar));
-            engine.SetValue(LoadAttachment, (Func<string, string>)(LoadAttachmentFunction));
+            engine.SetValue(Transformation.LoadAttachment, (Func<string, string>)(LoadAttachmentFunction));
         }
 
         protected override void LoadToFunction(string tableName, JsValue cols, PatcherOperationScope scope)

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Server.ETL;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Tests.Core.Utils.Entities;
@@ -49,7 +50,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses >= 3);
 
-                SetupEtl(src, dest, collections: new string[0], script: null, applyToAllDocuments: true);
+                AddEtl(src, dest, collections: new string[0], script: null, applyToAllDocuments: true);
 
                 using (var session = src.OpenSession())
                 {
@@ -154,7 +155,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses >= 3);
 
-                SetupEtl(src, dest, collections: new string[0], script: "loadToAuditItems({DocumentId:__document_id})", applyToAllDocuments: true);
+                AddEtl(src, dest, collections: new string[0], script: "loadToAuditItems({DocumentId:__document_id})", applyToAllDocuments: true);
 
                 using (var session = src.OpenSession())
                 {
@@ -255,7 +256,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses >= 3);
 
-                SetupEtl(src, dest, collections: new string[0], script: @"
+                AddEtl(src, dest, collections: new string[0], script: @"
 if (this['@metadata']['@collection'] != 'Orders')
     loadToPeople({Name: this.Name})"
                     , applyToAllDocuments: true);

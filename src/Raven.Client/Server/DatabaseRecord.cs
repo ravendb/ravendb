@@ -5,6 +5,7 @@ using System.Linq;
 using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Transformers;
+using Raven.Client.Server.ETL;
 using Raven.Client.Server.Expiration;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Client.Server.Versioning;
@@ -58,6 +59,10 @@ namespace Raven.Client.Server
         public ExpirationConfiguration Expiration { get; set; }
 
         public List<PeriodicBackupConfiguration> PeriodicBackups { get; set; }
+
+        public List<EtlConfiguration<RavenDestination>> RavenEtls;
+
+        public List<EtlConfiguration<SqlDestination>> SqlEtls;
 
         public string CustomFunctions { get; set; }
 

@@ -18,6 +18,7 @@ using FastTests.Voron.Util;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Extensions;
+using Raven.Client.Server.ETL;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
@@ -755,31 +756,27 @@ CREATE TABLE [dbo].[Attachments]
 
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
 
-                SetupEtl(store, new EtlDestinationsConfig
+                AddEtl(store, new EtlConfiguration<SqlDestination>
                 {
-                    SqlDestinations =
+                    Destination = new SqlDestination
                     {
-                        new EtlConfiguration<SqlDestination>
+                        Connection = new SqlEtlConnection()
                         {
-                            Destination = new SqlDestination
-                            {
-                                Connection = new SqlEtlConnection()
-                                {
-                                    FactoryName = "System.Data.SqlClient",
-                                    ConnectionString = GetConnectionString(store)
-                                },
-                                SqlTables =
-                                {
-                                    new SqlEtlTable {TableName = "Attachments", DocumentIdColumn = "UserId", InsertOnlyMode = false},
-                                },
-                            },
-                            Transforms =
-                            {
-                                new Transformation()
-                                {
-                                    Name = "Attachments",
-                                    Collections = {"Users"},
-                                    Script = @"
+                            FactoryName = "System.Data.SqlClient",
+                            ConnectionString = GetConnectionString(store)
+                        },
+                        SqlTables =
+                        {
+                            new SqlEtlTable {TableName = "Attachments", DocumentIdColumn = "UserId", InsertOnlyMode = false},
+                        },
+                    },
+                    Transforms =
+                    {
+                        new Transformation()
+                        {
+                            Name = "Attachments",
+                            Collections = {"Users"},
+                            Script = @"
 
 var attachments = this['@metadata']['@attachments'];
 
@@ -794,10 +791,7 @@ for (var i = 0; i < attachments.length; i++)
     loadToAttachments(attachment);
 }
 "
-                                }
-                            }
                         }
-
                     }
                 });
 
@@ -962,36 +956,29 @@ loadToOrders(orderData);
 
         protected static void SetupSqlEtl(DocumentStore store, string script, bool insertOnly = false, List<string> collections = null)
         {
-            SetupEtl(store, new EtlDestinationsConfig
+            AddEtl(store, new EtlConfiguration<SqlDestination>
             {
-                SqlDestinations =
+                Destination = new SqlDestination
                 {
-                    new EtlConfiguration<SqlDestination>
+                    Connection = new SqlEtlConnection()
                     {
-                        Destination = new SqlDestination
-                        {
-                            Connection = new SqlEtlConnection()
-                            {
-                                FactoryName = "System.Data.SqlClient",
-                                ConnectionString = GetConnectionString(store)
-                            },
-                            SqlTables =
-                            {
-                                new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id", InsertOnlyMode = insertOnly},
-                                new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId", InsertOnlyMode = insertOnly},
-                            },
-                        },
-                        Transforms =
-                        {
-                            new Transformation()
-                            {
-                                Name = "OrdersAndLines",
-                                Collections = collections ?? new List<string> {"Orders"},
-                                Script = script
-                            }
-                        }
+                        FactoryName = "System.Data.SqlClient",
+                        ConnectionString = GetConnectionString(store)
+                    },
+                    SqlTables =
+                    {
+                        new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id", InsertOnlyMode = insertOnly},
+                        new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId", InsertOnlyMode = insertOnly},
+                    },
+                },
+                Transforms =
+                {
+                    new Transformation()
+                    {
+                        Name = "OrdersAndLines",
+                        Collections = collections ?? new List<string> {"Orders"},
+                        Script = script
                     }
-
                 }
             });
         }

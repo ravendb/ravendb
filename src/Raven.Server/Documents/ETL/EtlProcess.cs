@@ -6,6 +6,7 @@ using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions.Patching;
+using Raven.Client.Server.ETL;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.NotificationCenter.Notifications;
@@ -423,6 +424,10 @@ namespace Raven.Server.Documents.ETL
                     try
                     {
                         _waitForChanges.Wait(CancellationToken);
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        return;
                     }
                     catch (OperationCanceledException)
                     {

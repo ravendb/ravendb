@@ -1,14 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 
-namespace Raven.Server.Documents.ETL.Providers.SQL
+namespace Raven.Client.Server.ETL
 {
     public class SqlDestination : EtlDestination
     {
-        private string _uniqueName;
-
         public SqlDestination()
         {
             SqlTables = new List<SqlEtlTable>();
@@ -38,19 +34,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                 errors.Add($"{nameof(SqlTables)} cannot be empty");
 
             return errors.Count == 0;
-        }
-
-        public override string UniqueName
-        {
-            get
-            {
-                if (_uniqueName != null)
-                    return _uniqueName;
-
-                var dbAtServer = DbProviderFactories.GetDatabaseAndServerFromConnectionString(Connection.FactoryName, Connection.ConnectionString);
-
-                return _uniqueName = $"{dbAtServer} [{string.Join(" ", SqlTables.Select(x => x.TableName))}]";
-            }
         }
     }
 

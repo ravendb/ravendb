@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Server.ETL;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Tests.Core.Utils.Entities;
@@ -18,7 +19,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                SetupEtl(src, dest, "Users", script: @"this.Name = 'James Doe';
+                AddEtl(src, dest, "Users", script: @"this.Name = 'James Doe';
                                        loadToUsers(this);");
 
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
@@ -69,7 +70,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                SetupEtl(src, dest, "Users", script: null);
+                AddEtl(src, dest, "Users", script: null);
 
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
@@ -121,7 +122,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                SetupEtl(src, dest, "users", @"
+                AddEtl(src, dest, "users", @"
 if (this.Age % 4 == 0) 
     return;
 else if (this.Age % 2 == 0) 
@@ -214,7 +215,7 @@ loadToUsers(
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                SetupEtl(src, dest, "users", @"
+                AddEtl(src, dest, "users", @"
 loadToUsers(this);
 loadToPeople({Name: this.Name + ' ' + this.LastName });
 loadToAddresses(LoadDocument(this.AddressId));
@@ -304,7 +305,7 @@ loadToAddresses(LoadDocument(this.AddressId));
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                SetupEtl(src, dest, "Orders", @"
+                AddEtl(src, dest, "Orders", @"
 var orderData = {
     OrderLinesCount: this.Lines.length,
     TotalCost: 0
@@ -428,7 +429,7 @@ loadToOrders(orderData);
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                SetupEtl(src, dest, "Users", "this.Name = __document_id; loadToUsers(this);");
+                AddEtl(src, dest, "Users", "this.Name = __document_id; loadToUsers(this);");
 
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 

@@ -15,6 +15,7 @@ using Raven.Client.Http.OAuth;
 using Raven.Client.Server;
 using Raven.Client.Server.Commands;
 using Raven.Client.Server.Operations;
+using Raven.Client.Server.Operations.ETL;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Client.Server.Tcp;
 using Sparrow.Json;
@@ -120,5 +121,10 @@ namespace Raven.Client.Json.Converters
 
         internal static readonly Func<BlittableJsonReaderObject, ModifyCustomFunctionsResult> ModifyCustomFunctionResult = GenerateJsonDeserializationRoutine<ModifyCustomFunctionsResult>();
 
+        internal static readonly Func<BlittableJsonReaderObject, AddEtlOperationResult> AddEtlOperationResult = GenerateJsonDeserializationRoutine<AddEtlOperationResult>();
+
+        internal static readonly Func<BlittableJsonReaderObject, UpdateEtlOperationResult> UpdateEtlOperationResult = GenerateJsonDeserializationRoutine<UpdateEtlOperationResult>();
+
+        internal static readonly Func<BlittableJsonReaderObject, DeleteEtlOperationResult> DeleteEtlOperationResult = GenerateJsonDeserializationRoutine<DeleteEtlOperationResult>();
     }
 }

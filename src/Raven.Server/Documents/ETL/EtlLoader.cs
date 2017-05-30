@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Extensions;
+using Raven.Client.Server.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
-using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
-using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.ETL
@@ -19,76 +18,84 @@ namespace Raven.Server.Documents.ETL
 
         private EtlProcess[] _processes = new EtlProcess[0];
 
+        private readonly object _loadProcessedLock = new object();
         private readonly DocumentDatabase _database;
+        private readonly ServerStore _serverStore;
 
         protected Logger Logger;
 
         public Action<string, EtlProcessStatistics> BatchCompleted;
 
-        public EtlLoader(DocumentDatabase database)
+        public EtlLoader(DocumentDatabase database, ServerStore serverStore)
         {
-            _database = database;
-            Logger = LoggingSource.Instance.GetLogger(_database.Name, GetType().FullName);
+            Logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
 
+            _database = database;
+            _serverStore = serverStore;
             _database.Changes.OnDocumentChange += NotifyAboutWork;
-            // TODO arek - RavennDB-6555 _serverStore.Cluster.DatabaseChanged += HandleDatabaseRecordChange;
-            // configuration stored in a system document under Raven/ETL key - temporary
-            _database.Changes.OnSystemDocumentChange += HandleSystemDocumentChange;
         }
 
         public EtlProcess[] Processes => _processes;
 
-        public EtlDestinationsConfig Destinations { get; private set; }
+        public List<EtlConfiguration<RavenDestination>> RavenDestinations;
+
+        public List<EtlConfiguration<SqlDestination>> SqlDestinations;
 
         public void Initialize()
         {
             LoadProcesses();
         }
-
+        
         private void LoadProcesses()
         {
-            LoadConfiguration();
-
-            if (Destinations == null)
-                return;
-
-            var processes = new List<EtlProcess>();
-
-            var uniqueDestinations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var config in Destinations.RavenDestinations)
+            lock (_loadProcessedLock)
             {
-                if (ValidateConfiguration(config, uniqueDestinations) == false)
-                    continue;
+                LoadConfiguration();
 
-                foreach (var transform in config.Transforms)
+                var processes = new List<EtlProcess>();
+
+                var uniqueDestinations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                if (RavenDestinations != null)
                 {
-                    var etlProcess = new RavenEtl(transform, config.Destination, _database);
+                    foreach (var config in RavenDestinations)
+                    {
+                        if (ValidateConfiguration(config, uniqueDestinations) == false)
+                            continue;
 
-                    processes.Add(etlProcess);
+                        foreach (var transform in config.Transforms)
+                        {
+                            var etlProcess = new RavenEtl(transform, config.Destination, _database);
+
+                            processes.Add(etlProcess);
+                        }
+                    }
                 }
-            }
 
-            foreach (var config in Destinations.SqlDestinations)
-            {
-                if (ValidateConfiguration(config, uniqueDestinations) == false)
-                    continue;
-
-                foreach (var transform in config.Transforms)
+                if (SqlDestinations != null)
                 {
-                    var sql = new SqlEtl(transform, config.Destination, _database);
+                    foreach (var config in SqlDestinations)
+                    {
+                        if (ValidateConfiguration(config, uniqueDestinations) == false)
+                            continue;
 
-                    processes.Add(sql);
+                        foreach (var transform in config.Transforms)
+                        {
+                            var sql = new SqlEtl(transform, config.Destination, _database);
+
+                            processes.Add(sql);
+                        }
+                    }
                 }
-            }
 
-            _processes = processes.ToArray();
+                _processes = processes.ToArray();
 
-            // ReSharper disable once ForCanBeConvertedToForeach
-            for (var i = 0; i < _processes.Length; i++)
-            {
-                _database.DocumentTombstoneCleaner.Subscribe(_processes[i]);
-                _processes[i].Start();
+                // ReSharper disable once ForCanBeConvertedToForeach
+                for (var i = 0; i < _processes.Length; i++)
+                {
+                    _database.DocumentTombstoneCleaner.Subscribe(_processes[i]);
+                    _processes[i].Start();
+                }
             }
         }
 
@@ -101,7 +108,7 @@ namespace Raven.Server.Documents.ETL
                 return false;
             }
 
-            if (uniqueDestinations.Add(config.Destination.UniqueName) == false)
+            if (uniqueDestinations.Add(EtlConfigurationNameRetriever.GetName(config.Destination)) == false)
             {
                 LogConfigurationError(config,
                     new List<string>
@@ -116,7 +123,7 @@ namespace Raven.Server.Documents.ETL
 
         private void LogConfigurationError<T>(EtlConfiguration<T> config, List<string> errors) where T : EtlDestination
         {
-            var errorMessage = $"Invalid ETL configuration for destination: {config.Destination}. " +
+            var errorMessage = $"Invalid ETL configuration for destination: {EtlConfigurationNameRetriever.GetName(config.Destination)}. " +
                                $"Reason{(errors.Count > 1 ? "s" : string.Empty)}: {string.Join(";", errors)}.";
 
             if (Logger.IsInfoEnabled)
@@ -129,20 +136,12 @@ namespace Raven.Server.Documents.ETL
 
         private void LoadConfiguration()
         {
-            DocumentsOperationContext context;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-            using (context.OpenReadTransaction())
-            {
-                var etlConfigDocument = _database.DocumentsStorage.Get(context, Constants.Documents.ETL.RavenEtlDocument);
+            var record = _serverStore.LoadDatabaseRecord(_database.Name);
 
-                if (etlConfigDocument == null)
-                {
-                    Destinations = null;
-                    return;
-                }
+            RavenDestinations = record.RavenEtls;
+            SqlDestinations = record.SqlEtls;
 
-                Destinations = JsonDeserializationServer.EtlConfiguration(etlConfigDocument.Data);
-            }
+            // TODO arek remove destinations which has been removed or modified - EtlStorage.Remove
         }
 
         private void NotifyAboutWork(DocumentChange documentChange)
@@ -154,11 +153,15 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        private void HandleSystemDocumentChange(DocumentChange change)
+        public virtual void Dispose()
         {
-            if (change.Id.Equals(Constants.Documents.ETL.RavenEtlDocument, StringComparison.OrdinalIgnoreCase) == false)
-                return;
+            _database.Changes.OnDocumentChange -= NotifyAboutWork;
 
+            Parallel.ForEach(_processes, x => x.Dispose());
+        }
+
+        public void HandleDatabaseRecordChange()
+        {
             var old = _processes;
 
             Parallel.ForEach(old, x => x.Dispose());
@@ -167,19 +170,10 @@ namespace Raven.Server.Documents.ETL
 
             LoadProcesses();
 
-            // unsubscribe old etls _after_ we start new processes to ensure the tombsone cleaner 
+            // unsubscribe old etls _after_ we start new processes to ensure the tombstone cleaner 
             // constantly keeps track of tombstones processed by ETLs so it won't delete them during etl processes reloading
 
-            old.ForEach(x => _database.DocumentTombstoneCleaner.Unsubscribe(x)); 
-        }
-
-        public virtual void Dispose()
-        {
-            _database.Changes.OnDocumentChange -= NotifyAboutWork;
-            // TODO arek - RavennDB-6555 _serverStore.Cluster.DatabaseChanged += HandleDatabaseRecordChange;
-            _database.Changes.OnSystemDocumentChange -= HandleSystemDocumentChange;
-
-            Parallel.ForEach(_processes, x => x.Dispose());
+            old.ForEach(x => _database.DocumentTombstoneCleaner.Unsubscribe(x));
         }
     }
 }

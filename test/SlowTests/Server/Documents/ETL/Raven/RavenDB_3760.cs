@@ -20,7 +20,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             {
                 var etlDone = WaitForEtl(master, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                SetupEtl(master, slave, "Users", @"
+                AddEtl(master, slave, "Users", @"
                         this.Name =  this['@metadata']['User'];
                         loadToUsers(this);");
 
@@ -56,7 +56,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             {
                 var etlDone = WaitForEtl(master, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                SetupEtl(master, slave, "users", @"
+                AddEtl(master, slave, "users", @"
 if (this.Age % 2 == 0) 
     return;
 else 
@@ -107,7 +107,7 @@ loadToUsers(this);");
             {
                 var etlDone = WaitForEtl(master, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                SetupEtl(master, slave, "Users", null);
+                AddEtl(master, slave, "Users", null);
 
                 using (var session = master.OpenSession())
                 {

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Raven.Server.Documents.ETL
+namespace Raven.Client.Server.ETL
 {
     public class EtlConfiguration<T> where T : EtlDestination
     {
@@ -27,5 +27,7 @@ namespace Raven.Server.Documents.ETL
             
             return errors.Count == 0;
         }
+
+        public EtlType EtlType => Destination is RavenDestination ? EtlType.Raven : EtlType.Sql;
     }
 }
