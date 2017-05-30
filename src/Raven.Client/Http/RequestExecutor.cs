@@ -13,12 +13,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
-using Raven.Client.Extensions;
 using Raven.Client.Http.OAuth;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server.Commands;
 using Raven.Client.Util;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -68,8 +66,6 @@ namespace Raven.Client.Http
         public string Url => _nodeSelector?.CurrentNode?.Url;
 
         public long TopologyEtag;
-
-        public bool HasUpdatedTopologyOnce { get; private set; }
 
         protected bool _withoutTopology;
 
@@ -194,7 +190,7 @@ namespace Raven.Client.Http
                     {
                         if (_firstTopologyUpdate == null)
                         {
-                            if(_lastKnownUrls == null)
+                            if (_lastKnownUrls == null)
                                 throw new InvalidOperationException("No known topology and no previously known one, cannot proceed, likely a bug");
                             _firstTopologyUpdate = FirstTopologyUpdate(_lastKnownUrls);
                         }
@@ -278,10 +274,10 @@ namespace Raven.Client.Http
             }
 
             _lastKnownUrls = initialUrls;
-            
-            throw new AggregateException("Failed to retrieve cluster topology from all known nodes" + Environment.NewLine + 
-                                         string.Join(Environment.NewLine, list.Select(x=> x.Item1 + " -> " + x.Item2?.Message))
-                , list.Select(x=>x.Item2));
+
+            throw new AggregateException("Failed to retrieve cluster topology from all known nodes" + Environment.NewLine +
+                                         string.Join(Environment.NewLine, list.Select(x => x.Item1 + " -> " + x.Item2?.Message))
+                , list.Select(x => x.Item2));
         }
 
         private void IntializeUpdateTopologyTimer()
@@ -332,7 +328,7 @@ namespace Raven.Client.Http
                     request.Headers.TryAddWithoutValidation("If-None-Match", $"\"{cachedEtag}\"");
                 }
 
-                if(!_withoutTopology)
+                if (!_withoutTopology)
                     request.Headers.TryAddWithoutValidation("Topology-Etag", $"\"{TopologyEtag}\"");
 
                 var sp = Stopwatch.StartNew();
@@ -401,7 +397,7 @@ namespace Raven.Client.Http
                             var x = command.FailedNodes.First();
                             throw new UnsuccessfulRequestException(x.Key.Url, x.Value);
                         }
-                        
+
                         throw new AllTopologyNodesDownException("Received unsuccessful response from all servers and couldn't recover from it.",
                             new AggregateException(command.FailedNodes.Select(x => new UnsuccessfulRequestException(x.Key.Url, x.Value))));
                     }
@@ -540,7 +536,7 @@ namespace Raven.Client.Http
             _nodeSelector.OnFailedRequest();
             if (command.FailedNodes.ContainsKey(_nodeSelector.CurrentNode)) //we tried all the nodes...nothing left to do
                 return false;
-            
+
             await ExecuteAsync(_nodeSelector.CurrentNode, context, command).ConfigureAwait(false);
 
             return true;
@@ -587,7 +583,7 @@ namespace Raven.Client.Http
 
         public string UrlFor(string documentId)
         {
-            var node = _nodeSelector.CurrentNode;
+            var node = _nodeSelector?.CurrentNode ?? AsyncHelpers.RunSync(GetCurrentNode);
             return $"{node.Url}/databases/{node.Database}/docs?id={documentId}";
         }
 
@@ -691,11 +687,6 @@ namespace Raven.Client.Http
             return GlobalHttpClient.Value;
         }
 
-        protected void OnTopologyChange()
-        {
-            HasUpdatedTopologyOnce = true;
-        }
-
         public class NodeSelector
         {
             private Topology _topology;
@@ -748,12 +739,10 @@ namespace Raven.Client.Http
 
         public async Task<ServerNode> GetCurrentNode()
         {
-            if(_firstTopologyUpdate.Status != TaskStatus.RanToCompletion)
-                await _firstTopologyUpdate;
+            if (_firstTopologyUpdate.Status != TaskStatus.RanToCompletion)
+                await _firstTopologyUpdate.ConfigureAwait(false);
 
             return _nodeSelector.CurrentNode;
-
-            
         }
     }
 }

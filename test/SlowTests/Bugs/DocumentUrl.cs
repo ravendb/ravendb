@@ -22,9 +22,9 @@ namespace SlowTests.Bugs
                     session.Store(entity);
 
                     var storedUrl = session.Advanced.GetDocumentUrl(entity);
-                    var serverUrl = documentStore.Urls;
-                    
-                    Assert.Equal(serverUrl + "/databases/"+documentStore.Database+ "/docs?id=users/1-A", storedUrl);
+                    var serverUrl = documentStore.Urls[0];
+
+                    Assert.Equal(serverUrl + "/databases/" + documentStore.Database + "/docs?id=users/1-A", storedUrl);
                 }
             }
         }

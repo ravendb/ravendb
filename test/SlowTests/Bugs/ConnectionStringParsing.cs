@@ -25,11 +25,12 @@ namespace SlowTests.Bugs
         [Fact]
         public void EnsureWellFormedConnectionStrings_ParsingWithRavenOptionTypes_Successful()
         {
-            var parser = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionString("Urls=http://localhost:8080;user=beam;password=up;");
+            var parser = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionString("Urls=http://localhost:8080;database=up;");
             parser.Parse();
             var options = parser.ConnectionStringOptions;
 
             Assert.Equal("http://localhost:8080", options.Urls.First());
+            Assert.Equal("up", options.Database);
         }
 
         [Fact]
