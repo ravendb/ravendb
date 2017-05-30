@@ -99,6 +99,8 @@ namespace Raven.Server.Rachis
 
         public event EventHandler<ClusterTopology> TopologyChanged;
 
+        public event EventHandler<State> StateChanged;
+
         private string _tag;
         public TransactionContextPool ContextPool { get; private set; }
         private StorageEnvironment _persistentState;
@@ -393,6 +395,8 @@ namespace Raven.Server.Rachis
                             d.Dispose();
                         }
                     });
+
+                    StateChanged?.Invoke(this, state);
                 }
             };
         }
