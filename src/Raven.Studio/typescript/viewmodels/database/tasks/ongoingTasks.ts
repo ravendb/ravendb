@@ -1,25 +1,23 @@
 import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
-import deleteDatabaseConfirm = require("viewmodels/resources/deleteDatabaseConfirm");
 import databaseInfo = require("models/resources/info/databaseInfo");
-import messagePublisher = require("common/messagePublisher");
 import ongoingTasksCommand = require("commands/database/tasks/getOngoingTasksCommand");
-import ongoingTaskReplication = require("models/database/tasks/ongoingTaskReplication");
-import ongoingTaskBackup = require("models/database/tasks/ongoingTaskBackup");
-import ongoingTaskEtl = require("models/database/tasks/ongoingTaskETL");
-import ongoingTaskSql = require("models/database/tasks/ongoingTaskSQL");
+import ongoingTaskReplication = require("models/database/tasks/ongoingTaskReplicationModel");
+import ongoingTaskBackup = require("models/database/tasks/ongoingTaskBackupModel");
+import ongoingTaskEtl = require("models/database/tasks/ongoingTaskETLModel");
+import ongoingTaskSql = require("models/database/tasks/ongoingTaskSQLModel");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
-import ongoingTask = require("models/database/tasks/ongoingTask");
 import createOngoingTask = require("viewmodels/database/tasks/createOngoingTask");
-
+import deleteOngoingTaskConfirm = require("viewmodels/database/tasks/deleteOngoingTaskConfirm");
+import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
 type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "Backup" | "Subscription";
 
 class ongoingTasks extends viewModelBase {
     
     // Todo: Get info for db group topology ! members & promotable list..
 
-    clusterManager = clusterTopologyManager.default;
+    private clusterManager = clusterTopologyManager.default;
     myNodeTag = ko.observable<string>();
 
     // Ongoing tasks lists:
@@ -38,6 +36,7 @@ class ongoingTasks extends viewModelBase {
     
     constructor() {
         super();
+        this.bindToCurrentInstance("removeOngoingTask");
 
         this.initObservables();
     }
@@ -46,7 +45,6 @@ class ongoingTasks extends viewModelBase {
         this.myNodeTag(this.clusterManager.nodeTag());
         this.subsCountText = ko.pureComputed(() => { return `(${this.subscriptionsCount()})`; });
         this.urlForSubscriptions = ko.pureComputed(() => appUrl.forSubscriptions(this.activeDatabase()));
-        this.selectedTaskType("All");
     }
 
     activate(args: any): JQueryPromise < Raven.Server.Web.System.OngoingTasksResult> {
@@ -59,6 +57,8 @@ class ongoingTasks extends viewModelBase {
         
         const db = this.activeDatabase();
         this.updateUrl(appUrl.forOngoingTasks(db));
+
+        this.selectedTaskType(_.first(this.existingTasksArray()) || "All");
     }
 
     private fetchOngoingTasks(): JQueryPromise<Raven.Server.Web.System.OngoingTasksResult> {
@@ -105,44 +105,15 @@ class ongoingTasks extends viewModelBase {
         return appUrl.forManageDatabaseGroup(dbInfo);
     }
 
-    removeOngoingTask(db: databaseInfo) {
-       // ...
-    }
-
-    private removeTaskConfirm(toDelete: databaseInfo[]) {
-        const confirmDeleteViewModel = new deleteDatabaseConfirm(toDelete);
-
-        confirmDeleteViewModel
-            .result
-            .done((confirmResult: deleteDatabaseConfirmResult) => {
-                if (confirmResult.can) {
-                    // ...
-                }
-            });
-
+    removeOngoingTask(args: ongoingTaskModel) {
+      
+        const confirmDeleteViewModel = new deleteOngoingTaskConfirm(this.activeDatabase(), args.taskType(), args.taskId);
         app.showBootstrapDialog(confirmDeleteViewModel);
     }
 
-    private onTaskRemoved() {
-        // ...
-    }
-
-    private removeTask(taskInfo: ongoingTask) {
-        // ...
-        messagePublisher.reportSuccess(`Task ${taskInfo.taskType} was successfully removed`);
-    }
-
     addNewOngoingTask() {
-        this.newOngoingTask();
-    }
-
-    newOngoingTask() {
         const addOngoingTaskView = new createOngoingTask();
         app.showBootstrapDialog(addOngoingTaskView);
-    }
-
-    editOngoingTask() {
-        // ....
     }
 
     setSelectedTaskType(taskName: string) {

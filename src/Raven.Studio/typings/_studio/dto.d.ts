@@ -317,3 +317,9 @@ interface feedbackSavedSettingsDto {
 interface customFunctionsDto {
     Functions: string;
 }
+
+interface externalReplicationDataFromUI {
+    ApiKey: string; 
+    DestinationDB: string;
+    DestinationURL: string;
+} 

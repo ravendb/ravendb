@@ -1,24 +1,25 @@
-import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import eventsCollector = require("common/eventsCollector");
+import appUrl = require("common/appUrl");
+import router = require("plugins/router");
+import dialogViewModelBase = require("viewModels/dialogViewModelBase"); 
+
 
 class createOngoingTask extends dialogViewModelBase {
-
-    constructor() {
-        super();
-    }
-
-    activate() {
-    }
 
     compositionComplete() {
         super.compositionComplete();
     }
 
-    protected initObservables() {
+    newReplicationTask(task: createOngoingTask) {
+        eventsCollector.default.reportEvent("externalReplication", "new");
+        const url = appUrl.forNewExternalReplication(this.activeDatabase());
+        router.navigate(url);
+        this.close();
     }
 
-    newReplicationTask() {
-        alert("NewReplicationTask");
-        // ...
+    urlForExternalReplication() {
+       return appUrl.forNewExternalReplication(this.activeDatabase());
+        
     }
 
     newEtlTask() {

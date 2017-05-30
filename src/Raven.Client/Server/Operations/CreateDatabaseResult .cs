@@ -29,7 +29,15 @@ namespace Raven.Client.Server.Operations
 
     }
 
-    public class ModifyDatabaseWatchersResult : CreateDatabaseResult
+    public class ModifyExternalReplicationResult : CreateDatabaseResult
     {
+    }
+
+    public class DatabasePutResult
+    {
+        public long ETag { get; set; }
+        public string Key { get; set; }
+        public DatabaseTopology Topology { get; set; }
+        public List<string> NodesAddedTo { get; set; }
     }
 }

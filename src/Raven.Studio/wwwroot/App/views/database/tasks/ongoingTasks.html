@@ -1,30 +1,23 @@
-<div class="content-container">
-    <div class="destinations flex-vertical absolute-fill content-margin">
+<div class="destinations flex-vertical absolute-fill content-margin">
         <div class="row flex-row flex-grow">
             <div class="col-sm-12 col-lg-6 flex-vertical">
                 <div class="flex-header flex-horizontal">
                     <button data-bind="click: addNewOngoingTask" class="btn btn-primary">
                         <i class="icon-plus"></i><span>Add Task</span>
                     </button>
-
                     <div class="flex-separator"></div>
-                    Filter By Type:
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                            <span data-bind="text: selectedTaskType"></span><span class="caret"></span>
-                        </button>
-                        <ul class="dropdown-menu" role="menu">
-                            <!-- ko foreach: existingTasksArray() -->
-                            <li data-bind="click: $root.setSelectedTaskType.bind($root, $data)"><a data-bind="text: $data"></a></li>
-                            <!-- /ko -->
-                            <!-- ko if: existingTasksArray().length === 0 -->
-                            <li data-bind="click: function() { }"><a>No tasks defined</a></li>
-                            <!-- /ko -->
-                            <!-- ko if: existingTasksArray().length > 1 -->
-                            <li class="divider"></li>
-                            <li data-bind="click: $root.setSelectedTaskType('All')"><a>All</a></li> 
-                            <!-- /ko -->
-                        </ul>
+                    <div data-bind="visible: existingTasksArray().length > 1">
+                        Filter By Type:
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                <span data-bind="text: selectedTaskType"></span><span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu">
+                                <!-- ko foreach: existingTasksArray() -->
+                                <li data-bind="click: $root.setSelectedTaskType.bind($root, $data)"><a data-bind="text: $data"></a></li>
+                                <!-- /ko -->
+                            </ul>
+                        </div>
                     </div>
                 </div>
                 <div class="scroll flex-grow">
@@ -32,7 +25,7 @@
                         <div class="row">
                             <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
                                 <i class="icon-xl icon-empty-set text-muted"></i>
-                                <h2 class="text-center">No tasks have been created for this Databse Group.</h2>
+                                <h2 class="text-center">No tasks have been created for this Database Group.</h2>
                             </div>
                         </div>
                     </div>
@@ -52,20 +45,20 @@
                                             <h5>DESTINATION</h5>
                                             <h3>
                                                 <a title="Destination Url" class="destination-name"><i class="icon-external-replication"></i><span data-bind="text: destinationURL"></span></a>
-                                                <span title="Destination database" class="location" data-bind="text: destDBText"></span>
+                                                <span title="Destination database" class="location" data-bind="text: '(' + destinationDB() + ')'"></span>
                                                 <!-- Todo: change 'location' class name to 'destination db' ; change 'dest name' to 'dest url' ..... -->
                                             </h3>
                                         </div>
                                         <div class="node">
                                             <h5>RESPONSIBLE NODE</h5>
-                                            <h3 data-bind="text: responsibleNode().NodeTag"></h3>
+                                            <h3 data-bind="text: responsibleNode().NodeTag"></h3> <!-- todo: add tooltips & move to template... -->
                                         </div>
                                         <div data-bind="template: { name: 'status-template' }"></div>
                                     </div>
                                     <div class="actions-container">
                                         <div class="actions">
                                             <button class="btn btn-default" data-bind="click: editTask"><i class="icon-edit"></i></button>
-                                            <button class="btn btn-danger" data-bind="click: removeTask"><i class="icon-trash"></i></button>
+                                            <button class="btn btn-danger" data-bind="click: $root.removeOngoingTask"><i class="icon-trash"></i></button> 
                                         </div>
                                     </div>
                                 </div>
@@ -262,19 +255,19 @@
                 </div>
             </div>
         </div>
-    </div>
-</div>  
+</div>
 
 <script type="text/html" id="status-template">
     <div class="status">
         <h5>STATUS</h5>
-        <div class="btn-group"> 
-            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                <span data-bind="visible: true">Enabled</span> 
-                <span data-bind="visible: false">Disabled</span><span class="caret"></span> 
+        <!--<div class="btn-group">-->
+        <div>
+            <button type="button" class="btn dropdown-toggle" data-toggle="dropdown" aria-expanded="false"> <!--set-size-->
+                <span data-bind="visible: true">Enabled</span>
+                <span data-bind="visible: false">Disabled</span><span class="caret"></span>
             </button>
-            <ul class="dropdown-menu settings-menu"> 
-                <li><a href="#" data-bind="click: enableTask"><span>Enable</span></a></li> 
+            <ul class="dropdown-menu settings-menu">
+                <li><a href="#" data-bind="click: enableTask"><span>Enable</span></a></li>
                 <li><a href="#" data-bind="click: disableTask"><span>Disable</span></a></li>
             </ul>
         </div>
