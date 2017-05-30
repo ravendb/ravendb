@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.Indexes
         {
             var creationOptions = IndexCreationOptions.Create;
             var existingIndex = GetIndex(name);
-            IndexDefinitionCompareDifferences differences =  IndexDefinitionCompareDifferences.None;
+            IndexDefinitionCompareDifferences differences = IndexDefinitionCompareDifferences.None;
             if (existingIndex != null)
                 creationOptions = GetIndexCreationOptions(definition, existingIndex, out differences);
 
@@ -128,20 +128,20 @@ namespace Raven.Server.Documents.Indexes
             if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex || creationOptions == IndexCreationOptions.Update)
             {
                 Debug.Assert(existingIndex != null);
-                
+
                 differences &= ~IndexDefinitionCompareDifferences.Etag;
 
-                
+
                 if ((differences & IndexDefinitionCompareDifferences.LockMode) != 0)
                 {
-                    existingIndex.SetLock(definition.LockMode);    
+                    existingIndex.SetLock(definition.LockMode);
                 }
 
                 if ((differences & IndexDefinitionCompareDifferences.Priority) != 0)
                 {
                     existingIndex.SetPriority(definition.Priority);
                 }
-                
+
                 existingIndex.Update(definition, existingIndex.Configuration);
 
                 _indexes.UpdateIndexEtag(existingIndex.Etag, etag);
@@ -358,7 +358,7 @@ namespace Raven.Server.Documents.Indexes
                 OpenIndexes(record);
                 HandleDatabaseRecordChange();
             });
-            }
+        }
 
         public Index GetIndex(long etag)
         {
@@ -438,9 +438,9 @@ namespace Raven.Server.Documents.Indexes
 
                 var command = PutAutoIndexCommand.Create(definition, _documentDatabase.Name);
 
-                var (index, result) = await _serverStore.SendToLeaderAsync(command);
+                var (etag, _) = await _serverStore.SendToLeaderAsync(command);
 
-                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index);
+                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
 
                 var instance = GetIndex(definition.Name);
 
@@ -503,8 +503,8 @@ namespace Raven.Server.Documents.Indexes
                 default:
                     throw new NotSupportedException($"Cannot update {definition.Type} index from IndexDefinition");
             }
-            
-            
+
+
         }
 
         private static IndexDefinitionCompareDifferences UpdateStaticIndexLockModeAndPriority(IndexDefinition definition, Index existingIndex,
@@ -646,7 +646,7 @@ namespace Raven.Server.Documents.Indexes
                 if (index == null)
                     return false;
 
-                var (etag, result) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
+                var (etag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
 
                 await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
 
@@ -668,9 +668,9 @@ namespace Raven.Server.Documents.Indexes
                 if (index == null)
                     IndexDoesNotExistException.ThrowFor(etag);
 
-                var (resultEtag,result) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
+                var (newEtag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
 
-                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(resultEtag);
+                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(newEtag);
             }
             finally
             {
@@ -945,7 +945,7 @@ namespace Raven.Server.Documents.Indexes
                 var singleIndexConfiguration = new SingleIndexConfiguration(definition.Configuration, _documentDatabase.Configuration);
                 var indexPath = path.Combine(safeName).FullPath;
                 if (Directory.Exists(indexPath))
-                OpenIndex(path, definition.Etag, indexPath, exceptions, name);
+                    OpenIndex(path, definition.Etag, indexPath, exceptions, name);
             }
 
             foreach (var kvp in record.AutoIndexes)
@@ -959,7 +959,7 @@ namespace Raven.Server.Documents.Indexes
                 var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(definition.Name);
                 var indexPath = path.Combine(safeName).FullPath;
                 if (Directory.Exists(indexPath))
-                OpenIndex(path, definition.Etag, indexPath, exceptions, name);
+                    OpenIndex(path, definition.Etag, indexPath, exceptions, name);
             }
 
             if (exceptions != null && exceptions.Count > 0)
@@ -1191,7 +1191,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var command = new SetIndexLockCommand(name, mode, _documentDatabase.Name);
 
-                var (etag, result) = await _serverStore.SendToLeaderAsync(command);
+                var (etag, _) = await _serverStore.SendToLeaderAsync(command);
 
                 await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
             }
@@ -1220,7 +1220,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var command = new SetIndexPriorityCommand(name, priority, _documentDatabase.Name);
 
-                var (etag, result) = await _serverStore.SendToLeaderAsync(command);
+                var (etag, _) = await _serverStore.SendToLeaderAsync(command);
 
                 await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
             }

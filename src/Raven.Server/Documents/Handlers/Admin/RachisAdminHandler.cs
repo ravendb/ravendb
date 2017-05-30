@@ -1,14 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Server.Extensions;
-using Raven.Server.Rachis;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -23,13 +22,9 @@ namespace Raven.Server.Documents.Handlers.Admin
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
-                var command = await context.ReadForMemoryAsync(RequestBodyStream(), "ExternalRachisCommand").ThrowOnTimeout();
+                var commandJson = await context.ReadForMemoryAsync(RequestBodyStream(), "external/rachis/command");
 
-                if (command.TryGet("Type", out string _) == false)
-                {
-                    // TODO: maybe add further validation?
-                    throw new ArgumentException("Received command must contain a Type field");
-                }
+                var command = CommandBase.CreateFrom(commandJson);
 
                 var (etag, result) = await ServerStore.PutCommandAsync(command).ThrowOnTimeout();
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
@@ -37,8 +32,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        ["ETag"] = etag,
-                        ["Data"] = result
+                        [nameof(ServerStore.PutRaftCommandResult.Etag)] = etag,
+                        [nameof(ServerStore.PutRaftCommandResult.Data)] = result
                     });
                     writer.Flush();
                 }

@@ -25,6 +25,7 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -64,6 +65,8 @@ namespace Raven.Server
 
         public RavenServer(RavenConfiguration configuration)
         {
+            JsonDeserializationValidator.Validate();
+
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
             if (Configuration.Initialized == false)

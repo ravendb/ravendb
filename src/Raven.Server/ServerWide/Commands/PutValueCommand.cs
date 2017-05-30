@@ -3,18 +3,21 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class PutValueCommand : CommandBase
+    public abstract class PutValueCommand<T> : CommandBase
     {
         public string Name;
-        public BlittableJsonReaderObject Value;
-        public override DynamicJsonValue ToJson()
+
+        public T Value;
+
+        public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
-            return new DynamicJsonValue
-            {
-                ["Type"] = nameof(PutValueCommand),
-                [nameof(PutValueCommand.Name)] = Name,
-                [nameof(PutValueCommand.Value)] = Value
-            };
+            var djv = base.ToJson(context);
+            djv[nameof(Name)] = Name;
+            djv[nameof(Value)] = ValueToJson();
+
+            return djv;
         }
+
+        public abstract DynamicJsonValue ValueToJson();
     }
 }

@@ -11,7 +11,7 @@ namespace Sparrow.Json
         private static readonly Type[] EmptyTypes = new Type[0];
         private static readonly Dictionary<Type, object> DeserializedTypes = new Dictionary<Type, object>();
 
-        protected static Func<BlittableJsonReaderObject, T> GenerateJsonDeserializationRoutine<T>()
+        protected internal static Func<BlittableJsonReaderObject, T> GenerateJsonDeserializationRoutine<T>()
         {
             try
             {

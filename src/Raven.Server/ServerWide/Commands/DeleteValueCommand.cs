@@ -1,17 +1,18 @@
-﻿using Sparrow.Json.Parsing;
+﻿using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
     public class DeleteValueCommand : CommandBase
     {
         public string Name;
-        public override DynamicJsonValue ToJson()
+
+        public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
-            return new DynamicJsonValue
-            {
-                ["Type"] = nameof(DeleteValueCommand),
-                [nameof(DeleteValueCommand.Name)] = Name,
-            };
+            var djv = base.ToJson(context);
+            djv[nameof(Name)] = Name;
+
+            return djv;
         }
     }
 }

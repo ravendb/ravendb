@@ -23,6 +23,7 @@ using Voron.Data;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Raven.Client.Http;
+using Raven.Server.ServerWide.Commands;
 
 namespace Raven.Server.Rachis
 {
@@ -429,7 +430,7 @@ namespace Raven.Server.Rachis
             leader.Start();
         }
 
-        public Task<(long, object)> PutAsync(BlittableJsonReaderObject cmd)
+        public Task<(long Etag, object Result)> PutAsync(CommandBase cmd)
         {
             var leader = _currentLeader;
             if (leader == null)
