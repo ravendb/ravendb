@@ -11,41 +11,32 @@ class saveCustomFunctionsCommand extends commandBase {
         super();
     }
 
+    execute(): JQueryPromise<string> {
+        const args = JSON.stringify(this.toSave.toDto());
+
+        // 1. Validate scripts if not empty
+        if (!this.toSave.hasEmptyScript) {
+            this.validateCustomFunctions(args)
+                .fail((response) => {
+                     return this.reportError("Failed to validate custom functions!", response.responseText, response.statusText);
+                });
+        } 
+
+        // 2. Send to server
+        return this.saveCustomFunctionsDocument(args);
+    }
+
     private validateCustomFunctions(document: string): JQueryPromise<string> {
         return this.post(endpoints.databases.studioTasks.studioTasksValidateCustomFunctions, document, this.db, { dataType: 'text' });
     }
 
-    execute(): JQueryPromise<void> {
-        if (this.toSave.hasEmptyScript) {
-            return this.deleteCustomFunctions();
-        } else {
-            const args = JSON.stringify(this.toSave.toDto());
-
-            return this.validateCustomFunctions(args)
-                .fail((response) => this.reportError("Failed to validate custom functions!", response.responseText, response.statusText))
-                .then(() => {
-                    return this.saveCustomFunctionsDocument(args);
-                });
-        }
-    }
-
-    private deleteCustomFunctions() {
-        const args = {
-            id: saveCustomFunctionsCommand.documentId
-        };
-        const url = endpoints.databases.document.docs + this.urlEncodeArgs(args);
-        return this.del<void>(url, null, this.db)
-            .done(() => this.reportSuccess("Custom functions saved."))
-            .fail((response: JQueryXHR) => this.reportError("Failed to save custom functions.", response.responseText, response.statusText));
-    }
-
     private saveCustomFunctionsDocument(args: string) {
-        const urlArgs = { id: saveCustomFunctionsCommand.documentId };
+        const url = endpoints.global.adminDatabases.adminModifyCustomFunctions + this.urlEncodeArgs({ name: this.db.name });
 
-        const url = endpoints.databases.document.docs + this.urlEncodeArgs(urlArgs);
-        const saveTask = this.put<void>(url, args, this.db, null)
+        const saveTask = this.post<void>(url, args)
             .done(() => this.reportSuccess("Custom functions saved."))
             .fail((response: JQueryXHR) => this.reportError("Failed to save custom functions.", response.responseText, response.statusText));
+
         return saveTask;
     }
 }

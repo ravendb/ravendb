@@ -374,7 +374,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/modify-custom-function", "POST", "/admin/modify-custom-function?name={databaseName:string}")]
+        [RavenAction("/admin/modify-custom-functions", "POST", "/admin/modify-custom-functions?name={databaseName:string}")]
         public async Task ModifyCustomFunctions()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -385,7 +385,7 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-modify-custom-function").ThrowOnTimeout();
+                var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-modify-custom-functions").ThrowOnTimeout();
                 string functions;
                 if (updateJson.TryGet("Functions", out functions) == false)
                 {

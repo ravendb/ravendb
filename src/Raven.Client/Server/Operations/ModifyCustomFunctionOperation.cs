@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Text;
+﻿using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -41,9 +38,10 @@ namespace Raven.Client.Server.Operations
             _functions = functions;
             _context = context;
         }
+
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/admin/modify-custom-function?name={_database}";
+            url = $"{node.Url}/admin/modify-custom-functions?name={_database}";
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
@@ -54,7 +52,7 @@ namespace Raven.Client.Server.Operations
                         ["Functions"] = _functions,
                     };
 
-                    _context.Write(stream, _context.ReadObject(json, "modify-custom-function"));
+                    _context.Write(stream, _context.ReadObject(json, "modify-custom-functions"));
                 })
             };
 
