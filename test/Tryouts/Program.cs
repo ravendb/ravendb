@@ -24,9 +24,9 @@ namespace Tryouts
                 Console.WriteLine(i);
                 Parallel.For(0, 10, _ =>
                 {
-                    using (var a = new FastTests.Issues.RavenDB_5610())
+                    using (var a = new FastTests.Server.Replication.DisableDatabasePropagationInRaftCluster())
                     {
-                        a.WillUpdate().Wait();
+                        a.DisableDatabaseToggleOperation_should_propagate_through_raft_cluster().Wait();
                     }
                 });
             }

@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -73,7 +74,7 @@ namespace Tests.Infrastructure
         }
 
 
-        protected async Task<bool> WaitUntilDatabaseHasState(DocumentStore store, TimeSpan timeout, bool isLoaded, string databaseName = null)
+        protected async Task<bool> WaitUntilDatabaseHasState(DocumentStore store, TimeSpan timeout, bool isLoaded)
         {
             var requestExecutor = store.GetRequestExecutor();
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -87,6 +88,52 @@ namespace Tests.Infrastructure
                         var databaseIsLoadedCommand = new IsDatabaseLoadedCommand();
                         await requestExecutor.ExecuteAsync(databaseIsLoadedCommand, context);
                         shouldContinue = databaseIsLoadedCommand.Result.IsLoaded != isLoaded;
+                        await Task.Delay(100);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        //OperationCanceledException is thrown if the database is currently shutting down
+                    }
+                }
+
+                return timeoutTask.IsCompleted == false;
+            }
+        }
+        
+        public class GetDatabaseDocumentTestCommand : RavenCommand<DatabaseRecord>
+        {
+            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            {
+                url = $"{node.Url}/admin/databases?name={node.Database}";
+
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get,
+                };
+            }
+
+            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+            {
+                Result = JsonDeserializationCluster.DatabaseRecord(response);
+            }
+
+            public override bool IsReadRequest => true;
+        }
+        
+        protected async Task<bool> WaitUntilDatabaseHasState(DocumentStore store, TimeSpan timeout, Func<DatabaseRecord, bool> predicate)
+        {
+            var requestExecutor = store.GetRequestExecutor();
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var shouldContinue = true;
+                var timeoutTask = Task.Delay(timeout);
+                while (shouldContinue && timeoutTask.IsCompleted == false)
+                {
+                    try
+                    {
+                        var databaseIsLoadedCommand = new GetDatabaseDocumentTestCommand();
+                        await requestExecutor.ExecuteAsync(databaseIsLoadedCommand, context);
+                        shouldContinue = predicate(databaseIsLoadedCommand.Result) == false;
                         await Task.Delay(100);
                     }
                     catch (OperationCanceledException)

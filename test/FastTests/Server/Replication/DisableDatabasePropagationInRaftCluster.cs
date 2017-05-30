@@ -97,6 +97,11 @@ namespace FastTests.Server.Replication
                 Assert.True(result.Success);
                 Assert.False(result.Disabled);
                 Assert.Equal(master.Database, result.Name);
+                
+                Assert.True(await WaitUntilDatabaseHasState(master, TimeSpan.FromSeconds(10), db => db.Disabled == false));
+                Assert.True(await WaitUntilDatabaseHasState(slave, TimeSpan.FromSeconds(10), db => db.Disabled == false));
+                
+                
                 using (var session = master.OpenSession())
                 {
                     var user1 = session.Load<User>("users/1");
