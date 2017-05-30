@@ -7,6 +7,7 @@ using Raven.Client.Server.Expiration;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Client.Server.Versioning;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Commands.Subscriptions;
@@ -60,7 +61,12 @@ namespace Raven.Server.ServerWide
             [nameof(ModifyDatabaseWatchersCommand)] = GenerateJsonDeserializationRoutine<ModifyDatabaseWatchersCommand>(),
             [nameof(ModifyConflictSolverCommand)] = GenerateJsonDeserializationRoutine<ModifyConflictSolverCommand>(),
             [nameof(UpdateTopologyCommand)] = GenerateJsonDeserializationRoutine<UpdateTopologyCommand>(),
-            [nameof(UpdateDatabaseWatcherCommand)] = GenerateJsonDeserializationRoutine<UpdateDatabaseWatcherCommand>()
+            [nameof(UpdateDatabaseWatcherCommand)] = GenerateJsonDeserializationRoutine<UpdateDatabaseWatcherCommand>(),
+            [nameof(AddRavenEtlCommand)] = GenerateJsonDeserializationRoutine<AddRavenEtlCommand>(),
+            [nameof(AddSqlEtlCommand)] = GenerateJsonDeserializationRoutine<AddSqlEtlCommand>(),
+            [nameof(UpdateRavenEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateRavenEtlCommand>(),
+            [nameof(UpdateSqlEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateSqlEtlCommand>(),
+            [nameof(DeleteEtlCommand)] = GenerateJsonDeserializationRoutine<DeleteEtlCommand>(),
         };
 
         public static Dictionary<string, Func<BlittableJsonReaderObject, UpdateValueForDatabaseCommand>> UpdateValueCommands =
@@ -101,7 +107,12 @@ namespace Raven.Server.ServerWide
             [nameof(DeleteSubscriptionCommand)] = GenerateJsonDeserializationRoutine<DeleteSubscriptionCommand>(),
             [nameof(DeletePeriodicBackupCommand)] = GenerateJsonDeserializationRoutine<DeletePeriodicBackupCommand>(),
             [nameof(UpdatePeriodicBackupCommand)] = GenerateJsonDeserializationRoutine<UpdatePeriodicBackupCommand>(),
-            [nameof(UpdatePeriodicBackupStatusCommand)] = GenerateJsonDeserializationRoutine<UpdatePeriodicBackupStatusCommand>()
+            [nameof(UpdatePeriodicBackupStatusCommand)] = GenerateJsonDeserializationRoutine<UpdatePeriodicBackupStatusCommand>(),
+            [nameof(AddRavenEtlCommand)] = GenerateJsonDeserializationRoutine<AddRavenEtlCommand>(),
+            [nameof(AddSqlEtlCommand)] = GenerateJsonDeserializationRoutine<AddSqlEtlCommand>(),
+            [nameof(UpdateRavenEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateRavenEtlCommand>(),
+            [nameof(UpdateSqlEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateSqlEtlCommand>(),
+            [nameof(DeleteEtlCommand)] = GenerateJsonDeserializationRoutine<DeleteEtlCommand>(),
         };
 
         public static readonly Func<BlittableJsonReaderObject, ServerStore.PutRaftCommandResult> PutRaftCommandResult = GenerateJsonDeserializationRoutine<ServerStore.PutRaftCommandResult>();

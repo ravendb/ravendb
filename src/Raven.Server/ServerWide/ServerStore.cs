@@ -615,15 +615,15 @@ namespace Raven.Server.ServerWide
             {
                 case EtlType.Raven:
                     if (isNew)
-                        command = new AddEtlCommand<RavenDestination>(JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration), type, databaseName);
+                        command = new AddRavenEtlCommand(JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration), databaseName);
                     else 
-                        command = new UpdateEtlCommand<RavenDestination>(JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration), type, databaseName);
+                        command = new UpdateRavenEtlCommand(JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration), databaseName);
                     break;
                 case EtlType.Sql:
                     if (isNew)
-                        command = new AddEtlCommand<SqlDestination>(JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration), type, databaseName);
+                        command = new AddSqlEtlCommand(JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration), databaseName);
                     else
-                        command = new UpdateEtlCommand<SqlDestination>(JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration), type, databaseName);
+                        command = new UpdateSqlEtlCommand(JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration), databaseName);
                     break;
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration destination type: {type}");
