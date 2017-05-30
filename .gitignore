@@ -113,3 +113,4 @@ release
 !scripts/assets/bin
 /.idea
 .vscode
+/test/Tryouts/Databases/*

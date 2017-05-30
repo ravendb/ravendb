@@ -22,11 +22,11 @@ namespace Tryouts
             for (int i = 0; i < 1000000; i++)
             {
                 Console.WriteLine(i);
-                Parallel.For(0, 15, _ =>
+                Parallel.For(0, 10, _ =>
                 {
-                    using (var a = new RavenDB937())
+                    using (var a = new FastTests.Issues.RavenDB_5610())
                     {
-                        a.LowLevelEmbeddedStreamAsync().Wait();
+                        a.WillUpdate().Wait();
                     }
                 });
             }

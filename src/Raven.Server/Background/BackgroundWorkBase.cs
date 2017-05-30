@@ -130,13 +130,10 @@ namespace Raven.Server.Background
 
         public void Dispose()
         {
-            if (_cts == null)
-                return;
             try
             {
                 Stop();
-                _cts?.Dispose();
-                _cts = null;
+                _cts.Dispose();
             }
             catch (ObjectDisposedException) //precaution, shouldn't happen
             {

@@ -101,7 +101,7 @@ namespace Raven.Server.Documents
 
         public DynamicJsonValue GetBackupInfo()
         {
-            return PeriodicBackupRunner?.GetBackupInfo().ToJson();
+            return PeriodicBackupRunner?.GetBackupInfo()?.ToJson();
         }
     }
 }

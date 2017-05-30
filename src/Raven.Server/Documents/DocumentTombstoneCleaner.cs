@@ -64,10 +64,11 @@ namespace Raven.Server.Documents
                 if (CancellationToken.IsCancellationRequested)
                     return;
 
-                var tombstones = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
-                var storageEnvironment = _documentDatabase.DocumentsStorage.Environment;
+                var storageEnvironment = _documentDatabase?.DocumentsStorage?.Environment;
                 if (storageEnvironment == null) // doc storage was disposed before us?
                     return;
+
+                var tombstones = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
 
                 using (var tx = storageEnvironment.ReadTransaction())
                 {

@@ -33,6 +33,48 @@
     <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-47-26-829-1\Configuration" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-47-26-829-1\Indexes\1E8CCF7F-Users_ByName" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-47-26-829-2\Configuration" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-47-26-829-2\Indexes\1E8CCF7F-Users_ByName" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-47-26-829-3\Configuration" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-47-26-829-3\Indexes\1E8CCF7F-Users_ByName" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-47-26-829-4\Configuration" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-47-26-829-4\Indexes\1E8CCF7F-Users_ByName" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-47-26-829-5\Configuration" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-47-26-829-5\Indexes\1E8CCF7F-Users_ByName" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-47-26-829-6\Configuration" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-47-26-829-6\Indexes\1E8CCF7F-Users_ByName" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-47-26-829-7\Configuration" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-47-26-829-7\Indexes\1E8CCF7F-Users_ByName" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-47-26-829-8\Configuration" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-47-26-829-8\Indexes\1E8CCF7F-Users_ByName" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-47-26-829-9\Configuration" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-47-26-829-9\Indexes\1E8CCF7F-Users_ByName" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-47-27-060-10\Configuration" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-47-27-060-10\Indexes\1E8CCF7F-Users_ByName" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-48-52-750-1\Configuration" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-48-52-750-1\Indexes\1E8CCF7F-Users_ByName" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-48-52-750-2\Configuration" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-48-52-750-2\Indexes\1E8CCF7F-Users_ByName" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-48-52-750-3\Configuration" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-48-52-750-3\Indexes\1E8CCF7F-Users_ByName" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-48-52-750-4\Configuration" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-48-52-750-4\Indexes\1E8CCF7F-Users_ByName" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-48-52-750-5\Configuration" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-48-52-750-5\Indexes\1E8CCF7F-Users_ByName" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-48-52-750-6\Configuration" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-48-52-750-6\Indexes\1E8CCF7F-Users_ByName" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-48-52-750-7\Configuration" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-48-52-750-7\Indexes\1E8CCF7F-Users_ByName" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-48-52-750-8\Configuration" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-48-52-750-8\Indexes\1E8CCF7F-Users_ByName" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-48-52-750-9\Configuration" />
+    <Folder Include="Databases\WillUpdate_0-2017-05-30-10-48-52-750-9\Indexes\1E8CCF7F-Users_ByName" />
+    <Folder Include="Databases\WillUpdate_1-2017-05-30-10-44-14-954-18\Configuration" />
+    <Folder Include="Databases\WillUpdate_1-2017-05-30-10-44-14-954-18\Indexes\1E8CCF7F-Users_ByName" />
+    <Folder Include="Databases\WillUpdate_1-2017-05-30-10-48-54-687-10\Configuration" />
+    <Folder Include="Databases\WillUpdate_1-2017-05-30-10-48-54-687-10\Indexes\1E8CCF7F-Users_ByName" />
     <Folder Include="Logs" />
   </ItemGroup>
 </Project>

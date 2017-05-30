@@ -71,7 +71,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="1.1.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="1.1.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="1.1.2" />
-	<PackageReference Include="NCrontab.Advanced" Version="1.2.3.3" />
+    <PackageReference Include="NCrontab.Advanced" Version="1.2.3.3" />
     <PackageReference Include="Npgsql" Version="3.2.2" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.8.1.2" />
     <PackageReference Include="System.ComponentModel" Version="4.3.0" />
@@ -84,6 +84,10 @@
     <PackageReference Include="System.Threading.Tasks.Parallel" Version="4.3.0" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Documents\PeriodicBackup\Aws" />
+    <Folder Include="Documents\PeriodicBackup\Azure" />
+    <Folder Include="Exceptions\PeriodicBackup" />
+    <Folder Include="ServerWide\Commands\PeriodicBackup" />
     <Folder Include="ServerWide\Maintenance" />
   </ItemGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
