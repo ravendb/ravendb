@@ -313,6 +313,7 @@ namespace Raven.Server.ServerWide
             _engine.StateMachine.DatabaseChanged += OnDatabaseChanged;
 
             _engine.TopologyChanged += OnTopologyChanged;
+            _engine.StateChanged += OnStateChanged;
 
             _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
             _notificationsStorage.Initialize(_env, ContextPool);
@@ -335,6 +336,15 @@ namespace Raven.Server.ServerWide
             }
 
             Task.Run(ClusterMaintenanceSetupTask, ServerShutdown);
+        }
+
+        private void OnStateChanged(object sender, RachisConsensus.State e)
+        {
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                NotificationCenter.Add(ClusterTopologyChanged.Create(GetClusterTopology(context), LeaderTag, NodeTag));
+            }
         }
 
         private void OnTopologyChanged(object sender, ClusterTopology topologyJson)
