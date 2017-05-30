@@ -22,6 +22,7 @@ import changeNodeVotingModeCommand = require("commands/database/cluster/changeNo
 import eventsCollector = require("common/eventsCollector");
 import addNodeToClusterCommand = require("commands/database/cluster/addNodeToClusterCommand");
 import removeNodeFromClusterCommand = require("commands/database/cluster/removeNodeFromClusterCommand");
+import leaderStepDownCommand = require("commands/database/cluster/leaderStepDownCommand");
 
 import clusterTopology = require("models/database/cluster/clusterTopology");
 import clusterNode = require("models/database/cluster/clusterNode");
@@ -35,7 +36,7 @@ class cluster extends viewModelBase {
 
     constructor() {
         super();
-        this.bindToCurrentInstance("deleteNode");
+        this.bindToCurrentInstance("deleteNode", "stepDown");
 
         this.initObservables();
     }
@@ -52,6 +53,16 @@ class cluster extends viewModelBase {
             new addNodeToClusterCommand(serverUrl)
                 .execute();
         }
+    }
+
+    stepDown(node: clusterNode) {
+        this.confirmationMessage("Are you sure?", `Do you want current leader to step down?`, ["Cancel", "Step down"])
+            .done(result => {
+                if (result.can) {
+                    new leaderStepDownCommand()
+                        .execute();
+                }
+            });
     }
 
     deleteNode(node: clusterNode) {
