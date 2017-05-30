@@ -18,6 +18,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Client.Server.Commands;
+using Raven.Client.Server.ETL;
 using Raven.Client.Server.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Extensions;
@@ -28,6 +29,9 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Client.Server.PeriodicBackup;
+using Raven.Server.Documents.ETL;
+using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.ETL;
 
 namespace Raven.Server.Web.System
 {
@@ -634,6 +638,39 @@ namespace Raven.Server.Web.System
 
                 writer.WriteEndObject();
             }
+        }
+
+        [RavenAction("/admin/etl/add", "PUT", "/admin/etl/add?name={databaseName:string}&type={[sql|raven]:string}")]
+        public async Task AddEtl()
+        {
+            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+
+            if (Enum.TryParse<EtlType>(type, true, out var etlType) == false)
+                throw new ArgumentException($"Unknown ETL type: {type}", "type");
+
+            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.ModifyEtl(_, databaseName, etlConfiguration, etlType, isNew: true), "etl-add");
+        }
+
+        [RavenAction("/admin/etl/update", "POST", "/admin/etl/update?name={databaseName:string}&type={[sql|raven]:string}")]
+        public async Task UpdateEtl()
+        {
+            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+
+            if (Enum.TryParse<EtlType>(type, true, out var etlType) == false)
+                throw new ArgumentException($"Unknown ETL type: {type}", "type");
+
+            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.ModifyEtl(_, databaseName, etlConfiguration, etlType, isNew: false), "etl-update");
+        }
+
+        [RavenAction("/admin/etl/delete", "DELETE", "/admin/etl/delete?name={databaseName:string}&type={[sql|raven]:string}")]
+        public async Task DeleteEtl()
+        {
+            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+
+            if (Enum.TryParse<EtlType>(type, true, out var etlType) == false)
+                throw new ArgumentException($"Unknown ETL type: {type}", "type");
+
+            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.DeleteEtl(_, databaseName, etlConfiguration, etlType), "etl-delete");
         }
     }
 }

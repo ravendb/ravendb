@@ -5,7 +5,7 @@ using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 
 namespace Raven.Server.Documents.ETL
 {
-    public static class EtlDestinationNameRetriever
+    public static class EtlConfigurationNameRetriever
     {
         public static string GetName(EtlDestination destination)
         {

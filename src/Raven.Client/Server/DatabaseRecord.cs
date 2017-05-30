@@ -60,9 +60,9 @@ namespace Raven.Client.Server
 
         public List<PeriodicBackupConfiguration> PeriodicBackups { get; set; }
 
-        public List<EtlConfiguration<RavenDestination>> RavenEtls = new List<EtlConfiguration<RavenDestination>>();
+        public List<EtlConfiguration<RavenDestination>> RavenEtls;
 
-        public List<EtlConfiguration<SqlDestination>> SqlEtls = new List<EtlConfiguration<SqlDestination>>();
+        public List<EtlConfiguration<SqlDestination>> SqlEtls;
 
         public string CustomFunctions { get; set; }
 

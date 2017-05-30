@@ -13,15 +13,18 @@ using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Server;
+using Raven.Client.Server.ETL;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.Documents.ETL;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Rachis;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
@@ -602,6 +605,40 @@ namespace Raven.Server.ServerWide
             taskIdJson.TryGet("TaskId", out long taskId);
             var editPeriodicBackup = new DeletePeriodicBackupCommand(taskId, name);
             return SendToLeaderAsync(editPeriodicBackup);
+        }
+
+        public async Task<(long, object)> ModifyEtl(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject etlConfiguration, EtlType type, bool isNew)
+        {
+            UpdateDatabaseCommand command;
+
+            switch (type)
+            {
+                case EtlType.Raven:
+                    if (isNew)
+                        command = new AddEtlCommand<RavenDestination>(JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration), type, databaseName);
+                    else 
+                        command = new UpdateEtlCommand<RavenDestination>(JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration), type, databaseName);
+                    break;
+                case EtlType.Sql:
+                    if (isNew)
+                        command = new AddEtlCommand<SqlDestination>(JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration), type, databaseName);
+                    else
+                        command = new UpdateEtlCommand<SqlDestination>(JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration), type, databaseName);
+                    break;
+                default:
+                    throw new NotSupportedException($"Unknown ETL configuration destination type: {type}");
+            }
+
+            return await SendToLeaderAsync(command);
+        }
+
+        public async Task<(long, object)> DeleteEtl(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject etlConfigurationName, EtlType type)
+        {
+            etlConfigurationName.TryGet("Name", out LazyStringValue configurationName);
+           
+            var command = new DeleteEtlCommand(configurationName, type, databaseName);
+
+            return await SendToLeaderAsync(command);
         }
 
         public Task<(long, object)> ModifyDatabaseVersioning(JsonOperationContext context, string name, BlittableJsonReaderObject configurationJson)

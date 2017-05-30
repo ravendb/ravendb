@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Server;
+using Raven.Client.Server.ETL;
 using Raven.Client.Server.Expiration;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Client.Server.Versioning;
@@ -33,6 +34,10 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, PeriodicBackupConfiguration> PeriodicBackupConfiguration = GenerateJsonDeserializationRoutine<PeriodicBackupConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, VersioningConfiguration> VersioningConfiguration = GenerateJsonDeserializationRoutine<VersioningConfiguration>();
+
+        public static Func<BlittableJsonReaderObject, EtlConfiguration<RavenDestination>> RavenEtlConfiguration = GenerateJsonDeserializationRoutine<EtlConfiguration<RavenDestination>>();
+
+        public static Func<BlittableJsonReaderObject, EtlConfiguration<SqlDestination>> SqlEtlConfiguration = GenerateJsonDeserializationRoutine<EtlConfiguration<SqlDestination>>();
 
         public static Dictionary<string, Func<BlittableJsonReaderObject, UpdateDatabaseCommand>> UpdateDatabaseCommands = new Dictionary<string, Func<BlittableJsonReaderObject, UpdateDatabaseCommand>>()
         {

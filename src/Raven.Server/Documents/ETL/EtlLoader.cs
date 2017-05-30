@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.ETL
                 return false;
             }
 
-            if (uniqueDestinations.Add(EtlDestinationNameRetriever.GetName(config.Destination)) == false)
+            if (uniqueDestinations.Add(EtlConfigurationNameRetriever.GetName(config.Destination)) == false)
             {
                 LogConfigurationError(config,
                     new List<string>
@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.ETL
 
         private void LogConfigurationError<T>(EtlConfiguration<T> config, List<string> errors) where T : EtlDestination
         {
-            var errorMessage = $"Invalid ETL configuration for destination: {EtlDestinationNameRetriever.GetName(config.Destination)}. " +
+            var errorMessage = $"Invalid ETL configuration for destination: {EtlConfigurationNameRetriever.GetName(config.Destination)}. " +
                                $"Reason{(errors.Count > 1 ? "s" : string.Empty)}: {string.Join(";", errors)}.";
 
             if (Logger.IsInfoEnabled)
@@ -140,6 +140,8 @@ namespace Raven.Server.Documents.ETL
 
             RavenDestinations = record.RavenEtls;
             SqlDestinations = record.SqlEtls;
+
+            // TODO arek remove destinations which has been removed or modified - EtlStorage.Remove
         }
 
         private void NotifyAboutWork(DocumentChange documentChange)

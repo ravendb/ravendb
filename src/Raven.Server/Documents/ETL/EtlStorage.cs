@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.ETL
 
         private string GetTreeName(EtlDestination destination)
         {
-            return $"__etl/{EtlDestinationNameRetriever.GetName(destination)}";
+            return $"__etl/{EtlConfigurationNameRetriever.GetName(destination)}";
         }
     }
 }
