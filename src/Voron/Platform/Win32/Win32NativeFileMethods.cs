@@ -21,6 +21,7 @@ namespace Voron.Platform.Win32
         public const int ErrorIOPending = 997;
         public const int ErrorSuccess = 0;
         public const int ErrorHandleEof = 38;
+        public const int ErrorInvalidHandle = 6;
 
 
         [StructLayout(LayoutKind.Explicit, Size = 8)]

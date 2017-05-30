@@ -367,12 +367,19 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Flush()
         {
+            if (_stream == null)
+                ThrowStreamClosed();
             if (_pos == 0)
                 return;
             _stream.Write(_pinnedBuffer.Buffer.Array, _pinnedBuffer.Buffer.Offset, _pos);
             _pos = 0;
         }
-      
+
+        private void ThrowStreamClosed()
+        {
+            throw new ObjectDisposedException("The stream was closed already.");
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteNull()
         {

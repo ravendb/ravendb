@@ -161,7 +161,7 @@ namespace Voron.Platform.Win32
                     throw new IOException("When opening file " + _filename, new Win32Exception(Marshal.GetLastWin32Error()));
             }
 
-            NativeOverlapped* nativeOverlapped = (NativeOverlapped*)NativeMemory.AllocateMemory(sizeof(NativeOverlapped));
+            var nativeOverlapped = (NativeOverlapped*)NativeMemory.AllocateMemory(sizeof(NativeOverlapped));
             try
             {
                 nativeOverlapped->OffsetLow = (int)(offsetInFile & 0xffffffff);
@@ -169,12 +169,13 @@ namespace Voron.Platform.Win32
                 nativeOverlapped->EventHandle = IntPtr.Zero;
                 while (numOfBytes > 0)
                 {
-                    int read;
-                    if (Win32NativeFileMethods.ReadFile(_readHandle, buffer, (int)Math.Min(numOfBytes, int.MaxValue), out read, nativeOverlapped) == false)
+                    if (Win32NativeFileMethods.ReadFile(_readHandle, buffer, (int)Math.Min(numOfBytes, int.MaxValue), out int read, nativeOverlapped) == false)
                     {
                         int lastWin32Error = Marshal.GetLastWin32Error();
                         if (lastWin32Error == Win32NativeFileMethods.ErrorHandleEof)
                             return false;
+                        if (lastWin32Error == Win32NativeFileMethods.ErrorInvalidHandle)
+                            _readHandle = null;
                         throw new Win32Exception(lastWin32Error, "Unable to read from " + _filename);
                     }
                     numOfBytes -= read;

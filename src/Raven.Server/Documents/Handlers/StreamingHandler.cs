@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Handlers
             DocumentsOperationContext context;
             using (TrackRequestTime())
             using (var token = CreateTimeLimitedOperationToken())
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context);
                 if (string.IsNullOrWhiteSpace(query.Query))
