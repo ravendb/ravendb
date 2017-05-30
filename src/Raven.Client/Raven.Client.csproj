@@ -75,6 +75,8 @@
     <PackageReference Include="System.Threading.Timer" Version="4.3.0" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Server\ETL" />
+    <Folder Include="Server\Operations\ETL" />
     <Folder Include="Server\PeriodicBackup" />
   </ItemGroup>
 </Project>
