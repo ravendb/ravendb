@@ -4,7 +4,7 @@ import ongoingTask = require("models/database/tasks/ongoingTask");
 
 class ongoingTaskBackup extends ongoingTask {
 
-    backupType = ko.observable<Raven.Server.Web.System.BackupType>();
+    backupType = ko.observable<any>();
     backupDestinations = ko.observableArray<string>();
 
     constructor(dto: Raven.Server.Web.System.OngoingTaskBackup) {

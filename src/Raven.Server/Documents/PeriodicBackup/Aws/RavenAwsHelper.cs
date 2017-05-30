@@ -9,7 +9,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Raven.Server.Documents.PeriodicExport.Aws
+namespace Raven.Server.Documents.PeriodicBackup.Aws
 {
     public static class RavenAwsHelper
     {

@@ -1,4 +1,3 @@
-using Raven.Client.Documents;
 using Raven.Client.Server;
 using Sparrow.Json.Parsing;
 
@@ -20,9 +19,10 @@ namespace Raven.Server.ServerWide.Commands.Transformers
             TransformerName = name;
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.DeleteTransformer(TransformerName);
+            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

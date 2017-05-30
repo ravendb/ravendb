@@ -16,13 +16,15 @@ namespace Raven.Server.ServerWide.Commands
         {
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             if(record.Identities == null)
                 record.Identities = new Dictionary<string, long>();
 
             record.Identities.TryGetValue(Prefix, out var prev);
             record.Identities[Prefix] = prev + 1;
+
+            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

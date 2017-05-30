@@ -103,7 +103,7 @@ namespace Raven.Server.Documents
             TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
             HugeDocuments = new HugeDocuments(configuration.PerformanceHints.HugeDocumentsCollectionSize,
                 configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
-            ConfigurationStorage = new ConfigurationStorage(this);
+            ConfigurationStorage = new ConfigurationStorage(this, serverStore);
             NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, _databaseShutdown.Token);
             DatabaseInfoCache = serverStore?.DatabaseInfoCache;
             RachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
@@ -511,8 +511,8 @@ namespace Raven.Server.Documents
                 _lastIdleTicks = DateTime.UtcNow.Ticks;
                 IndexStore?.RunIdleOperations();
                 Operations?.CleanupOperations();
+                BundleLoader?.PeriodicBackupRunner?.RemoveInactiveCompletedTasks();
             }
-
             finally
             {
                 Monitor.Exit(_idleLocker);

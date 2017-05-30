@@ -15,6 +15,7 @@ using Raven.Client.Http.OAuth;
 using Raven.Client.Server;
 using Raven.Client.Server.Commands;
 using Raven.Client.Server.Operations;
+using Raven.Client.Server.PeriodicBackup;
 using Raven.Client.Server.Tcp;
 using Sparrow.Json;
 
@@ -106,9 +107,11 @@ namespace Raven.Client.Json.Converters
 
         internal static readonly Func<BlittableJsonReaderObject, ConfigureExpirationOperationResult> ConfigureExpirationOperationResult = GenerateJsonDeserializationRoutine<ConfigureExpirationOperationResult>();
 
-        internal static readonly Func<BlittableJsonReaderObject, ConfigurePeriodicBackupOperationResult> ConfigurePeriodicExportBundleOperationResult = GenerateJsonDeserializationRoutine<ConfigurePeriodicBackupOperationResult>();
+        internal static readonly Func<BlittableJsonReaderObject, UpdatePeriodicBackupOperationResult> ConfigurePeriodicBackupBundleOperationResult = GenerateJsonDeserializationRoutine<UpdatePeriodicBackupOperationResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, GetPeriodicBackupStatusOperationResult> GetPeriodicBackupStatusOperationResult = GenerateJsonDeserializationRoutine<GetPeriodicBackupStatusOperationResult>();
+
+        internal static readonly Func<BlittableJsonReaderObject, PeriodicBackupStatus> PeriodicBackupStatus = GenerateJsonDeserializationRoutine<PeriodicBackupStatus>();
 
         internal static readonly Func<BlittableJsonReaderObject, ConfigureVersioningOperationResult> ConfigureVersioningOperationResult = GenerateJsonDeserializationRoutine<ConfigureVersioningOperationResult>();
         internal static readonly Func<BlittableJsonReaderObject, SubscriptionState> SubscriptionState = GenerateJsonDeserializationRoutine<SubscriptionState>();

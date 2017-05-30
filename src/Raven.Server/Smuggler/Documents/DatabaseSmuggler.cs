@@ -321,7 +321,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             using (var actions = _destination.RevisionDocuments())
             {
-                foreach (var item in _source.GetRevisionDocuments(_options.CollectionsToExport, actions, _options.RevisionDocumentsLimit ?? int.MaxValue))
+                foreach (var item in _source.GetRevisionDocuments(_options.CollectionsToExport, actions))
                 {
                     _token.ThrowIfCancellationRequested();
                     result.RevisionDocuments.ReadCount++;

@@ -9,6 +9,8 @@ using Raven.Client.Exceptions;
 using Raven.Client.Json.Converters;
 using Raven.Client.Http;using Raven.Client.Server;
 using Raven.Client.Server.Operations;
+using Raven.Client.Server.PeriodicBackup;
+using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -244,11 +246,5 @@ namespace Raven.Server.Web.System
     {
         Active,
         NotActive
-    }
-   
-    public enum BackupType // merge w/ Grish code later..
-    {
-       Backup,
-       Snapshot
     }
 }

@@ -13,7 +13,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         
         Etl_WriteErrorRatio,
         
-        PeriodicExport,
+        PeriodicBackup,
         Replication,
         Server_NewVersionAvailable,
         LicenseManager_InitializationError,

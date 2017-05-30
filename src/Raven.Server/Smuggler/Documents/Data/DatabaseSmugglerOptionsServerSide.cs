@@ -18,8 +18,6 @@ namespace Raven.Server.Smuggler.Documents.Data
                     var key = item.Key;
                     if (string.Equals(key, "operateOnTypes", StringComparison.OrdinalIgnoreCase))
                         result.OperateOnTypes = (DatabaseItemType)Enum.Parse(typeof(DatabaseItemType), item.Value[0]);
-                    else if (string.Equals(key, "revisionDocumentsLimit", StringComparison.OrdinalIgnoreCase))
-                        result.RevisionDocumentsLimit = int.Parse(item.Value[0]);
                     else if (string.Equals(key, "includeExpired", StringComparison.OrdinalIgnoreCase))
                         result.IncludeExpired = bool.Parse(item.Value[0]);
                     else if (string.Equals(key, "removeAnalyzers", StringComparison.OrdinalIgnoreCase))

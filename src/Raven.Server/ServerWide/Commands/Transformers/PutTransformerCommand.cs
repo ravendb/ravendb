@@ -1,4 +1,3 @@
-using Raven.Client.Documents;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Server;
 using Raven.Server.Utils;
@@ -22,10 +21,11 @@ namespace Raven.Server.ServerWide.Commands.Transformers
             Definition = definition;
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             Definition.Etag = etag;
             record.AddTransformer(Definition);
+            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

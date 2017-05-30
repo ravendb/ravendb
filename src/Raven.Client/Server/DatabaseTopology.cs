@@ -266,6 +266,10 @@ namespace Raven.Client.Server
             topology.AddRange(Promotables);
             topology.Sort();
 
+
+            if (topology.Count == 0)
+                return null; // this is probably being deleted now, no one is able to run tasks
+
             var key = task.GetTaskKey();
             while (true)
             {

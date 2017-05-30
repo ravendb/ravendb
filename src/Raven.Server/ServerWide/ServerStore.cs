@@ -23,6 +23,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
@@ -132,7 +133,7 @@ namespace Raven.Server.ServerWide
                     if (_engine.LeaderTag != NodeTag)
                     {
                         await _engine.WaitForState(RachisConsensus.State.Leader)
-                                     .WithCancellation(_shutdownNotification.Token);
+                            .WithCancellation(_shutdownNotification.Token);
                         continue;
                     }
                     using (ClusterMaintenanceSupervisor = new ClusterMaintenanceSupervisor(this, _engine.Tag, _engine.CurrentTerm))
@@ -158,16 +159,16 @@ namespace Raven.Server.ServerWide
                             foreach (var node in nodesChanges.addedValues)
                             {
                                 var task = ClusterMaintenanceSupervisor.AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key)).ContinueWith(t =>
-                                        {
-                                            if(Logger.IsInfoEnabled)
-                                                Logger.Info($"ClusterMaintenanceSupervisor() => Failed to add to cluster node key = {node.Key}",t.Exception);
-                                        },TaskContinuationOptions.OnlyOnFaulted);
+                                {
+                                    if (Logger.IsInfoEnabled)
+                                        Logger.Info($"ClusterMaintenanceSupervisor() => Failed to add to cluster node key = {node.Key}", t.Exception);
+                                }, TaskContinuationOptions.OnlyOnFaulted);
                                 GC.KeepAlive(task);
                             }
 
                             var leaderChanged = _engine.WaitForLeaveState(RachisConsensus.State.Leader);
                             if (await Task.WhenAny(topologyChangedTask, leaderChanged)
-                                          .WithCancellation(_shutdownNotification.Token) == leaderChanged)
+                                    .WithCancellation(_shutdownNotification.Token) == leaderChanged)
                                 break;
                         }
                     }
@@ -585,20 +586,26 @@ namespace Raven.Server.ServerWide
         {
             var editExpiration = new EditExpirationCommand(JsonDeserializationCluster.ExpirationConfiguration(configurationJson), name);
             return await SendToLeaderAsync(editExpiration);
+        }
 
-            }
-
-        public async Task<(long, object)> ModifyDatabasePeriodicBackup(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson)
+        public async Task<(long, object)> ModifyPeriodicBackup(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson)
         {
-            var editPeriodicBackup = new EditPeriodicBackupCommand(JsonDeserializationCluster.PeriodicBackupConfiguration(configurationJson), name);
+            var modifyPeriodicBackup = new UpdatePeriodicBackupCommand(JsonDeserializationCluster.PeriodicBackupConfiguration(configurationJson), name);
+            return await SendToLeaderAsync(modifyPeriodicBackup);
+        }
+
+        public async Task<(long, object)> DeletePeriodicBackup(TransactionOperationContext context, string name, BlittableJsonReaderObject taskIdJson)
+        {
+            taskIdJson.TryGet("TaskId", out long taskId);
+            var editPeriodicBackup = new DeletePeriodicBackupCommand(taskId, name);
             return await SendToLeaderAsync(editPeriodicBackup);
-            }
+        }
         
         public async Task<(long, object)> ModifyDatabaseVersioning(JsonOperationContext context, string name, BlittableJsonReaderObject configurationJson)
         {
             var editVersioning = new EditVersioningCommand(JsonDeserializationCluster.VersioningConfiguration(configurationJson), name);
             return await SendToLeaderAsync(editVersioning);
-            }
+        }
 
         public Guid GetServerId()
         {
@@ -688,12 +695,23 @@ namespace Raven.Server.ServerWide
                     var maxTimeDatabaseCanBeIdle = Configuration.Databases.MaxIdleTime.AsTimeSpan;
 
                     var databasesToCleanup = DatabasesLandlord.LastRecentlyUsed
-                       .Where(x => SystemTime.UtcNow - x.Value > maxTimeDatabaseCanBeIdle)
-                       .Select(x => x.Key)
-                       .ToArray();
+                        .Where(x => SystemTime.UtcNow - x.Value > maxTimeDatabaseCanBeIdle)
+                        .Select(x => x.Key)
+                        .ToArray();
 
                     foreach (var db in databasesToCleanup)
                     {
+                        Task<DocumentDatabase> resourceTask;
+                        if (DatabasesLandlord.DatabasesCache.TryGetValue(db, out resourceTask) &&
+                            resourceTask != null &&
+                            resourceTask.Status == TaskStatus.RanToCompletion &&
+                            resourceTask.Result.BundleLoader != null &&
+                            resourceTask.Result.BundleLoader.PeriodicBackupRunner.HasRunningBackups())
+                        {
+                            // there are running backups for this database
+                            continue;
+                        }
+
                         // intentionally inside the loop, so we get better concurrency overall
                         // since shutting down a database can take a while
                         DatabasesLandlord.UnloadDatabase(db, skipIfActiveInDuration: maxTimeDatabaseCanBeIdle, shouldSkip: database => database.Configuration.Core.RunInMemory);

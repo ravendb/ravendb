@@ -2,7 +2,7 @@
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
-using Raven.Client.Server.PeriodicExport;
+using Raven.Client.Server.PeriodicBackup;
 using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations
@@ -10,30 +10,36 @@ namespace Raven.Client.Server.Operations
     public class GetPeriodicBackupStatusOperation : IServerOperation<GetPeriodicBackupStatusOperationResult>
     {
         private readonly string _databaseName;
-        public GetPeriodicBackupStatusOperation(string databaseName)
+
+        private readonly long _taskId;
+        
+        public GetPeriodicBackupStatusOperation(string databaseName, long taskId)
         {
             _databaseName = databaseName;
+            _taskId = taskId;
         }
 
         public RavenCommand<GetPeriodicBackupStatusOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetPeriodicBackupStatusCommand(_databaseName);
+            return new GetPeriodicBackupStatusCommand(_databaseName, _taskId);
         }
     }
 
     public class GetPeriodicBackupStatusCommand : RavenCommand<GetPeriodicBackupStatusOperationResult>
     {
+        public override bool IsReadRequest => true;
         private readonly string _databaseName;
-        public GetPeriodicBackupStatusCommand(string databaseName)
+        private readonly long _taskId;
+
+        public GetPeriodicBackupStatusCommand(string databaseName, long taskId)
         {
             _databaseName = databaseName;
+            _taskId = taskId;
         }
 
-        public override bool IsReadRequest => true;
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{_databaseName}/periodic-backup/status";
-
+            url = $"{node.Url}/admin/periodic-backup/status?name={_databaseName}&taskId={_taskId}";
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Get
@@ -52,6 +58,6 @@ namespace Raven.Client.Server.Operations
 
     public class GetPeriodicBackupStatusOperationResult
     {
-        public PeriodicExportStatus Status;
+        public PeriodicBackupStatus Status;
     }
 }

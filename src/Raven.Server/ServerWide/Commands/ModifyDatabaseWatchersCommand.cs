@@ -1,11 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Raven.Client.Documents;
+﻿using System.Collections.Generic;
 using Raven.Client.Server;
-using Raven.Server.Rachis;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
@@ -24,7 +18,7 @@ namespace Raven.Server.ServerWide.Commands
 
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.Topology.Watchers = new Dictionary<string, DatabaseWatcher>();
 
@@ -36,6 +30,8 @@ namespace Raven.Server.ServerWide.Commands
                     record.Topology.Watchers[watcher.CurrentTaskId] = watcher;
                 }
             }
+
+            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)
@@ -63,10 +59,11 @@ namespace Raven.Server.ServerWide.Commands
 
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             if (Watcher == null)
-                return;
+                return null;
+
             var newTaskKey = Watcher.GetTaskKey().ToString();
             if (Watcher.CurrentTaskId != null && Watcher.CurrentTaskId != newTaskKey)
             {
@@ -75,6 +72,7 @@ namespace Raven.Server.ServerWide.Commands
             }
 
             record.Topology.Watchers[newTaskKey] = Watcher;
+            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

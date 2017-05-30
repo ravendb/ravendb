@@ -20,10 +20,10 @@ using System.Threading.Tasks;
 using System.Xml;
 using Microsoft.AspNetCore.WebUtilities;
 using Raven.Client.Util;
-using Raven.Server.Exceptions.PeriodicExport;
+using Raven.Server.Exceptions.PeriodicBackup;
 using Sparrow.Utils;
 
-namespace Raven.Server.Documents.PeriodicExport.Azure
+namespace Raven.Server.Documents.PeriodicBackup.Azure
 {
     public class RavenAzureClient : RavenStorageClient
     {

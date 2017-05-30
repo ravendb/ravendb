@@ -1,4 +1,3 @@
-using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Server;
 using Raven.Server.Utils;
@@ -21,10 +20,11 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             Definition = definition;
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             Definition.Etag = etag;
             record.AddIndex(Definition);
+            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

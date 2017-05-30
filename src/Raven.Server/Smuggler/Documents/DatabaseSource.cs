@@ -20,8 +20,7 @@ namespace Raven.Server.Smuggler.Documents
         private readonly DocumentDatabase _database;
         private DocumentsOperationContext _context;
         
-        private readonly long _startDocsEtag;
-        private readonly long _startRevisionDocumentsEtag;
+        private readonly long _startDocumentEtag;
 
         private DatabaseSmugglerOptions _options;
         private SmugglerResult _result;
@@ -41,11 +40,10 @@ namespace Raven.Server.Smuggler.Documents
             DatabaseItemType.None
         };
 
-        public DatabaseSource(DocumentDatabase database, long startDocsEtag, long startRevisionDocumentsEtag)
+        public DatabaseSource(DocumentDatabase database, long startDocumentEtag)
         {
             _database = database;
-            _startDocsEtag = startDocsEtag;
-            _startRevisionDocumentsEtag = startRevisionDocumentsEtag;
+            _startDocumentEtag = startDocumentEtag;
         }
 
         public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, out long buildVersion)
@@ -72,8 +70,8 @@ namespace Raven.Server.Smuggler.Documents
         public IEnumerable<DocumentItem> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions)
         {
             var documents = collectionsToExport.Count != 0
-                ? _database.DocumentsStorage.GetDocumentsFrom(_context, collectionsToExport, _startDocsEtag, int.MaxValue)
-                : _database.DocumentsStorage.GetDocumentsFrom(_context, _startDocsEtag, 0, int.MaxValue);
+                ? _database.DocumentsStorage.GetDocumentsFrom(_context, collectionsToExport, _startDocumentEtag, int.MaxValue)
+                : _database.DocumentsStorage.GetDocumentsFrom(_context, _startDocumentEtag, 0, int.MaxValue);
 
             foreach (var document in documents)
             {
@@ -84,13 +82,13 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<DocumentItem> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions, int limit)
+        public IEnumerable<DocumentItem> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions)
         {
             var versioningStorage = _database.BundleLoader.VersioningStorage;
             if (versioningStorage == null)
                 yield break;
 
-            var documents = versioningStorage.GetRevisionsFrom(_context, _startRevisionDocumentsEtag, limit);
+            var documents = versioningStorage.GetRevisionsFrom(_context, _startDocumentEtag, int.MaxValue);
             foreach (var document in documents)
             {
                 yield return new DocumentItem

@@ -21,6 +21,7 @@ using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
+using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Commands.Transformers;
 using Raven.Server.ServerWide.Context;
@@ -107,7 +108,8 @@ namespace Raven.Server.ServerWide
                 case nameof(DeleteTransformerCommand):
                 case nameof(RenameTransformerCommand):
                 case nameof(EditVersioningCommand):
-                case nameof(EditPeriodicBackupCommand):
+                case nameof(UpdatePeriodicBackupCommand):
+                case nameof(DeletePeriodicBackupCommand):
                 case nameof(EditExpirationCommand):
                 case nameof(ModifyDatabaseWatchersCommand):
                 case nameof(ModifyConflictSolverCommand):
@@ -117,6 +119,7 @@ namespace Raven.Server.ServerWide
                 case nameof(UpdateDatabaseWatcherCommand):
                     UpdateDatabase(context, type, cmd, index, leader);
                     break;
+                case nameof(UpdatePeriodicBackupStatusCommand):
                 case nameof(AcknowledgeSubscriptionBatchCommand):
                 case nameof(CreateSubscriptionCommand):
                 case nameof(DeleteSubscriptionCommand):
@@ -474,7 +477,16 @@ namespace Raven.Server.ServerWide
 
                     try
                     {
-                        updateCommand.UpdateDatabaseRecord(databaseRecord, index);
+                        var relatedRecordIdToDelete = updateCommand.UpdateDatabaseRecord(databaseRecord, index);
+                        if (relatedRecordIdToDelete != null)
+                        {
+                            var itemKey = relatedRecordIdToDelete;
+                            using (Slice.From(context.Allocator, itemKey, out Slice _))
+                            using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameToDeleteLowered))
+                            {
+                                items.DeleteByKey(valueNameToDeleteLowered);
+                            }
+                        }
                     }
                     catch (Exception e)
                     {

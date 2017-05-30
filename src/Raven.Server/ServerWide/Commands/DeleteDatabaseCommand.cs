@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Server;
 using Sparrow.Json.Parsing;
@@ -21,7 +19,7 @@ namespace Raven.Server.ServerWide.Commands
         {
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             var deletionInProgressStatus = HardDelete? DeletionInProgressStatus.HardDelete
                 : DeletionInProgressStatus.SoftDelete;
@@ -51,6 +49,8 @@ namespace Raven.Server.ServerWide.Commands
 
                 record.Topology = new DatabaseTopology();
             }
+
+            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

@@ -1,4 +1,3 @@
-using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Client.Server.Versioning;
 using Raven.Server.Utils;
@@ -24,9 +23,10 @@ namespace Raven.Server.ServerWide.Commands
             Configuration = configuration;
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.Versioning = Configuration;
+            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

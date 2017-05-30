@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Server.Expiration;
-using Raven.Client.Server.PeriodicExport;
+using Raven.Client.Server.PeriodicBackup;
 using Raven.Client.Server.Versioning;
 
 namespace Raven.Client.Server
@@ -55,7 +57,7 @@ namespace Raven.Client.Server
 
         public ExpirationConfiguration Expiration { get; set; }
 
-        public PeriodicBackupConfiguration PeriodicBackup { get; set; }
+        public List<PeriodicBackupConfiguration> PeriodicBackups { get; set; }
 
         public string CustomFunctions { get; set; }
 
@@ -168,6 +170,28 @@ namespace Raven.Client.Server
         public void DeleteTransformer(string name)
         {
             Transformers?.Remove(name);
+        }
+
+        public void AddPeriodicBackupConfiguration(PeriodicBackupConfiguration configuration)
+        {
+            Debug.Assert(configuration.TaskId != 0);
+
+            DeletePeriodicBackupConfiguration(configuration.TaskId);
+            PeriodicBackups.Add(configuration);
+        }
+
+        public void DeletePeriodicBackupConfiguration(long backupTaskId)
+        {
+            Debug.Assert(backupTaskId != 0);
+
+            foreach (var periodicBackup in PeriodicBackups)
+            {
+                if (periodicBackup.TaskId == backupTaskId)
+                {
+                    PeriodicBackups.Remove(periodicBackup);
+                    break;
+                }
+            }
         }
     }
 

@@ -98,8 +98,8 @@ class periodicExport extends viewModelBase {
         var deferred = $.Deferred();
         new getPeriodicExportSetupCommand(db)
             .execute()
-            .done((result: Raven.Client.Server.PeriodicExport.PeriodicBackupConfiguration) => {
-                this.backupSetup().fromDto(result);
+            .done((result: any) => {
+                //this.backupSetup().fromDto(result);
             })
             .always(() => deferred.resolve());
         return deferred;
@@ -139,7 +139,7 @@ class periodicExport extends viewModelBase {
         var db = this.activeDatabase();
         if (db) {
 
-            const periodicExportConfig = this.backupSetup().toDto();
+            /*const periodicExportConfig = this.backupSetup().toDto();
 
             new saveDocumentCommand("Raven/PeriodicExport/Configuration",
                     new document(periodicExportConfig),
@@ -149,7 +149,7 @@ class periodicExport extends viewModelBase {
                     this.backupSetup().resetDecryptionFailures();
                     this.dirtyFlag().reset();
                     this.updateExportDisabledFlag();
-                });
+                });*/
             /* TODO:
             var task: JQueryPromise<any>;
             task = new savePeriodicExportSetupCommand(this.backupSetup(), db).execute();
