@@ -1,5 +1,7 @@
 #!/bin/bash
 
+CURL_CMD=$(which curl)
+GIT_CMD=$(which git)
 NODE_CMD=$(which node)
 DOTNET_CMD=$(which dotnet)
 POWERSHELL_CMD=$(which powershell)
@@ -34,16 +36,16 @@ if [ -z "$POWERSHELL_CMD" ] ; then
     echo "Powershell not found. Installing.."
 
     if [ "$UBUNTU_VERSION" = "16.04" ] ; then
-        POWERSHELL_URL="https://github.com/PowerShell/PowerShell/releases/download/v6.0.0-alpha.13/powershell_6.0.0-alpha.13-1ubuntu1.16.04.1_amd64.deb"
+        POWERSHELL_URL="https://github.com/PowerShell/PowerShell/releases/download/v6.0.0-beta.1/powershell_6.0.0-beta.1-1ubuntu1.16.04.1_amd64.deb"
     elif [ "$UBUNTU_VERSION" = "14.04" ] ; then
-        POWERSHELL_URL="https://github.com/PowerShell/PowerShell/releases/download/v6.0.0-alpha.13/powershell_6.0.0-alpha.13-1ubuntu1.14.04.1_amd64.deb"
+        POWERSHELL_URL="https://github.com/PowerShell/PowerShell/releases/download/v6.0.0-beta.1/powershell_6.0.0-beta.1-1ubuntu1.14.04.1_amd64.deb"
     fi
 
     POWERSHELL_FILE="powershell.deb"
 
     wget "$POWERSHELL_URL" -O "$POWERSHELL_FILE"
     sudo dpkg -i "$POWERSHELL_FILE"
-    sudo apt-get install -f
+    sudo apt-get install -f -y
     rm "$POWERSHELL_FILE"
 else
     echo "Powershell is installed."
@@ -51,8 +53,13 @@ fi
 
 if [ -z "$NODE_CMD" ] ; then
     echo "Node not found. Installing.."
+
+    if [ -z "$CURL_CMD" ]; then
+        sudo apt-get install -y curl 
+    fi
+
     curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
-    sudo apt-get install -y nodejs
+    sudo apt-get install -y nodejs build-essential
 else
     NODE_VERSION="$($NODE_CMD --version)"
 
@@ -72,6 +79,10 @@ if [ -z "$MONO_CMD" ] ; then
     sudo apt-get install -y mono-complete
 else 
     echo "Mono is installed."
+fi
+
+if [ -z "$GIT_CMD" ]; then
+    sudo apt-get install -y git
 fi
 
 echo "To build RavenDB run: powershell ./build.ps1"
