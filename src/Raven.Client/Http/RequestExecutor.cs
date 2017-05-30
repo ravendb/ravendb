@@ -393,7 +393,16 @@ namespace Raven.Client.Http
                         if (command.FailedNodes.Count == 0) //precaution, should never happen at this point
                             throw new InvalidOperationException("Received unsuccessful response and couldn't recover from it. Also, no record of exceptions per failed nodes. This is weird and should not happen.");
 
-                        throw new AllTopologyNodesDownException("Received unsuccessful response and couldn't recover from it.",
+                        if (command.FailedNodes.Count == 1)
+                        {
+                            Console.Beep();
+                            Console.WriteLine("Error");
+                            Console.ReadLine();
+                            var x = command.FailedNodes.First();
+                            throw new UnsuccessfulRequestException(x.Key.Url, x.Value);
+                        }
+                        
+                        throw new AllTopologyNodesDownException("Received unsuccessful response from all servers and couldn't recover from it.",
                             new AggregateException(command.FailedNodes.Select(x => new UnsuccessfulRequestException(x.Key.Url, x.Value))));
                     }
                     return; // we either handled this already in the unsuccessful response or we are throwing
