@@ -323,7 +323,7 @@ namespace FastTests.Server.Replication
                 var databaseWatcher = new DatabaseWatcher
                 {
                     Database = store.Database,
-                    Url = store.Urls.First(),
+                    Url = store.Urls[0]
                 };
                 ModifyReplicationDestination(databaseWatcher);
                 watchers.Add(databaseWatcher);
@@ -457,7 +457,7 @@ namespace FastTests.Server.Replication
                 }
                 Result = result;
             }
-            }
+        }
 
         private class GetLiveTopologyCommand : RavenCommand<LiveTopologyInfo>
         {

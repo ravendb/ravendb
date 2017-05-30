@@ -4,13 +4,12 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Replication;
 using Raven.Client.Exceptions;
 using Raven.Client.Json.Converters;
-using Raven.Client.Http;using Raven.Client.Server;
+using Raven.Client.Http;
+using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.PeriodicBackup;
-using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -64,27 +63,28 @@ namespace Raven.Server.Web.System
             if (dbTopology == null)
                 return;
 
-            foreach (var watcher in dbTopology.Watchers.Values)
+            foreach (var watcher in dbTopology.Watchers)
             {
                 var tag = dbTopology.WhoseTaskIsIt(watcher);
                 var task = GetReplicationTaskInfo(clusterTopology, tag, watcher);
                 ongoingTasksList.Add(task);
             }
-            }
+        }
 
-        private static OngoingTaskReplication GetReplicationTaskInfo(ClusterTopology clusterTopology, string tag, ReplicationNode replicationNode)
+        private static OngoingTaskReplication GetReplicationTaskInfo(ClusterTopology clusterTopology, string tag, DatabaseWatcher watcher)
         {
             return new OngoingTaskReplication
             {
                 TaskType = OngoingTaskType.Replication,
+                TaskId = watcher.TaskId,
                 ResponsibleNode = new NodeId
                 {
                     NodeTag = tag,
                     NodeUrl = clusterTopology.GetUrlFromTag(tag)
                 },
-                DestinationDB = replicationNode.Database,
-                TaskState = replicationNode.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
-                DestinationURL = replicationNode.Url,
+                DestinationDB = watcher.Database,
+                TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
+                DestinationURL = watcher.Url,
             };
         }
 
@@ -96,32 +96,29 @@ namespace Raven.Server.Web.System
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
-            ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-update-watcher");
                 if (updateJson.TryGet(nameof(DatabaseWatcher), out BlittableJsonReaderObject watcherBlittable) == false)
                 {
-                    throw new InvalidDataException("NewWatcher property was not found.");
-    }
-                using (context.OpenReadTransaction())
+                    throw new InvalidDataException("Watcher was not found.");
+                }
+
+                var watcher = JsonDeserializationClient.DatabaseWatcher(watcherBlittable);
+                var (index, _) = await ServerStore.UpdateDatabaseWatcher(name, watcher);
+                await ServerStore.Cluster.WaitForIndexNotification(index);
+
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    var watcher = JsonDeserializationClient.DatabaseWatcher(watcherBlittable);
-                    var (index, _) = await ServerStore.UpdateDatabaseWatcher(name, watcher);
-                    await ServerStore.Cluster.WaitForIndexNotification(index);
-
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    context.Write(writer, new DynamicJsonValue
                     {
-                        context.Write(writer, new DynamicJsonValue
-                        {
-                            [nameof(DatabasePutResult.ETag)] = index,
-                            [nameof(DatabasePutResult.Key)] = name,
-                            [nameof(OngoingTask.TaskId)] = watcher?.GetTaskKey().ToString(),
-                        });
-                        writer.Flush();
-                    }
+                        [nameof(DatabasePutResult.ETag)] = index,
+                        [nameof(DatabasePutResult.Key)] = name,
+                        [nameof(OngoingTask.TaskId)] = (watcher.Database + watcher.Url).ToLower()
+                    });
+                    writer.Flush();
                 }
             }
         }
@@ -149,7 +146,7 @@ namespace Raven.Server.Web.System
 
     public abstract class OngoingTask : IDynamicJson // Single task info - Common to all tasks types
     {
-        public ulong? TaskId { get; set; }
+        public string TaskId { get; set; }
         public OngoingTaskType TaskType { get; set; }
         public NodeId ResponsibleNode { get; set; }
         public OngoingTaskState TaskState { get; set; }
