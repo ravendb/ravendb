@@ -118,7 +118,7 @@ namespace Raven.Server.Utils
         public static TcpConnectionInfo GetTcpInfo(string url, string databaseName, string apiKey, string tag)
         {
             JsonOperationContext context;
-            using (var requestExecuter = RequestExecutor.CreateForSingleNode(url, databaseName, apiKey))
+            using (var requestExecuter = ClusterRequestExecutor.CreateForSingleNode(url, apiKey))
             using (requestExecuter.ContextPool.AllocateOperationContext(out context))
             {
                 var getTcpInfoCommand = new GetTcpInfoCommand(tag + "/" + databaseName);
@@ -130,7 +130,7 @@ namespace Raven.Server.Utils
 
         public static async Task<TcpConnectionInfo> GetTcpInfoAsync(string url, string databaseName, string apiKey, string tag)
         {
-            using (var requestExecuter = RequestExecutor.CreateForSingleNode(url, databaseName, apiKey))
+            using (var requestExecuter = ClusterRequestExecutor.CreateForSingleNode(url, apiKey))
             using (requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {                
                 var getTcpInfoCommand = new GetTcpInfoCommand(tag + "/" + databaseName);

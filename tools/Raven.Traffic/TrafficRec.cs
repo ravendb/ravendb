@@ -7,6 +7,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -123,7 +124,7 @@ namespace Raven.Traffic
             var id = Guid.NewGuid().ToString();
             using (var client = new ClientWebSocket())
             {
-                var url = store.Url + "/traffic-watch/websockets";
+                var url = store.Urls.First() + "/traffic-watch/websockets";
                 var uri = new Uri(url.ToWebSocketPath());
 
                 await client.ConnectAsync(uri, CancellationToken.None)

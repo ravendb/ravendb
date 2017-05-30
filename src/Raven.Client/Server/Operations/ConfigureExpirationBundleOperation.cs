@@ -1,5 +1,6 @@
 ﻿using System.Net.Http;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -12,14 +13,16 @@ namespace Raven.Client.Server.Operations
     public class ConfigureExpirationOperation : IServerOperation<ConfigureExpirationOperationResult>
     {
         private readonly ExpirationConfiguration _configuration;
+        private readonly string _databaseName;
 
-        public ConfigureExpirationOperation(ExpirationConfiguration configuration)
+        public ConfigureExpirationOperation(ExpirationConfiguration configuration, string databaseName)
         {
             _configuration = configuration;
+            _databaseName = databaseName;
         }
         public RavenCommand<ConfigureExpirationOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new ConfigureExpirationCommand(_configuration, context);
+            return new ConfigureExpirationCommand(_configuration, _databaseName, context);
         }
     }
 
@@ -27,18 +30,20 @@ namespace Raven.Client.Server.Operations
     {
         private readonly ExpirationConfiguration _configuration;
         private readonly JsonOperationContext _context;
+        private readonly string _databaseName;
 
-        public ConfigureExpirationCommand(ExpirationConfiguration configuration, JsonOperationContext context)
+        public ConfigureExpirationCommand(ExpirationConfiguration configuration, string databaseName, JsonOperationContext context)
         {
             _configuration = configuration;
             _context = context;
+            _databaseName = databaseName;
         }
 
         public override bool IsReadRequest => false;
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/admin/expiration/config?name={node.Database}";
+            url = $"{node.Url}/admin/expiration/config?name={_databaseName}";
 
             var request = new HttpRequestMessage
             {

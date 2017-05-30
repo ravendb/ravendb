@@ -1,19 +1,20 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Text.RegularExpressions;
-using Newtonsoft.Json;
-using Raven.Client.Documents.Replication;
 
 namespace Raven.Client.Util
 {
     public class ConnectionStringOptions
     {
-        private string _url;
-        public string Url
+        private List<string> _urls;
+
+        public ConnectionStringOptions()
         {
-            get => _url;
-            set => _url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
+            _urls = new List<string>();
         }
+
+        public List<string> Urls { get; set; }
 
         public string ApiKey { get; set; }
 
@@ -23,7 +24,7 @@ namespace Raven.Client.Util
 
         public override string ToString()
         {
-            return $"Url: {Url}, Api Key: {2}";
+            return string.Format("Urls: {0}, Api Key: {1}", string.Join(",", Urls), ApiKey);
         }
     }
 
@@ -31,11 +32,9 @@ namespace Raven.Client.Util
     {
         public string Database { get; set; }
 
-        public FailoverServers FailoverServers { get; set; }
-
         public override string ToString()
         {
-            return $"Url: {Url}, Database: {Database}, Api Key: {ApiKey}";
+            return string.Format("Urls: {1}, DefaultDatabase: {0}, Api Key: {2}", Database, string.Join(",", Urls), ApiKey);
         }
     }
 
@@ -50,9 +49,17 @@ namespace Raven.Client.Util
                                                                         RegexOptions.Compiled |
                                                                         RegexOptions.IgnorePatternWhitespace);
 
+        private static readonly Regex UrlStringRegex = new Regex(@"(""\w+"")",
+            RegexOptions.Compiled |
+            RegexOptions.IgnorePatternWhitespace);
+
         private static readonly Regex ConnectionStringArgumentsSplitterRegex = new Regex(@"; (?=\s* \w+ \s* =)",
                                                                                          RegexOptions.Compiled |
                                                                                          RegexOptions.IgnorePatternWhitespace);
+
+        private static readonly Regex ConnectionStringListSplitterRegex = new Regex(@"(\s?,\s?)",
+            RegexOptions.Compiled |
+            RegexOptions.IgnorePatternWhitespace);
 
         private readonly string _connectionString;
         private readonly string _connectionStringName;
@@ -93,9 +100,23 @@ namespace Raven.Client.Util
                 case "domain":
                     networkCredentials.Domain = value;
                     break;
-                case "url":
-                    if (string.IsNullOrEmpty(options.Url))
-                        options.Url = value;
+                case "urls":
+                    if (options.Urls == null || options.Urls?.Count == 0)
+                    {
+                        var items = ConnectionStringListSplitterRegex.Split(value);
+                        if (options.Urls == null)
+                            options.Urls = new List<string>();
+
+                        foreach (var item in items)
+                        {
+                            Match match = UrlStringRegex.Match(item);
+                            if (match.Success == false)
+                                throw new ArgumentException(string.Format("url: '{0}' could not be parsed", item));
+
+                            options.Urls.Add(item);;
+                        }
+                        
+                    }
                     break;
 
                 // Couldn't process the option.
@@ -121,25 +142,6 @@ namespace Raven.Client.Util
                     options.Database = value;
                     break;
 
-                case "failover":
-                    if (options.FailoverServers == null)
-                        options.FailoverServers = new FailoverServers();
-
-                    var databaseNameAndFailoverDestination = value.Split('|');
-
-                    ReplicationNode node;
-                    if (databaseNameAndFailoverDestination.Length == 1)
-                    {
-                        node = JsonConvert.DeserializeObject<ReplicationNode>(databaseNameAndFailoverDestination[0]);
-                        options.FailoverServers.AddForDefaultDatabase(node);
-                    }
-                    else
-                    {
-                        node = JsonConvert.DeserializeObject<ReplicationNode>(databaseNameAndFailoverDestination[1]);
-                        options.FailoverServers.AddForDatabase(databaseName: databaseNameAndFailoverDestination[0], nodes: node);
-                    }
-                    break;
-
                 // Couldn't process the option.
                 default: return false;
             }
@@ -152,7 +154,7 @@ namespace Raven.Client.Util
         {
             string[] strings = ConnectionStringArgumentsSplitterRegex.Split(_connectionString);
             var networkCredential = new NetworkCredential();
-            foreach (string str in strings)
+            foreach (var str in strings)
             {
                 string arg = str.Trim(';');
                 Match match = ConnectionStringRegex.Match(arg);

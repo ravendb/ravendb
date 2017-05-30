@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
@@ -7,23 +8,17 @@ using Sparrow.Json;
 
 namespace Raven.Client.Server.Commands
 {
-    public class GetTopologyCommand : RavenCommand<Topology>
+    public class GetClusterTopologyCommand : RavenCommand<ClusterTopologyResponse>
     {
-        private readonly string _forcedUrl;
-
-        public GetTopologyCommand(string forcedUrl = null)
+        public GetClusterTopologyCommand()
         {
-            _forcedUrl = forcedUrl;
             FailedNodes = new Dictionary<ServerNode, ExceptionDispatcher.ExceptionSchema>();
         }
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/topology?name={node.Database}";
-            if (string.IsNullOrEmpty(_forcedUrl) == false)
-            {
-                url += $"&url={_forcedUrl}";
-            }
+            url = $"{node.Url}/admin/cluster/topology?url={node.Url}";
+           
             return new HttpRequestMessage
             {
                 Method = HttpMethod.Get,
@@ -35,7 +30,7 @@ namespace Raven.Client.Server.Commands
             if (response == null)
                 return;
 
-            Result = JsonDeserializationClient.Topology(response);
+            Result = JsonDeserializationClient.ClusterTopology(response);
         }
 
         public override bool IsReadRequest => true;

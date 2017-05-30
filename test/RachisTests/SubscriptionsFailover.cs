@@ -41,7 +41,7 @@ namespace RachisTests
             string tag1, tag2, tag3;
             using (var store = new DocumentStore
             {
-                Url = leader.WebUrls[0],
+                Urls = leader.WebUrls,
                 Database = defaultDatabase
             }.Initialize())
             {
@@ -94,7 +94,7 @@ namespace RachisTests
             
             using (var store = new DocumentStore
             {
-                Url = leader.WebUrls[0],
+                Urls = leader.WebUrls,
                 Database = defaultDatabase
             }.Initialize())
             {

@@ -9,19 +9,30 @@ namespace Raven.Client.Server.Operations
 {
     public class GetPeriodicBackupStatusOperation : IServerOperation<GetPeriodicBackupStatusOperationResult>
     {
+        private readonly string _databaseName;
+        public GetPeriodicBackupStatusOperation(string databaseName)
+        {
+            _databaseName = databaseName;
+        }
 
         public RavenCommand<GetPeriodicBackupStatusOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetPeriodicBackupStatusCommand();
+            return new GetPeriodicBackupStatusCommand(_databaseName);
         }
     }
 
     public class GetPeriodicBackupStatusCommand : RavenCommand<GetPeriodicBackupStatusOperationResult>
     {
+        private readonly string _databaseName;
+        public GetPeriodicBackupStatusCommand(string databaseName)
+        {
+            _databaseName = databaseName;
+        }
+
         public override bool IsReadRequest => true;
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/periodic-backup/status";
+            url = $"{node.Url}/databases/{_databaseName}/periodic-backup/status";
 
             var request = new HttpRequestMessage
             {

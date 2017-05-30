@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Raven.Client.Http;
 using Raven.Client.Server.Tcp;
 using Raven.Server.ServerWide.Context;
 using Sparrow;

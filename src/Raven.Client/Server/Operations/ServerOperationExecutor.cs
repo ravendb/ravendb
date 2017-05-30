@@ -11,12 +11,12 @@ namespace Raven.Client.Server.Operations
     public class ServerOperationExecutor
     {
         private readonly DocumentStoreBase _store;
-        private readonly RequestExecutor _requestExecutor;
+        private readonly ClusterRequestExecutor _requestExecutor;
 
         public ServerOperationExecutor(DocumentStoreBase store)
         {
             _store = store;
-            _requestExecutor = store.GetRequestExecutor();
+            _requestExecutor = ClusterRequestExecutor.Create(_store.Urls, _store.ApiKey);
         }
 
         public void Send(IServerOperation operation)
@@ -34,7 +34,6 @@ namespace Raven.Client.Server.Operations
             using (GetContext(out JsonOperationContext context))
             {
                 var command = operation.GetCommand(_store.Conventions, context);
-
                 await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
             }
         }

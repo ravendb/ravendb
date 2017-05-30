@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -21,7 +22,7 @@ namespace FastTests.Issues
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var url = " " + storeB.Url;
+                var url = " " + storeB.Urls.First();
                 DoReplicationTest(storeA, storeB, url);
             }
         }
@@ -32,7 +33,7 @@ namespace FastTests.Issues
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var url = storeB.Url + " ";
+                var url = storeB.Urls.First() + " ";
                 DoReplicationTest(storeA, storeB, url);
             }
         }
@@ -43,7 +44,7 @@ namespace FastTests.Issues
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var url = storeB.Url + " ";
+                var url = storeB.Urls.First() + " ";
                 DoReplicationTest(storeA, storeB, url);
             }
         }       

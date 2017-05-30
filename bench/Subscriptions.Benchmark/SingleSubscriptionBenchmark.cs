@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
@@ -71,7 +72,7 @@ namespace SubscriptionsBenchmark
         private readonly string _collectionName;
         private DocumentStore _store;
 
-        public SingleSubscriptionBenchmark(int batchSize, string url,
+        public SingleSubscriptionBenchmark(int batchSize,  string url,
             string databaseName = "freeDB", string collectionName = "Disks")
         {
             _batchSize = batchSize;
@@ -80,7 +81,7 @@ namespace SubscriptionsBenchmark
             _store = new DocumentStore()
             {
                 Database = databaseName,
-                Url = url,
+                Urls = new []{ url },
                 Conventions = new DocumentConventions()
             };
             _store.Initialize();

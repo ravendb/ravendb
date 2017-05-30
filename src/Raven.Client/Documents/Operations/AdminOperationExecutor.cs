@@ -8,26 +8,19 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public partial class AdminOperationExecutor
+    public class AdminOperationExecutor
     {
         private readonly DocumentStoreBase _store;
         private readonly string _databaseName;
-        private readonly RequestExecutor _requestExecutor;
-        private readonly JsonOperationContext _context;
+        private RequestExecutor _requestExecutor;
         private ServerOperationExecutor _serverOperationExecutor;
+
+        private RequestExecutor RequestExecutor => _requestExecutor ?? (_requestExecutor = _store.GetRequestExecutor(_databaseName));
 
         public AdminOperationExecutor(DocumentStoreBase store, string databaseName = null)
         {
             _store = store;
             _databaseName = databaseName ?? store.Database;
-            _requestExecutor = store.GetRequestExecutor(databaseName);
-        }
-
-        internal AdminOperationExecutor(DocumentStoreBase store, RequestExecutor requestExecutor, JsonOperationContext context)
-        {
-            _store = store;
-            _requestExecutor = requestExecutor;
-            _context = context;
         }
 
         public ServerOperationExecutor Server => _serverOperationExecutor ?? (_serverOperationExecutor = new ServerOperationExecutor(_store));
@@ -53,33 +46,40 @@ namespace Raven.Client.Documents.Operations
         public async Task SendAsync(IAdminOperation operation, CancellationToken token = default(CancellationToken))
         {
             JsonOperationContext context;
-            using (GetContext(out context))
+            using (RequestExecutor.ContextPool.AllocateOperationContext(out context))
             {
                 var command = operation.GetCommand(_store.Conventions, context);
-
-                await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
+                await RequestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
             }
         }
 
         public async Task<TResult> SendAsync<TResult>(IAdminOperation<TResult> operation, CancellationToken token = default(CancellationToken))
         {
             JsonOperationContext context;
-            using (GetContext(out context))
+            using (RequestExecutor.ContextPool.AllocateOperationContext(out context))
             {
                 var command = operation.GetCommand(_store.Conventions, context);
 
-                await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
+                await RequestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
                 return command.Result;
             }
         }
 
-        private IDisposable GetContext(out JsonOperationContext context)
+        public Operation Send(IAdminOperation<OperationIdResult> operation)
         {
-            if (_context == null)
-                return _requestExecutor.ContextPool.AllocateOperationContext(out context);
+            return AsyncHelpers.RunSync(() => SendAsync(operation));
+        }
 
-            context = _context;
-            return null;
+        public async Task<Operation> SendAsync(IAdminOperation<OperationIdResult> operation, CancellationToken token = default(CancellationToken))
+        {
+            JsonOperationContext context;
+            using (RequestExecutor.ContextPool.AllocateOperationContext(out context))
+            {
+                var command = operation.GetCommand(_store.Conventions, context);
+
+                await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
+                return new Operation(_requestExecutor, () => _store.Changes(_databaseName), _store.Conventions, command.Result.OperationId);
+            }
         }
     }
 }

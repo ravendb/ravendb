@@ -12,7 +12,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
-using Raven.Client.Server;
 using Raven.Client.Util;
 using System;
 using System.Collections.Concurrent;
@@ -53,11 +52,11 @@ namespace Raven.Client.Documents
             {
                 if (_identifier != null)
                     return _identifier;
-                if (Url == null)
+                if (Urls == null)
                     return null;
                 if (Database != null)
-                    return Url + " (DB: " + Database + ")";
-                return Url;
+                    return string.Join(",", Urls) + " (DB: " + Database + ")";
+                return string.Join(",", Urls);
             }
             set => _identifier = value;
         }
@@ -78,14 +77,12 @@ namespace Raven.Client.Documents
         /// </summary>
         protected virtual void SetConnectionStringSettings(RavenConnectionStringOptions options)
         {
-            if (string.IsNullOrEmpty(options.Url) == false)
-                Url = options.Url;
+            if (options.Urls.Count > 0)
+                Urls = options.Urls.ToArray();
             if (string.IsNullOrEmpty(options.Database) == false)
                 Database = options.Database;
             if (string.IsNullOrEmpty(options.ApiKey) == false)
                 ApiKey = options.ApiKey;
-            if (options.FailoverServers != null)
-                FailoverServers = options.FailoverServers;
 
         }
 
@@ -105,7 +102,7 @@ namespace Raven.Client.Documents
             foreach (var changes in _databaseChanges)
             {
                 using (changes.Value) { }
-            }
+                }
 
             // try to wait until all the async disposables are completed
             Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(3));
@@ -166,7 +163,7 @@ namespace Raven.Client.Documents
             EnsureNotClosed();
 
             var sessionId = Guid.NewGuid();
-            var databaseName = options.Database ?? Database ?? MultiDatabase.GetDatabaseName(Url);
+            var databaseName = options.Database ?? Database;
             var requestExecutor = GetRequestExecutor(databaseName);
             var session = new DocumentSession(databaseName, this, sessionId, requestExecutor);
             RegisterEvents(session);
@@ -174,10 +171,14 @@ namespace Raven.Client.Documents
             return session;
         }
 
-        public Task ForceUpdateTopologyFor(string databaseName = null)
+        public async Task ForceUpdateTopologyFor(string url, string databaseName = null, int timeout = 0)
         {
             var requestExecutor = GetRequestExecutor(databaseName);
-            return requestExecutor.UpdateTopologyAsync();
+            await requestExecutor.UpdateTopologyAsync(new ServerNode
+            {
+                Url = url,
+                Database = databaseName
+            }, timeout);
         }
 
         public override RequestExecutor GetRequestExecutor(string database = null)
@@ -187,9 +188,11 @@ namespace Raven.Client.Documents
 
             Lazy<RequestExecutor> lazy;
             if (_requestExecutors.TryGetValue(database, out lazy))
+            {
                 return lazy.Value;
-
-            lazy = new Lazy<RequestExecutor>(() => RequestExecutor.Create(Url, database, ApiKey));
+            }
+            
+            lazy = new Lazy<RequestExecutor>(() => RequestExecutor.Create(Urls, database, ApiKey));
 
             lazy = _requestExecutors.GetOrAdd(database, lazy);
 
@@ -246,11 +249,10 @@ namespace Raven.Client.Documents
         /// </summary>
         protected virtual void AssertValidConfiguration()
         {
-            if (string.IsNullOrEmpty(Url))
-                throw new ArgumentException($"Document store {nameof(Url)} cannot be empty", nameof(Url));
-
-            if (string.IsNullOrEmpty(Database))
-                throw new ArgumentException($"Document store {nameof(Database)} cannot be empty", nameof(Database));
+            if (Urls == null || Urls?.Length == 0)
+            {
+                throw new ArgumentException("Document store URLs cannot be empty", nameof(Urls));
+            }
         }
 
         /// <summary>
@@ -325,7 +327,7 @@ namespace Raven.Client.Documents
             EnsureNotClosed();
 
             var sessionId = Guid.NewGuid();
-            var databaseName = options.Database ?? Database ?? MultiDatabase.GetDatabaseName(Url);
+            var databaseName = options.Database ?? Database;
             var requestExecutor = GetRequestExecutor(databaseName);
             var session = new AsyncDocumentSession(databaseName, this, requestExecutor, sessionId);
             //AfterSessionCreated(session);
@@ -389,8 +391,7 @@ namespace Raven.Client.Documents
 
         internal Task GetObserveChangesAndEvictItemsFromCacheTask(string database = null)
         {
-            var databaseName = database ?? Database ?? MultiDatabase.GetDatabaseName(Url);
-            var changes = _observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(databaseName);
+            var changes = _observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(database ?? Database);
 
             return changes == null ? Task.CompletedTask : changes.ConnectionTask;
         }

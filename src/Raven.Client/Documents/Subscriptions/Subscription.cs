@@ -291,10 +291,11 @@ namespace Raven.Client.Documents.Subscriptions
                 _stream = _tcpClient.GetStream();
                 _stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient, command.Result).ConfigureAwait(false);
 
+                var databaseName = _dbName ?? _store.Database;
                 var header = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(new TcpConnectionHeaderMessage
                 {
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
-                    DatabaseName = _dbName ?? _store.Database,
+                    DatabaseName = databaseName,
                     AuthorizationToken = apiToken
                 }));
 
@@ -310,7 +311,7 @@ namespace Raven.Client.Documents.Subscriptions
                     {
                         case TcpConnectionHeaderResponse.AuthorizationStatus.Forbidden:
                         case TcpConnectionHeaderResponse.AuthorizationStatus.ForbiddenReadOnly:
-                            throw AuthorizationException.Forbidden(_store.Url);
+                            throw AuthorizationException.Forbidden($"Cannot access database {databaseName} because we got a Forbidden authorization status");
                         case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
                             break;
                         default:
@@ -702,15 +703,9 @@ namespace Raven.Client.Documents.Subscriptions
                         .FirstOrDefault(x => x.ClusterTag == se.AppropriateNode);
                     if (nodeToRedirectTo == null)
                     {
-                        await requestExecuter.UpdateTopologyAsync();
-                        nodeToRedirectTo = requestExecuter.TopologyNodes.FirstOrDefault(x => x.ClusterTag == se.AppropriateNode);
-
-                        if (nodeToRedirectTo == null)
-                        {
-                            SubscriptionConnectionInterrupted(new AggregateException(ex,
-                                new InvalidOperationException($"Could not redirect to {se.AppropriateNode}, because it was not found in local topology, even after retrying")), false);
-                            return true;
-                        }
+                        SubscriptionConnectionInterrupted(new AggregateException(ex,
+                            new InvalidOperationException($"Could not redirect to {se.AppropriateNode}, because it was not found in local topology, even after retrying")), false);
+                        return true;
                     }
                     _redirectNode = nodeToRedirectTo;
                     SubscriptionConnectionInterrupted(ex, true);

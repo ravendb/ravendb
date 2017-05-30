@@ -151,7 +151,7 @@ namespace SubscriptionFailoverBenchmark
         {
             using (var store = new DocumentStore
             {
-                Url = Servers[0].WebUrls[0],
+                Urls = Servers[0].WebUrls,
                 Database = defaultDatabase
             }.Initialize())
             {
@@ -199,7 +199,7 @@ namespace SubscriptionFailoverBenchmark
         {
             using (var store = new DocumentStore
             {
-                Url = url,
+                Urls = new[] { url },
                 Database = defaultDatabase
             }.Initialize())
             {

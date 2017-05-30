@@ -120,7 +120,7 @@ namespace Raven.Server.ServerWide
                 case nameof(AcknowledgeSubscriptionBatchCommand):
                 case nameof(CreateSubscriptionCommand):
                 case nameof(DeleteSubscriptionCommand):
-                    SetValueForTypedDatabaseCommand(context, type, cmd, index, leader);
+                    SetValueForTypedDatabaseCommand(context,type, cmd, index, leader);
                     break;
                 case nameof(PutValueCommand):
                     PutValue(context, cmd, index, leader);
@@ -139,7 +139,7 @@ namespace Raven.Server.ServerWide
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
                 updateCommand = JsonDeserializationCluster.UpdateValueCommands[type](cmd);
-
+                
                 var record = ReadDatabase(context, updateCommand.DatabaseName);
                 if (record == null)
                 {
@@ -161,7 +161,7 @@ namespace Raven.Server.ServerWide
 
                     try
                     {
-                        itemBlittable = updateCommand.GetUpdatedValue(index, record, context, itemBlittable);
+                        itemBlittable = updateCommand.GetUpdatedValue(index, record, context , itemBlittable);
 
                         // if returned null, means, there is nothing to update and we just wanted to delete the value
                         if (itemBlittable == null)
@@ -185,8 +185,8 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
                 {
                     UpdateValue(index, items, valueNameLowered, valueName, itemBlittable);
+                    }
                 }
-            }
             finally
             {
                 NotifyDatabaseChanged(context, updateCommand?.DatabaseName, index, type);
@@ -315,7 +315,7 @@ namespace Raven.Server.ServerWide
 
                     databaseRecord.Topology = new DatabaseTopology();
                 }
-
+                
                 using (var updated = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context))
                 {
                     UpdateValue(index, items, lowerKey, key, updated);
@@ -455,13 +455,13 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
                 {
                     var doc = ReadInternal(context, out long etag, valueNameLowered);
-
+                    
                     if (doc == null)
                     {
                         NotifyLeaderAboutError(index, leader, new DatabaseDoesNotExistException($"Cannot execute update command of type {type} for {databaseName} because it does not exists"));
                         return null;
                     }
-
+                    
                     databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
                     var updateCommand = JsonDeserializationCluster.UpdateDatabaseCommands[type](cmd);
 
@@ -481,9 +481,9 @@ namespace Raven.Server.ServerWide
                         NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute command of type {type} for database {databaseName}", e));
                         return null;
                     }
-
+                    
                     var updatedDatabaseBlittable = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
-
+                    
                     UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
                 }
             }
@@ -608,7 +608,7 @@ namespace Raven.Server.ServerWide
 
             etag = Bits.SwapBytes(*(long*)reader.Read(3, out size));
             Debug.Assert(size == sizeof(long));
-
+            
             return doc;
         }
 
@@ -624,7 +624,7 @@ namespace Raven.Server.ServerWide
         public static IEnumerable<(long, BlittableJsonReaderObject)> ReadValuesStartingWith(TransactionOperationContext context, Slice startsWithKey)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-
+            
             foreach (var holder in items.SeekByPrimaryKeyPrefix(startsWithKey, Slices.Empty, 0))
             {
                 var reader = holder.Reader;
@@ -633,7 +633,7 @@ namespace Raven.Server.ServerWide
 
                 yield return (etag, doc);
             }
-
+            
         }
 
         private static unsafe int GetDataAndEtagTupleFromReader(TransactionOperationContext context, TableValueReader reader, out BlittableJsonReaderObject doc, out long etag)
@@ -718,8 +718,14 @@ namespace Raven.Server.ServerWide
     public class RachisLogIndexNotifications
     {
         private readonly CancellationToken _token;
-        private long _lastModifiedIndex;
+        private Holder _lastModifiedIndex = new Holder();
         private readonly AsyncManualResetEvent _notifiedListeners;
+
+        private class Holder
+        {
+            public long Val;
+            public string CachedToString;
+        }
 
         public RachisLogIndexNotifications(CancellationToken token)
         {
@@ -727,22 +733,30 @@ namespace Raven.Server.ServerWide
             _notifiedListeners = new AsyncManualResetEvent(token);
         }
 
-        public async Task WaitForIndexNotification(long index, TimeSpan? timeout = null)
+        public bool IsMatch(string etag)
+        {
+            var copy = _lastModifiedIndex;
+            if (copy.CachedToString == null)
+                copy.CachedToString = copy.Val.ToString();
+            return etag == copy.CachedToString;
+        }
+
+        public async Task WaitForIndexNotification(long index, TimeSpan? timeoutInMs = null)
         {
             Task timeoutTask = null;
-            if (timeout.HasValue)
-                timeoutTask = TimeoutManager.WaitFor(timeout.Value, _token);
-            while (index > Volatile.Read(ref _lastModifiedIndex) &&
-                    (timeout.HasValue == false || timeoutTask.IsCompleted == false))
+            if (timeoutInMs.HasValue)
+                timeoutTask = TimeoutManager.WaitFor(timeoutInMs.Value, _token);
+            while (index > Volatile.Read(ref _lastModifiedIndex.Val) && 
+                    (timeoutInMs.HasValue == false || timeoutTask.IsCompleted == false))
             {
                 var task = _notifiedListeners.WaitAsync();
-                if (timeout.HasValue == false)
+                if (timeoutInMs.HasValue == false)
                 {
                     await task;
                 }
                 else if (timeoutTask == await Task.WhenAny(task, timeoutTask))
                 {
-                    ThrowTimeoutException(timeout.Value, index, _lastModifiedIndex);
+                    ThrowTimeoutException(timeoutInMs.Value, index, _lastModifiedIndex.Val);
                 }
             }
         }
@@ -755,9 +769,15 @@ namespace Raven.Server.ServerWide
 
         public void NotifyListenersAbout(long index)
         {
-            var lastModified = _lastModifiedIndex;
-            while (index > lastModified)
-                lastModified = Interlocked.CompareExchange(ref _lastModifiedIndex, index, lastModified);
+            var lastModifed = _lastModifiedIndex;
+            var holder = new Holder
+            {
+                Val = index
+            };
+            while (index > lastModifed.Val)
+            {
+                lastModifed = Interlocked.CompareExchange(ref _lastModifiedIndex, holder, lastModifed);
+            }
             _notifiedListeners.SetAndResetAtomically();
         }
     }

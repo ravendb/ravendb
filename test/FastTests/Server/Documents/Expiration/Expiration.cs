@@ -28,7 +28,7 @@ namespace FastTests.Server.Documents.Expiration
                 Active = true,
                 DeleteFrequencySeconds = 100,
             };
-            await store.Admin.Server.SendAsync(new ConfigureExpirationOperation(config));
+            await store.Admin.Server.SendAsync(new ConfigureExpirationOperation(config, store.Database));
         }
 
         [Fact]

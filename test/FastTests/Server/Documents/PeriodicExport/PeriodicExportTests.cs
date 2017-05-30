@@ -67,7 +67,7 @@ namespace FastTests.Server.Documents.PeriodicExport
                     await session.SaveChangesAsync();
 
                 }
-                var operation = new GetPeriodicBackupStatusOperation();
+                var operation = new GetPeriodicBackupStatusOperation(store.Database);
                 SpinWait.SpinUntil(() => store.Admin.Server.Send(operation).Status != null, 10000);
 
             }

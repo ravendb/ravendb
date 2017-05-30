@@ -1,8 +1,7 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Rachis
+namespace Raven.Client.Http
 {
     public class ClusterTopology
     {

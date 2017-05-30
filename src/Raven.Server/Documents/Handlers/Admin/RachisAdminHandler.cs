@@ -5,6 +5,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Http;
 using Raven.Server.Extensions;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
@@ -77,14 +78,18 @@ namespace Raven.Server.Documents.Handlers.Admin
                 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    context.Write(writer, new DynamicJsonValue
+                    var json = new DynamicJsonValue
                     {
                         ["Topology"] = blit,
-                        ["Errors"] = ServerStore.GetClusterErrors(),
                         ["Leader"] = ServerStore.LeaderTag,
                         ["CurrentState"] = ServerStore.CurrentState,
                         ["NodeTag"] = nodeTag
-                    });
+                    };
+                    var clusterErrors = ServerStore.GetClusterErrors();
+                    if (clusterErrors.Count > 0)
+                        json["Errors"] = clusterErrors;
+
+                    context.Write(writer, json);
                     writer.Flush();
                 }
             }

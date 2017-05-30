@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using FastTests;
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
 
                 using (var client = new HttpClient())
                 {
-                    var url = $"{documentStore.Url}/databases/{documentStore.Database}/indexes/c-sharp-index-definition?name=MultiMap";
+                    var url = $"{documentStore.Urls.First()}/databases/{documentStore.Database}/indexes/c-sharp-index-definition?name=MultiMap";
                     var response = await client.GetStringAsync(url);
 
                     Assert.Contains("from order in docs.Collection1", response);

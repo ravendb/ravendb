@@ -47,7 +47,7 @@ namespace Raven.Client.Http
                 {
                     using (var blittableJsonReaderObject = context.Read(stream, "raven-topology"))
                     {
-                        return JsonDeserializationClient.ClusterTopology(blittableJsonReaderObject);
+                        return JsonDeserializationClient.Topology(blittableJsonReaderObject);
                     }
                 }
             }

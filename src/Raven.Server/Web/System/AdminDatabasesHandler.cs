@@ -64,7 +64,7 @@ namespace Raven.Server.Web.System
         public Task Get()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
+            
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
@@ -197,7 +197,7 @@ namespace Raven.Server.Web.System
                 }
             }
         }
-
+        
         public bool NotUsingSsl(string url)
         {
             return url.Contains("https:") == false;
@@ -208,7 +208,7 @@ namespace Raven.Server.Web.System
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var nodesAddedTo = new List<string>();
-
+            
             string errorMessage;
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
                 throw new BadRequestException(errorMessage);
@@ -354,7 +354,7 @@ namespace Raven.Server.Web.System
                 if (dbRecord.Topology.RelevantFor(ServerStore.NodeTag))
                 {
                     var db = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name).ThrowOnTimeout();
-                    await db.WaitForIndexNotification(index).ThrowOnTimeout();
+                    await db.RachisLogIndexNotifications.WaitForIndexNotification(index).ThrowOnTimeout();
                 }
                 else
                 {
@@ -410,7 +410,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/modify-watchers", "POST", "/admin/modify-watchers?name={databaseName:string}")]
         public async Task ModifyWatchers()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");  
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
@@ -423,8 +423,9 @@ namespace Raven.Server.Web.System
                     throw new InvalidDataException("NewWatchers property was not found.");
                 }
                 using (context.OpenReadTransaction())
-                {
+                {              
                     var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out long _);
+
                     var watchers = new List<DatabaseWatcher>(watchersBlittable.Length);
                     foreach (BlittableJsonReaderObject watcher in watchersBlittable)
                     {
@@ -432,9 +433,8 @@ namespace Raven.Server.Web.System
                     }
                     var (index, _) = await ServerStore.ModifyDatabaseWatchers(name, watchers).ThrowOnTimeout();
                     await ServerStore.Cluster.WaitForIndexNotification(index).ThrowOnTimeout();
-
+                    
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         context.Write(writer, new DynamicJsonValue
@@ -466,7 +466,7 @@ namespace Raven.Server.Web.System
                 {
                     var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out _);
 
-                    var (index, _) = await ServerStore.ModifyConflictSolverAsync(name, conflictResolver).ThrowOnTimeout();
+                    var (index,_) = await ServerStore.ModifyConflictSolverAsync(name, conflictResolver).ThrowOnTimeout();
                     await ServerStore.Cluster.WaitForIndexNotification(index).ThrowOnTimeout();
                     
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -512,7 +512,7 @@ namespace Raven.Server.Web.System
                 {
                     var (newEtag, _) = await ServerStore.DeleteDatabaseAsync(name, isHardDelete, fromNode).ThrowOnTimeout();
                     etag = newEtag;
-                }
+                    }
                 await ServerStore.Cluster.WaitForIndexNotification(etag).ThrowOnTimeout();
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 

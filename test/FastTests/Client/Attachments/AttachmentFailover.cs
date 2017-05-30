@@ -23,7 +23,7 @@ namespace FastTests.Client.Attachments
             using (var store = new DocumentStore
             {
                 Database = databaseName,
-                Url = leader.WebUrls[0]
+                Urls = leader.WebUrls
             }.Initialize())
             {
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
@@ -58,7 +58,7 @@ namespace FastTests.Client.Attachments
                     var saveChangesOperation = new BatchOperation(session);
                     using (var command = saveChangesOperation.CreateRequest())
                     {
-                        var currentNode = session.RequestExecutor._nodeSelector.CurrentNode;
+                        var currentNode = await session.RequestExecutor.GetCurrentNode();
                         var task = session.RequestExecutor.ExecuteAsync(currentNode, session.Context, command);
                         var currentServer = Servers.Single(x => x.ServerStore.NodeTag == currentNode.ClusterTag);
                         DisposeServerAndWaitForFinishOfDisposal(currentServer);

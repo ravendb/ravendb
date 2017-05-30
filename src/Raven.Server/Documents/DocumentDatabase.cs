@@ -106,7 +106,7 @@ namespace Raven.Server.Documents
             ConfigurationStorage = new ConfigurationStorage(this);
             NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, _databaseShutdown.Token);
             DatabaseInfoCache = serverStore?.DatabaseInfoCache;
-            _rachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
+            RachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
             CatastrophicFailureNotification = new CatastrophicFailureNotification(e =>
             {
                 serverStore?.DatabasesLandlord.UnloadResourceOnCatastrophicFailue(name, e);
@@ -599,13 +599,13 @@ namespace Raven.Server.Documents
             }
             finally
             {
-                _rachisLogIndexNotifications.NotifyListenersAbout(index);
+                RachisLogIndexNotifications.NotifyListenersAbout(index);
             }
         }
 
-        public Task WaitForIndexNotification(long index) => _rachisLogIndexNotifications.WaitForIndexNotification(index, Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan);
+        public Task WaitForIndexNotification(long index) => RachisLogIndexNotifications.WaitForIndexNotification(index, Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan);
 
-        private readonly RachisLogIndexNotifications _rachisLogIndexNotifications;
+        public readonly RachisLogIndexNotifications RachisLogIndexNotifications;
         public byte[] MasterKey;
 
         public IEnumerable<DatabasePerformanceMetrics> GetAllPerformanceMetrics()
