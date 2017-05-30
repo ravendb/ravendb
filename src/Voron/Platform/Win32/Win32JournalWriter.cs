@@ -150,15 +150,17 @@ namespace Voron.Platform.Win32
         {
             if (_readHandle == null)
             {
-                _readHandle = Win32NativeFileMethods.CreateFile(_filename.FullPath,
+                var handle = Win32NativeFileMethods.CreateFile(_filename.FullPath,
                     Win32NativeFileAccess.GenericRead,
                     Win32NativeFileShare.Write | Win32NativeFileShare.Read | Win32NativeFileShare.Delete,
                     IntPtr.Zero,
                     Win32NativeFileCreationDisposition.OpenExisting,
                     Win32NativeFileAttributes.Normal,
                     IntPtr.Zero);
-                if(_readHandle.IsInvalid)
+                if(handle.IsInvalid)
                     throw new IOException("When opening file " + _filename, new Win32Exception(Marshal.GetLastWin32Error()));
+
+                _readHandle = handle;
             }
 
             var nativeOverlapped = (NativeOverlapped*)NativeMemory.AllocateMemory(sizeof(NativeOverlapped));
