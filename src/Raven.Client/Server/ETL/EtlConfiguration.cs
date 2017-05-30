@@ -27,5 +27,7 @@ namespace Raven.Client.Server.ETL
             
             return errors.Count == 0;
         }
+
+        public EtlType EtlType => Destination is RavenDestination ? EtlType.Raven : EtlType.Sql;
     }
 }

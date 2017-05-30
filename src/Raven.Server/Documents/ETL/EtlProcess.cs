@@ -425,6 +425,10 @@ namespace Raven.Server.Documents.ETL
                     {
                         _waitForChanges.Wait(CancellationToken);
                     }
+                    catch (ObjectDisposedException)
+                    {
+                        return;
+                    }
                     catch (OperationCanceledException)
                     {
                         return;

@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.ETL
 
         public EtlLoader(DocumentDatabase database, ServerStore serverStore)
         {
-            Logger = LoggingSource.Instance.GetLogger(_database.Name, GetType().FullName);
+            Logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
 
             _database = database;
             _serverStore = serverStore;
@@ -170,7 +170,7 @@ namespace Raven.Server.Documents.ETL
 
             LoadProcesses();
 
-            // unsubscribe old etls _after_ we start new processes to ensure the tombsone cleaner 
+            // unsubscribe old etls _after_ we start new processes to ensure the tombstone cleaner 
             // constantly keeps track of tombstones processed by ETLs so it won't delete them during etl processes reloading
 
             old.ForEach(x => _database.DocumentTombstoneCleaner.Unsubscribe(x));

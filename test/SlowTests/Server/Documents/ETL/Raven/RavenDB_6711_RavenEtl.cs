@@ -50,7 +50,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses >= 3);
 
-                SetupEtl(src, dest, collections: new string[0], script: null, applyToAllDocuments: true);
+                AddEtl(src, dest, collections: new string[0], script: null, applyToAllDocuments: true);
 
                 using (var session = src.OpenSession())
                 {
@@ -155,7 +155,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses >= 3);
 
-                SetupEtl(src, dest, collections: new string[0], script: "loadToAuditItems({DocumentId:__document_id})", applyToAllDocuments: true);
+                AddEtl(src, dest, collections: new string[0], script: "loadToAuditItems({DocumentId:__document_id})", applyToAllDocuments: true);
 
                 using (var session = src.OpenSession())
                 {
@@ -256,7 +256,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses >= 3);
 
-                SetupEtl(src, dest, collections: new string[0], script: @"
+                AddEtl(src, dest, collections: new string[0], script: @"
 if (this['@metadata']['@collection'] != 'Orders')
     loadToPeople({Name: this.Name})"
                     , applyToAllDocuments: true);

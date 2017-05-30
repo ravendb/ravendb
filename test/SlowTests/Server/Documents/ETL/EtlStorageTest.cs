@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using Raven.Server.Documents.ETL.Providers.Raven;
+using Raven.Client.Server.ETL;
 using Xunit;
 
 namespace SlowTests.Server.Documents.ETL
