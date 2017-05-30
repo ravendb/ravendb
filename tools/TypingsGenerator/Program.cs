@@ -14,6 +14,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Http;
 using Raven.Client.Server;
+using Raven.Client.Server.ETL;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Client.Server.Versioning;
@@ -146,7 +147,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(NewVersionAvailableDetails));
             scripter.AddType(typeof(MessageDetails));
             scripter.AddType(typeof(ExceptionDetails));
-            
+
             // indexes
             scripter.AddType(typeof(IndexStats));
             scripter.AddType(typeof(IndexingStatus));
@@ -224,17 +225,17 @@ namespace TypingsGenerator
             // ongoing tasks
             scripter.AddType(typeof(OngoingTasksResult));
             scripter.AddType(typeof(OngoingTask));
-            scripter.AddType(typeof(OngoingTaskReplication)); 
+            scripter.AddType(typeof(OngoingTaskReplication));
             scripter.AddType(typeof(OngoingTaskETL));
-            scripter.AddType(typeof(OngoingTaskSQL)); 
-            scripter.AddType(typeof(OngoingTaskBackup)); 
+            scripter.AddType(typeof(OngoingTaskSQL));
+            scripter.AddType(typeof(OngoingTaskBackup));
             scripter.AddType(typeof(OngoingTaskType));
             scripter.AddType(typeof(OngoingTaskState));
             scripter.AddType(typeof(OngoingTaskConnectionStatus));
             scripter.AddType(typeof(BackupType));
             scripter.AddType(typeof(NodeId));
-            scripter.AddType(typeof(ModifyExternalReplicationResult)); 
-            scripter.AddType(typeof(DatabaseWatcher)); 
+            scripter.AddType(typeof(ModifyExternalReplicationResult));
+            scripter.AddType(typeof(DatabaseWatcher));
 
             return scripter;
         }
