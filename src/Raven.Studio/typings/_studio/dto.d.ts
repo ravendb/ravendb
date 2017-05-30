@@ -299,6 +299,7 @@ interface clusterTopologyDto {
 }
 
 type clusterNodeType = "Member" | "Promotable" | "Watcher";
+type databaseGroupNodeType = "Member" | "Promotable" | "Watcher";
 
 type patchOption = "Document" | "Collection" | "Index";
 

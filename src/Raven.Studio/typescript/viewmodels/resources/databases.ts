@@ -18,7 +18,7 @@ import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import databaseInfo = require("models/resources/info/databaseInfo");
 import messagePublisher = require("common/messagePublisher");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
-import clusterNode = require("models/database/cluster/clusterNode");
+import databaseGroupNode = require("models/resources/info/databaseGroupNode");
 
 class databases extends viewModelBase {
 
@@ -178,7 +178,7 @@ class databases extends viewModelBase {
         });
     }
 
-    createAllDocumentsUrlObservableForNode(dbInfo: databaseInfo, node: clusterNode) {
+    createAllDocumentsUrlObservableForNode(dbInfo: databaseInfo, node: databaseGroupNode) {
         return ko.pureComputed(() => {
             const currentNodeTag = this.clusterManager.nodeTag();
             const nodeTag = node.tag();
