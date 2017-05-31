@@ -2,13 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
-using Raven.Server.Extensions;
+using Raven.Client.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
@@ -64,7 +62,7 @@ namespace Raven.Server.Rachis
             StateMachine.OnSnapshotInstalled(context, lastIncludedIndex);
         }
 
-        public override async Task<Stream> ConenctToPeer(string url, string apiKey, TransactionOperationContext context = null)
+        public override async Task<Stream> ConnectToPeer(string url, string apiKey, TransactionOperationContext context = null)
         {
             return await StateMachine.ConnectToPeer(url, apiKey);
         }
@@ -90,10 +88,7 @@ namespace Raven.Server.Rachis
         }
 
         public State CurrentState { get; private set; }
-        public TimeoutEvent Timeout { get; private set; }
 
-
-        public TimeSpan RemoteOperationTimeout;
 
         public string LastStateChangeReason => _lastStateChangeReason;
 
@@ -108,7 +103,6 @@ namespace Raven.Server.Rachis
 
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
-
         public long CurrentTerm { get; private set; }
         public string Tag => _tag;
 
@@ -121,8 +115,6 @@ namespace Raven.Server.Rachis
         private static readonly Slice LastTruncatedSlice;
         private static readonly Slice TopologySlice;
         private static readonly Slice TagSlice;
-
-
 
         internal static readonly Slice EntriesSlice;
         internal static readonly TableSchema LogsTable;
@@ -156,7 +148,19 @@ namespace Raven.Server.Rachis
             });
         }
 
-        public TimeSpan ElectionTimeout;
+        public TimeSpan ElectionTimeout
+        {
+            get => _electionTimeout;
+            private set => _electionTimeout = value;
+        }
+
+        public TimeoutEvent Timeout { get; private set; }
+
+        public TimeSpan OperationTimeout
+        {
+            get => _operationTimeout;
+            private set => _operationTimeout = value;
+        }
 
         private Leader _currentLeader;
         public Leader CurrentLeader => _currentLeader;
@@ -178,11 +182,11 @@ namespace Raven.Server.Rachis
             {
                 _persistentState = env;
 
-                RemoteOperationTimeout = configuration.ClusterOperationTimeout.AsTimeSpan;
+                OperationTimeout = configuration.ClusterOperationTimeout.AsTimeSpan;
                 ElectionTimeout = configuration.ElectionTimeout.AsTimeSpan;
 
-                MiscUtils.LongTimespanIfDebugging(ref RemoteOperationTimeout);
-                MiscUtils.LongTimespanIfDebugging(ref ElectionTimeout);
+                MiscUtils.LongTimespanIfDebugging(ref _operationTimeout);
+                MiscUtils.LongTimespanIfDebugging(ref _electionTimeout);
 
                 ContextPool = new TransactionContextPool(_persistentState);
 
@@ -215,7 +219,7 @@ namespace Raven.Server.Rachis
                 }
                 //We want to be able to reproduce rare issues that are related to timing
                 var rand = _seed.HasValue ? new Random(_seed.Value) : new Random();
-                Timeout = new TimeoutEvent(rand.Next((int)(ElectionTimeout.TotalMilliseconds / 3 * 2),(int)ElectionTimeout.TotalMilliseconds));
+                Timeout = new TimeoutEvent(rand.Next((int)(ElectionTimeout.TotalMilliseconds / 3 * 2), (int)ElectionTimeout.TotalMilliseconds));
 
                 // if we don't have a topology id, then we are passive
                 // an admin needs to let us know that it is fine, either
@@ -269,7 +273,6 @@ namespace Raven.Server.Rachis
         }
 
         protected abstract void InitializeState(TransactionOperationContext context);
-
 
         public async Task WaitForState(State state)
         {
@@ -434,13 +437,17 @@ namespace Raven.Server.Rachis
             leader.Start();
         }
 
-        public Task<(long Etag, object Result)> PutAsync(CommandBase cmd)
+        public async Task<(long Etag, object Result)> PutAsync(CommandBase cmd)
         {
             var leader = _currentLeader;
             if (leader == null)
                 throw new NotLeadingException("Not a leader, cannot accept commands. " + _lastStateChangeReason);
 
-            return leader.PutAsync(cmd);
+            var putTask = leader.PutAsync(cmd);
+            if (await putTask.WaitWithTimeout(OperationTimeout) == false)
+                throw new TimeoutException($"Waited for {OperationTimeout} but the command was not applied in this time.");
+
+            return await putTask;
         }
 
         public void SwitchToCandidateStateOnTimeout()
@@ -584,7 +591,7 @@ namespace Raven.Server.Rachis
                     {
                         throw new TopologyMismatchException(
                             $"{initialMessage.DebugSourceIdentifier} attempted to connect to us with topology id {initialMessage.TopologyId} but our topology id is already set ({clusterTopology.TopologyId}). " +
-                            $"Rejecting connection from outside our cluster, this is likely an old server trying to connect to us.");
+                            "Rejecting connection from outside our cluster, this is likely an old server trying to connect to us.");
                     }
 
                     if (_tag == "?")
@@ -603,7 +610,7 @@ namespace Raven.Server.Rachis
                         {
                             throw new TopologyMismatchException(
                                 $"{initialMessage.DebugSourceIdentifier} attempted to connect to us with tag {initialMessage.DebugDestinationIdentifier} but our tag is already set ({_tag}). " +
-                                $"Rejecting connection from confused server, this is likely an old server trying to connect to us, or bad network configuration.");
+                                "Rejecting connection from confused server, this is likely an old server trying to connect to us, or bad network configuration.");
                         }
                     }
 
@@ -618,7 +625,7 @@ namespace Raven.Server.Rachis
                             follower.TryAcceptConnection();
                             break;
                         default:
-                            throw new ArgumentOutOfRangeException("Uknown initial message value: " +
+                            throw new ArgumentOutOfRangeException("Unknown initial message value: " +
                                                                   initialMessage.InitialMessageType +
                                                                   ", no idea how to handle it");
                     }
@@ -630,7 +637,7 @@ namespace Raven.Server.Rachis
                         using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                             remoteConnection.Send(context, e);
                     }
-                    catch 
+                    catch
                     {
                         // errors here do not matter
                     }
@@ -677,7 +684,7 @@ namespace Raven.Server.Rachis
             }
             else
             {
-                GetLastTruncated(context, out lastIndex, out long lastIndexTerm);
+                GetLastTruncated(context, out lastIndex, out long _);
             }
             lastIndex += 1;
             using (table.Allocate(out TableValueBuilder tvb))
@@ -692,7 +699,7 @@ namespace Raven.Server.Rachis
             return lastIndex;
         }
 
-        public unsafe void ClearLogEntriesAndSetLastTrancate(TransactionOperationContext context, long index, long term)
+        public unsafe void ClearLogEntriesAndSetLastTruncate(TransactionOperationContext context, long index, long term)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
             while (true)
@@ -799,7 +806,7 @@ namespace Raven.Server.Rachis
                     firstIndexInEntriesThatWeHaveNotSeen++;
                 }
                 if (firstIndexInEntriesThatWeHaveNotSeen >= entries.Count)
-                    return null; // we have all of those entires in our log, so we can safely ignore them
+                    return null; // we have all of those entries in our log, so we can safely ignore them
 
                 var firstEntry = entries[firstIndexInEntriesThatWeHaveNotSeen];
                 //While we do support the case where we get the same entries, we expect them to have the same index/term up to the commit index.
@@ -828,7 +835,7 @@ namespace Raven.Server.Rachis
                         if (term == entry.Term)
                             continue; // same, can skip
 
-                        // we have found a divergence in the log, and we now need to trucate it from this
+                        // we have found a divergence in the log, and we now need to truncate it from this
                         // location forward
                         do
                         {
@@ -976,7 +983,7 @@ namespace Raven.Server.Rachis
 
         public async Task WaitForCommitIndexChange(CommitIndexModification modification, long value)
         {
-            var timeoutTask = TimeoutManager.WaitFor(RemoteOperationTimeout);
+            var timeoutTask = TimeoutManager.WaitFor(OperationTimeout);
             while (timeoutTask.IsCompleted == false)
             {
                 var task = _commitIndexChanged.Task;
@@ -1167,7 +1174,7 @@ namespace Raven.Server.Rachis
             ContextPool?.Dispose();
         }
 
-        public abstract Task<Stream> ConenctToPeer(string url, string apiKey, TransactionOperationContext context = null);
+        public abstract Task<Stream> ConnectToPeer(string url, string apiKey, TransactionOperationContext context = null);
 
         public void Bootstarp(string selfUrl)
         {
@@ -1307,6 +1314,8 @@ namespace Raven.Server.Rachis
         }
 
         private long _leaderTime;
+        private TimeSpan _operationTimeout;
+        private TimeSpan _electionTimeout;
 
         public void ReportLeaderTime(long leaderTime)
         {

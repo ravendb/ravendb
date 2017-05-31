@@ -94,7 +94,7 @@ namespace Raven.Server.Rachis
                             TransactionOperationContext context;
                             using (_engine.ContextPool.AllocateOperationContext(out context))
                             {
-                                stream = _engine.ConenctToPeer(_url, _apiKey, context).Result;
+                                stream = _engine.ConnectToPeer(_url, _apiKey, context).Result;
                             }
                         }
                         catch (Exception e)

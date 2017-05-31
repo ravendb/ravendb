@@ -76,7 +76,7 @@ namespace Raven.Server.Rachis
                             TransactionOperationContext context;
                             using (_engine.ContextPool.AllocateOperationContext(out context))
                             {
-                                _conenctToPeer = _engine.ConenctToPeer(_url, _apiKey, context).Result; 
+                                _conenctToPeer = _engine.ConnectToPeer(_url, _apiKey, context).Result; 
                             }
 
                             if (_candidate.Running == false)

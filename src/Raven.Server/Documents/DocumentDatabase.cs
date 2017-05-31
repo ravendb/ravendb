@@ -4,13 +4,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Server;
 using Raven.Client.Util;
 using Raven.Server.Config;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Operations;
@@ -576,7 +574,7 @@ namespace Raven.Server.Documents
         /// this event is intended for entities that are not singeltons 
         /// per database and still need to be informed on changes to the database record.
         /// </summary>
-        public event Action DatabaseRecordchanged;
+        public event Action DatabaseRecordChanged;
 
         public void StateChanged(long index)
         {
@@ -591,7 +589,7 @@ namespace Raven.Server.Documents
                 ReplicationLoader?.HandleDatabaseRecordChange();
                 SubscriptionStorage?.HandleDatabaseValueChange();
                 EtlLoader?.HandleDatabaseRecordChange();
-                OnDatabaseRecordchanged();
+                OnDatabaseRecordChanged();
             }
             catch
             {
@@ -604,8 +602,6 @@ namespace Raven.Server.Documents
             }
         }
 
-        public Task WaitForIndexNotification(long index) => RachisLogIndexNotifications.WaitForIndexNotification(index, Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan);
-
         public readonly RachisLogIndexNotifications RachisLogIndexNotifications;
         public byte[] MasterKey;
 
@@ -615,9 +611,9 @@ namespace Raven.Server.Documents
             yield return TxMerger.TransactionPerformanceMetrics;
         }
 
-        private void OnDatabaseRecordchanged()
+        private void OnDatabaseRecordChanged()
         {
-            DatabaseRecordchanged?.Invoke();
+            DatabaseRecordChanged?.Invoke();
         }
     }
 
