@@ -26,13 +26,13 @@ namespace Raven.Server.Documents
 
         public void Initialize()
         {
-            Database.DatabaseRecordchanged += LoadCustomFunctions;
+            Database.DatabaseRecordChanged += LoadCustomFunctions;
             LoadCustomFunctions();
         }
 
         public void Dispose()
         {
-            Database.DatabaseRecordchanged -= LoadCustomFunctions;
+            Database.DatabaseRecordChanged -= LoadCustomFunctions;
         }
 
         protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)

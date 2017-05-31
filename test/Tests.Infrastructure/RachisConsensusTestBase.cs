@@ -8,6 +8,8 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
@@ -119,19 +121,16 @@ namespace Tests.Infrastructure
                 _count--;
             }
 
-
             var url = "tcp://localhost:" + ((IPEndPoint)tcpListener.LocalEndpoint).Port + "/?" + caller + "#" + ch;
-
 
             var server = StorageEnvironmentOptions.CreateMemoryOnly();
 
             int seed = PredictableSeeds ? _random.Next(int.MaxValue) : _count;
             var rachis = new RachisConsensus<CountingStateMachine>(seed);
             var storageEnvironment = new StorageEnvironment(server);
-            rachis.Initialize(storageEnvironment, new ClusterConfiguration
-            {
-                ElectionTimeout = new TimeSetting(300, TimeUnit.Milliseconds)
-            });
+            var configuration = new RavenConfiguration(caller, ResourceType.Server);
+            configuration.Initialize();
+            rachis.Initialize(storageEnvironment, configuration.Cluster);
             rachis.OnDispose += (sender, args) =>
             {
                 storageEnvironment.Dispose();

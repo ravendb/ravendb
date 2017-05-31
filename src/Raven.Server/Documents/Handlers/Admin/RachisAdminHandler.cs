@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
-using Raven.Server.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -26,7 +25,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                 var command = CommandBase.CreateFrom(commandJson);
 
-                var (etag, result) = await ServerStore.PutCommandAsync(command).ThrowOnTimeout();
+                var (etag, result) = await ServerStore.PutCommandAsync(command);
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -45,9 +44,9 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
-            using(context.OpenReadTransaction())
+            using (context.OpenReadTransaction())
             {
-                
+
                 var topology = ServerStore.GetClusterTopology(context);
                 var nodeTag = ServerStore.NodeTag;
 
@@ -68,9 +67,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                     nodeTag = "A";
                 }
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                
+
                 var blit = EntityToBlittable.ConvertEntityToBlittable(topology, DocumentConventions.Default, context);
-                
+
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     var json = new DynamicJsonValue
@@ -134,13 +133,13 @@ namespace Raven.Server.Documents.Handlers.Admin
             ServerStore.EnsureNotPassive();
             if (ServerStore.IsLeader())
             {
-                await ServerStore.AddNodeToClusterAsync(serverUrl).ThrowOnTimeout();
+                await ServerStore.AddNodeToClusterAsync(serverUrl);
                 NoContentStatus();
                 return;
             }
             RedirectToLeader();
         }
-        
+
         [RavenAction("/admin/cluster/remove-node", "DELETE", "/admin/cluster/remove-node?nodeTag={nodeTag:string}")]
         public async Task DeleteNode()
         {
@@ -148,7 +147,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             ServerStore.EnsureNotPassive();
             if (ServerStore.IsLeader())
             {
-                await ServerStore.RemoveFromClusterAsync(serverUrl).ThrowOnTimeout();
+                await ServerStore.RemoveFromClusterAsync(serverUrl);
                 NoContentStatus();
                 return;
             }
@@ -179,7 +178,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             var leaderLocation = url + HttpContext.Request.Path + HttpContext.Request.QueryString;
             HttpContext.Response.StatusCode = (int)HttpStatusCode.TemporaryRedirect;
             HttpContext.Response.Headers.Remove("Content-Type");
-            HttpContext.Response.Headers.Add("Location",leaderLocation);
+            HttpContext.Response.Headers.Add("Location", leaderLocation);
         }
     }
 }

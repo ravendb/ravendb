@@ -616,7 +616,7 @@ namespace Raven.Server.ServerWide
                 case EtlType.Raven:
                     if (isNew)
                         command = new AddRavenEtlCommand(JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration), databaseName);
-                    else 
+                    else
                         command = new UpdateRavenEtlCommand(JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration), databaseName);
                     break;
                 case EtlType.Sql:
@@ -635,7 +635,7 @@ namespace Raven.Server.ServerWide
         public async Task<(long, object)> DeleteEtl(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject etlConfigurationName, EtlType type)
         {
             etlConfigurationName.TryGet("Name", out LazyStringValue configurationName);
-           
+
             var command = new DeleteEtlCommand(configurationName, type, databaseName);
 
             return await SendToLeaderAsync(command);
@@ -893,10 +893,8 @@ namespace Raven.Server.ServerWide
         private async Task<(long Etag, object Result)> SendToLeaderAsyncInternal(CommandBase cmd)
         {
             //I think it is reasonable to expect timeout twice of error retry
-            var timeout = Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan;
-            var timeoutTask = TimeoutManager.WaitFor(timeout, _shutdownNotification.Token);
+            var timeoutTask = TimeoutManager.WaitFor(Engine.OperationTimeout, _shutdownNotification.Token);
 
-            MiscUtils.LongTimespanIfDebugging(ref timeout);
             while (true)
             {
                 ServerShutdown.ThrowIfCancellationRequested();
@@ -958,13 +956,13 @@ namespace Raven.Server.ServerWide
 
                 var command = new PutRaftCommand(context, cmdJson);
 
-                if (_clusterRequestExecutor == null)
-                    _clusterRequestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, clusterTopology.ApiKey);
-                else if (_clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false ||
-                         _clusterRequestExecutor.ApiKey?.Equals(clusterTopology.ApiKey) == false)
+                if (_clusterRequestExecutor == null 
+                    || _clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false 
+                    || _clusterRequestExecutor.ApiKey?.Equals(clusterTopology.ApiKey) == false)
                 {
-                    _clusterRequestExecutor.Dispose();
+                    _clusterRequestExecutor?.Dispose();
                     _clusterRequestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, clusterTopology.ApiKey);
+                    _clusterRequestExecutor.DefaultTimeout = Engine.OperationTimeout;
                 }
 
                 await _clusterRequestExecutor.ExecuteAsync(command, context, ServerShutdown);

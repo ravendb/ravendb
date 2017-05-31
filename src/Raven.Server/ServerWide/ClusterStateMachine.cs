@@ -207,7 +207,7 @@ namespace Raven.Server.ServerWide
 
         public async Task WaitForIndexNotification(long index)
         {
-            await _rachisLogIndexNotifications.WaitForIndexNotification(index, _parent.RemoteOperationTimeout);
+            await _rachisLogIndexNotifications.WaitForIndexNotification(index, _parent.OperationTimeout);
         }
 
         private unsafe void RemoveNodeFromDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)

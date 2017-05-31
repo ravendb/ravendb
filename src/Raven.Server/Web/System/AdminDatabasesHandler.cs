@@ -177,7 +177,7 @@ namespace Raven.Server.Web.System
                     });
                 }
 
-                var (newEtag, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, etag).ThrowOnTimeout();
+                var (newEtag, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, etag);
                 await ServerStore.Cluster.WaitForIndexNotification(newEtag);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -241,7 +241,7 @@ namespace Raven.Server.Web.System
                     databaseRecord.Topology = topology = AssignNodesToDatabase(context, factor, name, out nodesAddedTo);
                 }
 
-                var (newEtag, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, etag).ThrowOnTimeout();
+                var (newEtag, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, etag);
                 await ServerStore.Cluster.WaitForIndexNotification(newEtag);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -305,13 +305,13 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/expiration/config", "POST", "/admin/config-expiration?name={databaseName:string}")]
         public async Task ConfigExpirationBundle()
         {
-            await DatabaseConfigurations(ServerStore.ModifyDatabaseExpiration, "read-expiration-config").ThrowOnTimeout();
+            await DatabaseConfigurations(ServerStore.ModifyDatabaseExpiration, "read-expiration-config");
         }
 
         [RavenAction("/admin/versioning/config", "POST", "/admin/config-versioning?name={databaseName:string}")]
         public async Task ConfigVersioning()
         {
-            await DatabaseConfigurations(ServerStore.ModifyDatabaseVersioning, "read-versioning-config").ThrowOnTimeout();
+            await DatabaseConfigurations(ServerStore.ModifyDatabaseVersioning, "read-versioning-config");
         }
 
         [RavenAction("/admin/periodic-backup/update", "POST", "/admin/config-periodic-backup?name={databaseName:string}")]
@@ -426,7 +426,7 @@ namespace Raven.Server.Web.System
                     throw new InvalidDataException("Functions property was not found.");
                 }
 
-                var (etag, _) = await ServerStore.ModifyCustomFunctions(name, functions).ThrowOnTimeout();
+                var (etag, _) = await ServerStore.ModifyCustomFunctions(name, functions);
                 await ServerStore.Cluster.WaitForIndexNotification(etag);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -466,7 +466,7 @@ namespace Raven.Server.Web.System
                     {
                         watchers.Add(JsonDeserializationClient.DatabaseWatcher(watcher));
                     }
-                    var (etag, _) = await ServerStore.ModifyDatabaseWatchers(name, watchers).ThrowOnTimeout();
+                    var (etag, _) = await ServerStore.ModifyDatabaseWatchers(name, watchers);
                     await ServerStore.Cluster.WaitForIndexNotification(etag);
 
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -501,7 +501,7 @@ namespace Raven.Server.Web.System
                 {
                     var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out _);
 
-                    var (etag, _) = await ServerStore.ModifyConflictSolverAsync(name, conflictResolver).ThrowOnTimeout();
+                    var (etag, _) = await ServerStore.ModifyConflictSolverAsync(name, conflictResolver);
                     await ServerStore.Cluster.WaitForIndexNotification(etag);
 
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -545,7 +545,7 @@ namespace Raven.Server.Web.System
                 long etag = -1;
                 foreach (var name in names)
                 {
-                    var (newEtag, _) = await ServerStore.DeleteDatabaseAsync(name, isHardDelete, fromNode).ThrowOnTimeout();
+                    var (newEtag, _) = await ServerStore.DeleteDatabaseAsync(name, isHardDelete, fromNode);
                     etag = newEtag;
                 }
                 await ServerStore.Cluster.WaitForIndexNotification(etag);
@@ -565,13 +565,13 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/databases/disable", "POST", "/admin/databases/disable?name={resourceName:string|multiple}")]
         public async Task DisableDatabases()
         {
-            await ToggleDisableDatabases(disableRequested: true).ThrowOnTimeout();
+            await ToggleDisableDatabases(disableRequested: true);
         }
 
         [RavenAction("/admin/databases/enable", "POST", "/admin/databases/enable?name={resourceName:string|multiple}")]
         public async Task EnableDatabases()
         {
-            await ToggleDisableDatabases(disableRequested: false).ThrowOnTimeout();
+            await ToggleDisableDatabases(disableRequested: false);
         }
 
         private async Task ToggleDisableDatabases(bool disableRequested)
@@ -622,7 +622,7 @@ namespace Raven.Server.Web.System
 
                     databaseRecord.Disabled = disableRequested;
 
-                    var (etag, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, null).ThrowOnTimeout();
+                    var (etag, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, null);
                     await ServerStore.Cluster.WaitForIndexNotification(etag);
 
                     context.Write(writer, new DynamicJsonValue

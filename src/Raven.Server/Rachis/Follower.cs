@@ -266,7 +266,7 @@ namespace Raven.Server.Rachis
                             $"Follower {_engine.Tag}: Installed snapshot with last index={snapshot.LastIncludedIndex} with LastIncludedTerm={snapshot.LastIncludedTerm} ");
                     }
                     _engine.SetLastCommitIndex(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
-                    _engine.ClearLogEntriesAndSetLastTrancate(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
+                    _engine.ClearLogEntriesAndSetLastTruncate(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
                 }
                 else
                 {
