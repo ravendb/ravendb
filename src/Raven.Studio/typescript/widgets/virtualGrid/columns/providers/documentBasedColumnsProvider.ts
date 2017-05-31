@@ -4,6 +4,7 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
+import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import document = require("models/database/documents/document");
@@ -16,6 +17,7 @@ type documentBasedColumnsProviderOpts = {
     showRowSelectionCheckbox?: boolean;
     enableInlinePreview?: boolean;
     showSelectAllCheckbox?: boolean;
+    createHyperlinks?: boolean;
 }
 
 class documentBasedColumnsProvider {
@@ -26,6 +28,7 @@ class documentBasedColumnsProvider {
     private readonly collectionNames: string[];
     private readonly db: database;
     private readonly enableInlinePreview: boolean;
+    private readonly createHyperlinks: boolean;
     private readonly showSelectAllCheckbox: boolean;
 
     private static readonly externalIdRegex = /^\w+\/\w+/ig;
@@ -36,6 +39,7 @@ class documentBasedColumnsProvider {
         this.db = db;
         this.enableInlinePreview = _.isBoolean(opts.enableInlinePreview) ? opts.enableInlinePreview : false;
         this.showSelectAllCheckbox = _.isBoolean(opts.showSelectAllCheckbox) ? opts.showSelectAllCheckbox : false;
+        this.createHyperlinks = _.isBoolean(opts.createHyperlinks) ? opts.createHyperlinks : true;
     }
 
     findColumns(viewportWidth: number, results: pagedResult<document>): virtualColumn[] {
@@ -62,11 +66,18 @@ class documentBasedColumnsProvider {
         const columnWidth = Math.floor(remainingSpaceForOtherColumns / columnNames.length) + "px";
 
         return initialColumns.concat(columnNames.map(p => {
-            if (p === "__metadata") {
-                return new hyperlinkColumn((x: document) => x.getId(), x => appUrl.forEditDoc(x.getId(), this.db), "Id", columnWidth);
-            }
+            if (this.createHyperlinks) {
+                if (p === "__metadata") {
+                    return new hyperlinkColumn((x: document) => x.getId(), x => appUrl.forEditDoc(x.getId(), this.db), "Id", columnWidth);
+                }
 
-            return new hyperlinkColumn(p, _.partial(this.findLink, _, p).bind(this), p, columnWidth);
+                return new hyperlinkColumn(p, _.partial(this.findLink, _, p).bind(this), p, columnWidth);
+            } else {
+                if (p === "__metadata") {
+                    return new textColumn((x: document) => x.getId(), "Id", columnWidth);
+                }
+                return new textColumn(p, p, columnWidth);
+            }
         }));
     }
 
