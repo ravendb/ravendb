@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -9,9 +10,9 @@ namespace Raven.Server.Json
 {
     public static class JsonDeserializationValidator
     {
+        [Conditional("DEBUG")]
         public static void Validate()
         {
-#if DEBUG
             var exceptions = new List<Exception>();
             var assembly = typeof(JsonDeserializationValidator).GetTypeInfo().Assembly;
             foreach (var type in assembly.GetTypes())
@@ -33,7 +34,6 @@ namespace Raven.Server.Json
                 return;
 
             throw new AggregateException(exceptions);
-#endif
         }
     }
 }

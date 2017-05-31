@@ -148,7 +148,7 @@ namespace Raven.Server.ServerWide
             {
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
-                updateCommand = JsonDeserializationCluster.UpdateValueCommands[type](cmd);
+                updateCommand = (UpdateValueForDatabaseCommand)JsonDeserializationCluster.Commands[type](cmd);
 
                 var record = ReadDatabase(context, updateCommand.DatabaseName);
                 if (record == null)
@@ -411,16 +411,16 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, dbKey, out Slice valueName))
                 using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
                 {
-                    var doc = ReadInternal(context, out long etag, valueNameLowered);
+                    var databaseRecordJson = ReadInternal(context, out long etag, valueNameLowered);
 
-                    if (doc == null)
+                    if (databaseRecordJson == null)
                     {
                         NotifyLeaderAboutError(index, leader, new DatabaseDoesNotExistException($"Cannot execute update command of type {type} for {databaseName} because it does not exists"));
                         return null;
                     }
 
-                    databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
-                    var updateCommand = JsonDeserializationCluster.UpdateDatabaseCommands[type](cmd);
+                    databaseRecord = JsonDeserializationCluster.DatabaseRecord(databaseRecordJson);
+                    var updateCommand = (UpdateDatabaseCommand)JsonDeserializationCluster.Commands[type](cmd);
 
                     if (updateCommand.Etag != null && etag != updateCommand.Etag.Value)
                     {
