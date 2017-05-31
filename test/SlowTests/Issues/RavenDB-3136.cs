@@ -36,11 +36,16 @@ namespace SlowTests.Issues
 
                     Assert.Equal(resultInteger.Results.Count, 1);
                     Assert.Equal(resultInteger.Results.First().Value.Values.Count(), 2);
-                    var sorted = resultInteger.Results.First().Value.Values.Select(valueValue => valueValue.Range).ToList();
-                    sorted.Sort();
-                    Assert.Equal(sorted.First(), "2");
+                    Assert.Equal(GetFirstSortedRangeString(resultInteger), "2");
                 }
             }
+        }
+
+        private static string GetFirstSortedRangeString(Raven.Client.Documents.Commands.FacetedQueryResult resultInteger)
+        {
+            var sorted = resultInteger.Results.First().Value.Values.Select(valueValue => valueValue.Range).ToList();
+            sorted.Sort();
+            return sorted.First();
         }
 
         [Fact]
@@ -68,7 +73,7 @@ namespace SlowTests.Issues
 
                     Assert.Equal(resultInteger.Results.Count, 1);
                     Assert.Equal(resultInteger.Results.First().Value.Values.Count(), 2);
-                    Assert.Equal(resultInteger.Results.First().Value.Values.First().Range, "2");
+                    Assert.Equal(GetFirstSortedRangeString(resultInteger), "2");
                 }
             }
         }
@@ -100,7 +105,7 @@ namespace SlowTests.Issues
 
                     Assert.Equal(resultString.Results.Count, 1);
                     Assert.Equal(resultString.Results.First().Value.Values.Count(), 2);
-                    Assert.Equal(resultString.Results.First().Value.Values.First().Range, "2");
+                    Assert.Equal(GetFirstSortedRangeString(resultString), "2");
                 }
             }
         }
