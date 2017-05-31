@@ -39,18 +39,13 @@ namespace Raven.Server.Documents
         {
             lock(this)
             {
-                TransactionOperationContext context;
-                using (_serverStore.ContextPool.AllocateOperationContext(out context))
-                {
-                    context.OpenReadTransaction();
-                    var dbRecord = _serverStore.Cluster.ReadDatabase(context, _database.Name);
-                    if (dbRecord == null)
-                        return;
+                var dbRecord = _serverStore.LoadDatabaseRecord(_database.Name);
+                if (dbRecord == null)
+                    return;
 
-                    VersioningStorage = VersioningStorage.LoadConfigurations(_database, dbRecord, VersioningStorage);
-                    ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(_database, dbRecord, ExpiredDocumentsCleaner);
-                    PeriodicBackupRunner.UpdateConfigurations(dbRecord);
-                }
+                VersioningStorage = VersioningStorage.LoadConfigurations(_database, dbRecord, VersioningStorage);
+                ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(_database, dbRecord, ExpiredDocumentsCleaner);
+                PeriodicBackupRunner.UpdateConfigurations(dbRecord);
             }
         }
 

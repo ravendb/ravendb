@@ -343,7 +343,7 @@ namespace Raven.Server.Documents.Replication
             if (_isInitialized) //precaution -> probably not necessary, but still...
                 return;
 
-            var record = LoadDatabaseRecord();
+            var record = _server.LoadDatabaseRecord(Database.Name);
 
             ConflictSolverConfig = record?.ConflictSolverConfig;
             ConflictResolver = new ResolveConflictOnReplicationConfigurationChange(this, _log);
@@ -361,7 +361,7 @@ namespace Raven.Server.Documents.Replication
 
         public void HandleDatabaseRecordChange()
         {
-            var newRecord = LoadDatabaseRecord();
+            var newRecord = _server.LoadDatabaseRecord(Database.Name);
             HandleConflictResolverChange(newRecord);
             HandleTopologyChange(newRecord, out var instancesToDispose); // this function is done under lock
             foreach (var instance in instancesToDispose)
@@ -491,16 +491,6 @@ namespace Raven.Server.Documents.Replication
 
             _numberOfSiblings = 0;
             StartOutgoingConnections(Destinations);
-        }
-
-        private DatabaseRecord LoadDatabaseRecord()
-        {
-            TransactionOperationContext context;
-            using (_server.ContextPool.AllocateOperationContext(out context))
-            using (context.OpenReadTransaction())
-            {
-                return _server.Cluster.ReadDatabase(context, Database.Name);
-            }
         }
 
         private void AddAndStartOutgoingReplication(ReplicationNode node)

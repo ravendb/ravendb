@@ -880,6 +880,15 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public DatabaseRecord LoadDatabaseRecord(string databaseName, out long etag)
+        {
+            TransactionOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
+            {
+                return Cluster.ReadDatabase(context, databaseName, out etag);
+            }
+        }
 
         private async Task<(long Etag, object Result)> SendToLeaderAsyncInternal(CommandBase cmd)
         {
