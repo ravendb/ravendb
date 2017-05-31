@@ -185,6 +185,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SqlDestination));
             scripter.AddType(typeof(EtlProcessStatistics));
             scripter.AddType(typeof(SimulateSqlEtl));
+            scripter.AddType(typeof(SqlEtlTable)); 
 
             // backup
             //TODO: scripter.AddType(typeof(PeriodicBackupConfiguration));

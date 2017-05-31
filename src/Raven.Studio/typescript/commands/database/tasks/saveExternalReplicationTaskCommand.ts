@@ -6,10 +6,10 @@ class saveExternalReplicationTaskCommand extends commandBase {
    
     private externalReplicationToSend: Raven.Client.Server.DatabaseWatcher;
 
-    constructor(private newRepTask: externalReplicationDataFromUI, private db: database, private taskId?: number) {
+    constructor(private newRepTask: externalReplicationDataFromUI, private db: database, private taskId: string) {
         super();
 
-        const taskIdToSend = this.taskId ? this.taskId.toString() : null;
+        //const taskIdToSend = this.taskId ? this.taskId.toString() : null;
 
         this.externalReplicationToSend = {
             // From UI:
@@ -17,7 +17,7 @@ class saveExternalReplicationTaskCommand extends commandBase {
             Database: newRepTask.DestinationDB,
             Url: newRepTask.DestinationURL,
             // Other vals:
-            CurrentTaskId: taskIdToSend
+            TaskId: taskId
         } as Raven.Client.Server.DatabaseWatcher;
     }
 

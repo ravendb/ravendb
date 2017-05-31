@@ -106,7 +106,6 @@ class ongoingTasks extends viewModelBase {
     }
 
     removeOngoingTask(args: ongoingTaskModel) {
-      
         const confirmDeleteViewModel = new deleteOngoingTaskConfirm(this.activeDatabase(), args.taskType(), args.taskId);
         app.showBootstrapDialog(confirmDeleteViewModel);
     }

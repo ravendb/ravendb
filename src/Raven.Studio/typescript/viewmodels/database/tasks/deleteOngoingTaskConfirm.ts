@@ -9,7 +9,7 @@ class deleteOngoingTaskConfirm extends confirmViewModelBase<deleteDatabaseConfir
     deleteTask = $.Deferred<boolean>();
     taskTypeStr = ko.observable<Raven.Server.Web.System.OngoingTaskType>();
 
-    constructor(private db: database, taskType: Raven.Server.Web.System.OngoingTaskType, private taskId: number) {
+    constructor(private db: database, taskType: Raven.Server.Web.System.OngoingTaskType, private taskId: string) {
         super();
         this.taskTypeStr(taskType);
     }
