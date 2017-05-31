@@ -227,8 +227,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OngoingTasksResult));
             scripter.AddType(typeof(OngoingTask));
             scripter.AddType(typeof(OngoingTaskReplication));
-            scripter.AddType(typeof(OngoingTaskETL));
-            scripter.AddType(typeof(OngoingTaskSQL));
+            scripter.AddType(typeof(OngoingRavenEtl));
+            scripter.AddType(typeof(OngoingSqlEtl));
             scripter.AddType(typeof(OngoingTaskBackup));
             scripter.AddType(typeof(OngoingTaskType));
             scripter.AddType(typeof(OngoingTaskState));

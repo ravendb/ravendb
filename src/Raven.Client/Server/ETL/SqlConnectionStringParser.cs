@@ -6,7 +6,7 @@ namespace Raven.Client.Server.ETL
 {
     internal class SqlConnectionStringParser
     {
-        internal static string GetDatabaseAndServerFromConnectionString(string factoryName, string connectionString)
+        internal static (string Database, string Server) GetDatabaseAndServerFromConnectionString(string factoryName, string connectionString)
         {
             string database;
             string server;
@@ -37,7 +37,7 @@ namespace Raven.Client.Server.ETL
                     throw new NotSupportedException($"Factory '{factoryName}' is not supported");
             }
 
-            return $"{database}@{server}";
+            return (database, server);
         }
 
         private static string GetConnectionStringValue(string connectionString, string[] keyNames, bool throwIfNotFound = true)
