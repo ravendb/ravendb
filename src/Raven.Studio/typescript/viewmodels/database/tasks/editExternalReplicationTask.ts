@@ -9,7 +9,7 @@ class editExternalReplicationTask extends viewModelBase {
 
     editedExternalReplication = ko.observable<ongoingTaskReplication>();
     isAddingNewRepTask = ko.observable<boolean>();
-    private taskId: number;
+    private taskId: string;
 
     constructor() {
         super();
@@ -40,7 +40,7 @@ class editExternalReplicationTask extends viewModelBase {
             // TODO: call the new ep to get info from server if there is task id in url ==> an edit action
             // Now the following is just simulation....
             alert("Simulating getting data from server...");
-            const tempTask = ongoingTaskReplication.Simulation();
+            const tempTask = ongoingTaskReplication.simulation();
             tempTask.taskId = this.taskId;
 
             this.editedExternalReplication(tempTask);
