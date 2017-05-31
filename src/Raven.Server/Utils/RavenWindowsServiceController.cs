@@ -206,6 +206,8 @@ namespace Raven.Server.Utils
                 return false;
 
             var p = ParentProcessUtilities.GetParentProcess();
+            if (p == null)
+                return false;
             var hasBeenStartedByServices = p.ProcessName == "services";
             return hasBeenStartedByServices;
         }
