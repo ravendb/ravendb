@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collation
             private static Expression<GetSortHandleDelegate> CreateGetSortHandleMethod()
             {
                 var parameter = Expression.Parameter(typeof(CompareInfo), "value");
-                var member = Expression.Field(parameter, "m_sortHandle");
+                var member = Expression.Field(parameter, "_sortHandle");
 
                 return Expression.Lambda<GetSortHandleDelegate>(member, parameter);
             }
