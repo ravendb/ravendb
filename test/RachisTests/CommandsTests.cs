@@ -7,7 +7,7 @@ using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
 
-namespace SlowTests.Server.Rachis
+namespace RachisTests
 {
     public class CommandsTests : RachisConsensusTestBase
     {

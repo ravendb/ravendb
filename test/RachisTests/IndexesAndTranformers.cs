@@ -10,13 +10,10 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Transformers;
 using Raven.Client.Documents.Transformers;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
-using Raven.Server;
 using Tests.Infrastructure;
 using Xunit;
 
-namespace SlowTests.Server.Rachis
+namespace RachisTests
 {
     public class IndexesAndTransformers : ClusterTestBase
     {
@@ -30,7 +27,7 @@ namespace SlowTests.Server.Rachis
             public Transformer()
             {
                 TransformResults = docs => from doc in docs
-                    select new {Nmae = doc.Name};
+                                           select new { Nmae = doc.Name };
             }
         }
 
@@ -45,7 +42,7 @@ namespace SlowTests.Server.Rachis
             var databaseCreationResult = await CreateDatabaseInCluster(defaultDatabase, 5, leader.WebUrls[0]);
             using (var store = new DocumentStore()
             {
-                Urls =  databaseCreationResult.Item2[0].WebUrls,
+                Urls = databaseCreationResult.Item2[0].WebUrls,
                 Database = defaultDatabase
             }.Initialize())
             {
@@ -54,7 +51,7 @@ namespace SlowTests.Server.Rachis
                 {
                     var serverToStoreAt = relevantServers[i];
                     LambdaExpression tranformResults = (Expression<Func<IEnumerable<Person>, IEnumerable>>)(docs => from doc in docs
-                        select new {doc.Name});
+                                                                                                                    select new { doc.Name });
                     var curTransformerDefinition = new TransformerDefinition
                     {
                         Name = "Trans" + i,

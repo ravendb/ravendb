@@ -420,7 +420,7 @@ namespace RachisTests.DatabaseCluster
                         Database = store2.Database,
                         Url = store2.Urls.First(),
                         ApiKey = "super/" + api
-    }
+                    }
                 };
                 await UpdateReplicationTopology(store1, watchers);
 
