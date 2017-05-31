@@ -8,6 +8,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Json.Converters;
 using Raven.Client.Http;
 using Raven.Client.Server;
+using Raven.Client.Server.ETL;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Server.Routing;
@@ -42,50 +43,107 @@ namespace Raven.Server.Web.System
             using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 context.OpenReadTransaction();
-                var dbTopology = serverStore.Cluster.ReadDatabase(context, dbName)?.Topology;
+
+                var databaseRecord = serverStore.Cluster.ReadDatabase(context, dbName);
+                var dbTopology = databaseRecord?.Topology;
                 var clusterTopology = serverStore.GetClusterTopology(context);
 
-                CollectReplicationOngoingTasks(dbTopology, clusterTopology, ongoingTasksResult.OngoingTasksList);
+                foreach (var tasks in new []
+                {
+                    CollectExternalReplicationTasks(dbTopology, clusterTopology),
+                    CollectEtlTasks(databaseRecord, dbTopology, clusterTopology)
+                })
+                {
+                    ongoingTasksResult.OngoingTasksList.AddRange(tasks);
+                }
 
                 if (serverStore.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var database) && database.Status == TaskStatus.RanToCompletion)
                 {
                     ongoingTasksResult.SubscriptionsCount = (int)database.Result.SubscriptionStorage.GetAllSubscriptionsCount();
                 }
 
-                //TODO: collect all the rest of the ongoing tasks (ETL, SQL, Backup)
+                //TODO: collect all the rest of the ongoing tasks (Backup)
 
                 return (ongoingTasksResult, dbTopology);
             }
         }
 
-        private static void CollectReplicationOngoingTasks(DatabaseTopology dbTopology, ClusterTopology clusterTopology, ICollection<OngoingTask> ongoingTasksList)
+        private static IEnumerable<OngoingTask> CollectExternalReplicationTasks(DatabaseTopology dbTopology, ClusterTopology clusterTopology)
         {
             if (dbTopology == null)
-                return;
+                yield break;
 
             foreach (var watcher in dbTopology.Watchers)
             {
                 var tag = dbTopology.WhoseTaskIsIt(watcher);
-                var task = GetReplicationTaskInfo(clusterTopology, tag, watcher);
-                ongoingTasksList.Add(task);
+
+                yield return new OngoingTaskReplication
+                {
+                    TaskId = watcher.TaskId,
+                    ResponsibleNode = new NodeId
+                    {
+                        NodeTag = tag,
+                        NodeUrl = clusterTopology.GetUrlFromTag(tag)
+                    },
+                    DestinationDB = watcher.Database,
+                    TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
+                    DestinationURL = watcher.Url,
+                };
             }
         }
 
-        private static OngoingTaskReplication GetReplicationTaskInfo(ClusterTopology clusterTopology, string tag, DatabaseWatcher watcher)
+        private static IEnumerable<OngoingTask> CollectEtlTasks(DatabaseRecord databaseRecord, DatabaseTopology dbTopology, ClusterTopology clusterTopology)
         {
-            return new OngoingTaskReplication
+            if (dbTopology == null)
+                yield break;
+
+            if (databaseRecord.RavenEtls != null)
             {
-                TaskType = OngoingTaskType.Replication,
-                TaskId = watcher.TaskId,
-                ResponsibleNode = new NodeId
+                foreach (var ravenEtl in databaseRecord.RavenEtls)
                 {
-                    NodeTag = tag,
-                    NodeUrl = clusterTopology.GetUrlFromTag(tag)
-                },
-                DestinationDB = watcher.Database,
-                TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
-                DestinationURL = watcher.Url,
-            };
+                    var tag = dbTopology.WhoseTaskIsIt(ravenEtl);
+
+                    yield return new OngoingRavenEtl
+                    {
+                        TaskId = ravenEtl.GetTaskKey().ToString(), // TODO TaskId vs TaskKey?
+                        // TODO arek TaskConnectionStatus = 
+                        // TODO arek TaskState = 
+                        ResponsibleNode = new NodeId
+                        {
+                            NodeTag = tag,
+                            NodeUrl = clusterTopology.GetUrlFromTag(tag)
+                        },
+                        DestinationUrl = ravenEtl.Destination.Url,
+                        DestinationDatabase = ravenEtl.Destination.Database,
+                    };
+                }
+            }
+
+            if (databaseRecord.SqlEtls != null)
+            {
+                foreach (var sqlEtl in databaseRecord.SqlEtls)
+                {
+                    var tag = dbTopology.WhoseTaskIsIt(sqlEtl);
+
+                    var (database, server) =
+                        SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlEtl.Destination.Connection.FactoryName,
+                            sqlEtl.Destination.Connection.ConnectionString);
+
+                    yield return new OngoingSqlEtl
+                    {
+                        TaskId = sqlEtl.GetTaskKey().ToString(), // TODO TaskId vs TaskKey?
+                        // TODO arek TaskConnectionStatus = 
+                        // TODO arek TaskState = 
+                        ResponsibleNode = new NodeId
+                        {
+                            NodeTag = tag,
+                            NodeUrl = clusterTopology.GetUrlFromTag(tag)
+                        },
+                        DestinationServer = server,
+                        DestinationDatabase = database,
+                    };
+                }
+            }
         }
 
         [RavenAction("/admin/update-watcher", "POST", "/admin/update-watcher?name={databaseName:string}")]
@@ -148,7 +206,7 @@ namespace Raven.Server.Web.System
     public abstract class OngoingTask : IDynamicJson // Single task info - Common to all tasks types
     {
         public string TaskId { get; set; }
-        public OngoingTaskType TaskType { get; set; }
+        protected OngoingTaskType TaskType { get; set; }
         public NodeId ResponsibleNode { get; set; }
         public OngoingTaskState TaskState { get; set; }
         public DateTime LastModificationTime { get; set; }
@@ -169,6 +227,11 @@ namespace Raven.Server.Web.System
 
     public class OngoingTaskReplication : OngoingTask
     {
+        public OngoingTaskReplication()
+        {
+            TaskType = OngoingTaskType.Replication;
+        }
+
         public string DestinationURL { get; set; }
         public string DestinationDB { get; set; }
 
@@ -181,31 +244,41 @@ namespace Raven.Server.Web.System
         }
     }
 
-    public class OngoingTaskETL : OngoingTask
+    public class OngoingRavenEtl : OngoingTask
     {
-        public string DestinationURL { get; set; }
-        public string DestinationDB { get; set; }
-        public Dictionary<string, string> CollectionsScripts { get; set; }
+        public OngoingRavenEtl()
+        {
+            TaskType = OngoingTaskType.RavenEtl;
+        }
+
+        public string DestinationUrl { get; set; }
+
+        public string DestinationDatabase { get; set; }
 
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
-            json[nameof(DestinationURL)] = DestinationURL;
-            json[nameof(DestinationDB)] = DestinationDB;
-            json[nameof(CollectionsScripts)] = TypeConverter.ToBlittableSupportedType(CollectionsScripts);
+            json[nameof(DestinationUrl)] = DestinationUrl;
+            json[nameof(DestinationDatabase)] = DestinationDatabase;
             return json;
         }
     }
 
-    public class OngoingTaskSQL : OngoingTask
+    public class OngoingSqlEtl : OngoingTask
     {
-        public string SqlProvider { get; set; }
-        public string SqlTable { get; set; }
+        public OngoingSqlEtl()
+        {
+            TaskType = OngoingTaskType.SqlEtl;
+        }
+
+        public string DestinationServer { get; set; }
+        public string DestinationDatabase { get; set; }
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
-            json[nameof(SqlProvider)] = SqlProvider;
-            json[nameof(SqlTable)] = SqlTable;
+            json[nameof(DestinationServer)] = DestinationServer;
+            json[nameof(DestinationDatabase)] = DestinationDatabase;
             return json;
         }
     }
@@ -227,8 +300,8 @@ namespace Raven.Server.Web.System
     public enum OngoingTaskType
     {
         Replication,
-        ETL,
-        SQL,
+        RavenEtl,
+        SqlEtl,
         Backup,
         Subscription
     }

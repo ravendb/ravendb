@@ -46,9 +46,9 @@ namespace Raven.Client.Server.ETL
                 if (_name != null)
                     return _name;
 
-                var dbAtServer = SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(Connection.FactoryName, Connection.ConnectionString);
+                var (database, server) = SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(Connection.FactoryName, Connection.ConnectionString);
 
-                return _name = $"{dbAtServer} [{string.Join(" ", SqlTables.Select(x => x.TableName))}]";
+                return _name = $"{database}@{server} [{string.Join(" ", SqlTables.Select(x => x.TableName))}]";
             }
         }
     }

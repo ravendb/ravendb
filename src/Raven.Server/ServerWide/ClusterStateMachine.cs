@@ -163,7 +163,6 @@ namespace Raven.Server.ServerWide
                 BlittableJsonReaderObject itemBlittable = null;
 
                 var itemKey = updateCommand.GetItemId();
-                using (Slice.From(context.Allocator, itemKey, out Slice valueName))
                 using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
                 {
                     if (items.ReadByKey(valueNameLowered, out TableValueReader reader))
