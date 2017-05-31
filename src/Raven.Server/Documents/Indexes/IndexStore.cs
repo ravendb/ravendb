@@ -69,24 +69,15 @@ namespace Raven.Server.Documents.Indexes
 
         public void HandleDatabaseRecordChange()
         {
-            TransactionOperationContext context;
-            using (_serverStore.ContextPool.AllocateOperationContext(out context))
-            {
-                long etag;
-                DatabaseRecord record;
-                using (context.OpenReadTransaction())
-                {
-                    record = _serverStore.Cluster.ReadDatabase(context, _documentDatabase.Name, out etag);
-                    if (record == null)
-                        return;
-                }
+            var record = _serverStore.LoadDatabaseRecord(_documentDatabase.Name, out var etag);
+            if (record == null)
+                return;
 
-                lock (_locker)
-                {
-                    HandleDeletes(record);
-                    HandleChangesForStaticIndexes(record, etag);
-                    HandleChangesForAutoIndexes(record);
-                }
+            lock (_locker)
+            {
+                HandleDeletes(record);
+                HandleChangesForStaticIndexes(record, etag);
+                HandleChangesForAutoIndexes(record);
             }
         }
 

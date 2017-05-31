@@ -49,22 +49,15 @@ namespace Raven.Server.Documents.Transformers
         {
             try
             {
-                TransactionOperationContext context;
-                using (_serverStore.ContextPool.AllocateOperationContext(out context))
-                {
-                    DatabaseRecord record;
-                    using (context.OpenReadTransaction())
-                    {
-                        record = _serverStore.Cluster.ReadDatabase(context, _documentDatabase.Name);
-                        if (record == null)
-                            return;
-                    }
+                var record = _serverStore.LoadDatabaseRecord(_documentDatabase.Name);
 
-                    lock (_locker)
-                    {
-                        HandleDeletes(record);
-                        HandleChanges(record);
-                    }
+                if (record == null)
+                    return;
+
+                lock (_locker)
+                {
+                    HandleDeletes(record);
+                    HandleChanges(record);
                 }
             }
             catch (Exception e)
