@@ -99,7 +99,7 @@ namespace Tests.Infrastructure
                 return timeoutTask.IsCompleted == false;
             }
         }
-        
+
         public class GetDatabaseDocumentTestCommand : RavenCommand<DatabaseRecord>
         {
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
@@ -119,7 +119,7 @@ namespace Tests.Infrastructure
 
             public override bool IsReadRequest => true;
         }
-        
+
         protected async Task<bool> WaitUntilDatabaseHasState(DocumentStore store, TimeSpan timeout, Func<DatabaseRecord, bool> predicate)
         {
             var requestExecutor = store.GetRequestExecutor();
@@ -150,12 +150,12 @@ namespace Tests.Infrastructure
         {
             var nodes = topology.AllReplicationNodes();
             var servers = new List<ServerStore>();
-            var tasks = new Dictionary<string,Task<T>>();
+            var tasks = new Dictionary<string, Task<T>>();
             foreach (var node in nodes)
             {
                 var server = Servers.Single(s => s.ServerStore.NodeTag == node.NodeTag);
                 servers.Add(server.ServerStore);
-               
+
             }
             foreach (var server in servers)
             {
@@ -165,8 +165,8 @@ namespace Tests.Infrastructure
 
             var res = await Task.WhenAll(tasks.Values);
             var hasExpectedVals = res.Where(t => t?.Equals(excpected) ?? false);
-           
-            if(hasExpectedVals.Count() == servers.Count)
+
+            if (hasExpectedVals.Count() == servers.Count)
                 return excpected;
 
             var lookup = tasks.ToLookup(key => key.Value.Result, val => val.Key);
@@ -185,11 +185,11 @@ namespace Tests.Infrastructure
 
         protected async Task<bool> WaitForDocumentInClusterAsync<T>(DatabaseTopology topology, string docId, Func<T, bool> predicate, TimeSpan timeout)
         {
-            var stores = GetDocumentStores(topology);
+            var stores = GetDocumentStores(topology, disableTopologyUpdates: true);
             return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores);
         }
 
-        protected async Task<bool> WaitForDocumentInClusterAsync<T>(IReadOnlyList<ServerNode> topology,string docId, Func<T, bool> predicate, TimeSpan timeout)
+        protected async Task<bool> WaitForDocumentInClusterAsync<T>(IReadOnlyList<ServerNode> topology, string docId, Func<T, bool> predicate, TimeSpan timeout)
         {
             var stores = GetStoresFromTopology(topology);
             return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores);
@@ -207,17 +207,25 @@ namespace Tests.Infrastructure
             return tasks.All(x => x.Result);
         }
 
-        private List<DocumentStore> GetDocumentStores(DatabaseTopology topology)
+        private List<DocumentStore> GetDocumentStores(DatabaseTopology topology, bool disableTopologyUpdates)
         {
             var stores = new List<DocumentStore>();
             foreach (var node in topology.AllReplicationNodes())
             {
-                stores.Add(new DocumentStore
+                var store = new DocumentStore
                 {
-                    Urls = new [] { node.Url },
-                    Database = node.Database
-                });
+                    Urls = new[] { node.Url },
+                    Database = node.Database,
+                    Conventions =
+                    {
+                        DisableTopologyUpdates = disableTopologyUpdates
+                    }
+                };
+
+                stores.Add(store);
+                _toDispose.Add(store);
             }
+
             return stores;
         }
 
@@ -276,13 +284,17 @@ namespace Tests.Infrastructure
             foreach (var node in topologyNodes)
             {
                 string url;
-                if(!tokenToUrl.TryGetValue(node.ClusterTag, out url)) //precaution
+                if (!tokenToUrl.TryGetValue(node.ClusterTag, out url)) //precaution
                     continue;
 
                 var store = new DocumentStore
                 {
                     Database = node.Database,
-                    Urls = new [] { url }
+                    Urls = new[] { url },
+                    Conventions =
+                    {
+                        DisableTopologyUpdates = true
+                    }
                 };
 
                 _toDispose.Add(store);
@@ -332,12 +344,12 @@ namespace Tests.Infrastructure
         {
             leaderIndex = leaderIndex ?? _random.Next(0, numberOfNodes);
             RavenServer leader = null;
-            var serversToPorts = new Dictionary<RavenServer,string>();
+            var serversToPorts = new Dictionary<RavenServer, string>();
             for (var i = 0; i < numberOfNodes; i++)
             {
                 var serverUrl = UseFiddler($"http://127.0.0.1:{GetPort()}");
 
-                var customSettings = new Dictionary<string, string>{{"Raven/ServerUrl", serverUrl}};
+                var customSettings = new Dictionary<string, string> { { "Raven/ServerUrl", serverUrl } };
 
                 if (useSsl)
                 {
@@ -348,7 +360,7 @@ namespace Tests.Infrastructure
                     customSettings["Raven/ServerUrl"] = serverUrl;
                 }
 
-                var server = GetNewServer(customSettings ,runInMemory:shouldRunInMemory);
+                var server = GetNewServer(customSettings, runInMemory: shouldRunInMemory);
 
                 serversToPorts.Add(server, serverUrl);
                 Servers.Add(server);
@@ -370,9 +382,9 @@ namespace Tests.Infrastructure
                 await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
             }
             // ReSharper disable once PossibleNullReferenceException
-            var condition = await leader.ServerStore.WaitForState(RachisConsensus.State.Leader).WaitAsync(numberOfNodes* ElectionTimeoutInMs * 5);
+            var condition = await leader.ServerStore.WaitForState(RachisConsensus.State.Leader).WaitAsync(numberOfNodes * ElectionTimeoutInMs * 5);
             Assert.True(condition,
-                "The leader has changed while waiting for cluster to become stable. Status: " + leader.ServerStore.ClusterStatus() );
+                "The leader has changed while waiting for cluster to become stable. Status: " + leader.ServerStore.ClusterStatus());
             return leader;
         }
 
@@ -397,12 +409,12 @@ namespace Tests.Infrastructure
             return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
         }
 
-        public async Task WaitForRaftIndexToBeAppliedInCluster(long index,  TimeSpan timeout)
+        public async Task WaitForRaftIndexToBeAppliedInCluster(long index, TimeSpan timeout)
         {
             if (Servers.Count == 0)
                 return;
 
-            var tasks = 
+            var tasks =
                 Servers
                 .Select(server => server.ServerStore.Cluster.WaitForIndexNotification(index))
                 .ToList();
@@ -412,8 +424,8 @@ namespace Tests.Infrastructure
                 return;
 
 
-            var message = $"Timed out waiting for {index} after {timeout} because out of {Servers.Count} " + 
-                          $" we got confirmations that it was applied only on {tasks.Count(x=>x.IsCompleted)}";
+            var message = $"Timed out waiting for {index} after {timeout} because out of {Servers.Count} " +
+                          $" we got confirmations that it was applied only on {tasks.Count(x => x.IsCompleted)}";
 
             //Console.ForegroundColor = ConsoleColor.Blue;
 
@@ -431,7 +443,7 @@ namespace Tests.Infrastructure
             CreateDatabaseResult databaseResult;
             using (var store = new DocumentStore()
             {
-                Urls = new [] {leasderUrl},
+                Urls = new[] { leasderUrl },
                 Database = databaseName
             }.Initialize())
             {

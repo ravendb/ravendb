@@ -9,6 +9,7 @@ using Raven.Client.Documents;
 using SlowTests.Issues;
 using SlowTests.Smuggler;
 using System.Threading.Tasks;
+using RachisTests.DatabaseCluster;
 
 namespace Tryouts
 {
@@ -22,13 +23,11 @@ namespace Tryouts
             for (int i = 0; i < 1000000; i++)
             {
                 Console.WriteLine(i);
-                Parallel.For(0, 10, _ =>
+
+                using (var a = new ReplicationTests())
                 {
-                    using (var a = new FastTests.Server.Replication.DisableDatabasePropagationInRaftCluster())
-                    {
-                        a.DisableDatabaseToggleOperation_should_propagate_through_raft_cluster().Wait();
-                    }
-                });
+                    a.AddGlobalChangeVectorToNewDocument(false).Wait();
+                }
             }
         }
     }

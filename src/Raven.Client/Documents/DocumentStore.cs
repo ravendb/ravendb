@@ -102,7 +102,7 @@ namespace Raven.Client.Documents
             foreach (var changes in _databaseChanges)
             {
                 using (changes.Value) { }
-                }
+            }
 
             // try to wait until all the async disposables are completed
             Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(3));
@@ -191,8 +191,10 @@ namespace Raven.Client.Documents
             {
                 return lazy.Value;
             }
-            
-            lazy = new Lazy<RequestExecutor>(() => RequestExecutor.Create(Urls, database, ApiKey));
+
+            lazy = Conventions.DisableTopologyUpdates == false 
+                ? new Lazy<RequestExecutor>(() => RequestExecutor.Create(Urls, database, ApiKey)) 
+                : new Lazy<RequestExecutor>(() => RequestExecutor.CreateForSingleNode(Urls[0], database, ApiKey));
 
             lazy = _requestExecutors.GetOrAdd(database, lazy);
 
