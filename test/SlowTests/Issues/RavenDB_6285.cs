@@ -30,7 +30,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Assert.True(mre.Wait(TimeSpan.FromSeconds(15)));
+                Assert.True(mre.Wait(TimeSpan.FromSeconds(45)));
             }
         }
     }
