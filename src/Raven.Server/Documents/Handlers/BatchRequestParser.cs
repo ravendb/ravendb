@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Patch;
+using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -56,7 +57,7 @@ namespace Raven.Server.Documents.Handlers
             _cache.Push(cmds);
         }
 
-        public static async Task<ArraySegment<CommandData>> ParseAsync(JsonOperationContext ctx, Stream stream, DocumentPatcher patcher)
+        public static async Task<ArraySegment<CommandData>> BuildCommandsAsync(JsonOperationContext ctx, Stream stream, DocumentDatabase database, ServerStore serverStore)
         {
             CommandData[] cmds = Empty;
 
@@ -104,10 +105,16 @@ namespace Raven.Server.Documents.Handlers
 
                     if (commandData.Type == CommandType.PATCH)
                     {
-                        commandData.PatchCommand = patcher.GetPatchDocumentCommand(commandData.Id, commandData.Etag, commandData.Patch, commandData.PatchIfMissing,
+                        commandData.PatchCommand = database.Patcher.GetPatchDocumentCommand(commandData.Id, commandData.Etag, commandData.Patch,
+                            commandData.PatchIfMissing,
                             skipPatchIfEtagMismatch: false, debugMode: false);
                     }
 
+                    if (commandData.Type == CommandType.PUT && commandData.Id?[commandData.Id.Length - 1] == '/')
+                    {
+                        commandData.Id = await serverStore.GenerateClusterIdentityAsync(commandData.Id, database.Name);
+                    }
+                    
                     cmds[index] = commandData;
                 }
             }
