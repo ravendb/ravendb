@@ -41,6 +41,9 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         private void Delete<T>(List<EtlConfiguration<T>> etls, string configurationName) where T : EtlDestination
         {
+            if (etls == null)
+                ThrowNoEtlsDefined(EtlType, configurationName);
+            
             var index = etls.FindIndex(x => EtlConfigurationNameRetriever.GetName(x.Destination)
                 .Equals(configurationName, StringComparison.OrdinalIgnoreCase));
 
@@ -52,7 +55,12 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         private static void ThrowConfigurationNotFound(string configurationName)
         {
-            throw new InvalidOperationException($"Configuration was not found: {configurationName}");
+            throw new InvalidOperationException($"Configuration was not found: '{configurationName}'");
+        }
+        
+        private static void ThrowNoEtlsDefined(EtlType type, string configurationName)
+        {
+            throw new InvalidOperationException($"There is no {type} ETL defined so we cannot delete '{configurationName}' configuration");
         }
 
         public override void FillJson(DynamicJsonValue json)

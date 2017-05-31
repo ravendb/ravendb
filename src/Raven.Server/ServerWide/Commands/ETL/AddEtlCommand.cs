@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Raven.Client.Server;
 using Raven.Client.Server.ETL;
-using Raven.Server.Documents.ETL;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
@@ -22,7 +20,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
             Configuration = configuration;
         }
 
-        protected void Add(List<EtlConfiguration<T>> etls, EtlConfiguration<T> configuration)
+        protected void Add(ref List<EtlConfiguration<T>> etls, EtlConfiguration<T> configuration)
         {
             if (etls == null)
                 etls = new List<EtlConfiguration<T>>();
@@ -50,7 +48,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            Add(record.RavenEtls, Configuration);
+            Add(ref record.RavenEtls, Configuration);
             return null;
         }
     }
@@ -69,7 +67,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            Add(record.SqlEtls, Configuration);
+            Add(ref record.SqlEtls, Configuration);
             return null;
         }
     }

@@ -8,6 +8,7 @@ using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.ETL
@@ -157,14 +158,32 @@ namespace Raven.Server.Documents.ETL
         {
             _database.Changes.OnDocumentChange -= NotifyAboutWork;
 
-            Parallel.ForEach(_processes, x => x.Dispose());
+            var ea = new ExceptionAggregator(Logger, "Could not dispose ETL loader");
+            
+            Parallel.ForEach(_processes, x => ea.Execute(x.Dispose));
+            
+            ea.ThrowIfNeeded();
         }
 
         public void HandleDatabaseRecordChange()
         {
             var old = _processes;
 
-            Parallel.ForEach(old, x => x.Dispose());
+            Parallel.ForEach(old, x =>
+            {
+                try
+                {
+                    x.Dispose();
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsOperationsEnabled)
+                    {
+                        Logger.Operations($"Failed to dispose ETL process {x.Name} on the database record change",e);
+                    } 
+                    throw;
+                }
+            });
 
             _processes = new EtlProcess[0];
 
