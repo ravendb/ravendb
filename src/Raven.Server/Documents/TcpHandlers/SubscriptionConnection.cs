@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -17,8 +16,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Extensions;
-using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Utils;
 
@@ -36,7 +33,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private readonly Logger _logger;
         public readonly SubscriptionConnectionStats Stats;
         public readonly CancellationTokenSource CancellationTokenSource;
-        private AsyncManualResetEvent _waitForMoreDocuments;
+        private readonly AsyncManualResetEvent _waitForMoreDocuments;
 
         private SubscriptionConnectionOptions _options;
 
@@ -162,7 +159,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     try
                     {
                         await connection.InitAsync();
-                        await connection.ProcessSubscriptionAysnc();
+                        await connection.ProcessSubscriptionAsync();
                     }
                     catch (Exception e)
                     {
@@ -186,7 +183,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         if (connection._logger.IsInfoEnabled)
                         {
                             connection._logger.Info(
-                                $"Finished proccessing subscription {connection._options?.SubscriptionId} / from client {remoteEndPoint}");
+                                $"Finished processing subscription {connection._options?.SubscriptionId} / from client {remoteEndPoint}");
                         }
                     }
                 }
@@ -224,7 +221,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
                     });
                 }
-                else if (ex is SubscriptionDoesNotBelongToNodeException subscriptionDoesNotBelonException)
+                else if (ex is SubscriptionDoesNotBelongToNodeException subscriptionDoesNotBelongException)
                 {
                     if (connection._logger.IsInfoEnabled)
                     {
@@ -236,7 +233,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Redirect),
                         [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue()
                         {
-                            [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)] = subscriptionDoesNotBelonException.AppropriateNode
+                            [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)] = subscriptionDoesNotBelongException.AppropriateNode
                         }
                     });
                 }
@@ -308,12 +305,12 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        private async Task ProcessSubscriptionAysnc()
+        private async Task ProcessSubscriptionAsync()
         {
             if (_logger.IsInfoEnabled)
             {
                 _logger.Info(
-                    $"Starting proccessing documents for subscription {SubscriptionId} received from {TcpConnection.TcpClient.Client.RemoteEndPoint}");
+                    $"Starting processing documents for subscription {SubscriptionId} received from {TcpConnection.TcpClient.Client.RemoteEndPoint}");
             }
             var subscription = TcpConnection.DocumentDatabase.SubscriptionStorage.GetSubscriptionFromServerStore(_options.SubscriptionId);
 

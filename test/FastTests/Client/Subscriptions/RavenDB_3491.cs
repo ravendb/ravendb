@@ -227,7 +227,7 @@ namespace FastTests.Client.Subscriptions
                         var db = await this.GetDatabase(store.Database);
                         using (this.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                         {
-                            subscriptionReleasedAwaiter = db.SubscriptionStorage.GetSusbscriptionConnectionInUseAwaiter(subscriptionId);
+                            subscriptionReleasedAwaiter = db.SubscriptionStorage.GetSubscriptionConnectionInUseAwaiter(subscriptionId);
                         }
 
                         dynamic doc;
