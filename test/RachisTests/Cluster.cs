@@ -1,19 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Server;
-using Raven.Client.Server.Commands;
 using Raven.Client.Server.Operations;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
 
-namespace SlowTests.Server.Rachis
+namespace RachisTests
 {
-    
-    public class Cluster: ClusterTestBase
+
+    public class Cluster : ClusterTestBase
     {
         private static async Task<int> GetMembersCount(IDocumentStore store, string databaseName)
         {
@@ -43,13 +40,13 @@ namespace SlowTests.Server.Rachis
                 databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
 
                 int numberOfInstances = 0;
-                await AssertNumberOfNodesContainingDatabase(databaseResult.ETag??0, databaseName, numberOfInstances, replicationFactor);
+                await AssertNumberOfNodesContainingDatabase(databaseResult.ETag ?? 0, databaseName, numberOfInstances, replicationFactor);
                 databaseResult = store.Admin.Server.Send(new AddDatabaseNodeOperation(databaseName));
                 Assert.Equal(databaseResult.Topology.AllNodes.Count(), ++replicationFactor);
                 numberOfInstances = 0;
                 await AssertNumberOfNodesContainingDatabase(databaseResult.ETag ?? 0, databaseName, numberOfInstances, replicationFactor);
                 DeleteDatabaseResult deleteResult;
-                while (replicationFactor>0)
+                while (replicationFactor > 0)
                 {
                     var val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), replicationFactor);
                     Assert.Equal(replicationFactor, val);
@@ -65,7 +62,7 @@ namespace SlowTests.Server.Rachis
                 using (leader.ServerStore.ContextPool.AllocateOperationContext(out context))
                 using (context.OpenReadTransaction())
                 {
-                    Assert.Null(leader.ServerStore.Cluster.ReadDatabase(context, databaseName));                    
+                    Assert.Null(leader.ServerStore.Cluster.ReadDatabase(context, databaseName));
                 }
             }
         }
