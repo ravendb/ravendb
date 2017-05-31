@@ -571,10 +571,30 @@ namespace Raven.Server.Documents
         }
 
         /// <summary>
-        /// this event is intended for entities that are not singeltons 
+        /// this event is intended for entities that are not singletons 
         /// per database and still need to be informed on changes to the database record.
         /// </summary>
         public event Action DatabaseRecordChanged;
+
+        public void ValueChanged(long index)
+        {
+            try
+            {
+                if (_databaseShutdown.IsCancellationRequested)
+                    ThrowDatabaseShutdown();
+
+                SubscriptionStorage?.HandleDatabaseValueChange();
+            }
+            catch
+            {
+                if (_databaseShutdown.IsCancellationRequested)
+                    ThrowDatabaseShutdown();
+            }
+            finally
+            {
+                RachisLogIndexNotifications.NotifyListenersAbout(index);
+            }
+        }
 
         public void StateChanged(long index)
         {
@@ -587,7 +607,6 @@ namespace Raven.Server.Documents
                 BundleLoader.HandleDatabaseRecordChange();
                 IndexStore.HandleDatabaseRecordChange();
                 ReplicationLoader?.HandleDatabaseRecordChange();
-                SubscriptionStorage?.HandleDatabaseValueChange();
                 EtlLoader?.HandleDatabaseRecordChange();
                 OnDatabaseRecordChanged();
             }

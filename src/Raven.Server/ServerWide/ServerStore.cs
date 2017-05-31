@@ -312,6 +312,7 @@ namespace Raven.Server.ServerWide
 
             _engine.StateMachine.DatabaseChanged += DatabasesLandlord.ClusterOnDatabaseChanged;
             _engine.StateMachine.DatabaseChanged += OnDatabaseChanged;
+            _engine.StateMachine.DatabaseValueChanged += DatabasesLandlord.ClusterOnDatabaseValueChanged;
 
             _engine.TopologyChanged += OnTopologyChanged;
             _engine.StateChanged += OnStateChanged;
