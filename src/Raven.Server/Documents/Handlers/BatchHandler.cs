@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Handlers
                 if (contentType == null ||
                     contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase))
                 {
-                    command.ParsedCommands = await BatchRequestParser.ParseAsync(context, RequestBodyStream(), Database.Patcher);
+                    command.ParsedCommands = await BatchRequestParser.BuildCommandsAsync(context, RequestBodyStream(), Database, ServerStore);
                 }
                 else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase))
                 {
@@ -44,18 +44,6 @@ namespace Raven.Server.Documents.Handlers
                 }
                 else
                     ThrowNotSupportedType(contentType);
-
-                for (int i = 0; i < command.ParsedCommands.Count; i++)
-                {
-                    if (command.ParsedCommands.Array[i + command.ParsedCommands.Offset].Type != CommandType.PUT)
-                        continue;
-
-                    if (command.ParsedCommands.Array[i + command.ParsedCommands.Offset].Id?.EndsWith("/") != true)
-                        continue;
-
-                    command.ParsedCommands.Array[i + command.ParsedCommands.Offset].Id =
-                        await ServerStore.GenerateClusterIdentityAsync(command.ParsedCommands.Array[i + command.ParsedCommands.Offset].Id, Database.Name);
-                }
 
                 var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
                 if (waitForIndexesTimeout != null)
@@ -115,7 +103,7 @@ namespace Raven.Server.Documents.Handlers
                 var bodyStream = GetBodyStream(section);
                 if (i == 0)
                 {
-                    command.ParsedCommands = await BatchRequestParser.ParseAsync(context, bodyStream, Database.Patcher);
+                    command.ParsedCommands = await BatchRequestParser.BuildCommandsAsync(context, bodyStream, Database, ServerStore);
                     continue;
                 }
 
