@@ -22,8 +22,6 @@ namespace Raven.Server.Documents
 
         public StorageEnvironment Environment { get; }
 
-        public EtlStorage EtlStorage { get; }
-
         public ConfigurationStorage(DocumentDatabase db, ServerStore serverStore)
         {
             var path = db.Configuration.Core.DataDirectory.Combine("Configuration");
@@ -47,8 +45,6 @@ namespace Raven.Server.Documents
 
             OperationsStorage = new OperationsStorage();
 
-            EtlStorage = new EtlStorage(db.Name);
-
             _contextPool = new TransactionContextPool(Environment);
         }
 
@@ -60,7 +56,6 @@ namespace Raven.Server.Documents
         public void Initialize(IndexStore indexStore, TransformerStore transformerStore)
         {
             OperationsStorage.Initialize(Environment, _contextPool);
-            EtlStorage.Initialize(Environment, _contextPool);
         }
 
         public void Dispose()

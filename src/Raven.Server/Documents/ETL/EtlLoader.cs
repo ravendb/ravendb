@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.ETL
 
                         foreach (var transform in config.Transforms)
                         {
-                            var etlProcess = new RavenEtl(transform, config.Destination, _database);
+                            var etlProcess = new RavenEtl(transform, config.Destination, _database, _serverStore);
 
                             processes.Add(etlProcess);
                         }
@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.ETL
 
                         foreach (var transform in config.Transforms)
                         {
-                            var sql = new SqlEtl(transform, config.Destination, _database);
+                            var sql = new SqlEtl(transform, config.Destination, _database, _serverStore);
 
                             processes.Add(sql);
                         }

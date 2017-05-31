@@ -8,6 +8,7 @@ using Raven.Server.Documents.ETL.Providers.SQL.Metrics;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.ETL.Providers.SQL.Simulation;
 using Raven.Server.Documents.ETL.Stats;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -19,8 +20,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         public readonly SqlEtlMetricsCountersManager SqlMetrics = new SqlEtlMetricsCountersManager();
 
-        public SqlEtl(Transformation transformation, SqlDestination destination, DocumentDatabase database)
-            : base(transformation, destination, database, SqlEtlTag)
+        public SqlEtl(Transformation transformation, SqlDestination destination, DocumentDatabase database, ServerStore serverStore)
+            : base(transformation, destination, database, serverStore, SqlEtlTag)
         {
             Metrics = SqlMetrics;
         }
@@ -168,7 +169,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                                                     "while SQL ETL simulation is supposed to work with exactly 1 collection");
             }
 
-            using (var etl = new SqlEtl(simulateSqlEtl.Configuration.Transforms[0], simulateSqlEtl.Configuration.Destination, database))
+            using (var etl = new SqlEtl(simulateSqlEtl.Configuration.Transforms[0], simulateSqlEtl.Configuration.Destination, database, null))
             {
                 etl.EnsureThreadAllocationStats();
 
