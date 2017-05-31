@@ -1,3 +1,6 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
@@ -33,7 +36,9 @@ namespace SlowTests.Issues
 
                     Assert.Equal(resultInteger.Results.Count, 1);
                     Assert.Equal(resultInteger.Results.First().Value.Values.Count(), 2);
-                    Assert.Equal(resultInteger.Results.First().Value.Values.First().Range, "2");
+                    var sorted = resultInteger.Results.First().Value.Values.Select(valueValue => valueValue.Range).ToList();
+                    sorted.Sort();
+                    Assert.Equal(sorted.First(), "2");
                 }
             }
         }
