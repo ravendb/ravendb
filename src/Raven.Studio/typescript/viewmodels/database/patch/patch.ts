@@ -449,7 +449,8 @@ class patch extends viewModelBase {
         const grid = this.gridController();
         this.documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.collections().map(x => x.name), {
             showRowSelectionCheckbox: false,
-            showSelectAllCheckbox: false
+            showSelectAllCheckbox: false,
+            createHyperlinks: false
         });
 
         const fakeFetcher: fetcherType = () => $.Deferred<pagedResult<document>>().resolve({
