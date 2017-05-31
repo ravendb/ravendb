@@ -151,6 +151,32 @@ namespace Raven.Server.Documents
             }
         }
 
+        public void ClusterOnDatabaseValueChanged(object sender, (string dbName, long index, string type) t)
+        {
+            if (DatabasesCache.TryGetValue(t.dbName, out var task) == false)
+            {
+                // if the database isn't loaded, but it is relevant for this node, we need to create
+                // it. This is important so things like replication will start pumping, and that 
+                // configuration changes such as running periodic backup will get a chance to run, which
+                // they wouldn't unless the database is loaded / will have a request on it.          
+                task = TryGetOrCreateResourceStore(t.dbName);
+            }
+
+            if (task.IsCanceled || task.IsFaulted)
+                return;
+
+            if (task.IsCompleted)
+            {
+                NotifyDatabaseAboutValueChange(t.dbName, task, t.index);
+                return;
+            }
+
+            task.ContinueWith(done =>
+            {
+                NotifyDatabaseAboutValueChange(t.dbName, done, t.index);
+            });
+        }
+
         private void NotifyLeaderAboutRemoval(string dbName)
         {
             var cmd = new RemoveNodeFromDatabaseCommand(dbName)
@@ -181,6 +207,22 @@ namespace Raven.Server.Documents
                 if (_logger.IsInfoEnabled)
                 {
                     _logger.Info($"Failed to update database {changedDatabase} about new state", e);
+                }
+                // nothing to do here
+            }
+        }
+
+        private void NotifyDatabaseAboutValueChange(string changedDatabase, Task<DocumentDatabase> done, long index)
+        {
+            try
+            {
+                done.Result.ValueChanged(index);
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info($"Failed to update database {changedDatabase} about new value", e);
                 }
                 // nothing to do here
             }
