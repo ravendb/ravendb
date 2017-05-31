@@ -1415,19 +1415,13 @@ pre {
 
 .input-group {
     &.has-error, &.has-warning {
-        padding-bottom: 25px;
 
         .input-group-addon {
-            color: inherit;
-            background-color: inherit;
         }
 
         .help-block {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            margin-bottom: 0;
+            display: table-caption;
+            caption-side: bottom;
         }
     }
 }

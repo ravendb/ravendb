@@ -4,7 +4,7 @@
             <div class="modal-header">
                 <button type="button" data-bind="click: close" class="close" data-dismiss="modal" aria-label="Close"><i aria-hidden="true" class="icon-cancel"></i></button>
                 <h4 class="modal-title" id="newDatabaseLabel">
-                    <i class="icon-database"></i>
+                    <i class="icon-new-database"></i>
                     <span>New database</span>
                 </h4>
             </div>
@@ -18,21 +18,29 @@
 
                         <div class="settings-group" data-bind="foreach: getAvailableSections()">
                             <div class="checkbox settings-item nocheck" data-bind="css: { 'active': $root.currentAdvancedSection() === name }, visible: alwaysEnabled">
-                                <label data-bind="text: name, click: _.partial($root.showAdvancedConfigurationFor, name)"></label>
+                                <label>
+                                    <span data-bind="text: name, click: _.partial($root.showAdvancedConfigurationFor, name)"></span>
+                                    <small><span>Replication factor: 1</span> <i class="icon-warning text-warning"></i></small>
+                                </label>
                                 <button type="button" class="btn pull-right btn-toggle"
                                         data-bind="click: _.partial($root.showAdvancedConfigurationFor, name), css: { 'btn-danger': enabled() && validationGroup && !validationGroup.isValid() }">
                                     <i data-bind="attr: { 'class' : validationGroup && !validationGroup.isValid() ? 'icon-danger' : 'icon-settings' }"></i>
                                 </button>
                             </div>
-                            <div class="checkbox settings-item" data-bind="css: { 'active': $root.currentAdvancedSection() === name }, visible: !alwaysEnabled">
+                            <div class="toggle settings-item" data-bind="css: { 'active': $root.currentAdvancedSection() === name }, visible: !alwaysEnabled">
                                 <input class="styled" type="checkbox" data-bind="checked: enabled, attr: { id: 'section_' + $index() }">
-                                <label data-bind="text: name, attr: { 'for': 'section_' + $index() }"></label>
+                                <label>
+                                    <span data-bind="text: name, attr: { 'for': 'section_' + $index() }"></span>
+                                </label>
                                 <button type="button" class="btn pull-right btn-toggle"
                                         data-bind="click: _.partial($root.showAdvancedConfigurationFor, name), css: { 'btn-danger': enabled() && validationGroup && !validationGroup.isValid() }">
                                     <i data-bind="attr: { 'class' : enabled() && validationGroup && !validationGroup.isValid() ? 'icon-danger' : 'icon-settings' }"></i>
                                 </button>
                             </div>
                         </div>
+                        <div class="flex-separator"></div>
+                        <button type="submit" class="btn btn-success btn-block" data-bind="css: { 'btn-spinner': spinners.create }, disable: spinners.create"><i class="icon-plus"></i><span>Create</span></button>
+
                     </div>
                     <div class="modal-settings-panel-slideout">
                         <div>
@@ -49,9 +57,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="submit" class="btn btn-success btn-block" data-bind="css: { 'btn-spinner': spinners.create }, disable: spinners.create"><i class="icon-plus"></i><span>Create</span></button>
             </div>
         </div>
     </form>
@@ -100,49 +105,40 @@
 <script type="text/html" id="create-db-replication">
     <h3>Replication configuration</h3>
     <div data-bind="with: databaseModel.replication">
-        <div style="min-height:150px;">
-            <div class="form-group row" data-bind="validationElement: replicationFactor">
-                <div class="col-md-12">
-                    <label class="control-label">Replication factor</label>
-                </div>
-                <div class="col-md-8">
-                    <input type="number" data-bind="numericInput: replicationFactor, disable: $root.disableReplicationFactorInput" class="form-control">
-                </div>
+        <div class="form-group">
+            <div class="input-group" data-bind="css: {'has-warning' : $root.showReplicationFactorWarning}, validationElement: replicationFactor">
+                <span class="input-group-addon">Replication factor</span>
+                <input type="number" data-bind="numericInput: replicationFactor, disable: $root.disableReplicationFactorInput" class="form-control">
+                <div class="help-block" data-bind="visible: $root.showReplicationFactorWarning">With replication factor set to 1 data won't be replicated.</div>
             </div>
-
-            <p class="bg-warning padding padding-xs" data-bind="visible: $root.showReplicationFactorWarning">With replication factor set to 1 data won't be replicated.</p>
         </div>
 
-
-        <p data-bind="visible: !manualMode()">Replication nodes will be selected randomly among cluster's nodes.</p>
-        <p data-bind="visible: manualMode">Please select replication nodes from the list below.</p>
-
-        <div class="checkbox checkbox-inline">
+        <div class="toggle">
             <input class="styled" type="checkbox" id="manual_mode" data-bind="checked: manualMode, disable: $root.enforceManualNodeSelection">
-            <label for="manual_mode">Set replication nodes manually.</label>
+            <label for="manual_mode">Set replication nodes manually</label>
         </div>
+        <small class="toggle-caption" data-bind="visible: !manualMode()">Replication nodes will be selected randomly among cluster's nodes.</small>
+        <small class="toggle-caption" data-bind="visible: manualMode()">Select replication nodes from the list below.</small>
 
-
-
-        <div data-bind="visible: manualMode()">
-            <h4>Replication nodes</h4>
-
-            <div class="row">
-                <div class="col-sm-12">
-                    <div class="checkbox checkbox-inline">
-                        <input type="checkbox" id="toggle_all_in_cluster" class="styled" data-bind="checkboxTriple: $root.selectionState, event: { change: $root.toggleSelectAll }">
-                        <label for="toggle_all_in_cluster">All</label>
-                    </div>
-                </div>
+        <div class="panel panel-info padding" data-bind="visible: manualMode()">
+            <small>Available nodes</small>
+            <div class="checkbox">
+                <input type="checkbox" id="toggle_all_in_cluster" class="styled" data-bind="checkboxTriple: $root.selectionState, event: { change: $root.toggleSelectAll }">
+                <label for="toggle_all_in_cluster"><i class="icon-cluster"></i><span>All cluster nodes</span></label>
             </div>
+
 
             <div data-bind="foreach: $root.clusterNodes">
-                <div class="checkbox">
+                <div class="checkbox checkbox-info">
                     <input class="styled" type="checkbox" data-bind="attr: { id: 'cluster_node_' + $index() }, checked: $parent.nodes, checkedValue: $data">
-                    <label data-bind="attr: { for: 'cluster_node_' + $index() }, text: tag() + ' (' + serverUrl() + ')'"></label>
+                    <label data-bind="attr: { for: 'cluster_node_' + $index() }">
+                        <i class="icon-cluster-node"></i><span data-bind="text: tag()"></span> &nbsp; <small data-bind="text: serverUrl()"></small>
+                    </label>
                 </div>
             </div>
         </div>
+
+        
     </div>
 </script>
 

@@ -27,6 +27,8 @@
             padding-left: (@grid-gutter-width / 2);
             padding-right: (@grid-gutter-width / 2);
             flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
 
             @media (min-width: @screen-sm) {
                 width: @modal-sm - 2;
@@ -43,6 +45,7 @@
                     border-top: 2px solid @gray-darker;
                     display: flex;
                     align-items: stretch;
+                    height: 45px;
 
                     &:last-of-type {
                         border-bottom: 2px solid @gray-darker;
@@ -50,9 +53,25 @@
 
                     label {
                         flex-grow: 1;
-                        line-height: 40px;
+                        line-height: 13px;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+
+                        small {
+                            font-size: 10px;
+                            text-transform: uppercase;
+                            letter-spacing: 0.3pt;
+
+                            span {
+                                opacity: .6;
+                            }
+                        }
 
                         &::before {
+                            top: 17px;
+                        }
+                        &:after {
                             top: 11px;
                         }
                     }
@@ -61,13 +80,24 @@
                         border: none;
                         box-shadow: none;
                     }
+
+                    &.nocheck label {
+                        padding-left: 43px;
+                    }
                 }
 
                 .checkbox {
+                    padding-left: 36px;
+                }
+
+                .toggle {
+                    padding-left: 18px;
+                }
+
+                .checkbox, .toggle {
                     margin-top: 0;
                     margin-bottom: 0;
                     margin-left: -15px;
-                    padding-left: 36px;
                     margin-right: -15px;
                     padding-right: 15px;
                     transition: background-color 0.2s ease;
