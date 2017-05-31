@@ -4,6 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using System.Threading;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -32,10 +34,16 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var errors = store.Admin.Send(new GetIndexErrorsOperation(new[] { "test" }))[0].Errors;
+                IndexingError[] errors = null;
+                var result = SpinWait.SpinUntil(() =>
+                {
+                    errors = store.Admin.Send(new GetIndexErrorsOperation(new[] { "test" }))[0].Errors;
+                    return errors?.Length > 0;
+                }, TimeSpan.FromSeconds(5));
 
+                Assert.True(result, "Waited for 5 seconds for errors to be persisted but it did not happen.");
                 Assert.NotEmpty(errors);
-         
+
                 Server.ServerStore.DatabasesLandlord.UnloadDatabase(store.Database);
 
                 var recoveredErrors = store.Admin.Send(new GetIndexErrorsOperation(new[] { "test" }))[0].Errors;
