@@ -5,7 +5,7 @@ using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 
-namespace SlowTests.Server.Rachis
+namespace RachisTests
 {
     public class BasicTests : RachisConsensusTestBase
     {

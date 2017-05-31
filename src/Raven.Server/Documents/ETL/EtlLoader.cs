@@ -178,10 +178,7 @@ namespace Raven.Server.Documents.ETL
                 catch (Exception e)
                 {
                     if (Logger.IsInfoEnabled)
-                    {
-                        Logger.Info($"Failed to dispose ETL process {x.Name} on the database record change",e);
-                    } 
-                    throw;
+                        Logger.Info($"Failed to dispose ETL process {x.Name} on the database record change", e);
                 }
             });
 

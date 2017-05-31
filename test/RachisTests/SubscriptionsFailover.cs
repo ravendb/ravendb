@@ -12,7 +12,6 @@ using Xunit;
 using FastTests.Server.Documents.Notifications;
 using Raven.Client.Extensions;
 using Raven.Client.Server.Operations;
-using Raven.Server;
 using Raven.Server.Rachis;
 using Sparrow;
 

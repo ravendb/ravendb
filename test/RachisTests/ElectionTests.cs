@@ -6,7 +6,7 @@ using Raven.Server.Rachis;
 using Tests.Infrastructure;
 using Xunit;
 
-namespace SlowTests.Server.Rachis
+namespace RachisTests
 {
     public class ElectionTests : RachisConsensusTestBase
     {
@@ -32,12 +32,12 @@ namespace SlowTests.Server.Rachis
         [InlineData(3)]
         [InlineData(5)]
         [InlineData(7)]
-        public async Task OnNetworkDisconnectionANewLeaderIsElectedAfterReconnectOldLeaderStepsDownAndRollBackHisLog(int numberOfNodes)        
+        public async Task OnNetworkDisconnectionANewLeaderIsElectedAfterReconnectOldLeaderStepsDownAndRollBackHisLog(int numberOfNodes)
         {
             var firstLeader = await CreateNetworkAndGetLeader(numberOfNodes);
             var timeToWait = TimeSpan.FromMilliseconds(firstLeader.ElectionTimeout.TotalMilliseconds * 8); // was 'TotalMilliseconds * 4', changed to *8 for low end machines RavenDB-7263
             await IssueCommandsAndWaitForCommit(firstLeader, 3, "test", 1);
-           
+
             DisconnectFromNode(firstLeader);
             List<Task> invalidCommands = IssueCommandsWithoutWaitingForCommits(firstLeader, 5, "test", 1);
             var followers = GetFollowers();
