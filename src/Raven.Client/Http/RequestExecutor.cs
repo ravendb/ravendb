@@ -391,11 +391,8 @@ namespace Raven.Client.Http
 
                         if (command.FailedNodes.Count == 1)
                         {
-                            Console.Beep();
-                            Console.WriteLine("Error");
-                            Console.ReadLine();
-                            var x = command.FailedNodes.First();
-                            throw new UnsuccessfulRequestException(x.Key.Url, x.Value);
+                            var node = command.FailedNodes.First();
+                            throw new UnsuccessfulRequestException(node.Key.Url, node.Value);
                         }
 
                         throw new AllTopologyNodesDownException("Received unsuccessful response from all servers and couldn't recover from it.",
