@@ -44,8 +44,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
             if (etls == null)
                 ThrowNoEtlsDefined(EtlType, configurationName);
             
-            var index = etls.FindIndex(x => EtlConfigurationNameRetriever.GetName(x.Destination)
-                .Equals(configurationName, StringComparison.OrdinalIgnoreCase));
+            var index = etls.FindIndex(x => x.Destination.Name.Equals(configurationName, StringComparison.OrdinalIgnoreCase));
 
             if (index == -1)
                 ThrowConfigurationNotFound(configurationName);

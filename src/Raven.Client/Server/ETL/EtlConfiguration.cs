@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using Sparrow;
 
 namespace Raven.Client.Server.ETL
 {
-    public class EtlConfiguration<T> where T : EtlDestination
+    public class EtlConfiguration<T> : IDatabaseTask where T : EtlDestination
     {
+        private ulong? _taskKey;
+
         public T Destination { get; set; }
 
         public List<Transformation> Transforms { get; set; } = new List<Transformation>();
@@ -29,5 +32,10 @@ namespace Raven.Client.Server.ETL
         }
 
         public EtlType EtlType => Destination is RavenDestination ? EtlType.Raven : EtlType.Sql;
+
+        public ulong GetTaskKey()
+        {
+            return _taskKey ?? (_taskKey = Hashing.XXHash64.Calculate(Destination.Name, Encodings.Utf8)).Value;
+        }
     }
 }

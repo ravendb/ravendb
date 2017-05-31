@@ -150,7 +150,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             List<string> errors;
             if (simulateSqlEtl.Configuration.Validate(out errors) == false)
             {
-                throw new InvalidOperationException($"Invalid ETL configuration for destination {EtlConfigurationNameRetriever.GetName(simulateSqlEtl.Configuration.Destination)}. " +
+                throw new InvalidOperationException($"Invalid ETL configuration for destination {simulateSqlEtl.Configuration.Destination.Name}. " +
                                                     $"Reason{(errors.Count > 1 ? "s" : string.Empty)}: {string.Join(";", errors)}.");
             }
             
