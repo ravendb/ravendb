@@ -7,6 +7,7 @@ using Raven.Client.Http;
 using Raven.Client.Server.ETL;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.Raven.Enumerators;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -20,7 +21,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         private readonly RavenEtlDocumentTransformer.ScriptInput _script;
 
-        public RavenEtl(Transformation transformation, RavenDestination destination, DocumentDatabase database) : base(transformation, destination, database, RavenEtlTag)
+        public RavenEtl(Transformation transformation, RavenDestination destination, DocumentDatabase database, ServerStore serverStore) : base(transformation, destination, database, serverStore, RavenEtlTag)
         {
             Metrics = new EtlMetricsCountersManager();
             _requestExecutor = RequestExecutor.CreateForSingleNode(Destination.Url, Destination.Database, Destination.ApiKey);

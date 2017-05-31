@@ -72,6 +72,8 @@ namespace Raven.Server.ServerWide
 
         public event EventHandler<(string dbName, long index, string type)> DatabaseChanged;
 
+        public event EventHandler<(string dbName, long index, string type)> DatabaseValueChanged;
+
         protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             if (cmd.TryGet("Type", out string type) == false)
@@ -130,6 +132,7 @@ namespace Raven.Server.ServerWide
                 case nameof(AcknowledgeSubscriptionBatchCommand):
                 case nameof(CreateSubscriptionCommand):
                 case nameof(DeleteSubscriptionCommand):
+                case nameof(StoreEtlStatusCommand):
                     SetValueForTypedDatabaseCommand(context, type, cmd, index, leader);
                     break;
                 case nameof(PutApiKeyCommand):
@@ -160,7 +163,6 @@ namespace Raven.Server.ServerWide
                 BlittableJsonReaderObject itemBlittable = null;
 
                 var itemKey = updateCommand.GetItemId();
-                using (Slice.From(context.Allocator, itemKey, out Slice valueName))
                 using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
                 {
                     if (items.ReadByKey(valueNameLowered, out TableValueReader reader))
@@ -199,7 +201,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                NotifyDatabaseChanged(context, updateCommand?.DatabaseName, index, type);
+                NotifyDatabaseValueChanged(context, updateCommand?.DatabaseName, index, type);
             }
         }
 
@@ -386,6 +388,25 @@ namespace Raven.Server.ServerWide
                         try
                         {
                             DatabaseChanged?.Invoke(this, (databaseName, index, type));
+                        }
+                        finally
+                        {
+                            _rachisLogIndexNotifications.NotifyListenersAbout(index);
+                        }
+                    }, null);
+            };
+        }
+
+        private void NotifyDatabaseValueChanged(TransactionOperationContext context, string databaseName, long index, string type)
+        {
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
+            {
+                if (transaction is LowLevelTransaction llt && llt.Committed)
+                    TaskExecutor.Execute(_ =>
+                    {
+                        try
+                        {
+                            DatabaseValueChanged?.Invoke(this, (databaseName, index, type));
                         }
                         finally
                         {

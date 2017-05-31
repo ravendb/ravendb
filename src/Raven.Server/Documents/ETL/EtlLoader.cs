@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Extensions;
+using Raven.Client.Server;
 using Raven.Client.Server.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
@@ -18,6 +19,7 @@ namespace Raven.Server.Documents.ETL
         private const string AlertTitle = "ETL loader";
 
         private EtlProcess[] _processes = new EtlProcess[0];
+        private DatabaseRecord _databaseRecord;
 
         private readonly object _loadProcessedLock = new object();
         private readonly DocumentDatabase _database;
@@ -64,9 +66,12 @@ namespace Raven.Server.Documents.ETL
                         if (ValidateConfiguration(config, uniqueDestinations) == false)
                             continue;
 
+                        if (_databaseRecord.Topology.WhoseTaskIsIt(config) != _serverStore.NodeTag)
+                            continue;
+
                         foreach (var transform in config.Transforms)
                         {
-                            var etlProcess = new RavenEtl(transform, config.Destination, _database);
+                            var etlProcess = new RavenEtl(transform, config.Destination, _database, _serverStore);
 
                             processes.Add(etlProcess);
                         }
@@ -80,9 +85,12 @@ namespace Raven.Server.Documents.ETL
                         if (ValidateConfiguration(config, uniqueDestinations) == false)
                             continue;
 
+                        if (_databaseRecord.Topology.WhoseTaskIsIt(config) != _serverStore.NodeTag)
+                            continue;
+
                         foreach (var transform in config.Transforms)
                         {
-                            var sql = new SqlEtl(transform, config.Destination, _database);
+                            var sql = new SqlEtl(transform, config.Destination, _database, _serverStore);
 
                             processes.Add(sql);
                         }
@@ -109,7 +117,7 @@ namespace Raven.Server.Documents.ETL
                 return false;
             }
 
-            if (uniqueDestinations.Add(EtlConfigurationNameRetriever.GetName(config.Destination)) == false)
+            if (uniqueDestinations.Add(config.Destination.Name) == false)
             {
                 LogConfigurationError(config,
                     new List<string>
@@ -124,7 +132,7 @@ namespace Raven.Server.Documents.ETL
 
         private void LogConfigurationError<T>(EtlConfiguration<T> config, List<string> errors) where T : EtlDestination
         {
-            var errorMessage = $"Invalid ETL configuration for destination: {EtlConfigurationNameRetriever.GetName(config.Destination)}. " +
+            var errorMessage = $"Invalid ETL configuration for destination: {config.Destination.Name}. " +
                                $"Reason{(errors.Count > 1 ? "s" : string.Empty)}: {string.Join(";", errors)}.";
 
             if (Logger.IsInfoEnabled)
@@ -137,10 +145,10 @@ namespace Raven.Server.Documents.ETL
 
         private void LoadConfiguration()
         {
-            var record = _serverStore.LoadDatabaseRecord(_database.Name);
+            _databaseRecord = _serverStore.LoadDatabaseRecord(_database.Name);
 
-            RavenDestinations = record.RavenEtls;
-            SqlDestinations = record.SqlEtls;
+            RavenDestinations = _databaseRecord.RavenEtls;
+            SqlDestinations = _databaseRecord.SqlEtls;
 
             // TODO arek remove destinations which has been removed or modified - EtlStorage.Remove
         }

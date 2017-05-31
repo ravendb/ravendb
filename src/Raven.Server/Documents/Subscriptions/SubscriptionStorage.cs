@@ -321,12 +321,12 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 var databaseRecord = _serverStore.Cluster.ReadDatabase(context, _db.Name);
 
-                foreach (var subscripitonStateKvp in _subscriptionStates)
+                foreach (var subscriptionStateKvp in _subscriptionStates)
                 {
-                    var subscriptionBlittable = _serverStore.Cluster.Read(context, subscripitonStateKvp.Key);
+                    var subscriptionBlittable = _serverStore.Cluster.Read(context, subscriptionStateKvp.Key);
                     if (subscriptionBlittable == null)
                     {
-                        DropSubscriptionConnection(subscripitonStateKvp.Key, new SubscriptionDoesNotExistException("Deleted"));
+                        DropSubscriptionConnection(subscriptionStateKvp.Key, new SubscriptionDoesNotExistException("Deleted"));
                         continue;
                     }
                     var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
@@ -335,14 +335,14 @@ namespace Raven.Server.Documents.Subscriptions
                     if (databaseRecord.Topology.WhoseTaskIsIt(subscriptionState) != _serverStore.NodeTag)
                     {
                         if (_logger.IsInfoEnabled)
-                            _logger.Info($"Disconnected subscripiton with id {subscripitonStateKvp.Key}, because it was is no longer managed by this node ({_serverStore.NodeTag})");
-                        RedirectSubscriptionConnection(subscripitonStateKvp.Key, "Subscription operation was stopped, because it's now under different server's responsibility");
+                            _logger.Info($"Disconnected subscription with id {subscriptionStateKvp.Key}, because it was is no longer managed by this node ({_serverStore.NodeTag})");
+                        RedirectSubscriptionConnection(subscriptionStateKvp.Key, "Subscription operation was stopped, because it's now under different server's responsibility");
                     }
                 }
             }
         }
 
-        public Task GetSusbscriptionConnectionInUseAwaiter(string subscriptionId)
+        public Task GetSubscriptionConnectionInUseAwaiter(string subscriptionId)
         {
             if (_subscriptionStates.TryGetValue(subscriptionId, out SubscriptionConnectionState state) == false)
                 return Task.CompletedTask;

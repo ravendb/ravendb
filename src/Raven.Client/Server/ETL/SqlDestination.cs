@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Raven.Client.Server.ETL
 {
     public class SqlDestination : EtlDestination
     {
+        private string _name;
+
         public SqlDestination()
         {
             SqlTables = new List<SqlEtlTable>();
@@ -34,6 +37,19 @@ namespace Raven.Client.Server.ETL
                 errors.Add($"{nameof(SqlTables)} cannot be empty");
 
             return errors.Count == 0;
+        }
+
+        public override string Name
+        {
+            get
+            {
+                if (_name != null)
+                    return _name;
+
+                var (database, server) = SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(Connection.FactoryName, Connection.ConnectionString);
+
+                return _name = $"{database}@{server} [{string.Join(" ", SqlTables.Select(x => x.TableName))}]";
+            }
         }
     }
 
