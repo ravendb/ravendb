@@ -5,6 +5,7 @@ namespace Raven.Client.Server.ETL
     public class RavenDestination : EtlDestination
     {
         private string _url;
+        private string _name;
 
         public string Url
         {
@@ -28,5 +29,7 @@ namespace Raven.Client.Server.ETL
             
             return errors.Count == 0;
         }
+
+        public override string Name => _name ?? (_name = $"{Database}@{Url}");
     }
 }
