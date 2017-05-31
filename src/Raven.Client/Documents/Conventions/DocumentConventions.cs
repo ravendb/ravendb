@@ -187,6 +187,8 @@ namespace Raven.Client.Documents.Conventions
         /// <value>The find identity property.</value>
         public Func<MemberInfo, bool> FindIdentityProperty { get; set; }
 
+        public bool DisableTopologyUpdates { get; set; }
+
         /// <summary>
         ///     Default method used when finding a collection name for a type
         /// </summary>
