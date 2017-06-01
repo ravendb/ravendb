@@ -11,6 +11,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             Document = item.Document;
             IsDelete = item.IsDelete;
             Collection = item.Collection;
+            ChangeVector = item.ChangeVector;
         }
 
         public ToSqlItem(Document document, string collection) : base(document, collection)

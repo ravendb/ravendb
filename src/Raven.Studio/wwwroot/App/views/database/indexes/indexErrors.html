@@ -1,21 +1,25 @@
-<div class="errors content-margin">
-    <div class="flex-window stretch">
-        <div class="flex-header">
-            <div class="toolbar clearfix">
-
-                <div class="input-group">
-                    <input type="text" accesskey="/" class="form-control" placeholder="Filter" title="Filter index errors (Alt+/)" data-bind="textInput: searchText" />
-                </div>
-                <div class="btn-group">
-                    <select id="visibleIndexesSelector" data-bind="options: allErroredIndexNames, selectedOptions: selectedIndexNames" size="5" multiple="multiple"></select>
-                </div>
+<div class="errors flex-vertical absolute-fill content-margin">
+    <div class="flex-header">
+        <div class="flex-horizontal clearfix">
+            <div class="input-group">
+                <input type="text" accesskey="/" class="form-control" placeholder="Filter" title="Filter index errors (Alt+/)" data-bind="textInput: searchText" />
+            </div>
+            <div class="btn-group">
+                <select id="visibleIndexesSelector" size="5" multiple="multiple"
+                        data-bind="options: allErroredIndexNames, selectedOptions: selectedIndexNames, optionsText: 'indexName', optionsValue: 'indexName'" ></select>
             </div>
         </div>
-        <div class="flex-window-scroll">
-            <div class="scroll-stretch">
-                <div class="panel-body">
-                    <virtual-grid class="resizable virtual-grid" params="controller: gridController, emptyTemplate: 'empty-index-errors-template'"></virtual-grid>
-                </div>
+    </div>
+    <div class="flex-grow">
+        <div class="has-error results-error" data-bind="visible: isDirty">
+            <div class="help-block">
+                <i class="icon-danger"></i><span>Data has changed. Your results may contain non-current entries.
+                <a href="#" data-bind="click: refresh">Refresh.</a></span>
+            </div>
+        </div>
+        <div class="scroll-stretch">
+            <div class="panel-body">
+                <virtual-grid class="resizable virtual-grid" params="controller: gridController, emptyTemplate: 'empty-index-errors-template'"></virtual-grid>
             </div>
         </div>
     </div>

@@ -1,9 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
+using Jint.Native;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
+using Raven.Client.Server.Commands;
+using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -37,6 +40,24 @@ namespace Raven.Server.Documents.Handlers.Admin
                     writer.Flush();
                 }
             }
+        }
+
+        [RavenAction("/admin/cluster/node-info", "GET", "/admin/cluster/node-info")]
+        public Task GetTag()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var json = new DynamicJsonValue();
+                using (context.OpenReadTransaction())
+                {
+                    json[nameof(NodeInfo.NodeTag)] = ServerStore.NodeTag;
+                    json[nameof(NodeInfo.TopologyId)] = ServerStore.GetClusterTopology(context).TopologyId;
+                }
+                context.Write(writer, json);
+                writer.Flush();
+            }
+            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/cluster/topology", "GET", "/admin/cluster/topology")]
@@ -133,9 +154,35 @@ namespace Raven.Server.Documents.Handlers.Admin
             ServerStore.EnsureNotPassive();
             if (ServerStore.IsLeader())
             {
-                await ServerStore.AddNodeToClusterAsync(serverUrl);
-                NoContentStatus();
-                return;
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                {
+                    string apiKey;
+                    string topologyId;
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var clusterTopology = ServerStore.GetClusterTopology(ctx);
+                        apiKey = clusterTopology.ApiKey;
+                        topologyId = clusterTopology.TopologyId;
+                    }
+                    using (var requestExecuter = ClusterRequestExecutor.CreateForSingleNode(serverUrl, apiKey))
+                    {
+                        var infoCmd = new GetNodeInfoCommand();
+                        await requestExecuter.ExecuteAsync(infoCmd, ctx);
+                        var nodeInfo = infoCmd.Result;
+
+                        if (nodeInfo.TopologyId != null && topologyId != nodeInfo.TopologyId)
+                        {
+                            throw new TopologyMismatchException(
+                                $"Adding a new node to cluster failed due to topology mismatch, we expected topology id {topologyId}, but get {nodeInfo.TopologyId}");
+                        }
+
+                        var nodeTag = nodeInfo.NodeTag == "?" 
+                            ? null : nodeInfo.NodeTag;
+                        await ServerStore.AddNodeToClusterAsync(serverUrl, nodeTag, validateNotInTopology:false);
+                        NoContentStatus();
+                        return;
+                    }
+                }
             }
             RedirectToLeader();
         }

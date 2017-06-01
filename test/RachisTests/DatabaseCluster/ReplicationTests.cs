@@ -41,7 +41,7 @@ namespace RachisTests.DatabaseCluster
             Assert.Equal(clusterSize, databaseResult.Topology.AllReplicationNodes().Count());
             foreach (var server in Servers)
             {
-                await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag ?? -1);
+                await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag);
             }
             foreach (var server in Servers.Where(s => databaseResult.NodesAddedTo.Any(n => n == s.WebUrls[0])))
             {
@@ -97,7 +97,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(clusterSize, databaseResult.Topology.AllReplicationNodes().Count());
                 foreach (var server in Servers)
                 {
-                    await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag ?? -1);
+                    await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag);
                 }
                 foreach (var server in Servers)
                 {
@@ -119,22 +119,24 @@ namespace RachisTests.DatabaseCluster
                     doc = MultiDatabase.CreateDatabaseDocument($"Watcher{i}");
                     var res = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc));
                     var server = Servers.Single(x => x.WebUrls[0] == res.NodesAddedTo[0]);
-                    await server.ServerStore.Cluster.WaitForIndexNotification(res.ETag ?? -1);
+                    await server.ServerStore.Cluster.WaitForIndexNotification(res.ETag);
                     await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore($"Watcher{i}");
 
-                    watchers.Add(new DatabaseWatcher
+                    var watcher = new DatabaseWatcher
                     {
                         Database = $"Watcher{i}",
                         Url = res.NodesAddedTo[0]
-                    });
-                }
+                    };
+                    watchers.Add(watcher);
 
-                await UpdateReplicationTopology((DocumentStore)store, watchers);
+                    await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
+
+                }
             }
 
             foreach (var watcher in watchers)
             {
-                using (var store = new DocumentStore()
+                using (var store = new DocumentStore
                 {
                     Urls = new[] { watcher.Url },
                     Database = watcher.Database,
@@ -172,7 +174,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(clusterSize, databaseResult.Topology.AllReplicationNodes().Count());
                 foreach (var server in Servers)
                 {
-                    await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag ?? -1);
+                    await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag);
                 }
                 foreach (var server in Servers)
                 {
@@ -193,7 +195,7 @@ namespace RachisTests.DatabaseCluster
                 doc = MultiDatabase.CreateDatabaseDocument("Watcher");
                 var res = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc));
                 var node = Servers.Single(x => x.WebUrls[0] == res.NodesAddedTo[0]);
-                await node.ServerStore.Cluster.WaitForIndexNotification(res.ETag ?? -1);
+                await node.ServerStore.Cluster.WaitForIndexNotification(res.ETag);
                 await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore("Watcher");
 
                 watcher = new DatabaseWatcher
@@ -205,15 +207,15 @@ namespace RachisTests.DatabaseCluster
                 await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
             }
 
-            var tasks = OngoingTasksHandler.GetOngoingTasksAndDbTopology(databaseName, leader.ServerStore).tasks;
-            Assert.Equal(tasks.OngoingTasksList.Count, 1);
+            var tasks = OngoingTasksHandler.GetOngoingTasksFor(databaseName, leader.ServerStore);
+            Assert.Equal(1, tasks.OngoingTasksList.Count);
             var repTask = tasks.OngoingTasksList[0] as OngoingTaskReplication;
             Assert.Equal(repTask?.DestinationDB, watcher.Database);
             Assert.Equal(repTask?.DestinationURL, watcher.Url);
 
-            watcher.TaskId = repTask?.TaskId;
+            watcher.TaskId = Convert.ToInt64(repTask?.TaskId);
 
-            using (var store = new DocumentStore()
+            using (var store = new DocumentStore
             {
                 Urls = new[] { watcher.Url },
                 Database = watcher.Database,
@@ -226,7 +228,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.True(WaitForDocument<User>(store, "users/1", u => u.Name == "Karmel"));
             }
 
-            using (var store = new DocumentStore()
+            using (var store = new DocumentStore
             {
                 Urls = leader.WebUrls,
                 Database = databaseName,
@@ -239,7 +241,7 @@ namespace RachisTests.DatabaseCluster
                 var doc = MultiDatabase.CreateDatabaseDocument("Watcher2");
                 var res = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc));
                 var node = Servers.Single(x => x.WebUrls[0] == res.NodesAddedTo[0]);
-                await node.ServerStore.Cluster.WaitForIndexNotification(res.ETag ?? -1);
+                await node.ServerStore.Cluster.WaitForIndexNotification(res.ETag);
                 await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore("Watcher2");
 
                 //modify watcher
@@ -249,8 +251,8 @@ namespace RachisTests.DatabaseCluster
                 await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
             }
 
-            tasks = OngoingTasksHandler.GetOngoingTasksAndDbTopology(databaseName, leader.ServerStore).tasks;
-            Assert.Equal(tasks.OngoingTasksList.Count, 1);
+            tasks = OngoingTasksHandler.GetOngoingTasksFor(databaseName, leader.ServerStore);
+            Assert.Equal(1, tasks.OngoingTasksList.Count);
             repTask = tasks.OngoingTasksList[0] as OngoingTaskReplication;
             Assert.Equal(repTask?.DestinationDB, watcher.Database);
             Assert.Equal(repTask?.DestinationURL, watcher.Url);
@@ -266,6 +268,22 @@ namespace RachisTests.DatabaseCluster
             }.Initialize())
             {
                 Assert.True(WaitForDocument<User>(store, "users/1", u => u.Name == "Karmel"));
+            }
+
+            //delete watcher
+            using (var store = new DocumentStore
+            {
+                Urls = leader.WebUrls,
+                Database = databaseName,
+                Conventions =
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize())
+            {
+                await DeleteWatcherFromReplicationTopology((DocumentStore)store, watcher.TaskId);
+                tasks = OngoingTasksHandler.GetOngoingTasksFor(databaseName, leader.ServerStore);
+                Assert.Equal(0, tasks.OngoingTasksList.Count);
             }
         }
 
@@ -347,7 +365,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(clusterSize, topology.AllReplicationNodes().Count());
                 foreach (var server in Servers)
                 {
-                    await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag ?? -1);
+                    await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag);
                 }
                 foreach (var server in Servers)
                 {
@@ -413,16 +431,14 @@ namespace RachisTests.DatabaseCluster
                 Assert.NotNull(doc);
                 Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
 
-                var watchers = new List<DatabaseWatcher>
+                var watcher = new DatabaseWatcher
                 {
-                    new DatabaseWatcher
-                    {
-                        Database = store2.Database,
-                        Url = store2.Urls.First(),
-                        ApiKey = "super/" + api
-                    }
+                    Database = store2.Database,
+                    Url = store2.Urls.First(),
+                    ApiKey = "super/" + api
                 };
-                await UpdateReplicationTopology(store1, watchers);
+                
+                await AddWatcherToReplicationTopology(store1, watcher);
 
                 using (var session = store1.OpenAsyncSession())
                 {

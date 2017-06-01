@@ -288,7 +288,7 @@ namespace FastTests.Tasks
             Assert.Equal(clusterSize, databaseResult.Topology.AllReplicationNodes().Count());
             foreach (var server in Servers)
             {
-                await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag ?? -1);
+                await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag);
             }
         }
     }

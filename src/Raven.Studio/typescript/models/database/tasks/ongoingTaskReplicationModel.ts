@@ -96,7 +96,7 @@ class ongoingTaskReplicationModel extends ongoingTask {
             TaskType: "Replication",
             DestinationDB: "simulationDB",
             DestinationURL: "http://localhost:8080",
-            TaskId: "123456789"
+            TaskId: 123456789
         } as Raven.Server.Web.System.OngoingTaskReplication);
     }
 }

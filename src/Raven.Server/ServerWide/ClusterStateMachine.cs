@@ -115,12 +115,12 @@ namespace Raven.Server.ServerWide
                 case nameof(UpdatePeriodicBackupCommand):
                 case nameof(DeletePeriodicBackupCommand):
                 case nameof(EditExpirationCommand):
-                case nameof(ModifyDatabaseWatchersCommand):
                 case nameof(ModifyConflictSolverCommand):
                 case nameof(UpdateTopologyCommand):
                 case nameof(DeleteDatabaseCommand):
                 case nameof(ModifyCustomFunctionsCommand):
                 case nameof(UpdateDatabaseWatcherCommand):
+                case nameof(DeleteDatabaseWatcherCommand):
                 case nameof(AddRavenEtlCommand):
                 case nameof(AddSqlEtlCommand):
                 case nameof(UpdateRavenEtlCommand):
@@ -132,7 +132,7 @@ namespace Raven.Server.ServerWide
                 case nameof(AcknowledgeSubscriptionBatchCommand):
                 case nameof(CreateSubscriptionCommand):
                 case nameof(DeleteSubscriptionCommand):
-                case nameof(StoreEtlStatusCommand):
+                case nameof(UpdateEtlProcessStateCommand):
                     SetValueForTypedDatabaseCommand(context, type, cmd, index, leader);
                     break;
                 case nameof(PutApiKeyCommand):
@@ -434,14 +434,16 @@ namespace Raven.Server.ServerWide
                 {
                     var databaseRecordJson = ReadInternal(context, out long etag, valueNameLowered);
 
+                    var updateCommand = (UpdateDatabaseCommand)JsonDeserializationCluster.Commands[type](cmd);
+
                     if (databaseRecordJson == null)
                     {
-                        NotifyLeaderAboutError(index, leader, new DatabaseDoesNotExistException($"Cannot execute update command of type {type} for {databaseName} because it does not exists"));
+                        if(updateCommand.ErrorOnDatabaseDoesNotExists)
+                            NotifyLeaderAboutError(index, leader, new DatabaseDoesNotExistException($"Cannot execute update command of type {type} for {databaseName} because it does not exists"));
                         return null;
                     }
 
                     databaseRecord = JsonDeserializationCluster.DatabaseRecord(databaseRecordJson);
-                    var updateCommand = (UpdateDatabaseCommand)JsonDeserializationCluster.Commands[type](cmd);
 
                     if (updateCommand.Etag != null && etag != updateCommand.Etag.Value)
                     {
@@ -635,9 +637,10 @@ namespace Raven.Server.ServerWide
 
         public override async Task<Stream> ConnectToPeer(string url, string apiKey)
         {
-            if (_parent?.Url != null && url != null)
-                if (_parent.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) != url.StartsWith("https:", StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidOperationException($"Failed to connect from node {_parent.Url} to node {url}. If HTTPS is used on one node, the other node must also use it");
+            if (url == null) throw new ArgumentNullException(nameof(url));
+            if (_parent == null) throw new InvalidOperationException("Cannot connect to peer without a parent");
+            if (_parent.IsEncrypted &&  url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
+                    throw new InvalidOperationException($"Failed to connect to node {url}. Connections from encrypted store must use HTTPS.");
             
             var info = await ReplicationUtils.GetTcpInfoAsync(url, "Rachis.Server", apiKey, "Cluster");
             var authenticator = new ApiKeyAuthenticator();
@@ -732,22 +735,19 @@ namespace Raven.Server.ServerWide
             return etag == copy.CachedToString;
         }
 
-        public async Task WaitForIndexNotification(long index, TimeSpan? timeoutInMs = null)
+        public async Task WaitForIndexNotification(long index, TimeSpan? timeout = null)
         {
-            Task timeoutTask = null;
-            if (timeoutInMs.HasValue)
-                timeoutTask = TimeoutManager.WaitFor(timeoutInMs.Value, _token);
-            while (index > Volatile.Read(ref _lastModifiedIndex.Val) &&
-                    (timeoutInMs.HasValue == false || timeoutTask.IsCompleted == false))
+            while (true)
             {
-                var task = _notifiedListeners.WaitAsync();
-                if (timeoutInMs.HasValue == false)
+                // first get the task, then wait on it
+                var waitAsync = timeout.HasValue == false ? _notifiedListeners.WaitAsync() : _notifiedListeners.WaitAsync(timeout.Value);
+
+                if (index <= Volatile.Read(ref _lastModifiedIndex.Val))
+                    break;
+                
+                if (await waitAsync  == false)
                 {
-                    await task;
-                }
-                else if (timeoutTask == await Task.WhenAny(task, timeoutTask))
-                {
-                    ThrowTimeoutException(timeoutInMs.Value, index, _lastModifiedIndex.Val);
+                    ThrowTimeoutException(timeout ?? TimeSpan.MaxValue, index, _lastModifiedIndex.Val);
                 }
             }
         }
@@ -760,14 +760,14 @@ namespace Raven.Server.ServerWide
 
         public void NotifyListenersAbout(long index)
         {
-            var lastModifed = _lastModifiedIndex;
+            var lastModified = _lastModifiedIndex;
             var holder = new Holder
             {
                 Val = index
             };
-            while (index > lastModifed.Val)
+            while (index > lastModified.Val)
             {
-                lastModifed = Interlocked.CompareExchange(ref _lastModifiedIndex, holder, lastModifed);
+                lastModified = Interlocked.CompareExchange(ref _lastModifiedIndex, holder, lastModified);
             }
             _notifiedListeners.SetAndResetAtomically();
         }

@@ -9,7 +9,6 @@ namespace Raven.Server.Rachis
     {
         public static bool Disable;
 
-        private readonly int _timeoutPeriod;
         private readonly ManualResetEventSlim _timeoutEventSlim = new ManualResetEventSlim();
         private ExceptionDispatchInfo _edi;
         private readonly Timer _timer;
@@ -19,18 +18,21 @@ namespace Raven.Server.Rachis
 
         public TimeoutEvent(int timeoutPeriod)
         {
-            _timeoutPeriod = timeoutPeriod;
+            TimeoutPeriod = timeoutPeriod;
             _lastDeferredTicks = DateTime.UtcNow.Ticks;
             _timer = new Timer(Callback, null, Timeout.Infinite, Timeout.Infinite);
         }
 
-        public int TimeoutPeriod => _timeoutPeriod;
+        public int TimeoutPeriod;
 
         public void Start(Action onTimeout)
         {
-            _edi?.Throw();
-            _timeoutHappened = onTimeout;
-            _timer.Change(_timeoutPeriod, _timeoutPeriod);
+            lock (this)
+            {
+                _edi?.Throw();
+                _timeoutHappened = onTimeout;
+                _timer.Change(TimeoutPeriod, TimeoutPeriod);
+            }
         }
 
         private void Callback(object state)
@@ -51,17 +53,32 @@ namespace Raven.Server.Rachis
             }
         }
 
+        private void DisableTimeoutInternal()
+        {
+            _timer.Change(Timeout.Infinite, Timeout.Infinite);
+            _timeoutHappened = null;
+            _currentLeader = null;
+        }
+
+        public void DisableTimeout()
+        {
+            lock (this)
+            {
+                DisableTimeoutInternal();
+            }
+        }
+
         public void ExecuteTimeoutBehavior()
         {
             lock (this)
             {
-                if (_timeoutHappened == null)
-                    return;
-                if (Disable)
-                    return;
-                _timer.Change(Timeout.Infinite, Timeout.Infinite);
                 try
                 {
+                    if (_timeoutHappened == null)
+                        return;
+                    if (Disable)
+                        return;
+
                     _timeoutHappened?.Invoke();
                 }
                 catch (ConcurrencyException)
@@ -70,11 +87,9 @@ namespace Raven.Server.Rachis
                 }
                 finally
                 {
-                    _timeoutHappened = null;
-                    _currentLeader = null;
+                   DisableTimeoutInternal();
                 }
             }
-            return;
         }
 
         public void Defer(string leader)

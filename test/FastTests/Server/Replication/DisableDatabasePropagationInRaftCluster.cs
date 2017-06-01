@@ -43,7 +43,7 @@ namespace FastTests.Server.Replication
 
                 //since we have only Raft clusters, it is enough to create database only on one server
                 var databaseResult = master.Admin.Server.Send(new CreateDatabaseOperation(doc, 2));
-                await WaitForRaftIndexToBeAppliedInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
+                await WaitForRaftIndexToBeAppliedInCluster(databaseResult.ETag, TimeSpan.FromSeconds(5));
 
                 var requestExecutor = master.GetRequestExecutor();
                 using (var session = master.OpenSession())
@@ -74,8 +74,8 @@ namespace FastTests.Server.Replication
                 Assert.Equal(master.Database, result.Name);
 
                 //wait until disabled databases unload, this is an immediate operation
-                Assert.True(await WaitUntilDatabaseHasState(master, TimeSpan.FromSeconds(10), isLoaded: false));
-                Assert.True(await WaitUntilDatabaseHasState(slave, TimeSpan.FromSeconds(10), isLoaded: false));
+                Assert.True(await WaitUntilDatabaseHasState(master, TimeSpan.FromSeconds(30), isLoaded: false));
+                Assert.True(await WaitUntilDatabaseHasState(slave, TimeSpan.FromSeconds(30), isLoaded: false));
 
                 using (var session = master.OpenSession())
                 {

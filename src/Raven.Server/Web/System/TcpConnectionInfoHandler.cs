@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Raven.Client.Server.Commands;
 using Raven.Server.Routing;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -28,8 +29,8 @@ namespace Raven.Server.Web.System
 
                 var output = new DynamicJsonValue
                 {
-                    ["Url"] = new UriBuilder("tcp", host, tcpListenerStatus.Port).Uri.ToString(),
-                    ["Certificate"] = Server.ServerCertificate?.CertificateForClients
+                    [nameof(TcpConnectionInfo.Url)] = new UriBuilder("tcp", host, tcpListenerStatus.Port).Uri.ToString(),
+                    [nameof(TcpConnectionInfo.Certificate)] = Server.ServerCertificate?.CertificateForClients,
                 };
 
                 context.Write(writer, output);

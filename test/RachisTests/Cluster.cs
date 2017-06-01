@@ -40,11 +40,11 @@ namespace RachisTests
                 databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
 
                 int numberOfInstances = 0;
-                await AssertNumberOfNodesContainingDatabase(databaseResult.ETag ?? 0, databaseName, numberOfInstances, replicationFactor);
+                await AssertNumberOfNodesContainingDatabase(databaseResult.ETag, databaseName, numberOfInstances, replicationFactor);
                 databaseResult = store.Admin.Server.Send(new AddDatabaseNodeOperation(databaseName));
                 Assert.Equal(databaseResult.Topology.AllNodes.Count(), ++replicationFactor);
                 numberOfInstances = 0;
-                await AssertNumberOfNodesContainingDatabase(databaseResult.ETag ?? 0, databaseName, numberOfInstances, replicationFactor);
+                await AssertNumberOfNodesContainingDatabase(databaseResult.ETag, databaseName, numberOfInstances, replicationFactor);
                 DeleteDatabaseResult deleteResult;
                 while (replicationFactor > 0)
                 {
@@ -74,8 +74,8 @@ namespace RachisTests
                 await server.ServerStore.Cluster.WaitForIndexNotification(eTag);
                 try
                 {
-                    await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-                    numberOfInstances++;
+                    if(server.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName,out var _))
+                        numberOfInstances++;
                 }
                 catch
                 {

@@ -14,7 +14,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
     public class BlittableFormatTests : NoDisposalNeeded
     {
         [Theory]
-        [MemberData("Samples")]
+        [MemberData(nameof(Samples))]
         public void CheckRoundtrip(string name)
         {
             using (var stream = typeof(BlittableFormatTests).GetTypeInfo().Assembly.GetManifestResourceStream(name))

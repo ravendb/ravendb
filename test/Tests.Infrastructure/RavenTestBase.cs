@@ -8,13 +8,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Database;
-using Raven.Client.Extensions;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Server;
@@ -26,6 +23,8 @@ using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
+using Xunit;
 
 namespace FastTests
 {
@@ -41,6 +40,29 @@ namespace FastTests
         }
 
         private readonly object _getDocumentStoreSync = new object();
+
+        protected async Task WaitForRaftIndexToBeAppliedInCluster(long index, TimeSpan timeout)
+        {
+            if (Servers.Count == 0)
+                return;
+
+            var tasks = Servers
+                .Select(server => server.ServerStore.Cluster.WaitForIndexNotification(index))
+                .ToList();
+
+            if (await Task.WhenAll(tasks).WaitAsync(timeout))
+                return;
+
+            var message = $"Timed out waiting for {index} after {timeout} because out of {Servers.Count} " +
+                          " we got confirmations that it was applied only on to following servers: ";
+
+            for (var i = 0; i < tasks.Count; i++)
+            {
+                message += $"{Environment.NewLine}Url: {Servers[i].WebUrls[0]}. Applied: {tasks[i].IsCompleted}.";
+            }
+
+            throw new TimeoutException(message);
+        }
 
         protected virtual DocumentStore GetDocumentStore(
             [CallerMemberName] string caller = null,
@@ -92,17 +114,6 @@ namespace FastTests
                     int.MaxValue.ToString();
                 modifyDatabaseRecord?.Invoke(doc);
 
-                if (createDatabase)
-                {
-                    TransactionOperationContext context;
-                    using (defaultServer.ServerStore.ContextPool.AllocateOperationContext(out context))
-                    {
-                        context.OpenReadTransaction();
-                        if (defaultServer.ServerStore.Cluster.Read(context, Constants.Documents.Prefix + name) != null)
-                            throw new InvalidOperationException($"Database '{name}' already exists");
-                    }
-                }
-
                 var store = new DocumentStore
                 {
                     Urls = UseFiddler(defaultServer.WebUrls),
@@ -114,24 +125,43 @@ namespace FastTests
 
                 if (createDatabase)
                 {
-                    var result = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
-                    defaultServer.ServerStore.Cluster.WaitForIndexNotification(result.ETag ?? 0).Wait();
-                }
+                    foreach (var server in Servers)
+                    {
+                        using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        {
+                            context.OpenReadTransaction();
+                            if (server.ServerStore.Cluster.Read(context, Constants.Documents.Prefix + name) != null)
+                                throw new InvalidOperationException($"Database '{name}' already exists");
+                        }
+                    }
 
+                    var result = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
+                    Assert.True(result.ETag > 0); //sanity check             
+                    store.Urls = result.NodesAddedTo;
+                    var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
+                    var task = WaitForRaftIndexToBeAppliedInCluster(result.ETag, timeout);
+                    task.ConfigureAwait(false).GetAwaiter().GetResult();
+                }
 
                 store.AfterDispose += (sender, args) =>
                 {
                     if (CreatedStores.TryRemove(store) == false)
                         return; // can happen if we are wrapping the store inside sharded one
 
-                    if (defaultServer.Disposed == false)
+                    foreach (var server in Servers)
                     {
-                        var databaseTask = defaultServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name, ignoreDisabledDatabase);
+                        if (server.Disposed)
+                            continue;
+
+                        if (store.Urls.Any(url => server.WebUrls.Contains(url)) == false)
+                            continue;
+
+                        var databaseTask = server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name, ignoreDisabledDatabase);
                         if (databaseTask != null && databaseTask.IsCompleted == false)
                             databaseTask.Wait();
                         // if we are disposing store before database had chance to load then we need to wait
 
-                        defaultServer.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
+                        server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
                         if (deleteDatabaseWhenDisposed)
                         {
                             DeleteDatabaseResult result;
@@ -141,9 +171,9 @@ namespace FastTests
                             }
                             catch (DatabaseDoesNotExistException)
                             {
-                                return;
+                                continue;
                             }
-                            defaultServer.ServerStore.Cluster.WaitForIndexNotification(result.ETag).ConfigureAwait(false).GetAwaiter().GetResult();
+                            server.ServerStore.Cluster.WaitForIndexNotification(result.ETag).ConfigureAwait(false).GetAwaiter().GetResult();
                         }
                     }
                 };

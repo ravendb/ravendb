@@ -171,16 +171,6 @@ namespace Raven.Client.Documents
             return session;
         }
 
-        public async Task ForceUpdateTopologyFor(string url, string databaseName = null, int timeout = 0)
-        {
-            var requestExecutor = GetRequestExecutor(databaseName);
-            await requestExecutor.UpdateTopologyAsync(new ServerNode
-            {
-                Url = url,
-                Database = databaseName
-            }, timeout);
-        }
-
         public override RequestExecutor GetRequestExecutor(string database = null)
         {
             if (database == null)

@@ -289,20 +289,19 @@ namespace FastTests.Server.Replication
             }
         }
 
-
-        protected static async Task<ModifyExternalReplicationResult> UpdateReplicationTopology(
-            DocumentStore store,
-            List<DatabaseWatcher> watchers)
-        {
-            var op = new ModifyDatabaseWatchersOperation(store.Database, watchers);
-            return await store.Admin.Server.SendAsync(op);
-        }
-
         protected static async Task<ModifyExternalReplicationResult> AddWatcherToReplicationTopology(
             DocumentStore store,
             DatabaseWatcher watcher)
         {
             var op = new UpdateWatcherOperation(store.Database, watcher);
+            return await store.Admin.Server.SendAsync(op);
+        }
+
+        protected static async Task<ModifyExternalReplicationResult> DeleteWatcherFromReplicationTopology(
+            DocumentStore store,
+            long taskId)
+        {
+            var op = new DeleteWatcherOperation(store.Database, taskId);
             return await store.Admin.Server.SendAsync(op);
         }
 
@@ -317,7 +316,7 @@ namespace FastTests.Server.Replication
 
         public async Task SetupReplicationAsync(DocumentStore fromStore, params DocumentStore[] toStores)
         {
-            var watchers = new List<DatabaseWatcher>();
+            ModifyExternalReplicationResult result = null;
             foreach (var store in toStores)
             {
                 var databaseWatcher = new DatabaseWatcher
@@ -326,10 +325,9 @@ namespace FastTests.Server.Replication
                     Url = store.Urls[0]
                 };
                 ModifyReplicationDestination(databaseWatcher);
-                watchers.Add(databaseWatcher);
+                result = await AddWatcherToReplicationTopology(fromStore, databaseWatcher);
             }
-            var result = await UpdateReplicationTopology(fromStore, watchers);
-            CurrentDatabaseTopology = result.Topology;
+            CurrentDatabaseTopology = result?.Topology;
         }
 
         public static async Task SetScriptResolutionAsync(DocumentStore store, string script, string collection)
@@ -363,16 +361,15 @@ namespace FastTests.Server.Replication
 
         protected static async Task SetupReplicationWithCustomDestinations(DocumentStore fromStore, params ReplicationNode[] toNodes)
         {
-            var watchers = new List<DatabaseWatcher>();
             foreach (var node in toNodes)
             {
-                watchers.Add(new DatabaseWatcher
+                var databaseWatcher = new DatabaseWatcher
                 {
                     Database = node.Database,
                     Url = node.Url,
-                });
+                };
+                await AddWatcherToReplicationTopology(fromStore, databaseWatcher);
             }
-            await UpdateReplicationTopology(fromStore, watchers);
         }
 
         private class GetRevisionsCommand : RavenCommand<List<object>>

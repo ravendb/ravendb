@@ -1,15 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using FastTests.Server.NotificationCenter;
-using FastTests.Server.Replication;
-using Orders;
-using Raven.Client.Documents;
-using SlowTests.Issues;
-using SlowTests.Smuggler;
-using System.Threading.Tasks;
+using FastTests.Client.Attachments;
 using RachisTests.DatabaseCluster;
+using Sparrow.Logging;
+using System.Threading.Tasks;
 
 namespace Tryouts
 {
@@ -17,17 +11,25 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
+            LoggingSource.Instance.SetupLogMode(LogMode.Information, @"c:\work\debug\ravendb");
+
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
 
-            for (int i = 0; i < 1000000; i++)
+            for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
 
-                using (var a = new ReplicationTests())
+
+                //Parallel.For(0, 10, _ =>
                 {
-                    a.AddGlobalChangeVectorToNewDocument(false).Wait();
+                    using (var a = new FastTests.Server.Documents.Versioning.Versioning())
+                    {
+                        a.ServerSaveBundlesAfterRestart().Wait();
+                    }
                 }
+                
+                //);
             }
         }
     }

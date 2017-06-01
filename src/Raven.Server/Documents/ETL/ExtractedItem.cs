@@ -1,4 +1,5 @@
-﻿using Sparrow.Json;
+﻿using Raven.Client.Documents.Replication.Messages;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL
 {
@@ -15,6 +16,7 @@ namespace Raven.Server.Documents.ETL
             Etag = document.Etag;
             Document = document;
             Collection = collection;
+            ChangeVector = document.ChangeVector;
         }
 
         protected ExtractedItem(DocumentTombstone tombstone, string collection)
@@ -23,6 +25,7 @@ namespace Raven.Server.Documents.ETL
             DocumentId = tombstone.LowerId;
             IsDelete = true;
             Collection = collection;
+            ChangeVector = tombstone.ChangeVector;
         }
 
         public Document Document { get; protected set; }
@@ -30,6 +33,8 @@ namespace Raven.Server.Documents.ETL
         public LazyStringValue DocumentId { get; protected set; }
 
         public long Etag { get; protected set; }
+
+        public ChangeVectorEntry[] ChangeVector;
 
         public bool IsDelete { get; protected set; }
 

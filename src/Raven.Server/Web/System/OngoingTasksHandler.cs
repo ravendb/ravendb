@@ -8,13 +8,12 @@ using Raven.Client.Exceptions;
 using Raven.Client.Json.Converters;
 using Raven.Client.Http;
 using Raven.Client.Server;
-using Raven.Client.Server.ETL;
+using Raven.Client.Server.ETL.SQL;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -26,7 +25,7 @@ namespace Raven.Server.Web.System
         public Task GetOngoingTasks()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("databaseName");
-            var result = GetOngoingTasksAndDbTopology(name, ServerStore).tasks;
+            var result = GetOngoingTasksFor(name, ServerStore);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -37,7 +36,7 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        public static (OngoingTasksResult tasks, DatabaseTopology topology) GetOngoingTasksAndDbTopology(string dbName, ServerStore serverStore)
+        public static OngoingTasksResult GetOngoingTasksFor(string dbName, ServerStore serverStore)
         {
             var ongoingTasksResult = new OngoingTasksResult();
             using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -51,7 +50,8 @@ namespace Raven.Server.Web.System
                 foreach (var tasks in new []
                 {
                     CollectExternalReplicationTasks(dbTopology, clusterTopology),
-                    CollectEtlTasks(databaseRecord, dbTopology, clusterTopology)
+                    CollectEtlTasks(databaseRecord, dbTopology, clusterTopology),
+                    CollectBackupTasks(databaseRecord, dbTopology, clusterTopology)
                 })
                 {
                     ongoingTasksResult.OngoingTasksList.AddRange(tasks);
@@ -62,9 +62,7 @@ namespace Raven.Server.Web.System
                     ongoingTasksResult.SubscriptionsCount = (int)database.Result.SubscriptionStorage.GetAllSubscriptionsCount();
                 }
 
-                //TODO: collect all the rest of the ongoing tasks (Backup)
-
-                return (ongoingTasksResult, dbTopology);
+                return ongoingTasksResult;
             }
         }
 
@@ -92,6 +90,52 @@ namespace Raven.Server.Web.System
             }
         }
 
+        private static IEnumerable<OngoingTask> CollectBackupTasks(DatabaseRecord databaseRecord, DatabaseTopology dbTopology, ClusterTopology clusterTopology)
+        {
+            if (dbTopology == null)
+                yield break;
+
+            if (databaseRecord.PeriodicBackups == null)
+                yield break;
+
+            foreach (var backupConfiguration in databaseRecord.PeriodicBackups)
+            {
+                var tag = dbTopology.WhoseTaskIsIt(backupConfiguration);
+
+                var backupDestinations = GetBackupDestinations(backupConfiguration);
+
+                yield return new OngoingTaskBackup
+                {
+                    TaskId = backupConfiguration.TaskId,
+                    BackupType = backupConfiguration.BackupType,
+                    Name = backupConfiguration.Name,
+                    TaskState = backupConfiguration.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
+                    ResponsibleNode = new NodeId
+                    {
+                        NodeTag = tag,
+                        NodeUrl = clusterTopology.GetUrlFromTag(tag)
+                    },
+                    BackupDestinations = backupDestinations
+                };
+            }
+        }
+
+        private static List<string> GetBackupDestinations(PeriodicBackupConfiguration backupConfiguration)
+        {
+            var backupDestinations = new List<string>();
+
+            if (backupConfiguration.LocalSettings != null && backupConfiguration.LocalSettings.Disabled == false)
+                backupDestinations.Add("Local");
+            if (backupConfiguration.AzureSettings != null && backupConfiguration.AzureSettings.Disabled == false)
+                backupDestinations.Add("Azure");
+            if (backupConfiguration.S3Settings != null && backupConfiguration.S3Settings.Disabled == false)
+                backupDestinations.Add("S3");
+            if (backupConfiguration.GlacierSettings != null && backupConfiguration.GlacierSettings.Disabled == false)
+                backupDestinations.Add("Glacier");
+
+            return backupDestinations;
+        }
+
         private static IEnumerable<OngoingTask> CollectEtlTasks(DatabaseRecord databaseRecord, DatabaseTopology dbTopology, ClusterTopology clusterTopology)
         {
             if (dbTopology == null)
@@ -105,7 +149,7 @@ namespace Raven.Server.Web.System
 
                     yield return new OngoingRavenEtl
                     {
-                        TaskId = ravenEtl.GetTaskKey().ToString(), // TODO TaskId vs TaskKey?
+                        TaskId = (long)ravenEtl.GetTaskKey(),
                         // TODO arek TaskConnectionStatus = 
                         // TODO arek TaskState = 
                         ResponsibleNode = new NodeId
@@ -131,7 +175,7 @@ namespace Raven.Server.Web.System
 
                     yield return new OngoingSqlEtl
                     {
-                        TaskId = sqlEtl.GetTaskKey().ToString(), // TODO TaskId vs TaskKey?
+                        TaskId = (long)sqlEtl.GetTaskKey(),
                         // TODO arek TaskConnectionStatus = 
                         // TODO arek TaskState = 
                         ResponsibleNode = new NodeId
@@ -172,10 +216,40 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-
                         [nameof(DatabasePutResult.ETag)] = index,
                         [nameof(DatabasePutResult.Key)] = name,
-                        [nameof(OngoingTask.TaskId)] = (watcher.Database + "@" + watcher.Url)
+                        [nameof(OngoingTask.TaskId)] = watcher.TaskId == 0 ? index : watcher.TaskId
+                    });
+                    writer.Flush();
+                }
+            }
+        }
+
+        [RavenAction("/admin/delete-watcher", "POST", "/admin/delete-watcher?name={databaseName:string}&id={taskId:string}")]
+        public async Task DeleteWatcher()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            var taskId = GetLongQueryString("id");
+            if (taskId == null)
+                return;
+            
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var (index, _) = await ServerStore.DeleteDatabaseWatcher(taskId.Value, name);
+                await ServerStore.Cluster.WaitForIndexNotification(index);
+
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(DatabasePutResult.ETag)] = index,
+                        [nameof(DatabasePutResult.Key)] = name
                     });
                     writer.Flush();
                 }
@@ -205,7 +279,7 @@ namespace Raven.Server.Web.System
 
     public abstract class OngoingTask : IDynamicJson // Single task info - Common to all tasks types
     {
-        public string TaskId { get; set; }
+        public long TaskId { get; set; }
         public OngoingTaskType TaskType { get; protected set; }
         public NodeId ResponsibleNode { get; set; }
         public OngoingTaskState TaskState { get; set; }
@@ -215,7 +289,7 @@ namespace Raven.Server.Web.System
         {
             return new DynamicJsonValue
             {
-                [nameof(TaskId)] = TaskId?.ToString(),
+                [nameof(TaskId)] = TaskId,
                 [nameof(TaskType)] = TaskType,
                 [nameof(ResponsibleNode)] = ResponsibleNode.ToJson(),
                 [nameof(TaskState)] = TaskState,
@@ -287,6 +361,7 @@ namespace Raven.Server.Web.System
     {
         public BackupType BackupType { get; set; }
         public List<string> BackupDestinations { get; set; }
+        public string Name { get; set; }
 
         public override DynamicJsonValue ToJson()
         {

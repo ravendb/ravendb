@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
@@ -33,8 +34,8 @@ namespace RachisTests
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
                 var databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
 
-                Assert.True((databaseResult.ETag ?? 0) > 0); //sanity check                
-                await WaitForRaftIndexToBeAppliedInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
+                Assert.True(databaseResult.ETag > 0); //sanity check                
+                await WaitForRaftIndexToBeAppliedInCluster(databaseResult.ETag, TimeSpan.FromSeconds(5));
 
                 //before dispose there is such a document
                 using (var session = store.OpenSession(databaseName))
@@ -56,41 +57,27 @@ namespace RachisTests
         public async Task RequestExecutor_failover_to_database_topology_should_work()
         {
             var leader = await CreateRaftClusterAndGetLeader(3);
-            const int replicationFactor = 2;
-            const string databaseName = nameof(RequestExecutor_failover_to_database_topology_should_work);
-            using (var store = new DocumentStore
+            using (var store = GetDocumentStore(defaultServer: leader, replicationFactor: 2))
             {
-                Database = databaseName,
-                Urls = leader.WebUrls
-            }.Initialize())
-            {
-                var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
-                var databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
-
-                Assert.True((databaseResult.ETag ?? 0) > 0); //sanity check                
-                await WaitForRaftIndexToBeAppliedInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
-
-                await ((DocumentStore)store).ForceUpdateTopologyFor(databaseName);
-                var requestExecutor = ((DocumentStore)store).GetRequestExecutor(databaseName);
-
-                using (var session = store.OpenSession(databaseName))
+                using (var session = (DocumentSession)store.OpenSession())
                 {
                     session.Store(new User { Name = "John Doe" }, "users/1");
                     session.SaveChanges();
+
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(
+                        session,
+                        "users/1",
+                        u => u.Name.Equals("John Doe"),
+                        TimeSpan.FromSeconds(10)));
                 }
 
-                Assert.True(await WaitForDocumentInClusterAsync<User>(
-                    requestExecutor.TopologyNodes,
-                    "users/1",
-                    u => u.Name.Equals("John Doe"),
-                    TimeSpan.FromSeconds(10)));
-
-                using (var session = store.OpenSession(databaseName))
+                using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
                     Assert.NotNull(user);
                 }
 
+                var requestExecutor = store.GetRequestExecutor();
                 var serverToDispose = Servers.FirstOrDefault(
                     srv => srv.ServerStore.NodeTag.Equals(requestExecutor.TopologyNodes[0].ClusterTag, StringComparison.OrdinalIgnoreCase));
                 Assert.NotNull(serverToDispose); //precaution
@@ -98,14 +85,12 @@ namespace RachisTests
                 //dispose the first topology node, forcing the requestExecutor to failover to the next one                
                 DisposeServerAndWaitForFinishOfDisposal(serverToDispose);
 
-                using (var session = store.OpenSession(databaseName))
+                using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
                     Assert.NotNull(user);
                 }
             }
         }
-
-
     }
 }

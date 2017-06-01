@@ -192,9 +192,9 @@ namespace Raven.Server.ServerWide
             return _engine.GetTopology(context);
         }
 
-        public async Task AddNodeToClusterAsync(string nodeUrl)
+        public async Task AddNodeToClusterAsync(string nodeUrl, string nodeTag = null, bool validateNotInTopology = true)
         {
-            await _engine.AddToClusterAsync(nodeUrl).WithCancellation(_shutdownNotification.Token);
+            await _engine.AddToClusterAsync(nodeUrl, nodeTag, validateNotInTopology).WithCancellation(_shutdownNotification.Token);
         }
 
         public async Task RemoveFromClusterAsync(string nodeTag)
@@ -541,15 +541,6 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(deleteCommand);
         }
 
-        public Task<(long Etag, object Result)> ModifyDatabaseWatchers(string dbName, List<DatabaseWatcher> watchers)
-        {
-            var watcherCommand = new ModifyDatabaseWatchersCommand(dbName)
-            {
-                Watchers = watchers
-            };
-            return SendToLeaderAsync(watcherCommand);
-        }
-
         public Task<(long Etag, object Result)> ModifyCustomFunctions(string dbName, string customFunctions)
         {
             var customFunctionsCommand = new ModifyCustomFunctionsCommand(dbName)
@@ -566,6 +557,13 @@ namespace Raven.Server.ServerWide
                 Watcher = watcher
             };
             return SendToLeaderAsync(addWatcherCommand);
+        }
+
+        public Task<(long Etag, object Result)> DeleteDatabaseWatcher(long taskId, string dbName)
+        {
+            var deleteWatcherCommand = new DeleteDatabaseWatcherCommand(taskId, dbName);
+
+            return SendToLeaderAsync(deleteWatcherCommand);
         }
 
         public Task<(long Etag, object Result)> ModifyConflictSolverAsync(string dbName, ConflictSolver solver)

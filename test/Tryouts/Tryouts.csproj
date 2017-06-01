@@ -33,6 +33,35 @@
     <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Databases\CanPersist_1-2017-06-01-15-58-56-118-372\Configuration" />
+    <Folder Include="Databases\CanPersist_1-2017-06-01-15-58-56-118-372\Indexes\06F5DA55-Users_ByCount_GroupByLocation" />
+    <Folder Include="Databases\CanPersist_1-2017-06-01-15-58-56-118-372\Indexes\88C6FEF1-Orders_ByCount_GroupByProduct" />
+    <Folder Include="Databases\CanPersist_1-2017-06-01-16-08-10-121-571\Indexes\06F5DA55-Users_ByCount_GroupByLocation" />
+    <Folder Include="Databases\CanPersist_1-2017-06-01-16-08-10-121-571\Indexes\88C6FEF1-Orders_ByCount_GroupByProduct" />
+    <Folder Include="Databases\CanPersist_1-2017-06-01-16-08-10-121-574\Configuration" />
+    <Folder Include="Databases\CanPersist_1-2017-06-01-16-08-10-121-574\Indexes\06F5DA55-Users_ByCount_GroupByLocation" />
+    <Folder Include="Databases\CanPersist_1-2017-06-01-16-08-10-121-574\Indexes\88C6FEF1-Orders_ByCount_GroupByProduct" />
+    <Folder Include="Databases\CanPersist_1-2017-06-01-16-08-10-121-575\Configuration" />
+    <Folder Include="Databases\CanPersist_1-2017-06-01-16-08-10-121-575\Indexes\06F5DA55-Users_ByCount_GroupByLocation" />
+    <Folder Include="Databases\CanPersist_1-2017-06-01-16-08-10-121-575\Indexes\88C6FEF1-Orders_ByCount_GroupByProduct" />
+    <Folder Include="Databases\CanPersist_1-2017-06-01-16-08-10-121-577\Indexes\06F5DA55-Users_ByCount_GroupByLocation" />
+    <Folder Include="Databases\CanPersist_1-2017-06-01-16-08-10-121-577\Indexes\88C6FEF1-Orders_ByCount_GroupByProduct" />
+    <Folder Include="Databases\CanPersist_1-2017-06-01-16-08-10-121-578\Configuration" />
+    <Folder Include="Databases\CanPersist_1-2017-06-01-16-08-10-121-578\Indexes\06F5DA55-Users_ByCount_GroupByLocation" />
+    <Folder Include="Databases\CanPersist_1-2017-06-01-16-08-10-121-578\Indexes\88C6FEF1-Orders_ByCount_GroupByProduct" />
+    <Folder Include="Databases\CanPersist_1-2017-06-01-16-08-10-121-579\Configuration" />
+    <Folder Include="Databases\CanPersist_1-2017-06-01-16-08-10-121-579\Indexes\06F5DA55-Users_ByCount_GroupByLocation" />
+    <Folder Include="Databases\CanPersist_1-2017-06-01-16-08-10-121-579\Indexes\88C6FEF1-Orders_ByCount_GroupByProduct" />
+    <Folder Include="Databases\CanPersist_1-2017-06-01-16-08-10-121-580\Configuration" />
+    <Folder Include="Databases\CanPersist_1-2017-06-01-16-08-10-121-580\Indexes\06F5DA55-Users_ByCount_GroupByLocation" />
+    <Folder Include="Databases\CanPersist_1-2017-06-01-16-08-10-121-580\Indexes\88C6FEF1-Orders_ByCount_GroupByProduct" />
+    <Folder Include="Databases\ServerSaveBundlesAfterRestart_1-2017-06-01-20-05-10-507-2\Configuration" />
+    <Folder Include="Databases\ServerSaveBundlesAfterRestart_1-2017-06-01-20-07-30-280-2\Configuration" />
+    <Folder Include="Databases\ServerSaveBundlesAfterRestart_1-2017-06-01-20-15-34-402-2\Configuration" />
+    <Folder Include="Databases\ServerSaveBundlesAfterRestart_1-2017-06-01-20-17-14-209-2\Configuration" />
+    <Folder Include="Databases\ServerSaveBundlesAfterRestart_1-2017-06-01-20-17-53-931-2\Configuration" />
+    <Folder Include="Databases\ServerSaveBundlesAfterRestart_1-2017-06-01-20-18-51-829-2\Configuration" />
+    <Folder Include="Databases\ServerSaveBundlesAfterRestart_1-2017-06-01-20-24-49-460-15\Configuration" />
     <Folder Include="Databases\WillUpdate_0-2017-05-30-10-47-26-829-1\Configuration" />
     <Folder Include="Databases\WillUpdate_0-2017-05-30-10-47-26-829-1\Indexes\1E8CCF7F-Users_ByName" />
     <Folder Include="Databases\WillUpdate_0-2017-05-30-10-47-26-829-2\Configuration" />

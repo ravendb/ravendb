@@ -9,7 +9,7 @@ class editExternalReplicationTask extends viewModelBase {
 
     editedExternalReplication = ko.observable<ongoingTaskReplication>();
     isAddingNewRepTask = ko.observable<boolean>();
-    private taskId: string;
+    private taskId: number;
 
     constructor() {
         super();
@@ -65,6 +65,8 @@ class editExternalReplicationTask extends viewModelBase {
             DestinationDB: this.editedExternalReplication().destinationDB(),
             ApiKey: this.editedExternalReplication().apiKey()
         };
+
+        this.taskId = this.isAddingNewRepTask() ? 0 : this.taskId;
 
         return new saveExternalReplicationTaskCommand(newRepTask, this.activeDatabase(), this.taskId)
             .execute()

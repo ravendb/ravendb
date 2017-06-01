@@ -14,7 +14,7 @@ namespace Raven.Client.Http
     /// </summary>
     public class AttachmentStreamContent : HttpContent
     {
-        private const int BufferSize = 4096;
+        private readonly byte[] _buffer = new byte[4096];
 
         private readonly Stream _stream;
         private readonly CancellationToken _cancellationToken;
@@ -28,11 +28,21 @@ namespace Raven.Client.Http
             _cancellationToken = cancellationToken;
         }
 
+        protected async Task CopyToStreamAsync(Stream stream)
+        {
+            var count = await _stream.ReadAsync(_buffer, 0, _buffer.Length, _cancellationToken).ConfigureAwait(false); 
+            while (count > 0)
+            {
+                await stream.WriteAsync(_buffer, 0, count, _cancellationToken);
+                count = await _stream.ReadAsync(_buffer, 0, _buffer.Length, _cancellationToken).ConfigureAwait(false);
+            }
+        }
+
         protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
         {
             Debug.Assert(stream != null);
-
-            return _stream.CopyToAsync(stream, BufferSize, _cancellationToken);
+            // instead of : "_stream.CopyToAsync(stream, BufferSize, _cancellationToken)" - RavenDB-7291, we do:
+            return CopyToStreamAsync(stream);
         }
 
         protected override bool TryComputeLength(out long length)

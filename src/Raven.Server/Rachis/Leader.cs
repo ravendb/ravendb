@@ -102,6 +102,10 @@ namespace Raven.Server.Rachis
             if (_voters.Count == 0)
                 throw new InvalidOperationException("Cannot step down when I'm the only voter int he cluster");
             var nextLeader = _voters.Values.OrderByDescending(x => x.FollowerMatchIndex).ThenByDescending(x => x.LastReplyFromFollower).First();
+            if (_engine.Log.IsInfoEnabled)
+            {
+                _engine.Log.Info($"Stepping as down as leader and will ask {nextLeader} to become the next leader");
+            }
             nextLeader.ForceElectionsNow = true;
             var old = Interlocked.Exchange(ref _newEntriesArrived, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
             old.TrySetResult(null);
@@ -271,6 +275,8 @@ namespace Raven.Server.Rachis
                     }
                     EnsureThatWeHaveLeadership(VotersMajority);
 
+                    _engine.ReportLeaderTime(LeaderShipDuration);
+                    
                     var lowestIndexInEntireCluster = GetLowestIndexInEntireCluster();
                     if (lowestIndexInEntireCluster != LowestIndexInEntireCluster)
                     {

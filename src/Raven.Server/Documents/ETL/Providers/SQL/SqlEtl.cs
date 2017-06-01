@@ -173,7 +173,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             {
                 etl.EnsureThreadAllocationStats();
 
-                var transformed = etl.Transform(new[] {new ToSqlItem(document, simulateSqlEtl.Configuration.Transforms[0].Collections[0])}, context, new EtlStatsScope(new EtlRunStats()));
+                var transformed = etl.Transform(new[] {new ToSqlItem(document, simulateSqlEtl.Configuration.Transforms[0].Collections[0])}, context, new EtlStatsScope(new EtlRunStats()), new EtlProcessState());
 
                 return etl.Simulate(simulateSqlEtl, context, transformed);
             }

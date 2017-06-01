@@ -14,6 +14,7 @@
     <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
     <GenerateNeutralResourcesLanguageAttribute>false</GenerateNeutralResourcesLanguageAttribute>
+    <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
@@ -34,8 +35,9 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.0.0" />
     <PackageReference Include="System.Diagnostics.TraceSource" Version="4.3.0" />
-    <PackageReference Include="xunit" Version="2.3.0-beta2-build3656" />
-    <DotNetCliToolReference Include="dotnet-xunit" Version="2.3.0-beta1-build3643" />
+    <PackageReference Include="xunit" Version="2.3.0-beta3-build3701" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.3.0-beta3-build3701" />
+    <DotNetCliToolReference Include="dotnet-xunit" Version="2.3.0-beta3-build3701" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />

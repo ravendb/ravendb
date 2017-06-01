@@ -13,10 +13,12 @@ namespace Raven.Server.ServerWide.Commands
 
         public DeleteDatabaseCommand() : base(null)
         {
+            ErrorOnDatabaseDoesNotExists = true;
         }
 
         public DeleteDatabaseCommand(string databaseName) : base(databaseName)
         {
+            ErrorOnDatabaseDoesNotExists = true;
         }
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)

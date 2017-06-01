@@ -2,7 +2,7 @@
 
 abstract class ongoingTaskModel { 
 
-    taskId: string;
+    taskId: number;
     taskType = ko.observable<Raven.Server.Web.System.OngoingTaskType>();
     responsibleNode = ko.observable<Raven.Client.Server.Operations.NodeId>();
     taskState = ko.observable<Raven.Server.Web.System.OngoingTaskState>();

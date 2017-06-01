@@ -41,7 +41,7 @@ namespace RachisTests.DatabaseCluster
             var clusterSize = 3;
             var databaseName = "PromoteOnCatchingUp";
             var leader = await CreateRaftClusterAndGetLeader(clusterSize,true,0);
-            using (var store = new DocumentStore()
+            using (var store = new DocumentStore
             {
                 Urls = leader.WebUrls,
                 Database = databaseName
@@ -52,7 +52,7 @@ namespace RachisTests.DatabaseCluster
 
                 var member = createRes.Topology.Members.Single();
                 var dbServer = Servers.Single(s => s.ServerStore.NodeTag == member.NodeTag);
-                await dbServer.ServerStore.Cluster.WaitForIndexNotification(createRes.ETag ?? 0);
+                await dbServer.ServerStore.Cluster.WaitForIndexNotification(createRes.ETag);
                 await dbServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
 
                 using (var dbStore = new DocumentStore
@@ -71,7 +71,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(1, res.Topology.Members.Count);
                 Assert.Equal(1, res.Topology.Promotables.Count);
 
-                await WaitForRaftIndexToBeAppliedInCluster(res.ETag ?? 0, TimeSpan.FromSeconds(5));
+                await WaitForRaftIndexToBeAppliedInCluster(res.ETag, TimeSpan.FromSeconds(5));
                 await WaitForDocumentInClusterAsync<ReplicationBasicTests.User>(res.Topology, "users/1", u => u.Name == "Karmel",TimeSpan.FromSeconds(10));
                                 
                 var val = await WaitForValueAsync(async () => await GetPromotableCount(store, databaseName), 0);
@@ -95,7 +95,7 @@ namespace RachisTests.DatabaseCluster
             {
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
                 var res = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc,clusterSize));
-                await WaitForRaftIndexToBeAppliedInCluster(res.ETag ?? 0, TimeSpan.FromSeconds(5));
+                await WaitForRaftIndexToBeAppliedInCluster(res.ETag, TimeSpan.FromSeconds(5));
                 Assert.Equal(3, res.Topology.Members.Count);
             }
 

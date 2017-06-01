@@ -58,10 +58,10 @@ namespace Raven.Server.ServerWide
             [nameof(DeleteIndexCommand)] = GenerateJsonDeserializationRoutine<DeleteIndexCommand>(),
             [nameof(SetIndexLockCommand)] = GenerateJsonDeserializationRoutine<SetIndexLockCommand>(),
             [nameof(SetIndexPriorityCommand)] = GenerateJsonDeserializationRoutine<SetIndexPriorityCommand>(),
-            [nameof(ModifyDatabaseWatchersCommand)] = GenerateJsonDeserializationRoutine<ModifyDatabaseWatchersCommand>(),
             [nameof(ModifyConflictSolverCommand)] = GenerateJsonDeserializationRoutine<ModifyConflictSolverCommand>(),
             [nameof(UpdateTopologyCommand)] = GenerateJsonDeserializationRoutine<UpdateTopologyCommand>(),
             [nameof(UpdateDatabaseWatcherCommand)] = GenerateJsonDeserializationRoutine<UpdateDatabaseWatcherCommand>(),
+            [nameof(DeleteDatabaseWatcherCommand)] = GenerateJsonDeserializationRoutine<DeleteDatabaseWatcherCommand>(),
             [nameof(AddDatabaseCommand)] = GenerateJsonDeserializationRoutine<AddDatabaseCommand>(),
             [nameof(DeleteValueCommand)] = GenerateJsonDeserializationRoutine<DeleteValueCommand>(),
             [nameof(PutApiKeyCommand)] = GenerateJsonDeserializationRoutine<PutApiKeyCommand>(),
@@ -77,7 +77,7 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateRavenEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateRavenEtlCommand>(),
             [nameof(UpdateSqlEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateSqlEtlCommand>(),
             [nameof(DeleteEtlCommand)] = GenerateJsonDeserializationRoutine<DeleteEtlCommand>(),
-            [nameof(StoreEtlStatusCommand)] = GenerateJsonDeserializationRoutine<StoreEtlStatusCommand>(),
+            [nameof(UpdateEtlProcessStateCommand)] = GenerateJsonDeserializationRoutine<UpdateEtlProcessStateCommand>(),
         };
     }
 }

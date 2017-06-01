@@ -199,8 +199,7 @@ namespace Raven.Server.Web.System
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var nodesAddedTo = new List<string>();
 
-            string errorMessage;
-            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
             ServerStore.EnsureNotPassive();
@@ -441,48 +440,6 @@ namespace Raven.Server.Web.System
                         [nameof(DatabasePutResult.ETag)] = etag,
                     });
                     writer.Flush();
-                }
-            }
-        }
-
-        [RavenAction("/admin/modify-watchers", "POST", "/admin/modify-watchers?name={databaseName:string}")]
-        public async Task ModifyWatchers()
-        {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            ServerStore.EnsureNotPassive();
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-modify-watchers");
-                if (updateJson.TryGet(nameof(DatabaseTopology.Watchers), out BlittableJsonReaderArray watchersBlittable) == false)
-                {
-                    throw new InvalidDataException("NewWatchers property was not found.");
-                }
-                using (context.OpenReadTransaction())
-                {
-                    var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out long _);
-
-                    var watchers = new List<DatabaseWatcher>(watchersBlittable.Length);
-                    foreach (BlittableJsonReaderObject watcher in watchersBlittable)
-                    {
-                        watchers.Add(JsonDeserializationClient.DatabaseWatcher(watcher));
-                    }
-                    var (etag, _) = await ServerStore.ModifyDatabaseWatchers(name, watchers);
-                    await ServerStore.Cluster.WaitForIndexNotification(etag);
-
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        context.Write(writer, new DynamicJsonValue
-                        {
-                            [nameof(ModifyExternalReplicationResult.ETag)] = etag,
-                            [nameof(ModifyExternalReplicationResult.Key)] = name,
-                            [nameof(ModifyExternalReplicationResult.Topology)] = databaseRecord.Topology.ToJson()
-                        });
-                        writer.Flush();
-                    }
                 }
             }
         }

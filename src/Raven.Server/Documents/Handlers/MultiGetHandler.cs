@@ -68,8 +68,7 @@ namespace Raven.Server.Documents.Handlers
 
                         httpContext.Request.Method = method;
 
-                        RouteMatch localMatch;
-                        var routeInformation = Server.Router.GetRoute(method, url, out localMatch);
+                        var routeInformation = Server.Router.GetRoute(method, url, out RouteMatch localMatch);
                         if (routeInformation == null)
                         {
                             writer.WritePropertyName(statusProperty);

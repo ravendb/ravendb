@@ -8,8 +8,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Server.Documents.Operations;
-using Raven.Server.NotificationCenter;
-using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 
 namespace Raven.Server.Documents.Handlers
@@ -19,8 +17,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/collections/stats", "GET", "/databases/{databaseName:string}/collections/stats")]
         public Task GetCollectionStats()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var collections = new DynamicJsonValue();
@@ -45,8 +42,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/collections/docs", "GET", "/databases/{databaseName:string}/collections/docs?name={collectionName:string}&start={pageStart:int|optional}&pageSize={pageSize:int|optional(25)}")]
         public Task GetCollectionDocuments()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var pageSize = GetPageSize();
@@ -71,8 +67,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/collections/docs", "DELETE")]
         public Task Delete()
         {
-            DocumentsOperationContext context;
-            var returnContextToPool = ContextPool.AllocateOperationContext(out context);
+            var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
 
             ExecuteCollectionOperation((runner, collectionName, options, onProgress, token) => Task.Run(async () => await runner.ExecuteDelete(collectionName, options, onProgress, token)),
                 context, returnContextToPool, DatabaseOperations.OperationType.DeleteByCollection);
@@ -83,8 +78,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/collections/docs", "PATCH")]
         public Task Patch()
         {
-            DocumentsOperationContext context;
-            var returnContextToPool = ContextPool.AllocateOperationContext(out context);
+            var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
 
             var reader = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
             var patch = Documents.Patch.PatchRequest.Parse(reader);

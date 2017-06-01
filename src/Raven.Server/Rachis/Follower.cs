@@ -36,8 +36,7 @@ namespace Raven.Server.Rachis
             {
                 entries.Clear();
 
-                TransactionOperationContext context;
-                using (_engine.ContextPool.AllocateOperationContext(out context))
+                using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
                     var appendEntries = _connection.Read<AppendEntries>(context);
                     _engine.Timeout.Defer(_connection.Source);
@@ -51,9 +50,9 @@ namespace Raven.Server.Rachis
                         }
                         if (_engine.Log.IsInfoEnabled)
                         {
-                            _engine.Log.Info($"Follower {_engine.Tag}: Got non empty append entries request with {entries.Count} entries. Last: ({entries[entries.Count-1].Index} - {entries[entries.Count - 1].Flags})"
+                            _engine.Log.Info($"Follower {_engine.Tag}: Got non empty append entries request with {entries.Count} entries. Last: ({entries[entries.Count - 1].Index} - {entries[entries.Count - 1].Flags})"
 #if DEBUG
-                                + $"[{string.Join(" ,", entries.Select(x=>x.ToString()))}]"
+                                + $"[{string.Join(" ,", entries.Select(x => x.ToString()))}]"
 #endif
                                 );
                         }

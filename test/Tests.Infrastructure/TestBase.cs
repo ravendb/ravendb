@@ -7,12 +7,9 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Extensions;
 using Raven.Client.Http;
-using Raven.Client.Util.Helpers;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -35,7 +32,15 @@ namespace FastTests
         private readonly ConcurrentSet<string> _localPathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
         private static RavenServer _globalServer;
+
+        protected static bool IsGlobalServer(RavenServer server)
+        {
+            return _globalServer == server;
+        }
+        
         private RavenServer _localServer;
+
+        protected List<RavenServer> Servers = new List<RavenServer>();
 
         private static readonly object ServerLocker = new object();
 
@@ -107,17 +112,22 @@ namespace FastTests
                 if (_doNotReuseServer)
                 {
                     UseNewLocalServer();
+                    Servers.Add(_localServer);
                     return _localServer;
                 }
 
-                if (_globalServer != null)
+                if (_globalServer  != null)
                 {
-                    _localServer = _globalServer;
+                    if(_globalServer.Disposed)
+                        throw new ObjectDisposedException("Someone disposed the global server!");
+                    _localServer = _globalServer ;
+                    
+                    Servers.Add(_localServer);
                     return _localServer;
                 }
                 lock (ServerLocker)
                 {
-                    if (_globalServer == null)
+                    if (_globalServer == null || _globalServer.Disposed)
                     {
                         var globalServer = GetNewServer();
                         Console.WriteLine($"\tTo attach debugger to test process ({(PlatformDetails.Is32Bits ? "x86" : "x64")}), use proc-id: {Process.GetCurrentProcess().Id}. Url {globalServer.WebUrls[0]}");
@@ -126,6 +136,7 @@ namespace FastTests
                         _globalServer = globalServer;
                     }
                     _localServer = _globalServer;
+                    Servers.Add(_localServer);
                 }
                 return _globalServer;
             }
@@ -192,10 +203,6 @@ namespace FastTests
 
                 var server = new RavenServer(configuration);
                 server.Initialize();
-
-                // TODO: Make sure to properly handle this when this is resolved:
-                // TODO: https://github.com/dotnet/corefx/issues/5205
-                // TODO: AssemblyLoadContext.GetLoadContext(typeof(RavenTestBase).GetTypeInfo().Assembly).Unloading +=
 
                 return server;
             }
