@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -99,6 +101,32 @@ namespace RachisTests
                 if (node.Url == follower.Url)
                     continue;
                 Assert.True(await node.WaitForTopology(Leader.TopologyModification.Remove, follower.Tag).WaitAsync(TimeSpan.FromMilliseconds(node.ElectionTimeout.TotalMilliseconds * 1000)), "Node was not removed from topology in time");
+            }
+        }
+
+        [Fact]
+        public async Task AddingRemovedNodeShouldWork()
+        {
+            var clusterSize = 3;
+            var leader = await CreateNetworkAndGetLeader(clusterSize);
+            var follower = GetRandomFollower();
+            var oldTag = follower.Tag;
+            Assert.True(await leader.RemoveFromClusterAsync(oldTag).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 10)), "Was unable to remove node from cluster in time");
+            foreach (var node in RachisConsensuses)
+            {
+                if (node.Url == follower.Url)
+                    continue;
+                Assert.True(await node.WaitForTopology(Leader.TopologyModification.Remove, follower.Tag).WaitAsync(TimeSpan.FromMilliseconds(node.ElectionTimeout.TotalMilliseconds * 10)), "Node was not removed from topology in time");
+            }
+            Assert.True(await leader.AddToClusterAsync(follower.Url,follower.Tag).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 5)));
+            Assert.True(await follower.WaitForTopology(Leader.TopologyModification.Voter).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 5))); ;
+
+            using (leader.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var topology = leader.GetTopology(ctx);
+                Assert.Equal(clusterSize, topology.AllNodes.Count);
+                Assert.True(topology.Contains(oldTag));
             }
         }
     }

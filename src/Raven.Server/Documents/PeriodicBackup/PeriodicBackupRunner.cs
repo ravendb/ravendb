@@ -59,14 +59,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             _logger = LoggingSource.Instance.GetLogger<PeriodicBackupRunner>(_database.Name);
             _cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
 
-            _tempBackupPath =
-                (_database.Configuration.Storage.TempPath ??
-                 _database.Configuration.Core.DataDirectory)
-                .Combine($"PeriodicBackup-Temp-{_database.Name}");
+            _tempBackupPath = (_database.Configuration.Storage.TempPath ?? _database.Configuration.Core.DataDirectory).Combine("PeriodicBackupTemp");
 
-            if (Directory.Exists(_tempBackupPath.FullPath))
-                IOExtensions.DeleteDirectory(_tempBackupPath.FullPath);
-
+            IOExtensions.DeleteDirectory(_tempBackupPath.FullPath);
             Directory.CreateDirectory(_tempBackupPath.FullPath);
         }
 
@@ -108,16 +103,16 @@ namespace Raven.Server.Documents.PeriodicBackup
         }
 
         private NextBackup GetNextBackupDetails(
-            PeriodicBackupConfiguration configuration, 
+            PeriodicBackupConfiguration configuration,
             PeriodicBackupStatus backupStatus,
             bool skipErrorLog = false)
         {
             var now = SystemTime.UtcNow;
             var lastFullBackup = backupStatus.LastFullBackup ?? now;
             var lastIncrementalBackup = backupStatus.LastIncrementalBackup ?? backupStatus.LastFullBackup ?? now;
-            var nextFullBackup = GetNextBackupOccurrence(configuration.FullBackupFrequency, 
+            var nextFullBackup = GetNextBackupOccurrence(configuration.FullBackupFrequency,
                 lastFullBackup, configuration, skipErrorLog: skipErrorLog);
-            var nextIncrementalBackup = GetNextBackupOccurrence(configuration.IncrementalBackupFrequency, 
+            var nextIncrementalBackup = GetNextBackupOccurrence(configuration.IncrementalBackupFrequency,
                 lastIncrementalBackup, configuration, skipErrorLog: skipErrorLog);
 
             if (nextFullBackup == null && nextIncrementalBackup == null)
@@ -136,7 +131,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             else
             {
                 // we already have an existing backup
-                nextBackupTimeSpan = (nextBackupDateTime - now).Ticks <= 0 ? 
+                nextBackupTimeSpan = (nextBackupDateTime - now).Ticks <= 0 ?
                     TimeSpan.Zero : nextBackupDateTime - now;
             }
 
@@ -147,7 +142,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             };
         }
 
-        private bool IsFullBackup(PeriodicBackupStatus backupStatus, 
+        private bool IsFullBackup(PeriodicBackupStatus backupStatus,
             PeriodicBackupConfiguration configuration,
             DateTime? nextFullBackup, DateTime? nextIncrementalBackup)
         {
@@ -187,7 +182,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     var backupToLocalFolder = CanBackupUsing(configuration.LocalSettings);
 
                     var now = SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture);
-                    
+
 
                     if (status.LocalBackup == null)
                         status.LocalBackup = new LocalBackup();
@@ -201,12 +196,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                         status.BackupType != configuration.BackupType || // backup type has changed
                         status.LastEtag == null || // last document etag wasn't updated
                         backupToLocalFolder && DirectoryContainsFullBackupOrSnapshot(status.LocalBackup.BackupDirectory, configuration.BackupType) == false)
-                        // the local folder has a missing full backup
+                    // the local folder has a missing full backup
                     {
                         isFullBackup = true;
 
-                        backupDirectory = backupToLocalFolder ? 
-                            GetLocalFolderPath(configuration, now) : 
+                        backupDirectory = backupToLocalFolder ?
+                            GetLocalFolderPath(configuration, now) :
                             _tempBackupPath;
 
                         if (Directory.Exists(backupDirectory.FullPath) == false)
@@ -217,8 +212,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                     }
                     else
                     {
-                        backupDirectory = backupToLocalFolder ? 
-                            new PathSetting(status.LocalBackup.BackupDirectory) : 
+                        backupDirectory = backupToLocalFolder ?
+                            new PathSetting(status.LocalBackup.BackupDirectory) :
                             _tempBackupPath;
                     }
 
@@ -316,7 +311,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             bool isFullBackup,
             string backupFolder,
             string now,
-            BackupType backupType, 
+            BackupType backupType,
             out string backupFilePath)
         {
             string fileName;
@@ -361,7 +356,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return fileName;
         }
 
-        private long CreateLocalBackupOrSnapshot(PeriodicBackupConfiguration configuration, 
+        private long CreateLocalBackupOrSnapshot(PeriodicBackupConfiguration configuration,
             bool isFullBackup, PeriodicBackupStatus status, string backupFilePath,
             long? startDocumentEtag, DocumentsOperationContext context, DocumentsTransaction tx)
         {
@@ -407,7 +402,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private SmugglerResult CreateBackup(string backupFilePath, 
+        private SmugglerResult CreateBackup(string backupFilePath,
             long? startDocsEtag, DocumentsOperationContext context)
         {
             SmugglerResult result;
@@ -627,7 +622,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return nextBackup;
         }
 
-        private DateTime? GetNextBackupOccurrence(string backupFrequency, 
+        private DateTime? GetNextBackupOccurrence(string backupFrequency,
             DateTime now, PeriodicBackupConfiguration configuration, bool skipErrorLog)
         {
             if (backupFrequency == null)
@@ -963,6 +958,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                         WaitForTaskCompletion(task);
                     }
                 }
+
+                if (_tempBackupPath != null)
+                    IOExtensions.DeleteDirectory(_tempBackupPath.FullPath);
             }
         }
 

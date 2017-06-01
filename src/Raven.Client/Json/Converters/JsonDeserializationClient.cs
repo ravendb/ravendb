@@ -47,12 +47,16 @@ namespace Raven.Client.Json.Converters
 
         public static readonly Func<BlittableJsonReaderObject, ClusterTopologyResponse> ClusterTopology = GenerateJsonDeserializationRoutine<ClusterTopologyResponse>();
 
+        public static readonly Func<BlittableJsonReaderObject, NodeInfo> NodeInfo = GenerateJsonDeserializationRoutine<NodeInfo>();
+
         public static readonly Func<BlittableJsonReaderObject, TcpConnectionHeaderMessage> TcpConnectionHeaderMessage = GenerateJsonDeserializationRoutine<TcpConnectionHeaderMessage>();
 
         public static readonly Func<BlittableJsonReaderObject, TcpConnectionHeaderResponse> TcpConnectionHeaderResponse = GenerateJsonDeserializationRoutine<TcpConnectionHeaderResponse>();
 
         public static readonly Func<BlittableJsonReaderObject, CreateDatabaseResult> CreateDatabaseResult = GenerateJsonDeserializationRoutine<CreateDatabaseResult>();
-        public static readonly Func<BlittableJsonReaderObject, ModifyExternalReplicationResult> ModifyDatabaseWatchersResult = GenerateJsonDeserializationRoutine<ModifyExternalReplicationResult>();
+
+        public static readonly Func<BlittableJsonReaderObject, ModifyExternalReplicationResult> ModifyExternalReplicationResult = GenerateJsonDeserializationRoutine<ModifyExternalReplicationResult>();
+
         public static readonly Func<BlittableJsonReaderObject, ModifySolverResult> ModifySolverResult = GenerateJsonDeserializationRoutine<ModifySolverResult>();
 
         public static readonly Func<BlittableJsonReaderObject, DisableDatabaseToggleResult> DisableResourceToggleResult = GenerateJsonDeserializationRoutine<DisableDatabaseToggleResult>();
@@ -116,6 +120,7 @@ namespace Raven.Client.Json.Converters
         internal static readonly Func<BlittableJsonReaderObject, PeriodicBackupStatus> PeriodicBackupStatus = GenerateJsonDeserializationRoutine<PeriodicBackupStatus>();
 
         internal static readonly Func<BlittableJsonReaderObject, ConfigureVersioningOperationResult> ConfigureVersioningOperationResult = GenerateJsonDeserializationRoutine<ConfigureVersioningOperationResult>();
+
         internal static readonly Func<BlittableJsonReaderObject, SubscriptionState> SubscriptionState = GenerateJsonDeserializationRoutine<SubscriptionState>();
 
         internal static readonly Func<BlittableJsonReaderObject, DatabaseWatcher> DatabaseWatcher= GenerateJsonDeserializationRoutine<DatabaseWatcher>();

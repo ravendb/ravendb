@@ -31,7 +31,8 @@ namespace Raven.Server.Exceptions.PeriodicBackup
                 var readAsStringAsync = RequestExecutor.ReadAsStreamUncompressedAsync(response);
                 if (readAsStringAsync.IsCompleted)
                 {
-                    using (var streamReader = new StreamReader(readAsStringAsync.Result))
+                    using(var stream = readAsStringAsync.Result)
+                    using (var streamReader = new StreamReader(stream))
                     {
                         responseString = streamReader.ReadToEnd();
                         sb.AppendLine(responseString);

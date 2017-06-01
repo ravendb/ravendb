@@ -11,7 +11,7 @@ type actionColumnOpts<T> = {
 type provider<T> = (item: T) => string;
 
 class actionColumn<T> implements virtualColumn {
-    private readonly action: (obj: T) => void;
+    private readonly action: (obj: T, idx: number) => void;
 
     header: string;
     private buttonText: (item: T) => string;
@@ -22,7 +22,7 @@ class actionColumn<T> implements virtualColumn {
 
     actionUniqueId = _.uniqueId("action-");
 
-    constructor(action: (obj: T) => void, header: string, buttonText: provider<T> | string, width: string, opts: actionColumnOpts<T> = {}) {
+    constructor(action: (obj: T, idx: number) => void, header: string, buttonText: provider<T> | string, width: string, opts: actionColumnOpts<T> = {}) {
         this.action = action;
         this.header = header;
         this.buttonText = _.isString(buttonText) ? (item: T) => buttonText : buttonText;
@@ -35,7 +35,7 @@ class actionColumn<T> implements virtualColumn {
     }
 
     handle(row: virtualRow) {
-        this.action(row.data as T);
+        this.action(row.data as T, row.index);
     }
 
     renderCell(item: T, isSelected: boolean): string {

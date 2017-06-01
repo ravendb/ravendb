@@ -1,3 +1,5 @@
+/// <reference path="../../typings/tsd.d.ts"/>
+
 /**
  * This is helper class to build boostrap multiselect with support for custom awesome checkboxes
  *
@@ -7,16 +9,23 @@ class awesomeMultiselect {
 
     // used for generating unique label/ids
     static instanceNumber = 1;
+
     /**
      * Build dropdown
      * @param object
      */
-    static build(object: JQuery): void {
-        object.multiselect({
+    static build(object: JQuery, customizeOptions?: (opts: any) => void): void {
+        const opts = {
             templates: {
                 li: '<li><div class="checkbox"><label></label></div></li>'
             }
-        });
+        };
+
+        if (customizeOptions) {
+            customizeOptions(opts);
+        }
+
+        object.multiselect(opts);
 
         if (object.data('instanceData')) {
             throw new Error("Object was already initialized. Use rebuild instead.");
@@ -43,10 +52,10 @@ class awesomeMultiselect {
     private static fixAwesomeCheckboxes(object: JQuery) {
         var instanceId = <number> object.data('instanceData');
         $('.multiselect-container .checkbox', object.parent()).each(function (index) {
-            var $self = $(this);
-            var id = 'multiselect-' + instanceId + "-" + index;
-            var $input = $self.find('input');
-            var $label = $self.find('label');
+            const $self = $(this);
+            const id = 'multiselect-' + instanceId + "-" + index;
+            const $input = $self.find('input');
+            const $label = $self.find('label');
 
             // check if DOM was already modified
             if (!$label.attr('for')) {

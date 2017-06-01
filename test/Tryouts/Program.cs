@@ -19,10 +19,14 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new AttachmentFailover())
+
+                Parallel.For(0, 10, _ =>
                 {
-                    a.PutAttachmentsWithFailover(1024 * 1024 * 1).Wait();
-                }
+                    using (var a = new FastTests.Server.Documents.Indexing.Static.BasicStaticMapReduceIndexing())
+                    {
+                        a.CanPersist().Wait();
+                    }
+                });
             }
         }
     }

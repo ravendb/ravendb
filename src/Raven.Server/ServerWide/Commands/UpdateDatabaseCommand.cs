@@ -8,6 +8,7 @@ namespace Raven.Server.ServerWide.Commands
     public abstract class UpdateDatabaseCommand : CommandBase
     {
         public string DatabaseName;
+        public bool ErrorOnDatabaseDoesNotExists;
 
         protected UpdateDatabaseCommand(string databaseName)
         {

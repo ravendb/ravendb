@@ -48,6 +48,7 @@ interface metadataAwareDto {
 interface IndexErrorPerDocument {
     Document: string;
     Error: string;
+    Action: string;
     IndexName: string;
     Timestamp: string;
 }

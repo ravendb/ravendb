@@ -115,12 +115,12 @@ namespace Raven.Server.ServerWide
                 case nameof(UpdatePeriodicBackupCommand):
                 case nameof(DeletePeriodicBackupCommand):
                 case nameof(EditExpirationCommand):
-                case nameof(ModifyDatabaseWatchersCommand):
                 case nameof(ModifyConflictSolverCommand):
                 case nameof(UpdateTopologyCommand):
                 case nameof(DeleteDatabaseCommand):
                 case nameof(ModifyCustomFunctionsCommand):
                 case nameof(UpdateDatabaseWatcherCommand):
+                case nameof(DeleteDatabaseWatcherCommand):
                 case nameof(AddRavenEtlCommand):
                 case nameof(AddSqlEtlCommand):
                 case nameof(UpdateRavenEtlCommand):
@@ -434,14 +434,16 @@ namespace Raven.Server.ServerWide
                 {
                     var databaseRecordJson = ReadInternal(context, out long etag, valueNameLowered);
 
+                    var updateCommand = (UpdateDatabaseCommand)JsonDeserializationCluster.Commands[type](cmd);
+
                     if (databaseRecordJson == null)
                     {
-                        NotifyLeaderAboutError(index, leader, new DatabaseDoesNotExistException($"Cannot execute update command of type {type} for {databaseName} because it does not exists"));
+                        if(updateCommand.ErrorOnDatabaseDoesNotExists)
+                            NotifyLeaderAboutError(index, leader, new DatabaseDoesNotExistException($"Cannot execute update command of type {type} for {databaseName} because it does not exists"));
                         return null;
                     }
 
                     databaseRecord = JsonDeserializationCluster.DatabaseRecord(databaseRecordJson);
-                    var updateCommand = (UpdateDatabaseCommand)JsonDeserializationCluster.Commands[type](cmd);
 
                     if (updateCommand.Etag != null && etag != updateCommand.Etag.Value)
                     {
@@ -635,9 +637,10 @@ namespace Raven.Server.ServerWide
 
         public override async Task<Stream> ConnectToPeer(string url, string apiKey)
         {
-            if (_parent?.Url != null && url != null)
-                if (_parent.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) != url.StartsWith("https:", StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidOperationException($"Failed to connect from node {_parent.Url} to node {url}. If HTTPS is used on one node, the other node must also use it");
+            if (url == null) throw new ArgumentNullException(nameof(url));
+            if (_parent == null) throw new InvalidOperationException("Cannot connect to peer without a parent");
+            if (_parent.IsEncrypted &&  url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
+                    throw new InvalidOperationException($"Failed to connect to node {url}. Connections from encrypted store must use HTTPS.");
             
             var info = await ReplicationUtils.GetTcpInfoAsync(url, "Rachis.Server", apiKey, "Cluster");
             var authenticator = new ApiKeyAuthenticator();

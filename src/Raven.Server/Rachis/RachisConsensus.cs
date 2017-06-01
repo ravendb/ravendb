@@ -168,12 +168,18 @@ namespace Raven.Server.Rachis
         private TaskCompletionSource<object> _stateChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         private TaskCompletionSource<object> _commitIndexChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly ManualResetEventSlim _disposeEvent = new ManualResetEventSlim();
-        private int? _seed;
+        private readonly Random _rand;
         private string _lastStateChangeReason;
 
         protected RachisConsensus(int? seed = null)
         {
-            _seed = seed;
+            _rand = seed.HasValue ? new Random(seed.Value) : new Random();
+        }
+
+        public void SetTimeout()
+        {
+            //We want to be able to reproduce rare issues that are related to timing
+            Timeout = new TimeoutEvent(_rand.Next((int)(ElectionTimeout.TotalMilliseconds / 3 * 2), (int)ElectionTimeout.TotalMilliseconds));
         }
 
         public unsafe void Initialize(StorageEnvironment env, ClusterConfiguration configuration)
@@ -217,9 +223,8 @@ namespace Raven.Server.Rachis
 
                     tx.Commit();
                 }
-                //We want to be able to reproduce rare issues that are related to timing
-                var rand = _seed.HasValue ? new Random(_seed.Value) : new Random();
-                Timeout = new TimeoutEvent(rand.Next((int)(ElectionTimeout.TotalMilliseconds / 3 * 2), (int)ElectionTimeout.TotalMilliseconds));
+
+                SetTimeout();
 
                 // if we don't have a topology id, then we are passive
                 // an admin needs to let us know that it is fine, either
@@ -395,8 +400,23 @@ namespace Raven.Server.Rachis
                     {
                         foreach (var d in toDispose)
                         {
-                            d.Dispose();
+                            try
+                            {
+                                d.Dispose();
+                            }
+                            catch (ObjectDisposedException)
+                            {
+                                // nothing to do
+                            }
+                            catch (Exception e)
+                            {
+                                if (Log.IsInfoEnabled)
+                                {
+                                    Log.Info("Failed to dispose during new rachis state transition", e);
+                                }
+                            }
                         }
+
                     });
 
                     StateChanged?.Invoke(this, state);
@@ -457,6 +477,7 @@ namespace Raven.Server.Rachis
 
         public void SwitchToCandidateState(string reason, bool forced = false)
         {
+            Timeout.DisableTimeout();
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -474,7 +495,7 @@ namespace Raven.Server.Rachis
 
             if (Log.IsInfoEnabled)
             {
-                Log.Info("Switching to candidate state");
+                Log.Info($"Switching to candidate state because {reason} forced: {forced}");
             }
 
             var candidate = new Candidate(this)
@@ -1209,9 +1230,9 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public Task AddToClusterAsync(string url)
+        public Task AddToClusterAsync(string url, string nodeTag = null, bool validateNotInTopology = true)
         {
-            return ModifyTopologyAsync(null, url, Leader.TopologyModification.Promotable, true);
+            return ModifyTopologyAsync(nodeTag, url, Leader.TopologyModification.Promotable, validateNotInTopology);
         }
 
         public Task RemoveFromClusterAsync(string nodeTag)
@@ -1257,6 +1278,9 @@ namespace Raven.Server.Rachis
                 _leaderTag = value;
             }
         }
+
+        public bool IsEncrypted => _persistentState.Options.EncryptionEnabled;
+
         public abstract bool ShouldSnapshot(Slice slice, RootObjectType type);
 
         public abstract void Apply(TransactionOperationContext context, long uptoInclusive, Leader leader);

@@ -494,28 +494,17 @@ namespace Raven.Client.Http
             return ExceptionDispatcher.Throw(context, response);
         }
 
-        public static async Task<MemoryStream> ReadAsStreamUncompressedAsync(HttpResponseMessage response)
+        public static async Task<Stream> ReadAsStreamUncompressedAsync(HttpResponseMessage response)
         {
-            using (var serverStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
-            {
-                var stream = serverStream;
-                var encoding = response.Content.Headers.ContentEncoding.FirstOrDefault();
-                if (encoding != null && encoding.Contains("gzip"))
-                    stream = new GZipStream(stream, CompressionMode.Decompress);
-                else if (encoding != null && encoding.Contains("deflate"))
-                    stream = new DeflateStream(stream, CompressionMode.Decompress);
-                var ms = new MemoryStream();
+            var serverStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+            var stream = serverStream;
+            var encoding = response.Content.Headers.ContentEncoding.FirstOrDefault();
+            if (encoding != null && encoding.Contains("gzip"))
+                return new GZipStream(stream, CompressionMode.Decompress);
+            if (encoding != null && encoding.Contains("deflate"))
+                return new DeflateStream(stream, CompressionMode.Decompress);
 
-                var buffer = new byte[4096];
-                int read;
-                while ((read = stream.Read(buffer, 0, buffer.Length)) != 0)
-                {
-                    ms.Write(buffer, 0, read);
-                }
-                stream.Dispose();
-                ms.Position = 0;
-                return ms;
-            }
+            return serverStream;
         }
 
         private async Task<bool> HandleServerDown<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, HttpRequestException e)

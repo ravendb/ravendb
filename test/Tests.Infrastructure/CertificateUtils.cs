@@ -68,7 +68,7 @@ namespace Tests.Infrastructure
             store.SetCertificateEntry(friendlyName, certificateEntry);
             store.SetKeyEntry(friendlyName, new AsymmetricKeyEntry(subjectKeyPair.Private), new[] { certificateEntry });
             var stream = new MemoryStream();
-            store.Save(stream, null, random);
+            store.Save(stream, new char[0], random);
             var convertedCertificate =
                 new X509Certificate2(
                     stream.ToArray(), null,

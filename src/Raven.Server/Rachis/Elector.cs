@@ -40,9 +40,12 @@ namespace Raven.Server.Rachis
                             return;
                         }
 
-                        if (_engine.CurrentState == RachisConsensus.State.Leader ||
-                            _engine.CurrentState == RachisConsensus.State.LeaderElect)
-                        {
+                        if (rv.IsForcedElection == false &&
+                            (
+                                _engine.CurrentState == RachisConsensus.State.Leader ||
+                                _engine.CurrentState == RachisConsensus.State.LeaderElect
+                            )
+                        ){
                             _connection.Send(context, new RequestVoteResponse
                             {
                                 Term = _engine.CurrentTerm,
@@ -102,7 +105,7 @@ namespace Raven.Server.Rachis
                             {
                                 Term = _engine.CurrentTerm,
                                 VoteGranted = false,
-                                Message = $"My last log entry is of term {lastTerm} while yours is {rv.LastLogTerm}, so I'm more up to date"
+                                Message = $"My last log entry is of term {lastTerm} / {lastIndex} while yours is {rv.LastLogTerm}, so I'm more up to date"
                             });
                             _connection.Dispose();
                             return;

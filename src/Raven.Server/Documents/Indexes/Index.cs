@@ -1203,6 +1203,14 @@ namespace Raven.Server.Documents.Indexes
             return _indexStorage.ReadErrorsCount();
         }
 
+        public DateTime? GetLastIndexingErrorTime()
+        {
+            if (_isCompactionInProgress || Type == IndexType.Faulty)
+                return DateTime.MinValue;
+
+            return _indexStorage.ReadLastIndexingErrorTime();
+        }
+
         public virtual void SetPriority(IndexPriority priority)
         {
             if (Definition.Priority == priority)
