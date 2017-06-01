@@ -1540,10 +1540,24 @@ pre {
         padding-left: 32px;
         margin-top: 0;
         margin-bottom: 0;
-    }
+        white-space:nowrap;
+        display: flex;
+        align-items: center;
 
-    label.checkbox {
-        padding-left: 3px;
+        label {
+            padding-left: 3px;
+            flex-grow: 1;
+
+            display:flex;
+
+            .name {
+                flex-grow: 1;
+            }
+        }
+
+        .badge {
+            margin: 0 5px;
+        }
     }
 }
 
