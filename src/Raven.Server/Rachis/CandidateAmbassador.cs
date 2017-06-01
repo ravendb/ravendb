@@ -18,6 +18,7 @@ namespace Raven.Server.Rachis
         public string Status;
         private Thread _thread;
         private Stream _conenctToPeer;
+        private bool _disposed;
         public long TrialElectionWonAtTerm { get; set; }
         public long ReadlElectionWonAtTerm { get; set; }
 
@@ -44,6 +45,7 @@ namespace Raven.Server.Rachis
 
         public void Dispose()
         {
+            _disposed = true;
             _conenctToPeer?.Dispose();
             if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
             {
@@ -66,7 +68,7 @@ namespace Raven.Server.Rachis
         {
             try
             {
-                while (_candidate.Running)
+                while (_candidate.Running && _disposed == false)
                 {
                     _conenctToPeer = null;
                     try

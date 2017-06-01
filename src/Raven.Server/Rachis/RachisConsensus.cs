@@ -176,14 +176,14 @@ namespace Raven.Server.Rachis
             _rand = seed.HasValue ? new Random(seed.Value) : new Random();
         }
 
-        public void SetTimeout()
+        public void RandomizeTimeout(bool extend = false)
         {
             //We want to be able to reproduce rare issues that are related to timing
-            var oldTimeout = Timeout;
-            using (oldTimeout)
-            {
-                Timeout = new TimeoutEvent(_rand.Next((int)(ElectionTimeout.TotalMilliseconds / 3 * 2), (int)ElectionTimeout.TotalMilliseconds));
-            }
+            var timeout = (int)ElectionTimeout.TotalMilliseconds;
+            if (extend)
+                timeout = Math.Max(timeout, timeout * 2); // avoid overflow
+
+            Timeout.TimeoutPeriod = _rand.Next(timeout / 3 * 2, timeout);
         }
 
         public unsafe void Initialize(StorageEnvironment env, ClusterConfiguration configuration)
@@ -228,7 +228,8 @@ namespace Raven.Server.Rachis
                     tx.Commit();
                 }
 
-                SetTimeout();
+                Timeout = new TimeoutEvent(0);
+                RandomizeTimeout();
 
                 // if we don't have a topology id, then we are passive
                 // an admin needs to let us know that it is fine, either
@@ -1117,6 +1118,7 @@ namespace Raven.Server.Rachis
                 }
                 var term = *(long*)reader.Read(1, out int size);
                 Debug.Assert(size == sizeof(long));
+                Debug.Assert(term != 0);
                 return term;
             }
         }
