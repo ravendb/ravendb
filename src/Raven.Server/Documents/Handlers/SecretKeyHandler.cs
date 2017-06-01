@@ -62,6 +62,9 @@ namespace Raven.Server.Documents.Handlers
             var name = GetStringQueryString("name");
             var overwrite = GetBoolValueQueryString("overwrite", required: false) ?? false;
 
+            if (Server.ServerCertificate == null)
+                throw new InvalidOperationException($"Cannot put secret key for {name} in node {Server.ServerStore.NodeTag} because the node is not using HTTPS");
+
             using (var reader = new StreamReader(HttpContext.Request.Body))
             {
                 var base64 = reader.ReadToEnd();
@@ -119,6 +122,9 @@ namespace Raven.Server.Documents.Handlers
                         var url = clusterTopology.GetUrlFromTag(node);
                         if (url == null)
                             throw new InvalidOperationException($"Node {node} is not a part of the cluster, cannot send secret key.");
+                        
+                        if (url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
+                            throw new InvalidOperationException($"Cannot put secret key for {name} on node {node} with url {url} because it is not using HTTPS");
 
                         if (string.Equals(node, ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase))
                         {

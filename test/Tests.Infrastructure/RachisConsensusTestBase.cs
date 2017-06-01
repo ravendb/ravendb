@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Raven.Client.Documents;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
@@ -16,6 +17,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
+using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -304,13 +306,17 @@ namespace Tests.Infrastructure
 
             public override async Task<Stream> ConnectToPeer(string url, string apiKey)
             {
+                if (_parent.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) != url.StartsWith("https:", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException($"Failed to connect from node {_parent.Url} to node {url}. If HTTPS is used on one node, the other node must also use it");
+
+                var info = await ReplicationUtils.GetTcpInfoAsync(url, "Rachis.Server", apiKey, "Cluster");
                 var tcpInfo = new Uri(url);
                 var tcpClient = new TcpClient();
                 await tcpClient.ConnectAsync(tcpInfo.Host, tcpInfo.Port);
-                return tcpClient.GetStream();
+                return await TcpUtils.WrapStreamWithSslAsync(tcpClient, info);
             }
         }
-
+        
         public class TestCommand : CommandBase
         {
             public string Name;

@@ -51,6 +51,11 @@ namespace Raven.Client.Server.ETL
                 return _name = $"{database}@{server} [{string.Join(" ", SqlTables.Select(x => x.TableName))}]";
             }
         }
+
+        public override bool UsingEncryptedCommunicationChannel()
+        {
+            return true; //TODO: Figure out how we can tell
+        }
     }
 
     public class SqlEtlTable

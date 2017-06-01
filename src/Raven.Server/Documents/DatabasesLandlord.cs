@@ -475,6 +475,20 @@ namespace Raven.Server.Documents
                     return null;
 
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
+
+                if (databaseRecord.Encrypted)
+                {
+                    if (_serverStore.RavenServer.WebUrls != null && _serverStore.RavenServer.WebUrls.Length > 0)
+                    {
+                        var ravenServerWebUrl = _serverStore.RavenServer.WebUrls[0];
+                        if (ravenServerWebUrl?.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
+                        {
+                            throw new DatabaseDisabledException(
+                                $"The database {databaseName.Value} is encrypted, and must be accessed only via HTTPS, but the web url used is {ravenServerWebUrl}");       
+                        }
+                    }
+                }
+
                 return CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase, ignoreBeenDeleted, databaseRecord);
 
             }
