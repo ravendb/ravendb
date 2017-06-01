@@ -419,8 +419,9 @@ namespace Raven.Server.Documents.ETL
                             LastProcessedEtag = Statistics.LastProcessedEtag
                         }, Database.Name);
 
-
-                        var (etag, _) = _serverStore.SendToLeaderAsync(command).Result;
+                        var sendToLeaderTask = _serverStore.SendToLeaderAsync(command);
+                        sendToLeaderTask.Wait(CancellationToken);
+                        var (etag, _) = sendToLeaderTask.Result;
 
                         try
                         {

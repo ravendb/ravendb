@@ -635,6 +635,10 @@ namespace Raven.Server.ServerWide
 
         public override async Task<Stream> ConnectToPeer(string url, string apiKey)
         {
+            if (_parent?.Url != null && url != null)
+                if (_parent.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) != url.StartsWith("https:", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException($"Failed to connect from node {_parent.Url} to node {url}. If HTTPS is used on one node, the other node must also use it");
+            
             var info = await ReplicationUtils.GetTcpInfoAsync(url, "Rachis.Server", apiKey, "Cluster");
             var authenticator = new ApiKeyAuthenticator();
 

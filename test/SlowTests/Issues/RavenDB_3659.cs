@@ -27,7 +27,7 @@ namespace SlowTests.Issues
             if (LinuxTestUtils.RunningOnPosix)
                 _invalidCustomSettings = new Dictionary<string, string>
                 {
-                    {RavenConfiguration.GetKey(x => x.Storage.TempPath), "/mnt/noSuchDir"}
+                    {RavenConfiguration.GetKey(x => x.Storage.TempPath), "/proc/no/such/dir"} // in linux for invalid dir we need non permission one like /proc (root / dir can be valid in some cases)
                 };
             else
                 _invalidCustomSettings = new Dictionary<string, string>

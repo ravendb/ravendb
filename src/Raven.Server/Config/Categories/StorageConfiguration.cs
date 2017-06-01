@@ -66,7 +66,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("Use the 32 bits memory mapped pager, even when running in 64 bits")]
         [DefaultValue(false)]
-        [ConfigurationEntry("Raven/Storage/ForceUsing32BitsPager")]
+        [ConfigurationEntry("Raven/Storage/ForceUsing32BitsPager", isServerWideOnly: true)]
         public bool ForceUsing32BitsPager { get; set; }
 
         [Description("How long transaction mode (Danger/Lazy) last before returning to Safe mode. Value in Minutes. Default one day. Zero for infinite time")]

@@ -214,9 +214,7 @@ class query extends viewModelBase {
                 this.addFilterVisible(true);
             }
         });
-
-        this.rawJsonUrl.subscribe((value: string) => ko.postbox.publish("SetRawJSONUrl", value));
-
+      
         this.isLoading.extend({ rateLimit: 100 });
 
         const criteria = this.criteria();
@@ -336,9 +334,7 @@ class query extends viewModelBase {
         this.createKeyboardShortcut("alt+c", () => this.focusOnQuery(), query.containerSelector);
         this.createKeyboardShortcut("alt+r", () => this.runQuery(), query.containerSelector); // Using keyboard shortcut here, rather than HTML's accesskey, so that we don't steal focus from the editor.
         */
-
-        ko.postbox.publish("SetRawJSONUrl", appUrl.forIndexQueryRawData(this.activeDatabase(), this.criteria().selectedIndex()));
-
+       
         $(".query-title small").popover({
             html: true,
             trigger: "hover",

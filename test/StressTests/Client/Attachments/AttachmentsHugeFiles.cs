@@ -1,4 +1,6 @@
-﻿using FastTests;
+﻿using System;
+using System.IO;
+using FastTests;
 using FastTests.Client.Attachments;
 using Microsoft.AspNetCore.Http.Features;
 using Xunit;
@@ -12,9 +14,18 @@ namespace StressTests.Client.Attachments
         [InlineData(2.5 * 1024 * 1024 * 1024, "2ssXqJM7lbdDpDNkc2GsfDbmcQ6CXdgP6/LFmLtFCT4=")] // 2.5 GB
         public void BatchRequestWithLongMultiPartSections(long size, string hash)
         {
-            using (var stress = new AttachmentsBigFiles())
+            try
             {
-                stress.BatchRequestWithLongMultiPartSections(size, hash);
+                using (var stress = new AttachmentsBigFiles())
+                {
+                    stress.BatchRequestWithLongMultiPartSections(size, hash);
+                }
+            }
+            catch (IOException ioe)
+            {
+                if (ioe.Message.Contains("Stream was too long"))
+                    throw new IOException("Not enough memory to run this test. Consider running stress tests one by one", ioe);
+                throw;
             }
         }
 
@@ -22,9 +33,18 @@ namespace StressTests.Client.Attachments
         [InlineData(2.5 * 1024 * 1024 * 1024, "2ssXqJM7lbdDpDNkc2GsfDbmcQ6CXdgP6/LFmLtFCT4=")] // 2.5 GB
         public void SupportHugeAttachment(long size, string hash)
         {
-            using (var stress = new AttachmentsBigFiles())
+            try
             {
-                stress.SupportHugeAttachment(size, hash);
+                using (var stress = new AttachmentsBigFiles())
+                {
+                    stress.SupportHugeAttachment(size, hash);
+                }
+            }
+            catch (IOException ioe)
+            {
+                if (ioe.Message.Contains("Stream was too long"))
+                    throw new IOException("Not enough memory to run this test. Consider running stress tests one by one", ioe);
+                throw;
             }
         }
     }

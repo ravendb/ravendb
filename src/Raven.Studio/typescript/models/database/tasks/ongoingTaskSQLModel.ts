@@ -4,11 +4,11 @@ import ongoingTask = require("models/database/tasks/ongoingTaskModel");
 
 class ongoingTaskSQLModel extends ongoingTask {
 
-    sqlProvider = ko.observable<string>();
-    sqlTable = ko.observable<string>();
-    sqlTableText: KnockoutComputed<string>;
+    destinationServer = ko.observable<string>();
+    destinationDatabase = ko.observable<string>();
+    destinationDatabaseText: KnockoutComputed<string>;
 
-    constructor(dto: Raven.Server.Web.System.OngoingTaskSQL) {
+    constructor(dto: Raven.Server.Web.System.OngoingSqlEtl) {
         super(dto);
         this.initializeObservables();
         this.update(dto);
@@ -17,15 +17,15 @@ class ongoingTaskSQLModel extends ongoingTask {
     initializeObservables() {
         super.initializeObservables();
         // ...
-        this.sqlTableText = ko.pureComputed(() => {
-            return `(${this.sqlTable()})`;
+        this.destinationDatabaseText = ko.pureComputed(() => {
+            return `(${this.destinationDatabase()})`;
         });
     }
 
-    update(dto: Raven.Server.Web.System.OngoingTaskSQL) {
+    update(dto: Raven.Server.Web.System.OngoingSqlEtl) {
         super.update(dto);
-        this.sqlProvider(dto.SqlProvider);
-        this.sqlTable(dto.SqlTable);
+        this.destinationServer(dto.DestinationServer);
+        this.destinationDatabaseText(dto.DestinationDatabase);
     }
 
     enableTask() {

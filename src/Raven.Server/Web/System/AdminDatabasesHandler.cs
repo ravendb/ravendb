@@ -131,7 +131,7 @@ namespace Raven.Server.Web.System
                     if (url == null)
                         throw new InvalidOperationException($"Can't add node {node} to {name} topology because node {node} is not part of the cluster");
 
-                    if (databaseRecord.Encrypted && NotUsingSsl(url))
+                    if (databaseRecord.Encrypted && NotUsingHttps(url))
                         throw new InvalidOperationException($"Can't add node {node} to database {name} topology because database {name} is encrypted but node {node} doesn't have an SSL certificate.");
 
                     databaseRecord.Topology.Promotables.Add(new DatabaseTopologyNode
@@ -149,22 +149,14 @@ namespace Raven.Server.Web.System
                         .Concat(clusterTopology.Promotables.Keys)
                         .Concat(clusterTopology.Watchers.Keys)
                         .ToList();
+                    
+                    allNodes.RemoveAll(n => databaseRecord.Topology.AllNodes.Contains(n) || (databaseRecord.Encrypted && NotUsingHttps(clusterTopology.GetUrlFromTag(n))));
 
-                    allNodes.RemoveAll(n => databaseRecord.Topology.AllNodes.Contains(n));
+                    if (databaseRecord.Encrypted && allNodes.Count == 0)
+                        throw new InvalidOperationException($"Database {name} is encrypted and requires a node which supports SSL. There is no such node available in the cluster.");
 
-                    if (databaseRecord.Encrypted)
-                    {
-                        var nodeCount = allNodes.Count;
-                        var removed = allNodes.RemoveAll(n =>
-                        {
-                            var u = clusterTopology.GetUrlFromTag(n);
-                            return NotUsingSsl(u);
-                        });
-
-                        if (nodeCount == removed)
-                            throw new InvalidOperationException(
-                                $"Database {name} is encrypted and requires a node which supports SSL. There is no such node available in the cluster.");
-                    }
+                    if (allNodes.Count == 0)
+                        throw new InvalidOperationException($"Database {name} already exists on all the nodes of the cluster");
 
                     var rand = new Random().Next();
                     var newNode = allNodes[rand % allNodes.Count];
@@ -195,9 +187,10 @@ namespace Raven.Server.Web.System
             }
         }
 
-        public bool NotUsingSsl(string url)
+        public bool NotUsingHttps(string url)
         {
-            return url.Contains("https:") == false;
+            return url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false;
+                
         }
 
         [RavenAction("/admin/databases", "PUT", "/admin/databases/{databaseName:string}")]
@@ -233,12 +226,12 @@ namespace Raven.Server.Web.System
                 if (databaseRecord.Topology?.Members?.Count > 0)
                 {
                     topology = databaseRecord.Topology;
-                    ValidateClusterMembers(context, topology);
+                    ValidateClusterMembers(context, topology, databaseRecord);
                 }
                 else
                 {
                     var factor = Math.Max(1, GetIntValueQueryString("replication-factor", required: false) ?? 0);
-                    databaseRecord.Topology = topology = AssignNodesToDatabase(context, factor, name, out nodesAddedTo);
+                    databaseRecord.Topology = topology = AssignNodesToDatabase(context, factor, name, databaseRecord, out nodesAddedTo);
                 }
 
                 var (newEtag, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, etag);
@@ -260,7 +253,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private DatabaseTopology AssignNodesToDatabase(TransactionOperationContext context, int factor, string name, out List<string> nodesAddedTo)
+        private DatabaseTopology AssignNodesToDatabase(TransactionOperationContext context, int factor, string name, DatabaseRecord databaseRecord, out List<string> nodesAddedTo)
         {
             var topology = new DatabaseTopology();
 
@@ -269,14 +262,21 @@ namespace Raven.Server.Web.System
             var allNodes = clusterTopology.Members.Keys
                 .Concat(clusterTopology.Promotables.Keys)
                 .Concat(clusterTopology.Watchers.Keys)
-                .ToArray();
+                .ToList();
+
+            if (databaseRecord.Encrypted)
+            {
+                allNodes.RemoveAll(n => NotUsingHttps(clusterTopology.GetUrlFromTag(n)));
+                if (allNodes.Count == 0)
+                    throw new InvalidOperationException($"Database {name} is encrypted and requires a node which supports SSL. There is no such node available in the cluster.");
+            }
 
             var offset = new Random().Next();
             nodesAddedTo = new List<string>();
 
-            for (int i = 0; i < Math.Min(allNodes.Length, factor); i++)
+            for (int i = 0; i < Math.Min(allNodes.Count, factor); i++)
             {
-                var selectedNode = allNodes[(i + offset) % allNodes.Length];
+                var selectedNode = allNodes[(i + offset) % allNodes.Count];
                 var url = clusterTopology.GetUrlFromTag(selectedNode);
                 topology.Members.Add(new DatabaseTopologyNode
                 {
@@ -290,7 +290,7 @@ namespace Raven.Server.Web.System
             return topology;
         }
 
-        private void ValidateClusterMembers(TransactionOperationContext context, DatabaseTopology topology)
+        private void ValidateClusterMembers(TransactionOperationContext context, DatabaseTopology topology, DatabaseRecord databaseRecord)
         {
             var clusterTopology = ServerStore.GetClusterTopology(context);
 
@@ -299,6 +299,9 @@ namespace Raven.Server.Web.System
                 var result = clusterTopology.TryGetNodeTagByUrl(node.Url);
                 if (result.hasUrl == false || result.nodeTag != node.NodeTag)
                     throw new InvalidOperationException($"The Url {node.Url} for node {node.NodeTag} is not a part of the cluster, the incoming topology is wrong!");
+
+                if (databaseRecord.Encrypted && NotUsingHttps(node.Url))
+                    throw new InvalidOperationException($"{databaseRecord.DatabaseName} is encrypted but node {node.NodeTag} with url {node.Url} doesn't use HTTPS. This is not allowed.");
             }
         }
 

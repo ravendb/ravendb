@@ -105,12 +105,12 @@ namespace Raven.Server.Documents.Handlers
 
                     if (commandData.Type == CommandType.PATCH)
                     {
-                        commandData.PatchCommand = database.Patcher.GetPatchDocumentCommand(commandData.Id, commandData.Etag, commandData.Patch,
+                        commandData.PatchCommand = database.Patcher.GetPatchDocumentCommand(ctx, commandData.Id, commandData.Etag, commandData.Patch,
                             commandData.PatchIfMissing,
                             skipPatchIfEtagMismatch: false, debugMode: false);
                     }
 
-                    if (commandData.Type == CommandType.PUT && commandData.Id?[commandData.Id.Length - 1] == '/')
+                    if (commandData.Type == CommandType.PUT && string.IsNullOrEmpty(commandData.Id) == false && commandData.Id[commandData.Id.Length - 1] == '/')
                     {
                         commandData.Id = await serverStore.GenerateClusterIdentityAsync(commandData.Id, database.Name);
                     }

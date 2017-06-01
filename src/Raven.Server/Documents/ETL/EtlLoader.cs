@@ -9,6 +9,7 @@ using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 
@@ -115,6 +116,30 @@ namespace Raven.Server.Documents.ETL
             {
                 LogConfigurationError(config, errors);
                 return false;
+            }
+
+            using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var databaseRecord = _database.ServerStore.Cluster.ReadDatabase(ctx, _database.Name);
+                if (databaseRecord == null)
+                {
+                    LogConfigurationError(config,
+                        new List<string>
+                        {
+                            "The database record for " + _database.Name + " does not exists?!"
+                        });
+                    return false;
+                }
+                if (databaseRecord.Encrypted && config.Destination.UsingEncryptedCommunicationChannel() == false)
+                {
+                    LogConfigurationError(config,
+                        new List<string>
+                        {
+                           _database.Name + " is encrypted, but " + config.Destination + " does not use encryption, so cannot be used"
+                        });
+                    return false;
+                }
             }
 
             if (uniqueDestinations.Add(config.Destination.Name) == false)

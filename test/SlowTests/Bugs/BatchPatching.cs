@@ -13,10 +13,10 @@ namespace SlowTests.Bugs
         [Fact]
         public void CanSuccessfullyPatchInBatches()
         {
-            using(var store =GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 const int count = 512;
-                using(var s = store.OpenSession())
+                using (var s = store.OpenSession())
                 {
                     for (int i = 0; i < count; i++)
                     {
@@ -29,10 +29,10 @@ namespace SlowTests.Bugs
                 }
 
                 var batchesFirstHalf =
-                    Enumerable.Range(0, count/2).Select(i => new PatchOperation("users/" + i, null, new PatchRequest
-                        {
-                            Script = $"this.Name='Users-{i}';"
-                        }));
+                    Enumerable.Range(0, count / 2).Select(i => new PatchOperation("users/" + i, null, new PatchRequest
+                    {
+                        Script = $"this.Name='Users-{i}';"
+                    }));
                 foreach (var patchCommandData in batchesFirstHalf)
                 {
                     if (store.Operations.Send(patchCommandData) != PatchStatus.Patched)
@@ -55,7 +55,7 @@ namespace SlowTests.Bugs
                     s.Advanced.MaxNumberOfRequestsPerSession = count + 2;
                     for (int i = 0; i < count; i++)
                     {
-                        Assert.Equal("Users-"+i, s.Load<User>("users/"+i).Name);
+                        Assert.Equal("Users-" + i, s.Load<User>("users/" + i).Name);
                     }
                 }
 

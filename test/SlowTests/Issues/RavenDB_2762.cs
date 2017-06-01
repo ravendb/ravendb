@@ -39,9 +39,9 @@ namespace SlowTests.Issues
                 {
                     errors = store.Admin.Send(new GetIndexErrorsOperation(new[] { "test" }))[0].Errors;
                     return errors?.Length > 0;
-                }, TimeSpan.FromSeconds(5));
+                }, TimeSpan.FromSeconds(20));
 
-                Assert.True(result, "Waited for 5 seconds for errors to be persisted but it did not happen.");
+                Assert.True(result, "Waited for 20 seconds for errors to be persisted but it did not happen.");
                 Assert.NotEmpty(errors);
 
                 Server.ServerStore.DatabasesLandlord.UnloadDatabase(store.Database);

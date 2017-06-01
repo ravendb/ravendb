@@ -11,7 +11,7 @@ class ongoingTaskETLModel extends ongoingTask {
 
     // Todo: Add support for the collections scripts dictionary
 
-    constructor(dto: Raven.Server.Web.System.OngoingTaskETL) {
+    constructor(dto: Raven.Server.Web.System.OngoingRavenEtl) {
         super(dto);
         this.initializeObservables();
         this.update(dto);
@@ -25,10 +25,10 @@ class ongoingTaskETLModel extends ongoingTask {
         });
     }
 
-    update(dto: Raven.Server.Web.System.OngoingTaskETL) {
+    update(dto: Raven.Server.Web.System.OngoingRavenEtl) {
         super.update(dto);
-        this.destinationDB(dto.DestinationDB);
-        this.destinationURL(dto.DestinationURL);
+        this.destinationDB(dto.DestinationDatabase);
+        this.destinationURL(dto.DestinationUrl);
     }
 
     enableTask() {
