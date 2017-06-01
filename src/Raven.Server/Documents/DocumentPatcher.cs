@@ -6,6 +6,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents
@@ -67,7 +68,9 @@ namespace Raven.Server.Documents
             }
         }
 
-        public PatchDocumentCommand GetPatchDocumentCommand(string id,
+        public PatchDocumentCommand GetPatchDocumentCommand(
+            JsonOperationContext context,
+            string id,
             long? etag,
             PatchRequest patch,
             PatchRequest patchIfMissing,
@@ -88,7 +91,7 @@ namespace Raven.Server.Documents
 
             var run = CreateScriptRun(patch, scope, id); 
 
-            var command = new PatchDocumentCommand(id, etag, skipPatchIfEtagMismatch, debugMode, scope, run, Database, Logger, isTest, patch.IsPuttingDocuments || patchIfMissing?.IsPuttingDocuments == true);
+            var command = new PatchDocumentCommand(context, id, etag, skipPatchIfEtagMismatch, debugMode, scope, run, Database, Logger, isTest, patch.IsPuttingDocuments || patchIfMissing?.IsPuttingDocuments == true);
 
             if (patchIfMissing != null)
             {

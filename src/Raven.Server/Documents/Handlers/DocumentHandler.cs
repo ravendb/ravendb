@@ -437,82 +437,70 @@ namespace Raven.Server.Documents.Handlers
                 if (request.TryGet("PatchIfMissing", out patchIfMissingCmd) && patchIfMissingCmd != null)
                     patchIfMissing = PatchRequest.Parse(patchIfMissingCmd);
 
-                BlittableJsonReaderObject origin = null;
-                try
+                var command = Database.Patcher.GetPatchDocumentCommand(context, id, etag, patch, patchIfMissing, skipPatchIfEtagMismatch, debugMode, isTest);
+
+                if (isTest == false)
+                    await Database.TxMerger.Enqueue(command);
+                else
                 {
-                    var command = Database.Patcher.GetPatchDocumentCommand(id, etag, patch, patchIfMissing, skipPatchIfEtagMismatch, debugMode, isTest);
-
-                    if (isTest == false)
-                        await Database.TxMerger.Enqueue(command);
-                    else
+                    using (patch.IsPuttingDocuments == false ?
+                        context.OpenReadTransaction() :
+                        context.OpenWriteTransaction()) // PutDocument requires the write access to the docs storage
                     {
-                        using (patch.IsPuttingDocuments == false ? 
-                            context.OpenReadTransaction() : 
-                            context.OpenWriteTransaction()) // PutDocument requires the write access to the docs storage
-                        {
-                            command.Execute(context);
-
-                            // origin document is only accessible from the transaction, and we are closing it
-                            // so we have hold on to a copy of it
-                            origin = command.PatchResult.OriginalDocument.Clone(context);
-                        }
-                    }
-
-                    switch (command.PatchResult.Status)
-                    {
-                        case PatchStatus.DocumentDoesNotExist:
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            return;
-                        case PatchStatus.Created:
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-                            break;
-                        case PatchStatus.Skipped:
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                            return;
-                        case PatchStatus.Patched:
-                        case PatchStatus.NotModified:
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
-
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        writer.WriteStartObject();
-
-                        writer.WritePropertyName(nameof(command.PatchResult.Status));
-                        writer.WriteString(command.PatchResult.Status.ToString());
-                        writer.WriteComma();
-
-                        writer.WritePropertyName(nameof(command.PatchResult.ModifiedDocument));
-                        writer.WriteObject(command.PatchResult.ModifiedDocument);
-
-                        if (debugMode)
-                        {
-                            writer.WriteComma();
-
-                            writer.WritePropertyName(nameof(command.PatchResult.OriginalDocument));
-                            if (origin != null)
-                                writer.WriteObject(origin);
-                            else
-                                writer.WriteNull();
-
-                            writer.WriteComma();
-
-                            writer.WritePropertyName(nameof(command.PatchResult.Debug));
-                            if (command.PatchResult.Debug != null)
-                                writer.WriteObject(command.PatchResult.Debug);
-                            else
-                                writer.WriteNull();
-                        }
-
-                        writer.WriteEndObject();
+                        command.Execute(context);
                     }
                 }
-                finally
+
+                switch (command.PatchResult.Status)
                 {
-                    origin?.Dispose();
+                    case PatchStatus.DocumentDoesNotExist:
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        return;
+                    case PatchStatus.Created:
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                        break;
+                    case PatchStatus.Skipped:
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                        return;
+                    case PatchStatus.Patched:
+                    case PatchStatus.NotModified:
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName(nameof(command.PatchResult.Status));
+                    writer.WriteString(command.PatchResult.Status.ToString());
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(command.PatchResult.ModifiedDocument));
+                    writer.WriteObject(command.PatchResult.ModifiedDocument);
+
+                    if (debugMode)
+                    {
+                        writer.WriteComma();
+
+                        writer.WritePropertyName(nameof(command.PatchResult.OriginalDocument));
+                        if (isTest)
+                            writer.WriteObject(command.PatchResult.OriginalDocument);
+                        else
+                            writer.WriteNull();
+
+                        writer.WriteComma();
+
+                        writer.WritePropertyName(nameof(command.PatchResult.Debug));
+                        if (command.PatchResult.Debug != null)
+                            writer.WriteObject(command.PatchResult.Debug);
+                        else
+                            writer.WriteNull();
+                    }
+
+                    writer.WriteEndObject();
                 }
             }
         }

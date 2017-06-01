@@ -16,6 +16,7 @@ namespace Raven.Server.Documents.Patch
         private readonly bool _skipPatchIfEtagMismatch;
         private readonly bool _debugMode;
 
+        private readonly JsonOperationContext _externalContext;
         private readonly PatcherOperationScope _scope;
 
         private readonly DocumentDatabase _database;
@@ -25,9 +26,10 @@ namespace Raven.Server.Documents.Patch
 
         private DocumentPatcherBase.SingleScriptRun _run;
 
-        public PatchDocumentCommand(string id, long? expectedEtag, bool skipPatchIfEtagMismatch, bool debugMode, PatcherOperationScope scope,
+        public PatchDocumentCommand(JsonOperationContext context, string id, long? expectedEtag, bool skipPatchIfEtagMismatch, bool debugMode, PatcherOperationScope scope,
             DocumentPatcherBase.SingleScriptRun run, DocumentDatabase database, Logger logger, bool isTest, bool scriptIsPuttingDocument)
         {
+            _externalContext = context;
             _scope = scope;
             _run = run;
             _id = id;
@@ -114,18 +116,18 @@ namespace Raven.Server.Documents.Patch
                 throw;
             }
 
-            var modifiedDocument = context.ReadObject(_scope.ToBlittable(_scope.PatchObject.AsObject()), document.Id,
-                BlittableJsonDocumentBuilder.UsageMode.ToDisk, new BlittableMetadataModifier(context));
+            var modifiedDocument = _externalContext.ReadObject(_scope.ToBlittable(_scope.PatchObject.AsObject()), document.Id,
+                BlittableJsonDocumentBuilder.UsageMode.ToDisk, new BlittableMetadataModifier(_externalContext));
 
             var result = new PatchResult
             {
                 Status = PatchStatus.NotModified,
-                OriginalDocument = originalDocument?.Data,
+                OriginalDocument = _isTest == false ? originalDocument?.Data : originalDocument?.Data?.Clone(_externalContext),
                 ModifiedDocument = modifiedDocument
             };
 
             if (_debugMode)
-                DocumentPatcherBase.AddDebug(context, result, _scope);
+                DocumentPatcherBase.AddDebug(_externalContext, result, _scope);
 
             if (modifiedDocument == null)
             {
@@ -147,7 +149,7 @@ namespace Raven.Server.Documents.Patch
 
                 result.Status = PatchStatus.Created;
             }
-            else if (DocumentCompare.IsEqualTo(originalDocument.Data, modifiedDocument, true) == DocumentCompareResult.NotEqual) // http://issues.hibernatingrhinos.com/issue/RavenDB-6408
+            else if (DocumentCompare.IsEqualTo(originalDocument.Data, modifiedDocument, tryMergeAttachmentsConflict: true) == DocumentCompareResult.NotEqual) // http://issues.hibernatingrhinos.com/issue/RavenDB-6408
             {
                 if (_isTest == false || _scriptIsPuttingDocument)
                     putResult = _database.DocumentsStorage.Put(context, originalDocument.Id, originalDocument.Etag, modifiedDocument);

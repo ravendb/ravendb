@@ -105,7 +105,7 @@ namespace Raven.Server.Documents.Handlers
 
                     if (commandData.Type == CommandType.PATCH)
                     {
-                        commandData.PatchCommand = database.Patcher.GetPatchDocumentCommand(commandData.Id, commandData.Etag, commandData.Patch,
+                        commandData.PatchCommand = database.Patcher.GetPatchDocumentCommand(ctx, commandData.Id, commandData.Etag, commandData.Patch,
                             commandData.PatchIfMissing,
                             skipPatchIfEtagMismatch: false, debugMode: false);
                     }
