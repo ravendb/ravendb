@@ -309,12 +309,8 @@ namespace Raven.Client.Http
 
         public async Task ExecuteAsync<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, CancellationToken token = default(CancellationToken), bool shouldRetry = true)
         {
-            string url;
-            var request = CreateRequest(chosenNode, command, out url);
-            long cachedEtag;
-            BlittableJsonReaderObject cachedValue;
-            HttpCache.ReleaseCacheItem cachedItem;
-            using (cachedItem = GetFromCache(context, command, request, url, out cachedEtag, out cachedValue))
+            var request = CreateRequest(chosenNode, command, out string url);
+            using (var cachedItem = GetFromCache(context, command, request, url, out long cachedEtag, out BlittableJsonReaderObject cachedValue))
             {
                 if (cachedEtag != 0)
                 {
@@ -552,7 +548,7 @@ namespace Raven.Client.Http
                         Url = request.RequestUri.ToString(),
                         Message = "Got unrecognized response from the server",
                         Error = new StreamReader(ms).ReadToEnd(),
-                        Type = "Unparsable Server Response"
+                        Type = "Unparseable Server Response"
                     });
                 }
                 return;

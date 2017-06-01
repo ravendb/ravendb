@@ -68,6 +68,7 @@ namespace Raven.Client.Documents.Commands.Batches
                 var multipartContent = new MultipartContent {request.Content};
                 foreach (var stream in _attachmentStreams)
                 {
+                    PutAttachmentCommandHelper.PrepareStream(stream);
                     var streamContent = new AttachmentStreamContent(stream, CancellationToken);
                     streamContent.Headers.TryAddWithoutValidation("Command-Type", "AttachmentStream");
                     multipartContent.Add(streamContent);

@@ -6,7 +6,7 @@ namespace Sparrow.Logging
     public enum LogMode
     {
         None = 0,
-        Operations = 1,
-        Information = 3
+        Operations = 1, // High level info for operational users
+        Information = 3 // Low level debug info
     }
 }

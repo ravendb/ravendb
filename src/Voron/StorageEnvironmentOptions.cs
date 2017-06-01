@@ -385,16 +385,16 @@ namespace Voron
                 return result.Value;
             }
 
-            private static long TickInHour = TimeSpan.FromHours(1).Ticks;
+            private static readonly long TickInHour = TimeSpan.FromHours(1).Ticks;
 
             private void AttemptToReuseJournal(VoronPathSetting desiredPath, long desiredSize)
             {
                 lock (_journalsForReuse)
                 {
-                    var lastModifed = DateTime.MinValue.Ticks;
+                    var lastModified = DateTime.MinValue.Ticks;
                     while (_journalsForReuse.Count > 0)
                     {
-                        lastModifed = _journalsForReuse.Keys[_journalsForReuse.Count - 1];
+                        lastModified = _journalsForReuse.Keys[_journalsForReuse.Count - 1];
                         var filename = _journalsForReuse.Values[_journalsForReuse.Count - 1];
                         _journalsForReuse.RemoveAt(_journalsForReuse.Count - 1);
 
@@ -426,7 +426,7 @@ namespace Voron
                                 continue;
                             }
 
-                            if (lastModifed - fileInfo.LastWriteTimeUtc.Ticks > TickInHour * 72)
+                            if (lastModified - fileInfo.LastWriteTimeUtc.Ticks > TickInHour * 72)
                             {
                                 _journalsForReuse.RemoveAt(0);
                                 TryDelete(fileInfo.FullName);

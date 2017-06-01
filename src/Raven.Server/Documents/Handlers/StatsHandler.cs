@@ -3,8 +3,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Server.Operations;
-using Raven.Client.Server.PeriodicBackup;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -20,8 +18,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/stats", "GET")]
         public Task Stats()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
@@ -30,7 +27,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var stats = new DatabaseStatistics();
                 stats.LastDocEtag = DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction);
-                
+
                 stats.CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context);
                 stats.CountOfRevisionDocuments = Database.BundleLoader.VersioningStorage?.GetNumberOfRevisionDocuments(context);
                 var attachments = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(context);
@@ -38,7 +35,7 @@ namespace Raven.Server.Documents.Handlers
                 stats.CountOfUniqueAttachments = attachments.StreamsCount;
                 stats.CountOfIndexes = indexes.Count;
                 stats.CountOfTransformers = transformersCount;
-                var statsDatabaseChangeVector = Database.DocumentsStorage.GetDatabaseChangeVector(context).ToDictionary(x=>x.DbId, x=>x);
+                var statsDatabaseChangeVector = Database.DocumentsStorage.GetDatabaseChangeVector(context).ToDictionary(x => x.DbId, x => x);
 
                 statsDatabaseChangeVector[Database.DbId] = new ChangeVectorEntry()
                 {
@@ -82,8 +79,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/metrics", "GET")]
         public Task Metrics()
         {
-            JsonOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, Database.Metrics.CreateMetricsStatsJsonValue());
@@ -95,13 +91,12 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/metrics/puts", "GET")]
         public Task PutsMetrics()
         {
-            JsonOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, new DynamicJsonValue
                 {
-                    ["DocsPutsPerSec"] = Database.Metrics.DocPutsPerSecond.CreateMeterData(true, GetBoolValueQueryString("empty", required:false) ?? true),
+                    ["DocsPutsPerSec"] = Database.Metrics.DocPutsPerSecond.CreateMeterData(true, GetBoolValueQueryString("empty", required: false) ?? true),
                 });
             }
 
@@ -111,8 +106,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/metrics/bytes", "GET")]
         public Task BytesMetrics()
         {
-            JsonOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, new DynamicJsonValue

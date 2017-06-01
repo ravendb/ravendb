@@ -735,22 +735,17 @@ namespace Raven.Server.ServerWide
             return etag == copy.CachedToString;
         }
 
-        public async Task WaitForIndexNotification(long index, TimeSpan? timeoutInMs = null)
+        public async Task WaitForIndexNotification(long index, TimeSpan? timeout = null)
         {
-            Task timeoutTask = null;
-            if (timeoutInMs.HasValue)
-                timeoutTask = TimeoutManager.WaitFor(timeoutInMs.Value, _token);
-            while (index > Volatile.Read(ref _lastModifiedIndex.Val) &&
-                    (timeoutInMs.HasValue == false || timeoutTask.IsCompleted == false))
+            while (index > Volatile.Read(ref _lastModifiedIndex.Val))
             {
-                var task = _notifiedListeners.WaitAsync();
-                if (timeoutInMs.HasValue == false)
+                if (timeout.HasValue == false)
                 {
-                    await task;
+                    await _notifiedListeners.WaitAsync();
                 }
-                else if (timeoutTask == await Task.WhenAny(task, timeoutTask))
+                else if (await _notifiedListeners.WaitAsync(timeout.Value) == false)
                 {
-                    ThrowTimeoutException(timeoutInMs.Value, index, _lastModifiedIndex.Val);
+                    ThrowTimeoutException(timeout.Value, index, _lastModifiedIndex.Val);
                 }
             }
         }
@@ -763,14 +758,14 @@ namespace Raven.Server.ServerWide
 
         public void NotifyListenersAbout(long index)
         {
-            var lastModifed = _lastModifiedIndex;
+            var lastModified = _lastModifiedIndex;
             var holder = new Holder
             {
                 Val = index
             };
-            while (index > lastModifed.Val)
+            while (index > lastModified.Val)
             {
-                lastModifed = Interlocked.CompareExchange(ref _lastModifiedIndex, holder, lastModifed);
+                lastModified = Interlocked.CompareExchange(ref _lastModifiedIndex, holder, lastModified);
             }
             _notifiedListeners.SetAndResetAtomically();
         }

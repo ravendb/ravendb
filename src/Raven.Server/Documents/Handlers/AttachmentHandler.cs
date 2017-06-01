@@ -40,24 +40,21 @@ namespace Raven.Server.Documents.Handlers
             var documentId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                AttachmentType type = AttachmentType.Document;
+                var type = AttachmentType.Document;
                 ChangeVectorEntry[] changeVector = null;
                 if (isDocument == false)
                 {
                     var stream = TryGetRequestFormStream("ChangeVectorAndType") ?? RequestBodyStream();
                     var request = context.Read(stream, "GetAttachment");
 
-                    string typeString;
-                    if (request.TryGet("Type", out typeString) == false ||
+                    if (request.TryGet("Type", out string typeString) == false ||
                         Enum.TryParse(typeString, out type) == false)
                         throw new ArgumentException("The 'Type' field in the body request is mandatory");
 
-                    BlittableJsonReaderArray changeVectorArray;
-                    if (request.TryGet("ChangeVector", out changeVectorArray) == false)
+                    if (request.TryGet("ChangeVector", out BlittableJsonReaderArray changeVectorArray) == false)
                         throw new ArgumentException("The 'ChangeVector' field in the body request is mandatory");
 
                     changeVector = changeVectorArray.ToVector();
@@ -103,8 +100,7 @@ namespace Raven.Server.Documents.Handlers
                 HttpContext.Response.Headers["Attachment-Size"] = attachment.Stream.Length.ToString();
                 HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{attachment.Etag}\"";
 
-                JsonOperationContext.ManagedPinnedBuffer buffer;
-                using (context.GetManagedBuffer(out buffer))
+                using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
                 using (var stream = attachment.Stream)
                 {
                     var responseStream = ResponseBodyStream();
@@ -186,8 +182,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/attachments", "DELETE")]
         public async Task Delete()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
                 var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");

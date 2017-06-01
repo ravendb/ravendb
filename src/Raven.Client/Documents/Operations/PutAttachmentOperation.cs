@@ -54,16 +54,16 @@ namespace Raven.Client.Documents.Operations
                 _etag = etag;
 
                 if (_stream.CanRead == false)
-                    PutAttachmentCommandData.ThrowNotReadableStream();
+                    PutAttachmentCommandHelper.ThrowNotReadableStream();
                 if (_stream.CanSeek == false)
-                    PutAttachmentCommandData.ThrowNotSeekableStream();
+                    PutAttachmentCommandHelper.ThrowNotSeekableStream();
                 if (_stream.Position != 0)
-                    PutAttachmentCommandData.ThrowPositionNotZero(_stream.Position);
+                    PutAttachmentCommandHelper.ThrowPositionNotZero(_stream.Position);
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                _stream.Position = 0;
+                PutAttachmentCommandHelper.PrepareStream(_stream);
 
                 url = $"{node.Url}/databases/{node.Database}/attachments?id={Uri.EscapeDataString(_documentId)}&name={Uri.EscapeDataString(_name)}";
                 if (string.IsNullOrWhiteSpace(_contentType) == false)
