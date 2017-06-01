@@ -74,8 +74,8 @@ namespace FastTests.Server.Replication
                 Assert.Equal(master.Database, result.Name);
 
                 //wait until disabled databases unload, this is an immediate operation
-                Assert.True(await WaitUntilDatabaseHasState(master, TimeSpan.FromSeconds(10), isLoaded: false));
-                Assert.True(await WaitUntilDatabaseHasState(slave, TimeSpan.FromSeconds(10), isLoaded: false));
+                Assert.True(await WaitUntilDatabaseHasState(master, TimeSpan.FromSeconds(30), isLoaded: false));
+                Assert.True(await WaitUntilDatabaseHasState(slave, TimeSpan.FromSeconds(30), isLoaded: false));
 
                 using (var session = master.OpenSession())
                 {

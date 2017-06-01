@@ -737,15 +737,17 @@ namespace Raven.Server.ServerWide
 
         public async Task WaitForIndexNotification(long index, TimeSpan? timeout = null)
         {
-            while (index > Volatile.Read(ref _lastModifiedIndex.Val))
+            while (true)
             {
-                if (timeout.HasValue == false)
+                // first get the task, then wait on it
+                var waitAsync = timeout.HasValue == false ? _notifiedListeners.WaitAsync() : _notifiedListeners.WaitAsync(timeout.Value);
+
+                if (index <= Volatile.Read(ref _lastModifiedIndex.Val))
+                    break;
+                
+                if (await waitAsync  == false)
                 {
-                    await _notifiedListeners.WaitAsync();
-                }
-                else if (await _notifiedListeners.WaitAsync(timeout.Value) == false)
-                {
-                    ThrowTimeoutException(timeout.Value, index, _lastModifiedIndex.Val);
+                    ThrowTimeoutException(timeout ?? TimeSpan.MaxValue, index, _lastModifiedIndex.Val);
                 }
             }
         }
