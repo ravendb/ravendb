@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 
-namespace Raven.Client.Server.ETL
+namespace Raven.Client.Server.ETL.SQL
 {
     internal class SqlConnectionStringParser
     {
@@ -11,13 +11,13 @@ namespace Raven.Client.Server.ETL
             string database;
             string server;
 
-            switch (factoryName)
+            switch (SqlProviderParser.GetSupportedProvider(factoryName))
             {
-                case "System.Data.SqlClient":
+                case SqlProvider.SqlClient:
                     database = GetConnectionStringValue(connectionString, new[] { "Initial Catalog", "Database" });
                     server = GetConnectionStringValue(connectionString, new[] { "Data Source", "Server" });
                     break;
-                case "Npgsql":
+                case SqlProvider.Npgsql:
                     database = GetConnectionStringValue(connectionString, new[] { "Database" });
                     server = GetConnectionStringValue(connectionString, new[] { "Host", "Data Source", "Server" });
 
@@ -26,13 +26,6 @@ namespace Raven.Client.Server.ETL
                     if (string.IsNullOrEmpty(port))
                         server += $":{port}";
                     break;
-                case "System.Data.SqlServerCe.4.0":
-                case "System.Data.OleDb":
-                case "System.Data.OracleClient":
-                case "MySql.Data.MySqlClient":
-                case "System.Data.SqlServerCe.3.5":
-                    // keep it sync with DbProviderFactories
-                    throw new NotImplementedException($"Factory '{factoryName}' is not implemented yet");
                 default:
                     throw new NotSupportedException($"Factory '{factoryName}' is not supported");
             }
@@ -40,7 +33,7 @@ namespace Raven.Client.Server.ETL
             return (database, server);
         }
 
-        private static string GetConnectionStringValue(string connectionString, string[] keyNames, bool throwIfNotFound = true)
+        public static string GetConnectionStringValue(string connectionString, string[] keyNames, bool throwIfNotFound = true)
         {
             var parts = connectionString.Split(';');
 
@@ -58,7 +51,7 @@ namespace Raven.Client.Server.ETL
             }
 
             if (throwIfNotFound)
-                throw new InvalidDataException($"Could not found neither of '{string.Join(",", keyNames)}' keys in the connection string: {connectionString}");
+                throw new InvalidDataException($"Invalid connection string. Could not found neither of '{string.Join(",", keyNames)}' keys in the connection string: {connectionString}");
 
             return null;
         }

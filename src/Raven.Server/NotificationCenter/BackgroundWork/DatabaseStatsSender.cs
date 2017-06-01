@@ -29,6 +29,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
             await WaitOrThrowOperationCanceled(_notificationCenter.Options.DatabaseStatsThrottle);
 
             Stats current;
+            DateTime? lastIndexingErrorTime = null;
 
             DocumentsOperationContext context;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
@@ -44,7 +45,20 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                     if (index.IsStale(context))
                         staleIndexes++;
 
-                    countOfIndexingErrors += index.GetErrorCount();
+                    var errorCount = index.GetErrorCount();
+
+                    if (errorCount > 0)
+                    {
+                        var lastError = index.GetLastIndexingErrorTime();
+                        if (lastError != null)
+                        {
+                            if (lastIndexingErrorTime == null || lastError > lastIndexingErrorTime)
+                            {
+                                lastIndexingErrorTime = lastError;
+                            }
+                        }
+                    }
+                    countOfIndexingErrors += errorCount;
                 }
 
                 current = new Stats
@@ -66,7 +80,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
             var modifiedCollections = _latest == null ? current.Collections.Values.ToList() : ExtractModifiedCollections(current);
 
             _notificationCenter.Add(DatabaseStatsChanged.Create(current.CountOfDocuments, current.CountOfIndexes,
-                current.CountOfStaleIndexes, current.LastEtag, current.CountOfIndexingErrors, modifiedCollections));
+                current.CountOfStaleIndexes, current.LastEtag, current.CountOfIndexingErrors, lastIndexingErrorTime, modifiedCollections));
 
             _latest = current;
         }
