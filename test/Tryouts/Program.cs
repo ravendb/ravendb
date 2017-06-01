@@ -19,14 +19,15 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-
-                Parallel.For(0, 10, _ =>
+                using (var a = new FastTests.Server.Replication.ReplicationResolveConflictsOnConfigurationChange())
                 {
-                    using (var a = new FastTests.Server.Documents.Indexing.Static.BasicStaticMapReduceIndexing())
-                    {
-                        a.CanPersist().Wait();
-                    }
-                });
+                    a.ResolveManyConflicts().Wait();
+                }
+
+                //Parallel.For(0, 10, _ =>
+                //{
+
+                //});
             }
         }
     }

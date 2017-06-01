@@ -317,7 +317,6 @@ namespace FastTests.Server.Replication
         public async Task SetupReplicationAsync(DocumentStore fromStore, params DocumentStore[] toStores)
         {
             ModifyExternalReplicationResult result = null;
-            var watchers = new List<DatabaseWatcher>();
             foreach (var store in toStores)
             {
                 var databaseWatcher = new DatabaseWatcher
@@ -326,7 +325,6 @@ namespace FastTests.Server.Replication
                     Url = store.Urls[0]
                 };
                 ModifyReplicationDestination(databaseWatcher);
-                watchers.Add(databaseWatcher);
                 result = await AddWatcherToReplicationTopology(fromStore, databaseWatcher);
             }
             CurrentDatabaseTopology = result?.Topology;

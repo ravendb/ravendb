@@ -7,6 +7,8 @@ using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Server;
+using Raven.Client.Server.Commands;
+using Raven.Server.Web.System;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -101,6 +103,16 @@ namespace FastTests.Server.Replication
             }
         }
 
+        private async Task RemoveReplicationFrom(DocumentStore store)
+        {
+            var tasks = OngoingTasksHandler.GetOngoingTasksFor(store.Database, Server.ServerStore);
+            foreach (var replication in tasks.OngoingTasksList.OfType<OngoingTaskReplication>())
+            {
+                await DeleteWatcherFromReplicationTopology(store, replication.TaskId);
+            }
+        }
+        
+
         [Fact]
         public async Task ResolveManyConflicts()
         {
@@ -108,8 +120,9 @@ namespace FastTests.Server.Replication
             using (var store2 = GetDocumentStore())
             {
                 await GenerateConflicts(store1, store2, "users/1");
-                await SetupReplicationAsync(store1);
-                await SetupReplicationAsync(store2);
+
+                await RemoveReplicationFrom(store1);
+                await RemoveReplicationFrom(store2);
                 await GenerateConflicts(store1, store2, "users/2");
                 var storage1 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
                 await UpdateConflictResolver(store1, storage1.DbId.ToString());

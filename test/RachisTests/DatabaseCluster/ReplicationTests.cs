@@ -207,7 +207,7 @@ namespace RachisTests.DatabaseCluster
                 await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
             }
 
-            var tasks = OngoingTasksHandler.GetOngoingTasksAndDbTopology(databaseName, leader.ServerStore).tasks;
+            var tasks = OngoingTasksHandler.GetOngoingTasksFor(databaseName, leader.ServerStore);
             Assert.Equal(1, tasks.OngoingTasksList.Count);
             var repTask = tasks.OngoingTasksList[0] as OngoingTaskReplication;
             Assert.Equal(repTask?.DestinationDB, watcher.Database);
@@ -251,7 +251,7 @@ namespace RachisTests.DatabaseCluster
                 await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
             }
 
-            tasks = OngoingTasksHandler.GetOngoingTasksAndDbTopology(databaseName, leader.ServerStore).tasks;
+            tasks = OngoingTasksHandler.GetOngoingTasksFor(databaseName, leader.ServerStore);
             Assert.Equal(1, tasks.OngoingTasksList.Count);
             repTask = tasks.OngoingTasksList[0] as OngoingTaskReplication;
             Assert.Equal(repTask?.DestinationDB, watcher.Database);
@@ -282,7 +282,7 @@ namespace RachisTests.DatabaseCluster
             }.Initialize())
             {
                 await DeleteWatcherFromReplicationTopology((DocumentStore)store, watcher.TaskId);
-                tasks = OngoingTasksHandler.GetOngoingTasksAndDbTopology(databaseName, leader.ServerStore).tasks;
+                tasks = OngoingTasksHandler.GetOngoingTasksFor(databaseName, leader.ServerStore);
                 Assert.Equal(0, tasks.OngoingTasksList.Count);
             }
         }

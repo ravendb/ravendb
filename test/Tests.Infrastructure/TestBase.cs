@@ -32,6 +32,12 @@ namespace FastTests
         private readonly ConcurrentSet<string> _localPathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
         private static RavenServer _globalServer;
+
+        protected static bool IsGlobalServer(RavenServer server)
+        {
+            return _globalServer == server;
+        }
+        
         private RavenServer _localServer;
 
         protected List<RavenServer> Servers = new List<RavenServer>();
@@ -109,14 +115,16 @@ namespace FastTests
                     return _localServer;
                 }
 
-                if (_globalServer != null)
+                if (_globalServer  != null)
                 {
-                    _localServer = _globalServer;
+                    if(_globalServer.Disposed)
+                        throw new ObjectDisposedException("Someone disposed the global server!");
+                    _localServer = _globalServer ;
                     return _localServer;
                 }
                 lock (ServerLocker)
                 {
-                    if (_globalServer == null)
+                    if (_globalServer == null || _globalServer.Disposed)
                     {
                         var globalServer = GetNewServer();
                         Console.WriteLine($"\tTo attach debugger to test process ({(PlatformDetails.Is32Bits ? "x86" : "x64")}), use proc-id: {Process.GetCurrentProcess().Id}. Url {globalServer.WebUrls[0]}");

@@ -460,6 +460,8 @@ namespace Tests.Infrastructure
 
             foreach (var server in Servers)
             {
+                if (IsGlobalServer(server))
+                    continue; // must not dispose the global server
                 server?.Dispose();
             }
 

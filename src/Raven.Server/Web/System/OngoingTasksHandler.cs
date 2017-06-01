@@ -25,7 +25,7 @@ namespace Raven.Server.Web.System
         public Task GetOngoingTasks()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("databaseName");
-            var result = GetOngoingTasksAndDbTopology(name, ServerStore).tasks;
+            var result = GetOngoingTasksFor(name, ServerStore);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -36,7 +36,7 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        public static (OngoingTasksResult tasks, DatabaseTopology topology) GetOngoingTasksAndDbTopology(string dbName, ServerStore serverStore)
+        public static OngoingTasksResult GetOngoingTasksFor(string dbName, ServerStore serverStore)
         {
             var ongoingTasksResult = new OngoingTasksResult();
             using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -62,7 +62,7 @@ namespace Raven.Server.Web.System
                     ongoingTasksResult.SubscriptionsCount = (int)database.Result.SubscriptionStorage.GetAllSubscriptionsCount();
                 }
 
-                return (ongoingTasksResult, dbTopology);
+                return ongoingTasksResult;
             }
         }
 
