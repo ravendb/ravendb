@@ -6,7 +6,7 @@
 using System;
 using System.Linq;
 
-namespace Raven.Database.Util
+namespace Raven.Abstractions.Util
 {
     public class WildcardMatcher
     {

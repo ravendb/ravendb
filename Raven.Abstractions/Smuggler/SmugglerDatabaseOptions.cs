@@ -13,6 +13,8 @@ using Raven.Abstractions.Json;
 using Raven.Json.Linq;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Raven.Abstractions.Util;
+using Raven.Database.Util;
 
 namespace Raven.Abstractions.Smuggler
 {
@@ -161,7 +163,7 @@ namespace Raven.Abstractions.Smuggler
                     var val = tuple.Item1.Type == JTokenType.String
                                 ? tuple.Item1.Value<string>()
                                 : tuple.Item1.ToString(Formatting.None);
-                    matchedFilter |= filter.Values.Any(value => String.Equals(val, value, StringComparison.OrdinalIgnoreCase)) ==
+                    matchedFilter |= filter.Values.Any(value => WildcardMatcher.Matches(value, val)) ==
                                      filter.ShouldMatch;
                 }
 

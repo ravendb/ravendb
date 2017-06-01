@@ -1420,7 +1420,6 @@
     <Compile Include="Util\SizeHelper.cs" />
     <Compile Include="Util\SortedKeyList.cs" />
     <Compile Include="Util\Streams\PartialStream.cs" />
-    <Compile Include="Util\WildcardMatcher.cs" />
     <Compile Include="Extensions\FeatureNotSupportedOnPosixException.cs" />
     <Compile Include="Config\MemoryStatisticsPosix.cs" />
   </ItemGroup>
