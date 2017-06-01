@@ -226,6 +226,26 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public unsafe DateTime? ReadLastIndexingErrorTime()
+        {
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenReadTransaction())
+            {
+                var table = tx.InnerTransaction.OpenTable(_errorsSchema, "Errors");
+
+                using (var it = table.GetTree(_errorsSchema.Indexes[IndexSchema.ErrorTimestampsSlice]).Iterate(false))
+                {
+                    if (it.Seek(Slices.AfterAllKeys) == false)
+                        return null;
+
+                    var ptr = it.CurrentKey.Content.Ptr;
+
+                    return new DateTime(IPAddress.NetworkToHostOrder(*(long*)ptr), DateTimeKind.Utc);
+                }
+            }
+        }
+
         public DateTime? ReadLastIndexingTime(RavenTransaction tx)
         {
             var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);

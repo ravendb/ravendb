@@ -22,6 +22,8 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         public long CountOfIndexingErrors { get; private set; }
 
+        public DateTime? LastIndexingErrorTime { get; private set; }
+
         public string GlobalDocumentsEtag { get; private set; }
 
         public long LastEtag { get; private set; }
@@ -38,12 +40,15 @@ namespace Raven.Server.NotificationCenter.Notifications
             json[nameof(LastEtag)] = LastEtag;
             json[nameof(GlobalDocumentsEtag)] = GlobalDocumentsEtag;
             json[nameof(CountOfIndexingErrors)] = CountOfIndexingErrors;
+            json[nameof(LastIndexingErrorTime)] = LastIndexingErrorTime;
             json[nameof(ModifiedCollections)] = new DynamicJsonArray(ModifiedCollections.Select(x => x.ToJson()));
 
             return json;
         }
 
-        public static DatabaseStatsChanged Create(long countOfDocs, int countOfIndexes, int countOfStaleIndexes, long lastEtag, long countOfIndexingErrors, List<ModifiedCollection> modifiedCollections)
+        public static DatabaseStatsChanged Create(long countOfDocs, int countOfIndexes, int countOfStaleIndexes, 
+            long lastEtag, long countOfIndexingErrors, DateTime? lastIndexingErrorTime, 
+            List<ModifiedCollection> modifiedCollections)
         {
             return new DatabaseStatsChanged
             {
@@ -57,6 +62,7 @@ namespace Raven.Server.NotificationCenter.Notifications
                 CountOfIndexingErrors = countOfIndexingErrors,
                 CountOfIndexes = countOfIndexes,
                 CountOfStaleIndexes = countOfStaleIndexes,
+                LastIndexingErrorTime = lastIndexingErrorTime,
                 ModifiedCollections = modifiedCollections,
             };
         }
