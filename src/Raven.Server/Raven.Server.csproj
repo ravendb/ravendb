@@ -85,9 +85,14 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Documents\PeriodicBackup\Aws" />
+    <Folder Include="Documents\PeriodicBackup\Aws" />
+    <Folder Include="Documents\PeriodicBackup\Azure" />
     <Folder Include="Documents\PeriodicBackup\Azure" />
     <Folder Include="Exceptions\PeriodicBackup" />
+    <Folder Include="Exceptions\PeriodicBackup" />
     <Folder Include="ServerWide\Commands\ETL" />
+    <Folder Include="ServerWide\Commands\ETL" />
+    <Folder Include="ServerWide\Commands\PeriodicBackup" />
     <Folder Include="ServerWide\Commands\PeriodicBackup" />
     <Folder Include="ServerWide\Maintenance" />
   </ItemGroup>

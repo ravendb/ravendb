@@ -49,5 +49,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Server\Documents\PeriodicBackup" />
+    <Folder Include="Server\Documents\PeriodicBackup" />
   </ItemGroup>
 </Project>

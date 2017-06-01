@@ -1257,6 +1257,9 @@ namespace Raven.Server.Rachis
                 _leaderTag = value;
             }
         }
+
+        public bool IsEncrypted => _persistentState.Options.EncryptionEnabled;
+
         public abstract bool ShouldSnapshot(Slice slice, RootObjectType type);
 
         public abstract void Apply(TransactionOperationContext context, long uptoInclusive, Leader leader);
