@@ -110,7 +110,6 @@ namespace Raven.Server.Rachis
                                 trialElectionsCount++;
                         }
 
-
                         var majority = ((_voters.Count + 1) / 2) + 1;
 
                         if (removedFromTopology)
@@ -134,7 +133,6 @@ namespace Raven.Server.Rachis
                             break;
                         }
 
-
                         if (realElectionsCount >= majority)
                         {
                             Running = false;
@@ -146,6 +144,7 @@ namespace Raven.Server.Rachis
                         {
                             CastVoteForSelf();
                         }
+                        _engine.SetTimeout();
                     }
                 }
                 catch (Exception e)
