@@ -41,7 +41,7 @@ namespace Raven.Server.Rachis
                     Running = true;
                     if (_engine.Log.IsInfoEnabled)
                     {
-                        _engine.Log.Info($"Candidate {_engine.Tag}:Starting elections");
+                        _engine.Log.Info($"Candidate {_engine.Tag}: Starting elections");
                     }
                     TransactionOperationContext context;
                     ClusterTopology clusterTopology;
@@ -86,6 +86,8 @@ namespace Raven.Server.Rachis
                                 CastVoteForSelf();
                             }
 
+                            _engine.RandomizeTimeout(extend: true);
+
                             StateChange(); // will wake ambassadors and make them ping peers again
                             continue;
                         }
@@ -116,7 +118,7 @@ namespace Raven.Server.Rachis
                         {
                             if (_engine.Log.IsInfoEnabled)
                             {
-                                _engine.Log.Info($"Candidate {_engine.Tag}:A leader node has indicated that I'm not in their topology, I was probably kicked out. Moving to passive mode");
+                                _engine.Log.Info($"Candidate {_engine.Tag}: A leader node has indicated that I'm not in their topology, I was probably kicked out. Moving to passive mode");
                             }
                             var engineCurrentTerm = _engine.CurrentTerm;
                             using (_engine.ContextPool.AllocateOperationContext(out context))
@@ -144,7 +146,6 @@ namespace Raven.Server.Rachis
                         {
                             CastVoteForSelf();
                         }
-                        _engine.SetTimeout();
                     }
                 }
                 catch (Exception e)

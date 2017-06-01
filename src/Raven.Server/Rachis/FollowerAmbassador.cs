@@ -35,6 +35,7 @@ namespace Raven.Server.Rachis
         private string _lastSentMsg;
         private Thread _thread;
         private RemoteConnection _connection;
+        private bool _dispose;
 
         public string Tag => _tag;
 
@@ -84,7 +85,7 @@ namespace Raven.Server.Rachis
         {
             try
             {
-                while (_leader.Running)
+                while (_leader.Running && _dispose == false)
                 {
                     Stream stream = null;
                     try
@@ -606,6 +607,7 @@ namespace Raven.Server.Rachis
 
         public void Dispose()
         {
+            _dispose = true;
             _connection?.Dispose();
             if (_engine.Log.IsInfoEnabled)
             {

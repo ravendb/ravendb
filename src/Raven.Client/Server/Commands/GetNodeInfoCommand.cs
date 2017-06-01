@@ -11,7 +11,9 @@ namespace Raven.Client.Server.Commands
     public class NodeInfo
     {
         public string NodeTag;
+        public string TopologyId;
     }
+
     class GetNodeInfoCommand : RavenCommand<NodeInfo>
     {
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
