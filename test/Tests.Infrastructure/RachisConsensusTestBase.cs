@@ -306,16 +306,10 @@ namespace Tests.Infrastructure
 
             public override async Task<Stream> ConnectToPeer(string url, string apiKey)
             {
-                if (url == null) throw new ArgumentNullException(nameof(url));
-                if (_parent == null) throw new InvalidOperationException("Cannot connect to peer without a parent");
-                if (_parent.IsEncrypted && url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
-                    throw new InvalidOperationException($"Failed to connect to node {url}. Connections from encrypted store must use HTTPS.");
-
-                var info = await ReplicationUtils.GetTcpInfoAsync(url, "Rachis.Server", apiKey, "Cluster");
                 var tcpInfo = new Uri(url);
                 var tcpClient = new TcpClient();
                 await tcpClient.ConnectAsync(tcpInfo.Host, tcpInfo.Port);
-                return await TcpUtils.WrapStreamWithSslAsync(tcpClient, info);
+                return tcpClient.GetStream();
             }
         }
         
