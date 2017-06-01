@@ -10,11 +10,8 @@ using Microsoft.Net.Http.Headers;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Extensions;
-using Raven.Client.Util;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Rachis;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler;
 using Sparrow;
@@ -406,6 +403,9 @@ namespace Raven.Server.Documents.Handlers
 
             public void Dispose()
             {
+                if (ParsedCommands.Count == 0)
+                    return;
+
                 foreach (var cmd in ParsedCommands)
                 {
                     cmd.Document?.Dispose();

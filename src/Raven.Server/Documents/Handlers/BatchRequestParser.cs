@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Handlers
                             skipPatchIfEtagMismatch: false, debugMode: false);
                     }
 
-                    if (commandData.Type == CommandType.PUT && commandData.Id?[commandData.Id.Length - 1] == '/')
+                    if (commandData.Type == CommandType.PUT && string.IsNullOrEmpty(commandData.Id) == false && commandData.Id[commandData.Id.Length - 1] == '/')
                     {
                         commandData.Id = await serverStore.GenerateClusterIdentityAsync(commandData.Id, database.Name);
                     }
