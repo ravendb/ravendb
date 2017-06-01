@@ -1,9 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
+using Jint.Native;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
+using Raven.Client.Server.Commands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -37,6 +39,22 @@ namespace Raven.Server.Documents.Handlers.Admin
                     writer.Flush();
                 }
             }
+        }
+
+        [RavenAction("/admin/cluster/node-info", "GET", "/admin/cluster/node-info")]
+        public Task GetTag()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var json = new DynamicJsonValue
+                {
+                    [nameof(NodeInfo.NodeTag)] = ServerStore.NodeTag
+                };
+                context.Write(writer, json);
+                writer.Flush();
+            }
+            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/cluster/topology", "GET", "/admin/cluster/topology")]
@@ -133,9 +151,24 @@ namespace Raven.Server.Documents.Handlers.Admin
             ServerStore.EnsureNotPassive();
             if (ServerStore.IsLeader())
             {
-                await ServerStore.AddNodeToClusterAsync(serverUrl);
-                NoContentStatus();
-                return;
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                {
+                    string apiKey;
+                    using (ctx.OpenReadTransaction())
+                    {
+                        apiKey = ServerStore.GetClusterTopology(ctx).ApiKey;
+                    }
+                    using (var requestExecuter = ClusterRequestExecutor.CreateForSingleNode(serverUrl, apiKey))
+                    {
+                        var infoCmd = new GetNodeInfoCommand();
+                        await requestExecuter.ExecuteAsync(infoCmd, ctx);
+                        var nodeTag = infoCmd.Result.NodeTag == "?" 
+                            ? null : infoCmd.Result.NodeTag;
+                        await ServerStore.AddNodeToClusterAsync(serverUrl, nodeTag, validateNotInTopology:false);
+                        NoContentStatus();
+                        return;
+                    }
+                }
             }
             RedirectToLeader();
         }

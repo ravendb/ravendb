@@ -74,8 +74,8 @@ namespace RachisTests
                 await server.ServerStore.Cluster.WaitForIndexNotification(eTag);
                 try
                 {
-                    await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-                    numberOfInstances++;
+                    if(server.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName,out var _))
+                        numberOfInstances++;
                 }
                 catch
                 {
