@@ -79,7 +79,7 @@ namespace Raven.Server.Web.System
 
                 yield return new OngoingTaskReplication
                 {
-                    TaskId = watcher.TaskId.ToString(),
+                    TaskId = watcher.TaskId,
                     ResponsibleNode = new NodeId
                     {
                         NodeTag = tag,
@@ -108,7 +108,7 @@ namespace Raven.Server.Web.System
 
                 yield return new OngoingTaskBackup
                 {
-                    TaskId = backupConfiguration.TaskId.ToString(),
+                    TaskId = backupConfiguration.TaskId,
                     BackupType = backupConfiguration.BackupType,
                     Name = backupConfiguration.Name,
                     TaskState = backupConfiguration.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
@@ -151,7 +151,7 @@ namespace Raven.Server.Web.System
 
                     yield return new OngoingRavenEtl
                     {
-                        TaskId = ravenEtl.GetTaskKey().ToString(), // TODO TaskId vs TaskKey?
+                        TaskId = (long)ravenEtl.GetTaskKey(),
                         // TODO arek TaskConnectionStatus = 
                         // TODO arek TaskState = 
                         ResponsibleNode = new NodeId
@@ -177,7 +177,7 @@ namespace Raven.Server.Web.System
 
                     yield return new OngoingSqlEtl
                     {
-                        TaskId = sqlEtl.GetTaskKey().ToString(), // TODO TaskId vs TaskKey?
+                        TaskId = (long)sqlEtl.GetTaskKey(),
                         // TODO arek TaskConnectionStatus = 
                         // TODO arek TaskState = 
                         ResponsibleNode = new NodeId
@@ -251,7 +251,7 @@ namespace Raven.Server.Web.System
 
     public abstract class OngoingTask : IDynamicJson // Single task info - Common to all tasks types
     {
-        public string TaskId { get; set; }
+        public long TaskId { get; set; }
         public OngoingTaskType TaskType { get; protected set; }
         public NodeId ResponsibleNode { get; set; }
         public OngoingTaskState TaskState { get; set; }
