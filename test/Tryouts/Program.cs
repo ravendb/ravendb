@@ -24,10 +24,13 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new ReplicationTests())
+                Parallel.For(0, 10, _ =>
                 {
-                    a.AddGlobalChangeVectorToNewDocument(false).Wait();
-                }
+                    using (var a = new FastTests.Server.Documents.Indexing.Static.BasicStaticMapReduceIndexing())
+                    {
+                        a.CanPersist().Wait();
+                    }
+                });
             }
         }
     }

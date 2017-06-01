@@ -433,14 +433,16 @@ namespace Raven.Server.ServerWide
                 {
                     var databaseRecordJson = ReadInternal(context, out long etag, valueNameLowered);
 
+                    var updateCommand = (UpdateDatabaseCommand)JsonDeserializationCluster.Commands[type](cmd);
+
                     if (databaseRecordJson == null)
                     {
-                        NotifyLeaderAboutError(index, leader, new DatabaseDoesNotExistException($"Cannot execute update command of type {type} for {databaseName} because it does not exists"));
+                        if(updateCommand.ErrorOnDatabaseDoesNotExists)
+                            NotifyLeaderAboutError(index, leader, new DatabaseDoesNotExistException($"Cannot execute update command of type {type} for {databaseName} because it does not exists"));
                         return null;
                     }
 
                     databaseRecord = JsonDeserializationCluster.DatabaseRecord(databaseRecordJson);
-                    var updateCommand = (UpdateDatabaseCommand)JsonDeserializationCluster.Commands[type](cmd);
 
                     if (updateCommand.Etag != null && etag != updateCommand.Etag.Value)
                     {
