@@ -6,7 +6,7 @@ class saveExternalReplicationTaskCommand extends commandBase {
    
     private externalReplicationToSend: Raven.Client.Server.DatabaseWatcher;
 
-    constructor(private newRepTask: externalReplicationDataFromUI, private db: database, private taskId: string) {
+    constructor(private newRepTask: externalReplicationDataFromUI, private db: database, private taskId: number) {
         super();
 
         //const taskIdToSend = this.taskId ? this.taskId.toString() : null;
