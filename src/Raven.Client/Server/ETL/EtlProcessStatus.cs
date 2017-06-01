@@ -22,9 +22,9 @@ namespace Raven.Client.Server.ETL
             return json;
         }
 
-        public static string GenerateItemName(string destinationName, string transformationName)
+        public static string GenerateItemName(string databaseName, string destinationName, string transformationName)
         {
-            return $"etl/{destinationName}/{transformationName}"; // TODO arek - also need a db name to ensure uniqueness ??
+            return $"etl/{databaseName}/{destinationName}/{transformationName}";
         }
     }
 }

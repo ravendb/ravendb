@@ -21,7 +21,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public override string GetItemId()
         {
-            return EtlProcessStatus.GenerateItemName(EtlProcessStatus.Destination, EtlProcessStatus.TransformationName);
+            return EtlProcessStatus.GenerateItemName(DatabaseName, EtlProcessStatus.Destination, EtlProcessStatus.TransformationName);
         }
 
         public override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)

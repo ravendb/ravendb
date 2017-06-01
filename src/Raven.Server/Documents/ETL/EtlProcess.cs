@@ -499,7 +499,7 @@ namespace Raven.Server.Documents.ETL
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var statusBlittable = _serverStore.Cluster.Read(context, EtlProcessStatus.GenerateItemName(Destination.Name, Name));
+                var statusBlittable = _serverStore.Cluster.Read(context, EtlProcessStatus.GenerateItemName(Database.Name, Destination.Name, Name));
 
                 lastProcessedEtag = statusBlittable != null ? JsonDeserializationClient.EtlProcessStatus(statusBlittable).LastProcessedEtag : 0;
             }
