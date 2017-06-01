@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Server;
@@ -45,7 +46,6 @@ namespace Tests.Infrastructure
 
         protected readonly ConcurrentBag<IDisposable> _toDispose = new ConcurrentBag<IDisposable>();
 
-        protected List<RavenServer> Servers = new List<RavenServer>();
         private readonly Random _random = new Random();
 
         protected IDisposable NoTimeouts()
@@ -61,9 +61,8 @@ namespace Tests.Infrastructure
 
             var databaseResult = CreateClusterDatabase(databaseName, store);
 
-            Assert.True((databaseResult.ETag ?? 0) > 0); //sanity check                
-
-            await WaitForRaftIndexToBeAppliedInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
+            Assert.True(databaseResult.ETag > 0); //sanity check                
+            await WaitForRaftIndexToBeAppliedInCluster(databaseResult.ETag, TimeSpan.FromSeconds(5));
         }
 
         protected static CreateDatabaseResult CreateClusterDatabase(string databaseName, IDocumentStore store, int replicationFactor = 2)
@@ -183,9 +182,21 @@ namespace Tests.Infrastructure
             throw new Exception($"Not all node in the group have the expected value of {excpected}. {otherValues}");
         }
 
+        protected async Task<bool> WaitForDocumentInClusterAsync<T>(DocumentSession session, string docId, Func<T, bool> predicate, TimeSpan timeout)
+        {
+            var nodes = session.RequestExecutor.TopologyNodes;
+            var stores = GetDocumentStores(nodes, disableTopologyUpdates: true);
+            return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores);
+        }
+
         protected async Task<bool> WaitForDocumentInClusterAsync<T>(DatabaseTopology topology, string docId, Func<T, bool> predicate, TimeSpan timeout)
         {
-            var stores = GetDocumentStores(topology, disableTopologyUpdates: true);
+            var nodes = topology.AllReplicationNodes().Select(x => new ServerNode
+            {
+                Url = x.Url,
+                Database = x.Database
+            });
+            var stores = GetDocumentStores(nodes, disableTopologyUpdates: true);
             return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores);
         }
 
@@ -207,10 +218,10 @@ namespace Tests.Infrastructure
             return tasks.All(x => x.Result);
         }
 
-        private List<DocumentStore> GetDocumentStores(DatabaseTopology topology, bool disableTopologyUpdates)
+        private List<DocumentStore> GetDocumentStores(IEnumerable<ServerNode> nodes, bool disableTopologyUpdates)
         {
             var stores = new List<DocumentStore>();
-            foreach (var node in topology.AllReplicationNodes())
+            foreach (var node in nodes)
             {
                 var store = new DocumentStore
                 {
@@ -363,7 +374,6 @@ namespace Tests.Infrastructure
                 var server = GetNewServer(customSettings, runInMemory: shouldRunInMemory);
 
                 serversToPorts.Add(server, serverUrl);
-                Servers.Add(server);
                 if (i == leaderIndex)
                 {
                     server.ServerStore.EnsureNotPassive();
@@ -409,35 +419,6 @@ namespace Tests.Infrastructure
             return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
         }
 
-        public async Task WaitForRaftIndexToBeAppliedInCluster(long index, TimeSpan timeout)
-        {
-            if (Servers.Count == 0)
-                return;
-
-            var tasks =
-                Servers
-                .Select(server => server.ServerStore.Cluster.WaitForIndexNotification(index))
-                .ToList();
-
-
-            if (await Task.WhenAll(tasks).WaitAsync(timeout))
-                return;
-
-
-            var message = $"Timed out waiting for {index} after {timeout} because out of {Servers.Count} " +
-                          $" we got confirmations that it was applied only on {tasks.Count(x => x.IsCompleted)}";
-
-            //Console.ForegroundColor = ConsoleColor.Blue;
-
-            //Console.WriteLine(message);
-
-            //Console.ReadLine();
-
-            throw new TimeoutException(
-                message
-                );
-        }
-
         public async Task<Tuple<long, List<RavenServer>>> CreateDatabaseInCluster(string databaseName, int replicationFactor, string leasderUrl)
         {
             CreateDatabaseResult databaseResult;
@@ -453,7 +434,7 @@ namespace Tests.Infrastructure
             int numberOfInstances = 0;
             foreach (var server in Servers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)))
             {
-                await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag ?? 0);
+                await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag);
                 try
                 {
                     await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
@@ -466,7 +447,7 @@ namespace Tests.Infrastructure
             }
             if (numberOfInstances != replicationFactor)
                 throw new InvalidOperationException("Couldn't create the db on all nodes, just on " + numberOfInstances + " out of " + replicationFactor);
-            return Tuple.Create(databaseResult.ETag.Value,
+            return Tuple.Create(databaseResult.ETag,
                 Servers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)).ToList());
 
 

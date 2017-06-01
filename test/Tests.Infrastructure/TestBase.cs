@@ -7,12 +7,9 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Extensions;
 using Raven.Client.Http;
-using Raven.Client.Util.Helpers;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -36,6 +33,8 @@ namespace FastTests
 
         private static RavenServer _globalServer;
         private RavenServer _localServer;
+
+        protected List<RavenServer> Servers = new List<RavenServer>();
 
         private static readonly object ServerLocker = new object();
 
@@ -196,6 +195,8 @@ namespace FastTests
                 // TODO: Make sure to properly handle this when this is resolved:
                 // TODO: https://github.com/dotnet/corefx/issues/5205
                 // TODO: AssemblyLoadContext.GetLoadContext(typeof(RavenTestBase).GetTypeInfo().Assembly).Unloading +=
+
+                Servers.Add(server);
 
                 return server;
             }

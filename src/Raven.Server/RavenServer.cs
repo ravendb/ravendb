@@ -416,7 +416,7 @@ namespace Raven.Server
                             }
                         }
 
-                        if (await DispatchServerwideTcpConnection(tcp, header))
+                        if (await DispatchServerWideTcpConnection(tcp, header))
                         {
                             tcp = null; //do not keep reference -> tcp will be disposed by server-wide connection handlers
                             return;
@@ -470,7 +470,7 @@ namespace Raven.Server
 
         private ClusterMaintenanceWorker _clusterMaintenanceWorker;
 
-        private async Task<bool> DispatchServerwideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header)
+        private async Task<bool> DispatchServerWideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header)
         {
             tcp.Operation = header.Operation;
             if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster)
@@ -497,7 +497,7 @@ namespace Raven.Server
                     {
                         if (_tcpLogger.IsInfoEnabled)
                         {
-                            _tcpLogger.Info($"Request for maintainance with term {maintenanceHeader.Term} was rejected, " +
+                            _tcpLogger.Info($"Request for maintenance with term {maintenanceHeader.Term} was rejected, " +
                                             $"because we are already connected to the recent leader with the term {_clusterMaintenanceWorker.CurrentTerm}");
                         }
                         tcp.Dispose();

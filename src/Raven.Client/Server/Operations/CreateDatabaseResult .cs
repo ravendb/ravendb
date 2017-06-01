@@ -14,19 +14,18 @@ namespace Raven.Client.Server.Operations
     public class CreateDatabaseResult
     {
         /// <summary>
-        /// Key of the database .
+        /// Key of the database.
         /// </summary>
         public string Key { get; set; }
 
         /// <summary>
-        /// long? of the database after PUT operation.
+        /// Etag of the database after PUT operation.
         /// </summary>
-        public long? ETag { get; set; }
+        public long ETag { get; set; }
 
         public DatabaseTopology Topology { get; set; }
 
-        public List<string> NodesAddedTo { get; set; }
-
+        public string[] NodesAddedTo { get; set; }
     }
 
     public class ModifyExternalReplicationResult : CreateDatabaseResult

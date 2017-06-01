@@ -11,7 +11,7 @@ namespace Raven.Server.Utils
         [Conditional("DEBUG")]
         public static void LongTimespanIfDebugging(ref TimeSpan timespan)
         {
-            timespan = Debugger.IsAttached ? TimeSpan.FromHours(1) : timespan;
+            // timespan = Debugger.IsAttached ? TimeSpan.FromHours(1) : timespan;
         }
     }
 }

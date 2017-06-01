@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.Replication
                             if (response.Item1 == ReplicationMessageReply.ReplyType.Error)
                             {
                                 if (response.Item2.Exception.Contains(nameof(DatabaseDoesNotExistException)))
-                                    throw new DatabaseDoesNotExistException(response.Item2.Message,
+                                    throw new DatabaseDoesNotExistException(response.Item2.Message, 
                                         new InvalidOperationException(response.Item2.Exception));
                                 throw new InvalidOperationException(response.Item2.Exception);
                             }
