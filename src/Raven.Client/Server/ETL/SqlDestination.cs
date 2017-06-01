@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Server.ETL.SQL;
 
 namespace Raven.Client.Server.ETL
 {
@@ -54,7 +55,36 @@ namespace Raven.Client.Server.ETL
 
         public override bool UsingEncryptedCommunicationChannel()
         {
-            return true; //TODO: Figure out how we can tell
+            switch (SqlProviderParser.GetSupportedProvider(Connection.FactoryName))
+            {
+                case SqlProvider.SqlClient:
+                    var encrypt = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] {"Encrypt"}, throwIfNotFound: false);
+
+                    if (string.IsNullOrEmpty(encrypt))
+                        return false;
+
+                    if (bool.TryParse(encrypt, out var encryptBool) == false)
+                        return false;
+
+                    return encryptBool;
+                case SqlProvider.Npgsql:
+                    var sslMode = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] { "SslMode" }, throwIfNotFound: false);
+
+                    if (string.IsNullOrEmpty(sslMode))
+                        return false;
+
+                    switch (sslMode.ToLower())
+                    {
+                        case "require":
+                        case "verify-ca":
+                        case "verify-full":
+                            return true;
+                    }
+
+                    return false;
+                default:
+                    throw new NotSupportedException($"Factory '{Connection.FactoryName}' is not supported");
+            }
         }
     }
 

@@ -9,6 +9,7 @@ using Raven.Client.Json.Converters;
 using Raven.Client.Http;
 using Raven.Client.Server;
 using Raven.Client.Server.ETL;
+using Raven.Client.Server.ETL.SQL;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Server.Routing;
