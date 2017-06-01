@@ -52,7 +52,8 @@ namespace Raven.Server.Web.System
                 foreach (var tasks in new []
                 {
                     CollectExternalReplicationTasks(dbTopology, clusterTopology),
-                    CollectEtlTasks(databaseRecord, dbTopology, clusterTopology)
+                    CollectEtlTasks(databaseRecord, dbTopology, clusterTopology),
+                    CollectBackupTasks(databaseRecord, dbTopology, clusterTopology)
                 })
                 {
                     ongoingTasksResult.OngoingTasksList.AddRange(tasks);
@@ -62,8 +63,6 @@ namespace Raven.Server.Web.System
                 {
                     ongoingTasksResult.SubscriptionsCount = (int)database.Result.SubscriptionStorage.GetAllSubscriptionsCount();
                 }
-
-                //TODO: collect all the rest of the ongoing tasks (Backup)
 
                 return (ongoingTasksResult, dbTopology);
             }
@@ -91,6 +90,52 @@ namespace Raven.Server.Web.System
                     DestinationURL = watcher.Url,
                 };
             }
+        }
+
+        private static IEnumerable<OngoingTask> CollectBackupTasks(DatabaseRecord databaseRecord, DatabaseTopology dbTopology, ClusterTopology clusterTopology)
+        {
+            if (dbTopology == null)
+                yield break;
+
+            if (databaseRecord.PeriodicBackups == null)
+                yield break;
+
+            foreach (var backupConfiguration in databaseRecord.PeriodicBackups)
+            {
+                var tag = dbTopology.WhoseTaskIsIt(backupConfiguration);
+
+                var backupDestinations = GetBackupDestinations(backupConfiguration);
+
+                yield return new OngoingTaskBackup
+                {
+                    TaskId = backupConfiguration.TaskId.ToString(),
+                    BackupType = backupConfiguration.BackupType,
+                    Name = backupConfiguration.Name,
+                    TaskState = backupConfiguration.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
+                    ResponsibleNode = new NodeId
+                    {
+                        NodeTag = tag,
+                        NodeUrl = clusterTopology.GetUrlFromTag(tag)
+                    },
+                    BackupDestinations = backupDestinations
+                };
+            }
+        }
+
+        private static List<string> GetBackupDestinations(PeriodicBackupConfiguration backupConfiguration)
+        {
+            var backupDestinations = new List<string>();
+
+            if (backupConfiguration.LocalSettings != null && backupConfiguration.LocalSettings.Disabled == false)
+                backupDestinations.Add("Local");
+            if (backupConfiguration.AzureSettings != null && backupConfiguration.AzureSettings.Disabled == false)
+                backupDestinations.Add("Azure");
+            if (backupConfiguration.S3Settings != null && backupConfiguration.S3Settings.Disabled == false)
+                backupDestinations.Add("S3");
+            if (backupConfiguration.GlacierSettings != null && backupConfiguration.GlacierSettings.Disabled == false)
+                backupDestinations.Add("Glacier");
+
+            return backupDestinations;
         }
 
         private static IEnumerable<OngoingTask> CollectEtlTasks(DatabaseRecord databaseRecord, DatabaseTopology dbTopology, ClusterTopology clusterTopology)
@@ -288,6 +333,7 @@ namespace Raven.Server.Web.System
     {
         public BackupType BackupType { get; set; }
         public List<string> BackupDestinations { get; set; }
+        public string Name { get; set; }
 
         public override DynamicJsonValue ToJson()
         {
