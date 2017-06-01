@@ -102,7 +102,7 @@ namespace Raven.Client.Server
     public class DatabaseWatcher : ReplicationNode, IDatabaseTask, IDynamicJsonValueConvertible
     {
         public string ApiKey;
-        public string TaskId;
+        public long TaskId;
 
         public override DynamicJsonValue ToJson()
         {
@@ -110,7 +110,14 @@ namespace Raven.Client.Server
             json[nameof(TaskId)] = TaskId;
             return json;
         }
-    }
+
+        public override ulong GetTaskKey()
+        {
+            var hashCode = CalculateStringHash(Database);
+            hashCode = (hashCode* 397) ^ CalculateStringHash(Url);
+            return hashCode;
+        }
+}
     
     public class DatabaseTopology
     {
@@ -204,11 +211,24 @@ namespace Raven.Client.Server
             return (addDestinations, removeDestinations);
         }
 
-        public void RemoveWatcherIfExists(string taskId)
+        public void RemoveWatcher(long taskId)
         {
             foreach (var watcher in Watchers)
             {
                 if (watcher.TaskId != taskId)
+                    continue;
+                Watchers.Remove(watcher);
+                return;
+            }
+        }
+
+        public void EnsureUniqueDbAndUrl(DatabaseWatcher watcher)
+        {
+            var dbName = watcher.Database;
+            var url = watcher.Url;
+            foreach (var w in Watchers)
+            {
+                if (w.Database != dbName || w.Url != url)
                     continue;
                 Watchers.Remove(watcher);
                 return;

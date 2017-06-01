@@ -80,7 +80,7 @@ namespace Raven.Server.Web.System
 
                 yield return new OngoingTaskReplication
                 {
-                    TaskId = watcher.TaskId,
+                    TaskId = watcher.TaskId.ToString(),
                     ResponsibleNode = new NodeId
                     {
                         NodeTag = tag,
@@ -176,7 +176,7 @@ namespace Raven.Server.Web.System
 
                         [nameof(DatabasePutResult.ETag)] = index,
                         [nameof(DatabasePutResult.Key)] = name,
-                        [nameof(OngoingTask.TaskId)] = (watcher.Database + "@" + watcher.Url)
+                        [nameof(OngoingTask.TaskId)] = watcher.TaskId == 0 ? index : watcher.TaskId
                     });
                     writer.Flush();
                 }
@@ -216,7 +216,7 @@ namespace Raven.Server.Web.System
         {
             return new DynamicJsonValue
             {
-                [nameof(TaskId)] = TaskId?.ToString(),
+                [nameof(TaskId)] = TaskId,
                 [nameof(TaskType)] = TaskType,
                 [nameof(ResponsibleNode)] = ResponsibleNode.ToJson(),
                 [nameof(TaskState)] = TaskState,
