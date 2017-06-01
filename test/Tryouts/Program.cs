@@ -3,6 +3,7 @@ using System.Diagnostics;
 using FastTests.Client.Attachments;
 using RachisTests.DatabaseCluster;
 using Sparrow.Logging;
+using System.Threading.Tasks;
 
 namespace Tryouts
 {
@@ -19,15 +20,16 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new FastTests.Server.Replication.ReplicationResolveConflictsOnConfigurationChange())
-                {
-                    a.ResolveManyConflicts().Wait();
-                }
 
                 //Parallel.For(0, 10, _ =>
-                //{
-
-                //});
+                {
+                    using (var a = new FastTests.Server.Documents.Versioning.Versioning())
+                    {
+                        a.ServerSaveBundlesAfterRestart().Wait();
+                    }
+                }
+                
+                //);
             }
         }
     }

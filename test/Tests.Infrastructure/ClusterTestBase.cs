@@ -372,6 +372,7 @@ namespace Tests.Infrastructure
                 }
 
                 var server = GetNewServer(customSettings, runInMemory: shouldRunInMemory);
+                Servers.Add(server);
 
                 serversToPorts.Add(server, serverUrl);
                 if (i == leaderIndex)

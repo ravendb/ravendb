@@ -112,6 +112,7 @@ namespace FastTests
                 if (_doNotReuseServer)
                 {
                     UseNewLocalServer();
+                    Servers.Add(_localServer);
                     return _localServer;
                 }
 
@@ -120,6 +121,8 @@ namespace FastTests
                     if(_globalServer.Disposed)
                         throw new ObjectDisposedException("Someone disposed the global server!");
                     _localServer = _globalServer ;
+                    
+                    Servers.Add(_localServer);
                     return _localServer;
                 }
                 lock (ServerLocker)
@@ -133,6 +136,7 @@ namespace FastTests
                         _globalServer = globalServer;
                     }
                     _localServer = _globalServer;
+                    Servers.Add(_localServer);
                 }
                 return _globalServer;
             }
@@ -199,12 +203,6 @@ namespace FastTests
 
                 var server = new RavenServer(configuration);
                 server.Initialize();
-
-                // TODO: Make sure to properly handle this when this is resolved:
-                // TODO: https://github.com/dotnet/corefx/issues/5205
-                // TODO: AssemblyLoadContext.GetLoadContext(typeof(RavenTestBase).GetTypeInfo().Assembly).Unloading +=
-
-                Servers.Add(server);
 
                 return server;
             }
