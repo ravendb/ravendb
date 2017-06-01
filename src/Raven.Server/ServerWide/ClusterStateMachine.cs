@@ -120,6 +120,7 @@ namespace Raven.Server.ServerWide
                 case nameof(DeleteDatabaseCommand):
                 case nameof(ModifyCustomFunctionsCommand):
                 case nameof(UpdateDatabaseWatcherCommand):
+                case nameof(DeleteDatabaseWatcherCommand):
                 case nameof(AddRavenEtlCommand):
                 case nameof(AddSqlEtlCommand):
                 case nameof(UpdateRavenEtlCommand):
