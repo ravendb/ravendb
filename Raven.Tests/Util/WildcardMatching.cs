@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using Raven.Abstractions.Util;
 using Raven.Database.Util;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Attributes;
