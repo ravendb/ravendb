@@ -51,17 +51,32 @@ namespace Raven.Server.Rachis
             }
         }
 
+        private void DisableTimeoutInternal()
+        {
+            _timer.Change(Timeout.Infinite, Timeout.Infinite);
+            _timeoutHappened = null;
+            _currentLeader = null;
+        }
+
+        public void DisableTimeout()
+        {
+            lock (this)
+            {
+                DisableTimeoutInternal();
+            }
+        }
+
         public void ExecuteTimeoutBehavior()
         {
             lock (this)
             {
-                if (_timeoutHappened == null)
-                    return;
-                if (Disable)
-                    return;
-                _timer.Change(Timeout.Infinite, Timeout.Infinite);
                 try
                 {
+                    if (_timeoutHappened == null)
+                        return;
+                    if (Disable)
+                        return;
+
                     _timeoutHappened?.Invoke();
                 }
                 catch (ConcurrencyException)
@@ -70,8 +85,7 @@ namespace Raven.Server.Rachis
                 }
                 finally
                 {
-                    _timeoutHappened = null;
-                    _currentLeader = null;
+                   DisableTimeoutInternal();
                 }
             }
             return;

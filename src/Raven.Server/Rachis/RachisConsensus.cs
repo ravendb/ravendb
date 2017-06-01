@@ -395,8 +395,23 @@ namespace Raven.Server.Rachis
                     {
                         foreach (var d in toDispose)
                         {
-                            d.Dispose();
+                            try
+                            {
+                                d.Dispose();
+                            }
+                            catch (ObjectDisposedException)
+                            {
+                                // nothing to do
+                            }
+                            catch (Exception e)
+                            {
+                                if (Log.IsInfoEnabled)
+                                {
+                                    Log.Info("Failed to dispose during new rachis state transition", e);
+                                }
+                            }
                         }
+
                     });
 
                     StateChanged?.Invoke(this, state);
@@ -457,6 +472,7 @@ namespace Raven.Server.Rachis
 
         public void SwitchToCandidateState(string reason, bool forced = false)
         {
+            Timeout.DisableTimeout();
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -474,7 +490,7 @@ namespace Raven.Server.Rachis
 
             if (Log.IsInfoEnabled)
             {
-                Log.Info("Switching to candidate state");
+                Log.Info($"Switching to candidate state because {reason} forced: {forced}");
             }
 
             var candidate = new Candidate(this)
