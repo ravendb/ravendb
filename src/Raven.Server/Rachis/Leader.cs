@@ -275,6 +275,8 @@ namespace Raven.Server.Rachis
                     }
                     EnsureThatWeHaveLeadership(VotersMajority);
 
+                    _engine.ReportLeaderTime(LeaderShipDuration);
+                    
                     var lowestIndexInEntireCluster = GetLowestIndexInEntireCluster();
                     if (lowestIndexInEntireCluster != LowestIndexInEntireCluster)
                     {
