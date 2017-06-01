@@ -589,6 +589,8 @@ namespace Raven.Server.Documents
             {
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
+                
+                throw;
             }
             finally
             {
@@ -614,6 +616,8 @@ namespace Raven.Server.Documents
             {
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
+
+                throw;
             }
             finally
             {
