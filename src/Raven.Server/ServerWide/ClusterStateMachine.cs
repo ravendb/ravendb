@@ -115,7 +115,6 @@ namespace Raven.Server.ServerWide
                 case nameof(UpdatePeriodicBackupCommand):
                 case nameof(DeletePeriodicBackupCommand):
                 case nameof(EditExpirationCommand):
-                case nameof(ModifyDatabaseWatchersCommand):
                 case nameof(ModifyConflictSolverCommand):
                 case nameof(UpdateTopologyCommand):
                 case nameof(DeleteDatabaseCommand):

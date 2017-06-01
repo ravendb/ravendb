@@ -122,19 +122,21 @@ namespace RachisTests.DatabaseCluster
                     await server.ServerStore.Cluster.WaitForIndexNotification(res.ETag ?? -1);
                     await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore($"Watcher{i}");
 
-                    watchers.Add(new DatabaseWatcher
+                    var watcher = new DatabaseWatcher
                     {
                         Database = $"Watcher{i}",
                         Url = res.NodesAddedTo[0]
-                    });
-                }
+                    };
+                    watchers.Add(watcher);
 
-                await UpdateReplicationTopology((DocumentStore)store, watchers);
+                    await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
+
+                }
             }
 
             foreach (var watcher in watchers)
             {
-                using (var store = new DocumentStore()
+                using (var store = new DocumentStore
                 {
                     Urls = new[] { watcher.Url },
                     Database = watcher.Database,
@@ -211,9 +213,9 @@ namespace RachisTests.DatabaseCluster
             Assert.Equal(repTask?.DestinationDB, watcher.Database);
             Assert.Equal(repTask?.DestinationURL, watcher.Url);
 
-            watcher.TaskId = repTask?.TaskId;
+            watcher.TaskId = Convert.ToInt64(repTask?.TaskId);
 
-            using (var store = new DocumentStore()
+            using (var store = new DocumentStore
             {
                 Urls = new[] { watcher.Url },
                 Database = watcher.Database,
@@ -226,7 +228,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.True(WaitForDocument<User>(store, "users/1", u => u.Name == "Karmel"));
             }
 
-            using (var store = new DocumentStore()
+            using (var store = new DocumentStore
             {
                 Urls = leader.WebUrls,
                 Database = databaseName,
@@ -413,16 +415,14 @@ namespace RachisTests.DatabaseCluster
                 Assert.NotNull(doc);
                 Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
 
-                var watchers = new List<DatabaseWatcher>
+                var watcher = new DatabaseWatcher
                 {
-                    new DatabaseWatcher
-                    {
-                        Database = store2.Database,
-                        Url = store2.Urls.First(),
-                        ApiKey = "super/" + api
-                    }
+                    Database = store2.Database,
+                    Url = store2.Urls.First(),
+                    ApiKey = "super/" + api
                 };
-                await UpdateReplicationTopology(store1, watchers);
+                
+                await AddWatcherToReplicationTopology(store1, watcher);
 
                 using (var session = store1.OpenAsyncSession())
                 {

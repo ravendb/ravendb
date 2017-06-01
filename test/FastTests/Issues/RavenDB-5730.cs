@@ -51,17 +51,13 @@ namespace FastTests.Issues
 
         private void DoReplicationTest(DocumentStore storeA, DocumentStore storeB, string url)
         {
-
-            var watchers = new List<DatabaseWatcher>
-            {
-                new DatabaseWatcher
-                {
-                    Database = storeB.Database,
-                    Url = url,
-                }
+            var watcher = new DatabaseWatcher
+            {                
+                Database = storeB.Database,
+                Url = url,               
             };
 
-            UpdateReplicationTopology(storeA, watchers).ConfigureAwait(false);
+            AddWatcherToReplicationTopology(storeA, watcher).ConfigureAwait(false);
             
             using (var session = storeA.OpenSession())
             {

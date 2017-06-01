@@ -541,15 +541,6 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(deleteCommand);
         }
 
-        public Task<(long Etag, object Result)> ModifyDatabaseWatchers(string dbName, List<DatabaseWatcher> watchers)
-        {
-            var watcherCommand = new ModifyDatabaseWatchersCommand(dbName)
-            {
-                Watchers = watchers
-            };
-            return SendToLeaderAsync(watcherCommand);
-        }
-
         public Task<(long Etag, object Result)> ModifyCustomFunctions(string dbName, string customFunctions)
         {
             var customFunctionsCommand = new ModifyCustomFunctionsCommand(dbName)
