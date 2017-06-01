@@ -252,36 +252,44 @@ namespace Sparrow.Json
             if (_disposed)
                 return;
 
+            lock (this)
+            {
+                if(_disposed)
+                    return;
+                
+                
 #if MEM_GUARD_STACK
             ElectricFencedMemory.DecrementConext();
             ElectricFencedMemory.UnRegisterContextAllocation(this);
 #endif
 
-            Reset(true);
+                Reset(true);
 
-            _documentBuilder.Dispose();
+                _documentBuilder.Dispose();
 
-            _arenaAllocator.Dispose();
-            _arenaAllocatorForLongLivedValues?.Dispose();
+                _arenaAllocator.Dispose();
+                _arenaAllocatorForLongLivedValues?.Dispose();
 
-            if (_managedBuffers != null)
-            {
-                foreach (var managedPinnedBuffer in _managedBuffers)
+                if (_managedBuffers != null)
                 {
-                    managedPinnedBuffer.Dispose();
+                    foreach (var managedPinnedBuffer in _managedBuffers)
+                    {
+                        managedPinnedBuffer.Dispose();
+                    }
+                    _managedBuffers = null;
                 }
-                _managedBuffers = null;
-            }
 
-            if (_pinnedObjects != null)
-            {
-                foreach (var pinnedObject in _pinnedObjects)
+                if (_pinnedObjects != null)
                 {
-                    pinnedObject.Free();
+                    foreach (var pinnedObject in _pinnedObjects)
+                    {
+                        pinnedObject.Free();
+                    }
                 }
-            }
 
-            _disposed = true;
+                _disposed = true;
+            }
+            
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
