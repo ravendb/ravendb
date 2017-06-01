@@ -35,7 +35,7 @@ namespace Raven.Client.Server.ETL
 
         public ulong GetTaskKey()
         {
-            return _taskKey ?? (_taskKey = Hashing.XXHash64.Calculate(Destination.Name, Encodings.Utf8)).Value;
+            return _taskKey ?? (_taskKey = Hashing.XXHash64.Calculate(Destination.Name.ToLowerInvariant(), Encodings.Utf8)).Value;
         }
     }
 }
