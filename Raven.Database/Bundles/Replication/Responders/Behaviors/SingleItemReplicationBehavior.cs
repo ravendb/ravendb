@@ -106,8 +106,8 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                         ExecuteRemoveConflictOnPutTrigger(id, metadata, resolvedItemJObject);
 
                     AddWithoutConflict(id, etag, resolvedMetadataToSave, resolvedItemToSave);
-
                 }
+
                 return;
             }
             //this is expensive but worth trying if we can avoid conflicts
@@ -285,7 +285,21 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                 TExternal resolvedItemToSave;
                 if (TryResolveConflict(id, newMetadata, incoming, existingItem, out resolvedMetadataToSave, out resolvedItemToSave))
                 {
-                    AddWithoutConflict(id, existingEtag, resolvedMetadataToSave, resolvedItemToSave);
+                    if (resolvedMetadataToSave.ContainsKey("Raven-Delete-Marker") &&
+                        resolvedMetadataToSave.Value<bool>("Raven-Delete-Marker"))
+                    {
+                        // the deleted document "wins"
+                        if (newMetadata.ContainsKey(Constants.RavenEntityName))
+                            resolvedMetadataToSave[Constants.RavenEntityName] = newMetadata[Constants.RavenEntityName];
+                        DeleteItem(id, null);
+                        MarkAsDeleted(id, resolvedMetadataToSave);
+                    }
+                    else
+                    {
+                        var etag = deleted == false ? existingEtag : null;
+                        AddWithoutConflict(id, etag, resolvedMetadataToSave, resolvedItemToSave);
+                    }
+
                     return;
                 }
                 var newConflictId = SaveConflictedItem(id, newMetadata, incoming, existingEtag);
