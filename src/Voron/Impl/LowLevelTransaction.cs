@@ -338,6 +338,9 @@ namespace Voron.Impl
             _txHeader = (TransactionHeader*)_txHeaderMemory.Ptr;
             _txHeader->HeaderMarker = Constants.TransactionHeaderMarker;
 
+            if (_id > 1 && _state.NextPageNumber <= 1)
+                ThrowNextPageNumberCannotBeSmallerOrEqualThanOne();
+
             _txHeader->TransactionId = _id;
             _txHeader->NextPageNumber = _state.NextPageNumber;
             _txHeader->LastPageNumber = -1;
@@ -903,10 +906,19 @@ namespace Voron.Impl
             {
                 FreePage(_pagesToFreeOnCommit.Pop());
             }
+
+            if (_state.NextPageNumber <= 1)
+                ThrowNextPageNumberCannotBeSmallerOrEqualThanOne();
+
             _txHeader->LastPageNumber = _state.NextPageNumber - 1;
             _state.Root.CopyTo(&_txHeader->Root);
 
             _txHeader->TxMarker |= TransactionMarker.Commit;
+        }
+
+        private static void ThrowNextPageNumberCannotBeSmallerOrEqualThanOne([CallerMemberName] string caller = null)
+        {
+            throw new InvalidOperationException($"{nameof(StorageEnvironmentState.NextPageNumber)} cannot be <= 1 on {caller}.");
         }
 
         private void CommitStage3_DisposeTransactionResources()
