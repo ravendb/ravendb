@@ -206,7 +206,7 @@ namespace Raven.Server.Web.System
     public abstract class OngoingTask : IDynamicJson // Single task info - Common to all tasks types
     {
         public string TaskId { get; set; }
-        protected OngoingTaskType TaskType { get; set; }
+        public OngoingTaskType TaskType { get; protected set; }
         public NodeId ResponsibleNode { get; set; }
         public OngoingTaskState TaskState { get; set; }
         public DateTime LastModificationTime { get; set; }

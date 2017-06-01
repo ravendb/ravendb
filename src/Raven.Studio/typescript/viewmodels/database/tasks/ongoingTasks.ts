@@ -87,12 +87,12 @@ class ongoingTasks extends viewModelBase {
                     this.backupTasks().push(new ongoingTaskBackup(task as Raven.Server.Web.System.OngoingTaskBackup));
                     this.existingTasksSet.add("Backup");
                     break;
-                case 'ETL':
-                    this.etlTasks().push(new ongoingTaskEtl(task as Raven.Server.Web.System.OngoingTaskETL));
+                case 'RavenEtl':
+                    this.etlTasks().push(new ongoingTaskEtl(task as Raven.Server.Web.System.OngoingRavenEtl));
                     this.existingTasksSet.add("RavenDB ETL");
                     break;
-                case 'SQL':
-                    this.sqlTasks().push(new ongoingTaskSql(task as Raven.Server.Web.System.OngoingTaskSQL));
+                case 'SqlEtl':
+                    this.sqlTasks().push(new ongoingTaskSql(task as Raven.Server.Web.System.OngoingSqlEtl));
                     this.existingTasksSet.add("SQL ETL");
                     break;
             };
