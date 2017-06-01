@@ -6,6 +6,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Server.Commands;
+using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -47,10 +48,12 @@ namespace Raven.Server.Documents.Handlers.Admin
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                var json = new DynamicJsonValue
+                var json = new DynamicJsonValue();
+                using (context.OpenReadTransaction())
                 {
-                    [nameof(NodeInfo.NodeTag)] = ServerStore.NodeTag
-                };
+                    json[nameof(NodeInfo.NodeTag)] = ServerStore.NodeTag;
+                    json[nameof(NodeInfo.TopologyId)] = ServerStore.GetClusterTopology(context).TopologyId;
+                }
                 context.Write(writer, json);
                 writer.Flush();
             }
@@ -154,16 +157,27 @@ namespace Raven.Server.Documents.Handlers.Admin
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 {
                     string apiKey;
+                    string topologyId;
                     using (ctx.OpenReadTransaction())
                     {
-                        apiKey = ServerStore.GetClusterTopology(ctx).ApiKey;
+                        var clusterTopology = ServerStore.GetClusterTopology(ctx);
+                        apiKey = clusterTopology.ApiKey;
+                        topologyId = clusterTopology.TopologyId;
                     }
                     using (var requestExecuter = ClusterRequestExecutor.CreateForSingleNode(serverUrl, apiKey))
                     {
                         var infoCmd = new GetNodeInfoCommand();
                         await requestExecuter.ExecuteAsync(infoCmd, ctx);
-                        var nodeTag = infoCmd.Result.NodeTag == "?" 
-                            ? null : infoCmd.Result.NodeTag;
+                        var nodeInfo = infoCmd.Result;
+
+                        if (nodeInfo.TopologyId != null && topologyId != nodeInfo.TopologyId)
+                        {
+                            throw new TopologyMismatchException(
+                                $"Adding a new node to cluster failed due to topology mismatch, we expected topology id {topologyId}, but get {nodeInfo.TopologyId}");
+                        }
+
+                        var nodeTag = nodeInfo.NodeTag == "?" 
+                            ? null : nodeInfo.NodeTag;
                         await ServerStore.AddNodeToClusterAsync(serverUrl, nodeTag, validateNotInTopology:false);
                         NoContentStatus();
                         return;

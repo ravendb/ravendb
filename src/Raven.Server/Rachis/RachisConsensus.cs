@@ -179,7 +179,11 @@ namespace Raven.Server.Rachis
         public void SetTimeout()
         {
             //We want to be able to reproduce rare issues that are related to timing
-            Timeout = new TimeoutEvent(_rand.Next((int)(ElectionTimeout.TotalMilliseconds / 3 * 2), (int)ElectionTimeout.TotalMilliseconds));
+            var oldTimeout = Timeout;
+            using (oldTimeout)
+            {
+                Timeout = new TimeoutEvent(_rand.Next((int)(ElectionTimeout.TotalMilliseconds / 3 * 2), (int)ElectionTimeout.TotalMilliseconds));
+            }
         }
 
         public unsafe void Initialize(StorageEnvironment env, ClusterConfiguration configuration)
