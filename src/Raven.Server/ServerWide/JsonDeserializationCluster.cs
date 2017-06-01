@@ -61,6 +61,7 @@ namespace Raven.Server.ServerWide
             [nameof(ModifyConflictSolverCommand)] = GenerateJsonDeserializationRoutine<ModifyConflictSolverCommand>(),
             [nameof(UpdateTopologyCommand)] = GenerateJsonDeserializationRoutine<UpdateTopologyCommand>(),
             [nameof(UpdateDatabaseWatcherCommand)] = GenerateJsonDeserializationRoutine<UpdateDatabaseWatcherCommand>(),
+            [nameof(DeleteDatabaseWatcherCommand)] = GenerateJsonDeserializationRoutine<DeleteDatabaseWatcherCommand>(),
             [nameof(AddDatabaseCommand)] = GenerateJsonDeserializationRoutine<AddDatabaseCommand>(),
             [nameof(DeleteValueCommand)] = GenerateJsonDeserializationRoutine<DeleteValueCommand>(),
             [nameof(PutApiKeyCommand)] = GenerateJsonDeserializationRoutine<PutApiKeyCommand>(),

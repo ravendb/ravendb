@@ -559,6 +559,13 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(addWatcherCommand);
         }
 
+        public Task<(long Etag, object Result)> DeleteDatabaseWatcher(long taskId, string dbName)
+        {
+            var deleteWatcherCommand = new DeleteDatabaseWatcherCommand(taskId, dbName);
+
+            return SendToLeaderAsync(deleteWatcherCommand);
+        }
+
         public Task<(long Etag, object Result)> ModifyConflictSolverAsync(string dbName, ConflictSolver solver)
         {
             var conflictResolverCommand = new ModifyConflictSolverCommand(dbName)

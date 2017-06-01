@@ -297,6 +297,14 @@ namespace FastTests.Server.Replication
             return await store.Admin.Server.SendAsync(op);
         }
 
+        protected static async Task<ModifyExternalReplicationResult> DeleteWatcherFromReplicationTopology(
+            DocumentStore store,
+            long taskId)
+        {
+            var op = new DeleteWatcherOperation(store.Database, taskId);
+            return await store.Admin.Server.SendAsync(op);
+        }
+
         protected static async Task<ModifySolverResult> UpdateConflictResolver(IDocumentStore store, string resovlerDbId = null, Dictionary<string, ScriptResolver> collectionByScript = null, bool resolveToLatest = false)
         {
             var op = new ModifyConflictSolverOperation(store.Database,

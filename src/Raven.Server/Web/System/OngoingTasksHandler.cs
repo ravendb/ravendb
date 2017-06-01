@@ -8,14 +8,12 @@ using Raven.Client.Exceptions;
 using Raven.Client.Json.Converters;
 using Raven.Client.Http;
 using Raven.Client.Server;
-using Raven.Client.Server.ETL;
 using Raven.Client.Server.ETL.SQL;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -218,10 +216,40 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-
                         [nameof(DatabasePutResult.ETag)] = index,
                         [nameof(DatabasePutResult.Key)] = name,
                         [nameof(OngoingTask.TaskId)] = watcher.TaskId == 0 ? index : watcher.TaskId
+                    });
+                    writer.Flush();
+                }
+            }
+        }
+
+        [RavenAction("/admin/delete-watcher", "POST", "/admin/delete-watcher?name={databaseName:string}&id={taskId:string}")]
+        public async Task DeleteWatcher()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            var taskId = GetLongQueryString("id");
+            if (taskId == null)
+                return;
+            
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var (index, _) = await ServerStore.DeleteDatabaseWatcher(taskId.Value, name);
+                await ServerStore.Cluster.WaitForIndexNotification(index);
+
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(DatabasePutResult.ETag)] = index,
+                        [nameof(DatabasePutResult.Key)] = name
                     });
                     writer.Flush();
                 }
