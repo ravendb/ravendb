@@ -30,11 +30,11 @@ namespace Raven.Client.Http
 
         protected async Task CopyToStreamAsync(Stream stream)
         {
-            var count = await stream.ReadAsync(_buffer, 0, _buffer.Length, _cancellationToken).ConfigureAwait(false); 
+            var count = await _stream.ReadAsync(_buffer, 0, _buffer.Length, _cancellationToken).ConfigureAwait(false); 
             while (count > 0)
             {
-                await _stream.WriteAsync(_buffer, 0, count, _cancellationToken);
-                count = await stream.ReadAsync(_buffer, 0, _buffer.Length, _cancellationToken).ConfigureAwait(false);
+                await stream.WriteAsync(_buffer, 0, count, _cancellationToken);
+                count = await _stream.ReadAsync(_buffer, 0, _buffer.Length, _cancellationToken).ConfigureAwait(false);
             }
         }
 
