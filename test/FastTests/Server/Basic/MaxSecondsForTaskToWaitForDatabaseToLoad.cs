@@ -86,7 +86,6 @@ namespace FastTests.Server.Basic
             var doc = MultiDatabase.CreateDatabaseDocument(name);
             doc.Settings[RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "10";
             doc.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "true";
-            doc.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = $"\\{name}";
             doc.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "true";
             doc.Settings[RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString();
 
