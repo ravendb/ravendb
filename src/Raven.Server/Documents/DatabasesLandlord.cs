@@ -55,6 +55,16 @@ namespace Raven.Server.Documents
 
         public void ClusterOnDatabaseChanged(object sender, (string dbName, long index, string type) t)
         {
+            HandleClusterDatabaseChanged(t, ClusterDatabaseChangeType.RecordChanged);
+        }
+
+        public void ClusterOnDatabaseValueChanged(object sender, (string dbName, long index, string type) t)
+        {
+            HandleClusterDatabaseChanged(t, ClusterDatabaseChangeType.ValueChanged);
+        }
+
+        private void HandleClusterDatabaseChanged((string dbName, long index, string type) t, ClusterDatabaseChangeType changeType)
+        {
             _disposing.EnterReadLock();
             try
             {
@@ -64,78 +74,94 @@ namespace Raven.Server.Documents
                 // response to changed database.
                 // if disabled, unload
 
-                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                var record = _serverStore.LoadDatabaseRecord(t.dbName);
+                if (record == null)
                 {
-                    context.OpenReadTransaction();
-                    var record = _serverStore.Cluster.ReadDatabase(context, t.dbName);
-                    if (record == null)
-                    {
-                        // was removed, need to make sure that it isn't loaded 
-                        UnloadDatabase(t.dbName);
-                        return;
-                    }
+                    // was removed, need to make sure that it isn't loaded 
+                    UnloadDatabase(t.dbName);
+                    return;
+                }
 
-                    if (record.DeletionInProgress != null &&
-                        record.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out DeletionInProgressStatus deletionInProgress) &&
-                        deletionInProgress != DeletionInProgressStatus.No)
-                    {
-                        UnloadDatabase(t.dbName);
+                if (record.DeletionInProgress != null &&
+                    record.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out DeletionInProgressStatus deletionInProgress) &&
+                    deletionInProgress != DeletionInProgressStatus.No)
+                {
+                    UnloadDatabase(t.dbName);
 
-                        if (deletionInProgress == DeletionInProgressStatus.HardDelete)
+                    if (deletionInProgress == DeletionInProgressStatus.HardDelete)
+                    {
+                        RavenConfiguration configuration;
+                        try
                         {
-                            RavenConfiguration configuration;
-                            try
-                            {
-                                configuration = CreateDatabaseConfiguration(t.dbName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, databaseRecord: record);
-                            }
-                            catch (Exception ex)
-                            {
-                                configuration = null;
-                                if (_logger.IsInfoEnabled)
-                                    _logger.Info("Could not create database configuration", ex);
-                            }
-                            //this can happen if the database record was already deleted
-                            if (configuration != null)
-                            {
-                                DatabaseHelper.DeleteDatabaseFiles(configuration);
-                            }
+                            configuration = CreateDatabaseConfiguration(t.dbName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, databaseRecord: record);
                         }
-
-                        NotifyLeaderAboutRemoval(t.dbName);
-
-                        return;
+                        catch (Exception ex)
+                        {
+                            configuration = null;
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info("Could not create database configuration", ex);
+                        }
+                        // this can happen if the database record was already deleted
+                        if (configuration != null)
+                        {
+                            DatabaseHelper.DeleteDatabaseFiles(configuration);
+                        }
                     }
 
-                    if (record.Topology.RelevantFor(_serverStore.NodeTag) == false)
-                        return;
+                    NotifyLeaderAboutRemoval(t.dbName);
 
-                    if (record.Disabled)
-                    {
-                        UnloadDatabase(t.dbName);
-                        return;
-                    }
+                    return;
+                }
 
-                    if (DatabasesCache.TryGetValue(t.dbName, out var task) == false)
-                    {
-                        // if the database isn't loaded, but it is relevant for this node, we need to create
-                        // it. This is important so things like replication will start pumping, and that 
-                        // configuration changes such as running periodic backup will get a chance to run, which
-                        // they wouldn't unless the database is loaded / will have a request on it.          
-                        task = TryGetOrCreateResourceStore(t.dbName);
-                    }
+                if (record.Topology.RelevantFor(_serverStore.NodeTag) == false)
+                    return;
 
-                    if (task.IsCanceled || task.IsFaulted)
-                        return;
+                if (record.Disabled)
+                {
+                    UnloadDatabase(t.dbName);
+                    return;
+                }
 
-                    if (task.IsCompleted)
-                    {
-                        NotifyDatabaseAboutStateChange(t.dbName, task, t.index);
-                        return;
-                    }
-                    task.ContinueWith(done =>
-                    {
-                        NotifyDatabaseAboutStateChange(t.dbName, done, t.index);
-                    });
+                if (DatabasesCache.TryGetValue(t.dbName, out var task) == false)
+                {
+                    // if the database isn't loaded, but it is relevant for this node, we need to create
+                    // it. This is important so things like replication will start pumping, and that 
+                    // configuration changes such as running periodic backup will get a chance to run, which
+                    // they wouldn't unless the database is loaded / will have a request on it.          
+                    task = TryGetOrCreateResourceStore(t.dbName);
+                }
+
+                if (task.IsCanceled || task.IsFaulted)
+                    return;
+
+                switch (changeType)
+                {
+                     case ClusterDatabaseChangeType.RecordChanged:
+                         if (task.IsCompleted)
+                         {
+                             NotifyDatabaseAboutStateChange(t.dbName, task, t.index);
+                             return;
+                         }
+                         task.ContinueWith(done =>
+                         {
+                             NotifyDatabaseAboutStateChange(t.dbName, done, t.index);
+                         });
+                         break;
+                     case ClusterDatabaseChangeType.ValueChanged:
+                         if (task.IsCompleted)
+                         {
+                             NotifyDatabaseAboutValueChange(t.dbName, task, t.index);
+                             return;
+                         }
+
+                         task.ContinueWith(done =>
+                         {
+                             NotifyDatabaseAboutValueChange(t.dbName, done, t.index);
+                         });
+                         break;
+                     default:
+                         ThrowUnknownClusterDatabaseChangeType(changeType);
+                         break;
                 }
 
                 // if deleted, unload / deleted and then notify leader that we removed it
@@ -143,7 +169,7 @@ namespace Raven.Server.Documents
             catch (Exception e)
             {
                 if (_logger.IsInfoEnabled)
-                    _logger.Info("Could not react to a cluster database change", e);
+                    _logger.Info($"Could not react to a cluster database change of type {changeType} for db {t.dbName}", e);
             }
             finally
             {
@@ -151,30 +177,9 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void ClusterOnDatabaseValueChanged(object sender, (string dbName, long index, string type) t)
+        private static void ThrowUnknownClusterDatabaseChangeType(ClusterDatabaseChangeType type)
         {
-            if (DatabasesCache.TryGetValue(t.dbName, out var task) == false)
-            {
-                // if the database isn't loaded, but it is relevant for this node, we need to create
-                // it. This is important so things like replication will start pumping, and that 
-                // configuration changes such as running periodic backup will get a chance to run, which
-                // they wouldn't unless the database is loaded / will have a request on it.          
-                task = TryGetOrCreateResourceStore(t.dbName);
-            }
-
-            if (task.IsCanceled || task.IsFaulted)
-                return;
-
-            if (task.IsCompleted)
-            {
-                NotifyDatabaseAboutValueChange(t.dbName, task, t.index);
-                return;
-            }
-
-            task.ContinueWith(done =>
-            {
-                NotifyDatabaseAboutValueChange(t.dbName, done, t.index);
-            });
+            throw new InvalidOperationException($"Unknown cluster database change type: {type}");
         }
 
         private void NotifyLeaderAboutRemoval(string dbName)
@@ -605,6 +610,12 @@ namespace Raven.Server.Documents
             DatabasesCache.TryRemove(dbName, out dbTask);
 
             database.DatabaseShutdownCompleted.Set();
+        }
+        
+        private enum ClusterDatabaseChangeType
+        {
+            RecordChanged,
+            ValueChanged
         }
     }
 }
