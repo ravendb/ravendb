@@ -90,13 +90,13 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
             TExternal resolvedItemToSave;
             if (TryResolveConflict(id, metadata, incoming, existingItem, out resolvedMetadataToSave, out resolvedItemToSave))
             {                
-                if (metadata.ContainsKey("Raven-Remove-Document-Marker") &&
-                   metadata.Value<bool>("Raven-Remove-Document-Marker"))
+                if (resolvedMetadataToSave.ContainsKey("Raven-Remove-Document-Marker") &&
+                    resolvedMetadataToSave.Value<bool>("Raven-Remove-Document-Marker"))
                 {
-                    if (resolvedMetadataToSave.ContainsKey(Constants.RavenEntityName))
-                        metadata[Constants.RavenEntityName] = resolvedMetadataToSave[Constants.RavenEntityName];
+                    if (metadata.ContainsKey(Constants.RavenEntityName))
+                        resolvedMetadataToSave[Constants.RavenEntityName] = metadata[Constants.RavenEntityName];
                     DeleteItem(id, null);
-                    MarkAsDeleted(id, metadata);
+                    MarkAsDeleted(id, resolvedMetadataToSave);
                 }
                 else
                 {
