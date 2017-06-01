@@ -101,9 +101,7 @@ class editDocument extends viewModelBase {
         this.updateHelpLink('M72H1R');        
 
         //TODO: raw url for revision
-        if (navigationArgs && navigationArgs.id) {
-            ko.postbox.publish("SetRawJSONUrl", appUrl.forDocumentRawData(this.activeDatabase(), navigationArgs.id));
-        } else {
+        if (!navigationArgs || !navigationArgs.id) {
             return this.editNewDocument(navigationArgs ? navigationArgs.new : null);
         }
     }
@@ -231,9 +229,14 @@ class editDocument extends viewModelBase {
             const docId = this.userSpecifiedId();
             const revisionEtag = this.revisionEtag();
 
+            const activeDb = this.activeDatabase();
+            if (!activeDb) {
+                return null;
+            }
+
             return isRevision ? 
-                appUrl.forDocumentRevisionRawData(this.activeDatabase(), revisionEtag) :
-                appUrl.forDocumentRawData(this.activeDatabase(), docId);
+                appUrl.forDocumentRevisionRawData(activeDb, revisionEtag) :
+                appUrl.forDocumentRawData(activeDb, docId);
         });
 
         this.document.subscribe(doc => {
@@ -277,9 +280,7 @@ class editDocument extends viewModelBase {
             }
         });
         this.editedDocId = ko.pureComputed(() => this.metadata() ? this.metadata().id : "");
-        this.editedDocId.subscribe((docId: string) =>
-            ko.postbox.publish("SetRawJSONUrl", docId ? appUrl.forDocumentRawData(this.activeDatabase(), docId) : "")
-        );
+       
         this.displayLastModifiedDate = ko.pureComputed<boolean>(() => {
             const hasMetadata = !!this.metadata();
             const inEditMode = !this.isCreatingNewDocument();
