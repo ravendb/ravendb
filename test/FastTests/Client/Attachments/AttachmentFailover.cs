@@ -49,7 +49,7 @@ namespace FastTests.Client.Attachments
                         {
                             await task;
                         }
-                        catch (Exception e)
+                        catch (Exception)
                         {
                             // TODO: Make sure that we do not get an error here because of failing GetTcpInfo
                         }

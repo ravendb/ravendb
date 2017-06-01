@@ -17,7 +17,7 @@ namespace Raven.Client.Server.ETL.SQL
                     //return SqlProvider.SqlServerCe_4_0;
                 case "System.Data.OleDb":
                     throw new NotImplementedException($"Factory '{factoryName}' is not implemented yet");
-                    ..return SqlProvider.OleDb;
+                    //return SqlProvider.OleDb;
                 case "System.Data.OracleClient":
                     throw new NotImplementedException($"Factory '{factoryName}' is not implemented yet");
                     //return SqlProvider.OracleClient;

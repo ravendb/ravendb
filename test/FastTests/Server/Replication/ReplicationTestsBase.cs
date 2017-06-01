@@ -139,41 +139,6 @@ namespace FastTests.Server.Replication
             return false;
         }
 
-        protected bool WaitForDocument<T>(IDocumentStore store,
-            string docId,
-            Func<T, bool> predicate,
-            int timeout = 10000)
-        {
-            if (Debugger.IsAttached)
-                timeout *= 100;
-
-            var sw = Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds < timeout)
-            {
-                using (var session = store.OpenSession())
-                {
-                    try
-                    {
-                        var doc = session.Load<T>(docId);
-                        if (doc != null && predicate(doc))
-                            return true;
-                    }
-                    catch (ConflictException)
-                    {
-                        // expected that we might get conflict, ignore and wait
-                    }
-                }
-            }
-            using (var session = store.OpenSession())
-            {
-                //one last try, and throw if there is still a conflict
-                var doc = session.Load<T>(docId);
-                if (doc != null && predicate(doc))
-                    return true;
-            }
-            return false;
-        }
-
         protected bool WaitForDocument(DocumentStore store,
             string docId,
             int timeout = 10000)
