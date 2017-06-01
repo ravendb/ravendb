@@ -132,7 +132,7 @@ namespace Raven.Server.ServerWide
                 case nameof(AcknowledgeSubscriptionBatchCommand):
                 case nameof(CreateSubscriptionCommand):
                 case nameof(DeleteSubscriptionCommand):
-                case nameof(StoreEtlStatusCommand):
+                case nameof(UpdateEtlProcessStateCommand):
                     SetValueForTypedDatabaseCommand(context, type, cmd, index, leader);
                     break;
                 case nameof(PutApiKeyCommand):

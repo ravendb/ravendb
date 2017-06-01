@@ -1,4 +1,6 @@
 ﻿using System.Linq;
+using Raven.Client.Documents.Replication.Messages;
+using Raven.Server.Utils;
 using Raven.Server.Utils.Stats;
 
 namespace Raven.Server.Documents.ETL.Stats
@@ -25,6 +27,10 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public long LastLoadedEtag => _stats.LastLoadedEtag;
 
+        public long LastFilteredOutEtag => _stats.LastFilteredOutEtag;
+
+        public ChangeVectorEntry[] ChangeVector => _stats.ChangeVector;
+
         public void RecordExtractedItem()
         {
             _stats.NumberOfExtractedItems++;
@@ -40,9 +46,19 @@ namespace Raven.Server.Documents.ETL.Stats
             _stats.LastTransformedEtag = etag;
         }
 
+        public void RecordChangeVector(ChangeVectorEntry[] changeVector)
+        {
+            _stats.ChangeVector = ChangeVectorUtils.MergeVectors(_stats.ChangeVector, changeVector);
+        }
+
         public void RecordLastLoadedEtag(long etag)
         {
             _stats.LastLoadedEtag = etag;
+        }
+
+        public void RecordLastFilteredOutEtag(long etag)
+        {
+            _stats.LastFilteredOutEtag = etag;
         }
 
         public EtlPerformanceOperation ToPerformanceOperation(string name)
