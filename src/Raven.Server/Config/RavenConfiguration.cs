@@ -181,9 +181,6 @@ namespace Raven.Server.Config
 
         public void CopyParentSettings(RavenConfiguration serverConfiguration)
         {
-            Security.CertificatePassword = serverConfiguration.Security.CertificatePassword;
-            Security.CertificateFilePath = serverConfiguration.Security.CertificateFilePath;
-
             Storage.ForceUsing32BitsPager = serverConfiguration.Storage.ForceUsing32BitsPager;
 
             Queries.MaxClauseCount = serverConfiguration.Queries.MaxClauseCount;

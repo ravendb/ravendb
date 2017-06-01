@@ -89,6 +89,8 @@ namespace Raven.Server.ServerWide
 
         }
 
+        public RavenServer RavenServer => _ravenServer;
+
         public DatabaseInfoCache DatabaseInfoCache { get; set; }
 
         public TransactionContextPool ContextPool;

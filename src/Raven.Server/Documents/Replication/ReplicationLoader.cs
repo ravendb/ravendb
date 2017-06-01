@@ -12,6 +12,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Server;
+using Raven.Server.Config;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
@@ -491,6 +492,16 @@ namespace Raven.Server.Documents.Replication
 
             _numberOfSiblings = 0;
             StartOutgoingConnections(Destinations);
+        }
+
+        public DatabaseRecord LoadDatabaseRecord()
+        {
+            TransactionOperationContext context;
+            using (_server.ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
+            {
+                return _server.Cluster.ReadDatabase(context, Database.Name);
+            }
         }
 
         private void AddAndStartOutgoingReplication(ReplicationNode node)

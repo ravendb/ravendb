@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Raven.Client.Server.ETL
 {
@@ -31,5 +32,10 @@ namespace Raven.Client.Server.ETL
         }
 
         public override string Name => _name ?? (_name = $"{Database}@{Url}");
+
+        public override bool UsingEncryptedCommunicationChannel()
+        {
+            return Url?.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == true;
+        }
     }
 }

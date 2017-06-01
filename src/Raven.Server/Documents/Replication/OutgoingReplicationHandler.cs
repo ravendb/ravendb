@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using Raven.Client.Documents;
@@ -129,14 +130,24 @@ namespace Raven.Server.Documents.Replication
                 if (_log.IsInfoEnabled)
                     _log.Info($"Will replicate to {Destination.NodeTag} @ {Destination.Url} via {connectionInfo.Url}");
 
+                using (_parent._server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var record = _parent.LoadDatabaseRecord();
+                    if (record == null)
+                        throw new InvalidOperationException($"The database record for {_parent.Database.Name} does not exist?!");
+                    
+                    if (record.Encrypted && Destination.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
+                        throw new InvalidOperationException(
+                            $"{record.DatabaseName} is encrypted, and require HTTPS for replication, but had endpoint with url {Destination.Url} to database {Destination.Database}");
+                }
                 using (_tcpClient = new TcpClient())
                 {
                     TcpUtils.ConnectSocketAsync(connectionInfo, _tcpClient, _log)
                         .Wait(CancellationToken);
                     var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, connectionInfo);
 
-                    wrapSsl
-                        .Wait(CancellationToken);
+                    wrapSsl.Wait(CancellationToken);
 
                     using (_stream = wrapSsl.Result)
                     using (_interruptableRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream))
