@@ -21,8 +21,7 @@ namespace Voron.Impl.Journal
         private readonly StorageEnvironment _env;
         private IJournalWriter _journalWriter;
         private long _writePosIn4Kb;
-     
-        
+
         private readonly PageTable _pageTranslationTable = new PageTable();
 
         private readonly HashSet<PagePosition> _unusedPagesHashSetPool = new HashSet<PagePosition>(PagePositionEqualityComparer.Instance);
@@ -72,7 +71,7 @@ namespace Voron.Impl.Journal
 
         public void Dispose()
         {
-           
+
             GC.SuppressFinalize(this);
 
 
@@ -102,7 +101,7 @@ namespace Voron.Impl.Journal
         /// </summary>
         public void Write(LowLevelTransaction tx, CompressedPagesResult pages, LazyTransactionBuffer lazyTransactionScratch)
         {
-            var ptt = new Dictionary<long, PagePosition>(NumericEqualityComparer.Instance);           
+            var ptt = new Dictionary<long, PagePosition>(NumericEqualityComparer.Instance);
             var cur4KbPos = _writePosIn4Kb;
 
             Debug.Assert(pages.NumberOf4Kbs > 0);
@@ -139,7 +138,7 @@ namespace Voron.Impl.Journal
 
                 // non lazy tx will add itself to the buffer and then flush scratch to journal
                 if (tx.IsLazyTransaction == false ||
-                    lazyTransactionScratch.NumberOfPages > tx.Environment.ScratchBufferPool.GetAvailablePagesCount()/2)
+                    lazyTransactionScratch.NumberOfPages > tx.Environment.ScratchBufferPool.GetAvailablePagesCount() / 2)
                 {
                     try
                     {
@@ -151,7 +150,7 @@ namespace Voron.Impl.Journal
                         throw;
                     }
                 }
-                else 
+                else
                 {
                     lazyTransactionScratch.EnsureHasExistingReadTransaction(tx);
                 }
@@ -193,8 +192,8 @@ namespace Voron.Impl.Journal
                 if (ptt.TryGetValue(pageNumber, out pagePosition) && pagePosition.IsFreedPageMarker == false)
                 {
                     unused.Add(pagePosition);
-                }                                                    
-                                
+                }
+
                 ptt[pageNumber] = new PagePosition(txPage.PositionInScratchBuffer, tx.Id, journalNumber, txPage.ScratchFileNumber);
             }
 
@@ -222,12 +221,12 @@ namespace Voron.Impl.Journal
                 unusedAndFree = _unusedPages.FindAll(position => position.TransactionId <= lastSyncedTransactionId);
                 _unusedPages.RemoveAll(position => position.TransactionId <= lastSyncedTransactionId);
 
-              _pageTranslationTable.RemoveKeysWhereAllPagesOlderThan(lastSyncedTransactionId, unusedPages);
+                _pageTranslationTable.RemoveKeysWhereAllPagesOlderThan(lastSyncedTransactionId, unusedPages);
             }
 
             // use current write tx id to prevent from overriding a scratch page by write tx 
             // while there might be old read tx looking at it by using PTT from the journal snapshot
-            var availableForAllocationAfterTx = tx.Id; 
+            var availableForAllocationAfterTx = tx.Id;
 
             foreach (var unusedScratchPage in unusedAndFree)
             {

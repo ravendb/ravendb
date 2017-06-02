@@ -42,6 +42,7 @@ namespace Voron.Platform.Posix
             return true;
         }
 
+        public VoronPathSetting FileName => _filename;
 
         public PosixJournalWriter(StorageEnvironmentOptions options, VoronPathSetting filename, long journalSize)
         {

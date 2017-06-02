@@ -44,8 +44,10 @@ namespace Voron.Platform.Win32
             return true;
         }
 
-        public Win32FileJournalWriter(StorageEnvironmentOptions options, VoronPathSetting filename, long journalSize, 
-            Win32NativeFileAccess access = Win32NativeFileAccess.GenericWrite, 
+        public VoronPathSetting FileName => _filename;
+
+        public Win32FileJournalWriter(StorageEnvironmentOptions options, VoronPathSetting filename, long journalSize,
+            Win32NativeFileAccess access = Win32NativeFileAccess.GenericWrite,
             Win32NativeFileShare shareMode = Win32NativeFileShare.Read)
         {
             _options = options;
@@ -82,9 +84,9 @@ namespace Voron.Platform.Win32
                 length = journalSize;
             }
 
-            NumberOfAllocated4Kb = (int) (length / (4*Constants.Size.Kilobyte));
+            NumberOfAllocated4Kb = (int)(length / (4 * Constants.Size.Kilobyte));
 
-            _nativeOverlapped = (NativeOverlapped*) NativeMemory.AllocateMemory(sizeof (NativeOverlapped));
+            _nativeOverlapped = (NativeOverlapped*)NativeMemory.AllocateMemory(sizeof(NativeOverlapped));
 
             _nativeOverlapped->InternalLow = IntPtr.Zero;
             _nativeOverlapped->InternalHigh = IntPtr.Zero;
@@ -95,13 +97,13 @@ namespace Voron.Platform.Win32
             if (Disposed)
                 throw new ObjectDisposedException("Win32JournalWriter");
 
-            const int maxNumberInSingleWrite = (int.MaxValue/(4*Constants.Size.Kilobyte));
+            const int maxNumberInSingleWrite = (int.MaxValue / (4 * Constants.Size.Kilobyte));
             while (numberOf4Kb > maxNumberInSingleWrite)
             {
                 WriteFile(posBy4Kb, p, maxNumberInSingleWrite);
 
                 posBy4Kb += maxNumberInSingleWrite;
-                p += maxNumberInSingleWrite * 4 *Constants.Size.Kilobyte;
+                p += maxNumberInSingleWrite * 4 * Constants.Size.Kilobyte;
                 numberOf4Kb -= maxNumberInSingleWrite;
             }
 
@@ -111,7 +113,7 @@ namespace Voron.Platform.Win32
 
         private void WriteFile(long position, byte* p, int numberOf4Kb)
         {
-            position *= 4*Constants.Size.Kilobyte;
+            position *= 4 * Constants.Size.Kilobyte;
             _nativeOverlapped->OffsetLow = (int)(position & 0xffffffff);
             _nativeOverlapped->OffsetHigh = (int)(position >> 32);
             _nativeOverlapped->EventHandle = IntPtr.Zero;
@@ -119,7 +121,7 @@ namespace Voron.Platform.Win32
             Debug.Assert(_options.IoMetrics != null);
 
             bool writeSuccess;
-            var nNumberOfBytesToWrite = numberOf4Kb*(4*Constants.Size.Kilobyte);
+            var nNumberOfBytesToWrite = numberOf4Kb * (4 * Constants.Size.Kilobyte);
             using (var metrics = _options.IoMetrics.MeterIoRate(_filename.FullPath, IoMetrics.MeterType.JournalWrite, nNumberOfBytesToWrite))
             {
                 int written;
@@ -127,7 +129,7 @@ namespace Voron.Platform.Win32
                     out written,
                     _nativeOverlapped);
 
-                metrics.SetFileSize(NumberOfAllocated4Kb*(4*Constants.Size.Kilobyte));
+                metrics.SetFileSize(NumberOfAllocated4Kb * (4 * Constants.Size.Kilobyte));
             }
 
             if (writeSuccess == false)
@@ -157,7 +159,7 @@ namespace Voron.Platform.Win32
                     Win32NativeFileCreationDisposition.OpenExisting,
                     Win32NativeFileAttributes.Normal,
                     IntPtr.Zero);
-                if(handle.IsInvalid)
+                if (handle.IsInvalid)
                     throw new IOException("When opening file " + _filename, new Win32Exception(Marshal.GetLastWin32Error()));
 
                 _readHandle = handle;
@@ -167,7 +169,7 @@ namespace Voron.Platform.Win32
             try
             {
                 nativeOverlapped->OffsetLow = (int)(offsetInFile & 0xffffffff);
-                nativeOverlapped->OffsetHigh = (int) (offsetInFile >> 32);
+                nativeOverlapped->OffsetHigh = (int)(offsetInFile >> 32);
                 nativeOverlapped->EventHandle = IntPtr.Zero;
                 while (numOfBytes > 0)
                 {
@@ -183,14 +185,14 @@ namespace Voron.Platform.Win32
                     numOfBytes -= read;
                     buffer += read;
                     offsetInFile += read;
-                    nativeOverlapped->OffsetLow = (int) (offsetInFile & 0xffffffff);
-                    nativeOverlapped->OffsetHigh = (int) (offsetInFile >> 32);
+                    nativeOverlapped->OffsetLow = (int)(offsetInFile & 0xffffffff);
+                    nativeOverlapped->OffsetHigh = (int)(offsetInFile >> 32);
                 }
                 return true;
             }
             finally
             {
-                NativeMemory.Free((byte*) nativeOverlapped, sizeof(NativeOverlapped));
+                NativeMemory.Free((byte*)nativeOverlapped, sizeof(NativeOverlapped));
             }
         }
 
@@ -212,7 +214,7 @@ namespace Voron.Platform.Win32
                 NativeMemory.Free((byte*)_nativeOverlapped, sizeof(NativeOverlapped));
                 _nativeOverlapped = null;
             }
-           
+
             if (DeleteOnClose)
             {
                 _options.TryStoreJournalForReuse(_filename);
