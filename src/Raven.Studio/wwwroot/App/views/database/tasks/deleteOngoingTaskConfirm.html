@@ -7,11 +7,11 @@
             <h4 class="modal-title">Delete Task</h4>
         </div>
         <div class="modal-body">
-            <p>You're deleting task of type:&nbsp;&nbsp;<strong data-bind="text: taskTypeStr"></strong></p>
+            <p>You're deleting task of type: <strong data-bind="text: taskType"></strong></p>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
-            <button type="button" class="btn btn-danger" data-bind="click: deleteTaskOperation">Delete</button>
+            <button type="button" class="btn btn-danger" data-bind="click: confirm">Delete</button>
         </div>
     </div>
 </div>

@@ -12,9 +12,6 @@ abstract class ongoingTaskModel {
     badgeText: KnockoutComputed<string>;
     badgeClass: KnockoutComputed<string>;
 
-    constructor(dto: Raven.Server.Web.System.OngoingTask) {
-    }
-
     protected initializeObservables() {
         
         this.badgeClass = ko.pureComputed(() => {
