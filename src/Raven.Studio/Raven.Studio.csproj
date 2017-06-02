@@ -48,9 +48,4 @@
   <ItemGroup>
     <ProjectReference Include="..\..\tools\TypingsGenerator\TypingsGenerator.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="build\App" />
-    <Folder Include="build\Content\css\fonts" />
-    <Folder Include="build\Content\img" />
-  </ItemGroup>
 </Project>
