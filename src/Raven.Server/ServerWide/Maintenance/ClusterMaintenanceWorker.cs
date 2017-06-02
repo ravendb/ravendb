@@ -69,7 +69,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     {
                         _logger.Info($"Exception occurred while collecting info from {_server.NodeTag}", e);
                     }
-                    if (_tcp.TcpClient.Connected == false)
+                    if (_tcp.TcpClient?.Connected != true)
                     {
                         if (_logger.IsInfoEnabled)
                         {

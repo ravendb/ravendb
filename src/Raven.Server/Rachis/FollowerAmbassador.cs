@@ -522,7 +522,10 @@ namespace Raven.Server.Rachis
                 _connection.Send(context, lln);
 
                 var llr = _connection.Read<LogLengthNegotiationResponse>(context);
-
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info($"Got 1st LogLengthNegotiationResponse from {_tag} with term {llr.CurrentTerm} ({llr.MidpointIndex} / {llr.MidpointTerm}) {llr.Status}");
+                }
                 // need to negotiate
                 do
                 {
@@ -574,6 +577,7 @@ namespace Raven.Server.Rachis
                         }
                         var midIndex = (llr.MinIndex + llr.MaxIndex) / 2;
                         var termFor = _engine.GetTermFor(context, midIndex);
+                        Debug.Assert(termFor != 0);
                         lln = new LogLengthNegotiation
                         {
                             Term = engineCurrentTerm,
@@ -581,10 +585,18 @@ namespace Raven.Server.Rachis
                             PrevLogTerm = termFor??0,
                             Truncated = truncated || termFor == null
                         };
+                        if (_engine.Log.IsInfoEnabled)
+                        {
+                            _engine.Log.Info($"Sending LogLengthNegotiation to {_tag} with term {lln.Term} ({lln.PrevLogIndex} / {lln.PrevLogTerm}) - Trnuncated {lln.Truncated}");
+                        }
                     }
                     UpdateLastSend("Negotiation 2");
                     _connection.Send(context, lln);
                     llr = _connection.Read<LogLengthNegotiationResponse>(context);
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Got LogLengthNegotiationResponse from {_tag} with term {llr.CurrentTerm} ({llr.MidpointIndex} / {llr.MidpointTerm}) {llr.Status}");
+                    }
                 } while (true);
             }
         }
