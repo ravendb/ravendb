@@ -62,9 +62,19 @@ function IncludeDotnetForRaspberryPi( $packageDir, $outDirs ) {
     UnpackToDir  $dotnetArchivePath $dotnetPath
     Remove-Item $dotnetArchivePath
 
-    $dllsToCopy = [io.path]::combine($dotnetPath, "shared", "Microsoft.NETCore.App", $NETCORE_ARM_VERSION, "*.dll")
-    write-host "Copy DLLs from $dllsToCopy to $($outDirs.Server)"
-    Copy-Item $dllsToCopy -Destination "$($outDirs.Server)"
+    $dllsToCopy = (
+        'System.ComponentModel.Primitives.dll',
+        'System.ComponentModel.TypeConverter.dll',
+        'System.Collections.Specialized.dll'
+    );
+
+    write-host "Copy dotnet $NETCORE_ARM_VERSION DLLs to $($outDirs.Server)"
+    foreach ($dll in $dllsToCopy) {
+        $srcPath = [io.path]::combine($dotnetPath, "shared", "Microsoft.NETCore.App", $NETCORE_ARM_VERSION, $dll)
+        $dstPath = [System.IO.Path]::Combine("$($outDirs.Server)", $dll)
+        write-host "Copy $srcPath -> $dstPath"
+        Copy-Item $srcPath -Destination $dstPath    
+    }
 }
 
 function CopyStudioPackage ( $outDirs ) {
