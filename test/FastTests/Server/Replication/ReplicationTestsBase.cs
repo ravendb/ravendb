@@ -1,29 +1,18 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Net.Http;
-using System.Runtime.CompilerServices;
-using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Exceptions;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
-using Raven.Client.Json;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
-using Raven.Server.Documents.Replication;
-using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
@@ -134,40 +123,6 @@ namespace FastTests.Server.Replication
                 //one last try, and throw if there is still a conflict
                 var doc = session.Load<dynamic>(docId);
                 if (doc == null)
-                    return true;
-            }
-            return false;
-        }
-
-        protected bool WaitForDocument(DocumentStore store,
-            string docId,
-            int timeout = 10000)
-        {
-            if (Debugger.IsAttached)
-                timeout *= 100;
-
-            var sw = Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds < timeout)
-            {
-                using (var session = store.OpenSession())
-                {
-                    try
-                    {
-                        var doc = session.Load<dynamic>(docId);
-                        if (doc != null)
-                            return true;
-                    }
-                    catch (DocumentConflictException)
-                    {
-                        // expected that we might get conflict, ignore and wait
-                    }
-                }
-            }
-            using (var session = store.OpenSession())
-            {
-                //one last try, and throw if there is still a conflict
-                var doc = session.Load<dynamic>(docId);
-                if (doc != null)
                     return true;
             }
             return false;

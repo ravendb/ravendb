@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -36,11 +35,11 @@ namespace Tests.Infrastructure
 
         private const int PortRangeStart = 9000;
         private const int ElectionTimeoutInMs = 300;
-        private static int numberOfPortRequests;
+        private static int _numberOfPortRequests;
 
         internal static int GetPort()
         {
-            var portRequest = Interlocked.Increment(ref numberOfPortRequests);
+            var portRequest = Interlocked.Increment(ref _numberOfPortRequests);
             return PortRangeStart - (portRequest % 500);
         }
 
@@ -145,7 +144,7 @@ namespace Tests.Infrastructure
             }
         }
 
-        protected async Task<T> WaitForValueOnGroupAsync<T>(DatabaseTopology topology, Func<ServerStore, T> func, T excpected)
+        protected async Task<T> WaitForValueOnGroupAsync<T>(DatabaseTopology topology, Func<ServerStore, T> func, T expected)
         {
             var nodes = topology.AllReplicationNodes();
             var servers = new List<ServerStore>();
@@ -158,15 +157,15 @@ namespace Tests.Infrastructure
             }
             foreach (var server in servers)
             {
-                var task = WaitForValueAsync(() => func(server), excpected);
+                var task = WaitForValueAsync(() => func(server), expected);
                 tasks.Add(server.NodeTag, task);
             }
 
             var res = await Task.WhenAll(tasks.Values);
-            var hasExpectedVals = res.Where(t => t?.Equals(excpected) ?? false);
+            var hasExpectedVals = res.Where(t => t?.Equals(expected) ?? false);
 
             if (hasExpectedVals.Count() == servers.Count)
-                return excpected;
+                return expected;
 
             var lookup = tasks.ToLookup(key => key.Value.Result, val => val.Key);
 
@@ -179,7 +178,7 @@ namespace Tests.Infrastructure
                     otherValues += str + ", ";
                 }
             }
-            throw new Exception($"Not all node in the group have the expected value of {excpected}. {otherValues}");
+            throw new Exception($"Not all node in the group have the expected value of {expected}. {otherValues}");
         }
 
         protected async Task<bool> WaitForDocumentInClusterAsync<T>(DocumentSession session, string docId, Func<T, bool> predicate, TimeSpan timeout)
@@ -240,6 +239,13 @@ namespace Tests.Infrastructure
             return stores;
         }
 
+        protected bool WaitForDocument(IDocumentStore store,
+            string docId,
+            int timeout = 10000)
+        {
+            return WaitForDocument<dynamic>(store, docId, predicate: null, timeout: timeout);
+        }
+
         protected bool WaitForDocument<T>(IDocumentStore store,
             string docId,
             Func<T, bool> predicate,
@@ -256,9 +262,10 @@ namespace Tests.Infrastructure
                     try
                     {
                         var doc = session.Load<T>(docId);
-                        if (doc != null && predicate(doc))
+                        if (doc != null)
                         {
-                            return true;
+                            if (predicate == null || predicate(doc))
+                                return true;
                         }
                     }
                     catch (ConflictException)
@@ -266,14 +273,19 @@ namespace Tests.Infrastructure
                         // expected that we might get conflict, ignore and wait
                     }
                 }
-                Task.Delay(100);
+
+                Thread.Sleep(100);
             }
+
             using (var session = store.OpenSession())
             {
                 //one last try, and throw if there is still a conflict
                 var doc = session.Load<T>(docId);
-                if (doc != null && predicate(doc))
-                    return true;
+                if (doc != null)
+                {
+                    if (predicate == null || predicate(doc))
+                        return true;
+                }
             }
             return false;
         }
