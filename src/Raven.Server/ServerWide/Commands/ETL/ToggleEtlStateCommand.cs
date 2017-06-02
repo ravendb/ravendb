@@ -8,9 +8,9 @@ namespace Raven.Server.ServerWide.Commands.ETL
 {
     public class ToggleEtlStateCommand : UpdateDatabaseCommand
     {
-        private readonly string ConfigurationName;
+        public readonly string ConfigurationName;
 
-        private readonly EtlType EtlType;
+        public readonly EtlType EtlType;
 
         public ToggleEtlStateCommand() : base(null)
         {
