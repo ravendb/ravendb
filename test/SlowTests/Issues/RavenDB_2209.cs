@@ -47,8 +47,6 @@ namespace SlowTests.Issues
                         Assert.Equal("Arek", users.Value["users/1"].Name);
                     }
 
-                    store.GetObserveChangesAndEvictItemsFromCacheTask().Wait();
-
                     using (var session = store.OpenSession())
                     {
                         session.Store(new User

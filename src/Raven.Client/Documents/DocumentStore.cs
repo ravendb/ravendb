@@ -380,12 +380,5 @@ namespace Raven.Client.Documents
 
             base.AfterSessionCreated(session);*/
         }
-
-        internal Task GetObserveChangesAndEvictItemsFromCacheTask(string database = null)
-        {
-            var changes = _observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(database ?? Database);
-
-            return changes == null ? Task.CompletedTask : changes.ConnectionTask;
-        }
     }
 }

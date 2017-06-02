@@ -218,6 +218,7 @@ namespace Raven.Server
                         goto case "log";
 
                     case "log":
+                    case "logs":
 
                         LoggingSource.Instance.EnableConsoleLogging();
                         LoggingSource.Instance.SetupLogMode(LogMode.Information,
@@ -226,6 +227,7 @@ namespace Raven.Server
 
                     case "no-log":
                     case "nolog":
+                    case "nologs":
                         LoggingSource.Instance.DisableConsoleLogging();
                         LoggingSource.Instance.SetupLogMode(LogMode.None,
                             Path.Combine(AppContext.BaseDirectory, configuration.Core.LogsDirectory));
@@ -260,7 +262,7 @@ namespace Raven.Server
                         break;
 
                     case "help":
-                    case "–help":
+                    case "ï¿½help":
                     case "-help":
                     case "--help":
                     case "/?":

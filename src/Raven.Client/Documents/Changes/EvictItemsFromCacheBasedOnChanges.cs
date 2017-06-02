@@ -16,7 +16,6 @@ namespace Raven.Client.Documents.Changes
         private readonly Action<string> _evictCacheOldItems;
         private readonly IDisposable _documentsSubscription;
         private readonly IDisposable _indexesSubscription;
-        private readonly Task _connectionTask;
 
         public EvictItemsFromCacheBasedOnChanges(string databaseName, IDatabaseChanges changes, Action<string> evictCacheOldItems)
         {
@@ -27,11 +26,7 @@ namespace Raven.Client.Documents.Changes
             _documentsSubscription = docSub.Subscribe(this);
             var indexSub = changes.ForAllIndexes();
             _indexesSubscription = indexSub.Subscribe(this);
-
-            //connectionTask = Task.Factory.ContinueWhenAll(new Task[] { docSub.Task, indexSub.Task }, tasks => { }, TaskContinuationOptions.RunContinuationsAsynchronously);
         }
-
-        public Task ConnectionTask => _connectionTask;
 
         public void OnNext(DocumentChange change)
         {
