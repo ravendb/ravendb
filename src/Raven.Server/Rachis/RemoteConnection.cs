@@ -99,7 +99,7 @@ namespace Raven.Server.Rachis
                 [nameof(LogLengthNegotiation.Term)] = lln.Term,
                 [nameof(LogLengthNegotiation.PrevLogIndex)] = lln.PrevLogIndex,
                 [nameof(LogLengthNegotiation.PrevLogTerm)] = lln.PrevLogTerm,
-
+                [nameof(LogLengthNegotiation.Truncated)] = lln.Truncated,
             });
         }
 
