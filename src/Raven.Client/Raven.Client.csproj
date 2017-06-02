@@ -1,13 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Description>Raven.Client.Client is the client library for accessing RavenDB</Description>
+    <Description>RavenDB Client is the client library for accessing RavenDB</Description>
     <VersionPrefix>4.0.0</VersionPrefix>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>netstandard1.3</TargetFramework>
     <DefineConstants>$(DefineConstants);PORTABLE</DefineConstants>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Client</AssemblyName>
-    <PackageId>Raven.Client</PackageId>
+    <PackageId>RavenDB.Client</PackageId>
     <PackageTags>ravendb;client;database;nosql;doc db</PackageTags>
     <PackageIconUrl>http://static.ravendb.net/logo-for-nuget.png</PackageIconUrl>
     <PackageProjectUrl>https://ravendb.net</PackageProjectUrl>
@@ -21,6 +21,8 @@
     <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
     <GenerateNeutralResourcesLanguageAttribute>false</GenerateNeutralResourcesLanguageAttribute>
+    <Product>RavenDB Client</Product>
+    <Title>RavenDB Client</Title>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
