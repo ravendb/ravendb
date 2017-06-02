@@ -635,9 +635,20 @@ namespace Raven.Server.ServerWide
 
         public async Task<(long, object)> DeleteEtl(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject etlConfigurationName, EtlType type)
         {
-            etlConfigurationName.TryGet("Name", out LazyStringValue configurationName);
+            if (etlConfigurationName.TryGet("Name", out LazyStringValue configurationName) == false)
+                throw new InvalidOperationException("ETL configuration name not provided");
 
             var command = new DeleteEtlCommand(configurationName, type, databaseName);
+
+            return await SendToLeaderAsync(command);
+        }
+
+        public async Task<(long, object)> ToggleEtlState(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject etlConfigurationName, EtlType type)
+        {
+            if (etlConfigurationName.TryGet("Name", out LazyStringValue configurationName) == false)
+                throw new InvalidOperationException("ETL configuration name not provided");
+
+            var command = new ToggleEtlStateCommand(configurationName, type, databaseName);
 
             return await SendToLeaderAsync(command);
         }

@@ -78,6 +78,7 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateSqlEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateSqlEtlCommand>(),
             [nameof(DeleteEtlCommand)] = GenerateJsonDeserializationRoutine<DeleteEtlCommand>(),
             [nameof(UpdateEtlProcessStateCommand)] = GenerateJsonDeserializationRoutine<UpdateEtlProcessStateCommand>(),
+            [nameof(ToggleEtlStateCommand)] = GenerateJsonDeserializationRoutine<ToggleEtlStateCommand>(),
         };
     }
 }

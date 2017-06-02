@@ -11,6 +11,8 @@ namespace Raven.Client.Server.ETL
         public T Destination { get; set; }
 
         public List<Transformation> Transforms { get; set; } = new List<Transformation>();
+
+        public bool Disabled { get; set; }
         
         public virtual bool Validate(out List<string> errors)
         {

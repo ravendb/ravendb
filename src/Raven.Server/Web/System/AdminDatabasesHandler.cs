@@ -632,5 +632,16 @@ namespace Raven.Server.Web.System
 
             await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.DeleteEtl(_, databaseName, etlConfiguration, etlType), "etl-delete");
         }
+
+        [RavenAction("/admin/etl/toggleState", "PATCH", "/admin/etl/delete?name={databaseName:string}&type={[sql|raven]:string}")]
+        public async Task ToggleEtlState()
+        {
+            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+
+            if (Enum.TryParse<EtlType>(type, true, out var etlType) == false)
+                throw new ArgumentException($"Unknown ETL type: {type}", "type");
+
+            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.ToggleEtlState(_, databaseName, etlConfiguration, etlType), "etl-toggle-state");
+        }
     }
 }
