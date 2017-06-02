@@ -156,7 +156,7 @@ namespace Raven.Server.Web.System
                     
                     yield return new OngoingRavenEtl
                     {
-                        TaskId = (long)ravenEtl.GetTaskKey(),
+                        TaskId = (long)ravenEtl.Id,
                         // TODO arek TaskConnectionStatus = 
                         TaskState = taskState,
                         ResponsibleNode = new NodeId
@@ -189,7 +189,7 @@ namespace Raven.Server.Web.System
 
                     yield return new OngoingSqlEtl
                     {
-                        TaskId = (long)sqlEtl.GetTaskKey(),
+                        TaskId = (long)sqlEtl.Id,
                         // TODO arek TaskConnectionStatus = 
                         TaskState = taskState,
                         ResponsibleNode = new NodeId

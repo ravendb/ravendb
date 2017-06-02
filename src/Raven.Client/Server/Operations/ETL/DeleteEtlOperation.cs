@@ -11,32 +11,32 @@ namespace Raven.Client.Server.Operations.ETL
 {
     public class DeleteEtlOperation : IServerOperation<DeleteEtlOperationResult>
     {
-        private readonly string _configurationName;
+        private readonly long _id;
         private readonly EtlType _type;
         private readonly string _databaseName;
 
-        public DeleteEtlOperation(string configurationName, EtlType type, string databaseName)
+        public DeleteEtlOperation(long id, EtlType type, string databaseName)
         {
-            _configurationName = configurationName;
+            _id = id;
             _type = type;
             _databaseName = databaseName;
         }
 
         public RavenCommand<DeleteEtlOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new DeleteEtlCommand(_configurationName, _type, _databaseName, context);
+            return new DeleteEtlCommand(_id, _type, _databaseName, context);
         }
 
         public class DeleteEtlCommand : RavenCommand<DeleteEtlOperationResult>
         {
             private readonly string _databaseName;
             private readonly JsonOperationContext _context;
-            private readonly string _configurationName;
+            private readonly long _id;
             private readonly EtlType _type;
 
-            public DeleteEtlCommand(string configurationName, EtlType type, string databaseName, JsonOperationContext context)
+            public DeleteEtlCommand(long id, EtlType type, string databaseName, JsonOperationContext context)
             {
-                _configurationName = configurationName;
+                _id = id;
                 _type = type;
                 _databaseName = databaseName;
                 _context = context;
@@ -46,16 +46,12 @@ namespace Raven.Client.Server.Operations.ETL
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/etl/delete?name={_databaseName}&type={_type}";
+                url = $"{node.Url}/admin/etl/delete?id={_id}&name={_databaseName}&type={_type}";
 
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Delete,
-                    Content = new BlittableJsonContent(stream =>
-                    {
-                        var config = EntityToBlittable.ConvertEntityToBlittable(new { Name = _configurationName }, DocumentConventions.Default, _context);
-                        _context.Write(stream, config);
-                    })
+                    Content = new StringContent("{}") // TODO arek
                 };
 
                 return request;
