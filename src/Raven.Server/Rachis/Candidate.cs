@@ -55,6 +55,12 @@ namespace Raven.Server.Rachis
                         tx.Commit();
                     }
 
+                    if (clusterTopology.Members.Count == 1)
+                    {
+                        _engine.SwitchToLeaderState(ElectionTerm, $"I'm the only candidate.");
+                        return;
+                    }
+
                     if (IsForcedElection)
                     {
                         CastVoteForSelf();

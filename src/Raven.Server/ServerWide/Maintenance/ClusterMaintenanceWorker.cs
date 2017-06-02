@@ -65,17 +65,17 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
                 catch (Exception e)
                 {
-                    if (_logger.IsInfoEnabled)
-                    {
-                        _logger.Info($"Exception occurred while collecting info from {_server.NodeTag}", e);
-                    }
                     if (_tcp.TcpClient?.Connected != true)
                     {
                         if (_logger.IsInfoEnabled)
                         {
-                            _logger.Info("The tcp connection is closed, so we exit the maintenance work.");
+                            _logger.Info("The tcp connection was closed, so we exit the maintenance work.");
                         }
                         return;
+                    }
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info($"Exception occurred while collecting info from {_server.NodeTag}", e);
                     }
                 }
                 finally
