@@ -106,8 +106,6 @@ namespace Voron.Impl.Journal
 
             _lastFile = now;
 
-            _journalPath = Path.Combine(_env.Options.JournalPath?.FullPath ?? _env.Options.BasePath?.FullPath ?? string.Empty, StorageEnvironmentOptions.JournalName(_journalIndex));
-
             var journal = new JournalFile(_env, journalPager, _journalIndex);
             journal.AddRef(); // one reference added by a creator - write ahead log
 
@@ -183,7 +181,6 @@ namespace Voron.Impl.Journal
                         {
                             var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber,
                                 pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
-                            _journalPath = Path.Combine(_env.Options.JournalPath?.FullPath ?? _env.Options.BasePath?.FullPath ?? string.Empty, StorageEnvironmentOptions.JournalName(journalNumber));
                             var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber);
                             jrnlFile.InitFrom(journalReader);
                             jrnlFile.AddRef(); // creator reference - write ahead log
@@ -586,7 +583,7 @@ namespace Voron.Impl.Journal
                         // we call Wait() here to ensure that if there was an error in 
                         // the previous sync, we'll propogate it out and mark the env
                         // as catastrophic failure.
-                        _pendingSync.Wait(token); 
+                        _pendingSync.Wait(token);
                         token.ThrowIfCancellationRequested();
                         var operation = new SyncOperation(this);
                         operation.GatherInformationToStartSync();
@@ -1368,9 +1365,8 @@ namespace Voron.Impl.Journal
             long compressedLen;
 
             var compressionDuration = Stopwatch.StartNew();
-            using (var metrics = _env.Options.IoMetrics.MeterIoRate(
-                _journalPath ?? "",
-                IoMetrics.MeterType.Compression, 0)) // Note that the last journal may be replaced if we switch journals, however it doesn't affect web graph
+            var path = CurrentFile?.JournalWriter?.FileName?.FullPath ?? _env.Options.GetJournalPath(Math.Max(0, _journalIndex))?.FullPath;
+            using (var metrics = _env.Options.IoMetrics.MeterIoRate(path, IoMetrics.MeterType.Compression, 0)) // Note that the last journal may be replaced if we switch journals, however it doesn't affect web graph
             {
                 var compressionAcceleration = _lastCompressionAccelerationInfo.LastAcceleration;
 
@@ -1520,7 +1516,6 @@ namespace Voron.Impl.Journal
 
         private DateTime _lastCompressionBufferReduceCheck = DateTime.UtcNow;
         private CompressionAccelerationStats _lastCompressionAccelerationInfo = new CompressionAccelerationStats();
-        private string _journalPath; // this field is for web use only. It does not necessary reflects the current used journal path.
 
         public void ReduceSizeOfCompressionBufferIfNeeded()
         {

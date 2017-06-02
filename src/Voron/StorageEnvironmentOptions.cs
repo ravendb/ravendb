@@ -134,14 +134,14 @@ namespace Voron
 
         public abstract VoronPathSetting BasePath { get; }
 
-        internal VoronPathSetting JournalPath;
-
         /// <summary>
         /// This mode is used in the Voron recovery tool and is not intended to be set otherwise.
         /// </summary>
         internal bool CopyOnWriteMode { get; set; }
 
         public abstract IJournalWriter CreateJournalWriter(long journalNumber, long journalSize);
+
+        public abstract VoronPathSetting GetJournalPath(long journalNumber);
 
         protected bool Disposed;
         private long _initialLogFileSize;
@@ -250,7 +250,6 @@ namespace Voron
             {
                 _basePath = basePath;
                 _journalPath = journalPath ?? basePath;
-                JournalPath = journalPath;
 
                 if (Directory.Exists(_basePath.FullPath) == false)
                     Directory.CreateDirectory(_basePath.FullPath);
@@ -342,7 +341,6 @@ namespace Voron
 
             public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
             {
-
                 var name = JournalName(journalNumber);
                 var path = _journalPath.Combine(name);
                 if (File.Exists(path.FullPath) == false)
@@ -356,7 +354,7 @@ namespace Voron
                     return new Win32FileJournalWriter(this, path, journalSize);
                 }));
 
-                var createJournal = false;
+                bool createJournal;
                 try
                 {
                     createJournal = result.Value.Disposed;
@@ -383,6 +381,12 @@ namespace Voron
                 }
 
                 return result.Value;
+            }
+
+            public override VoronPathSetting GetJournalPath(long journalNumber)
+            {
+                var name = JournalName(journalNumber);
+                return _journalPath.Combine(name);
             }
 
             private static readonly long TickInHour = TimeSpan.FromHours(1).Ticks;
@@ -470,7 +474,7 @@ namespace Voron
             protected override void Disposing()
             {
                 if (Disposed)
-                    return;                
+                    return;
 
                 Disposed = true;
                 if (_dataPager.IsValueCreated)
@@ -704,16 +708,16 @@ namespace Voron
                 IJournalWriter value;
                 if (_logs.TryGetValue(name, out value))
                     return value;
-                var guid = Guid.NewGuid();
-                var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-{name}-{guid}";
+
+                var path = GetJournalPath(journalNumber);
 
                 if (RunningOnPosix)
                 {
-                    value = new PosixJournalWriter(this, TempPath.Combine(filename), journalSize);
+                    value = new PosixJournalWriter(this, path, journalSize);
                 }
                 else
                 {
-                    value = new Win32FileJournalWriter(this, TempPath.Combine(filename), journalSize,
+                    value = new Win32FileJournalWriter(this, path, journalSize,
                         Win32NativeFileAccess.GenericWrite,
                         Win32NativeFileShare.Read | Win32NativeFileShare.Write | Win32NativeFileShare.Delete
                         );
@@ -721,6 +725,14 @@ namespace Voron
 
                 _logs[name] = value;
                 return value;
+            }
+
+            public override VoronPathSetting GetJournalPath(long journalNumber)
+            {
+                var name = JournalName(journalNumber);
+                var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-{name}-{Guid.NewGuid()}";
+
+                return TempPath.Combine(filename);
             }
 
             protected override void Disposing()

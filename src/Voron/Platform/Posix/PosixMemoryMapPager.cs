@@ -41,7 +41,7 @@ namespace Voron.Platform.Posix
             SysPageSize = Syscall.sysconf(SysconfName._SC_PAGESIZE);
 
             _totalAllocationSize = GetFileSize();
-            
+
             if (_totalAllocationSize == 0 && initialFileSize.HasValue)
             {
                 _totalAllocationSize = NearestSizeToPageSize(initialFileSize.Value);
@@ -79,10 +79,10 @@ namespace Voron.Platform.Posix
         }
 
         private long GetFileSize()
-        {            
+        {
             FileInfo fi = new FileInfo(FileName.FullPath);
             return fi.Length;
-            
+
         }
 
         protected override string GetSourceName()
@@ -124,7 +124,7 @@ namespace Voron.Platform.Posix
             SetPagerState(newPagerState);
 
             _totalAllocationSize += allocationSize;
-            NumberOfAllocatedPages = _totalAllocationSize/ Constants.Storage.PageSize;
+            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
 
             return newPagerState;
         }
