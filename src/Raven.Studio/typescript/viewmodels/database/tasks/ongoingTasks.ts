@@ -1,6 +1,7 @@
 import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
+import database = require("models/resources/database");
 import databaseInfo = require("models/resources/info/databaseInfo");
 import ongoingTasksCommand = require("commands/database/tasks/getOngoingTasksCommand");
 import ongoingTaskReplication = require("models/database/tasks/ongoingTaskReplicationModel");
@@ -11,6 +12,9 @@ import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import createOngoingTask = require("viewmodels/database/tasks/createOngoingTask");
 import deleteOngoingTaskConfirm = require("viewmodels/database/tasks/deleteOngoingTaskConfirm");
 import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
+import deleteOngoingTaskCommand = require("commands/database/tasks/deleteOngoingTaskCommand");
+import messagePublisher = require("common/messagePublisher");
+
 type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "Backup" | "Subscription";
 
 class ongoingTasks extends viewModelBase {
@@ -26,8 +30,7 @@ class ongoingTasks extends viewModelBase {
     sqlTasks = ko.observableArray<ongoingTaskSql>();
     backupTasks = ko.observableArray<ongoingTaskBackup>();
 
-    existingTasksArray = ko.observableArray<string>(); // Used in the Filter by Type drop down
-    private existingTasksSet = new Set<TasksNamesInUI>();
+    existingTaskTypes = ko.observableArray<string>();
     selectedTaskType = ko.observable<string>();
     
     subscriptionsCount = ko.observable<number>();
@@ -36,7 +39,7 @@ class ongoingTasks extends viewModelBase {
     
     constructor() {
         super();
-        this.bindToCurrentInstance("removeOngoingTask");
+        this.bindToCurrentInstance("confirmRemoveOngoingTask");
 
         this.initObservables();
     }
@@ -58,7 +61,7 @@ class ongoingTasks extends viewModelBase {
         const db = this.activeDatabase();
         this.updateUrl(appUrl.forOngoingTasks(db));
 
-        this.selectedTaskType(_.first(this.existingTasksArray()) || "All");
+        this.selectedTaskType(_.first(this.existingTaskTypes()) || "All");
     }
 
     private fetchOngoingTasks(): JQueryPromise<Raven.Server.Web.System.OngoingTasksResult> {
@@ -71,43 +74,68 @@ class ongoingTasks extends viewModelBase {
     }
 
     private processTasksResult(result: Raven.Server.Web.System.OngoingTasksResult) { 
+        this.replicationTasks([]);
+        this.backupTasks([]);
+        this.etlTasks([]);
+        this.sqlTasks([]);
+
+        const taskTypesSet = new Set<TasksNamesInUI>();
+
         this.subscriptionsCount(result.SubscriptionsCount);
         if (result.SubscriptionsCount > 0) {
-            this.existingTasksSet.add("Subscription");
+            taskTypesSet.add("Subscription");
         }
 
-        // Init viewModel tasks lists:
         result.OngoingTasksList.map((task) => {
             switch (task.TaskType) {
                 case 'Replication':
-                    this.replicationTasks().push(new ongoingTaskReplication(task as Raven.Server.Web.System.OngoingTaskReplication));
-                    this.existingTasksSet.add("External Replication");
+                    this.replicationTasks.push(new ongoingTaskReplication(task as Raven.Server.Web.System.OngoingTaskReplication));
+                    taskTypesSet.add("External Replication");
                     break;
                 case 'Backup':
-                    this.backupTasks().push(new ongoingTaskBackup(task as Raven.Server.Web.System.OngoingTaskBackup));
-                    this.existingTasksSet.add("Backup");
+                    this.backupTasks.push(new ongoingTaskBackup(task as Raven.Server.Web.System.OngoingTaskBackup));
+                    taskTypesSet.add("Backup");
                     break;
                 case 'RavenEtl':
-                    this.etlTasks().push(new ongoingTaskEtl(task as Raven.Server.Web.System.OngoingRavenEtl));
-                    this.existingTasksSet.add("RavenDB ETL");
+                    this.etlTasks.push(new ongoingTaskEtl(task as Raven.Server.Web.System.OngoingRavenEtl));
+                    taskTypesSet.add("RavenDB ETL");
                     break;
                 case 'SqlEtl':
-                    this.sqlTasks().push(new ongoingTaskSql(task as Raven.Server.Web.System.OngoingSqlEtl));
-                    this.existingTasksSet.add("SQL ETL");
+                    this.sqlTasks.push(new ongoingTaskSql(task as Raven.Server.Web.System.OngoingSqlEtl));
+                    taskTypesSet.add("SQL ETL");
                     break;
             };
         });
 
-        this.existingTasksArray(Array.from(this.existingTasksSet).sort());
+        this.existingTaskTypes(Array.from(taskTypesSet).sort());
     }
 
     manageDatabaseGroupUrl(dbInfo: databaseInfo): string {
         return appUrl.forManageDatabaseGroup(dbInfo);
     }
 
-    removeOngoingTask(args: ongoingTaskModel) {
-        const confirmDeleteViewModel = new deleteOngoingTaskConfirm(this.activeDatabase(), args.taskType(), args.taskId);
+    confirmRemoveOngoingTask(model: ongoingTaskModel) {
+        const db = this.activeDatabase();
+
+        const confirmDeleteViewModel = new deleteOngoingTaskConfirm(db, model.taskType(), model.taskId);
         app.showBootstrapDialog(confirmDeleteViewModel);
+        confirmDeleteViewModel.result.done(result => {
+            if (result.can) {
+                this.deleteOngoingTask(db, model);
+            }
+        });
+    }
+
+    private deleteOngoingTask(db: database, model: ongoingTaskModel) {
+        new deleteOngoingTaskCommand(db, model.taskType(), model.taskId)
+            .execute()
+            .done(() => {
+                messagePublisher.reportSuccess("Successfully deleted " + model.taskType() + " task");
+                this.fetchOngoingTasks();
+            })
+            .fail(() => {
+                messagePublisher.reportError("Failed to delete " + model.taskType() + " task");
+            });
     }
 
     addNewOngoingTask() {

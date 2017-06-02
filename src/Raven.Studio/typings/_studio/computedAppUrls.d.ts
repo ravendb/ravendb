@@ -15,7 +15,7 @@ interface computedAppUrls {
     upgrade: KnockoutComputed<string>;
     newIndex: KnockoutComputed<string>;
     editIndex: (indexName?: string) => KnockoutComputed<string>;
-    editExternalReplication: (taskId?: string) => KnockoutComputed<string>;
+    editExternalReplication: (taskId?: number) => KnockoutComputed<string>;
     newTransformer: KnockoutComputed<string>;
     editTransformer: (transformerName?: string) => KnockoutComputed<string>;
     transformers: KnockoutComputed<string>;

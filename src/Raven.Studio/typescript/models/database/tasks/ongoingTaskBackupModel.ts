@@ -8,7 +8,7 @@ class ongoingTaskBackupModel extends ongoingTask {
     backupDestinations = ko.observableArray<string>();
 
     constructor(dto: Raven.Server.Web.System.OngoingTaskBackup) {
-        super(dto);
+        super();
         this.initializeObservables();
         this.update(dto);
     }

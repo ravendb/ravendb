@@ -14,7 +14,7 @@ class ongoingTaskReplicationModel extends ongoingTask {
     validationGroup: KnockoutValidationGroup;
 
     constructor(dto: Raven.Server.Web.System.OngoingTaskReplication) {
-        super(dto);
+        super();
         this.update(dto); 
         this.initializeObservables();
         this.initValidation();
@@ -24,8 +24,7 @@ class ongoingTaskReplicationModel extends ongoingTask {
         super.initializeObservables();
 
         const urls = appUrl.forCurrentDatabase();
-        const taskIdStr = this.taskId ? this.taskId.toString() : null;
-        this.editUrl = urls.editExternalReplication(taskIdStr); 
+        this.editUrl = urls.editExternalReplication(this.taskId); 
     }
 
     update(dto: Raven.Server.Web.System.OngoingTaskReplication) {
@@ -46,6 +45,14 @@ class ongoingTaskReplicationModel extends ongoingTask {
 
     editTask() {
         router.navigate(this.editUrl());
+    }
+
+    toDto(): externalReplicationDataFromUI {
+        return {
+            DestinationURL: this.destinationURL(),
+            DestinationDB: this.destinationDB(),
+            ApiKey: this.apiKey()
+        };
     }
 
     private initValidation() {
@@ -91,14 +98,6 @@ class ongoingTaskReplicationModel extends ongoingTask {
         } as Raven.Server.Web.System.OngoingTaskReplication);
     }
 
-    static simulation(): ongoingTaskReplicationModel {
-        return new ongoingTaskReplicationModel({
-            TaskType: "Replication",
-            DestinationDB: "simulationDB",
-            DestinationURL: "http://localhost:8080",
-            TaskId: 123456789
-        } as Raven.Server.Web.System.OngoingTaskReplication);
-    }
 }
 
 export = ongoingTaskReplicationModel;

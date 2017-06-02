@@ -3,29 +3,32 @@
         <div class="col-xs-12 col-lg-6 flex-vertical">
             <div class="flex-header">
                 <button data-bind="click: saveExternalReplication" class="btn btn-primary"><i class="icon-save"></i> 
-                    <span data-bind="if: isAddingNewRepTask">Create</span>
-                    <span data-bind="if: !isAddingNewRepTask()">Update</span>
+                    <span>Save</span>
                 </button>
                 <button data-bind="click: cancelOperation" class="btn btn-default" title="Return to Ongoing Tasks View"><i class="icon-cancel"></i><span>Cancel</span></button>
             </div>
             <div class="panel">
                 <form class="flex-form">
                     <div class="panel-body" data-bind="with: editedExternalReplication">
-                        <br />
                         <div class="form-group" data-bind="validationElement: destinationURL">
                             <label for="url" class="control-label">URL</label>
-                            <input autofocus type="text" class="form-control" data-bind="value: destinationURL" id="url"> 
-                            <!-- todo: Why autofocus is not working when coming from the dialog? only works upon refreshing page.. -->
+                            <div class="flex-grow">
+                                <input type="text" class="form-control" data-bind="value: destinationURL" id="url">     
+                            </div>
+                            <!-- TODO: Why autofocus is not working when coming from the dialog? only works upon refreshing page.. -->
                         </div>
                         <div class="form-group" data-bind="validationElement: destinationDB">
                             <label for="databaseName" class="control-label">Database</label>
-                            <input type="text" class="form-control" data-bind="value: destinationDB" id="databaseName">
+                            <div class="flex-grow">
+                                <input type="text" class="form-control" data-bind="value: destinationDB" id="databaseName">
+                            </div>
                         </div>
                         <div class="form-group" data-bind="validationElement: apiKey">
                             <label for="apiKey" class="control-label">API Key</label>
-                            <input type="text" class="form-control" data-bind="value: apiKey" id="apiKey">
+                            <div class="flex-grow">
+                                <input type="text" class="form-control" data-bind="value: apiKey" id="apiKey">
+                            </div>
                         </div>
-                        <br/>
                         <!-- Todo: Add Test Connection -->
                         <!--<div class="flex-horizontal">
                             <div>
