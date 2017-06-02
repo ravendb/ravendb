@@ -1178,7 +1178,7 @@ class indexPerformance extends viewModelBase {
             }         
         }
         catch (e) {
-            messagePublisher.reportError("Failed to parse json data", undefined, undefined);
+            messagePublisher.reportError("Failed to import indexing performance data", undefined, undefined);
         }              
     }
 
