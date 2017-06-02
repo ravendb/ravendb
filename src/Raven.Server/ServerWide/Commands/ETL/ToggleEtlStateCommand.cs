@@ -8,7 +8,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
 {
     public class ToggleEtlStateCommand : UpdateDatabaseCommand
     {
-        public readonly string ConfigurationName;
+        public readonly long Id;
 
         public readonly EtlType EtlType;
 
@@ -17,9 +17,9 @@ namespace Raven.Server.ServerWide.Commands.ETL
             // for deserialization
         }
 
-        public ToggleEtlStateCommand(string configurationName, EtlType etlType, string databaseName) : base(databaseName)
+        public ToggleEtlStateCommand(long id, EtlType etlType, string databaseName) : base(databaseName)
         {
-            ConfigurationName = configurationName;
+            Id = id;
             EtlType = etlType;
         }
 
@@ -41,29 +41,29 @@ namespace Raven.Server.ServerWide.Commands.ETL
         private void ToggleState<T>(List<EtlConfiguration<T>> etls) where T : EtlDestination
         {
             if (etls == null)
-                ThrowNoEtlsDefined(EtlType, ConfigurationName);
+                ThrowNoEtlsDefined(EtlType);
 
-            var config = etls.Find(x => x.Destination.Name.Equals(ConfigurationName, StringComparison.OrdinalIgnoreCase));
+            var config = etls.Find(x => x.Id == Id);
 
             if (config == null)
-                ThrowConfigurationNotFound(ConfigurationName);
+                ThrowConfigurationNotFound(Id);
 
             config.Disabled = !config.Disabled;
         }
 
-        private static void ThrowConfigurationNotFound(string configurationName)
+        private static void ThrowConfigurationNotFound(long taskId)
         {
-            throw new InvalidOperationException($"Configuration was not found: '{configurationName}'");
+            throw new InvalidOperationException($"Configuration was not found for a given task id: {taskId}");
         }
 
-        private static void ThrowNoEtlsDefined(EtlType type, string configurationName)
+        private static void ThrowNoEtlsDefined(EtlType type)
         {
-            throw new InvalidOperationException($"There is no {type} ETL defined so we cannot delete '{configurationName}' configuration");
+            throw new InvalidOperationException($"There is no {type} ETL defined so we cannot delete from it");
         }
 
         public override void FillJson(DynamicJsonValue json)
         {
-            json[nameof(ConfigurationName)] = ConfigurationName;
+            json[nameof(Id)] = Id;
             json[nameof(EtlType)] = EtlType;
         }
     }

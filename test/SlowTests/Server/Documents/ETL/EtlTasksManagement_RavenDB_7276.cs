@@ -32,7 +32,7 @@ namespace SlowTests.Server.Documents.ETL
                 };
                 AddEtl(store, configuration);
 
-                store.Admin.Server.Send(new DeleteEtlOperation(configuration.Destination.Name, EtlType.Raven, database.Name));
+                store.Admin.Server.Send(new DeleteEtlOperation(configuration.Id, EtlType.Raven, database.Name));
             }
         }
 
@@ -62,9 +62,11 @@ namespace SlowTests.Server.Documents.ETL
 
                 AddEtl(store, configuration);
 
+                var id = configuration.Id;
+
                 configuration.Transforms[0].Disabled = true;
 
-                store.Admin.Server.Send(new UpdateEtlOperation<RavenDestination>(configuration, database.Name));
+                store.Admin.Server.Send(new UpdateEtlOperation<RavenDestination>(id, configuration, database.Name));
             }
         }
 
@@ -94,7 +96,7 @@ namespace SlowTests.Server.Documents.ETL
 
                 AddEtl(store, configuration);
 
-                store.Admin.Server.Send(new ToggleEtlStateOperation(configuration.Destination.Name, EtlType.Raven, database.Name));
+                store.Admin.Server.Send(new ToggleEtlStateOperation(configuration.Id, EtlType.Raven, database.Name));
             }
         }
     }
