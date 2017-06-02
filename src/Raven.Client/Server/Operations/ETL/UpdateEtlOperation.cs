@@ -11,28 +11,32 @@ namespace Raven.Client.Server.Operations.ETL
 {
     public class UpdateEtlOperation<T> : IServerOperation<UpdateEtlOperationResult> where T : EtlDestination
     {
+        private readonly long _id;
         private readonly EtlConfiguration<T> _configuration;
         private readonly string _databaseName;
 
-        public UpdateEtlOperation(EtlConfiguration<T> configuration, string databaseName)
+        public UpdateEtlOperation(long id, EtlConfiguration<T> configuration, string databaseName)
         {
+            _id = id;
             _configuration = configuration;
             _databaseName = databaseName;
         }
 
         public RavenCommand<UpdateEtlOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new UpdateEtlCommand(_configuration, _databaseName, context);
+            return new UpdateEtlCommand(_id, _configuration, _databaseName, context);
         }
 
         public class UpdateEtlCommand : RavenCommand<UpdateEtlOperationResult>
         {
+            private readonly long _id;
             private readonly EtlConfiguration<T> _configuration;
             private readonly string _databaseName;
             private readonly JsonOperationContext _context;
 
-            public UpdateEtlCommand(EtlConfiguration<T> configuration, string databaseName, JsonOperationContext context)
+            public UpdateEtlCommand(long id, EtlConfiguration<T> configuration, string databaseName, JsonOperationContext context)
             {
+                _id = id;
                 _configuration = configuration;
                 _databaseName = databaseName;
                 _context = context;
@@ -42,7 +46,7 @@ namespace Raven.Client.Server.Operations.ETL
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/etl/update?name={_databaseName}&type={_configuration.EtlType}";
+                url = $"{node.Url}/admin/etl/update?id={_id}&name={_databaseName}&type={_configuration.EtlType}";
 
                 var request = new HttpRequestMessage
                 {

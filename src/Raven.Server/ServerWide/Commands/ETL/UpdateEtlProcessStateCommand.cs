@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using Raven.Client.Documents.Replication.Messages;
+﻿using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Client.Server.ETL;

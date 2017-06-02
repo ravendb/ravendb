@@ -61,42 +61,10 @@ namespace Raven.Server.Documents.ETL
                 var uniqueDestinations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                 if (RavenDestinations != null)
-                {
-                    foreach (var config in RavenDestinations)
-                    {
-                        if (ValidateConfiguration(config, uniqueDestinations) == false)
-                            continue;
-
-                        if (_databaseRecord.Topology.WhoseTaskIsIt(config) != _serverStore.NodeTag)
-                            continue;
-
-                        foreach (var transform in config.Transforms)
-                        {
-                            var etlProcess = new RavenEtl(transform, config.Destination, _database, _serverStore);
-
-                            processes.Add(etlProcess);
-                        }
-                    }
-                }
+                    processes.AddRange(GetRelevantProcesses(RavenDestinations, uniqueDestinations));
 
                 if (SqlDestinations != null)
-                {
-                    foreach (var config in SqlDestinations)
-                    {
-                        if (ValidateConfiguration(config, uniqueDestinations) == false)
-                            continue;
-
-                        if (_databaseRecord.Topology.WhoseTaskIsIt(config) != _serverStore.NodeTag)
-                            continue;
-
-                        foreach (var transform in config.Transforms)
-                        {
-                            var sql = new SqlEtl(transform, config.Destination, _database, _serverStore);
-
-                            processes.Add(sql);
-                        }
-                    }
-                }
+                    processes.AddRange(GetRelevantProcesses(SqlDestinations, uniqueDestinations));
 
                 _processes = processes.ToArray();
 
@@ -109,6 +77,49 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
+        private IEnumerable<EtlProcess> GetRelevantProcesses<T>(List<EtlConfiguration<T>> configurations, HashSet<string> uniqueDestinations) where T : EtlDestination
+        {
+            foreach (var config in configurations)
+            {
+                if (ValidateConfiguration(config, uniqueDestinations) == false)
+                    continue;
+
+                if (config.Disabled)
+                    continue;
+
+                if (_databaseRecord.Topology.WhoseTaskIsIt(config) != _serverStore.NodeTag)
+                    continue;
+
+                foreach (var transform in config.Transforms)
+                {
+                    if (transform.Disabled)
+                        continue;
+
+                    EtlProcess process = null;
+
+                    var sqlConfig = config as EtlConfiguration<SqlDestination>;
+
+                    if (sqlConfig != null)
+                        process = new SqlEtl(transform, sqlConfig.Destination, _database, _serverStore);
+
+                    var ravenConfig = config as EtlConfiguration<RavenDestination>;
+
+                    if (ravenConfig != null)
+                        process = new RavenEtl(transform, ravenConfig.Destination, _database, _serverStore);
+
+                    if (process == null)
+                        ThrownUnknownEtlConfiguration(config.GetType());
+
+                    yield return process;
+                }
+            }
+        }
+
+        public static void ThrownUnknownEtlConfiguration(Type type)
+        {
+            throw new InvalidOperationException($"Unknown config type: {type}");
+        }
+
         private bool ValidateConfiguration<T>(EtlConfiguration<T> config, HashSet<string> uniqueDestinations) where T : EtlDestination
         {
             List<string> errors;
@@ -118,28 +129,24 @@ namespace Raven.Server.Documents.ETL
                 return false;
             }
 
-            using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (ctx.OpenReadTransaction())
+            var databaseRecord = _database.ServerStore.LoadDatabaseRecord(_database.Name);
+            if (databaseRecord == null)
             {
-                var databaseRecord = _database.ServerStore.Cluster.ReadDatabase(ctx, _database.Name);
-                if (databaseRecord == null)
-                {
-                    LogConfigurationError(config,
-                        new List<string>
-                        {
-                            "The database record for " + _database.Name + " does not exists?!"
-                        });
-                    return false;
-                }
-                if (databaseRecord.Encrypted && config.Destination.UsingEncryptedCommunicationChannel() == false)
-                {
-                    LogConfigurationError(config,
-                        new List<string>
-                        {
-                           _database.Name + " is encrypted, but " + config.Destination + " does not use encryption, so cannot be used"
-                        });
-                    return false;
-                }
+                LogConfigurationError(config,
+                    new List<string>
+                    {
+                        "The database record for " + _database.Name + " does not exists?!"
+                    });
+                return false;
+            }
+            if (databaseRecord.Encrypted && config.Destination.UsingEncryptedCommunicationChannel() == false)
+            {
+                LogConfigurationError(config,
+                    new List<string>
+                    {
+                        _database.Name + " is encrypted, but " + config.Destination + " does not use encryption, so cannot be used"
+                    });
+                return false;
             }
 
             if (uniqueDestinations.Add(config.Destination.Name) == false)

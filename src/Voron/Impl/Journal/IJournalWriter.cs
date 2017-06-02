@@ -1,5 +1,6 @@
 using System;
 using Voron.Impl.Paging;
+using Voron.Util.Settings;
 
 namespace Voron.Impl.Journal
 {
@@ -15,5 +16,7 @@ namespace Voron.Impl.Journal
 
         void AddRef();
         bool Release();
+
+        VoronPathSetting FileName { get; }
     }
 }

@@ -6,11 +6,13 @@ namespace Raven.Client.Server.ETL
 {
     public class EtlConfiguration<T> : IDatabaseTask where T : EtlDestination
     {
-        private ulong? _taskKey;
+        private long? _id;
 
         public T Destination { get; set; }
 
         public List<Transformation> Transforms { get; set; } = new List<Transformation>();
+
+        public bool Disabled { get; set; }
         
         public virtual bool Validate(out List<string> errors)
         {
@@ -31,11 +33,13 @@ namespace Raven.Client.Server.ETL
             return errors.Count == 0;
         }
 
+        public long Id => _id ?? (_id = (long)Hashing.XXHash64.Calculate(Destination.Name.ToLowerInvariant(), Encodings.Utf8)).Value;
+
         public EtlType EtlType => Destination is RavenDestination ? EtlType.Raven : EtlType.Sql;
 
         public ulong GetTaskKey()
         {
-            return _taskKey ?? (_taskKey = Hashing.XXHash64.Calculate(Destination.Name.ToLowerInvariant(), Encodings.Utf8)).Value;
+            return (ulong)Id;
         }
     }
 }

@@ -9,7 +9,7 @@ class ongoingTaskSQLModel extends ongoingTask {
     destinationDatabaseText: KnockoutComputed<string>;
 
     constructor(dto: Raven.Server.Web.System.OngoingSqlEtl) {
-        super(dto);
+        super();
         this.initializeObservables();
         this.update(dto);
     }

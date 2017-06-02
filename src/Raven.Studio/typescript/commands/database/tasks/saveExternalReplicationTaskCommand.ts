@@ -9,8 +9,6 @@ class saveExternalReplicationTaskCommand extends commandBase {
     constructor(private newRepTask: externalReplicationDataFromUI, private db: database, private taskId: number) {
         super();
 
-        //const taskIdToSend = this.taskId ? this.taskId.toString() : null;
-
         this.externalReplicationToSend = {
             // From UI:
             ApiKey: newRepTask.ApiKey,
@@ -21,13 +19,14 @@ class saveExternalReplicationTaskCommand extends commandBase {
         } as Raven.Client.Server.DatabaseWatcher;
     }
 
+    //TODO: server doesn't return: ModifyExternalReplicationResult!
     execute(): JQueryPromise<Raven.Client.Server.Operations.ModifyExternalReplicationResult> {
         return this.addReplication()
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to create replication task for: " + this.newRepTask.DestinationDB, response.responseText, response.statusText);
             })
             .done(() => {
-                this.reportSuccess(`Replication task From: ${this.db.name} To: ${this.newRepTask.DestinationDB} was created`);
+                this.reportSuccess(`Created replication task from database ${this.db.name} to ${this.newRepTask.DestinationDB}`);
             });
     }
 

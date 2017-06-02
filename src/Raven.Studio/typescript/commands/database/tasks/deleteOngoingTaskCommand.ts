@@ -8,21 +8,25 @@ class deleteOngoingTaskCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Client.Server.Operations.ModifyExternalReplicationResult> { 
-        return this.deleteTask()
-            .fail((response: JQueryXHR) => {
-                this.reportError("Failed to delete task of type: " + this.taskType, response.responseText, response.statusText);
-            })
-            .done(() => {
-                this.reportSuccess(`${this.taskType} task was deleted from: ${this.db.name}`);
-            });
+    execute(): JQueryPromise<void> { 
+        switch (this.taskType) {
+            case "Replication":
+                return this.deleteWatcher();
+            default:
+                //TODO: handle other task types
+                throw new Error("Not yet implemented");
+        }
     }
 
-    private deleteTask(): JQueryPromise<Raven.Client.Server.Operations.ModifyExternalReplicationResult> {
-       
-        // TODO: Call the dedicated ep...!!!
-        alert("Delete is not implemented yet..");
-        return $.Deferred<Raven.Client.Server.Operations.ModifyExternalReplicationResult>();;
+    private deleteWatcher() {
+        const args = {
+            name: this.db.name,
+            id: this.taskId
+        };
+
+        const url = endpoints.global.ongoingTasks.adminDeleteWatcher + this.urlEncodeArgs(args);
+
+        return this.post<void>(url, null);
     }
 }
 

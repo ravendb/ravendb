@@ -3,31 +3,18 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
 import saveExternalReplicationTaskCommand = require("commands/database/tasks/saveExternalReplicationTaskCommand");
 import ongoingTaskReplication = require("models/database/tasks/ongoingTaskReplicationModel");
-import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 
 class editExternalReplicationTask extends viewModelBase {
 
     editedExternalReplication = ko.observable<ongoingTaskReplication>();
-    isAddingNewRepTask = ko.observable<boolean>();
-    private taskId: number;
-
-    constructor() {
-        super();
-        this.initObservables();
-    }
-
-    private initObservables() {
-        this.isAddingNewRepTask(true);
-        this.taskId = null;
-    }
+    isAddingNewReplicationTask = ko.observable<boolean>(true);
+    private taskId: number = null;
 
     activate(args: any) { 
         super.activate(args);
 
-        // Init the model
-
         if (args.taskId) {
-            this.isAddingNewRepTask(false);
+            this.isAddingNewReplicationTask(false);
             this.taskId = args.taskId;
 
             //new ongoingTaskInfoCommand(this.activeDatabase(), args.taskType, this.taskId)
@@ -37,16 +24,10 @@ class editExternalReplicationTask extends viewModelBase {
             //    .fail(() => { ... })
             //    });
 
-            // TODO: call the new ep to get info from server if there is task id in url ==> an edit action
-            // Now the following is just simulation....
-            alert("Simulating getting data from server...");
-            const tempTask = ongoingTaskReplication.simulation();
-            tempTask.taskId = this.taskId;
-
-            this.editedExternalReplication(tempTask);
+            //TODO: fetch data from server
         }
         else {
-            this.isAddingNewRepTask(true);
+            this.isAddingNewReplicationTask(true);
 
             // No task id in url, init an empty model ==> create action
             this.editedExternalReplication(ongoingTaskReplication.empty());
@@ -60,19 +41,13 @@ class editExternalReplicationTask extends viewModelBase {
         }
 
         // 2. create/add the new replication task
-        const newRepTask: externalReplicationDataFromUI = {
-            DestinationURL: this.editedExternalReplication().destinationURL(),
-            DestinationDB: this.editedExternalReplication().destinationDB(),
-            ApiKey: this.editedExternalReplication().apiKey()
-        };
+        const dto = this.editedExternalReplication().toDto();
 
-        this.taskId = this.isAddingNewRepTask() ? 0 : this.taskId;
+        this.taskId = this.isAddingNewReplicationTask() ? 0 : this.taskId;
 
-        return new saveExternalReplicationTaskCommand(newRepTask, this.activeDatabase(), this.taskId)
+        new saveExternalReplicationTaskCommand(dto, this.activeDatabase(), this.taskId)
             .execute()
-            .done(() => {
-                this.goToOngoingTasksView();
-            });
+            .done(() => this.goToOngoingTasksView());
     }
    
     cancelOperation() {

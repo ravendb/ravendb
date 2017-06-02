@@ -6,18 +6,18 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.ETL
 {
-    public class DeleteEtlCommand : UpdateDatabaseCommand
+    public class ToggleEtlStateCommand : UpdateDatabaseCommand
     {
         public readonly long Id;
 
         public readonly EtlType EtlType;
 
-        public DeleteEtlCommand() : base(null)
+        public ToggleEtlStateCommand() : base(null)
         {
             // for deserialization
         }
 
-        public DeleteEtlCommand(long id, EtlType etlType, string databaseName) : base(databaseName)
+        public ToggleEtlStateCommand(long id, EtlType etlType, string databaseName) : base(databaseName)
         {
             Id = id;
             EtlType = etlType;
@@ -28,34 +28,34 @@ namespace Raven.Server.ServerWide.Commands.ETL
             switch (EtlType)
             {
                 case EtlType.Raven:
-                    Delete(record.RavenEtls);
+                    ToggleState(record.RavenEtls);
                     return null;
                 case EtlType.Sql:
-                    Delete(record.SqlEtls);
+                    ToggleState(record.SqlEtls);
                     return null;
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration type: {EtlType}");
             }
         }
 
-        private void Delete<T>(List<EtlConfiguration<T>> etls) where T : EtlDestination
+        private void ToggleState<T>(List<EtlConfiguration<T>> etls) where T : EtlDestination
         {
             if (etls == null)
                 ThrowNoEtlsDefined(EtlType);
-            
-            var index = etls.FindIndex(x => x.Id == Id);
 
-            if (index == -1)
+            var config = etls.Find(x => x.Id == Id);
+
+            if (config == null)
                 ThrowConfigurationNotFound(Id);
 
-            etls.RemoveAt(index);
+            config.Disabled = !config.Disabled;
         }
 
         private static void ThrowConfigurationNotFound(long taskId)
         {
-            throw new InvalidOperationException($"Configuration was not found for a give task id: {taskId}");
+            throw new InvalidOperationException($"Configuration was not found for a given task id: {taskId}");
         }
-        
+
         private static void ThrowNoEtlsDefined(EtlType type)
         {
             throw new InvalidOperationException($"There is no {type} ETL defined so we cannot delete from it");

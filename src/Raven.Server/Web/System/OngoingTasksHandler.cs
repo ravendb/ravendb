@@ -147,11 +147,18 @@ namespace Raven.Server.Web.System
                 {
                     var tag = dbTopology.WhoseTaskIsIt(ravenEtl);
 
+                    var taskState = OngoingTaskState.Enabled;;
+
+                    if (ravenEtl.Disabled || ravenEtl.Transforms.All(x => x.Disabled))
+                        taskState = OngoingTaskState.Disabled;
+                    else if (ravenEtl.Transforms.Any(x => x.Disabled))
+                        taskState = OngoingTaskState.PartiallyEnabled;
+                    
                     yield return new OngoingRavenEtl
                     {
-                        TaskId = (long)ravenEtl.GetTaskKey(),
+                        TaskId = (long)ravenEtl.Id,
                         // TODO arek TaskConnectionStatus = 
-                        // TODO arek TaskState = 
+                        TaskState = taskState,
                         ResponsibleNode = new NodeId
                         {
                             NodeTag = tag,
@@ -173,11 +180,18 @@ namespace Raven.Server.Web.System
                         SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlEtl.Destination.Connection.FactoryName,
                             sqlEtl.Destination.Connection.ConnectionString);
 
+                    var taskState = OngoingTaskState.Enabled; ;
+
+                    if (sqlEtl.Disabled || sqlEtl.Transforms.All(x => x.Disabled))
+                        taskState = OngoingTaskState.Disabled;
+                    else if (sqlEtl.Transforms.Any(x => x.Disabled))
+                        taskState = OngoingTaskState.PartiallyEnabled;
+
                     yield return new OngoingSqlEtl
                     {
-                        TaskId = (long)sqlEtl.GetTaskKey(),
+                        TaskId = (long)sqlEtl.Id,
                         // TODO arek TaskConnectionStatus = 
-                        // TODO arek TaskState = 
+                        TaskState = taskState,
                         ResponsibleNode = new NodeId
                         {
                             NodeTag = tag,

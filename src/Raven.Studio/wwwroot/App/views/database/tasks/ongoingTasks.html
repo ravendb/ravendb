@@ -6,14 +6,14 @@
                         <i class="icon-plus"></i><span>Add Task</span>
                     </button>
                     <div class="flex-separator"></div>
-                    <div data-bind="visible: existingTasksArray().length > 1">
+                    <div data-bind="visible: existingTaskTypes().length > 1">
                         Filter By Type:
                         <div class="btn-group">
                             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                                 <span data-bind="text: selectedTaskType"></span><span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu" role="menu">
-                                <!-- ko foreach: existingTasksArray() -->
+                                <!-- ko foreach: existingTaskTypes() -->
                                 <li data-bind="click: $root.setSelectedTaskType.bind($root, $data)"><a data-bind="text: $data"></a></li>
                                 <!-- /ko -->
                             </ul>
@@ -21,7 +21,7 @@
                     </div>
                 </div>
                 <div class="scroll flex-grow">
-                    <div data-bind="if: existingTasksArray().length === 0">
+                    <div data-bind="if: existingTaskTypes().length === 0">
                         <div class="row">
                             <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
                                 <i class="icon-xl icon-empty-set text-muted"></i>
@@ -30,7 +30,7 @@
                         </div>
                     </div>
 
-                    <!--replication -->
+                    <!-- Replication -->
 
                     <div data-bind="if: replicationTasks().length > 0 && (selectedTaskType() === 'External Replication' || selectedTaskType() === 'All' )">
                         <div class="hr-title">
@@ -44,7 +44,9 @@
                                         <div class="destination flex-grow">
                                             <h5>DESTINATION</h5>
                                             <h3>
-                                                <a title="Destination Url" class="destination-name"><i class="icon-external-replication"></i><span data-bind="text: destinationURL"></span></a>
+                                                <a target="_blank" title="Destination Url" class="destination-name" data-bind="attr: { href: destinationURL }">
+                                                    <i class="icon-external-replication"></i><span data-bind="text: destinationURL"></span>
+                                                </a>
                                                 <span title="Destination database" class="location" data-bind="text: '(' + destinationDB() + ')'"></span>
                                                 <!-- Todo: change 'location' class name to 'destination db' ; change 'dest name' to 'dest url' ..... -->
                                             </h3>
@@ -53,12 +55,12 @@
                                             <h5>RESPONSIBLE NODE</h5>
                                             <h3 data-bind="text: responsibleNode().NodeTag"></h3> <!-- todo: add tooltips & move to template... -->
                                         </div>
-                                        <div data-bind="template: { name: 'status-template' }"></div>
+                                        <div class="status" data-bind="template: { name: 'status-template' }"></div>
                                     </div>
                                     <div class="actions-container">
                                         <div class="actions">
-                                            <button class="btn btn-default" data-bind="click: editTask"><i class="icon-edit"></i></button>
-                                            <button class="btn btn-danger" data-bind="click: $root.removeOngoingTask"><i class="icon-trash"></i></button> 
+                                            <button class="btn btn-default" disabled="disabled" data-bind="click: editTask"><i class="icon-edit"></i></button>
+                                            <button class="btn btn-danger" data-bind="click: $root.confirmRemoveOngoingTask"><i class="icon-trash"></i></button> 
                                         </div>
                                     </div>
                                 </div>
@@ -152,7 +154,7 @@
                                         <div class="destination flex-grow">
                                             <h5>DESTINATION</h5>
                                             <h3>
-                                                <a title="Backup destinations" class="destination-name"><i class="icon-raven-backup"></i><span data-bind="text: backupDestinations"></span></a>
+                                                <a title="Backup destinations" class="destination-name"><i class="icon-backup"></i><span data-bind="text: backupDestinations"></span></a>
                                             </h3>
                                         </div>
                                         <div class="node">
@@ -205,10 +207,10 @@
                     <div></div><h3>Topology <i class="icon-info text-info"></i></h3>
                     <div class="flex-separator"></div>
                     <div>
-                        <button class="btn btn-info btn-prerelease disabled"><i class="icon-topology"></i> <span>Retrieve live topology</span></button>
+                        <button class="btn btn-info btn-upcoming disabled"><i class="icon-topology"></i> <span>Retrieve live topology</span></button>
                     </div>
                     <div class="btn-group dropdown-right">
-                        <button class="btn btn-default dropdown-toggle btn-prerelease disabled" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                        <button class="btn btn-default dropdown-toggle btn-upcoming disabled" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                             <i class="icon-export"></i><span>Download topology</span>
                             <span class="caret"></span>
                         </button>
@@ -258,18 +260,16 @@
 </div>
 
 <script type="text/html" id="status-template">
-    <div class="status">
-        <h5>STATUS</h5>
-        <!--<div class="btn-group">-->
-        <div>
-            <button type="button" class="btn dropdown-toggle" data-toggle="dropdown" aria-expanded="false"> <!--set-size-->
-                <span data-bind="visible: true">Enabled</span>
-                <span data-bind="visible: false">Disabled</span><span class="caret"></span>
-            </button>
-            <ul class="dropdown-menu settings-menu">
-                <li><a href="#" data-bind="click: enableTask"><span>Enable</span></a></li>
-                <li><a href="#" data-bind="click: disableTask"><span>Disable</span></a></li>
-            </ul>
-        </div>
+    <h5>STATUS</h5>
+    <!--<div class="btn-group">-->
+    <div class="btn-group dropdown-right">
+        <button type="button" class="btn dropdown-toggle" disabled="disabled" data-toggle="dropdown" aria-expanded="false"> <!--set-size-->
+            <span data-bind="visible: true">Enabled</span>
+            <span data-bind="visible: false">Disabled</span><span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu settings-menu">
+            <li><a href="#" data-bind="click: enableTask"><span>Enable</span></a></li>
+            <li><a href="#" data-bind="click: disableTask"><span>Disable</span></a></li>
+        </ul>
     </div>
 </script>

@@ -126,6 +126,7 @@ namespace Raven.Server.ServerWide
                 case nameof(UpdateRavenEtlCommand):
                 case nameof(UpdateSqlEtlCommand):
                 case nameof(DeleteEtlCommand):
+                case nameof(ToggleEtlStateCommand):
                     UpdateDatabase(context, type, cmd, index, leader);
                     break;
                 case nameof(UpdatePeriodicBackupStatusCommand):
