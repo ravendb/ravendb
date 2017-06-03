@@ -358,13 +358,12 @@ namespace Raven.Server.Rachis
                 }
                 if (clusterTopology.Contains(_engine.LeaderTag) == false)
                 {
+                    TaskExecutor.CompleteAndReplace(ref _newEntriesArrived);
                     _engine.SetNewState(RachisConsensus.State.Passive, this, _engine.CurrentTerm,
                         "I was kicked out of the cluster and moved to passive mode");
+                    return;
                 }
-                else
-                {
-                    RefreshAmbassadors(clusterTopology);
-                }
+                RefreshAmbassadors(clusterTopology);
             }
 
             var maxIndexOnQuorum = GetMaxIndexOnQuorum(VotersMajority);
