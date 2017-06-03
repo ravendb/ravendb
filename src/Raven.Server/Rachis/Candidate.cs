@@ -57,7 +57,7 @@ namespace Raven.Server.Rachis
 
                     if (clusterTopology.Members.Count == 1)
                     {
-                        _engine.SwitchToLeaderState(ElectionTerm, $"I'm the only candidate.");
+                        _engine.SwitchToLeaderState(ElectionTerm, $"I'm the only one in the cluster, so no need for elections, I rule.");
                         return;
                     }
 
