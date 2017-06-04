@@ -270,6 +270,14 @@ namespace FastTests.Server.Replication
             return await store.Admin.Server.SendAsync(op);
         }
 
+        protected static async Task<GetTaskInfoResult> GetTaskInfo(
+            DocumentStore store,
+            long taskId, OngoingTaskType type)
+        {
+            var op = new GetOngoingTaskInfoOperation(store.Database, taskId, type);
+            return await store.Admin.Server.SendAsync(op);
+        }
+
         protected static async Task<ModifySolverResult> UpdateConflictResolver(IDocumentStore store, string resovlerDbId = null, Dictionary<string, ScriptResolver> collectionByScript = null, bool resolveToLatest = false)
         {
             var op = new ModifyConflictSolverOperation(store.Database,
