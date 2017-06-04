@@ -4,9 +4,9 @@
 
 // GPPG version 1.5.2
 // Machine:  TAL-PC
-// DateTime: 2/15/2017 3:23:57 PM
+// DateTime: 6/4/2017 10:49:36 AM
 // UserName: Tal
-// Input file <Indexing\LuceneQuery.Language.grammar.y - 2/15/2017 3:20:43 PM>
+// Input file <Indexing\LuceneQuery.Language.grammar.y - 2/20/2017 11:55:14 AM>
 
 // options: no-lines gplex
 
@@ -62,9 +62,9 @@ internal class ScanObj {
 [GeneratedCodeAttribute( "Gardens Point Parser Generator", "1.5.2")]
 internal partial class LuceneQueryParser: ShiftReduceParser<ValueType, LexLocation>
 {
-  // Verbatim content from Indexing\LuceneQuery.Language.grammar.y - 2/15/2017 3:20:43 PM
+  // Verbatim content from Indexing\LuceneQuery.Language.grammar.y - 2/20/2017 11:55:14 AM
 	public LuceneASTNodeBase LuceneAST {get; set;}
-  // End verbatim content from Indexing\LuceneQuery.Language.grammar.y - 2/15/2017 3:20:43 PM
+  // End verbatim content from Indexing\LuceneQuery.Language.grammar.y - 2/20/2017 11:55:14 AM
 
 #pragma warning disable 649
   private static Dictionary<int, string> aliases;
