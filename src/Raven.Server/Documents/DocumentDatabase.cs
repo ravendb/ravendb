@@ -486,7 +486,7 @@ namespace Raven.Server.Documents
                 [nameof(DatabaseInfo.IndexingErrors)] = IndexStore.GetIndexes().Sum(index => index.GetErrorCount()),
                 [nameof(DatabaseInfo.Alerts)] = NotificationCenter.GetAlertCount(),
                 [nameof(DatabaseInfo.UpTime)] = null, //it is shutting down
-                [nameof(DatabaseInfo.BackupInfo)] = BundleLoader?.GetBackupInfo(),
+                [nameof(DatabaseInfo.BackupInfo)] = PeriodicBackupRunner.GetBackupInfo(),
                 [nameof(DatabaseInfo.DocumentsCount)] = DocumentsStorage.GetNumberOfDocuments(),
                 [nameof(DatabaseInfo.IndexesCount)] = IndexStore.GetIndexes().Count(),
                 [nameof(DatabaseInfo.RejectClients)] = false, //TODO: implement me!
