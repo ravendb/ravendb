@@ -2,19 +2,17 @@
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
-using Raven.Client.Json;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Server.Operations
 {
-    public class DeleteWatcherOperation : IServerOperation<ModifyExternalReplicationResult>
+    public class DeleteExternalReplicationOperation : IServerOperation<ModifyExternalReplicationResult>
     {
         private readonly string _database;
         private readonly long _taskId;
 
-        public DeleteWatcherOperation(string database, long taskId)
+        public DeleteExternalReplicationOperation(string database, long taskId)
         {
             MultiDatabase.AssertValidName(database);
             _database = database;
@@ -23,17 +21,17 @@ namespace Raven.Client.Server.Operations
 
         public RavenCommand<ModifyExternalReplicationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new DeleteDatabaseWatcherCommand(conventions, context, _database, _taskId);
+            return new DeleteExternalReplicationCommand(conventions, context, _database, _taskId);
         }
 
-        private class DeleteDatabaseWatcherCommand : RavenCommand<ModifyExternalReplicationResult>
+        private class DeleteExternalReplicationCommand : RavenCommand<ModifyExternalReplicationResult>
         {
             private readonly JsonOperationContext _context;
             private readonly DocumentConventions _conventions;
             private readonly string _databaseName;
             private readonly long _taskId;
 
-            public DeleteDatabaseWatcherCommand(
+            public DeleteExternalReplicationCommand(
                 DocumentConventions conventions,
                 JsonOperationContext context,
                 string database,
@@ -49,7 +47,7 @@ namespace Raven.Client.Server.Operations
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/delete-watcher?name={_databaseName}&id={_taskId}";
+                url = $"{node.Url}/admin/external-replication/delete?name={_databaseName}&id={_taskId}";
 
                 var request = new HttpRequestMessage
                 {

@@ -9,12 +9,12 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Server.Operations
 {
-    public class UpdateWatcherOperation : IServerOperation<ModifyExternalReplicationResult>
+    public class UpdateExternalReplicationOperation : IServerOperation<ModifyExternalReplicationResult>
     {
         private readonly DatabaseWatcher _newWatcher;
         private readonly string _database;
 
-        public UpdateWatcherOperation(string database, DatabaseWatcher newWatcher)
+        public UpdateExternalReplicationOperation(string database, DatabaseWatcher newWatcher)
         {
             MultiDatabase.AssertValidName(database);
             _database = database;
@@ -23,17 +23,17 @@ namespace Raven.Client.Server.Operations
 
         public RavenCommand<ModifyExternalReplicationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new UpdateWatcherCommand(conventions, context, _database, _newWatcher);
+            return new UpdateExternalReplicationCommand(conventions, context, _database, _newWatcher);
         }
 
-        private class UpdateWatcherCommand : RavenCommand<ModifyExternalReplicationResult>
+        private class UpdateExternalReplicationCommand : RavenCommand<ModifyExternalReplicationResult>
         {
             private readonly JsonOperationContext _context;
             private readonly DocumentConventions _conventions;
             private readonly string _databaseName;
             private readonly DatabaseWatcher _newWatcher;
 
-            public UpdateWatcherCommand(
+            public UpdateExternalReplicationCommand(
                 DocumentConventions conventions,
                 JsonOperationContext context,
                 string database,
@@ -49,7 +49,7 @@ namespace Raven.Client.Server.Operations
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/update-watcher?name={_databaseName}";
+                url = $"{node.Url}/admin/external-replication/update?name={_databaseName}";
 
                 var request = new HttpRequestMessage
                 {
@@ -61,7 +61,7 @@ namespace Raven.Client.Server.Operations
                             [nameof(DatabaseWatcher)] = _newWatcher.ToJson(),
                         };
 
-                        _context.Write(stream, _context.ReadObject(json, "update-watcher"));
+                        _context.Write(stream, _context.ReadObject(json, "update-replication"));
                     })
                 };
 

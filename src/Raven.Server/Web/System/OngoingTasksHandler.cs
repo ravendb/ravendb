@@ -327,7 +327,6 @@ namespace Raven.Server.Web.System
 
                         case OngoingTaskType.RavenEtl:
 
-
                             var ravenEtl = record?.SqlEtls?.Find(x => x.Id == key);
                             if (ravenEtl == null)
                             {
@@ -373,8 +372,6 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-
-
         private void WriteResult(TransactionOperationContext context, OngoingTask taskInfo)
         {
             HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
@@ -397,9 +394,8 @@ namespace Raven.Server.Web.System
             }
         }
 
-
-        [RavenAction("/admin/update-watcher", "POST", "/admin/update-watcher?name={databaseName:string}")]
-        public async Task UpdateWatcher()
+        [RavenAction("/admin/external-replication/update", "POST", "/admin/external-replication/update?name={databaseName:string}")]
+        public async Task UpdateExternalReplication()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
@@ -408,14 +404,14 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-update-watcher");
+                var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-update-replication");
                 if (updateJson.TryGet(nameof(DatabaseWatcher), out BlittableJsonReaderObject watcherBlittable) == false)
                 {
                     throw new InvalidDataException("DatabaseWatcher was not found.");
                 }
 
                 var watcher = JsonDeserializationClient.DatabaseWatcher(watcherBlittable);
-                var (index, _) = await ServerStore.UpdateDatabaseWatcher(name, watcher);
+                var (index, _) = await ServerStore.UpdateExternalReplication(name, watcher);
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -433,8 +429,8 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/delete-watcher", "POST", "/admin/delete-watcher?name={databaseName:string}&id={taskId:string}")]
-        public async Task DeleteWatcher()
+        [RavenAction("/admin/external-replication/delete", "POST", "/admin/external-replication/delete?name={databaseName:string}&id={taskId:string}")]
+        public async Task DeleteExternalReplication()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
@@ -447,7 +443,7 @@ namespace Raven.Server.Web.System
             
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var (index, _) = await ServerStore.DeleteDatabaseWatcher(taskId.Value, name);
+                var (index, _) = await ServerStore.DeleteExternalReplication(taskId.Value, name);
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
