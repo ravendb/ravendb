@@ -882,8 +882,9 @@ namespace Raven.Server.ServerWide
 
             if (result == null)
             {
+                
                 throw new InvalidOperationException(
-                    "Expected to get result from raft command that should generate a cluster-wide identity, but didn't.");
+                    $"Expected to get result from raft command that should generate a cluster-wide identity, but didn't. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
             }
 
             return id + result;
@@ -930,10 +931,8 @@ namespace Raven.Server.ServerWide
                 {
                     if (cachedLeaderTag == null)
                     {
-                        var completed = await Task.WhenAny(logChange, TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(10000), ServerShutdown));
-
-                        if (completed != logChange)
-                            throw new TimeoutException("Could not send command to leader because there is no leader, and we timed out waiting for one");
+                        if (Task.WaitAny(logChange, timeoutTask) != 0)
+                            ThrowTimeoutException();
 
                         continue;
                     }
@@ -944,19 +943,19 @@ namespace Raven.Server.ServerWide
                 {
                     if (Logger.IsInfoEnabled)
                         Logger.Info("Tried to send message to leader, retrying", ex);
-
+                    
                     if (_engine.LeaderTag == cachedLeaderTag)
-                        throw; // if the leader changed, let's try again
+                        throw; // if the leader changed, let's try again                    
                 }
 
-                if (await Task.WhenAny(logChange, timeoutTask) == timeoutTask)
+                if (Task.WaitAny(logChange, timeoutTask) == 1)
                     ThrowTimeoutException();
             }
         }
 
         private static void ThrowTimeoutException()
         {
-            throw new TimeoutException();
+            throw new TimeoutException("Could not send command to leader because there is no leader, and we timed out waiting for one");
         }
 
         private async Task<(long Etag, object Result)> SendToNodeAsync(string engineLeaderTag, CommandBase cmd)

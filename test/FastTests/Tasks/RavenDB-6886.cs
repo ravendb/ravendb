@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
+using Sparrow.Logging;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -232,7 +233,93 @@ namespace FastTests.Tasks
             }
         }
 
+        [Fact]
+        public async Task Cluster_identity_for_single_document_in_parallel_on_different_nodes_should_work()
+        {
+            LoggingSource.Instance.SetupLogMode(LogMode.Information, "e:\\raven-test-log");
+            const int clusterSize = 3;
+            const string databaseName = "Cluster_identity_for_multiple_documents_on_different_nodes_should_work";
+            var leaderServer = await CreateRaftClusterAndGetLeader(clusterSize);
+            var followers = Servers.Where(s => s != leaderServer).ToList();
+            using (var leaderStore = new DocumentStore
+            {
+                Urls = leaderServer.WebUrls,
+                Database = databaseName
+            }.Initialize())
+            using (var followerA = new DocumentStore
+            {
+                Urls = followers[0].WebUrls,
+                Database = databaseName
+            }.Initialize())
+            using (var followerB = new DocumentStore
+            {
+                Urls = followers[1].WebUrls,
+                Database = databaseName
+            }.Initialize())
+            {
+                await CreateDatabasesInCluster(clusterSize, databaseName, leaderStore);
 
+                Parallel.For(0, 5, _ =>
+                {
+                    Console.Write(".");
+                    Parallel.Invoke(() =>
+                        {
+                            using (var session = leaderStore.OpenSession())
+                            {
+                                //id ending with "/" should trigger cluster identity id so
+                                //after tx commit, the id would be "users/1"
+                                session.Store(new User {Name = "John Dow"}, "users/");
+                                session.SaveChanges();
+                            }
+                        },
+                        () =>
+                        {
+                            using (var session = followerA.OpenSession())
+                            {
+                                session.Store(new User {Name = "Jane Dow"}, "users/");
+                                session.SaveChanges();
+                            }
+                        },
+                        () =>
+                        {
+                            using (var session = followerB.OpenSession())
+                            {
+                                session.Store(new User {Name = "Jake Dow"}, "users/");
+                                session.SaveChanges();
+                            }
+                        });
+                });
+
+                using (var session = followerA.OpenSession())
+                {
+                    session.Store(new User { Name = "foobar1" }, "marker A");
+                    session.SaveChanges();
+                }
+
+                using (var session = followerB.OpenSession())
+                {
+                    session.Store(new User { Name = "foobar2" }, "marker B");
+                    session.SaveChanges();
+                }
+
+                //make sure all replications that need to be done are done...
+                Assert.True(WaitForDocument<User>(leaderStore, "marker A", doc => true, timeout: 5000));
+                Assert.True(WaitForDocument<User>(leaderStore, "marker B", doc => true, timeout: 5000));
+
+                using (var session = leaderStore.OpenSession())
+                {
+                    var users = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Where(x => x.Name.StartsWith("J"))
+                        .OrderBy(x => x.Id)
+                        .ToList();
+
+                    Assert.Equal(15, users.Count);
+                    for(int i = 1; i <= 15; i++)
+                        Assert.True(users.Any(x => x.Id == "users/" + i));
+                }
+            }
+        }
 
 
         [Fact]
