@@ -459,7 +459,18 @@ namespace Raven.Server.Documents.TcpHandlers
         private IEnumerable<Document> GetDocumentsToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch, Stopwatch sendingCurrentBatchStopwatch)
         {
             var db = TcpConnection.DocumentDatabase;
-         
+
+            var revisions = db.BundleLoader.VersioningStorage;
+            if (revisions != null && revisions.IsVersioned(subscription.Criteria.Collection))
+            {
+                foreach (var (previous, current) in revisions.GetRevisionsFrom(docsContext, new CollectionName(subscription.Criteria.Collection), startEtag + 1))
+                {
+                    Console.WriteLine(previous);
+                    Console.WriteLine(current);
+                }
+            }
+            
+            
             foreach (var doc in db.DocumentsStorage.GetDocumentsFrom(
                 docsContext,
                 subscription.Criteria.Collection,
