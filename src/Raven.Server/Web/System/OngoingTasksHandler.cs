@@ -83,9 +83,9 @@ namespace Raven.Server.Web.System
                         NodeTag = tag,
                         NodeUrl = clusterTopology.GetUrlFromTag(tag)
                     },
-                    DestinationDB = watcher.Database,
+                    DestinationDatabase = watcher.Database,
                     TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
-                    DestinationURL = watcher.Url,
+                    DestinationUrl = watcher.Url,
                 };
             }
         }
@@ -180,7 +180,7 @@ namespace Raven.Server.Web.System
                         SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlEtl.Destination.Connection.FactoryName,
                             sqlEtl.Destination.Connection.ConnectionString);
 
-                    var taskState = OngoingTaskState.Enabled; ;
+                    var taskState = OngoingTaskState.Enabled; 
 
                     if (sqlEtl.Disabled || sqlEtl.Transforms.All(x => x.Disabled))
                         taskState = OngoingTaskState.Disabled;
@@ -204,8 +204,198 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/update-watcher", "POST", "/admin/update-watcher?name={databaseName:string}")]
-        public async Task UpdateWatcher()
+        [RavenAction("/admin/get-task", "GET", "/admin/get-task?name={databaseName:string}&key={taskId:string}&type={taskType:string}")]
+        public Task GetOngoingTaskInfo()
+        {
+            var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            var key = GetLongQueryString("key");
+            var typeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                using (context.OpenReadTransaction())
+                {
+                    var clusterTopology = ServerStore.GetClusterTopology(context);
+                    var record = ServerStore.Cluster.ReadDatabase(context, dbName);
+                    var dbTopology = record?.Topology;
+
+                    if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
+                        throw new ArgumentException($"Unknown task type: {type}", "type");
+
+                    string tag;
+
+                    switch (type)
+                    {
+                        case OngoingTaskType.Replication:
+
+                            var watcher = dbTopology?.Watchers.Find(x => x.TaskId == key);
+                            if (watcher == null)
+                            {
+                                WriteNotFound(context);
+                                break;
+                            }                               
+
+                            tag = dbTopology.WhoseTaskIsIt(watcher);
+
+                            var replicationTaskInfo = new OngoingTaskReplication
+                            {
+                                TaskId = watcher.TaskId,
+                                ResponsibleNode = new NodeId
+                                {
+                                    NodeTag = tag,
+                                    NodeUrl = clusterTopology.GetUrlFromTag(tag)
+                                },
+                                DestinationDatabase = watcher.Database,
+                                TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
+                                DestinationUrl = watcher.Url
+                            };
+
+                            WriteResult(context, replicationTaskInfo);
+
+                            break;
+
+                            
+                        case OngoingTaskType.Backup:
+
+                            var backup = record?.PeriodicBackups?.Find(x => x.TaskId == key);
+                            if (backup == null)
+                            {
+                                WriteNotFound(context);
+                                break;
+                            }
+
+                            tag = dbTopology?.WhoseTaskIsIt(backup);
+                            var backupDestinations = GetBackupDestinations(backup);
+
+                            var backupTaskInfo = new OngoingTaskBackup
+                            {
+                                TaskId = backup.TaskId,
+                                BackupType = backup.BackupType,
+                                Name = backup.Name,
+                                TaskState = backup.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
+                                ResponsibleNode = new NodeId
+                                {
+                                    NodeTag = tag,
+                                    NodeUrl = clusterTopology.GetUrlFromTag(tag)
+                                },
+                                BackupDestinations = backupDestinations
+                            };
+
+                            WriteResult(context, backupTaskInfo);
+                            break;
+
+                        case OngoingTaskType.SqlEtl:
+
+                            var sqlEtl = record?.SqlEtls?.Find(x => x.Id == key);
+                            if (sqlEtl == null)
+                            {
+                                WriteNotFound(context);
+                                break;
+                            }
+
+                            tag = dbTopology?.WhoseTaskIsIt(sqlEtl);
+                            var taskState = OngoingTaskState.Enabled;
+
+                            if (sqlEtl.Disabled || sqlEtl.Transforms.All(x => x.Disabled))
+                                taskState = OngoingTaskState.Disabled;
+                            else if (sqlEtl.Transforms.Any(x => x.Disabled))
+                                taskState = OngoingTaskState.PartiallyEnabled;
+
+                            var (database, server) =
+                                SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlEtl.Destination.Connection.FactoryName,
+                                    sqlEtl.Destination.Connection.ConnectionString);
+
+                            var sqlTaskInfo = new OngoingSqlEtl
+                            {
+                                TaskId = sqlEtl.Id,
+                                TaskState = taskState,
+                                ResponsibleNode = new NodeId
+                                {
+                                    NodeTag = tag,
+                                    NodeUrl = clusterTopology.GetUrlFromTag(tag)
+                                },
+                                DestinationServer = server,
+                                DestinationDatabase = database
+                            };
+
+                            WriteResult(context, sqlTaskInfo);
+                            break;
+
+                        case OngoingTaskType.RavenEtl:
+
+                            var ravenEtl = record?.SqlEtls?.Find(x => x.Id == key);
+                            if (ravenEtl == null)
+                            {
+                                WriteNotFound(context);
+                                break;
+                            }
+
+                            tag = dbTopology?.WhoseTaskIsIt(ravenEtl);
+                            taskState = OngoingTaskState.Enabled;
+
+                            if (ravenEtl.Disabled || ravenEtl.Transforms.All(x => x.Disabled))
+                                taskState = OngoingTaskState.Disabled;
+                            else if (ravenEtl.Transforms.Any(x => x.Disabled))
+                                taskState = OngoingTaskState.PartiallyEnabled;
+
+                            (database, server) =
+                                SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(ravenEtl.Destination.Connection.FactoryName,
+                                    ravenEtl.Destination.Connection.ConnectionString);
+
+                            var ravenTaskInfo = new OngoingRavenEtl
+                            {
+                                TaskId = ravenEtl.Id,
+                                TaskState = taskState,
+                                ResponsibleNode = new NodeId
+                                {
+                                    NodeTag = tag,
+                                    NodeUrl = clusterTopology.GetUrlFromTag(tag)
+                                },
+                                DestinationUrl = server,
+                                DestinationDatabase = database
+                            };
+
+                            WriteResult(context, ravenTaskInfo);
+                            break;
+
+                        default:
+                            WriteNotFound(context);
+                            break;
+                    }
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
+        private void WriteResult(TransactionOperationContext context, OngoingTask taskInfo)
+        {
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, taskInfo.ToJson());
+                writer.Flush();
+            }
+        }
+
+        private void WriteNotFound(TransactionOperationContext context)
+        {
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, new DynamicJsonValue
+                {
+                    [nameof(GetTaskInfoResult.NotFound)] = true
+                });
+            }
+        }
+
+        [RavenAction("/admin/external-replication/update", "POST", "/admin/external-replication/update?name={databaseName:string}")]
+        public async Task UpdateExternalReplication()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
@@ -214,14 +404,14 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-update-watcher");
+                var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-update-replication");
                 if (updateJson.TryGet(nameof(DatabaseWatcher), out BlittableJsonReaderObject watcherBlittable) == false)
                 {
                     throw new InvalidDataException("DatabaseWatcher was not found.");
                 }
 
                 var watcher = JsonDeserializationClient.DatabaseWatcher(watcherBlittable);
-                var (index, _) = await ServerStore.UpdateDatabaseWatcher(name, watcher);
+                var (index, _) = await ServerStore.UpdateExternalReplication(name, watcher);
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -239,8 +429,8 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/delete-watcher", "POST", "/admin/delete-watcher?name={databaseName:string}&id={taskId:string}")]
-        public async Task DeleteWatcher()
+        [RavenAction("/admin/external-replication/delete", "POST", "/admin/external-replication/delete?name={databaseName:string}&id={taskId:string}")]
+        public async Task DeleteExternalReplication()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
@@ -253,7 +443,7 @@ namespace Raven.Server.Web.System
             
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var (index, _) = await ServerStore.DeleteDatabaseWatcher(taskId.Value, name);
+                var (index, _) = await ServerStore.DeleteExternalReplication(taskId.Value, name);
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
@@ -320,14 +510,14 @@ namespace Raven.Server.Web.System
             TaskType = OngoingTaskType.Replication;
         }
 
-        public string DestinationURL { get; set; }
-        public string DestinationDB { get; set; }
+        public string DestinationUrl { get; set; }
+        public string DestinationDatabase { get; set; }
 
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
-            json[nameof(DestinationURL)] = DestinationURL;
-            json[nameof(DestinationDB)] = DestinationDB;
+            json[nameof(DestinationUrl)] = DestinationUrl;
+            json[nameof(DestinationDatabase)] = DestinationDatabase;
             return json;
         }
     }
@@ -377,34 +567,18 @@ namespace Raven.Server.Web.System
         public List<string> BackupDestinations { get; set; }
         public string Name { get; set; }
 
+        public OngoingTaskBackup()
+        {
+            TaskType = OngoingTaskType.Backup;
+        }
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(BackupType)] = BackupType;
+            json[nameof(Name)] = Name;
             json[nameof(BackupDestinations)] = new DynamicJsonArray(BackupDestinations);
             return json;
         }
-    }
-
-    public enum OngoingTaskType
-    {
-        Replication,
-        RavenEtl,
-        SqlEtl,
-        Backup,
-        Subscription
-    }
-
-    public enum OngoingTaskState
-    {
-        Enabled,
-        Disabled,
-        PartiallyEnabled
-    }
-
-    public enum OngoingTaskConnectionStatus
-    {
-        Active,
-        NotActive
     }
 }

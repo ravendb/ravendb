@@ -62,7 +62,7 @@ namespace FastTests.Server.Documents.Expiration
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
-                var expiredDocumentsCleaner = database.BundleLoader.ExpiredDocumentsCleaner;
+                var expiredDocumentsCleaner = database.ExpiredDocumentsCleaner;
 
                 await expiredDocumentsCleaner.CleanupExpiredDocs();
 
@@ -112,8 +112,7 @@ namespace FastTests.Server.Documents.Expiration
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
-                var expiredDocumentsCleaner = database.BundleLoader.ExpiredDocumentsCleaner;
-
+                var expiredDocumentsCleaner = database.ExpiredDocumentsCleaner;
                 await expiredDocumentsCleaner.CleanupExpiredDocs();
 
                 var stats = await store.Admin.SendAsync(new GetStatisticsOperation());

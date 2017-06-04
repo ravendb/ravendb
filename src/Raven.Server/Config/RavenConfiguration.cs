@@ -54,7 +54,7 @@ namespace Raven.Server.Config
 
         public MemoryConfiguration Memory { get; }
 
-        public ExpirationBundleConfiguration Expiration { get; }
+        public ExpirationConfiguration Expiration { get; }
 
         public StudioConfiguration Studio { get; }
 
@@ -64,7 +64,7 @@ namespace Raven.Server.Config
 
         public LicenseConfiguration Licensing { get; }
 
-        public QuotasBundleConfiguration Quotas { get; }
+        public QuotasConfiguration Quotas { get; }
 
         public TombstoneConfiguration Tombstones { get; }
 
@@ -100,10 +100,10 @@ namespace Raven.Server.Config
             Server = new ServerConfiguration();
             Databases = new DatabaseConfiguration();
             Memory = new MemoryConfiguration();
-            Expiration = new ExpirationBundleConfiguration();
+            Expiration = new ExpirationConfiguration();
             Studio = new StudioConfiguration();
             Licensing = new LicenseConfiguration();
-            Quotas = new QuotasBundleConfiguration();
+            Quotas = new QuotasConfiguration();
             Tombstones = new TombstoneConfiguration();
         }
 

@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class deleteOngoingTaskCommand extends commandBase {
     
-    constructor(private db: database, private taskType: Raven.Server.Web.System.OngoingTaskType, private taskId: number) {
+    constructor(private db: database, private taskType: Raven.Client.Server.Operations.OngoingTaskType, private taskId: number) {
         super();
     }
 
@@ -24,7 +24,7 @@ class deleteOngoingTaskCommand extends commandBase {
             id: this.taskId
         };
 
-        const url = endpoints.global.ongoingTasks.adminDeleteWatcher + this.urlEncodeArgs(args);
+        const url = endpoints.global.ongoingTasks.adminExternalReplicationDelete + this.urlEncodeArgs(args);
 
         return this.post<void>(url, null);
     }

@@ -4,7 +4,7 @@ using Raven.Server.Config.Settings;
 
 namespace Raven.Server.Config.Categories
 {
-    public class ExpirationBundleConfiguration : ConfigurationCategory
+    public class ExpirationConfiguration : ConfigurationCategory
     {
         [DefaultValue(300)]
         [TimeUnit(TimeUnit.Seconds)]

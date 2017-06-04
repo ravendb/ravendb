@@ -3,7 +3,7 @@ using Raven.Server.Config.Attributes;
 
 namespace Raven.Server.Config.Categories
 {
-    public class QuotasBundleConfiguration : ConfigurationCategory
+    public class QuotasConfiguration : ConfigurationCategory
     {
         [DefaultValue(long.MaxValue)]
         [ConfigurationEntry("Raven/Quotas/Documents/HardLimit")]

@@ -3,11 +3,11 @@
 abstract class ongoingTaskModel { 
 
     taskId: number;
-    taskType = ko.observable<Raven.Server.Web.System.OngoingTaskType>();
+    taskType = ko.observable<Raven.Client.Server.Operations.OngoingTaskType>();
     responsibleNode = ko.observable<Raven.Client.Server.Operations.NodeId>();
-    taskState = ko.observable<Raven.Server.Web.System.OngoingTaskState>();
+    taskState = ko.observable<Raven.Client.Server.Operations.OngoingTaskState>();
     lastModificationTime = ko.observable<string>();
-    taskConnectionStatus = ko.observable<Raven.Server.Web.System.OngoingTaskConnectionStatus>();
+    taskConnectionStatus = ko.observable<Raven.Client.Server.Operations.OngoingTaskConnectionStatus>();
     
     badgeText: KnockoutComputed<string>;
     badgeClass: KnockoutComputed<string>;

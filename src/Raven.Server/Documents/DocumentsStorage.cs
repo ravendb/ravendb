@@ -979,7 +979,7 @@ namespace Raven.Server.Documents
                 if (collectionName.IsSystem == false &&
                     (flags & DocumentFlags.Versioned) == DocumentFlags.Versioned)
                 {
-                    _documentDatabase.BundleLoader.VersioningStorage?.Delete(context, collectionName, lowerId);
+                    _documentDatabase.VersioningStorage?.Delete(context, collectionName, lowerId);
                 }
                 table.Delete(doc.StorageId);
 

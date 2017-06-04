@@ -9,51 +9,60 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Server.Operations
 {
-    public class DeleteWatcherOperation : IServerOperation<ModifyExternalReplicationResult>
+    public class UpdateExternalReplicationOperation : IServerOperation<ModifyExternalReplicationResult>
     {
+        private readonly DatabaseWatcher _newWatcher;
         private readonly string _database;
-        private readonly long _taskId;
 
-        public DeleteWatcherOperation(string database, long taskId)
+        public UpdateExternalReplicationOperation(string database, DatabaseWatcher newWatcher)
         {
             MultiDatabase.AssertValidName(database);
             _database = database;
-            _taskId = taskId;
+            _newWatcher = newWatcher;
         }
 
         public RavenCommand<ModifyExternalReplicationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new DeleteDatabaseWatcherCommand(conventions, context, _database, _taskId);
+            return new UpdateExternalReplicationCommand(conventions, context, _database, _newWatcher);
         }
 
-        private class DeleteDatabaseWatcherCommand : RavenCommand<ModifyExternalReplicationResult>
+        private class UpdateExternalReplicationCommand : RavenCommand<ModifyExternalReplicationResult>
         {
             private readonly JsonOperationContext _context;
             private readonly DocumentConventions _conventions;
             private readonly string _databaseName;
-            private readonly long _taskId;
+            private readonly DatabaseWatcher _newWatcher;
 
-            public DeleteDatabaseWatcherCommand(
+            public UpdateExternalReplicationCommand(
                 DocumentConventions conventions,
                 JsonOperationContext context,
                 string database,
-                long taskId
+                DatabaseWatcher newWatcher
 
             )
             {
                 _context = context ?? throw new ArgumentNullException(nameof(context));
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _databaseName = database ?? throw new ArgumentNullException(nameof(database));
-                _taskId = taskId;
+                _newWatcher = newWatcher;
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/delete-watcher?name={_databaseName}&id={_taskId}";
+                url = $"{node.Url}/admin/external-replication/update?name={_databaseName}";
 
                 var request = new HttpRequestMessage
                 {
-                    Method = HttpMethod.Post
+                    Method = HttpMethod.Post,
+                    Content = new BlittableJsonContent(stream =>
+                    {
+                        var json = new DynamicJsonValue
+                        {
+                            [nameof(DatabaseWatcher)] = _newWatcher.ToJson(),
+                        };
+
+                        _context.Write(stream, _context.ReadObject(json, "update-replication"));
+                    })
                 };
 
                 return request;

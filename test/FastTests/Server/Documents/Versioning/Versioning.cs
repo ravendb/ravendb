@@ -6,7 +6,9 @@
 
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Exceptions.Versioning;
+using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -59,7 +61,7 @@ namespace FastTests.Server.Documents.Versioning
                     var company3 = await session.LoadAsync<Company>(company.Id);
                     var metadata = session.Advanced.GetMetadataFor(company3);
 
-                    Assert.Equal("Versioned", metadata["@flags"]);
+                    Assert.Equal(DocumentFlags.Versioned.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
                 }
             }
         }
@@ -258,7 +260,7 @@ namespace FastTests.Server.Documents.Versioning
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var company = new Company { Name = "Hibernaitng Rhinos " };
+                    var company = new Company { Name = "Hibernating Rhinos " };
                     var user = new User { Name = "Fitzchak " };
                     await session.StoreAsync(company, "companies/1");
                     await session.StoreAsync(user, "users/1");

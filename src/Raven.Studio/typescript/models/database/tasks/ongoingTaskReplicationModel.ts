@@ -29,8 +29,8 @@ class ongoingTaskReplicationModel extends ongoingTask {
 
     update(dto: Raven.Server.Web.System.OngoingTaskReplication) {
         super.update(dto);
-        this.destinationDB(dto.DestinationDB);
-        this.destinationURL(dto.DestinationURL);
+        this.destinationDB(dto.DestinationDatabase);
+        this.destinationURL(dto.DestinationUrl);
     }
 
     enableTask() {
@@ -93,8 +93,8 @@ class ongoingTaskReplicationModel extends ongoingTask {
     static empty(): ongoingTaskReplicationModel {
         return new ongoingTaskReplicationModel({
             TaskType: "Replication",
-            DestinationDB: null,
-            DestinationURL: null
+            DestinationDatabase: null,
+            DestinationUrl: null
         } as Raven.Server.Web.System.OngoingTaskReplication);
     }
 

@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Replication;
@@ -13,6 +11,7 @@ using Raven.Client.Server.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Expiration;
 using Raven.Server.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -193,7 +192,7 @@ namespace Raven.Server.Web.System
 
             var size = new Size(GetTotalSize(db));
 
-            DatabaseInfo databaseInfo = new DatabaseInfo
+            var databaseInfo = new DatabaseInfo
             {
                 Name = databaseName,
                 Disabled = disabled,
@@ -202,15 +201,16 @@ namespace Raven.Server.Web.System
                 IsAdmin = true, //TODO: implement me!
                 UpTime = online ? (TimeSpan?)GetUptime(db) : null,
                 BackupInfo = GetBackupInfo(db),
-                
-                Alerts = online ? db?.NotificationCenter.GetAlertCount() : 0,
+
+                Alerts = db?.NotificationCenter.GetAlertCount() ?? 0,
                 RejectClients = false, //TODO: implement me!
                 LoadError = null,
-                IndexingErrors = online ? db?.IndexStore.GetIndexes().Sum(index => index.GetErrorCount()) : 0,
+                IndexingErrors = db?.IndexStore.GetIndexes().Sum(index => index.GetErrorCount()) ?? 0,
 
-                DocumentsCount = online ? db?.DocumentsStorage.GetNumberOfDocuments() : 0,
-                Bundles = GetBundles(db),
-                IndexesCount = online ? db?.IndexStore.GetIndexes().Count() : 0,
+                DocumentsCount = db?.DocumentsStorage.GetNumberOfDocuments() ?? 0,
+                VersioningActive = db?.VersioningStorage != null,
+                ExpirationActive = db?.ExpiredDocumentsCleaner != null,
+                IndexesCount = db?.IndexStore.GetIndexes().Count() ?? 0,
                 IndexingStatus = indexingStatus,
 
                 NodesTopology = nodesTopology
@@ -235,7 +235,7 @@ namespace Raven.Server.Web.System
         
         private static BackupInfo GetBackupInfo(DocumentDatabase db)
         {
-            var periodicBackupRunner = db?.BundleLoader?.PeriodicBackupRunner;
+            var periodicBackupRunner = db?.PeriodicBackupRunner;
             return periodicBackupRunner?.GetBackupInfo();
         }
 
@@ -253,14 +253,6 @@ namespace Raven.Server.Web.System
                 db.GetAllStoragesEnvironment().Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes);
         }
 
-        private List<string> GetBundles(DocumentDatabase db)
-        {
-            if (db != null)
-                return db.BundleLoader.GetActiveBundles();
-
-            return new List<string>();
-        }
-
         private NodeId GetNodeId(ReplicationNode node,string responsible = null)
         {
             var nodeId = new NodeId
@@ -274,4 +266,3 @@ namespace Raven.Server.Web.System
         }
     }
 }
-

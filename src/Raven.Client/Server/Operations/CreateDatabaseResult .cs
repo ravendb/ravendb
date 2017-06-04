@@ -30,6 +30,7 @@ namespace Raven.Client.Server.Operations
 
     public class ModifyExternalReplicationResult : CreateDatabaseResult
     {
+        public long TaskId { get; set; }
     }
 
     public class DatabasePutResult

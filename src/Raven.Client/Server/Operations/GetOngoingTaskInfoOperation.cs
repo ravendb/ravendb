@@ -2,67 +2,62 @@
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
-using Raven.Client.Json;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Server.Operations
 {
-    public class UpdateWatcherOperation : IServerOperation<ModifyExternalReplicationResult>
-    {
-        private readonly DatabaseWatcher _newWatcher;
-        private readonly string _database;
 
-        public UpdateWatcherOperation(string database, DatabaseWatcher newWatcher)
+
+    public class GetOngoingTaskInfoOperation : IServerOperation<GetTaskInfoResult>
+    {
+        private readonly string _database;
+        private readonly long _taskId;
+        private readonly OngoingTaskType _type;
+
+        public GetOngoingTaskInfoOperation(string database, long taskId, OngoingTaskType type)
         {
             MultiDatabase.AssertValidName(database);
             _database = database;
-            _newWatcher = newWatcher;
+            _taskId = taskId;
+            _type = type;
         }
 
-        public RavenCommand<ModifyExternalReplicationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<GetTaskInfoResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new UpdateWatcherCommand(conventions, context, _database, _newWatcher);
+            return new GetOngoingTaskInfoCommand(conventions, context, _database, _taskId, _type);
         }
 
-        private class UpdateWatcherCommand : RavenCommand<ModifyExternalReplicationResult>
+        private class GetOngoingTaskInfoCommand : RavenCommand<GetTaskInfoResult>
         {
             private readonly JsonOperationContext _context;
             private readonly DocumentConventions _conventions;
             private readonly string _databaseName;
-            private readonly DatabaseWatcher _newWatcher;
+            private readonly long _taskId;
+            private readonly OngoingTaskType _type;
 
-            public UpdateWatcherCommand(
+            public GetOngoingTaskInfoCommand(
                 DocumentConventions conventions,
                 JsonOperationContext context,
                 string database,
-                DatabaseWatcher newWatcher
-
+                long taskId,
+                OngoingTaskType type
             )
             {
                 _context = context ?? throw new ArgumentNullException(nameof(context));
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _databaseName = database ?? throw new ArgumentNullException(nameof(database));
-                _newWatcher = newWatcher;
+                _taskId = taskId;
+                _type = type;
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/update-watcher?name={_databaseName}";
+                url = $"{node.Url}/admin/get-task?name={_databaseName}&key={_taskId}&type={_type}";
 
                 var request = new HttpRequestMessage
                 {
-                    Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
-                    {
-                        var json = new DynamicJsonValue
-                        {
-                            [nameof(DatabaseWatcher)] = _newWatcher.ToJson(),
-                        };
-
-                        _context.Write(stream, _context.ReadObject(json, "update-watcher"));
-                    })
+                    Method = HttpMethod.Get
                 };
 
                 return request;
@@ -73,7 +68,7 @@ namespace Raven.Client.Server.Operations
                 if (response == null)
                     ThrowInvalidResponse();
 
-                Result = JsonDeserializationClient.ModifyExternalReplicationResult(response);
+                Result = JsonDeserializationClient.GetTaskInfoResult(response);
             }
 
             public override bool IsReadRequest => false;
