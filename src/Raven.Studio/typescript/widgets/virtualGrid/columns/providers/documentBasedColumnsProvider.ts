@@ -68,7 +68,7 @@ class documentBasedColumnsProvider {
         return initialColumns.concat(columnNames.map(p => {
             if (this.createHyperlinks) {
                 if (p === "__metadata") {
-                    return new hyperlinkColumn((x: document) => x.getId(), x => appUrl.forEditDoc(x.getId(), this.db), "Id", columnWidth);
+                    return new hyperlinkColumn((x: document) => x.getId(), x => appUrl.forEditDoc(x.getId(), this.db, x.__metadata.collection), "Id", columnWidth);
                 }
 
                 return new hyperlinkColumn(p, _.partial(this.findLink, _, p).bind(this), p, columnWidth);
@@ -136,7 +136,7 @@ class documentBasedColumnsProvider {
             if (_.isString(value) && value.match(documentBasedColumnsProvider.externalIdRegex)) {
                 const extractedCollectionName = value.split("/")[0].toLowerCase();
                 const matchedCollection = this.collectionNames.find(x => extractedCollectionName.startsWith(x.toLowerCase()));
-                return matchedCollection ? appUrl.forEditDoc(value, this.db) : null;
+                return matchedCollection ? appUrl.forEditDoc(value, this.db, matchedCollection) : null;
             }
         }
         return null;
