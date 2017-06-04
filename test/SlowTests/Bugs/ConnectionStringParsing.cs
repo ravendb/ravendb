@@ -39,5 +39,28 @@ namespace SlowTests.Bugs
             var dbParser = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionString("memory=true");
             Assert.Throws<ArgumentException>(() => dbParser.Parse());
         }
+
+        [Fact]
+        public void EnsureWellFormedConnectionStrings_ParsingMultiUrls_Successful()
+        {
+            var connectionStringParser = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionString("Urls=http://localhost:10301,http://localhost:10302,http://localhost:10303;database=up;");
+            connectionStringParser.Parse();
+
+            var options = connectionStringParser.ConnectionStringOptions;
+            Assert.True(options.Urls.Count == 3);
+            Assert.Equal("up", options.Database);
+
+        }
+
+        [Fact]
+        public void EnsureWellFormedConnectionStrings_ParsingMultiUrlsWithSpaces_Successful()
+        {
+            var connectionStringParser = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionString("Urls=http://localhost:10301 , http://localhost:10302 , http://localhost:10303;database=up;");
+            connectionStringParser.Parse();
+
+            var options = connectionStringParser.ConnectionStringOptions;
+            Assert.True(options.Urls.Count == 3);
+            Assert.Equal("up", options.Database);
+        }
     }
 }
