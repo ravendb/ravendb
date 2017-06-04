@@ -160,7 +160,7 @@ namespace FastTests.Smuggler
         }
 
         [Fact]
-        public async Task CanExportAndImportWithVersioingRevisionDocuments()
+        public async Task CanExportAndImportWithRevisionDocuments()
         {
             var file = Path.GetTempFileName();
             try
@@ -173,7 +173,7 @@ namespace FastTests.Smuggler
 
                         await session.StoreAsync(new Person { Name = "Name1" });
                         await session.StoreAsync(new Person { Name = "Name2" });
-                        await session.StoreAsync(new Company { Name = "Hibernaitng Rhinos " });
+                        await session.StoreAsync(new Company { Name = "Hibernating Rhinos " });
                         await session.SaveChangesAsync();
                     }
 
@@ -240,7 +240,7 @@ namespace FastTests.Smuggler
 
                         await session.StoreAsync(new Person { Name = "Name1" });
                         await session.StoreAsync(new Person { Name = "Name2" });
-                        await session.StoreAsync(new Company { Name = "Hibernaitng Rhinos " });
+                        await session.StoreAsync(new Company { Name = "Hibernating Rhinos " });
                         await session.SaveChangesAsync();
                     }
 
