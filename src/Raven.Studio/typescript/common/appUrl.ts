@@ -229,10 +229,11 @@ class appUrl {
         return "#has-api-key";
     }
 
-    static forEditDoc(id: string, db: database | databaseInfo): string {
+    static forEditDoc(id: string, db: database | databaseInfo, collection?: string): string {
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
         const docIdUrlPart = id ? "&id=" + encodeURIComponent(id) : "";
-        return "#databases/edit?" + docIdUrlPart + databaseUrlPart;
+        const collectionPart = collection ? "&collection=" + encodeURIComponent(collection) : "";
+        return "#databases/edit?" + docIdUrlPart + collectionPart + databaseUrlPart;
     }
 
     static forViewDocumentAtRevision(id: string, revisionEtag: number, db: database | databaseInfo): string {
