@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -339,74 +340,44 @@ namespace Raven.Server.Documents.TcpHandlers
                         using (TcpConnection.ContextPool.AllocateOperationContext(out context))
                         using (var writer = new BlittableJsonTextWriter(context, _buffer))
                         {
-                            foreach (var doc in TcpConnection.DocumentDatabase.DocumentsStorage.GetDocumentsFrom(
-                                docsContext,
-                                subscription.Criteria.Collection,
-                                startEtag + 1,
-                                0,
-                                _options.MaxDocsPerBatch))
+                            foreach (var doc in GetDocumentsToSend(docsContext, subscription, startEtag, patch, sendingCurrentBatchStopwatch))
                             {
-                                using (doc.Data)
+                               
+                                if (doc.Data == null)
                                 {
-                                    BlittableJsonReaderObject transformResult;
-                                    if (ShouldSendDocument(subscription, patch, docsContext, doc, out transformResult) == false)
-                                    {
-                                        // make sure that if we read a lot of irrelevant documents, we send keep alive over the network
-                                        if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
-                                        {
-                                            await SendHeartBeat();
-                                            sendingCurrentBatchStopwatch.Reset();
-                                        }
-                                        continue;
-                                    }
-
+                                    await SendHeartBeat();
+                                    continue;
+                                }
+                                
                                     lastChangeVector = ChangeVectorUtils.MergeVectors(doc.ChangeVector, subscription.ChangeVector);
-                                    anyDocumentsSentInCurrentIteration = true;
+                                anyDocumentsSentInCurrentIteration = true;
                                     startEtag = doc.Etag;
 
-                                    writer.WriteStartObject();
-                                    writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(TypeSegment));
-                                    writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching(DataSegment));
-                                    writer.WriteComma();
-                                    writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(DataSegment));
+                                writer.WriteStartObject();
+                                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(TypeSegment));
+                                writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching(DataSegment));
+                                writer.WriteComma();
+                                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(DataSegment));
+                                
+                                doc.EnsureMetadata();
+                                writer.WriteDocument(docsContext, doc);
+                                doc.Data.Dispose();
 
-                                    if (transformResult != null)
+                                writer.WriteEndObject();
+                                docsToFlush++;
+
+                                // perform flush for current batch after 1000ms of running
+                                if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
+                                {
+                                    if (docsToFlush > 0)
                                     {
-                                        var newDoc = new Document
-                                        {
-                                            Id = doc.Id,
-                                            Etag = doc.Etag,
-                                            Data = transformResult,
-                                            LowerId = doc.LowerId
-                                        };
-
-                                        newDoc.EnsureMetadata();
-                                        writer.WriteDocument(docsContext, newDoc);
-                                        transformResult.Dispose();
+                                        await FlushDocsToClient(writer, docsToFlush);
+                                        docsToFlush = 0;
+                                        sendingCurrentBatchStopwatch.Reset();
                                     }
                                     else
                                     {
-                                        doc.EnsureMetadata();
-                                        writer.WriteDocument(docsContext, doc);
-                                        doc.Data.Dispose();
-                                    }
-
-                                    writer.WriteEndObject();
-                                    docsToFlush++;
-
-                                    // perform flush for current batch after 1000ms of running
-                                    if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
-                                    {
-                                        if (docsToFlush > 0)
-                                        {
-                                            await FlushDocsToClient(writer, docsToFlush);
-                                            docsToFlush = 0;
-                                            sendingCurrentBatchStopwatch.Reset();
-                                        }
-                                        else
-                                        {
-                                            await SendHeartBeat();
-                                        }
+                                        await SendHeartBeat();
                                     }
                                 }
                             }
@@ -480,6 +451,51 @@ namespace Raven.Server.Documents.TcpHandlers
                                 throw new ArgumentException("Unknown message type from client " +
                                                             clientReply.Type);
                         }
+                    }
+                }
+            }
+        }
+
+        private IEnumerable<Document> GetDocumentsToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch, Stopwatch sendingCurrentBatchStopwatch)
+        {
+            var db = TcpConnection.DocumentDatabase;
+         
+            foreach (var doc in db.DocumentsStorage.GetDocumentsFrom(
+                docsContext,
+                subscription.Criteria.Collection,
+                startEtag + 1,
+                0,
+                _options.MaxDocsPerBatch))
+            {
+                using (doc.Data)
+                {
+                    BlittableJsonReaderObject transformResult;
+                    if (ShouldSendDocument(subscription, patch, docsContext, doc, out transformResult) == false)
+                    {
+                        // make sure that if we read a lot of irrelevant documents, we send keep alive over the network
+                        if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
+                        {
+                            doc.Data = null;
+                            yield return doc;
+                            sendingCurrentBatchStopwatch.Reset();
+                        }
+                        continue;
+                    }
+                    using (transformResult)
+                    {
+                        if (transformResult == null)
+                        {
+                            yield  return doc;
+                            continue;
+                        }
+                    
+                        yield return new Document
+                        {
+                            Id = doc.Id,
+                            Etag = doc.Etag,
+                            Data = transformResult,
+                            LowerId = doc.LowerId
+                        };
                     }
                 }
             }
