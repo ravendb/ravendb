@@ -45,7 +45,7 @@ namespace Raven.Client.Util
                                                                                          RegexOptions.Compiled |
                                                                                          RegexOptions.IgnorePatternWhitespace);
 
-        private static readonly Regex ConnectionStringListSplitterRegex = new Regex(@"(\s?,\s?)",
+        private static readonly Regex ConnectionStringListSplitterRegex = new Regex(@"\s*,\s*",
             RegexOptions.Compiled |
             RegexOptions.IgnorePatternWhitespace);
 
@@ -74,23 +74,15 @@ namespace Raven.Client.Util
                 case "apikey":
                     options.ApiKey = value;
                     break;
-                case "urls":
-                    if (options.Urls == null || options.Urls?.Count == 0)
-                    {
-                        var items = ConnectionStringListSplitterRegex.Split(value);
-                        if (options.Urls == null)
-                            options.Urls = new List<string>();
+                case "url":
+                    if (options.Urls == null)
+                        options.Urls = new List<string>();
 
-                        foreach (var item in items)
-                        {
-                            Match match = UrlStringRegex.Match(item);
-                            if (match.Success == false)
-                                throw new ArgumentException(string.Format("url: '{0}' could not be parsed", item));
+                        var match = UrlStringRegex.Match(value);
+                    if (match.Success == false)
+                        throw new ArgumentException(string.Format("url: '{0}' could not be parsed", value));
 
-                            options.Urls.Add(item);
-                        }
-
-                    }
+                    options.Urls.Add(value); 
                     break;
 
                 // Couldn't process the option.
