@@ -274,6 +274,7 @@ namespace Raven.Server.Rachis
                             return;
                     }
                     EnsureThatWeHaveLeadership(VotersMajority);
+                    _engine.ReportLeaderTime(LeaderShipDuration);
 
                     _engine.ReportLeaderTime(LeaderShipDuration);
                     

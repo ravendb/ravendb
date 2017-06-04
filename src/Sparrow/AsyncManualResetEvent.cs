@@ -103,6 +103,13 @@ namespace Sparrow
             previousTcs.TrySetResult(true);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void SetInAsyncManner(TaskCompletionSource<bool> tcs)
+        {
+            var currentTcs = tcs;
+            currentTcs.TrySetResult(true);
+        }
+
         public void SetInAsyncMannerFireAndForget()
         {
             SetInAsyncMannerFireAndForget(_tcs);

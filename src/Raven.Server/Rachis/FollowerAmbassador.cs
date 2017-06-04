@@ -11,6 +11,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
@@ -20,6 +21,7 @@ namespace Raven.Server.Rachis
 {
     public class FollowerAmbassador : IDisposable
     {
+        private readonly Logger _log;
         private readonly RachisConsensus _engine;
         private readonly Leader _leader;
         private ManualResetEvent _wakeLeader;
@@ -69,6 +71,7 @@ namespace Raven.Server.Rachis
             _url = url;
             _apiKey = apiKey;
             Status = "Started";
+            _log = LoggingSource.Instance.GetLogger<FollowerAmbassador>($"FollowerAmbassador -> {tag} url:[{url}]");
         }
 
         public void UpdateLeaderWake(ManualResetEvent wakeLeader)
@@ -177,7 +180,12 @@ namespace Raven.Server.Rachis
                                     }
                                     _connection.Send(context, appendEntries, entries);
                                     var aer = _connection.Read<AppendEntriesResponse>(context);
-
+                                    if (aer == null)
+                                    {
+                                        if(_log.IsInfoEnabled)
+                                            _log.Info("Reading of AppendEntriesResponse failed with IOException. Since the remote node has closed the connection, aborting the ambassador thread.");
+                                        return;
+                                    }
                                     if (aer.Success == false)
                                     {
                                         // shouldn't happen, the connection should be aborted if this is the case, but still
@@ -300,6 +308,14 @@ namespace Raven.Server.Rachis
                 while (true)
                 {
                     var aer = _connection.Read<InstallSnapshotResponse>(context);
+                    if (aer == null)
+                    {
+                        if (_engine.Log.IsInfoEnabled)
+                        {
+                            _engine.Log.Info($"FollowerAmbassador {_engine.Tag} has IOException thrown while reading InstallSnapshotResponse message. This has happened since remote node closed the connection on the other side, so we are closing the current Ambassador thread.");
+                        }
+                        return;
+                    }
                     if (aer.Done)
                     {
                         UpdateLastMatchFromFollower(aer.LastLogIndex);
@@ -307,6 +323,7 @@ namespace Raven.Server.Rachis
                     }
                     UpdateLastMatchFromFollower(_followerMatchIndex);
                 }
+
                 if (_engine.Log.IsInfoEnabled)
                 {
                     _engine.Log.Info($"FollowerAmbassador {_engine.Tag}:done sending snapshot to {_tag}");

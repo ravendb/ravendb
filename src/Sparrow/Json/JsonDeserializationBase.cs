@@ -459,7 +459,9 @@ namespace Sparrow.Json
 
         private static T GetPrimitiveProperty<T>(BlittableJsonReaderObject json, string prop)
         {
-            return !json.TryGet(prop, out T val) ? default(T) : val;
+            return !json.TryGet(prop, out T val) ? 
+                throw new InvalidCastException($"Failed to fetch property name = {prop} of type {typeof(T).Name} from json with value : [{json}]") : 
+                val;
         }
 
         private static T ToObject<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter) where T : new()
