@@ -460,7 +460,7 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             var db = TcpConnection.DocumentDatabase;
 
-            var revisions = db.BundleLoader.VersioningStorage;
+            var revisions = db.VersioningStorage;
             if (revisions != null && revisions.IsVersioned(subscription.Criteria.Collection))
             {
                 foreach (var (previous, current) in revisions.GetRevisionsFrom(docsContext, new CollectionName(subscription.Criteria.Collection), startEtag + 1))
