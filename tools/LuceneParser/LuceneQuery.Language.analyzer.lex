@@ -23,7 +23,7 @@ QuotedTerm \"{QuotedChar}*\"
 UnquotedTerm {TermStartChar}{TermChar}*
 PrefixTerm {UnquotedTerm}"\*"
 WildCardTerm  {WildCardStartChar}{WildCardChar}*
-Method \@[^<]+\<[^>]+\>
+Method \@{TermStartChar}[^<]*\<{TermStartChar}[^>]*\>
 DateTime {Digit}{4}-{Digit}{2}-{Digit}{2}T{Digit}{2}\:{Digit}{2}\:{Digit}{2}\.{Digit}{7}Z?
 
 
