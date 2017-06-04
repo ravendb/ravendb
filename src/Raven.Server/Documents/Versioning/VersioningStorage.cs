@@ -29,7 +29,6 @@ namespace Raven.Server.Documents.Versioning
 
         private static readonly TableSchema DocsSchema;
 
-        private readonly Logger _logger;
         private readonly DocumentDatabase _database;
         private readonly DocumentsStorage _documentsStorage;
         private readonly VersioningConfiguration _versioningConfiguration;
@@ -56,8 +55,6 @@ namespace Raven.Server.Documents.Versioning
             _documentsStorage = _database.DocumentsStorage;
             _versioningConfiguration = versioningConfiguration;
 
-            _logger = LoggingSource.Instance.GetLogger<VersioningStorage>(database.Name);
-
             using (var tx = database.DocumentsStorage.Environment.WriteTransaction())
             {
                 DocsSchema.Create(tx, RevisionDocumentsSlice, 16);
@@ -81,18 +78,21 @@ namespace Raven.Server.Documents.Versioning
             {
                 StartIndex = (int)Columns.ChangeVector,
                 Count = 1,
-                Name = ChangeVectorSlice
+                Name = ChangeVectorSlice,
+                IsGlobal = true
             });
             DocsSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
                 StartIndex = (int)Columns.LowerId,
                 Count = 3,
-                Name = IdAndEtagSlice
+                Name = IdAndEtagSlice,
+                IsGlobal = true
             });
             DocsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = (int)Columns.Etag,
-                Name = RevisionsEtagsSlice
+                Name = RevisionsEtagsSlice,
+                IsGlobal = true
             });
         }
 
@@ -120,6 +120,21 @@ namespace Raven.Server.Documents.Versioning
                         $" in the database record is missing or not valid: {dbRecord}", e);
                 return null;
             }
+        }
+
+        public bool IsVersioned(string collection)
+        {
+            if (_versioningConfiguration.Collections != null && _versioningConfiguration.Collections.TryGetValue(collection, out var configuration))
+            {
+                return configuration.Active;
+            }
+
+            if (_versioningConfiguration.Default != null)
+            {
+                return _versioningConfiguration.Default.Active;
+            }
+
+            return _emptyConfiguration.Active;
         }
 
         private VersioningConfigurationCollection GetVersioningConfiguration(CollectionName collectionName)
@@ -377,16 +392,6 @@ namespace Raven.Server.Documents.Versioning
 
                 if (take-- <= 0)
                     yield break;
-            }
-        }
-
-        public IEnumerable<ReplicationBatchItem> GetRevisionsAfter(DocumentsOperationContext context, long etag)
-        {
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
-
-            foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[RevisionsEtagsSlice], etag, 0))
-            {
-                yield return ReplicationBatchItem.From(TableValueToRevision(context, ref tvr.Reader));
             }
         }
 
