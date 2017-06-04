@@ -641,6 +641,7 @@
     <Compile Include="RDoc_56.cs" />
     <Compile Include="RDoc_60.cs" />
     <Compile Include="RDoc_76.cs" />
+    <Compile Include="QueriesStartingWithAtShouldWork.cs" />
     <Compile Include="ReplicationAlerts.cs" />
     <Compile Include="RavenDB_3096.cs" />
     <Compile Include="SlowIndex.cs" />
