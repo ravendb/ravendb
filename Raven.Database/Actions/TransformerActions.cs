@@ -71,7 +71,7 @@ namespace Raven.Database.Actions
         [MethodImpl(MethodImplOptions.Synchronized)]
         public bool DeleteTransform(string name)
         {
-            if (!IndexDefinitionStorage.RemoveTransformer(name)) 
+            if (IndexDefinitionStorage.RemoveTransformer(name) == false) 
                 return false;
 
             //raise notification only if the transformer was actually removed
@@ -139,7 +139,9 @@ namespace Raven.Database.Actions
             {
                 // we're creating a new transformer,
                 // we need to take the transformer version of the deleted transformer (if exists)
-                definition.TransformerVersion = GetDeletedTransformerId(definition.Name);
+                var tombstoneVersion = GetDeletedTransformerVersion(Constants.RavenReplicationTransformerTombstones, definition.Name);
+                var deletedVersion = GetDeletedTransformerVersion(Constants.RavenDeletedTransformersVersions, definition.Name);
+                definition.TransformerVersion = Math.Max(tombstoneVersion, deletedVersion);
                 definition.TransformerVersion = (definition.TransformerVersion ?? 0) + 1;
             }
 
@@ -181,13 +183,13 @@ namespace Raven.Database.Actions
             return name;
         }
 
-        private int GetDeletedTransformerId(string transformerName)
+        private int GetDeletedTransformerVersion(string listName, string transformerName)
         {
             var version = 0;
 
             TransactionalStorage.Batch(action =>
             {
-                var li = action.Lists.Read(Constants.RavenReplicationTransformerTombstones, transformerName);
+                var li = action.Lists.Read(listName, transformerName);
                 if (li == null)
                     return;
 

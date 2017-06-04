@@ -20,6 +20,7 @@ using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Impl;
 using Raven.Bundles.Replication.Tasks;
+using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using Sparrow.Collections;
@@ -244,7 +245,8 @@ namespace Raven.Database.Bundles.Replication.Tasks
             }
         }
 
-        public bool Execute(Func<ReplicationDestination, bool> shouldSkipDestinationPredicate = null)
+        public bool Execute(Func<ReplicationDestination, bool> shouldSkipDestinationPredicate = null,
+            bool forceTombstoneReplication = false)
         {
             if (Database.Disposed)
                 return false;
@@ -266,6 +268,7 @@ namespace Raven.Database.Bundles.Replication.Tasks
                 {
                     shouldSkipDestinationPredicate = shouldSkipDestinationPredicate ?? (x => x.SkipIndexReplication == false);
                     var replicationDestinations = GetReplicationDestinations(x => shouldSkipDestinationPredicate(x));
+                    var replicatedIndexTombstones = new Dictionary<string, int>();
 
                     foreach (var destination in replicationDestinations)
                     {
@@ -277,9 +280,7 @@ namespace Raven.Database.Bundles.Replication.Tasks
                                 // we don't send out deletions immediately, we wait for a bit
                                 // to make sure that the user didn't reset the index or delete / create
                                 // things manually
-                                x => (now - x.CreatedAt) >= TimeToWaitBeforeSendingDeletesOfIndexesToSiblings);
-
-                            var replicatedIndexTombstones = new Dictionary<string, int>();
+                                x => forceTombstoneReplication || (now - x.CreatedAt) >= TimeToWaitBeforeSendingDeletesOfIndexesToSiblings);
 
                             ReplicateIndexDeletionIfNeeded(indexTombstones, destination, replicatedIndexTombstones);
 
@@ -326,26 +327,26 @@ namespace Raven.Database.Bundles.Replication.Tasks
 
                                 ReplicateIndexesMultiPut(destination, indexesToAdd);
                             }
-
-                            Database.TransactionalStorage.Batch(actions =>
-                            {
-                                foreach (var indexTombstone in replicatedIndexTombstones)
-                                {
-                                    if (indexTombstone.Value != replicationDestinations.Count &&
-                                        Database.IndexStorage.HasIndex(indexTombstone.Key) == false)
-                                    {
-                                        continue;
-                                    }
-
-                                    actions.Lists.Remove(Constants.RavenReplicationIndexesTombstones, indexTombstone.Key);
-                                }
-                            });
                         }
                         catch (Exception e)
                         {
                             Log.ErrorException("Failed to replicate indexes to " + destination, e);
                         }
                     }
+
+                    Database.TransactionalStorage.Batch(actions =>
+                    {
+                        foreach (var indexTombstone in replicatedIndexTombstones)
+                        {
+                            if (indexTombstone.Value != replicationDestinations.Count &&
+                                Database.IndexStorage.HasIndex(indexTombstone.Key) == false)
+                            {
+                                continue;
+                            }
+                            
+                            actions.Lists.Remove(Constants.RavenReplicationIndexesTombstones, indexTombstone.Key);
+                        }
+                    });
 
                     return true;
                 }
@@ -435,7 +436,7 @@ namespace Raven.Database.Bundles.Replication.Tasks
                         {Constants.RavenIndexDeleteMarker, true},
                         {Constants.RavenReplicationSource, Database.TransactionalStorage.Id.ToString()},
                         {Constants.RavenReplicationVersion, ReplicationHiLo.NextId(Database)},
-                        {"IndexVersion", notification.Version }
+                        {IndexDefinitionStorage.IndexVersionKey, notification.Version }
                     };
                     
                     Database.TransactionalStorage.Batch(accessor => accessor.Lists.Set(Constants.RavenReplicationIndexesTombstones, indexName, metadata, UuidType.Indexing));
@@ -496,7 +497,10 @@ namespace Raven.Database.Bundles.Replication.Tasks
             replicationRequest.ExecuteRequest();
         }
 
-        private void ReplicateIndexDeletionIfNeeded(List<JsonDocument> indexTombstones, ReplicationStrategy destination, Dictionary<string, int> replicatedIndexTombstones)
+        private void ReplicateIndexDeletionIfNeeded(
+            List<JsonDocument> indexTombstones, 
+            ReplicationStrategy destination, 
+            Dictionary<string, int> replicatedIndexTombstones)
         {
             if (indexTombstones.Count == 0)
                 return;

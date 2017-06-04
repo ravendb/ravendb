@@ -288,7 +288,7 @@ namespace Raven.Database.Actions
                     {
                         // we create a new index,
                         // we need to restore its previous IndexVersion (if it was deleted before)
-                        var deletedIndexVersion = IndexDefinitionStorage.GetDeletedIndexVersion(definition);
+                        var deletedIndexVersion = IndexDefinitionStorage.GetDeletedIndexVersion(definition.Name, definition.IndexId);
                         var replacingIndexVersion = GetOriginalIndexVersion(definition.Name);
                         definition.IndexVersion = Math.Max(deletedIndexVersion, replacingIndexVersion);
                         definition.IndexVersion++;
@@ -943,13 +943,27 @@ namespace Raven.Database.Actions
                     return;
 
                 // Set up a flag to signal that this is something we're doing
-                TransactionalStorage.Batch(actions => actions.Lists.Set("Raven/Indexes/PendingDeletion", instance.IndexId.ToString(CultureInfo.InvariantCulture), (RavenJObject.FromObject(new
+                TransactionalStorage.Batch(actions =>
                 {
-                    TimeOfOriginalDeletion = SystemTime.UtcNow,
-                    instance.IndexId,
-                    IndexName = instance.Name,
-                    instance.IndexVersion
-                })), UuidType.Tasks));
+                    actions.Lists.Set("Raven/Indexes/PendingDeletion", 
+                        instance.IndexId.ToString(CultureInfo.InvariantCulture),
+                        RavenJObject.FromObject(new
+                        {
+                            TimeOfOriginalDeletion = SystemTime.UtcNow,
+                            instance.IndexId,
+                            IndexName = instance.Name,
+                            instance.IndexVersion
+                        }), UuidType.Tasks);
+
+                    if (instance.Name.StartsWith(Constants.SideBySideIndexNamePrefix))
+                        return;
+
+                    var metadata = new RavenJObject
+                    {
+                        {IndexDefinitionStorage.IndexVersionKey, instance.IndexVersion ?? 0 }
+                    };
+                    actions.Lists.Set(Constants.RavenDeletedIndexesVersions, instance.Name, metadata, UuidType.Indexing);
+                });
 
                 // Delete the main record synchronously
                 IndexDefinitionStorage.RemoveIndex(instance.IndexId, removeByNameMapping);
