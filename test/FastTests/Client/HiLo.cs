@@ -5,10 +5,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Identity;
-using Raven.Client.Documents.Replication;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -19,11 +17,6 @@ namespace FastTests.Client
         private class HiloDoc
         {
             public long Max { get; set; }
-        }
-
-        private class PrefixHiloDoc
-        {
-            public string ServerPrefix { get; set; }
         }
 
         private class Product
@@ -309,6 +302,87 @@ namespace FastTests.Client
 
             for (long i = 1; i <= GeneratedIdCount; i++)
                 Assert.True(ids.Contains(i), "Id " + i + " was not generated.");
+        }
+
+        [Fact]
+        public void HiLoKeyGenerator_works_without_aggressive_caching()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var hiLoKeyGenerator = new AsyncHiLoIdGenerator("users", store, store.Database,
+                    store.Conventions.IdentityPartsSeparator);
+
+                Assert.Equal(1L, hiLoKeyGenerator.NextIdAsync().GetAwaiter().GetResult());
+                Assert.Equal(2L, hiLoKeyGenerator.NextIdAsync().GetAwaiter().GetResult());
+            }
+        }
+
+        [Fact(Skip = "RavenDB-6312 AggressivelyCache Not Implemented yet")]
+        public async Task HiLoKeyGenerator_async_hangs_when_aggressive_caching_enabled()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (store.AggressivelyCache())
+                {
+                    var hiLoKeyGenerator = new AsyncHiLoIdGenerator("users", store, store.Database,
+                        store.Conventions.IdentityPartsSeparator);
+
+                    Assert.Equal(1L, await hiLoKeyGenerator.NextIdAsync());
+                    Assert.Equal(2L, await hiLoKeyGenerator.NextIdAsync());
+                }
+            }
+        }
+
+        [Fact(Skip = "RavenDB-6312 AggressivelyCache Not Implemented yet")]
+        public void HiLoKeyGenerator_hangs_when_aggressive_caching_enabled()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (store.AggressivelyCache())
+                {
+                    var hiLoKeyGenerator = new AsyncHiLoIdGenerator("users", store, store.Database,
+                        store.Conventions.IdentityPartsSeparator);
+
+                    Assert.Equal(1L, hiLoKeyGenerator.NextIdAsync().GetAwaiter().GetResult());
+                    Assert.Equal(2L, hiLoKeyGenerator.NextIdAsync().GetAwaiter().GetResult());
+                }
+            }
+        }
+
+        [Fact(Skip = "RavenDB-6312 AggressivelyCache Not Implemented yet")]
+        public void HiLoKeyGenerator_hangs_when_aggressive_caching_enabled_on_other_documentstore()
+        {
+            using (var server = GetNewServer())
+            using (var otherServer = GetNewServer())
+            using (var store = GetDocumentStore(defaultServer: server))
+            using (var otherStore = GetDocumentStore(defaultServer: otherServer))
+            {
+                using (otherStore.AggressivelyCache()) // Note that we don't even use the other store, we just call AggressivelyCache on it
+                {
+                    var hilo = new AsyncHiLoIdGenerator("users", store, store.Database, 
+                        store.Conventions.IdentityPartsSeparator);
+                    Assert.Equal(1L, hilo.NextIdAsync().GetAwaiter().GetResult());
+                    Assert.Equal(2L, hilo.NextIdAsync().GetAwaiter().GetResult());
+                }
+            }
+        }
+
+        [Fact(Skip = "RavenDB-6312 AggressivelyCache Not Implemented yet")]
+        public async Task HiLoKeyGenerator_async_hangs_when_aggressive_caching_enabled_on_other_documentstore()
+        {
+            using (var server = GetNewServer())
+            using (var otherServer = GetNewServer())
+            using (var store = GetDocumentStore(defaultServer: server))
+            using (var otherStore = GetDocumentStore(defaultServer: otherServer))
+            {
+                using (otherStore.AggressivelyCache()) // Note that we don't even use the other store, we just call AggressivelyCache on it
+                {
+                    var hilo = new AsyncHiLoIdGenerator("users", store, store.Database, 
+                        store.Conventions.IdentityPartsSeparator);
+                    Assert.Equal(1L, await hilo.NextIdAsync());
+                    Assert.Equal(2L, await hilo.NextIdAsync());
+                }
+            }
         }
     }
 }
