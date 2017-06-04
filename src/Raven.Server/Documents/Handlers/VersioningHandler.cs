@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/revisions", "GET")]
         public Task GetRevisionsFor()
         {
-            var versioningStorage = Database.BundleLoader.VersioningStorage;
+            var versioningStorage = Database.VersioningStorage;
             if (versioningStorage == null)
                 throw new VersioningDisabledException();
 
@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                var versioningStorage = Database.BundleLoader.VersioningStorage;
+                var versioningStorage = Database.VersioningStorage;
                 var revision = versioningStorage.GetRevisionsFrom(context, etag, 1).FirstOrDefault();
 
                 if (revision != null)
@@ -106,11 +106,10 @@ namespace Raven.Server.Documents.Handlers
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
             var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var versioningStorage = Database.BundleLoader.VersioningStorage;
+                var versioningStorage = Database.VersioningStorage;
 
                 int start = GetStart();
                 int pageSize = GetPageSize();

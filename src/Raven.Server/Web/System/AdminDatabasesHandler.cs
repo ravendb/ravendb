@@ -305,7 +305,7 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/expiration/config", "POST", "/admin/config-expiration?name={databaseName:string}")]
-        public async Task ConfigExpirationBundle()
+        public async Task ConfigExpiration()
         {
             await DatabaseConfigurations(ServerStore.ModifyDatabaseExpiration, "read-expiration-config");
         }
@@ -337,18 +337,16 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/periodic-backup/status", "GET", "/admin/delete-periodic-status?name={databaseName:string}")]
-        public Task GetPeriodicBackupBundleStatus()
+        public Task GetPeriodicBackupStatus()
         {
             var taskId = GetLongQueryString("taskId", required: true);
             Debug.Assert(taskId != 0);
 
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            string errorMessage;
-            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
-            TransactionOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             using (var statusBlittable =
                 ServerStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(name, taskId.Value)))

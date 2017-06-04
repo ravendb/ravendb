@@ -849,13 +849,13 @@ namespace Raven.Server.Documents.Replication
 
                                     if ((item.Flags & DocumentFlags.Revision) == DocumentFlags.Revision)
                                     {
-                                        if (database.BundleLoader.VersioningStorage == null)
+                                        if (database.VersioningStorage == null)
                                         {
                                             if (_incoming._log.IsOperationsEnabled)
-                                                _incoming._log.Operations("Versioing storage is disabled but the node got a versioned document from replication.");
+                                                _incoming._log.Operations("Versioning storage is disabled but the node got a versioned document from replication.");
                                             continue;
                                         }
-                                        database.BundleLoader.VersioningStorage.Put(context, item.Id, document, item.Flags,
+                                        database.VersioningStorage.Put(context, item.Id, document, item.Flags,
                                             NonPersistentDocumentFlags.FromReplication, _changeVector, item.LastModifiedTicks);
                                         continue;
                                     }

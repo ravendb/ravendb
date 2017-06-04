@@ -43,7 +43,7 @@ namespace FastTests.Server.Documents.PeriodicBackup
 
                 await store.Admin.Server.SendAsync(new UpdatePeriodicBackupOperation(config, store.Database));
 
-                var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.PeriodicBackupRunner;
+                var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
                 var backups = periodicBackupRunner.PeriodicBackups;
                 Assert.Equal("* */1 * * *", backups.First().Configuration.FullBackupFrequency);
                 Assert.Equal("* */2 * * *", backups.First().Configuration.IncrementalBackupFrequency);

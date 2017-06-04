@@ -10,12 +10,15 @@ using Raven.Client.Server;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.ETL;
+using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Operations;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Transformers;
+using Raven.Server.Documents.Versioning;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -143,7 +146,9 @@ namespace Raven.Server.Documents
 
         public DocumentsStorage DocumentsStorage { get; private set; }
 
-        public BundleLoader BundleLoader { get; private set; }
+        public VersioningStorage VersioningStorage { get; private set; }
+        public ExpiredDocumentsCleaner ExpiredDocumentsCleaner { get; private set; }
+        public PeriodicBackupRunner PeriodicBackupRunner { get; private set; }
 
         public DocumentTombstoneCleaner DocumentTombstoneCleaner { get; private set; }
 
@@ -190,22 +195,57 @@ namespace Raven.Server.Documents
                     if (databaseRecord.Encrypted == false && MasterKey != null)
                         throw new InvalidOperationException($"Attempt to create a non-encrypted db {Name}, but a secret key exists for this db.");
                 }
-                DocumentsStorage.Initialize();
-                InitializeInternal();
-            }
-            catch (Exception)
-            {
-                Dispose();
-                throw;
-            }
-        }
 
-        public void Initialize(StorageEnvironmentOptions options)
-        {
-            try
-            {
-                DocumentsStorage.Initialize(options);
-                InitializeInternal();
+                DocumentsStorage.Initialize();
+
+                TxMerger.Start();
+
+                ConfigurationStorage.InitializeNotificationsStorage();
+
+                DatabaseRecord record;
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                    record = _serverStore.Cluster.ReadDatabase(context, Name);
+
+
+                _indexStoreTask = IndexStore.InitializeAsync(record);
+                _transformerStoreTask = TransformerStore.InitializeAsync(record);
+
+                PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore);
+                LoadBundles();
+
+                Patcher.Initialize();
+                EtlLoader.Initialize();
+
+                DocumentTombstoneCleaner.Start();
+
+                try
+                {
+                    _indexStoreTask.Wait(DatabaseShutdown);
+                }
+                finally
+                {
+                    _indexStoreTask = null;
+                }
+
+                try
+                {
+                    _transformerStoreTask.Wait(DatabaseShutdown);
+                }
+                finally
+                {
+                    _transformerStoreTask = null;
+                }
+
+                SubscriptionStorage.Initialize();
+
+                //Index Metadata Store shares Voron env and context pool with documents storage, 
+                //so replication of both documents and indexes/transformers can be made within one transaction
+                ConfigurationStorage.Initialize(IndexStore, TransformerStore);
+
+                ReplicationLoader?.Initialize();
+
+                NotificationCenter.Initialize(this);
             }
             catch (Exception)
             {
@@ -254,56 +294,6 @@ namespace Raven.Server.Documents
                 if (_parent._databaseShutdown.IsCancellationRequested && currentUsagesCount == 0)
                     _parent._waitForUsagesOnDisposal.Set();
             }
-        }
-
-        private void InitializeInternal()
-        {
-            TxMerger.Start();
-
-            ConfigurationStorage.InitializeNotificationsStorage();
-
-            DatabaseRecord record;
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-                record = _serverStore.Cluster.ReadDatabase(context, Name);
-            
-
-            _indexStoreTask = IndexStore.InitializeAsync(record);
-            _transformerStoreTask = TransformerStore.InitializeAsync(record);
-
-            BundleLoader = new BundleLoader(this, _serverStore);
-            Patcher.Initialize();
-            EtlLoader.Initialize();
-
-            DocumentTombstoneCleaner.Start();
-
-            try
-            {
-                _indexStoreTask.Wait(DatabaseShutdown);
-            }
-            finally
-            {
-                _indexStoreTask = null;
-            }
-
-            try
-            {
-                _transformerStoreTask.Wait(DatabaseShutdown);
-            }
-            finally
-            {
-                _transformerStoreTask = null;
-            }
-
-            SubscriptionStorage.Initialize();
-
-            //Index Metadata Store shares Voron env and context pool with documents storage, 
-            //so replication of both documents and indexes/transformers can be made within one transaction
-            ConfigurationStorage.Initialize(IndexStore, TransformerStore);
-
-            ReplicationLoader?.Initialize();
-
-            NotificationCenter.Initialize(this);
         }
 
         public unsafe void Dispose()
@@ -392,8 +382,14 @@ namespace Raven.Server.Documents
 
                 exceptionAggregator.Execute(() =>
                 {
-                    BundleLoader?.Dispose();
-                    BundleLoader = null;
+                    ExpiredDocumentsCleaner?.Dispose();
+                    ExpiredDocumentsCleaner = null;
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    PeriodicBackupRunner?.Dispose();
+                    PeriodicBackupRunner = null;
                 });
 
                 exceptionAggregator.Execute(() =>
@@ -474,10 +470,11 @@ namespace Raven.Server.Documents
             var envs = GetAllStoragesEnvironment().ToList();
             if (envs.Any(x => x.Environment == null))
                 return null;
-            Size size = new Size(envs.Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes));
+            var size = new Size(envs.Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes));
             var databaseInfo = new DynamicJsonValue
             {
-                [nameof(DatabaseInfo.Bundles)] = BundleLoader != null ? new DynamicJsonArray(BundleLoader.GetActiveBundles()) : null,
+                [nameof(DatabaseInfo.VersioningActive)] = VersioningStorage != null,
+                [nameof(DatabaseInfo.ExpirationActive)] = ExpiredDocumentsCleaner != null,
                 [nameof(DatabaseInfo.IsAdmin)] = true, //TODO: implement me!
                 [nameof(DatabaseInfo.Name)] = Name,
                 [nameof(DatabaseInfo.Disabled)] = false, //TODO: this value should be overwritten by the studio since it is cached
@@ -489,7 +486,7 @@ namespace Raven.Server.Documents
                 [nameof(DatabaseInfo.IndexingErrors)] = IndexStore.GetIndexes().Sum(index => index.GetErrorCount()),
                 [nameof(DatabaseInfo.Alerts)] = NotificationCenter.GetAlertCount(),
                 [nameof(DatabaseInfo.UpTime)] = null, //it is shutting down
-                [nameof(DatabaseInfo.BackupInfo)] = BundleLoader?.GetBackupInfo(),
+                [nameof(DatabaseInfo.BackupInfo)] = PeriodicBackupRunner.GetBackupInfo(),
                 [nameof(DatabaseInfo.DocumentsCount)] = DocumentsStorage.GetNumberOfDocuments(),
                 [nameof(DatabaseInfo.IndexesCount)] = IndexStore.GetIndexes().Count(),
                 [nameof(DatabaseInfo.RejectClients)] = false, //TODO: implement me!
@@ -509,7 +506,7 @@ namespace Raven.Server.Documents
                 _lastIdleTicks = DateTime.UtcNow.Ticks;
                 IndexStore?.RunIdleOperations();
                 Operations?.CleanupOperations();
-                BundleLoader?.PeriodicBackupRunner?.RemoveInactiveCompletedTasks();
+                PeriodicBackupRunner?.RemoveInactiveCompletedTasks();
             }
             finally
             {
@@ -605,8 +602,9 @@ namespace Raven.Server.Documents
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
 
+                LoadBundles();
+
                 TransformerStore.HandleDatabaseRecordChange();
-                BundleLoader.HandleDatabaseRecordChange();
                 IndexStore.HandleDatabaseRecordChange();
                 ReplicationLoader?.HandleDatabaseRecordChange();
                 EtlLoader?.HandleDatabaseRecordChange();
@@ -622,6 +620,20 @@ namespace Raven.Server.Documents
             finally
             {
                 RachisLogIndexNotifications.NotifyListenersAbout(index);
+            }
+        }
+
+        private void LoadBundles()
+        {
+            lock (this)
+            {
+                var dbRecord = _serverStore.LoadDatabaseRecord(Name);
+                if (dbRecord != null)
+                {
+                    VersioningStorage = VersioningStorage.LoadConfigurations(this, dbRecord, VersioningStorage);
+                    ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, dbRecord, ExpiredDocumentsCleaner);
+                    PeriodicBackupRunner.UpdateConfigurations(dbRecord);
+                }
             }
         }
 

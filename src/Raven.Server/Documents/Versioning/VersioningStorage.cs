@@ -124,8 +124,8 @@ namespace Raven.Server.Documents.Versioning
 
         private VersioningConfigurationCollection GetVersioningConfiguration(CollectionName collectionName)
         {
-            VersioningConfigurationCollection configuration;
-            if (_versioningConfiguration.Collections != null && _versioningConfiguration.Collections.TryGetValue(collectionName.Name, out configuration))
+            if (_versioningConfiguration.Collections != null && 
+                _versioningConfiguration.Collections.TryGetValue(collectionName.Name, out VersioningConfigurationCollection configuration))
             {
                 return configuration;
             }

@@ -120,13 +120,13 @@ namespace Raven.Server.Documents
 #endif
                 }
 
-                if (_documentDatabase.BundleLoader.VersioningStorage != null &&
+                if (_documentDatabase.VersioningStorage != null &&
                     (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
                 {
-                    if (_documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document,
+                    if (_documentDatabase.VersioningStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document,
                         ref flags, out VersioningConfigurationCollection configuration))
                     {
-                        _documentDatabase.BundleLoader.VersioningStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration);
+                        _documentDatabase.VersioningStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration);
                     }
                 }
             }
@@ -157,7 +157,7 @@ namespace Raven.Server.Documents
 
             if (collectionName.IsSystem == false)
             {
-                _documentDatabase.BundleLoader.ExpiredDocumentsCleaner?.Put(context, lowerId, document);
+                _documentDatabase.ExpiredDocumentsCleaner?.Put(context, lowerId, document);
             }
 
             _documentDatabase.DocumentsStorage.SetDatabaseChangeVector(context,changeVector);
