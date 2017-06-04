@@ -18,7 +18,6 @@ class serverSmuggling extends viewModelBase {
 
     hasDatabases: KnockoutComputed<boolean>;
     noIncremental: KnockoutComputed<boolean>;
-    noDisableVersioning: KnockoutComputed<boolean>;
     databasesSelection: KnockoutComputed<checkbox>;
     incrementalSelection: KnockoutComputed<checkbox>;
     disableVersioningSelection: KnockoutComputed<checkbox>;
@@ -42,12 +41,6 @@ class serverSmuggling extends viewModelBase {
         this.hasDatabases = ko.computed(() => this.databases().length > 0);
 
         this.noIncremental = ko.computed(() => this.selectedDatabases().length === 0);
-
-        this.noDisableVersioning = ko.computed(() => {
-            var dbs = this.selectedDatabases();
-            var versioningCount = dbs.filter(x => x.hasVersioningBundle()).length;
-            return dbs.length === 0 || versioningCount === 0;
-        });
 
         this.databasesSelection = ko.computed(() => {
             var selectedDatabasesCount = this.selectedDatabases().length;
