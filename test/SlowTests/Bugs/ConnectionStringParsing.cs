@@ -11,12 +11,12 @@ namespace SlowTests.Bugs
         [Fact]
         public void EnsureWellFormedConnectionStrings_ParsingWithEndingSemicolons_Successful()
         {
-            var connectionStringParser = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionString("Urls=http://localhost:10301;");
+            var connectionStringParser = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionString("url=http://localhost:10301;");
             connectionStringParser.Parse();
 
             Assert.DoesNotContain(";", connectionStringParser.ConnectionStringOptions.Urls.First());
 
-            connectionStringParser = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionString("Urls=http://localhost:10301/;");
+            connectionStringParser = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionString("url=http://localhost:10301/;");
             connectionStringParser.Parse();
 
             Assert.DoesNotContain(";", connectionStringParser.ConnectionStringOptions.Urls.First());
@@ -25,7 +25,7 @@ namespace SlowTests.Bugs
         [Fact]
         public void EnsureWellFormedConnectionStrings_ParsingWithRavenOptionTypes_Successful()
         {
-            var parser = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionString("Urls=http://localhost:8080;database=up;");
+            var parser = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionString("url=http://localhost:8080;database=up;");
             parser.Parse();
             var options = parser.ConnectionStringOptions;
 
@@ -38,6 +38,17 @@ namespace SlowTests.Bugs
         {
             var dbParser = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionString("memory=true");
             Assert.Throws<ArgumentException>(() => dbParser.Parse());
+        }
+
+        [Fact]
+        public void EnsureWellFormedConnectionStrings_ParsingMultiUrls_Successful()
+        {
+            var connectionStringParser = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionString("url=http://localhost:10301; url=http://localhost:10302; url=http://localhost:10303; database=up;");
+            connectionStringParser.Parse();
+
+            var options = connectionStringParser.ConnectionStringOptions;
+            Assert.True(options.Urls.Count == 3);
+            Assert.Equal("up", options.Database);
         }
     }
 }
