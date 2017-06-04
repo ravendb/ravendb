@@ -73,15 +73,6 @@ class status extends viewModelBase {
         super.activate(args);
 
         this.userDatabasePages(status.initialVisibleViews.slice());
-        var db: database = this.activeDatabase();
-        var bundles: string[] = db.activeBundles();
-
-        bundles.forEach((bundle: string) => {
-            var bundleName = this.bundleMap[bundle.toLowerCase()];
-            if (bundleName != undefined) {
-                this.userDatabasePages.push(bundleName);
-            }
-        });
     }
 
     routeIsVisible(route: DurandalRouteConfiguration) {

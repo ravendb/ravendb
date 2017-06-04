@@ -164,7 +164,6 @@ class databaseInfo {
         this.indexingErrors(dto.IndexingErrors);
         this.alerts(dto.Alerts);
         this.loadError(dto.LoadError);
-        this.bundles(dto.Bundles);
         this.uptime(generalUtils.timeSpanAsAgo(dto.UpTime, false));
         this.backupEnabled(!!dto.BackupInfo);
         if (this.backupEnabled()) {
