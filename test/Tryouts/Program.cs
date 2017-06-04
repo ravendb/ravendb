@@ -23,9 +23,9 @@ namespace Tryouts
 
                 //Parallel.For(0, 10, _ =>
                 {
-                    using (var a = new FastTests.Server.Documents.Versioning.Versioning())
+                    using (var a = new FastTests.Client.Subscriptions.CriteriaScript())
                     {
-                        a.ServerSaveBundlesAfterRestart().Wait();
+                        a.CriteriaScriptWithTransformation(useSsl: false).Wait();
                     }
                 }
                 

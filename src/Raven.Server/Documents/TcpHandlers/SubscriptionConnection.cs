@@ -494,7 +494,8 @@ namespace Raven.Server.Documents.TcpHandlers
                             Id = doc.Id,
                             Etag = doc.Etag,
                             Data = transformResult,
-                            LowerId = doc.LowerId
+                            LowerId = doc.LowerId,
+                            ChangeVector = doc.ChangeVector
                         };
                     }
                 }

@@ -44,6 +44,7 @@ namespace Raven.Server.Documents
 
         public readonly string Name;
         public readonly bool IsSystem;
+        private string _revisions;
 
         static CollectionName()
         {
@@ -59,6 +60,7 @@ namespace Raven.Server.Documents
 
             _documents = GetName(CollectionTableType.Documents);
             _tombstones = GetName(CollectionTableType.Tombstones);
+            _revisions = GetName(CollectionTableType.Revisions);
         }
 
         public string GetTableName(CollectionTableType type)
@@ -69,6 +71,8 @@ namespace Raven.Server.Documents
                     return _documents;
                 case CollectionTableType.Tombstones:
                     return _tombstones;
+                    case CollectionTableType.Revisions:
+                        return _revisions;
                 default:
                     throw new NotSupportedException($"Collection table type '{type}' is not supported.");
             }
@@ -237,6 +241,7 @@ namespace Raven.Server.Documents
     public enum CollectionTableType
     {
         Documents,
-        Tombstones
+        Tombstones,
+        Revisions
     }
 }
