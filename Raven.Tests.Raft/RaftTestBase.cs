@@ -143,12 +143,10 @@ namespace Raven.Tests.Raft
             var documentStores = nodes
                 .Select(node => NewRemoteDocumentStore(ravenDbServer: node, fiddler: fiddler,activeBundles: activeBundles, configureStore: configureStore, databaseName: databaseName))
                 .ToList();
-            if(Debugger.IsAttached)
+
+            foreach (var documentStore in documentStores)
             {
-                foreach (var documentStore in documentStores)
-                {
-                    ((ClusterAwareRequestExecuter)((ServerClient)documentStore.DatabaseCommands).RequestExecuter).WaitForLeaderTimeout = TimeSpan.FromSeconds(30);
-                }
+                ((ClusterAwareRequestExecuter)((ServerClient)documentStore.DatabaseCommands).RequestExecuter).WaitForLeaderTimeout = TimeSpan.FromSeconds(30);
             }
             return documentStores;
         }
