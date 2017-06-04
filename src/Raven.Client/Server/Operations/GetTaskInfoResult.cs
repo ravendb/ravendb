@@ -28,7 +28,6 @@ namespace Raven.Client.Server.Operations
 
     public class GetTaskInfoResult
     {
-        public bool NotFound { get; set; }
         public long TaskId { get; set; }
         public string Name { get; set; }
         public OngoingTaskType TaskType { get; set; }

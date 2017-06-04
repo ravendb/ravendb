@@ -65,10 +65,8 @@ namespace Raven.Client.Server.Operations
 
             public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
-                if (response == null)
-                    ThrowInvalidResponse();
-
-                Result = JsonDeserializationClient.GetTaskInfoResult(response);
+                if (response != null)
+                    Result = JsonDeserializationClient.GetTaskInfoResult(response);
             }
 
             public override bool IsReadRequest => false;

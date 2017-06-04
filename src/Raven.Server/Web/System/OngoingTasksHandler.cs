@@ -235,7 +235,7 @@ namespace Raven.Server.Web.System
                             var watcher = dbTopology?.Watchers.Find(x => x.TaskId == key);
                             if (watcher == null)
                             {
-                                WriteNotFound(context);
+                                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                                 break;
                             }                               
 
@@ -257,14 +257,13 @@ namespace Raven.Server.Web.System
                             WriteResult(context, replicationTaskInfo);
 
                             break;
-
-                            
+                           
                         case OngoingTaskType.Backup:
 
                             var backup = record?.PeriodicBackups?.Find(x => x.TaskId == key);
                             if (backup == null)
                             {
-                                WriteNotFound(context);
+                                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                                 break;
                             }
 
@@ -293,7 +292,7 @@ namespace Raven.Server.Web.System
                             var sqlEtl = record?.SqlEtls?.Find(x => x.Id == key);
                             if (sqlEtl == null)
                             {
-                                WriteNotFound(context);
+                                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                                 break;
                             }
 
@@ -330,7 +329,7 @@ namespace Raven.Server.Web.System
                             var ravenEtl = record?.SqlEtls?.Find(x => x.Id == key);
                             if (ravenEtl == null)
                             {
-                                WriteNotFound(context);
+                                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                                 break;
                             }
 
@@ -363,7 +362,7 @@ namespace Raven.Server.Web.System
                             break;
 
                         default:
-                            WriteNotFound(context);
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                             break;
                     }
                 }
@@ -380,17 +379,6 @@ namespace Raven.Server.Web.System
             {
                 context.Write(writer, taskInfo.ToJson());
                 writer.Flush();
-            }
-        }
-
-        private void WriteNotFound(TransactionOperationContext context)
-        {
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                context.Write(writer, new DynamicJsonValue
-                {
-                    [nameof(GetTaskInfoResult.NotFound)] = true
-                });
             }
         }
 
