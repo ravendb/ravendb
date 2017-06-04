@@ -231,6 +231,12 @@ namespace Raven.Server.Documents.Replication
                             SendDocumentsBatch(documentsContext, _stats.Network);
                         }
                     }
+                    catch (OperationCanceledException)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Received cancelation notification while sending document replication batch.");
+                        throw;
+                    }
                     catch (Exception e)
                     {
                         if (_log.IsInfoEnabled)
@@ -349,8 +355,8 @@ namespace Raven.Server.Documents.Replication
                 _log.Info($"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents and {_replicaAttachmentStreams.Count:#,#;;0} attachment streams in {sw.ElapsedMilliseconds:#,#;;0} ms. Last sent etag = {_lastEtag}");
 
             _parent._lastDocumentSentTime = DateTime.UtcNow;
-            _parent.HandleServerResponse();
 
+            _parent.HandleServerResponse();
         }
 
         private void WriteItemToServer(ReplicationBatchItem item, OutgoingReplicationStatsScope stats)
