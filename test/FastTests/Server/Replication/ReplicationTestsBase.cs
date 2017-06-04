@@ -258,7 +258,7 @@ namespace FastTests.Server.Replication
             DocumentStore store,
             DatabaseWatcher watcher)
         {
-            var op = new UpdateWatcherOperation(store.Database, watcher);
+            var op = new UpdateExternalReplicationOperation(store.Database, watcher);
             return await store.Admin.Server.SendAsync(op);
         }
 
@@ -266,7 +266,15 @@ namespace FastTests.Server.Replication
             DocumentStore store,
             long taskId)
         {
-            var op = new DeleteWatcherOperation(store.Database, taskId);
+            var op = new DeleteExternalReplicationOperation(store.Database, taskId);
+            return await store.Admin.Server.SendAsync(op);
+        }
+
+        protected static async Task<GetTaskInfoResult> GetTaskInfo(
+            DocumentStore store,
+            long taskId, OngoingTaskType type)
+        {
+            var op = new GetOngoingTaskInfoOperation(store.Database, taskId, type);
             return await store.Admin.Server.SendAsync(op);
         }
 

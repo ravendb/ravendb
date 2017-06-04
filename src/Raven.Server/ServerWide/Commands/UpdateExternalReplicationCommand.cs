@@ -3,16 +3,16 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class UpdateDatabaseWatcherCommand : UpdateDatabaseCommand
+    public class UpdateExternalReplicationCommand : UpdateDatabaseCommand
     {
         public DatabaseWatcher Watcher;
 
-        public UpdateDatabaseWatcherCommand() : base(null)
+        public UpdateExternalReplicationCommand() : base(null)
         {
 
         }
 
-        public UpdateDatabaseWatcherCommand(string databaseName) : base(databaseName)
+        public UpdateExternalReplicationCommand(string databaseName) : base(databaseName)
         {
 
         }

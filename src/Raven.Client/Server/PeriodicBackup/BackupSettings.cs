@@ -146,7 +146,7 @@ namespace Raven.Client.Server.PeriodicBackup
             if (WasEnabled(other))
                 return true;
 
-            return other.RemoteFolderName.Equals(RemoteFolderName);
+            return other.RemoteFolderName?.Equals(RemoteFolderName) ?? false;
         }
     }
 }

@@ -550,18 +550,18 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(customFunctionsCommand);
         }
 
-        public Task<(long Etag, object Result)> UpdateDatabaseWatcher(string dbName, DatabaseWatcher watcher)
+        public Task<(long Etag, object Result)> UpdateExternalReplication(string dbName, DatabaseWatcher watcher)
         {
-            var addWatcherCommand = new UpdateDatabaseWatcherCommand(dbName)
+            var addWatcherCommand = new UpdateExternalReplicationCommand(dbName)
             {
                 Watcher = watcher
             };
             return SendToLeaderAsync(addWatcherCommand);
         }
 
-        public Task<(long Etag, object Result)> DeleteDatabaseWatcher(long taskId, string dbName)
+        public Task<(long Etag, object Result)> DeleteExternalReplication(long taskId, string dbName)
         {
-            var deleteWatcherCommand = new DeleteDatabaseWatcherCommand(taskId, dbName);
+            var deleteWatcherCommand = new DeleteExternalReplicationCommand(taskId, dbName);
 
             return SendToLeaderAsync(deleteWatcherCommand);
         }

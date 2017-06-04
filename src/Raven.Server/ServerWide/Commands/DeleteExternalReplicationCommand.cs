@@ -5,16 +5,16 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class DeleteDatabaseWatcherCommand : UpdateDatabaseCommand
+    public class DeleteExternalReplicationCommand : UpdateDatabaseCommand
     {
         public long TaskId;
 
-        public DeleteDatabaseWatcherCommand() : base(null)
+        public DeleteExternalReplicationCommand() : base(null)
         {
 
         }
 
-        public DeleteDatabaseWatcherCommand(long taskId, string databaseName) : base(databaseName)
+        public DeleteExternalReplicationCommand(long taskId, string databaseName) : base(databaseName)
         {
             TaskId = taskId;
         }
