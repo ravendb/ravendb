@@ -28,7 +28,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             using (var store = GetDocumentStore())
             {
-                var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.PeriodicBackupRunner;
+                var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
 
                 // get by reflection the maxTimerTimeoutInMilliseconds field
                 // this field is the maximum interval acceptable in .Net's threading timer
@@ -96,7 +96,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             using (var store = GetDocumentStore())
             {
-                var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.PeriodicBackupRunner;
+                var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
 
                 // get by reflection the maxTimerTimeoutInMilliseconds field
                 // this field is the maximum interval acceptable in .Net's threading timer

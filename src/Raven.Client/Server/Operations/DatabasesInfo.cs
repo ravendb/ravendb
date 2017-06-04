@@ -43,7 +43,8 @@ namespace Raven.Client.Server.Operations
         public long? IndexingErrors { get; set; }
 
         public long? DocumentsCount { get; set; }
-        public List<string> Bundles { get; set; }
+        public bool VersioningActive { get; set; }
+        public bool ExpirationActive { get; set; }
         public int? IndexesCount { get; set; }
         public IndexRunningStatus IndexingStatus { get; set; }
 
@@ -70,7 +71,8 @@ namespace Raven.Client.Server.Operations
                 [nameof(IndexingErrors)] = IndexingErrors,
 
                 [nameof(DocumentsCount)] = DocumentsCount,
-                [nameof(Bundles)] = new DynamicJsonArray(Bundles),
+                [nameof(VersioningActive)] = VersioningActive,
+                [nameof(ExpirationActive)] = ExpirationActive,
                 [nameof(IndexesCount)] = IndexesCount,
                 [nameof(IndexingStatus)] = IndexingStatus.ToString(),
 

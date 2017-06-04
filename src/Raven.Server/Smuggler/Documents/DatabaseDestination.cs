@@ -313,26 +313,26 @@ namespace Raven.Server.Smuggler.Documents
 
                         if (IsRevision)
                         {
-                            if (_database.BundleLoader.VersioningStorage == null)
+                            if (_database.VersioningStorage == null)
                                 ThrowVersioningDisabled();
 
                             PutAttachments(context, document);
                             // ReSharper disable once PossibleNullReferenceException
-                            _database.BundleLoader.VersioningStorage.Put(context, id, document.Data, document.Flags, document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
+                            _database.VersioningStorage.Put(context, id, document.Data, document.Flags, document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
                             continue;
                         }
 
                         if (IsPreV4Revision(id, document))
                         {
                             // handle old revisions
-                            if (_database.BundleLoader.VersioningStorage == null)
+                            if (_database.VersioningStorage == null)
                                 ThrowVersioningDisabled();
 
                             var endIndex = id.IndexOf(PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase);
                             var newId = id.Substring(0, endIndex);
 
                             // ReSharper disable once PossibleNullReferenceException
-                            _database.BundleLoader.VersioningStorage.Put(context, newId, document.Data, document.Flags, document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
+                            _database.VersioningStorage.Put(context, newId, document.Data, document.Flags, document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
                             continue;
                         }
 

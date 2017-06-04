@@ -84,7 +84,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public IEnumerable<DocumentItem> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions)
         {
-            var versioningStorage = _database.BundleLoader.VersioningStorage;
+            var versioningStorage = _database.VersioningStorage;
             if (versioningStorage == null)
                 yield break;
 

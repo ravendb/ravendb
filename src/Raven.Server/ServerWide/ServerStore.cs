@@ -764,8 +764,8 @@ namespace Raven.Server.ServerWide
                         if (DatabasesLandlord.DatabasesCache.TryGetValue(db, out resourceTask) &&
                             resourceTask != null &&
                             resourceTask.Status == TaskStatus.RanToCompletion &&
-                            resourceTask.Result.BundleLoader != null &&
-                            resourceTask.Result.BundleLoader.PeriodicBackupRunner.HasRunningBackups())
+                            resourceTask.Result.PeriodicBackupRunner != null &&
+                            resourceTask.Result.PeriodicBackupRunner.HasRunningBackups())
                         {
                             // there are running backups for this database
                             continue;
