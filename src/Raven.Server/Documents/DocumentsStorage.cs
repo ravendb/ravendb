@@ -234,7 +234,7 @@ namespace Raven.Server.Documents
 
         public void Initialize(StorageEnvironmentOptions options)
         {
-            options.SchemaVersion = 5;
+            options.SchemaVersion = 6;
             try
             {
                 Environment = new StorageEnvironment(options);
@@ -317,7 +317,7 @@ namespace Raven.Server.Documents
 
         public static long ReadLastRevisionsEtag(Transaction tx)
         {
-            return ReadLastEtagFrom(tx, VersioningStorage.RevisionsEtagsSlice);
+            return ReadLastEtagFrom(tx, VersioningStorage.AllRevisionsEtagsSlice);
         }
 
         public static long ReadLastAttachmentsEtag(Transaction tx)

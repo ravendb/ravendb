@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Server;
 using Raven.Client.Server.Versioning;
@@ -16,23 +17,23 @@ using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
+using Voron.Impl;
 
 namespace Raven.Server.Documents.Versioning
 {
     public unsafe class VersioningStorage
     {
-        private static readonly Slice ChangeVectorSlice;
         private static readonly Slice IdAndEtagSlice;
-        public static readonly Slice RevisionsEtagsSlice;
-        private static readonly Slice RevisionDocumentsSlice;
+        public static readonly Slice AllRevisionsEtagsSlice;
+        public static readonly Slice CollectionRevisionsEtagsSlice;
         private static readonly Slice RevisionsCountSlice;
 
         private static readonly TableSchema DocsSchema;
 
-        private readonly Logger _logger;
         private readonly DocumentDatabase _database;
         private readonly DocumentsStorage _documentsStorage;
         private readonly VersioningConfiguration _versioningConfiguration;
+        private readonly HashSet<string> _tableCreated = new HashSet<string>();
 
         private enum Columns
         {
@@ -56,24 +57,37 @@ namespace Raven.Server.Documents.Versioning
             _documentsStorage = _database.DocumentsStorage;
             _versioningConfiguration = versioningConfiguration;
 
-            _logger = LoggingSource.Instance.GetLogger<VersioningStorage>(database.Name);
-
             using (var tx = database.DocumentsStorage.Environment.WriteTransaction())
             {
-                DocsSchema.Create(tx, RevisionDocumentsSlice, 16);
 
+                foreach (var collection in _versioningConfiguration.Collections)
+                {
+                    if(collection.Value.Active == false)
+                        continue;
+                    EnsureRevisionTableCreated(tx, new CollectionName(collection.Key));
+                }
+                
                 tx.CreateTree(RevisionsCountSlice);
 
                 tx.Commit();
             }
         }
 
+        private Table EnsureRevisionTableCreated(Transaction tx ,CollectionName collection)
+        {
+            var tableName = collection.GetTableName(CollectionTableType.Revisions);
+            if (_tableCreated.Add(collection.Name))
+                DocsSchema.Create(tx, tableName, 16);
+            return tx.OpenTable(DocsSchema, tableName);
+
+        }
+
         static VersioningStorage()
         {
-            Slice.From(StorageEnvironment.LabelsContext, "ChangeVector", ByteStringType.Immutable, out ChangeVectorSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "IdAndEtag", ByteStringType.Immutable, out IdAndEtagSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "RevisionsEtags", ByteStringType.Immutable, out RevisionsEtagsSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "RevisionDocuments", ByteStringType.Immutable, out RevisionDocumentsSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "RevisionsChangeVector", ByteStringType.Immutable, out var changeVectorSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "RevisionsIdAndEtag", ByteStringType.Immutable, out IdAndEtagSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "AllRevisionsEtags", ByteStringType.Immutable, out AllRevisionsEtagsSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "CollectionRevisionsEtags", ByteStringType.Immutable, out CollectionRevisionsEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "RevisionsCount", ByteStringType.Immutable, out RevisionsCountSlice);
 
             DocsSchema = new TableSchema();
@@ -81,18 +95,26 @@ namespace Raven.Server.Documents.Versioning
             {
                 StartIndex = (int)Columns.ChangeVector,
                 Count = 1,
-                Name = ChangeVectorSlice
+                Name = changeVectorSlice,
+                IsGlobal = true
             });
             DocsSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
                 StartIndex = (int)Columns.LowerId,
                 Count = 3,
-                Name = IdAndEtagSlice
+                Name = IdAndEtagSlice,
+                IsGlobal = true
             });
             DocsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = (int)Columns.Etag,
-                Name = RevisionsEtagsSlice
+                Name = AllRevisionsEtagsSlice,
+                IsGlobal = true
+            });
+            DocsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            {
+                StartIndex = (int)Columns.Etag,
+                Name = CollectionRevisionsEtagsSlice,
             });
         }
 
@@ -104,7 +126,7 @@ namespace Raven.Server.Documents.Versioning
                 if (dbRecord.Versioning == null)
                     return null;
                 if (dbRecord.Versioning.Equals(versioningStorage?._versioningConfiguration))
-                    return versioningStorage;                    
+                    return versioningStorage;
                 var config = new VersioningStorage(database, dbRecord.Versioning);
                 if (logger.IsInfoEnabled)
                     logger.Info("Versioning configuration changed");
@@ -120,6 +142,21 @@ namespace Raven.Server.Documents.Versioning
                         $" in the database record is missing or not valid: {dbRecord}", e);
                 return null;
             }
+        }
+
+        public bool IsVersioned(string collection)
+        {
+            if (_versioningConfiguration.Collections != null && _versioningConfiguration.Collections.TryGetValue(collection, out var configuration))
+            {
+                return configuration.Active;
+            }
+
+            if (_versioningConfiguration.Default != null)
+            {
+                return _versioningConfiguration.Default.Active;
+            }
+
+            return _emptyConfiguration.Active;
         }
 
         private VersioningConfigurationCollection GetVersioningConfiguration(CollectionName collectionName)
@@ -183,8 +220,11 @@ namespace Raven.Server.Documents.Versioning
             DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr);
 
             var notFromSmuggler = (nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) != NonPersistentDocumentFlags.FromSmuggler;
+           
+            var collectionName = _database.DocumentsStorage.ExtractCollectionName(context, id, document);
 
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
+            var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
+
             fixed (ChangeVectorEntry* pChangeVector = changeVector)
             {
                 var changeVectorPtr = (byte*)pChangeVector;
@@ -225,7 +265,6 @@ namespace Raven.Server.Documents.Versioning
             {
                 if (configuration == null)
                 {
-                    var collectionName = _database.DocumentsStorage.ExtractCollectionName(context, id, document);
                     configuration = GetVersioningConfiguration(collectionName);
                 }
 
@@ -294,7 +333,7 @@ namespace Raven.Server.Documents.Versioning
             if (configuration.PurgeOnDelete == false)
                 return;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
+            var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
             {
                 DeleteRevisions(context, table, prefixSlice, long.MaxValue);
@@ -355,7 +394,7 @@ namespace Raven.Server.Documents.Versioning
 
         private IEnumerable<Document> GetRevisions(DocumentsOperationContext context, Slice prefixSlice, Slice lastKey, int start, int take)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
             foreach (var tvr in table.SeekBackwardFrom(DocsSchema.Indexes[IdAndEtagSlice], prefixSlice, lastKey, start))
             {
                 if (take-- <= 0)
@@ -368,9 +407,9 @@ namespace Raven.Server.Documents.Versioning
 
         public IEnumerable<Document> GetRevisionsFrom(DocumentsOperationContext context, long etag, int take)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
-            foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[RevisionsEtagsSlice], etag, 0))
+            foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], etag, 0))
             {
                 var document = TableValueToRevision(context, ref tvr.Reader);
                 yield return document;
@@ -379,14 +418,32 @@ namespace Raven.Server.Documents.Versioning
                     yield break;
             }
         }
-
-        public IEnumerable<ReplicationBatchItem> GetRevisionsAfter(DocumentsOperationContext context, long etag)
+        
+        public IEnumerable<(Document previous, Document current)> GetRevisionsFrom(DocumentsOperationContext context, CollectionName collectionName, long etag)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
-
-            foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[RevisionsEtagsSlice], etag, 0))
+            var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
+            var docsSchemaIndex = DocsSchema.Indexes[IdAndEtagSlice];
+            
+            foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], etag, 0))
             {
-                yield return ReplicationBatchItem.From(TableValueToRevision(context, ref tvr.Reader));
+                var current = TableValueToRevision(context, ref tvr.Reader);
+
+                using (docsSchemaIndex.GetSlice(context.Allocator, ref tvr.Reader, out var idAndetag))
+                using (Slice.External(context.Allocator, idAndetag, idAndetag.Size - sizeof(long), out var prefix))
+                {
+                    bool hasPrevious = false;
+                    foreach (var prevTvr in table.SeekBackwardFrom(docsSchemaIndex, prefix, idAndetag, 1))
+                    {
+                        var previous = TableValueToRevision(context, ref prevTvr.Result.Reader);
+                        yield return (previous, current);
+                        hasPrevious = true;
+                        break;
+                    }
+                    if (hasPrevious)
+                        continue;
+                }
+
+                yield return (null, current);
             }
         }
 
@@ -419,8 +476,8 @@ namespace Raven.Server.Documents.Versioning
 
         public long GetNumberOfRevisionDocuments(DocumentsOperationContext context)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
-            return table.GetNumberEntriesFor(DocsSchema.FixedSizeIndexes[RevisionsEtagsSlice]);
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+            return table.GetNumberEntriesFor(DocsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice]);
         }
     }
 }
