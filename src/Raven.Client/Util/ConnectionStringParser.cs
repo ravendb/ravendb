@@ -45,7 +45,7 @@ namespace Raven.Client.Util
                                                                                          RegexOptions.Compiled |
                                                                                          RegexOptions.IgnorePatternWhitespace);
 
-        private static readonly Regex ConnectionStringListSplitterRegex = new Regex(@"(\s?,\s?)",
+        private static readonly Regex ConnectionStringListSplitterRegex = new Regex(@"\s*,\s*",
             RegexOptions.Compiled |
             RegexOptions.IgnorePatternWhitespace);
 
