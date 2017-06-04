@@ -86,7 +86,14 @@ namespace Raven.Server.Documents
             }
             finally
             {
-                _concurrentOperations.Signal(); // done with this
+                try
+                {
+                    _concurrentOperations.Signal(); // done with this
+                }
+                catch (InvalidOperationException)
+                {
+                    // Expected: "Invalid attempt made to decrement the event's count below zero."
+                }
             }
         }
 
