@@ -465,8 +465,8 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 foreach (var (previous, current) in revisions.GetRevisionsFrom(docsContext, new CollectionName(subscription.Criteria.Collection), startEtag + 1))
                 {
-                    Console.WriteLine(previous);
-                    Console.WriteLine(current);
+                    Console.WriteLine(previous?.Data?.ToString() ?? "null");
+                    Console.WriteLine(current.Data);
                 }
             }
             

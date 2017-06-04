@@ -432,7 +432,7 @@ namespace Raven.Server.Documents.Versioning
                 using (Slice.External(context.Allocator, idAndetag, idAndetag.Size - sizeof(long), out var prefix))
                 {
                     bool hasPrevious = false;
-                    foreach (var prevTvr in table.SeekBackwardFrom(docsSchemaIndex, prefix, idAndetag, 0))
+                    foreach (var prevTvr in table.SeekBackwardFrom(docsSchemaIndex, prefix, idAndetag, 1))
                     {
                         var previous = TableValueToRevision(context, ref prevTvr.Result.Reader);
                         yield return (previous, current);
