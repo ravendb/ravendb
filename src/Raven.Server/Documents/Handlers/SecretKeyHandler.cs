@@ -99,6 +99,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/admin/secrets/distribute", "POST", "/admin/secrets/distribute?name={name:string}&node={node:string|multiple}")]
         public async Task DistributeKeyInCluster()
         {
+            ServerStore.EnsureNotPassive();
+
             var name = GetStringQueryString("name");
             var nodes = GetStringValuesQueryString("node", required: true);
 
