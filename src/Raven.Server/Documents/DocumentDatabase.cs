@@ -88,31 +88,31 @@ namespace Raven.Server.Documents
 
             try
             {
-            IoChanges = new IoChangesNotifications();
-            Changes = new DocumentsChanges();
-            DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
-            DocumentsStorage = new DocumentsStorage(this);
-            IndexStore = new IndexStore(this, serverStore, _indexAndTransformerLocker);
-            TransformerStore = new TransformerStore(this, serverStore, _indexAndTransformerLocker);
-            EtlLoader = new EtlLoader(this, serverStore);
-            if(serverStore != null)
-                ReplicationLoader = new ReplicationLoader(this, serverStore);
-            SubscriptionStorage = new SubscriptionStorage(this, serverStore);
-            Operations = new DatabaseOperations(this);
-            Metrics = new MetricsCountersManager();
-            Patcher = new DocumentPatcher(this);
-            TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
-            HugeDocuments = new HugeDocuments(configuration.PerformanceHints.HugeDocumentsCollectionSize,
-                configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
-            ConfigurationStorage = new ConfigurationStorage(this, serverStore);
-            NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, _databaseShutdown.Token);
-            DatabaseInfoCache = serverStore?.DatabaseInfoCache;
-            RachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
-            CatastrophicFailureNotification = new CatastrophicFailureNotification(e =>
-            {
-                serverStore?.DatabasesLandlord.UnloadResourceOnCatastrophicFailue(name, e);
-            });
-        }
+                IoChanges = new IoChangesNotifications();
+                Changes = new DocumentsChanges();
+                DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
+                DocumentsStorage = new DocumentsStorage(this);
+                IndexStore = new IndexStore(this, serverStore, _indexAndTransformerLocker);
+                TransformerStore = new TransformerStore(this, serverStore, _indexAndTransformerLocker);
+                EtlLoader = new EtlLoader(this, serverStore);
+                if (serverStore != null)
+                    ReplicationLoader = new ReplicationLoader(this, serverStore);
+                SubscriptionStorage = new SubscriptionStorage(this, serverStore);
+                Operations = new DatabaseOperations(this);
+                Metrics = new MetricsCountersManager();
+                Patcher = new DocumentPatcher(this);
+                TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
+                HugeDocuments = new HugeDocuments(configuration.PerformanceHints.HugeDocumentsCollectionSize,
+                    configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
+                ConfigurationStorage = new ConfigurationStorage(this);
+                NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, _databaseShutdown.Token);
+                DatabaseInfoCache = serverStore?.DatabaseInfoCache;
+                RachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
+                CatastrophicFailureNotification = new CatastrophicFailureNotification(e =>
+                {
+                    serverStore?.DatabasesLandlord.UnloadResourceOnCatastrophicFailue(name, e);
+                });
+            }
             catch (Exception)
             {
                 Dispose();
@@ -200,13 +200,12 @@ namespace Raven.Server.Documents
 
                 TxMerger.Start();
 
-                ConfigurationStorage.InitializeNotificationsStorage();
+                ConfigurationStorage.Initialize();
 
                 DatabaseRecord record;
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                     record = _serverStore.Cluster.ReadDatabase(context, Name);
-
 
                 _indexStoreTask = IndexStore.InitializeAsync(record);
                 _transformerStoreTask = TransformerStore.InitializeAsync(record);
@@ -238,10 +237,6 @@ namespace Raven.Server.Documents
                 }
 
                 SubscriptionStorage.Initialize();
-
-                //Index Metadata Store shares Voron env and context pool with documents storage, 
-                //so replication of both documents and indexes/transformers can be made within one transaction
-                ConfigurationStorage.Initialize(IndexStore, TransformerStore);
 
                 ReplicationLoader?.Initialize();
 
