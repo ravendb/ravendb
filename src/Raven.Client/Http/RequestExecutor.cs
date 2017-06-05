@@ -172,7 +172,7 @@ namespace Raven.Client.Http
         {
             var topologyUpdate = _firstTopologyUpdate;
 
-            if ((topologyUpdate != null && topologyUpdate.Status == TaskStatus.RanToCompletion) || _withoutTopology)
+            if (topologyUpdate != null && topologyUpdate.Status == TaskStatus.RanToCompletion || _withoutTopology)
             {
                 await ExecuteAsync(_nodeSelector.CurrentNode, context, command, token).ConfigureAwait(false);
                 return;

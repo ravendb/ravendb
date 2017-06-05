@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using FastTests.Client.Attachments;
+using FastTests.Tasks;
 using RachisTests.DatabaseCluster;
 using Sparrow.Logging;
 using System.Threading.Tasks;
@@ -18,13 +20,18 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
 
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new AttachmentFailover())
-                {
-                    a.PutAttachmentsWithFailover(false, 512 * 1024, "BfKA8g/BJuHOTHYJ+A6sOt9jmFSVEDzCM3EcLLKCRMU=").Wait();
-                }
+                //Parallel.For(0, 10, _ =>
+                //{
+                    using (var a = new RavenDB_6886())
+                    {
+                        Console.Write(".");
+                        a.Cluster_identity_for_single_document_in_parallel_on_different_nodes_should_work().Wait();
+                    }
+                //});
+                Console.WriteLine();
             }
         }
     }

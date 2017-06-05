@@ -139,6 +139,12 @@ namespace Raven.Server.Rachis
                                         });
 
                                         rvr = connection.Read<RequestVoteResponse>(context);
+                                        if (rvr == null)
+                                        {
+                                            HandleUnexpectedRemoteConnectionClosed();
+                                            return;
+                                        }
+
                                         if (rvr.Term > currentElectionTerm)
                                         {
                                             var message = "Found election term " + rvr.Term + " that is higher than ours " + currentElectionTerm;
@@ -180,6 +186,12 @@ namespace Raven.Server.Rachis
                                     });
 
                                     rvr = connection.Read<RequestVoteResponse>(context);
+                                    if (rvr == null)
+                                    {
+                                        HandleUnexpectedRemoteConnectionClosed();
+                                        return;
+                                    }
+
                                     if (rvr.Term > currentElectionTerm)
                                     {
                                         var message = "Found election term " + rvr.Term + " that is higher than ours " + currentElectionTerm;
@@ -248,6 +260,16 @@ namespace Raven.Server.Rachis
                     _engine.Log.Info("Failed to talk to remote peer: " + _url, e);
                 }
             }
+        }
+
+        private void HandleUnexpectedRemoteConnectionClosed()
+        {
+            if (_engine.Log.IsInfoEnabled)
+            {
+                _engine.Log.Info(
+                    $"CandidateAmbassador {_engine.Tag}: remote follower closed the connection while reading RequestVoteResponse message, so I am closing it on this side.");
+            }
+            _candidate.Dispose();
         }
 
         public bool NotInTopology { get; private set; }

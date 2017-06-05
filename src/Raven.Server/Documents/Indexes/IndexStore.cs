@@ -421,7 +421,7 @@ namespace Raven.Server.Documents.Indexes
             if (definition is MapIndexDefinition)
                 return await CreateIndex(((MapIndexDefinition)definition).IndexDefinition);
 
-            await _indexAndTransformerLocker.WaitAsync();
+            await _indexAndTransformerLocker.WaitAsync(_documentDatabase.DatabaseShutdown);
 
             try
             {
