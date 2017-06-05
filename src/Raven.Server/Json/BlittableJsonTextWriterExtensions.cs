@@ -662,10 +662,10 @@ namespace Raven.Server.Json
             writer.WriteInteger(statistics.CountOfDocuments);
             writer.WriteComma();
 
-            if (statistics.CountOfRevisionDocuments.HasValue)
+            if (statistics.CountOfRevisionDocuments > 0)
             {
                 writer.WritePropertyName(nameof(statistics.CountOfRevisionDocuments));
-                writer.WriteInteger(statistics.CountOfRevisionDocuments.Value);
+                writer.WriteInteger(statistics.CountOfRevisionDocuments);
                 writer.WriteComma();
             }
 

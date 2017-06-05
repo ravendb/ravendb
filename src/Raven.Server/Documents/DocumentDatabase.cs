@@ -146,7 +146,6 @@ namespace Raven.Server.Documents
 
         public DocumentsStorage DocumentsStorage { get; private set; }
 
-        public VersioningStorage VersioningStorage { get; private set; }
         public ExpiredDocumentsCleaner ExpiredDocumentsCleaner { get; private set; }
         public PeriodicBackupRunner PeriodicBackupRunner { get; private set; }
 
@@ -468,7 +467,7 @@ namespace Raven.Server.Documents
             var size = new Size(envs.Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes));
             var databaseInfo = new DynamicJsonValue
             {
-                [nameof(DatabaseInfo.VersioningActive)] = VersioningStorage != null,
+                [nameof(DatabaseInfo.HasVersioningConfiguration)] = DocumentsStorage.VersioningStorage.Configuration != null,
                 [nameof(DatabaseInfo.ExpirationActive)] = ExpiredDocumentsCleaner != null,
                 [nameof(DatabaseInfo.IsAdmin)] = true, //TODO: implement me!
                 [nameof(DatabaseInfo.Name)] = Name,
@@ -625,7 +624,7 @@ namespace Raven.Server.Documents
                 var dbRecord = _serverStore.LoadDatabaseRecord(Name);
                 if (dbRecord != null)
                 {
-                    VersioningStorage = VersioningStorage.LoadConfigurations(this, dbRecord, VersioningStorage);
+                    DocumentsStorage.VersioningStorage.InitializeFromDatabaseRecord(dbRecord);
                     ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, dbRecord, ExpiredDocumentsCleaner);
                     PeriodicBackupRunner.UpdateConfigurations(dbRecord);
                 }

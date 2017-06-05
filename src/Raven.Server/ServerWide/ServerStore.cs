@@ -891,8 +891,7 @@ namespace Raven.Server.ServerWide
 
         public DatabaseRecord LoadDatabaseRecord(string databaseName)
         {
-            TransactionOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 return Cluster.ReadDatabase(context, databaseName);

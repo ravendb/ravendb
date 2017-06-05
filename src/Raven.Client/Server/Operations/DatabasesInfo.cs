@@ -43,7 +43,7 @@ namespace Raven.Client.Server.Operations
         public long? IndexingErrors { get; set; }
 
         public long? DocumentsCount { get; set; }
-        public bool VersioningActive { get; set; }
+        public bool HasVersioningConfiguration { get; set; }
         public bool ExpirationActive { get; set; }
         public int? IndexesCount { get; set; }
         public IndexRunningStatus IndexingStatus { get; set; }
@@ -71,7 +71,7 @@ namespace Raven.Client.Server.Operations
                 [nameof(IndexingErrors)] = IndexingErrors,
 
                 [nameof(DocumentsCount)] = DocumentsCount,
-                [nameof(VersioningActive)] = VersioningActive,
+                [nameof(HasVersioningConfiguration)] = HasVersioningConfiguration,
                 [nameof(ExpirationActive)] = ExpirationActive,
                 [nameof(IndexesCount)] = IndexesCount,
                 [nameof(IndexingStatus)] = IndexingStatus.ToString(),

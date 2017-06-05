@@ -167,6 +167,7 @@ namespace Raven.Server.Documents
 
         public StorageEnvironment Environment { get; private set; }
 
+        public VersioningStorage VersioningStorage;
         public ConflictsStorage ConflictsStorage;
         public AttachmentsStorage AttachmentsStorage;
         public IdentitiesStorage Identities;
@@ -252,6 +253,7 @@ namespace Raven.Server.Documents
 
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
 
+                    VersioningStorage = new VersioningStorage(_documentDatabase, tx);
                     Identities = new IdentitiesStorage(_documentDatabase, tx);
                     ConflictsStorage = new ConflictsStorage(_documentDatabase, tx);
                     AttachmentsStorage = new AttachmentsStorage(_documentDatabase, tx);
@@ -979,7 +981,11 @@ namespace Raven.Server.Documents
                 if (collectionName.IsSystem == false &&
                     (flags & DocumentFlags.Versioned) == DocumentFlags.Versioned)
                 {
-                    _documentDatabase.VersioningStorage?.Delete(context, collectionName, lowerId);
+                    // TODO:
+                    // Check on _documentDatabase.DocumentsStorage.VersioningStorage.Configuration != null 
+                    // instead of having DocumentFlags.Versioned
+                    // And put delete marker
+                    _documentDatabase.DocumentsStorage.VersioningStorage.Delete(context, collectionName, lowerId);
                 }
                 table.Delete(doc.StorageId);
 

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Server;
 using Raven.Client.Server.Versioning;
@@ -17,6 +16,7 @@ using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
+using Voron.Impl;
 
 namespace Raven.Server.Documents.Versioning
 {
@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Versioning
         private readonly Logger _logger;
         private readonly DocumentDatabase _database;
         private readonly DocumentsStorage _documentsStorage;
-        private readonly VersioningConfiguration _versioningConfiguration;
+        public VersioningConfiguration Configuration { get; private set; }
 
         private enum Columns
         {
@@ -51,22 +51,15 @@ namespace Raven.Server.Documents.Versioning
         }
         private readonly VersioningConfigurationCollection _emptyConfiguration = new VersioningConfigurationCollection();
 
-        private VersioningStorage(DocumentDatabase database, VersioningConfiguration versioningConfiguration)
+        public VersioningStorage(DocumentDatabase database, Transaction tx)
         {
             _database = database;
             _documentsStorage = _database.DocumentsStorage;
-            _versioningConfiguration = versioningConfiguration;
 
             _logger = LoggingSource.Instance.GetLogger<VersioningStorage>(database.Name);
 
-            using (var tx = database.DocumentsStorage.Environment.WriteTransaction())
-            {
-                DocsSchema.Create(tx, RevisionDocumentsSlice, 16);
-
-                tx.CreateTree(RevisionsCountSlice);
-
-                tx.Commit();
-            }
+            DocsSchema.Create(tx, RevisionDocumentsSlice, 16);
+            tx.CreateTree(RevisionsCountSlice);
         }
 
         static VersioningStorage()
@@ -97,43 +90,45 @@ namespace Raven.Server.Documents.Versioning
             });
         }
 
-        public static VersioningStorage LoadConfigurations(DocumentDatabase database, DatabaseRecord dbRecord, VersioningStorage versioningStorage)
+        public void InitializeFromDatabaseRecord(DatabaseRecord dbRecord)
         {
-            var logger = LoggingSource.Instance.GetLogger<VersioningStorage>(database.Name);
             try
             {
                 if (dbRecord.Versioning == null)
-                    return null;
-                if (dbRecord.Versioning.Equals(versioningStorage?._versioningConfiguration))
-                    return versioningStorage;                    
-                var config = new VersioningStorage(database, dbRecord.Versioning);
-                if (logger.IsInfoEnabled)
-                    logger.Info("Versioning configuration changed");
-                return config;
+                {
+                    Configuration = null;
+                    return;
+                }
+
+                if (dbRecord.Versioning.Equals(Configuration))
+                    return;
+
+                Configuration = dbRecord.Versioning;
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Versioning configuration changed");
             }
             catch (Exception e)
             {
                 var msg = "Cannot enable versioning for documents as the versioning configuration" +
                           $" in the database record is missing or not valid: {dbRecord}";
-                database.NotificationCenter.Add(AlertRaised.Create($"Versioning error in {database.Name}", msg,
-                    AlertType.VersioningConfigurationNotValid, NotificationSeverity.Error, database.Name));
-                if (logger.IsOperationsEnabled)
-                    logger.Operations(msg, e);
-                return null;
+                _database.NotificationCenter.Add(AlertRaised.Create($"Versioning error in {_database.Name}", msg,
+                    AlertType.VersioningConfigurationNotValid, NotificationSeverity.Error, _database.Name));
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations(msg, e);
             }
         }
 
         private VersioningConfigurationCollection GetVersioningConfiguration(CollectionName collectionName)
         {
-            if (_versioningConfiguration.Collections != null && 
-                _versioningConfiguration.Collections.TryGetValue(collectionName.Name, out VersioningConfigurationCollection configuration))
+            if (Configuration.Collections != null && 
+                Configuration.Collections.TryGetValue(collectionName.Name, out VersioningConfigurationCollection configuration))
             {
                 return configuration;
             }
 
-            if (_versioningConfiguration.Default != null)
+            if (Configuration.Default != null)
             {
-                return _versioningConfiguration.Default;
+                return Configuration.Default;
             }
 
             return _emptyConfiguration;

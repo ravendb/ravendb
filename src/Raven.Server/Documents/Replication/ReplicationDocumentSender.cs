@@ -131,7 +131,8 @@ namespace Raven.Server.Documents.Replication
             var docs = _parent._database.DocumentsStorage.GetDocumentsFrom(ctx, etag + 1);
             var tombs = _parent._database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1);
             var conflicts = _parent._database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(ctx, etag + 1);
-            var revisions = _parent._database.VersioningStorage?.GetRevisionsAfter(ctx, etag + 1);
+            var versioningStorage = _parent._database.DocumentsStorage.VersioningStorage;
+            var revisions = versioningStorage.Configuration != null ? versioningStorage.GetRevisionsAfter(ctx, etag + 1) : null;
             var attachments = _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsFrom(ctx, etag + 1);
 
             using (var docsIt = docs.GetEnumerator())

@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Operations
         /// <summary>
         /// Total number of revision documents in database.
         /// </summary>
-        public long? CountOfRevisionDocuments { get; set; }
+        public long CountOfRevisionDocuments { get; set; }
 
         /// <summary>
         /// Total number of attachments in database.
