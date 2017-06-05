@@ -8,6 +8,7 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Server;
 using Raven.Client.Server.Versioning;
 using Raven.Server.Documents.Replication;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
@@ -112,12 +113,12 @@ namespace Raven.Server.Documents.Versioning
             }
             catch (Exception e)
             {
-                //TODO: This should generate an alert, so admin will know that something is very bad
-                //TODO: Or this should throw and we should have a config flag to ignore the error
+                var msg = "Cannot enable versioning for documents as the versioning configuration" +
+                          $" in the database record is missing or not valid: {dbRecord}";
+                database.NotificationCenter.Add(AlertRaised.Create($"Versioning error in {database.Name}", msg,
+                    AlertType.VersioningConfigurationNotValid, NotificationSeverity.Error, database.Name));
                 if (logger.IsOperationsEnabled)
-                    logger.Operations(
-                        $"Cannot enable versioning for documents as the versioning configuration" +
-                        $" in the database record is missing or not valid: {dbRecord}", e);
+                    logger.Operations(msg, e);
                 return null;
             }
         }

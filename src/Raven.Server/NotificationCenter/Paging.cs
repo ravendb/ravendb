@@ -105,8 +105,7 @@ namespace Raven.Server.NotificationCenter
 
         private PerformanceHint GetPagingPerformanceHint(string id, PagingOperationType type)
         {
-            NotificationTableValue ntv;
-            using (_notificationsStorage.Read(id, out ntv))
+            using (_notificationsStorage.Read(id, out NotificationTableValue ntv))
             {
                 PagingPerformanceDetails details;
                 if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)

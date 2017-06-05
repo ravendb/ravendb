@@ -110,7 +110,7 @@ namespace Raven.Server.Documents
                 RachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
                 CatastrophicFailureNotification = new CatastrophicFailureNotification(e =>
                 {
-                    serverStore?.DatabasesLandlord.UnloadResourceOnCatastrophicFailue(name, e);
+                    serverStore?.DatabasesLandlord.UnloadResourceOnCatastrophicFailure(name, e);
                 });
             }
             catch (Exception)
