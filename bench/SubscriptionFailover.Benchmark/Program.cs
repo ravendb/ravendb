@@ -11,7 +11,7 @@ using Voron.Util;
 
 namespace SubscriptionFailoverBenchmark
 {
-    public class SubscriptionFailoverBenchmark: ClusterTestBase
+    public class SubscriptionFailoverBenchmark : ClusterTestBase
     {
 
         public async Task RunTestSimple()
@@ -28,18 +28,18 @@ namespace SubscriptionFailoverBenchmark
         private async Task GenerateDocuments(DocumentStore store)
         {
             var j = 0;
-            
+
             do
             {
                 try
                 {
                     using (var session = store.OpenAsyncSession())
                     {
-                        for (var i=0 ; i < 1000 ; j++,i++)
+                        for (var i = 0; i < 1000; j++, i++)
                         {
                             await session.StoreAsync(new User
                             {
-                                Name = "User"+j
+                                Name = "User" + j
                             });
                         }
 
@@ -52,7 +52,7 @@ namespace SubscriptionFailoverBenchmark
 
                 }
             } while (j < DocsAmount);
-        
+
         }
 
         public async Task RunsSubscriptionSimple(DocumentStore store)
@@ -67,7 +67,7 @@ namespace SubscriptionFailoverBenchmark
             var counter = 0;
             var tcs = new TaskCompletionSource<bool>();
 
-            
+
 
             subscripiton.Subscribe(x =>
             {
@@ -94,20 +94,20 @@ namespace SubscriptionFailoverBenchmark
         {
             var defaultDatabase = "StressTest";
 
-            
-            
+
+
             var leader = await CreateRaftClusterAndGetLeader(nodesAmount, false);
 
             await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrls[0]).ConfigureAwait(false);
 
             var docsCreationTasks = new Task[docsCreationTasksAmount];
-            
+
             var subscriptionsTasks = new Task[subscriptionCreationTasksAmount];
             var subscriptionSummaries = new List<(string, DateTime)>[subscriptionCreationTasksAmount];
 
             var cts = new CancellationTokenSource();
 
-            for(var i=0; i< docsCreationTasks.Length; i++)
+            for (var i = 0; i < docsCreationTasks.Length; i++)
             {
                 var curI = i;
                 docsCreationTasks[i] = Task.Run(async () =>
@@ -121,7 +121,7 @@ namespace SubscriptionFailoverBenchmark
                 await ChaosMonkey(cts);
             }));
 
-            for (var i=0; i< subscriptionsTasks.Length; i++)
+            for (var i = 0; i < subscriptionsTasks.Length; i++)
             {
                 var curI = i;
                 var log = new List<(string, DateTime)>();
@@ -147,7 +147,7 @@ namespace SubscriptionFailoverBenchmark
             }
         }
 
-        private async Task RunSubscription(string defaultDatabase,  List<(string, DateTime)> log)
+        private async Task RunSubscription(string defaultDatabase, List<(string, DateTime)> log)
         {
             using (var store = new DocumentStore
             {
@@ -192,7 +192,7 @@ namespace SubscriptionFailoverBenchmark
                 await subscripiton.StartAsync();
 
                 await tcs.Task;
-            }            
+            }
         }
 
         private async Task GenerateDocumentsForNode(string defaultDatabase, Task[] docsCreationTasks, string url, long rangeStart)
@@ -215,7 +215,7 @@ namespace SubscriptionFailoverBenchmark
                                 await session.StoreAsync(new User
                                 {
                                     Name = "User" + j
-                                },$"Users/{rangeStart+j}");
+                                }, $"Users/{rangeStart + j}");
                             }
 
                             await session.SaveChangesAsync();
@@ -230,9 +230,10 @@ namespace SubscriptionFailoverBenchmark
             }
         }
 
-        private async Task ChaosMonkey( CancellationTokenSource cts)
+        private Task ChaosMonkey(CancellationTokenSource cts)
         {
-            var curIndex = 0;
+            return Task.CompletedTask;
+            //var curIndex = 0;
             //while (cts.IsCancellationRequested == false)
             //{
             //    var curServer = Servers[curIndex];

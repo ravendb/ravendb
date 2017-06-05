@@ -72,9 +72,9 @@ namespace Raven.Server.Config
 
         protected IConfigurationRoot Settings { get; set; }
 
-        public RavenConfiguration(string resoureName, ResourceType resourceType, string customConfigPath = null)
+        public RavenConfiguration(string resourceName, ResourceType resourceType, string customConfigPath = null)
         {
-            ResourceName = resoureName;
+            ResourceName = resourceName;
             ResourceType = resourceType;
 
             _configBuilder = new ConfigurationBuilder();
@@ -82,6 +82,7 @@ namespace Raven.Server.Config
             AddJsonConfigurationVariables(customConfigPath);
 
             Settings = _configBuilder.Build();
+
             Core = new CoreConfiguration();
 
             Replication = new ReplicationConfiguration();
@@ -179,13 +180,6 @@ namespace Raven.Server.Config
             CheckDirectoryPermissions();
         }
 
-        public void CopyParentSettings(RavenConfiguration serverConfiguration)
-        {
-            Storage.ForceUsing32BitsPager = serverConfiguration.Storage.ForceUsing32BitsPager;
-
-            Queries.MaxClauseCount = serverConfiguration.Queries.MaxClauseCount;
-        }
-
         public void SetSetting(string key, string value)
         {
             if (Initialized)
@@ -220,7 +214,7 @@ namespace Raven.Server.Config
         {
             var dataDirectory = parent.Core.DataDirectory;
             var dataDirectoryPath = dataDirectory != null ? parent.Core.DataDirectory.Combine(Inflector.Pluralize(type.ToString())).Combine(name).ToFullPath() :
-                      GenerateDefaultDataDirectory(parent.Core.GetDefaultValue<CoreConfiguration>(v => v.DataDirectory).ToString(),type,name);
+                      GenerateDefaultDataDirectory(parent.Core.GetDefaultValue<CoreConfiguration>(v => v.DataDirectory).ToString(), type, name);
 
             var result = new RavenConfiguration(name, type)
             {
@@ -235,7 +229,7 @@ namespace Raven.Server.Config
             return result;
         }
 
-        private static string GenerateDefaultDataDirectory(string template, ResourceType type,string name)
+        private static string GenerateDefaultDataDirectory(string template, ResourceType type, string name)
         {
             return template.Replace("{pluralizedResourceType}", Inflector.Pluralize(type.ToString()))
                            .Replace("{name}", name);
