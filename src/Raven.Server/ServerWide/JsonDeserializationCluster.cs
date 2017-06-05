@@ -62,6 +62,7 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateTopologyCommand)] = GenerateJsonDeserializationRoutine<UpdateTopologyCommand>(),
             [nameof(UpdateExternalReplicationCommand)] = GenerateJsonDeserializationRoutine<UpdateExternalReplicationCommand>(),
             [nameof(DeleteExternalReplicationCommand)] = GenerateJsonDeserializationRoutine<DeleteExternalReplicationCommand>(),
+            [nameof(DisableEnableOngoingTaskCommand)] = GenerateJsonDeserializationRoutine<DisableEnableOngoingTaskCommand>(),
             [nameof(AddDatabaseCommand)] = GenerateJsonDeserializationRoutine<AddDatabaseCommand>(),
             [nameof(DeleteValueCommand)] = GenerateJsonDeserializationRoutine<DeleteValueCommand>(),
             [nameof(PutApiKeyCommand)] = GenerateJsonDeserializationRoutine<PutApiKeyCommand>(),
