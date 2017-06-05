@@ -195,10 +195,10 @@ namespace Raven.Server.Documents
                         throw new InvalidOperationException($"Attempt to create a non-encrypted db {Name}, but a secret key exists for this db.");
                 }
 
+                NotificationCenter.Initialize(this);
+
                 DocumentsStorage.Initialize();
-
                 TxMerger.Start();
-
                 ConfigurationStorage.Initialize();
 
                 DatabaseRecord record;
@@ -238,8 +238,6 @@ namespace Raven.Server.Documents
                 SubscriptionStorage.Initialize();
 
                 ReplicationLoader?.Initialize();
-
-                NotificationCenter.Initialize(this);
             }
             catch (Exception)
             {

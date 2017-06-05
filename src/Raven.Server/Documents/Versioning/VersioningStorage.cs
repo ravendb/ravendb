@@ -60,6 +60,9 @@ namespace Raven.Server.Documents.Versioning
 
             DocsSchema.Create(tx, RevisionDocumentsSlice, 16);
             tx.CreateTree(RevisionsCountSlice);
+
+            // TODO: Subscribe here on all of our collections
+            // _database.DocumentTombstoneCleaner.Subscribe();
         }
 
         static VersioningStorage()
