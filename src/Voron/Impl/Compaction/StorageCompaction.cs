@@ -9,6 +9,7 @@ using System.Linq;
 using System.Runtime.ExceptionServices;
 using Voron.Data;
 using Voron.Data.BTrees;
+using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Global;
 using Voron.Impl.FreeSpace;
@@ -126,7 +127,11 @@ namespace Voron.Impl.Compaction
             TreeIterator rootIterator, string treeName, long copiedTrees, long totalTreesCount, RootObjectType type, TransactionPersistentContext context)
         {
 
-            var fst = txr.FixedTreeFor(rootIterator.CurrentKey.Clone(txr.Allocator), 0);
+            var treeNameSlice = rootIterator.CurrentKey.Clone(txr.Allocator);
+
+            var header = (FixedSizeTreeHeader.Embedded*)txr.LowLevelTransaction.RootObjects.DirectRead(treeNameSlice);
+
+            var fst = txr.FixedTreeFor(treeNameSlice, header->ValueSize);
 
             Report(type, treeName, copiedTrees, totalTreesCount, 0, fst.NumberOfEntries, progressReport);
 
@@ -140,7 +145,7 @@ namespace Voron.Impl.Compaction
                 {
                     using (var txw = compactedEnv.WriteTransaction(context))
                     {
-                        var snd = txw.FixedTreeFor(rootIterator.CurrentKey.Clone(txr.Allocator));
+                        var snd = txw.FixedTreeFor(treeNameSlice, header->ValueSize);
                         var transactionSize = 0L;
                         do
                         {
