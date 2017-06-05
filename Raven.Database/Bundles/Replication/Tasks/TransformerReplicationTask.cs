@@ -15,6 +15,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Impl;
 using Raven.Bundles.Replication.Tasks;
+using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 
@@ -76,7 +77,8 @@ namespace Raven.Database.Bundles.Replication.Tasks
             }
         }
 
-        public bool Execute(Func<ReplicationDestination, bool> shouldSkipDestinationPredicate = null)
+        public bool Execute(Func<ReplicationDestination, bool> shouldSkipDestinationPredicate = null,
+            bool forceTombstoneReplication = false)
         {
             if (Database.Disposed)
                 return false;
@@ -90,6 +92,7 @@ namespace Raven.Database.Bundles.Replication.Tasks
                 {
                     shouldSkipDestinationPredicate = shouldSkipDestinationPredicate ?? (x => x.SkipIndexReplication == false);
                     var replicationDestinations = GetReplicationDestinations(x => shouldSkipDestinationPredicate(x));
+                    var replicatedTransformerTombstones = new Dictionary<string, int>();
 
                     foreach (var destination in replicationDestinations)
                     {
@@ -99,8 +102,7 @@ namespace Raven.Database.Bundles.Replication.Tasks
                             // we don't send out deletions immediately, we wait for a bit
                             // to make sure that the user didn't reset the index or delete / create
                             // things manually
-                            x => (now - x.CreatedAt) >= TimeToWaitBeforeSendingDeletesOfTransformersToSiblings);
-                        var replicatedTransformerTombstones = new Dictionary<string, int>();
+                            x => forceTombstoneReplication || (now - x.CreatedAt) >= TimeToWaitBeforeSendingDeletesOfTransformersToSiblings);
 
                         try
                         {
@@ -116,20 +118,21 @@ namespace Raven.Database.Bundles.Replication.Tasks
                         {
                             Log.ErrorException("Failed to replicate transformers to " + destination, e);
                         }
-
-                        Database.TransactionalStorage.Batch(actions =>
-                        {
-                            foreach (var transformerTombstone in replicatedTransformerTombstones)
-                            {
-                                var transformerExists = Database.Transformers.GetTransformerDefinition(transformerTombstone.Key) != null;
-                                if (transformerTombstone.Value != replicationDestinations.Count &&
-                                    transformerExists == false)
-                                    continue;
-
-                                actions.Lists.Remove(Constants.RavenReplicationTransformerTombstones, transformerTombstone.Key);
-                            }
-                        });
                     }
+
+                    Database.TransactionalStorage.Batch(actions =>
+                    {
+                        foreach (var transformerTombstone in replicatedTransformerTombstones)
+                        {
+                            var transformerExists = Database.Transformers.GetTransformerDefinition(transformerTombstone.Key) != null;
+                            if (transformerTombstone.Value != replicationDestinations.Count &&
+                                transformerExists == false)
+                                continue;
+
+                            actions.Lists.Remove(Constants.RavenReplicationTransformerTombstones, transformerTombstone.Key);
+                        }
+                    });
+
                     return true;
                 }
             }
@@ -195,7 +198,11 @@ namespace Raven.Database.Bundles.Replication.Tasks
                         continue;
                     }
 
-                    var url = string.Format("{0}/transformers/{1}?{2}", destination.ConnectionStringOptions.Url, Uri.EscapeUriString(tombstone.Key), GetDebugInformation());
+                    var url = string.Format("{0}/transformers/{1}?{2}&{3}",
+                        destination.ConnectionStringOptions.Url,
+                        Uri.EscapeUriString(tombstone.Key),
+                        GetTombstoneVersion(tombstone, IndexDefinitionStorage.TransformerVersionKey, Constants.TransformerVersion),
+                        GetDebugInformation());
                     var replicationRequest = HttpRavenRequestFactory.Create(url, "DELETE", destination.ConnectionStringOptions, Replication.GetRequestBuffering(destination));
                     replicationRequest.Write(RavenJObject.FromObject(EmptyRequestBody));
                     replicationRequest.ExecuteRequest();
