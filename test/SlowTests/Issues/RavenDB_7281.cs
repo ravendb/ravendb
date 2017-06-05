@@ -6,7 +6,7 @@ using Voron;
 using Voron.Data.Fixed;
 using Xunit;
 
-namespace FastTests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_7281 : StorageTest
     {
@@ -17,9 +17,20 @@ namespace FastTests.Issues
         [InlineData(5111, 3)]
         [InlineData(13, 5)]
         [InlineData(5111, 5)]
-        [InlineDataWithRandomSeed(2)]
         public void CanCalculateNumberOfEntriesInFst(int total, int mod)
         {
+            DoWork(total, mod, modZero: true);
+            DoWork(total, mod, modZero: false);
+        }
+
+        [Theory]
+        [InlineDataWithRandomSeed]
+        public void CanCalculateNumberOfEntriesInFst_Random(int seed)
+        {
+            var random = new Random(seed);
+            var total = random.Next(0, 10000);
+            var mod = random.Next(2, 100);
+
             DoWork(total, mod, modZero: true);
             DoWork(total, mod, modZero: false);
         }

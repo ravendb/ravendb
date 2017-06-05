@@ -1563,31 +1563,22 @@ namespace Voron.Data.Fixed
             if (Type.HasValue == false)
                 return 0;
 
-            long count = 0;
             if (Type.Value == RootObjectType.EmbeddedFixedSizeTree)
             {
-                using (var it = Iterate())
+                using (var it = (EmbeddedIterator)Iterate())
                 {
                     if (it.Seek(value) == false)
                         return 0;
 
-                    do
-                    {
-                        if (it.CurrentKey == value)
-                            continue;
-
-                        count++;
-                    } while (it.MoveNext());
+                    return it.NumberOfEntriesLeft;
                 }
-
-                return count;
             }
 
             var page = FindPageFor(value);
             if (page.LastMatch >= 0)
                 page.LastSearchPosition++;
 
-            count = GetRemainingNumberOfEntriesFor(page);
+            var count = GetRemainingNumberOfEntriesFor(page);
 
             if (_cursor.TryPop(out page) == false)
                 return count;
