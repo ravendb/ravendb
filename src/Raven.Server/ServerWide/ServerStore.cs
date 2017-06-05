@@ -15,10 +15,10 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Server;
 using Raven.Client.Server.ETL;
+using Raven.Client.Server.Operations;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
-using Raven.Server.Documents.ETL;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Rachis;
 using Raven.Server.NotificationCenter.Notifications;
@@ -544,7 +544,7 @@ namespace Raven.Server.ServerWide
 
         public Task<(long Etag, object Result)> ModifyCustomFunctions(string dbName, string customFunctions)
         {
-            var customFunctionsCommand = new ModifyCustomFunctionsCommand(dbName)
+            var customFunctionsCommand = new Commands.ModifyCustomFunctionsCommand(dbName)
             {
                 CustomFunctions = customFunctions
             };
@@ -565,6 +565,13 @@ namespace Raven.Server.ServerWide
             var deleteWatcherCommand = new DeleteExternalReplicationCommand(taskId, dbName);
 
             return SendToLeaderAsync(deleteWatcherCommand);
+        }
+
+        public Task<(long Etag, object Result)> DisableEnableOngoingTask(long taskId, OngoingTaskType type, bool disable, string dbName)
+        {
+            var disableEnableCommand = new DisableEnableOngoingTaskCommand(taskId, type, disable, dbName);
+
+            return SendToLeaderAsync(disableEnableCommand);
         }
 
         public Task<(long Etag, object Result)> ModifyConflictSolverAsync(string dbName, ConflictSolver solver)

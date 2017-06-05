@@ -382,6 +382,27 @@ namespace Raven.Server.Web.System
             }
         }
 
+        [RavenAction("/admin/disable-enable-task", "POST", "/admin/disable-enable-task?name={databaseName:string}&key={taskId:string}&type={taskType:string}&disable={disable:bool}")]
+        public async Task DisableEnableOngoingTask()
+        {
+            var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            var key = GetLongQueryString("key");
+            var typeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+            var disable = GetBoolValueQueryString("disable");
+
+            if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
+                throw new ArgumentException($"Unknown task type: {type}", "type");
+
+            var (index, _) = await ServerStore.DisableEnableOngoingTask(key.Value, type, disable.Value, dbName);
+            await ServerStore.Cluster.WaitForIndexNotification(index);
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;            
+        }
+
         [RavenAction("/admin/external-replication/update", "POST", "/admin/external-replication/update?name={databaseName:string}")]
         public async Task UpdateExternalReplication()
         {

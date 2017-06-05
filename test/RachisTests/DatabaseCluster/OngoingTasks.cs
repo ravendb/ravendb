@@ -94,5 +94,81 @@ namespace RachisTests.DatabaseCluster
                 await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.RavenEtl);                
             }
         }
+
+        [Fact]
+        public async Task CanDisableAndEnableOngoingTask()
+        {
+            var clusterSize = 3;
+            var databaseName = "TestDB";
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize);
+            ModifyExternalReplicationResult addWatcherRes;
+            UpdatePeriodicBackupOperationResult updateBackupResult;
+
+            using (var store = new DocumentStore
+            {
+                Urls = leader.WebUrls,
+                Database = databaseName
+            }.Initialize())
+            {
+                var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
+                var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+                Assert.Equal(clusterSize, databaseResult.Topology.AllReplicationNodes().Count());
+                foreach (var server in Servers)
+                {
+                    await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag);
+                }
+                foreach (var server in Servers)
+                {
+                    await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+                }
+
+                var watcher = new DatabaseWatcher
+                {
+                    Database = "Watcher1",
+                    Url = "http://127.0.0.1:9090"
+                };
+
+                addWatcherRes = await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
+
+                var backupConfig = new PeriodicBackupConfiguration
+                {
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = NewDataPath(suffix: "BackupFolder")
+                    },
+                    FullBackupFrequency = "* */1 * * *",
+                    IncrementalBackupFrequency = "* */2 * * *",
+                    Disabled = true
+                };
+
+                updateBackupResult = await store.Admin.Server.SendAsync(new UpdatePeriodicBackupOperation(backupConfig, store.Database));
+            }
+
+            using (var store = new DocumentStore
+            {
+                Urls = leader.WebUrls,
+                Database = databaseName,
+                Conventions =
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize())
+            {
+                var taskId = addWatcherRes.TaskId;
+                var op = new DisableEnableOngoingTaskOperation(store.Database, taskId, OngoingTaskType.Replication, true);
+                await store.Admin.Server.SendAsync(op);
+
+                var result = await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.Replication);
+                Assert.Equal(OngoingTaskState.Disabled, result.TaskState);
+
+                taskId = updateBackupResult.TaskId;
+                op = new DisableEnableOngoingTaskOperation(store.Database, taskId, OngoingTaskType.Backup, false);
+                await store.Admin.Server.SendAsync(op);
+
+                result = await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.Backup);
+                Assert.Equal(OngoingTaskState.Enabled, result.TaskState);
+
+            }
+        }
     }
 }
