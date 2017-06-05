@@ -262,7 +262,7 @@ namespace Raven.Database.Raft
 
         private async Task SendDatabaseDeleteInternalAsync(NodeConnectionInfo node, string databaseName, bool hardDelete)
         {
-            var url = node.GetAbsoluteUri() + "admin/cluster/commands/database/" + Uri.EscapeDataString(databaseName) + "?hardDelete=" + hardDelete;
+            var url = node.GetAbsoluteUri() + "admin/cluster/commands/database/" + Uri.EscapeDataString(databaseName) + "?hard-delete=" + hardDelete;
             using (var request = CreateRequest(node, url, HttpMethods.Delete))
             {
                 var response = await request.ExecuteAsync().ConfigureAwait(false);
