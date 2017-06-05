@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Server;
 using Raven.Client.Extensions;
@@ -891,8 +892,7 @@ namespace Raven.Server.ServerWide
 
         public DatabaseRecord LoadDatabaseRecord(string databaseName)
         {
-            TransactionOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 return Cluster.ReadDatabase(context, databaseName);
@@ -933,7 +933,7 @@ namespace Raven.Server.ServerWide
                         var completed = await Task.WhenAny(logChange, TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(10000), ServerShutdown));
 
                         if (completed != logChange)
-                            throw new TimeoutException("Could not send command to leader because there is no leader, and we timed out waiting for one");
+                            throw new NoLeaderException("Could not send command to leader because there is no leader, and we timed out waiting for one");
 
                         continue;
                     }

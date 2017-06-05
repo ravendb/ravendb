@@ -1553,5 +1553,66 @@ namespace Voron.Data.Fixed
         {
             return Name.ToString();
         }
+
+        public long GetNumberOfEntriesAfter(long value, out long totalCount)
+        {
+            totalCount = NumberOfEntries;
+            if (totalCount == 0)
+                return 0;
+
+            if (Type.HasValue == false)
+                return 0;
+
+            if (Type.Value == RootObjectType.EmbeddedFixedSizeTree)
+            {
+                using (var it = (EmbeddedIterator)Iterate())
+                {
+                    if (it.Seek(value) == false)
+                        return 0;
+
+                    return it.NumberOfEntriesLeft;
+                }
+            }
+
+            var page = FindPageFor(value);
+            if (page.LastMatch >= 0)
+                page.LastSearchPosition++;
+
+            var count = GetRemainingNumberOfEntriesFor(page);
+
+            if (_cursor.TryPop(out page) == false)
+                return count;
+
+            System.Diagnostics.Debug.Assert(page.IsBranch);
+
+            page.LastSearchPosition++;
+            count += GetRemainingNumberOfEntriesFor(page);
+
+            return count;
+        }
+
+        private long GetRemainingNumberOfEntriesFor(FixedSizeTreePage page)
+        {
+            if (page.IsLeaf)
+                return page.NumberOfEntries - page.LastSearchPosition;
+
+            if (page.IsBranch)
+            {
+                long count = 0;
+                while (page.LastSearchPosition <= page.NumberOfEntries)
+                {
+                    var entry = page.GetEntry(page.LastSearchPosition);
+                    var childPage = GetReadOnlyPage(entry->PageNumber);
+
+                    count += GetRemainingNumberOfEntriesFor(childPage);
+
+                    page.LastSearchPosition++;
+                }
+
+                return count;
+            }
+
+            throw new InvalidOperationException("Should not happen!");
+        }
     }
 }

@@ -463,10 +463,10 @@ namespace Raven.Server.Documents.TcpHandlers
             var db = TcpConnection.DocumentDatabase;
             if (subscription.Criteria.IsVersioned)
             {
-                if (db.VersioningStorage == null || db.VersioningStorage.IsVersioned(subscription.Criteria.Collection) == false)
-                    throw new SubscriptionClosedException("Cannot use a version subscription is the AS(YDAP(YRAYDCPIAS)(_Q#%R(");
+                if (db.DocumentsStorage.VersioningStorage == null || db.DocumentsStorage.VersioningStorage.IsVersioned(subscription.Criteria.Collection) == false)
+                    throw new SubscriptionClosedException("Cannot use a version subscription, database does not support versioning"); // todo: improve exception handling
 
-                return GetVerionTuplesToSend(docsContext, subscription, startEtag, patch, sendingCurrentBatchStopwatch, db.VersioningStorage);
+                return GetVerionTuplesToSend(docsContext, subscription, startEtag, patch, sendingCurrentBatchStopwatch, db.DocumentsStorage.VersioningStorage);
             }
 
 

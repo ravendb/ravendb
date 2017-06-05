@@ -313,26 +313,26 @@ namespace Raven.Server.Smuggler.Documents
 
                         if (IsRevision)
                         {
-                            if (_database.VersioningStorage == null)
+                            if (_database.DocumentsStorage.VersioningStorage.Configuration == null)
                                 ThrowVersioningDisabled();
 
                             PutAttachments(context, document);
-                            // ReSharper disable once PossibleNullReferenceException
-                            _database.VersioningStorage.Put(context, id, document.Data, document.Flags, document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
+                            _database.DocumentsStorage.VersioningStorage.Put(context, id, document.Data, document.Flags, 
+                                document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
                             continue;
                         }
 
                         if (IsPreV4Revision(id, document))
                         {
                             // handle old revisions
-                            if (_database.VersioningStorage == null)
+                            if (_database.DocumentsStorage.VersioningStorage.Configuration == null)
                                 ThrowVersioningDisabled();
 
                             var endIndex = id.IndexOf(PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase);
                             var newId = id.Substring(0, endIndex);
 
                             // ReSharper disable once PossibleNullReferenceException
-                            _database.VersioningStorage.Put(context, newId, document.Data, document.Flags, document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
+                            _database.DocumentsStorage.VersioningStorage.Put(context, newId, document.Data, document.Flags, document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
                             continue;
                         }
 
@@ -389,7 +389,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private static void ThrowVersioningDisabled()
             {
-                throw new InvalidOperationException("Revision bundle needs to be enabled before import!");
+                throw new InvalidOperationException("Versioning needs to be enabled before import!");
             }
 
             public void Dispose()

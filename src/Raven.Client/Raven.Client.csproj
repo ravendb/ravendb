@@ -1,7 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>RavenDB Client is the client library for accessing RavenDB</Description>
-    <VersionPrefix>4.0.0</VersionPrefix>
+    <Description>RavenDB Client is the client library for accessing RavenDB</Description>
+    <Version>4.0.0-custom-40</Version>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>netstandard1.3</TargetFramework>
     <DefineConstants>$(DefineConstants);PORTABLE</DefineConstants>

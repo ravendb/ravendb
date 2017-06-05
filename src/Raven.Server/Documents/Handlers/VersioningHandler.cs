@@ -60,8 +60,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/revisions", "GET")]
         public Task GetRevisionsFor()
         {
-            var versioningStorage = Database.VersioningStorage;
-            if (versioningStorage == null)
+            var versioningStorage = Database.DocumentsStorage.VersioningStorage;
+            if (versioningStorage.Configuration == null)
                 throw new VersioningDisabledException();
 
             var etag = GetLongQueryString("etag", required: false);
@@ -75,11 +75,10 @@ namespace Raven.Server.Documents.Handlers
 
         private Task GetRevisionByEtag(long etag)
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var versioningStorage = Database.VersioningStorage;
+                var versioningStorage = Database.DocumentsStorage.VersioningStorage;
                 var revision = versioningStorage.GetRevisionsFrom(context, etag, 1).FirstOrDefault();
 
                 if (revision != null)
@@ -109,7 +108,7 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var versioningStorage = Database.VersioningStorage;
+                var versioningStorage = Database.DocumentsStorage.VersioningStorage;
 
                 int start = GetStart();
                 int pageSize = GetPageSize();

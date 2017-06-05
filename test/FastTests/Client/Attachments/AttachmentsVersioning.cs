@@ -145,7 +145,7 @@ namespace FastTests.Client.Attachments
             var statistics = store.Admin.Send(new GetStatisticsOperation());
             Assert.Equal(expectedCountOfAttachments, statistics.CountOfAttachments);
             Assert.Equal(expectedCountOfUniqueAttachments, statistics.CountOfUniqueAttachments);
-            Assert.Equal(4, statistics.CountOfRevisionDocuments.Value);
+            Assert.Equal(4, statistics.CountOfRevisionDocuments);
             Assert.Equal(expectedCountOfDocuments, statistics.CountOfDocuments);
             Assert.Equal(0, statistics.CountOfIndexes);
 

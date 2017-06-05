@@ -11,11 +11,10 @@ using System.Globalization;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Client.Server.Expiration;
-using Raven.Server.Json;
 using Raven.Server.Background;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -65,13 +64,13 @@ namespace Raven.Server.Documents.Expiration
             }
             catch (Exception e)
             {
-                //TODO: Raise alert, or maybe handle this via a db load error that can be turned off with 
-                //TODO: a config
+                var msg = "Cannot enable expired documents cleaner as the configuration record is not valid.";
+                database.NotificationCenter.Add(AlertRaised.Create($"Expiration error in {database.Name}", msg,
+                    AlertType.VersioningConfigurationNotValid, NotificationSeverity.Error, database.Name));
 
                 var logger = LoggingSource.Instance.GetLogger<ExpiredDocumentsCleaner>(database.Name);
-
                 if (logger.IsOperationsEnabled)
-                    logger.Operations("Cannot enable expired documents cleaner as the configuration record is not valid.", e);
+                    logger.Operations(msg, e);
 
                 return null;
             }

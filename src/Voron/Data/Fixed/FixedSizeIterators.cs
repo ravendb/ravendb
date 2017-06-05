@@ -119,6 +119,17 @@ namespace Voron.Data.Fixed
                 }
             }
 
+            public long NumberOfEntriesLeft
+            {
+                get
+                {
+                    if (_fst._lastMatch == 0)
+                        return _header->NumberOfEntries - _pos - 1;
+
+                    return _header->NumberOfEntries - _pos;
+                }
+            }
+
             public ByteStringContext.Scope Value(out Slice slice)
             {
                 if (_pos == _header->NumberOfEntries)

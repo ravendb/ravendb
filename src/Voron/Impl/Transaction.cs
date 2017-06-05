@@ -398,6 +398,13 @@ namespace Voron.Impl
             _lowLevelTransaction?.Dispose();
         }
 
+        public FixedSizeTree FixedTreeFor(string treeName)
+        {
+            Slice treeNameSlice;
+            Slice.From(Allocator, treeName, ByteStringType.Immutable, out treeNameSlice);
+            return FixedTreeFor(treeNameSlice);
+        }
+
         public FixedSizeTree FixedTreeFor(Slice treeName)
         {
             var valueSize = FixedSizeTree.GetValueSize(LowLevelTransaction, LowLevelTransaction.RootObjects, treeName);

@@ -72,6 +72,9 @@ namespace Raven.Server.Config.Categories
                 foreach (var entry in property.GetCustomAttributes<ConfigurationEntryAttribute>())
                 {
                     var settingValue = getSetting(entry.Key);
+                    if (type != ResourceType.Server && entry.IsServerWideOnly && settingValue.CurrentValue != null)
+                        throw new InvalidOperationException($"Configuration '{entry.Key}' can only be set at server level.");
+
                     var value = settingValue.CurrentValue ?? settingValue.ServerValue;
                     setDefaultValueOfNeeded &= entry.SetDefaultValueIfNeeded;
 

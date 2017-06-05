@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>    
-    <VersionPrefix>4.0.0</VersionPrefix>
+    <Version>4.0.0-custom-40</Version>
     <TargetFramework>netcoreapp1.1</TargetFramework>
     <WarningsAsErrors>true</WarningsAsErrors>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

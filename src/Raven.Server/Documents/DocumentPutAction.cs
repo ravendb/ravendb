@@ -120,13 +120,13 @@ namespace Raven.Server.Documents
 #endif
                 }
 
-                if (_documentDatabase.VersioningStorage != null &&
+                if (_documentDatabase.DocumentsStorage.VersioningStorage.Configuration != null &&
                     (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
                 {
-                    if (_documentDatabase.VersioningStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document,
+                    if (_documentDatabase.DocumentsStorage.VersioningStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document,
                         ref flags, out VersioningConfigurationCollection configuration))
                     {
-                        _documentDatabase.VersioningStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration);
+                        _documentDatabase.DocumentsStorage.VersioningStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration);
                     }
                 }
             }

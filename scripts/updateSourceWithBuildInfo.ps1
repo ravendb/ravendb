@@ -4,6 +4,21 @@ function UpdateSourceWithBuildInfo ( $projectDir, $buildNumber, $version ) {
 
     $versionInfoFile = [io.path]::combine($projectDir, "src", "Raven.Client", "Properties", "VersionInfo.cs")
     UpdateRavenVersion $projectDir $buildNumber $version $commit $versionInfoFile
+
+    UpdateCsprojWithVersionInfo $projectDir $version
+}
+
+function UpdateCsprojWithVersionInfo ( $projectDir, $version ) {
+    # This is a workaround for the following issue:
+    # dotnet pack - version suffix missing from ProjectReference: https://github.com/NuGet/Home/issues/4337
+    
+    $srcCsprojs = Get-ChildItem -Recurse -Path $(Join-Path $projectDir -ChildPath "src") -Include *.csproj
+    $testCsprojs = Get-ChildItem -Recurse -Path $(Join-Path $projectDir -ChildPath "test") -Include *.csproj
+    $toolsCsprojs = Get-ChildItem -Recurse -Path $(Join-Path $projectDir -ChildPath "tools") -Include *.csproj
+
+    foreach ($csproj in $($srcCsprojs + $testCsprojs + $toolsCsprojs)) {
+        (Get-Content $csproj) -Replace '<Version>[A-Za-z0-9.-]*</Version>',"<Version>$version</Version>" | Out-File $csproj.FullName -Encoding utf8
+    }
 }
 
 function UpdateCommonAssemblyInfo ( $projectDir, $buildNumber, $version, $commit ) {

@@ -68,7 +68,7 @@ namespace SlowTests.Voron.Bugs
                         Script = @"PutDocument(""orders|"", this);"
                     })).WaitForCompletion(TimeSpan.FromSeconds(10));
                 }
-                catch (TimeoutException e)
+                catch (TimeoutException)
                 {
                     // expected
                 }

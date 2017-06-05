@@ -38,7 +38,7 @@ namespace Voron.Util
 
         public void ToStream(AbstractPager src, long startPage, long numberOfPages, Stream output)
         {
-            // In case of encryption bundle, we don't want to decrypt the data for backup, 
+            // In case of encryption, we don't want to decrypt the data for backup, 
             // so let's work directly with the underlying encrypted data (Inner pager).
          
             if((_buffer.Length % Constants.Storage.PageSize) != 0)

@@ -12,6 +12,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
@@ -174,13 +175,11 @@ namespace FastTests
                             {
                                 continue;
                             }
-                            catch (RavenException e)
+                            catch (NoLeaderException)
                             {
-                                if (e.Message.Contains("System.TimeoutException: Could not send command to leader because there is no leader, " +
-                                                       "and we timed out waiting for one"))
-                                    continue;
-                                throw;
+                                continue;
                             }
+
                             server.ServerStore.Cluster.WaitForIndexNotification(result.ETag).ConfigureAwait(false).GetAwaiter().GetResult();
                         }
                     }
