@@ -43,7 +43,7 @@ namespace Raven.Client.Documents.Operations
 
         public RavenCommand<PatchResult> GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new PatchCommand(conventions, context, _id, _etag, _patch, _patchIfMissing, _skipPatchIfEtagMismatch, returnDebugInformation: false);
+            return new PatchCommand(conventions, context, _id, _etag, _patch, _patchIfMissing, _skipPatchIfEtagMismatch, returnDebugInformation: false, test: false);
         }
 
         public class PatchCommand : RavenCommand<PatchResult>
@@ -54,8 +54,9 @@ namespace Raven.Client.Documents.Operations
             private readonly BlittableJsonReaderObject _patch;
             private readonly bool _skipPatchIfEtagMismatch;
             private readonly bool _returnDebugInformation;
+            private readonly bool _test;
 
-            public PatchCommand(DocumentConventions conventions, JsonOperationContext context, string id, long? etag, PatchRequest patch, PatchRequest patchIfMissing, bool skipPatchIfEtagMismatch, bool returnDebugInformation)
+            public PatchCommand(DocumentConventions conventions, JsonOperationContext context, string id, long? etag, PatchRequest patch, PatchRequest patchIfMissing, bool skipPatchIfEtagMismatch, bool returnDebugInformation, bool test)
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));
@@ -76,6 +77,7 @@ namespace Raven.Client.Documents.Operations
                 }, conventions, context);
                 _skipPatchIfEtagMismatch = skipPatchIfEtagMismatch;
                 _returnDebugInformation = returnDebugInformation;
+                _test = test;
             }
 
             public override bool IsReadRequest => false;
@@ -87,6 +89,8 @@ namespace Raven.Client.Documents.Operations
                     url += "&skipPatchIfEtagMismatch=true";
                 if (_returnDebugInformation)
                     url += "&debug=true";
+                if (_test)
+                    url += "&test=true";
 
                 var request = new HttpRequestMessage
                 {
