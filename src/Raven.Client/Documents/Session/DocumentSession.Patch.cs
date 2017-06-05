@@ -80,6 +80,9 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+        private int _valsCount;
+        private int _customCount;
+
         public void Increment<T, U>(T entity, Expression<Func<T, U>> path, U valToAdd)
         {
             var metadata = GetMetadataFor(entity);
@@ -91,11 +94,18 @@ namespace Raven.Client.Documents.Session
         {
             var pathScript = path.CompileToJavascript();
 
-            Advanced.Defer(new PatchCommandData(id, null, new PatchRequest
+            var patchRequest = new PatchRequest
             {
-                Script = $"this.{pathScript} += val;",
-                Values = { ["val"] = valToAdd }
-            }, null));
+                Script = $"this.{pathScript} += val_{_valsCount};",
+                Values = {[$"val_{_valsCount}"] = valToAdd} 
+            };
+
+            _valsCount++;
+
+            if (TryMergePatches(id, patchRequest) == false)
+            {
+                Advanced.Defer(new PatchCommandData(id, null, patchRequest, null));
+            }
         }
 
         public void Patch<T, U>(T entity, Expression<Func<T, U>> path, U value)
@@ -109,11 +119,18 @@ namespace Raven.Client.Documents.Session
         {
             var pathScript = path.CompileToJavascript();
 
-            Advanced.Defer(new PatchCommandData(id, null, new PatchRequest
+            var patchRequest = new PatchRequest
             {
-                Script = $"this.{pathScript} = val;",
-                Values = { ["val"] = value }
-            }, null));
+                Script = $"this.{pathScript} = val_{_valsCount};",
+                Values = {[$"val_{_valsCount}"] = value}
+            };
+
+            _valsCount++;
+
+            if (TryMergePatches(id, patchRequest) == false)
+            {
+                Advanced.Defer(new PatchCommandData(id, null, patchRequest, null));
+            }
         }
 
         public void Patch<T, U>(T entity, Expression<Func<T, IEnumerable<U>>> path,
@@ -134,13 +151,53 @@ namespace Raven.Client.Documents.Session
                     JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
                     new LinqMethods(), extension));
 
-            var script = $"this.{pathScript}{adderScript}";
+            var parameters = new Dictionary<string, object>(extension.Parameters);
+            foreach (var kvp in parameters)
+            {
+                var newArg = $"{kvp.Key}_{_customCount}";
+                adderScript = adderScript.Replace(kvp.Key, newArg);
+                extension.Parameters.Remove(kvp.Key);
+                extension.Parameters[newArg] = kvp.Value;
+            }
+            _customCount++;
+
+            var patchRequest = new PatchRequest
+            {
+                Script = $"this.{pathScript}{adderScript}",
+                Values = extension.Parameters
+            };
+
+            if (TryMergePatches(id, patchRequest) == false)
+            {
+                Advanced.Defer(new PatchCommandData(id, null, patchRequest, null));
+            }
+        }
+
+        private bool TryMergePatches(string id, PatchRequest patchRequest)
+        {
+            var patches = _deferredCommands.OfType<PatchCommandData>().ToList();
+            var oldPatch = patches.Find(p => p.Id == id);
+
+            if (oldPatch == null)
+                return false;
+
+            _deferredCommands.Remove(oldPatch);
+
+            var newScript = oldPatch.Patch.Script + '\n' + patchRequest.Script;
+            var newVals = oldPatch.Patch.Values;
+
+            foreach (var kvp in patchRequest.Values)
+            {
+                newVals[kvp.Key] = kvp.Value;
+            }
 
             Advanced.Defer(new PatchCommandData(id, null, new PatchRequest
             {
-                Script = script,
-                Values = extension.Parameters
+                Script = newScript,
+                Values = newVals
             }, null));
+
+            return true;
         }
     }
 }

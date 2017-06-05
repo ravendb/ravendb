@@ -138,6 +138,8 @@ namespace Raven.Client.Documents.Session
         public bool UseOptimisticConcurrency { get; set; }
 
         protected readonly List<ICommandData> _deferredCommands = new List<ICommandData>();
+        public int DeferredCommandsCount => _deferredCommands.Count;
+
         public GenerateEntityIdOnTheClient GenerateEntityIdOnTheClient { get; }
         public EntityToBlittable EntityToBlittable { get; }
 
