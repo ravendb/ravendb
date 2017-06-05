@@ -389,7 +389,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private static void ThrowVersioningDisabled()
             {
-                throw new InvalidOperationException("Revision bundle needs to be enabled before import!");
+                throw new InvalidOperationException("Versioning needs to be enabled before import!");
             }
 
             public void Dispose()

@@ -211,7 +211,7 @@ namespace Raven.Server.Documents
                 _transformerStoreTask = TransformerStore.InitializeAsync(record);
 
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore);
-                LoadBundles();
+                InitializeFromDatabaseRecord();
 
                 Patcher.Initialize();
                 EtlLoader.Initialize();
@@ -597,7 +597,7 @@ namespace Raven.Server.Documents
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
 
-                LoadBundles();
+                InitializeFromDatabaseRecord();
 
                 TransformerStore.HandleDatabaseRecordChange();
                 IndexStore.HandleDatabaseRecordChange();
@@ -618,7 +618,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void LoadBundles()
+        private void InitializeFromDatabaseRecord()
         {
             lock (this)
             {
