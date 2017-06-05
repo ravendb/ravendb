@@ -54,10 +54,5 @@ namespace Raven.Client.Documents.Subscriptions
     {
         public T Previous;
         public T Current;
-
-        public override string ToString()
-        {
-            return $"{nameof(Previous)}: {Previous}, {nameof(Current)}: {Current}";
-        }
     }
 }
