@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Server.Documents;
+using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
@@ -24,7 +25,7 @@ namespace FastTests.Client.Attachments
             {
                 using (var session = (DocumentSession)store.OpenSession())
                 {
-                    session.Store(new User {Name = "Fitzchak"}, "users/1");
+                    session.Store(new User { Name = "Fitzchak" }, "users/1");
                     session.SaveChanges();
 
                     Assert.True(await WaitForDocumentInClusterAsync<User>(
@@ -54,11 +55,6 @@ namespace FastTests.Client.Attachments
                             await task;
                             saveChangesOperation.SetResult(command.Result);
                         }
-                        catch (Exception)
-                        {
-                            // TODO: Make sure that we do not get an error here because of failing GetTcpInfo
-                        }
-                        saveChangesOperation.SetResult(command.Result);
                     }
                 }
                 else
