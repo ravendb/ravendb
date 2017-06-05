@@ -420,7 +420,7 @@ namespace Raven.Server.Documents.Versioning
         public long GetNumberOfRevisionDocuments(DocumentsOperationContext context)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
-            return table.GetNumberEntriesFor(DocsSchema.FixedSizeIndexes[RevisionsEtagsSlice]);
+            return table.GetNumberOfEntriesFor(DocsSchema.FixedSizeIndexes[RevisionsEtagsSlice]);
         }
     }
 }
