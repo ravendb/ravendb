@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations
 {
-    public class DeleteExternalReplicationOperation : IServerOperation<ModifyExternalReplicationResult>
+    public class DeleteExternalReplicationOperation : IServerOperation<ModifyOngoingTaskResult>
     {
         private readonly string _database;
         private readonly long _taskId;
@@ -19,12 +19,12 @@ namespace Raven.Client.Server.Operations
             _taskId = taskId;
         }
 
-        public RavenCommand<ModifyExternalReplicationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<ModifyOngoingTaskResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new DeleteExternalReplicationCommand(conventions, context, _database, _taskId);
         }
 
-        private class DeleteExternalReplicationCommand : RavenCommand<ModifyExternalReplicationResult>
+        private class DeleteExternalReplicationCommand : RavenCommand<ModifyOngoingTaskResult>
         {
             private readonly JsonOperationContext _context;
             private readonly DocumentConventions _conventions;

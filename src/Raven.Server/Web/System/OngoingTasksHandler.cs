@@ -425,8 +425,6 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(DatabasePutResult.ETag)] = index,
-                        [nameof(DatabasePutResult.Key)] = name,
                         [nameof(OngoingTask.TaskId)] = watcher.TaskId == 0 ? index : watcher.TaskId
                     });
                     writer.Flush();

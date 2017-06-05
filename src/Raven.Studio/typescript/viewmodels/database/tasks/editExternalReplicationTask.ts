@@ -3,6 +3,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
 import saveExternalReplicationTaskCommand = require("commands/database/tasks/saveExternalReplicationTaskCommand");
 import ongoingTaskReplication = require("models/database/tasks/ongoingTaskReplicationModel");
+import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 
 class editExternalReplicationTask extends viewModelBase {
 
@@ -14,22 +15,35 @@ class editExternalReplicationTask extends viewModelBase {
         super.activate(args);
 
         if (args.taskId) {
+            // 1. Editing an existing task
             this.isAddingNewReplicationTask(false);
             this.taskId = args.taskId;
+            const self = this;
 
-            //new ongoingTaskInfoCommand(this.activeDatabase(), args.taskType, this.taskId)
-            //    .execute()
-            //    .done((result) => {
-            //        this.editedExternalReplication(result);
-            //    .fail(() => { ... })
-            //    });
+            new ongoingTaskInfoCommand(this.activeDatabase(), "Replication", this.taskId)
+                .execute()
+                .done((result: Raven.Client.Server.Operations.GetTaskInfoResult) => {
 
-            //TODO: fetch data from server
+                    const replicationInfo: Raven.Server.Web.System.OngoingTaskReplication = {
+                        DestinationDatabase: result.DestinationDatabase,
+                        DestinationUrl: result.DestinationUrl,
+                        LastModificationTime: result.LastModificationTime,
+                        ResponsibleNode: result.ResponsibleNode,
+                        TaskConnectionStatus: result.TaskConnectionStatus,
+                        TaskId: result.TaskId,
+                        TaskState: result.TaskState,
+                        TaskType: result.TaskType
+                    };
+
+                    this.editedExternalReplication(new ongoingTaskReplication(replicationInfo));
+                })
+                .fail(() => {
+                    router.navigate(appUrl.forOngoingTasks(self.activeDatabase()));
+                });
         }
         else {
+            // 2. Creating a new task
             this.isAddingNewReplicationTask(true);
-
-            // No task id in url, init an empty model ==> create action
             this.editedExternalReplication(ongoingTaskReplication.empty());
         }
     }
@@ -45,7 +59,7 @@ class editExternalReplicationTask extends viewModelBase {
 
         this.taskId = this.isAddingNewReplicationTask() ? 0 : this.taskId;
 
-        new saveExternalReplicationTaskCommand(dto, this.activeDatabase(), this.taskId)
+        new saveExternalReplicationTaskCommand(this.activeDatabase(), this.taskId, dto)
             .execute()
             .done(() => this.goToOngoingTasksView());
     }

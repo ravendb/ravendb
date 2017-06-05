@@ -59,7 +59,7 @@
                                     </div>
                                     <div class="actions-container">
                                         <div class="actions">
-                                            <button class="btn btn-default" disabled="disabled" data-bind="click: editTask"><i class="icon-edit"></i></button>
+                                            <button class="btn btn-default" data-bind="click: editTask"><i class="icon-edit"></i></button>
                                             <button class="btn btn-danger" data-bind="click: $root.confirmRemoveOngoingTask"><i class="icon-trash"></i></button> 
                                         </div>
                                     </div>
@@ -260,16 +260,15 @@
 </div>
 
 <script type="text/html" id="status-template">
-    <h5>STATUS</h5>
-    <!--<div class="btn-group">-->
-    <div class="btn-group dropdown-right">
-        <button type="button" class="btn dropdown-toggle" disabled="disabled" data-toggle="dropdown" aria-expanded="false"> <!--set-size-->
+    <h5>STATUS</h5>   
+    <div class="btn-group"> 
+        <button type="button" class="btn dropdown-toggle" disabled="disabled" data-toggle="dropdown" aria-expanded="false"> <!--set-size--> 
             <span data-bind="visible: true">Enabled</span>
             <span data-bind="visible: false">Disabled</span><span class="caret"></span>
         </button>
         <ul class="dropdown-menu settings-menu">
-            <li><a href="#" data-bind="click: enableTask"><span>Enable</span></a></li>
-            <li><a href="#" data-bind="click: disableTask"><span>Disable</span></a></li>
+            <li><a href="#" data-bind="click: $root.confirmEnableOngoingTask"><span>Enable</span></a></li>
+            <li><a href="#" data-bind="click: $root.confirmDisableOngoingTask"><span>Disable</span></a></li>
         </ul>
     </div>
 </script>

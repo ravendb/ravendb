@@ -33,16 +33,6 @@ class ongoingTaskReplicationModel extends ongoingTask {
         this.destinationURL(dto.DestinationUrl);
     }
 
-    enableTask() {
-        alert("enabling task replication");
-        // TODO: ...
-    }
-
-    disableTask() {
-        alert("disabling task replication");
-        // TODO: ...
-    }
-
     editTask() {
         router.navigate(this.editUrl());
     }

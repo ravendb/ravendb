@@ -55,7 +55,7 @@ namespace Raven.Client.Json.Converters
 
         public static readonly Func<BlittableJsonReaderObject, CreateDatabaseResult> CreateDatabaseResult = GenerateJsonDeserializationRoutine<CreateDatabaseResult>();
 
-        public static readonly Func<BlittableJsonReaderObject, ModifyExternalReplicationResult> ModifyExternalReplicationResult = GenerateJsonDeserializationRoutine<ModifyExternalReplicationResult>();
+        public static readonly Func<BlittableJsonReaderObject, ModifyOngoingTaskResult> ModifyExternalReplicationResult = GenerateJsonDeserializationRoutine<ModifyOngoingTaskResult>();
 
         public static readonly Func<BlittableJsonReaderObject, GetTaskInfoResult> GetTaskInfoResult = GenerateJsonDeserializationRoutine<GetTaskInfoResult>();
 

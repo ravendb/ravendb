@@ -20,7 +20,7 @@ namespace RachisTests.DatabaseCluster
             var clusterSize = 3;
             var databaseName = "TestDB";
             var leader = await CreateRaftClusterAndGetLeader(clusterSize);
-            ModifyExternalReplicationResult addWatcherRes;
+            ModifyOngoingTaskResult addWatcherRes;
             UpdatePeriodicBackupOperationResult updateBackupResult;
             EtlConfiguration<RavenDestination> etlConfiguration;
             DatabaseWatcher watcher;

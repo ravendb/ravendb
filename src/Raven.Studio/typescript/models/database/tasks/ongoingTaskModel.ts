@@ -44,7 +44,6 @@ abstract class ongoingTaskModel {
             
             return "Offline"; // ?
         });
-
     }
 
     protected update(dto: Raven.Server.Web.System.OngoingTask) {
