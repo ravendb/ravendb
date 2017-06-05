@@ -17,6 +17,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Server.Documents.Versioning;
 using Raven.Server.Utils;
 using Sparrow.Utils;
 
@@ -340,25 +341,25 @@ namespace Raven.Server.Documents.TcpHandlers
                         using (TcpConnection.ContextPool.AllocateOperationContext(out context))
                         using (var writer = new BlittableJsonTextWriter(context, _buffer))
                         {
-                            foreach (var doc in GetDocumentsToSend(docsContext, subscription, startEtag, patch, sendingCurrentBatchStopwatch))
+                            foreach (var doc in GetDataToSend(docsContext, subscription, startEtag, patch, sendingCurrentBatchStopwatch))
                             {
-                               
+
                                 if (doc.Data == null)
                                 {
                                     await SendHeartBeat();
                                     continue;
                                 }
-                                
-                                    lastChangeVector = ChangeVectorUtils.MergeVectors(doc.ChangeVector, subscription.ChangeVector);
+
+                                lastChangeVector = ChangeVectorUtils.MergeVectors(doc.ChangeVector, subscription.ChangeVector);
                                 anyDocumentsSentInCurrentIteration = true;
-                                    startEtag = doc.Etag;
+                                startEtag = doc.Etag;
 
                                 writer.WriteStartObject();
                                 writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(TypeSegment));
                                 writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching(DataSegment));
                                 writer.WriteComma();
                                 writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(DataSegment));
-                                
+
                                 doc.EnsureMetadata();
                                 writer.WriteDocument(docsContext, doc);
                                 doc.Data.Dispose();
@@ -456,21 +457,25 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        private IEnumerable<Document> GetDocumentsToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch, Stopwatch sendingCurrentBatchStopwatch)
+        private IEnumerable<Document> GetDataToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch, Stopwatch sendingCurrentBatchStopwatch)
         {
+            
             var db = TcpConnection.DocumentDatabase;
-
-            var revisions = db.VersioningStorage;
-            if (revisions != null && revisions.IsVersioned(subscription.Criteria.Collection))
+            if (subscription.Criteria.IsVersioned)
             {
-                foreach (var (previous, current) in revisions.GetRevisionsFrom(docsContext, new CollectionName(subscription.Criteria.Collection), startEtag + 1))
-                {
-                    Console.WriteLine(previous?.Data?.ToString() ?? "null");
-                    Console.WriteLine(current.Data);
-                }
+                if (db.VersioningStorage == null || db.VersioningStorage.IsVersioned(subscription.Criteria.Collection) == false)
+                    throw new SubscriptionClosedException("Cannot use a version subscription is the AS(YDAP(YRAYDCPIAS)(_Q#%R(");
+
+                return GetVerionTuplesToSend(docsContext, subscription, startEtag, patch, sendingCurrentBatchStopwatch, db.VersioningStorage);
             }
-            
-            
+
+
+            return GetDocumentsToSend(docsContext, subscription, startEtag, patch, sendingCurrentBatchStopwatch, db);
+        }
+
+        private IEnumerable<Document> GetDocumentsToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch,
+            Stopwatch sendingCurrentBatchStopwatch, DocumentDatabase db)
+        {
             foreach (var doc in db.DocumentsStorage.GetDocumentsFrom(
                 docsContext,
                 subscription.Criteria.Collection,
@@ -496,10 +501,10 @@ namespace Raven.Server.Documents.TcpHandlers
                     {
                         if (transformResult == null)
                         {
-                            yield  return doc;
+                            yield return doc;
                             continue;
                         }
-                    
+
                         yield return new Document
                         {
                             Id = doc.Id,
@@ -507,6 +512,62 @@ namespace Raven.Server.Documents.TcpHandlers
                             Data = transformResult,
                             LowerId = doc.LowerId,
                             ChangeVector = doc.ChangeVector
+                        };
+                    }
+                }
+            }
+        }
+
+        private IEnumerable<Document> GetVerionTuplesToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch,
+            Stopwatch sendingCurrentBatchStopwatch, VersioningStorage revisions)
+        {
+            foreach (var versionedDocs in revisions.GetRevisionsFrom(docsContext, new CollectionName(subscription.Criteria.Collection), startEtag + 1))
+            {
+                var item = (versionedDocs.current ?? versionedDocs.previous);
+                Debug.Assert(item != null);
+
+                var dynamicValue = new DynamicJsonValue();
+
+                if (versionedDocs.current != null)
+                    dynamicValue["Current"] = versionedDocs.current.Data;
+
+                if (versionedDocs.previous != null)
+                    dynamicValue["Previous"] = versionedDocs.previous.Data;
+
+                using (var versioned = docsContext.ReadObject(dynamicValue, item.Id))
+                {
+                    if (ShouldSendDocumentWithVersioning(subscription, patch, docsContext, item, versioned, out var transformResult) == false)
+                    {
+                        // make sure that if we read a lot of irrelevant documents, we send keep alive over the network
+                        if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
+                        {
+                            var doc = new Document
+                            {
+                                Data = null,
+                                ChangeVector = item.ChangeVector,
+                                Etag = item.Etag
+                            };
+
+                            yield return doc;
+                            sendingCurrentBatchStopwatch.Reset();
+                        }
+                        continue;
+                    }
+                    using (transformResult)
+                    {
+                        if (transformResult == null)
+                        {
+                            yield return versionedDocs.current;
+                            continue;
+                        }
+
+                        yield return new Document
+                        {
+                            Id = item.Id,
+                            Etag = item.Etag,
+                            Data = transformResult,
+                            LowerId = item.LowerId,
+                            ChangeVector = item.ChangeVector
                         };
                     }
                 }
@@ -578,6 +639,41 @@ namespace Raven.Server.Documents.TcpHandlers
                 await SendHeartBeat();
             } while (CancellationTokenSource.IsCancellationRequested == false);
             return false;
+        }
+
+        private bool ShouldSendDocumentWithVersioning(SubscriptionState subscriptionState, SubscriptionPatchDocument patch, DocumentsOperationContext dbContext,
+            Document item, BlittableJsonReaderObject versioned, out BlittableJsonReaderObject transformResult)
+        {
+            transformResult = null;
+            var conflictStatus = ConflictsStorage.GetConflictStatus(
+                remote: item.ChangeVector,
+                local: subscriptionState.ChangeVector);
+
+            if (conflictStatus == ConflictsStorage.ConflictStatus.AlreadyMerged)
+                return false;
+
+            if (patch == null)
+                return true;
+            try
+            {
+                var docToProccess = new Document
+                {
+                    Data = versioned,
+                    Id = item.Id,
+                };
+
+                return patch.MatchCriteria(dbContext, docToProccess, out transformResult);
+            }
+            catch (Exception ex)
+            {
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info(
+                        $"Criteria script threw exception for subscription {_options.SubscriptionId} connected to {TcpConnection.TcpClient.Client.RemoteEndPoint} for document id {item.Id}",
+                        ex);
+                }
+                return false;
+            }
         }
 
         private bool ShouldSendDocument(SubscriptionState subscriptionState, SubscriptionPatchDocument patch, DocumentsOperationContext dbContext,
