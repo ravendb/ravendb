@@ -24,6 +24,7 @@ namespace Raven.Client.Documents.Session
         private class CustomMethods : JavascriptConversionExtension
         {
             public readonly Dictionary<string, object> Parameters = new Dictionary<string, object>();
+            public int Suffix { get; set;}
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
@@ -56,7 +57,7 @@ namespace Raven.Client.Documents.Session
 
                 for (var i = 0; i < args.Count; i++)
                 {
-                    var name = "arg_" + Parameters.Count;
+                    var name = $"arg_{Parameters.Count}_{Suffix}";
                     if (i != 0)
                         javascriptWriter.Write(", ");
                     javascriptWriter.Write(name);
@@ -144,22 +145,15 @@ namespace Raven.Client.Documents.Session
         public void Patch<T, U>(string id, Expression<Func<T, IEnumerable<U>>> path,
             Expression<Func<JavaScriptArray<U>, object>> arrayAdder)
         {
-            var extension = new CustomMethods();
+            var extension = new CustomMethods
+            {
+                Suffix = _customCount++
+            };
             var pathScript = path.CompileToJavascript();
             var adderScript = arrayAdder.CompileToJavascript(
                 new JavascriptCompilationOptions(
                     JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
                     new LinqMethods(), extension));
-
-            var parameters = new Dictionary<string, object>(extension.Parameters);
-            foreach (var kvp in parameters)
-            {
-                var newArg = $"{kvp.Key}_{_customCount}";
-                adderScript = adderScript.Replace(kvp.Key, newArg);
-                extension.Parameters.Remove(kvp.Key);
-                extension.Parameters[newArg] = kvp.Value;
-            }
-            _customCount++;
 
             var patchRequest = new PatchRequest
             {
