@@ -5,7 +5,6 @@ class database {
 
     name: string;
 
-    activeBundles = ko.observableArray<string>();
     disabled = ko.observable<boolean>(false);
     errored = ko.observable<boolean>(false);
     isAdminCurrentTenant = ko.observable<boolean>(false);
@@ -35,7 +34,6 @@ class database {
 
     updateUsing(incomingCopy: Raven.Client.Server.Operations.DatabaseInfo) {
         this.isAdminCurrentTenant(incomingCopy.IsAdmin);
-        this.activeBundles(incomingCopy.Bundles);
         this.name = incomingCopy.Name;
         this.disabled(incomingCopy.Disabled);
         this.errored(!!incomingCopy.LoadError);
@@ -59,13 +57,6 @@ class database {
     static getNameFromUrl(url: string) {
         var index = url.indexOf("databases/");
         return (index > 0) ? url.substring(index + 10) : "";
-    }
-
-    isBundleActive(bundleName: string): boolean {
-        if (bundleName) {
-            return !!this.activeBundles().find((x: string) => x.toLowerCase() === bundleName.toLowerCase());
-        }
-        return false;
     }
 
     //TODO: remove those props?

@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.PeriodicBackup;
@@ -90,8 +91,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal("backup1", result.Name);
                 Assert.Equal(OngoingTaskState.Disabled, result.TaskState);
 
-                result = await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.RavenEtl);
-                Assert.True(result.NotFound);
+                await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.RavenEtl);                
             }
         }
     }
