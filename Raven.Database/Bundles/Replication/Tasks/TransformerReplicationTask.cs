@@ -199,7 +199,11 @@ namespace Raven.Database.Bundles.Replication.Tasks
                         continue;
                     }
 
-                    var url = string.Format("{0}/transformers/{1}?{2}", destination.ConnectionStringOptions.Url, Uri.EscapeUriString(tombstone.Key), GetDebugInformation());
+                    var url = string.Format("{0}/transformers/{1}?{2}&{3}", 
+                        destination.ConnectionStringOptions.Url, 
+                        Uri.EscapeUriString(tombstone.Key),
+                        GetTombstoneVersion(tombstone, IndexDefinitionStorage.TransformerVersionKey, Constants.TransformerVersion),
+                        GetDebugInformation());
                     var replicationRequest = HttpRavenRequestFactory.Create(url, HttpMethods.Delete, destination.ConnectionStringOptions, Replication.GetRequestBuffering(destination));
                     replicationRequest.Write(RavenJObject.FromObject(EmptyRequestBody));
                     replicationRequest.ExecuteRequest();

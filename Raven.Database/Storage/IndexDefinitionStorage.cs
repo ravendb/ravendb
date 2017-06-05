@@ -538,6 +538,9 @@ namespace Raven.Database.Storage
 
         public int GetDeletedIndexVersion(string indexName, int indexId)
         {
+            if (indexName == null)
+                return 0;
+
             // we only need the deleted index version if exists
             // no need to log an error
             int indexVersionFromTombstones;
@@ -612,15 +615,6 @@ namespace Raven.Database.Storage
                 return false;
 
             RemoveTransformer(transformer.TransfomerId);
-
-            transactionalStorage.Batch(actions =>
-            {
-                var metadata = new RavenJObject
-                {
-                    {TransformerVersionKey, transformer.TransformerVersion ?? 0 }
-                };
-                actions.Lists.Set(Constants.RavenDeletedTransformersVersions, name, metadata, UuidType.Transformers);
-            });
 
             return true;
         }

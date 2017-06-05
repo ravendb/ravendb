@@ -14,6 +14,9 @@ namespace Raven.Abstractions.Data
         public const string ParticipatingIDsPropertyName = "Participating-IDs-Property-Name";
 
         public const string IsReplicatedUrlParamName = "is-replicated";
+        public const string IndexVersion = "index-version";
+        public const string TransformerVersion = "transformer-version";
+
         public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
 
         public const string RavenClientPrimaryServerLastCheck = "Raven-Client-Primary-Server-LastCheck";
