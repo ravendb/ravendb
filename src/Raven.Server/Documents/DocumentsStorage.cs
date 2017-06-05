@@ -1229,7 +1229,7 @@ namespace Raven.Server.Documents
                 return 0;
             }
 
-            return table.GetNumberEntriesFor(indexDef, afterEtag, out totalCount);
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount);
         }
 
         public long GetNumberOfDocuments()
