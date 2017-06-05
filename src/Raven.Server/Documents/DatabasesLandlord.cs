@@ -541,7 +541,7 @@ namespace Raven.Server.Documents
             return maxLastWork.AddMilliseconds(dbSize / 1024L);
         }
 
-        public void UnloadResourceOnCatastrophicFailue(string databaseName, Exception e)
+        public void UnloadResourceOnCatastrophicFailure(string databaseName, Exception e)
         {
             Task.Run(async () =>
             {

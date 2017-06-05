@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Server;
 using Raven.Client.Server.Versioning;
 using Raven.Server.Documents.Replication;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
@@ -16,6 +16,7 @@ using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
+using Voron.Impl;
 
 namespace Raven.Server.Documents.Versioning
 {
@@ -32,7 +33,7 @@ namespace Raven.Server.Documents.Versioning
         private readonly Logger _logger;
         private readonly DocumentDatabase _database;
         private readonly DocumentsStorage _documentsStorage;
-        private readonly VersioningConfiguration _versioningConfiguration;
+        public VersioningConfiguration Configuration { get; private set; }
 
         private enum Columns
         {
@@ -50,22 +51,18 @@ namespace Raven.Server.Documents.Versioning
         }
         private readonly VersioningConfigurationCollection _emptyConfiguration = new VersioningConfigurationCollection();
 
-        private VersioningStorage(DocumentDatabase database, VersioningConfiguration versioningConfiguration)
+        public VersioningStorage(DocumentDatabase database, Transaction tx)
         {
             _database = database;
             _documentsStorage = _database.DocumentsStorage;
-            _versioningConfiguration = versioningConfiguration;
 
             _logger = LoggingSource.Instance.GetLogger<VersioningStorage>(database.Name);
 
-            using (var tx = database.DocumentsStorage.Environment.WriteTransaction())
-            {
-                DocsSchema.Create(tx, RevisionDocumentsSlice, 16);
+            DocsSchema.Create(tx, RevisionDocumentsSlice, 16);
+            tx.CreateTree(RevisionsCountSlice);
 
-                tx.CreateTree(RevisionsCountSlice);
-
-                tx.Commit();
-            }
+            // TODO: Subscribe here on all of our collections
+            // _database.DocumentTombstoneCleaner.Subscribe();
         }
 
         static VersioningStorage()
@@ -96,43 +93,45 @@ namespace Raven.Server.Documents.Versioning
             });
         }
 
-        public static VersioningStorage LoadConfigurations(DocumentDatabase database, DatabaseRecord dbRecord, VersioningStorage versioningStorage)
+        public void InitializeFromDatabaseRecord(DatabaseRecord dbRecord)
         {
-            var logger = LoggingSource.Instance.GetLogger<VersioningStorage>(database.Name);
             try
             {
                 if (dbRecord.Versioning == null)
-                    return null;
-                if (dbRecord.Versioning.Equals(versioningStorage?._versioningConfiguration))
-                    return versioningStorage;                    
-                var config = new VersioningStorage(database, dbRecord.Versioning);
-                if (logger.IsInfoEnabled)
-                    logger.Info("Versioning configuration changed");
-                return config;
+                {
+                    Configuration = null;
+                    return;
+                }
+
+                if (dbRecord.Versioning.Equals(Configuration))
+                    return;
+
+                Configuration = dbRecord.Versioning;
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Versioning configuration changed");
             }
             catch (Exception e)
             {
-                //TODO: This should generate an alert, so admin will know that something is very bad
-                //TODO: Or this should throw and we should have a config flag to ignore the error
-                if (logger.IsOperationsEnabled)
-                    logger.Operations(
-                        $"Cannot enable versioning for documents as the versioning configuration" +
-                        $" in the database record is missing or not valid: {dbRecord}", e);
-                return null;
+                var msg = "Cannot enable versioning for documents as the versioning configuration" +
+                          $" in the database record is missing or not valid: {dbRecord}";
+                _database.NotificationCenter.Add(AlertRaised.Create($"Versioning error in {_database.Name}", msg,
+                    AlertType.VersioningConfigurationNotValid, NotificationSeverity.Error, _database.Name));
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations(msg, e);
             }
         }
 
         private VersioningConfigurationCollection GetVersioningConfiguration(CollectionName collectionName)
         {
-            if (_versioningConfiguration.Collections != null && 
-                _versioningConfiguration.Collections.TryGetValue(collectionName.Name, out VersioningConfigurationCollection configuration))
+            if (Configuration.Collections != null && 
+                Configuration.Collections.TryGetValue(collectionName.Name, out VersioningConfigurationCollection configuration))
             {
                 return configuration;
             }
 
-            if (_versioningConfiguration.Default != null)
+            if (Configuration.Default != null)
             {
-                return _versioningConfiguration.Default;
+                return Configuration.Default;
             }
 
             return _emptyConfiguration;

@@ -27,6 +27,8 @@ namespace Raven.Server.NotificationCenter.Notifications
         NonDurableFileSystem,
         RecoveryError,
         ClusterTopologyWarning,
-        SwappingHddInsteadOfSsd
+        SwappingHddInsteadOfSsd,
+
+        VersioningConfigurationNotValid,
     }
 }

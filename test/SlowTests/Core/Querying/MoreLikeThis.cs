@@ -2,15 +2,13 @@ using FastTests;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using SlowTests.Core.Utils.Indexes;
 using SlowTests.Core.Utils.Transformers;
-
 using Xunit;
-
 using Address = SlowTests.Core.Utils.Entities.Address;
 using Post = SlowTests.Core.Utils.Entities.Post;
 using PostContent = SlowTests.Core.Utils.Entities.PostContent;
 using User = SlowTests.Core.Utils.Entities.User;
 
-namespace SlowTests.Core.Bundles
+namespace SlowTests.Core.Querying
 {
     public class MoreLikeThis : RavenTestBase
     {

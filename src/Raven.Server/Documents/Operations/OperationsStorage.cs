@@ -9,44 +9,39 @@ namespace Raven.Server.Documents.Operations
         private StorageEnvironment _environment;
         private TransactionContextPool _contextPool;
 
+        private static readonly Slice NextOperationId;
+        private static readonly Slice OperationsTree;
+
+        static OperationsStorage()
+        {
+            Slice.From(StorageEnvironment.LabelsContext, "Operations", ByteStringType.Immutable, out OperationsTree);
+            Slice.From(StorageEnvironment.LabelsContext, "NextOperationId", ByteStringType.Immutable, out NextOperationId);
+        }
+
         public void Initialize(StorageEnvironment environment, TransactionContextPool contextPool)
         {
             _environment = environment;
             _contextPool = contextPool;
 
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = _environment.WriteTransaction(context.PersistentContext))
             {
-                tx.CreateTree(OperationsSchema.OperationsTree);
+                tx.CreateTree(OperationsTree);
                 tx.Commit();
             }
         }
 
         public long GetNextOperationId()
         {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = _environment.WriteTransaction(context.PersistentContext))
             {
-                var operationsTree = tx.ReadTree(OperationsSchema.OperationsTree);
-                var id = operationsTree.Increment(OperationsSchema.NextOperationId, 1);
+                var operationsTree = tx.ReadTree(OperationsTree);
+                var id = operationsTree.Increment(NextOperationId, 1);
 
                 tx.Commit();
 
                 return id;
-            }
-        }
-
-        public static class OperationsSchema
-        {
-            public const string OperationsTree = "Operations";
-
-            public static readonly Slice NextOperationId;
-
-            static OperationsSchema()
-            {
-                Slice.From(StorageEnvironment.LabelsContext, "NextOperationId", ByteStringType.Immutable, out NextOperationId);
             }
         }
     }

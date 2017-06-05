@@ -17,7 +17,7 @@ namespace SlowTests.MailingList
     public class ResultTransformerMetaData : RavenTestBase
     {
         /// <summary>
-        /// The only thing i could not recreate here is the fact that the versioning bundle is active.
+        /// The only thing i could not recreate here is the fact that the versioning is active.
         /// So im not sure if the @last-modified meta-field will ever be filled in this case
         /// </summary>
         [Fact(Skip = "RavenDB-6264")]
@@ -39,7 +39,7 @@ namespace SlowTests.MailingList
                         InternalId = 1234
                     });
 
-                    //what should happen here is that the versioning bundle would do its stuff
+                    //what should happen here is that the versioning would do its stuff
                     //and the AuditListener pushes the "Updated-By" key into the metadata
                     session.SaveChanges();
                 }
