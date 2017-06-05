@@ -205,6 +205,10 @@ namespace Raven.Smuggler
             databaseOptionSet.Add("continuation-token:", OptionCategory.SmugglerDatabase, "Activates the usage of a continuation token in case of unreliable connections or huge imports", s => databaseOptions.ContinuationToken = s);
             databaseOptionSet.Add("skip-conflicted", OptionCategory.SmugglerDatabase, "The database will issue and error when conflicted documents are put. The default is to alert the user, this allows to skip them to continue.", _ => databaseOptions.SkipConflicted = true);
             databaseOptionSet.Add("system-database", OptionCategory.SmugglerDatabase, "Set to true in order to work on a system database", _ => allowOperationOnSystemDatabase = true);
+            databaseOptionSet.Add("start-document-etag:", OptionCategory.SmugglerDatabase, "Start exporting from the specified documents etag", value => databaseOptions.StartDocsEtag = Etag.Parse(value));
+            databaseOptionSet.Add("start-document-delete-etag:", OptionCategory.SmugglerDatabase, "Start exporting from the specified document deletion etag", value => databaseOptions.StartDocsDeletionEtag = Etag.Parse(value));
+            databaseOptionSet.Add("start-attachment-etag:", OptionCategory.SmugglerDatabase, "Start exporting from the specified attachment deletion etag", value => databaseOptions.StartAttachmentsEtag = Etag.Parse(value));
+            databaseOptionSet.Add("start-attachment-delete-etag:", OptionCategory.SmugglerDatabase, "Start exporting from the specified attachment deletion etag", value => databaseOptions.StartAttachmentsDeletionEtag = Etag.Parse(value));
         }
 
         private NetworkCredential GetCredentials(FilesConnectionStringOptions connectionStringOptions)
