@@ -175,8 +175,7 @@ namespace Raven.Client.Documents.Session
 
         private bool TryMergePatches(string id, PatchRequest patchRequest)
         {
-            var patches = _deferredCommands.OfType<PatchCommandData>().ToList();
-            var oldPatch = patches.Find(p => p.Id == id);
+            var oldPatch = _deferredCommands.OfType<PatchCommandData>().FirstOrDefault(p => p.Id == id);
 
             if (oldPatch == null)
                 return false;
