@@ -382,7 +382,15 @@ namespace Raven.Database.Server.Controllers
             var index = id;
 
             var isReplication = GetQueryStringValue(Constants.IsReplicatedUrlParamName);
-            if (Database.Indexes.DeleteIndex(index) &&
+            var indexVersionAsString = GetQueryStringValue(Constants.IndexVersion);
+            int? indexVersionAsInt = null;
+            int indexVersion;
+            if (int.TryParse(indexVersionAsString, out indexVersion))
+            {
+                indexVersionAsInt = indexVersion;
+            }
+
+            if (Database.Indexes.DeleteIndex(index, deletedIndexVersion: indexVersionAsInt) &&
                 !string.IsNullOrWhiteSpace(isReplication) && isReplication.Equals("true", StringComparison.InvariantCultureIgnoreCase))
             {
                 const string emptyFrom = "<no hostname>";

@@ -14,6 +14,9 @@ namespace Raven.Abstractions.Data
         public const string ParticipatingIDsPropertyName = "Participating-IDs-Property-Name";
 
         public const string IsReplicatedUrlParamName = "is-replicated";
+        public const string IndexVersion = "index-version";
+        public const string TransformerVersion = "transformer-version";
+
         public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
 
         public const string RavenClientPrimaryServerLastCheck = "Raven-Client-Primary-Server-LastCheck";
@@ -219,6 +222,9 @@ namespace Raven.Abstractions.Data
         public const string RavenReplicationDocsTombstones = "Raven/Replication/Docs/Tombstones";
         public const string RavenReplicationIndexesTombstones = "Raven/Replication/Indexes/Tombstones";
         public const string RavenReplicationTransformerTombstones = "Raven/Replication/Transformers/Tombstones";
+
+        public const string RavenDeletedIndexesVersions = "Raven/Deleted/Indexes/Versions";
+        public const string RavenDeletedTransformersVersions = "Raven/Deleted/Transformers/Versions";
 
         public const string RavenSqlReplicationConnectionsDocumentName = "Raven/SqlReplication/Connections";
         public const string ReplicationPropagationDelayInSeconds = "Raven/Replication/ReplicationPropagationDelayInSeconds";
