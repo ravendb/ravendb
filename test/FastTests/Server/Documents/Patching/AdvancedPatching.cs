@@ -385,7 +385,8 @@ namespace FastTests.Server.Documents.Patching
                         },
                         patchIfMissing: null,
                         skipPatchIfEtagMismatch: false,
-                        returnDebugInformation: true);
+                        returnDebugInformation: true,
+                        test: false);
 
                     await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
 

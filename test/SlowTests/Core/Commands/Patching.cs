@@ -145,7 +145,8 @@ namespace SlowTests.Core.Commands
                         },
                         patchIfMissing: null,
                         skipPatchIfEtagMismatch: false,
-                        returnDebugInformation: true);
+                        returnDebugInformation: true,
+                        test: false);
 
                     commands.RequestExecutor.Execute(command, commands.Context);
 
@@ -199,7 +200,8 @@ namespace SlowTests.Core.Commands
                         },
                         patchIfMissing: null,
                         skipPatchIfEtagMismatch: false,
-                        returnDebugInformation: true);
+                        returnDebugInformation: true,
+                        test: false);
 
                     commands.RequestExecutor.Execute(command, commands.Context);
 
@@ -229,7 +231,8 @@ namespace SlowTests.Core.Commands
                         },
                         patchIfMissing: null,
                         skipPatchIfEtagMismatch: false,
-                        returnDebugInformation: true);
+                        returnDebugInformation: true,
+                        test: false);
 
                     commands.RequestExecutor.Execute(command, commands.Context);
 
@@ -243,6 +246,88 @@ namespace SlowTests.Core.Commands
                         Assert.Equal(postId, post.Title);
                         Guid id;
                         Assert.True(Guid.TryParse(postId, out id));
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void CanTestPatches()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Post
+                    {
+                        Title = "Post 1",
+                        Comments = new Post[] { }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var commands = store.Commands())
+                {
+                    var command = new PatchOperation.PatchCommand(
+                        store.Conventions,
+                        commands.Context,
+                        "posts/1-A",
+                        null,
+                        new PatchRequest
+                        {
+                            Script = @"this.Title = 'abcd'",
+                        },
+                        patchIfMissing: null,
+                        skipPatchIfEtagMismatch: false,
+                        returnDebugInformation: false,
+                        test: true);
+
+                    commands.RequestExecutor.Execute(command, commands.Context);
+
+                    var modified = (Post)store.Conventions.DeserializeEntityFromBlittable(typeof(Post), command.Result.ModifiedDocument);
+
+                    Assert.Equal("abcd", modified.Title);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var post = session.Load<Post>("posts/1-A");
+
+                    Assert.Equal("Post 1", post.Title);
+                }
+
+                using (var commands = store.Commands())
+                {
+                    var command = new PatchOperation.PatchCommand(
+                        store.Conventions,
+                        commands.Context,
+                        "posts/1-A",
+                        null,
+                        new PatchRequest
+                        {
+                            Script = @"
+                            var postId = PutDocument('posts|',
+                                { 'Title' : 'unknown post id' }
+                            );
+                            this.Title = postId;
+                            output(postId);"
+                        },
+                        patchIfMissing: null,
+                        skipPatchIfEtagMismatch: false,
+                        returnDebugInformation: false,
+                        test: true);
+
+                    commands.RequestExecutor.Execute(command, commands.Context);
+
+                    var array = (BlittableJsonReaderArray)command.Result.Debug["Info"];
+
+                    using (var session = store.OpenSession())
+                    {
+                        var postId = array[0].ToString();
+                        var post = session.Load<Post>(postId);
+
+                        Assert.Null(post);
                     }
                 }
             }
