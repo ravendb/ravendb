@@ -7,6 +7,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
+using System.Threading;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
@@ -53,16 +54,29 @@ namespace Voron.Impl.Compaction
 
                 bool synced;
 
-                using (var op = new WriteAheadJournal.JournalApplicator.SyncOperation(compactedEnv.Journal.Applicator))
+                const int maxNumberOfRetries = 100;
+
+                var syncRetries = 0;
+
+                while (true)
                 {
-                    try
+                    using (var op = new WriteAheadJournal.JournalApplicator.SyncOperation(compactedEnv.Journal.Applicator))
                     {
-                        synced = op.SyncDataFile();
-                    }
-                    catch (Exception e)
-                    {
-                        existingEnv.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
-                        throw;
+                        try
+                        {
+
+                            synced = op.SyncDataFile();
+
+                            if (synced || ++syncRetries >= maxNumberOfRetries)
+                                break;
+
+                            Thread.Sleep(100);
+                        }
+                        catch (Exception e)
+                        {
+                            existingEnv.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
+                            throw;
+                        }
                     }
                 }
 
