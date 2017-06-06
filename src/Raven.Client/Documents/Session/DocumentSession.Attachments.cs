@@ -21,14 +21,12 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class DocumentSession
     {
-        private static readonly AttachmentName[] NoAttachments = new AttachmentName[0];
-
         public AttachmentName[] GetAttachmentNames(object entity)
         {
             if (entity == null ||
                 DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false ||
                 document.Metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
-                return NoAttachments;
+                return Array.Empty<AttachmentName>();
 
             var results = new AttachmentName[attachments.Length];
             for (var i = 0; i < attachments.Length; i++)
