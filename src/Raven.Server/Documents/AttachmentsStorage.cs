@@ -113,7 +113,7 @@ namespace Raven.Server.Documents
             return table.GetCountOfMatchesFor(AttachmentsSchema.Indexes[AttachmentsHashSlice], hash);
         }
 
-        public AttachmentResult PutAttachment(
+        public AttachmentDetails PutAttachment(
             DocumentsOperationContext context,
             string documentId,
             string name,
@@ -125,7 +125,7 @@ namespace Raven.Server.Documents
             if (context.Transaction == null)
             {
                 DocumentPutAction.ThrowRequiresTransaction();
-                return default(AttachmentResult);// never hit
+                return default(AttachmentDetails);// never hit
             }
 
             // Attachment etag should be generated before updating the document
@@ -234,7 +234,7 @@ namespace Raven.Server.Documents
                 _documentsStorage.UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, tvr);
             }
 
-            return new AttachmentResult
+            return new AttachmentDetails
             {
                 Etag = attachmenEtag,
                 ContentType = contentType,
@@ -379,10 +379,10 @@ namespace Raven.Server.Documents
                 {
                     attachments.Add(new DynamicJsonValue
                     {
-                        [nameof(AttachmentResult.Name)] = attachment.Name,
-                        [nameof(AttachmentResult.Hash)] = attachment.Base64Hash.ToString(), // TODO: Do better than create a string
-                        [nameof(AttachmentResult.ContentType)] = attachment.ContentType,
-                        [nameof(AttachmentResult.Size)] = attachment.Size,
+                        [nameof(AttachmentName.Name)] = attachment.Name,
+                        [nameof(AttachmentName.Hash)] = attachment.Base64Hash.ToString(), // TODO: Do better than create a string
+                        [nameof(AttachmentName.ContentType)] = attachment.ContentType,
+                        [nameof(AttachmentName.Size)] = attachment.Size,
                     });
                 }
             }

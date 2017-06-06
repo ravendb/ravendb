@@ -116,7 +116,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(PutIndexResult));
 
             // attachments
-            scripter.AddType(typeof(AttachmentResult));
+            scripter.AddType(typeof(AttachmentName));
+            scripter.AddType(typeof(AttachmentDetails));
 
             // notifications
             scripter.AddType(typeof(AlertRaised));

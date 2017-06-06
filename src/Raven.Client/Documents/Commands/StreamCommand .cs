@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Commands
         {
             _url = url ?? throw new ArgumentNullException(nameof(url));
             UsedTransformer = usedTransformer;
-            ResponseType = RavenCommandResponseType.Raw;
+            ResponseType = RavenCommandResponseType.Empty;
         }
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)

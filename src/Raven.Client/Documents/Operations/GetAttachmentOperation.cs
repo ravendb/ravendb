@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Replication.Messages;
@@ -14,39 +15,35 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class GetAttachmentOperation : IOperation<AttachmentResult>
+    public class GetAttachmentOperation : IOperation<(Stream stream, AttachmentDetails attachment)>
     {
         private readonly string _documentId;
         private readonly string _name;
-        private readonly Action<AttachmentResult, Stream> _handleStreamResponse;
         private readonly AttachmentType _type;
         private readonly ChangeVectorEntry[] _changeVector;
 
-        public GetAttachmentOperation(string documentId, string name, Action<AttachmentResult, Stream> handleStreamResponse, 
-            AttachmentType type, ChangeVectorEntry[] changeVector)
+        public GetAttachmentOperation(string documentId, string name, AttachmentType type, ChangeVectorEntry[] changeVector)
         {
             _documentId = documentId;
             _name = name;
-            _handleStreamResponse = handleStreamResponse;
             _type = type;
             _changeVector = changeVector;
         }
 
-        public RavenCommand<AttachmentResult> GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<(Stream stream, AttachmentDetails attachment)> GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new GetAttachmentCommand(context, _documentId, _name, _handleStreamResponse, _type, _changeVector);
+            return new GetAttachmentCommand(context, _documentId, _name, _type, _changeVector);
         }
 
-        private class GetAttachmentCommand : RavenCommand<AttachmentResult>
+        private class GetAttachmentCommand : RavenCommand<(Stream stream, AttachmentDetails attachment)>
         {
             private readonly JsonOperationContext _context;
             private readonly string _documentId;
             private readonly string _name;
-            private readonly Action<AttachmentResult, Stream> _handleStreamResponse;
             private readonly AttachmentType _type;
             private readonly ChangeVectorEntry[] _changeVector;
 
-            public GetAttachmentCommand(JsonOperationContext context, string documentId, string name, Action<AttachmentResult, Stream> handleStreamResponse, AttachmentType type, ChangeVectorEntry[] changeVector)
+            public GetAttachmentCommand(JsonOperationContext context, string documentId, string name, AttachmentType type, ChangeVectorEntry[] changeVector)
             {
                 if (string.IsNullOrWhiteSpace(documentId))
                     throw new ArgumentNullException(nameof(documentId));
@@ -59,11 +56,10 @@ namespace Raven.Client.Documents.Operations
                 _context = context;
                 _documentId = documentId;
                 _name = name;
-                _handleStreamResponse = handleStreamResponse ?? throw new ArgumentNullException(nameof(handleStreamResponse));
                 _type = type;
                 _changeVector = changeVector;
 
-                ResponseType = RavenCommandResponseType.Raw;
+                ResponseType = RavenCommandResponseType.Empty;
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
@@ -118,11 +114,8 @@ namespace Raven.Client.Documents.Operations
                 return request;
             }
 
-            public override void SetResponseRaw(HttpResponseMessage response, Stream stream, JsonOperationContext context)
+            public override async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
             {
-                if (stream == null)
-                    return;
-
                 var contentType = response.Content.Headers.TryGetValues("Content-Type", out IEnumerable<string> contentTypeVale) ? contentTypeVale.First() : null;
                 var etag = response.GetRequiredEtagHeader();
                 var hash = response.Headers.TryGetValues("Attachment-Hash", out IEnumerable<string> hashVal) ? hashVal.First() : null;
@@ -130,17 +123,19 @@ namespace Raven.Client.Documents.Operations
                 if (response.Headers.TryGetValues("Attachment-Size", out IEnumerable<string> sizeVal))
                     long.TryParse(sizeVal.First(), out size);
 
-                Result = new AttachmentResult
+                var attachmentDetails = new AttachmentDetails
                 {
                     ContentType = contentType,
-                    Etag = etag,
                     Name = _name,
-                    DocumentId = _documentId,
                     Hash = hash,
-                    Size = size
+                    Size = size,
+                    Etag = etag,
+                    DocumentId = _documentId,
                 };
 
-                _handleStreamResponse(Result, stream);
+                var stream = new AttachmentStream(response, await response.Content.ReadAsStreamAsync());
+
+                Result = (stream, attachmentDetails);
             }
 
             public override bool IsReadRequest => true;

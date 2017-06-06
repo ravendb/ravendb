@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.IO;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Replication.Messages;
@@ -17,19 +16,39 @@ namespace Raven.Client.Documents.Session
     public partial interface IAdvancedSessionOperation
     {
         /// <summary>
-        /// Returns the attachment by the document id and attachment name.
+        /// Returns the attachments info of a document.
         /// </summary>
-        AttachmentResult GetAttachment(string documentId, string name, Action<AttachmentResult, Stream> stream);
+        AttachmentName[] GetAttachmentNames(object entity);
 
         /// <summary>
         /// Returns the attachment by the document id and attachment name.
         /// </summary>
-        AttachmentResult GetAttachment(object entity, string name, Action<AttachmentResult, Stream> stream);
+        Stream GetAttachment(string documentId, string name);
+
+        /// <summary>
+        /// Returns the attachment by the document id and attachment name.
+        /// </summary>
+        Stream GetAttachment(string documentId, string name, out AttachmentDetails attachment);
+
+        /// <summary>
+        /// Returns the attachment by the document id and attachment name.
+        /// </summary>
+        Stream GetAttachment(object entity, string name);
+
+        /// <summary>
+        /// Returns the attachment by the document id and attachment name.
+        /// </summary>
+        Stream GetAttachment(object entity, string name, out AttachmentDetails attachment);
 
         /// <summary>
         /// Returns the revision attachment by the document id and attachment name.
         /// </summary>
-        AttachmentResult GetRevisionAttachment(string documentId, string name, ChangeVectorEntry[] changeVector, Action<AttachmentResult, Stream> stream);
+        Stream GetRevisionAttachment(string documentId, string name, ChangeVectorEntry[] changeVector);
+
+        /// <summary>
+        /// Returns the revision attachment by the document id and attachment name.
+        /// </summary>
+        Stream GetRevisionAttachment(string documentId, string name, ChangeVectorEntry[] changeVector, out AttachmentDetails attachment);
 
         /// <summary>
         /// Stores attachment to be sent in the session.

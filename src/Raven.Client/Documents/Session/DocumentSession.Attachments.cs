@@ -11,6 +11,8 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Json.Converters;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
@@ -19,25 +21,71 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class DocumentSession
     {
-        public AttachmentResult GetAttachment(string documentId, string name, Action<AttachmentResult, Stream> stream)
+        public AttachmentName[] GetAttachmentNames(object entity)
         {
-            var operation = new GetAttachmentOperation(documentId, name, stream, AttachmentType.Document, null);
-            return DocumentStore.Operations.Send(operation);
+            if (entity == null ||
+                DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false ||
+                document.Metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+                return Array.Empty<AttachmentName>();
+
+            var results = new AttachmentName[attachments.Length];
+            for (var i = 0; i < attachments.Length; i++)
+            {
+                var attachment = (BlittableJsonReaderObject)attachments[i];
+                results[i] = JsonDeserializationClient.AttachmentName(attachment);
+            }
+            return results;
         }
 
-        public AttachmentResult GetAttachment(object entity, string name, Action<AttachmentResult, Stream> stream)
+        public Stream GetAttachment(string documentId, string name)
+        {
+            var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Document, null);
+            var tuple = DocumentStore.Operations.Send(operation);
+            return tuple.stream;
+        }
+
+        public Stream GetAttachment(string documentId, string name, out AttachmentDetails attachment)
+        {
+            var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Document, null);
+            var tuple = DocumentStore.Operations.Send(operation);
+            attachment = tuple.attachment;
+            return tuple.stream;
+        }
+
+        public Stream GetAttachment(object entity, string name)
         {
             if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
                 ThrowEntityNotInSession(entity);
 
-            var operation = new GetAttachmentOperation(document.Id, name, stream, AttachmentType.Document, null);
-            return DocumentStore.Operations.Send(operation);
+            var operation = new GetAttachmentOperation(document.Id, name, AttachmentType.Document, null);
+            var tuple = DocumentStore.Operations.Send(operation);
+            return tuple.stream;
         }
 
-        public AttachmentResult GetRevisionAttachment(string documentId, string name, ChangeVectorEntry[] changeVector, Action<AttachmentResult, Stream> stream)
+        public Stream GetAttachment(object entity, string name, out AttachmentDetails attachment)
         {
-            var operation = new GetAttachmentOperation(documentId, name, stream, AttachmentType.Revision, changeVector);
-            return DocumentStore.Operations.Send(operation);
+            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
+                ThrowEntityNotInSession(entity);
+
+            var operation = new GetAttachmentOperation(document.Id, name, AttachmentType.Document, null);
+            var tuple = DocumentStore.Operations.Send(operation);
+            attachment = tuple.attachment;
+            return tuple.stream;
+        }
+
+        public Stream GetRevisionAttachment(string documentId, string name, ChangeVectorEntry[] changeVector)
+        {
+            var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Revision, changeVector);
+            var tuple = DocumentStore.Operations.Send(operation);
+            return tuple.stream;
+        }
+
+        public Stream GetRevisionAttachment(string documentId, string name, ChangeVectorEntry[] changeVector, out AttachmentDetails attachment)
+        {
+            var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Revision, changeVector);
+            var tuple = DocumentStore.Operations.Send(operation);
+            attachment = tuple.attachment;
+            return tuple.stream;
         }
 
         public void StoreAttachment(string documentId, string name, Stream stream, string contentType = null)

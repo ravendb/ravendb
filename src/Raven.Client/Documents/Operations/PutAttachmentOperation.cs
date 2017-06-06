@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class PutAttachmentOperation : IOperation<AttachmentResult>
+    public class PutAttachmentOperation : IOperation<AttachmentDetails>
     {
         private readonly string _documentId;
         private readonly string _name;
@@ -27,12 +27,12 @@ namespace Raven.Client.Documents.Operations
             _etag = etag;
         }
 
-        public RavenCommand<AttachmentResult> GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<AttachmentDetails> GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
             return new PutAttachmentCommand(_documentId, _name, _stream, _contentType, _etag);
         }
 
-        private class PutAttachmentCommand : RavenCommand<AttachmentResult>
+        private class PutAttachmentCommand : RavenCommand<AttachmentDetails>
         {
             private readonly string _documentId;
             private readonly string _name;
@@ -81,7 +81,7 @@ namespace Raven.Client.Documents.Operations
 
             public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
-                Result = JsonDeserializationClient.AttachmentResult(response);
+                Result = JsonDeserializationClient.AttachmentDetails(response);
             }
 
             public override bool IsReadRequest => false;

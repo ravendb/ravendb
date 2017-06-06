@@ -176,8 +176,8 @@ namespace FastTests.Client.Attachments
             {
                 var name = orderedNames[i];
                 var attachment = attachments[i];
-                Assert.Equal(name, attachment.GetString(nameof(AttachmentResult.Name)));
-                var hash = attachment.GetString(nameof(AttachmentResult.Hash));
+                Assert.Equal(name, attachment.GetString(nameof(AttachmentName.Name)));
+                var hash = attachment.GetString(nameof(AttachmentName.Hash));
                 if (name == names[1])
                 {
                     Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", hash);
@@ -198,8 +198,9 @@ namespace FastTests.Client.Attachments
             {
                 var name = names[i];
                 using (var attachmentStream = new MemoryStream(readBuffer))
+                using (var stream = session.Advanced.GetRevisionAttachment("users/1", name, changeVector, out AttachmentDetails attachment))
                 {
-                    var attachment = session.Advanced.GetRevisionAttachment("users/1", name, changeVector, (result, stream) => stream.CopyTo(attachmentStream));
+                    stream.CopyTo(attachmentStream);
                     if (i >= expectedCount)
                     {
                         Assert.Null(attachment);
