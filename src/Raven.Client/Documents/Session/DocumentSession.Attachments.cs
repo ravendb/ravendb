@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class DocumentSession
     {
-        public AttachmentResult[] GetAttachmentNames<T>(string documentId)
+        public AttachmentName[] GetAttachmentNames<T>(string documentId)
         {
             var entity = Load<T>(documentId);
             if (entity == null)
@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Session
             return GetAttachmentNames(entity);
         }
 
-        public AttachmentResult[] GetAttachmentNames<T>(T entity)
+        public AttachmentName[] GetAttachmentNames<T>(T entity)
         {
             if (entity == null)
                 return null;
@@ -50,24 +50,24 @@ namespace Raven.Client.Documents.Session
             return results;
         }
 
-        public AttachmentResult GetAttachment(string documentId, string name, Action<AttachmentResult, Stream> stream)
+        public AttachmentResultWithStream GetAttachment(string documentId, string name)
         {
-            var operation = new GetAttachmentOperation(documentId, name, stream, AttachmentType.Document, null);
+            var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Document, null);
             return DocumentStore.Operations.Send(operation);
         }
 
-        public AttachmentResult GetAttachment(object entity, string name, Action<AttachmentResult, Stream> stream)
+        public AttachmentResultWithStream GetAttachment(object entity, string name)
         {
             if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
                 ThrowEntityNotInSession(entity);
 
-            var operation = new GetAttachmentOperation(document.Id, name, stream, AttachmentType.Document, null);
+            var operation = new GetAttachmentOperation(document.Id, name, AttachmentType.Document, null);
             return DocumentStore.Operations.Send(operation);
         }
 
-        public AttachmentResult GetRevisionAttachment(string documentId, string name, ChangeVectorEntry[] changeVector, Action<AttachmentResult, Stream> stream)
+        public AttachmentResultWithStream GetRevisionAttachment(string documentId, string name, ChangeVectorEntry[] changeVector)
         {
-            var operation = new GetAttachmentOperation(documentId, name, stream, AttachmentType.Revision, changeVector);
+            var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Revision, changeVector);
             return DocumentStore.Operations.Send(operation);
         }
 

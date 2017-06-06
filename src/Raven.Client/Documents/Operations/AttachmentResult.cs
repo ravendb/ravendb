@@ -1,12 +1,40 @@
-﻿namespace Raven.Client.Documents.Operations
+﻿using System;
+using System.IO;
+using System.Net.Http;
+
+namespace Raven.Client.Documents.Operations
 {
-    public class AttachmentResult
+    public class AttachmentResultWithStream : AttachmentResult, IDisposable
     {
-        public string ContentType;
+        private HttpResponseMessage _response;
+
+        public Stream Stream;
+
+        public AttachmentResultWithStream(HttpResponseMessage response)
+        {
+            _response = response;
+        }
+
+        public void Dispose()
+        {
+            Stream?.Dispose();
+            Stream = null;
+            _response?.Dispose();
+            _response = null;
+        }
+    }
+
+    public class AttachmentResult : AttachmentName
+    {
         public long Etag;
-        public long Size;
-        public string Name;
         public string DocumentId;
+    }
+
+    public class AttachmentName
+    {
+        public string Name;
         public string Hash;
+        public string ContentType;
+        public long Size;
     }
 }

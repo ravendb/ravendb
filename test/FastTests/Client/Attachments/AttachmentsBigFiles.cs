@@ -27,8 +27,9 @@ namespace FastTests.Client.Attachments
                     var user = session.Load<User>("users/1");
 
                     using (var bigStream = new BigDummyStream(size))
+                    using (var attachment = session.Advanced.GetAttachment(user, "big-file"))
                     {
-                        var attachment = session.Advanced.GetAttachment(user, "big-file", (result, stream) => stream.CopyTo(bigStream));
+                        attachment.Stream.CopyTo(bigStream);
                         Assert.Equal(2, attachment.Etag);
                         Assert.Equal("big-file", attachment.Name);
                         Assert.Equal(hash, attachment.Hash);
@@ -69,8 +70,9 @@ namespace FastTests.Client.Attachments
                     var user = session.Load<User>("users/1");
 
                     using (var bigStream = new BigDummyStream(size))
+                    using (var attachment = session.Advanced.GetAttachment(user, "huge-file"))
                     {
-                        var attachment = session.Advanced.GetAttachment(user, "huge-file", (result, stream) => stream.CopyTo(bigStream));
+                        attachment.Stream.CopyTo(bigStream);
                         Assert.Equal(2, attachment.Etag);
                         Assert.Equal("huge-file", attachment.Name);
                         Assert.Equal(hash, attachment.Hash);

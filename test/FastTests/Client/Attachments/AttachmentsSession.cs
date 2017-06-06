@@ -76,8 +76,9 @@ namespace FastTests.Client.Attachments
                     {
                         var name = names[i];
                         using (var attachmentStream = new MemoryStream(readBuffer))
+                        using (var attachment = session.Advanced.GetAttachment(user, name))
                         {
-                            var attachment = session.Advanced.GetAttachment(user, name, (result, stream) => stream.CopyTo(attachmentStream));
+                            attachment.Stream.CopyTo(attachmentStream);
                             Assert.Equal(2 + 2 * i, attachment.Etag);
                             Assert.Equal(name, attachment.Name);
                             Assert.Equal(i == 0 ? 3 : 5, attachmentStream.Position);
@@ -105,9 +106,8 @@ namespace FastTests.Client.Attachments
                         }
                     }
 
-                    using (var attachmentStream = new MemoryStream(readBuffer))
+                    using (var notExistsAttachment = session.Advanced.GetAttachment("users/1", "not-there"))
                     {
-                        var notExistsAttachment = session.Advanced.GetAttachment("users/1", "not-there", (result, stream) => stream.CopyTo(attachmentStream));
                         Assert.Null(notExistsAttachment);
                     }
                 }
@@ -250,34 +250,32 @@ namespace FastTests.Client.Attachments
 
                     var readBuffer = new byte[16];
                     using (var attachmentStream = new MemoryStream(readBuffer))
+                    using (var attachment = session.Advanced.GetAttachment("users/1", "file1"))
                     {
-                        var attachment = session.Advanced.GetAttachment("users/1", "file1", (result, stream) => stream.CopyTo(attachmentStream));
+                        attachment.Stream.CopyTo(attachmentStream);
                         Assert.Equal(2, attachment.Etag);
                         Assert.Equal("file1", attachment.Name);
                         Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Hash);
                         Assert.Equal(3, attachmentStream.Position);
                         Assert.Equal(new byte[] { 1, 2, 3 }, readBuffer.Take(3));
                     }
-                    using (var attachmentStream = new MemoryStream(readBuffer))
+                    using (var attachment = session.Advanced.GetAttachment(user, "file2"))
                     {
-                        var attachment = session.Advanced.GetAttachment(user, "file2", (result, stream) => stream.CopyTo(attachmentStream));
                         Assert.Null(attachment);
-                        Assert.Equal(0, attachmentStream.Position);
                     }
                     using (var attachmentStream = new MemoryStream(readBuffer))
+                    using (var attachment = session.Advanced.GetAttachment(user, "file3"))
                     {
-                        var attachment = session.Advanced.GetAttachment(user, "file3", (result, stream) => stream.CopyTo(attachmentStream));
+                        attachment.Stream.CopyTo(attachmentStream);
                         Assert.Equal(6, attachment.Etag);
                         Assert.Equal("file3", attachment.Name);
                         Assert.Equal("NRQuixiqj+xvEokF6MdQq1u+uH1dk/gk2PLChJQ58Vo=", attachment.Hash);
                         Assert.Equal(9, attachmentStream.Position);
                         Assert.Equal(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }, readBuffer.Take(9));
                     }
-                    using (var attachmentStream = new MemoryStream(readBuffer))
+                    using (var attachment = session.Advanced.GetAttachment(user, "file4"))
                     {
-                        var attachment = session.Advanced.GetAttachment(user, "file4", (result, stream) => stream.CopyTo(attachmentStream));
                         Assert.Null(attachment);
-                        Assert.Equal(0, attachmentStream.Position);
                     }
 
                     // Delete document should delete all the attachments

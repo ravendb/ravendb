@@ -198,8 +198,9 @@ namespace FastTests.Client.Attachments
             {
                 var name = names[i];
                 using (var attachmentStream = new MemoryStream(readBuffer))
+                using (var attachment = session.Advanced.GetRevisionAttachment("users/1", name, changeVector))
                 {
-                    var attachment = session.Advanced.GetRevisionAttachment("users/1", name, changeVector, (result, stream) => stream.CopyTo(attachmentStream));
+                    attachment.Stream.CopyTo(attachmentStream);
                     if (i >= expectedCount)
                     {
                         Assert.Null(attachment);

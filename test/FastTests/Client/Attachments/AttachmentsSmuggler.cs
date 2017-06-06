@@ -51,8 +51,9 @@ namespace FastTests.Client.Attachments
                     {
                         var readBuffer = new byte[1024 * 1024];
                         using (var attachmentStream = new MemoryStream(readBuffer))
+                        using (var attachment = session.Advanced.GetAttachment("users/1", "big-file"))
                         {
-                            var attachment = session.Advanced.GetAttachment("users/1", "big-file", (result, stream) => stream.CopyTo(attachmentStream));
+                            attachment.Stream.CopyTo(attachmentStream);
                             Assert.Equal(2, attachment.Etag);
                             Assert.Equal("big-file", attachment.Name);
                             Assert.Equal("zKHiLyLNRBZti9DYbzuqZ/EDWAFMgOXB+SwKvjPAINk=", attachment.Hash);
@@ -306,8 +307,9 @@ namespace FastTests.Client.Attachments
                     {
                         var readBuffer = new byte[1024 * 1024];
                         using (var attachmentStream = new MemoryStream(readBuffer))
+                        using (var attachment = session.Advanced.GetAttachment("users/1", "empty-file"))
                         {
-                            var attachment = session.Advanced.GetAttachment("users/1", "empty-file", (result, stream) => stream.CopyTo(attachmentStream));
+                            attachment.Stream.CopyTo(attachmentStream);
                             Assert.Equal(1, attachment.Etag);
                             Assert.Equal("empty-file", attachment.Name);
                             Assert.Equal(0, attachment.Size);
