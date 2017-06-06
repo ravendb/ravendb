@@ -34,7 +34,7 @@ namespace Raven.Server.Web.Studio
                  * Respond with null custom functions, instead of 404
                  * as this function is used by Studio
                  * Each 404 response goes to console as error, 
-                 * so we don't want to scary user.
+                 * so we don't want to scare user.
                  */
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
