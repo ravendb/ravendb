@@ -378,7 +378,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/tasks/status", "PATCH", "/admin/tasks/status?name={databaseName:string}&key={taskId:string}&type={taskType:string}&disable={disable:true|false}")]
+        [RavenAction("/admin/tasks/state", "POST", "/admin/tasks/status?name={databaseName:string}&key={taskId:string}&type={taskType:string}&disable={disable:true|false}")]
         public async Task ToggleTaskState()
         {
             var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -432,21 +432,23 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/external-replication/delete", "POST", "/admin/external-replication/delete?name={databaseName:string}&id={taskId:string}")]
-        public async Task DeleteExternalReplication()
+        [RavenAction("/admin/tasks/delete", "POST", "/admin/tasks/delete?name={databaseName:string}&id={taskId:long}&type={taskType:string}")]
+        public async Task DeleteOngoingTask()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+            if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
-            var taskId = GetLongQueryString("id");
-            if (taskId == null)
-                return;
-            
+            var id = GetLongQueryString("id");
+            var typeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+
+            if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
+                throw new ArgumentException($"Unknown task type: {type}", "type");
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var (index, _) = await ServerStore.DeleteExternalReplication(taskId.Value, name);
+                var (index, _) = await ServerStore.DeleteOngoingTask(id.Value, type, dbName);
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
@@ -456,7 +458,7 @@ namespace Raven.Server.Web.System
                     context.Write(writer, new DynamicJsonValue
                     {
                         [nameof(DatabasePutResult.ETag)] = index,
-                        [nameof(DatabasePutResult.Key)] = name
+                        [nameof(DatabasePutResult.Key)] = dbName
                     });
                     writer.Flush();
                 }

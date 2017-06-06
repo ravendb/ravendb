@@ -73,7 +73,7 @@ namespace Raven.Client.Server.Operations
                 if (response == null)
                     ThrowInvalidResponse();
 
-                Result = JsonDeserializationClient.ModifyExternalReplicationResult(response);
+                Result = JsonDeserializationClient.ModifyOngoingTaskResult(response);
             }
 
             public override bool IsReadRequest => false;

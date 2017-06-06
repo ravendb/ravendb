@@ -8,6 +8,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Server;
 using Raven.Client.Server.Commands;
+using Raven.Client.Server.Operations;
 using Raven.Server.Web.System;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -108,7 +109,7 @@ namespace FastTests.Server.Replication
             var tasks = OngoingTasksHandler.GetOngoingTasksFor(store.Database, Server.ServerStore);
             foreach (var replication in tasks.OngoingTasksList.OfType<OngoingTaskReplication>())
             {
-                await DeleteWatcherFromReplicationTopology(store, replication.TaskId);
+                await DeleteOngoingTask(store, replication.TaskId, OngoingTaskType.Replication);
             }
         }
         

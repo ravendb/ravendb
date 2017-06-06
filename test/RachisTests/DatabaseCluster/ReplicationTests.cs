@@ -281,7 +281,7 @@ namespace RachisTests.DatabaseCluster
                 }
             }.Initialize())
             {
-                await DeleteWatcherFromReplicationTopology((DocumentStore)store, watcher.TaskId);
+                await DeleteOngoingTask((DocumentStore)store, watcher.TaskId, OngoingTaskType.Replication);
                 tasks = OngoingTasksHandler.GetOngoingTasksFor(databaseName, leader.ServerStore);
                 Assert.Equal(0, tasks.OngoingTasksList.Count);
             }

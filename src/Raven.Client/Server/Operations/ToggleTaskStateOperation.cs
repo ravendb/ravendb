@@ -57,11 +57,11 @@ namespace Raven.Client.Server.Operations
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/tasks/status?name={_databaseName}&key={_taskId}&type={_type}&disable={_disable}";
+                url = $"{node.Url}/admin/tasks/state?name={_databaseName}&key={_taskId}&type={_type}&disable={_disable}";
 
                 var request = new HttpRequestMessage
                 {
-                    Method = HttpMethods.Patch
+                    Method = HttpMethod.Post
                 };
 
                 return request;
@@ -70,7 +70,7 @@ namespace Raven.Client.Server.Operations
             public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
                 if (response != null)
-                    Result = JsonDeserializationClient.ModifyExternalReplicationResult(response);
+                    Result = JsonDeserializationClient.ModifyOngoingTaskResult(response);
             }
 
             public override bool IsReadRequest => false;

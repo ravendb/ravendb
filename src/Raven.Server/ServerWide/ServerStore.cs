@@ -560,11 +560,11 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(addWatcherCommand);
         }
 
-        public Task<(long Etag, object Result)> DeleteExternalReplication(long taskId, string dbName)
+        public Task<(long Etag, object Result)> DeleteOngoingTask(long taskId, OngoingTaskType taskType, string dbName)
         {
-            var deleteWatcherCommand = new DeleteExternalReplicationCommand(taskId, dbName);
+            var deleteTaskCommand = new DeleteOngoingTaskCommand(taskId, taskType, dbName);
 
-            return SendToLeaderAsync(deleteWatcherCommand);
+            return SendToLeaderAsync(deleteTaskCommand);
         }
 
         public Task<(long Etag, object Result)> ToggleTaskState(long taskId, OngoingTaskType type, bool disable, string dbName)
@@ -609,13 +609,6 @@ namespace Raven.Server.ServerWide
             return await SendToLeaderAsync(modifyPeriodicBackup);
         }
 
-        public Task<(long, object)> DeletePeriodicBackup(TransactionOperationContext context, string name, BlittableJsonReaderObject taskIdJson)
-        {
-            taskIdJson.TryGet("TaskId", out long taskId);
-            var editPeriodicBackup = new DeletePeriodicBackupCommand(taskId, name);
-            return SendToLeaderAsync(editPeriodicBackup);
-        }
-
         public async Task<(long, object)> AddEtl(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject etlConfiguration, EtlType type)
         {
             UpdateDatabaseCommand command;
@@ -650,13 +643,6 @@ namespace Raven.Server.ServerWide
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration destination type: {type}");
             }
-
-            return await SendToLeaderAsync(command);
-        }
-
-        public async Task<(long, object)> DeleteEtl(TransactionOperationContext context, string databaseName, long id, BlittableJsonReaderObject _, EtlType type)
-        {
-            var command = new DeleteEtlCommand(id, type, databaseName);
 
             return await SendToLeaderAsync(command);
         }
