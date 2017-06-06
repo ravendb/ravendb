@@ -7,7 +7,6 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Server;
 using Raven.Client.Server.Versioning;
-using Raven.Server.Documents.Replication;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Sparrow;

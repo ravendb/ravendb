@@ -473,7 +473,7 @@ namespace Raven.Server.Documents
             var databaseInfo = new DynamicJsonValue
             {
                 [nameof(DatabaseInfo.HasVersioningConfiguration)] = DocumentsStorage.VersioningStorage.Configuration != null,
-                [nameof(DatabaseInfo.ExpirationActive)] = ExpiredDocumentsCleaner != null,
+                [nameof(DatabaseInfo.HasExpirationConfiguration)] = ExpiredDocumentsCleaner != null,
                 [nameof(DatabaseInfo.IsAdmin)] = true, //TODO: implement me!
                 [nameof(DatabaseInfo.Name)] = Name,
                 [nameof(DatabaseInfo.Disabled)] = false, //TODO: this value should be overwritten by the studio since it is cached
