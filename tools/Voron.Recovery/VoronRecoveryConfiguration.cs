@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.IO;
 
 namespace Voron.Recovery
 {
@@ -12,7 +8,7 @@ namespace Voron.Recovery
         public string DataFileDirectory { get; set; }
         public string OutputFileName { get; set; }
         public int PageSizeInKb { get; set; } = 4;
-        public int NumberOfFiledsInDocumentTable { get; set; } = 5;
+        public int NumberOfFieldsInDocumentTable { get; set; } = 5;
         public int InitialContextSizeInMB { get; set; } = 1;
         public int InitialContextLongLivedSizeInKB { get; set; } = 16;
         public int ProgressIntervalInSeconds { get; set; } = 5;
@@ -64,7 +60,7 @@ namespace Voron.Recovery
                         int tvrCount;
                         if (int.TryParse(args[i + 1], out tvrCount) == false || tvrCount < 1)
                             return VoronRecoveryArgsProcessStatus.InvalidTableValueCount;
-                        config.NumberOfFiledsInDocumentTable = tvrCount;
+                        config.NumberOfFieldsInDocumentTable = tvrCount;
                         break;
                     case "-InitialContextSizeInMB":
                         int contextSize;
