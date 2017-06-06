@@ -24,7 +24,7 @@ class deleteOngoingTaskCommand extends commandBase {
             id: this.taskId
         };
 
-        const url = endpoints.global.ongoingTasks.adminExternalReplicationDelete + this.urlEncodeArgs(args);
+        const url = endpoints.global.ongoingTasks.adminTasksDelete + this.urlEncodeArgs(args);
 
         return this.post<void>(url, null);
     }

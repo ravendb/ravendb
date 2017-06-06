@@ -8,12 +8,12 @@ class toggleOngoingTaskCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<any> {
+    execute(): JQueryPromise<void> {
         const args = { name: this.db.name, key: this.taskId, type: this.taskType, disable: this.disable };
-        const url = endpoints.global.ongoingTasks.adminTasksStatus + this.urlEncodeArgs(args);
+        const url = endpoints.global.ongoingTasks.adminTasksState + this.urlEncodeArgs(args);
         const operationText = this.disable ? "disable" : "enable";
      
-        return this.patch(url, null)
+        return this.post(url, null)
             .done(() => this.reportSuccess(`Successfully ${operationText}d ${this.taskType} task`))
             .fail((response: JQueryXHR) => this.reportError(`Failed to ${operationText} ${this.taskType} task. `, response.responseText));
     }

@@ -33,7 +33,7 @@ namespace SlowTests.Server.Documents.ETL
                 };
                 AddEtl(store, configuration);
 
-                store.Admin.Server.Send(new DeleteEtlOperation(configuration.Id, EtlType.Raven, database.Name));
+                store.Admin.Server.Send(new DeleteOngoingTaskOperation(database.Name, configuration.Id, OngoingTaskType.RavenEtl));
             }
         }
 

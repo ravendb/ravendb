@@ -217,11 +217,12 @@ namespace FastTests.Server.Replication
             return await store.Admin.Server.SendAsync(op);
         }
 
-        protected static async Task<ModifyOngoingTaskResult> DeleteWatcherFromReplicationTopology(
+        protected static async Task<ModifyOngoingTaskResult> DeleteOngoingTask(
             DocumentStore store,
-            long taskId)
+            long taskId,
+            OngoingTaskType taskType)
         {
-            var op = new DeleteExternalReplicationOperation(store.Database, taskId);
+            var op = new DeleteOngoingTaskOperation(store.Database, taskId, taskType);
             return await store.Admin.Server.SendAsync(op);
         }
 
