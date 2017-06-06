@@ -1,23 +1,24 @@
 ﻿using System;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Client.Attachments;
-using Raven.Client.Documents.Subscriptions;
-using Xunit;
 using FastTests.Server.Documents.Notifications;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.Server.Operations;
 using Sparrow;
+using Xunit;
 
-namespace FastTests.Client.Subscriptions
+namespace SlowTests.Issues
 {
-    public class RavenDB_7253:RavenTestBase
+    public class RavenDB_7253 : RavenTestBase
     {
         [Fact]
         public async Task SubscriptionShouldStopUponDatabaseDeletion()
         {
             using (var store = GetDocumentStore())
             {
-                    
+
                 var subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
 
                 var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
