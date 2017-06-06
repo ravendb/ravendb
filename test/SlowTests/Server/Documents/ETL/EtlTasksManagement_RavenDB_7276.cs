@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Raven.Client.Server.ETL;
+using Raven.Client.Server.Operations;
 using Raven.Client.Server.Operations.ETL;
 using Xunit;
 
@@ -95,8 +96,9 @@ namespace SlowTests.Server.Documents.ETL
                 };
 
                 AddEtl(store, configuration);
+                
 
-                store.Admin.Server.Send(new ToggleEtlStateOperation(configuration.Id, EtlType.Raven, database.Name));
+                store.Admin.Server.Send(new ToggleTaskStateOperation(database.Name , configuration.Id, OngoingTaskType.RavenEtl, true));
             }
         }
     }

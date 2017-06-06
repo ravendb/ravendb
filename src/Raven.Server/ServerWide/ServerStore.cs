@@ -661,13 +661,6 @@ namespace Raven.Server.ServerWide
             return await SendToLeaderAsync(command);
         }
 
-        public async Task<(long, object)> ToggleEtlState(TransactionOperationContext context, string databaseName, long id, BlittableJsonReaderObject _, EtlType type)
-        {
-            var command = new ToggleEtlStateCommand(id, type, databaseName);
-
-            return await SendToLeaderAsync(command);
-        }
-
         public Task<(long, object)> ModifyDatabaseVersioning(JsonOperationContext context, string name, BlittableJsonReaderObject configurationJson)
         {
             var editVersioning = new EditVersioningCommand(JsonDeserializationCluster.VersioningConfiguration(configurationJson), name);
