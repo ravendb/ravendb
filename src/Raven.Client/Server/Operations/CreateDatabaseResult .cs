@@ -28,11 +28,6 @@ namespace Raven.Client.Server.Operations
         public string[] NodesAddedTo { get; set; }
     }
 
-    public class ModifyExternalReplicationResult : CreateDatabaseResult
-    {
-        public long TaskId { get; set; }
-    }
-
     public class DatabasePutResult
     {
         public long ETag { get; set; }

@@ -1,5 +1,4 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
-
 import ongoingTask = require("models/database/tasks/ongoingTaskModel"); 
 
 class ongoingTaskBackupModel extends ongoingTask {
@@ -24,24 +23,8 @@ class ongoingTaskBackupModel extends ongoingTask {
         this.backupDestinations(dto.BackupDestinations);
     }
 
-    enableTask() {
-        alert("enabling task backup");
-        // ...
-    }
-
-    disableTask() {
-        alert("disabling task backup");
-        // ...
-    }
-
     editTask() {
-        alert("edit task backup");
-        // ...
-    }
-
-    removeTask() {
-        alert("remove task backup");
-        // ...
+        // TODO...
     }
 }
 

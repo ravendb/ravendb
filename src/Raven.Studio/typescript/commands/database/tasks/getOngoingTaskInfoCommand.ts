@@ -8,21 +8,19 @@ class getOngoingTaskInfoCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Client.Server.Operations.ModifyExternalReplicationResult> {
+    execute(): JQueryPromise<Raven.Client.Server.Operations.GetTaskInfoResult> {
         return this.getTaskInfo()
             .fail((response: JQueryXHR) => {
-                this.reportError("Failed to get info for task of type: " + this.taskType, response.responseText, response.statusText);
-            })
-            .done(() => {
-                this.reportSuccess(`Successfully retrieved information for task of type: ${this.taskType}`);
+                this.reportError(`Failed to get info for ${this.taskType} task with id: ${this.taskId}. `, response.responseText, response.statusText);
             });
     }
 
-    private getTaskInfo(): JQueryPromise<Raven.Client.Server.Operations.ModifyExternalReplicationResult> {
+    private getTaskInfo(): JQueryPromise<Raven.Client.Server.Operations.GetTaskInfoResult> {
 
-        // TODO: Call the dedicated ep...!!!
-       
-        return $.Deferred<Raven.Client.Server.Operations.ModifyExternalReplicationResult>();
+        const url = endpoints.global.ongoingTasks.adminGetTask;
+        const args = { name: this.db.name, key: this.taskId, type: this.taskType };
+
+        return this.query<Raven.Client.Server.Operations.GetTaskInfoResult>(url, args);
     }
 }
 

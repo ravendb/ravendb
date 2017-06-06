@@ -396,7 +396,7 @@ namespace Raven.Server.Web.System
             var (index, _) = await ServerStore.ToggleTaskState(key.Value, type, disable.Value, dbName);
             await ServerStore.Cluster.WaitForIndexNotification(index);
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;            
+            NoContentStatus();
         }
 
         [RavenAction("/admin/external-replication/update", "POST", "/admin/external-replication/update?name={databaseName:string}")]
@@ -425,8 +425,6 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(DatabasePutResult.ETag)] = index,
-                        [nameof(DatabasePutResult.Key)] = name,
                         [nameof(OngoingTask.TaskId)] = watcher.TaskId == 0 ? index : watcher.TaskId
                     });
                     writer.Flush();

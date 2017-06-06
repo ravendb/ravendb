@@ -240,8 +240,9 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OngoingTaskConnectionStatus));
             scripter.AddType(typeof(BackupType));
             scripter.AddType(typeof(NodeId));
-            scripter.AddType(typeof(ModifyExternalReplicationResult));
+            scripter.AddType(typeof(ModifyOngoingTaskResult));
             scripter.AddType(typeof(DatabaseWatcher));
+            scripter.AddType(typeof(GetTaskInfoResult));
 
             return scripter;
         }

@@ -13,7 +13,7 @@ class deleteOngoingTaskCommand extends commandBase {
             case "Replication":
                 return this.deleteWatcher();
             default:
-                //TODO: handle other task types
+                //TODO: handle other task types (Use single ep for delete - see issue 7241)
                 throw new Error("Not yet implemented");
         }
     }
