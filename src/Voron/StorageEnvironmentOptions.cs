@@ -512,7 +512,9 @@ namespace Voron
                 if (File.Exists(file.FullPath) == false)
                     return false;
 
-                return File.Exists(file.FullPath) == false;
+                File.Delete(file.FullPath);
+
+                return true;
             }
 
             public override unsafe bool ReadHeader(string filename, FileHeader* header)
