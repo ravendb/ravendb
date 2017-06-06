@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Client.Attachments;
 using FastTests.Server.Documents.Notifications;
 using Raven.Client.Documents.Subscriptions;
@@ -12,9 +11,9 @@ using Raven.Server.Config.Attributes;
 using Sparrow;
 using Xunit;
 
-namespace FastTests.Client.Subscriptions
+namespace SlowTests.Issues
 {
-    public class RavenDB_7275:RavenTestBase
+    public class RavenDB_7275 : RavenTestBase
     {
         private readonly ApiKeyDefinition _apiKey = new ApiKeyDefinition
         {

@@ -18,7 +18,7 @@ namespace StressTests
 {
     public class Databases : RavenTestBase
     {
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(100)]
         public void CanHandleMultipleDatabasesOnWrite(int numberOfDatabases)
         {

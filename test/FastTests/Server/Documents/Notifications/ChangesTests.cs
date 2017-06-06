@@ -39,7 +39,6 @@ namespace FastTests.Server.Documents.Notifications
             }
         }
 
-        [Fact]
         public async Task CanGetAllNotificationAboutDocument_ALotOfDocuments()
         {
             using (var store = GetDocumentStore())
