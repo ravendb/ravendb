@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.IO;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Replication.Messages;
@@ -19,12 +18,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Returns the attachments info of a document.
         /// </summary>
-        AttachmentName[] GetAttachmentNames<T>(string documentId);
-
-        /// <summary>
-        /// Returns the attachments info of a document.
-        /// </summary>
-        AttachmentName[] GetAttachmentNames<T>(T entity);
+        AttachmentName[] GetAttachmentNames(object entity);
 
         /// <summary>
         /// Returns the attachment by the document id and attachment name.

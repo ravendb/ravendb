@@ -378,40 +378,6 @@ namespace FastTests.Client.Attachments
 
                 using (var session = store.OpenSession())
                 {
-                    var attachments = session.Advanced.GetAttachmentNames<User>("users/1");
-                    Assert.Equal(3, attachments.Length);
-                    var orderedNames = names.OrderBy(x => x).ToArray();
-                    for (var i = 0; i < names.Length; i++)
-                    {
-                        var name = orderedNames[i];
-                        var attachment = attachments[i];
-                        Assert.Equal(name, attachment.Name);
-                        if (i == 0)
-                        {
-                            Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", attachment.Hash);
-                            Assert.Equal(5, attachment.Size);
-                            Assert.Equal("ImGgE/jPeG", attachment.ContentType);
-                        }
-                        else if (i == 1)
-                        {
-                            Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", attachment.Hash);
-                            Assert.Equal(5, attachment.Size);
-                            Assert.Equal("", attachment.ContentType);
-                        }
-                        else if (i == 2)
-                        {
-                            Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Hash);
-                            Assert.Equal(3, attachment.Size);
-                            Assert.Equal("image/png", attachment.ContentType);
-                        }
-                    }
-
-                    var attachments2 = session.Advanced.GetAttachmentNames<User>("users/2");
-                    Assert.Null(attachments2);
-                }
-
-                using (var session = store.OpenSession())
-                {
                     var user = session.Load<User>("users/1");
                     var attachments = session.Advanced.GetAttachmentNames(user);
                     Assert.Equal(3, attachments.Length);

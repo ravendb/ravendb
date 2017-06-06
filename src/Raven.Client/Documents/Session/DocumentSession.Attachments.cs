@@ -21,16 +21,7 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class DocumentSession
     {
-        public AttachmentName[] GetAttachmentNames<T>(string documentId)
-        {
-            var entity = Load<T>(documentId);
-            if (entity == null)
-                return null;
-
-            return GetAttachmentNames(entity);
-        }
-
-        public AttachmentName[] GetAttachmentNames<T>(T entity)
+        public AttachmentName[] GetAttachmentNames(object entity)
         {
             if (entity == null)
                 return null;
