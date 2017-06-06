@@ -326,7 +326,7 @@ namespace Raven.Server.Web.System
 
                         case OngoingTaskType.RavenEtl:
 
-                            var ravenEtl = record?.SqlEtls?.Find(x => x.Id == key);
+                            var ravenEtl = record?.RavenEtls?.Find(x => x.Id == key);
                             if (ravenEtl == null)
                             {
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -341,10 +341,6 @@ namespace Raven.Server.Web.System
                             else if (ravenEtl.Transforms.Any(x => x.Disabled))
                                 taskState = OngoingTaskState.PartiallyEnabled;
 
-                            (database, server) =
-                                SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(ravenEtl.Destination.Connection.FactoryName,
-                                    ravenEtl.Destination.Connection.ConnectionString);
-
                             var ravenTaskInfo = new OngoingRavenEtl
                             {
                                 TaskId = ravenEtl.Id,
@@ -354,8 +350,8 @@ namespace Raven.Server.Web.System
                                     NodeTag = tag,
                                     NodeUrl = clusterTopology.GetUrlFromTag(tag)
                                 },
-                                DestinationUrl = server,
-                                DestinationDatabase = database
+                                DestinationUrl = ravenEtl.Destination.Url,
+                                DestinationDatabase = ravenEtl.Destination.Database
                             };
 
                             WriteResult(context, ravenTaskInfo);

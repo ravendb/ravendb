@@ -4,7 +4,9 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Server;
+using Raven.Client.Server.ETL;
 using Raven.Client.Server.Operations;
+using Raven.Client.Server.Operations.ETL;
 using Raven.Client.Server.PeriodicBackup;
 using Xunit;
 
@@ -20,6 +22,7 @@ namespace RachisTests.DatabaseCluster
             var leader = await CreateRaftClusterAndGetLeader(clusterSize);
             ModifyExternalReplicationResult addWatcherRes;
             UpdatePeriodicBackupOperationResult updateBackupResult;
+            EtlConfiguration<RavenDestination> etlConfiguration;
             DatabaseWatcher watcher;
 
             using (var store = new DocumentStore
@@ -65,6 +68,26 @@ namespace RachisTests.DatabaseCluster
                 };
 
                 updateBackupResult = await store.Admin.Server.SendAsync(new UpdatePeriodicBackupOperation(backupConfig, store.Database));
+
+
+                etlConfiguration = new EtlConfiguration<RavenDestination>
+                {
+                    Destination =
+                        new RavenDestination
+                        {
+                            Url = "http://127.0.0.1:8080",
+                            Database = "Northwind",
+                        },
+                    Transforms =
+                    {
+                        new Transformation()
+                        {
+                            Collections = {"Users"}
+                        }
+                    }
+                };
+
+                store.Admin.Server.Send(new AddEtlOperation<RavenDestination>(etlConfiguration, store.Database));
             }
 
             using (var store = new DocumentStore
@@ -91,7 +114,11 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal("backup1", result.Name);
                 Assert.Equal(OngoingTaskState.Disabled, result.TaskState);
 
-                await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.RavenEtl);                
+                taskId = etlConfiguration.Id;
+
+                result = await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.RavenEtl);              
+                Assert.Equal(result?.DestinationDatabase, etlConfiguration.Destination.Database);
+                Assert.Equal(result?.DestinationUrl, etlConfiguration.Destination.Url);
             }
         }
 
