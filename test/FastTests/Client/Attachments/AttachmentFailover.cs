@@ -6,7 +6,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Server.Documents;
-using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
@@ -97,7 +96,7 @@ namespace FastTests.Client.Attachments
 
                     var user = session.Load<User>("users/1");
                     var metadata = session.Advanced.GetMetadataFor(user);
-                    Assert.Equal((DocumentFlags.HasAttachments | DocumentFlags.FromReplication).ToString(), metadata[Constants.Documents.Metadata.Flags]);
+                    Assert.Contains(DocumentFlags.HasAttachments.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
                     var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
                     var attachmentMetadata = attachments.Single();
                     Assert.Equal("File", attachmentMetadata.GetString(nameof(AttachmentResult.Name)));
