@@ -538,9 +538,6 @@ namespace Raven.Database.Storage
 
         public int GetDeletedIndexVersion(string indexName, int indexId)
         {
-            if (indexName == null)
-                return 0;
-
             // we only need the deleted index version if exists
             // no need to log an error
             int indexVersionFromTombstones;

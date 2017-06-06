@@ -232,7 +232,7 @@ namespace Raven.Database.Actions
             name = name.Trim();
             IsIndexNameValid(name);
 
-            var deletedIndexVersion = IndexDefinitionStorage.GetDeletedIndexVersion(definition.Name, definition.IndexId);
+            var deletedIndexVersion = IndexDefinitionStorage.GetDeletedIndexVersion(name, definition.IndexId);
             if (isReplication && definition.IndexVersion != null &&
                 deletedIndexVersion > definition.IndexVersion)
             {
@@ -279,24 +279,27 @@ namespace Raven.Database.Actions
             switch (creationOptions ?? FindIndexCreationOptions(definition, ref name))
             {
                 case IndexCreationOptions.Noop:
+                    definition.IndexVersion = Math.Max(definition.IndexVersion ?? 0, existingIndexVersion ?? 0);                    
                     return null;
                 case IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex:
                     // ensure that the code can compile
                     new DynamicViewCompiler(definition.Name, definition, Database.Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Database.Configuration).GenerateInstance();
                     IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(definition);
+
+                    definition.IndexVersion = Math.Max(definition.IndexVersion ?? 0, existingIndexVersion ?? 0);
                     if (isReplication == false)
-                        definition.IndexVersion = Math.Max(definition.IndexVersion ?? 0, existingIndexVersion ?? 0) + 1;
+                        definition.IndexVersion++;
                     return null;
                 case IndexCreationOptions.Update:
                     // ensure that the code can compile
                     new DynamicViewCompiler(definition.Name, definition, Database.Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Database.Configuration).GenerateInstance();
                     DeleteIndex(name);
+
+                    definition.IndexVersion = Math.Max(definition.IndexVersion ?? 0, existingIndexVersion ?? 0);
                     if (isReplication == false)
-                        definition.IndexVersion = Math.Max(definition.IndexVersion ?? 0, existingIndexVersion ?? 0) + 1;
+                        definition.IndexVersion++;
                     break;
                 case IndexCreationOptions.Create:
-
-
                     if (isReplication == false)
                     {
                         // we create a new index,

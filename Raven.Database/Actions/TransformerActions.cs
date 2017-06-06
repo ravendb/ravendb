@@ -121,8 +121,8 @@ namespace Raven.Database.Actions
 
             name = name.Trim();
 
-            var deletedVersion = GetDeletedTransformerVersion(Constants.RavenDeletedTransformersVersions, definition.Name);
-            var tombstoneVersion = GetDeletedTransformerVersion(Constants.RavenReplicationTransformerTombstones, definition.Name);
+            var deletedVersion = GetDeletedTransformerVersion(Constants.RavenDeletedTransformersVersions, name);
+            var tombstoneVersion = GetDeletedTransformerVersion(Constants.RavenReplicationTransformerTombstones, name);
             var deletedTransformerVersion = Math.Max(deletedVersion, tombstoneVersion);
             if (isReplication && definition.TransformerVersion != null &&
                 deletedTransformerVersion > definition.TransformerVersion)
