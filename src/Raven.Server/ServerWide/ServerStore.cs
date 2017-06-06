@@ -567,9 +567,9 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(deleteWatcherCommand);
         }
 
-        public Task<(long Etag, object Result)> DisableEnableOngoingTask(long taskId, OngoingTaskType type, bool disable, string dbName)
+        public Task<(long Etag, object Result)> ToggleTaskState(long taskId, OngoingTaskType type, bool disable, string dbName)
         {
-            var disableEnableCommand = new DisableEnableOngoingTaskCommand(taskId, type, disable, dbName);
+            var disableEnableCommand = new ToggleTaskStateCommand(taskId, type, disable, dbName);
 
             return SendToLeaderAsync(disableEnableCommand);
         }

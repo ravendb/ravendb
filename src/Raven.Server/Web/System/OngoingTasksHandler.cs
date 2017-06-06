@@ -382,8 +382,8 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/disable-enable-task", "POST", "/admin/disable-enable-task?name={databaseName:string}&key={taskId:string}&type={taskType:string}&disable={disable:bool}")]
-        public async Task DisableEnableOngoingTask()
+        [RavenAction("/admin/tasks/status", "PATCH", "/admin/tasks/status?name={databaseName:string}&key={taskId:string}&type={taskType:string}&disable={disable:true|false}")]
+        public async Task ToggleTaskState()
         {
             var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
@@ -397,7 +397,7 @@ namespace Raven.Server.Web.System
             if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
                 throw new ArgumentException($"Unknown task type: {type}", "type");
 
-            var (index, _) = await ServerStore.DisableEnableOngoingTask(key.Value, type, disable.Value, dbName);
+            var (index, _) = await ServerStore.ToggleTaskState(key.Value, type, disable.Value, dbName);
             await ServerStore.Cluster.WaitForIndexNotification(index);
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;            

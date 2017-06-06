@@ -6,18 +6,18 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class DisableEnableOngoingTaskCommand : UpdateDatabaseCommand
+    public class ToggleTaskStateCommand : UpdateDatabaseCommand
     {
         public long TaskId;
         public OngoingTaskType TaskType;
         public bool Disable;
 
-        public DisableEnableOngoingTaskCommand() : base(null)
+        public ToggleTaskStateCommand() : base(null)
         {
 
         }
 
-        public DisableEnableOngoingTaskCommand(long taskId, OngoingTaskType type, bool disable, string databaseName) : base(databaseName)
+        public ToggleTaskStateCommand(long taskId, OngoingTaskType type, bool disable, string databaseName) : base(databaseName)
         {
             TaskId = taskId;
             TaskType = type;

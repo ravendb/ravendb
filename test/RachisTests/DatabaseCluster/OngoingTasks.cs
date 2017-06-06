@@ -96,7 +96,7 @@ namespace RachisTests.DatabaseCluster
         }
 
         [Fact]
-        public async Task CanDisableAndEnableOngoingTask()
+        public async Task CanToggleTaskState()
         {
             var clusterSize = 3;
             var databaseName = "TestDB";
@@ -155,14 +155,14 @@ namespace RachisTests.DatabaseCluster
             }.Initialize())
             {
                 var taskId = addWatcherRes.TaskId;
-                var op = new DisableEnableOngoingTaskOperation(store.Database, taskId, OngoingTaskType.Replication, true);
+                var op = new ToggleTaskStateOperation(store.Database, taskId, OngoingTaskType.Replication, true);
                 await store.Admin.Server.SendAsync(op);
 
                 var result = await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.Replication);
                 Assert.Equal(OngoingTaskState.Disabled, result.TaskState);
 
                 taskId = updateBackupResult.TaskId;
-                op = new DisableEnableOngoingTaskOperation(store.Database, taskId, OngoingTaskType.Backup, false);
+                op = new ToggleTaskStateOperation(store.Database, taskId, OngoingTaskType.Backup, false);
                 await store.Admin.Server.SendAsync(op);
 
                 result = await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.Backup);

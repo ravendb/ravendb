@@ -3,18 +3,19 @@ using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations
 {
-    public class DisableEnableOngoingTaskOperation : IServerOperation
+    public class ToggleTaskStateOperation : IServerOperation
     {
         private readonly string _database;
         private readonly long _taskId;
         private readonly OngoingTaskType _type;
         private readonly bool _disable;
 
-        public DisableEnableOngoingTaskOperation(string database, long taskId, OngoingTaskType type, bool disable)
+        public ToggleTaskStateOperation(string database, long taskId, OngoingTaskType type, bool disable)
         {
             MultiDatabase.AssertValidName(database);
             _database = database;
@@ -25,10 +26,10 @@ namespace Raven.Client.Server.Operations
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new DisableEnableOngoingTaskCommand(conventions, context, _database, _taskId, _type, _disable);
+            return new ToggleTaskStateCommand(conventions, context, _database, _taskId, _type, _disable);
         }
 
-        private class DisableEnableOngoingTaskCommand : RavenCommand
+        private class ToggleTaskStateCommand : RavenCommand
         {
             private readonly JsonOperationContext _context;
             private readonly DocumentConventions _conventions;
@@ -37,7 +38,7 @@ namespace Raven.Client.Server.Operations
             private readonly OngoingTaskType _type;
             private readonly bool _disable;
 
-            public DisableEnableOngoingTaskCommand(
+            public ToggleTaskStateCommand(
                 DocumentConventions conventions,
                 JsonOperationContext context,
                 string database,
@@ -56,11 +57,11 @@ namespace Raven.Client.Server.Operations
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/disable-enable-task?name={_databaseName}&key={_taskId}&type={_type}&disable={_disable}";
+                url = $"{node.Url}/admin/tasks/status?name={_databaseName}&key={_taskId}&type={_type}&disable={_disable}";
 
                 var request = new HttpRequestMessage
                 {
-                    Method = HttpMethod.Post
+                    Method = HttpMethods.Patch
                 };
 
                 return request;
