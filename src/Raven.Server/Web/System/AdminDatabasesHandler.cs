@@ -632,17 +632,5 @@ namespace Raven.Server.Web.System
 
             await DatabaseConfigurations((_, databaseName, __) => ServerStore.DeleteEtl(_, databaseName, id.Value, __, etlType), "etl-delete");
         }
-
-        [RavenAction("/admin/etl/toggleState", "PATCH", "/admin/etl/delete?id={id:ulong}&name={databaseName:string}&type={[sql|raven]:string}")]
-        public async Task ToggleEtlState()
-        {
-            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
-            var id = GetLongQueryString("id");
-            
-            if (Enum.TryParse<EtlType>(type, true, out var etlType) == false)
-                throw new ArgumentException($"Unknown ETL type: {type}", "type");
-
-            await DatabaseConfigurations((_, databaseName, __) => ServerStore.ToggleEtlState(_, databaseName, id.Value, __, etlType), "etl-toggle-state");
-        }
     }
 }

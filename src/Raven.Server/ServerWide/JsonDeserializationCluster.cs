@@ -62,7 +62,7 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateTopologyCommand)] = GenerateJsonDeserializationRoutine<UpdateTopologyCommand>(),
             [nameof(UpdateExternalReplicationCommand)] = GenerateJsonDeserializationRoutine<UpdateExternalReplicationCommand>(),
             [nameof(DeleteExternalReplicationCommand)] = GenerateJsonDeserializationRoutine<DeleteExternalReplicationCommand>(),
-            [nameof(DisableEnableOngoingTaskCommand)] = GenerateJsonDeserializationRoutine<DisableEnableOngoingTaskCommand>(),
+            [nameof(ToggleTaskStateCommand)] = GenerateJsonDeserializationRoutine<ToggleTaskStateCommand>(),
             [nameof(AddDatabaseCommand)] = GenerateJsonDeserializationRoutine<AddDatabaseCommand>(),
             [nameof(DeleteValueCommand)] = GenerateJsonDeserializationRoutine<DeleteValueCommand>(),
             [nameof(PutApiKeyCommand)] = GenerateJsonDeserializationRoutine<PutApiKeyCommand>(),
@@ -78,8 +78,7 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateRavenEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateRavenEtlCommand>(),
             [nameof(UpdateSqlEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateSqlEtlCommand>(),
             [nameof(DeleteEtlCommand)] = GenerateJsonDeserializationRoutine<DeleteEtlCommand>(),
-            [nameof(UpdateEtlProcessStateCommand)] = GenerateJsonDeserializationRoutine<UpdateEtlProcessStateCommand>(),
-            [nameof(ToggleEtlStateCommand)] = GenerateJsonDeserializationRoutine<ToggleEtlStateCommand>(),
+            [nameof(UpdateEtlProcessStateCommand)] = GenerateJsonDeserializationRoutine<UpdateEtlProcessStateCommand>()
         };
     }
 }
