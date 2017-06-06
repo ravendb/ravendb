@@ -330,12 +330,6 @@ namespace Raven.Server.Web.System
                 });
         }
 
-        [RavenAction("/admin/periodic-backup/delete", "DELETE", "/admin/delete-periodic-backup?name={databaseName:string}")]
-        public async Task DeletePeriodicBackup()
-        {
-            await DatabaseConfigurations(ServerStore.DeletePeriodicBackup, "delete-periodic-backup");
-        }
-
         [RavenAction("/admin/periodic-backup/status", "GET", "/admin/delete-periodic-status?name={databaseName:string}")]
         public Task GetPeriodicBackupStatus()
         {
@@ -619,18 +613,6 @@ namespace Raven.Server.Web.System
                 throw new ArgumentException($"Unknown ETL type: {type}", "type");
 
             await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.UpdateEtl(_, databaseName, id.Value, etlConfiguration, etlType), "etl-update");
-        }
-
-        [RavenAction("/admin/etl/delete", "DELETE", "/admin/etl/delete?id={id:ulong}&name={databaseName:string}&type={[sql|raven]:string}")]
-        public async Task DeleteEtl()
-        {
-            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
-            var id = GetLongQueryString("id");
-
-            if (Enum.TryParse<EtlType>(type, true, out var etlType) == false)
-                throw new ArgumentException($"Unknown ETL type: {type}", "type");
-
-            await DatabaseConfigurations((_, databaseName, __) => ServerStore.DeleteEtl(_, databaseName, id.Value, __, etlType), "etl-delete");
         }
     }
 }

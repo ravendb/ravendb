@@ -1,5 +1,6 @@
 ﻿using Raven.Client.Server;
 using Raven.Client.Server.ETL;
+using Raven.Client.Server.Operations;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
@@ -47,7 +48,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            new DeleteEtlCommand(TaskId, EtlType, DatabaseName).UpdateDatabaseRecord(record, etag);
+            new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.RavenEtl, DatabaseName).UpdateDatabaseRecord(record, etag);
             new AddRavenEtlCommand(Configuration, DatabaseName).UpdateDatabaseRecord(record, etag);
 
             return null;
@@ -68,7 +69,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            new DeleteEtlCommand(TaskId, EtlType, DatabaseName).UpdateDatabaseRecord(record, etag);
+            new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.SqlEtl, DatabaseName).UpdateDatabaseRecord(record, etag);
             new AddSqlEtlCommand(Configuration, DatabaseName).UpdateDatabaseRecord(record, etag);
 
             return null;
