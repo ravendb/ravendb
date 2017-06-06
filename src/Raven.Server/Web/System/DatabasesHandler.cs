@@ -208,7 +208,7 @@ namespace Raven.Server.Web.System
 
                 DocumentsCount = db?.DocumentsStorage.GetNumberOfDocuments() ?? 0,
                 HasVersioningConfiguration = db?.DocumentsStorage.VersioningStorage.Configuration != null,
-                ExpirationActive = db?.ExpiredDocumentsCleaner != null,
+                HasExpirationConfiguration = db?.ExpiredDocumentsCleaner != null,
                 IndexesCount = db?.IndexStore.GetIndexes().Count() ?? 0,
                 IndexingStatus = indexingStatus,
 
