@@ -98,11 +98,11 @@ class conflicts extends viewModelBase {
         grid.headerVisible(true);
         grid.init((s, t) => this.fetchConflicts(s, t), () =>
             [
-                new hyperlinkColumn<replicationConflictListItemDto>(x => x.Id, x => appUrl.forConflicts(this.activeDatabase(), x.Id), "Document", "50%",
+                new hyperlinkColumn<replicationConflictListItemDto>(grid, x => x.Id, x => appUrl.forConflicts(this.activeDatabase(), x.Id), "Document", "50%",
                     {
                         handler: (item, event) => this.handleLoadAction(item, event)
                     }),
-                new textColumn<replicationConflictListItemDto>(x => x.LastModified, "Date", "50%")
+                new textColumn<replicationConflictListItemDto>(grid, x => x.LastModified, "Date", "50%")
             ]
         );
 

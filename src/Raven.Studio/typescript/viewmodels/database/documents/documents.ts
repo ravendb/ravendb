@@ -7,6 +7,7 @@ import deleteCollection = require("viewmodels/database/documents/deleteCollectio
 import messagePublisher = require("common/messagePublisher");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import documentPropertyProvider = require("common/helpers/database/documentPropertyProvider");
+import getCustomFunctionsCommand = require("commands/database/documents/getCustomFunctionsCommand");
 
 import notificationCenter = require("common/notifications/notificationCenter");
 
@@ -24,6 +25,7 @@ import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
 import showDataDialog = require("viewmodels/common/showDataDialog");
+import evaluationContextHelper = require("common/helpers/evaluationContextHelper");
 
 class documents extends viewModelBase {
 
@@ -42,12 +44,12 @@ class documents extends viewModelBase {
 
     copyDisabledReason: KnockoutComputed<disabledReason>;
 
+    private customFunctionsContext: object;
+
     private collectionToSelectName: string;
     private gridController = ko.observable<virtualGridController<document>>();
     private columnPreview = new columnPreviewPlugin<document>();
     columnsSelector = new columnsSelector<document>();
-
-    private fullDocumentsProvider: documentPropertyProvider;
 
     spinners = {
         delete: ko.observable<boolean>(false),
@@ -106,15 +108,22 @@ class documents extends viewModelBase {
 
         this.collectionToSelectName = args ? args.collection : null;
 
-        this.fullDocumentsProvider = new documentPropertyProvider(this.activeDatabase());
-
         this.configureDirtyCollectionDetection();
 
-        return collectionsTracker.default.loadStatsTask
+        const loadStatsTask = collectionsTracker.default.loadStatsTask;
+        const customFunctionsTask = new getCustomFunctionsCommand(this.activeDatabase())
+            .execute()
+            .done(functions => {
+                this.customFunctionsContext = evaluationContextHelper.createContext(functions.functions);
+            });
+
+
+        return $.when<any>(loadStatsTask, customFunctionsTask)
             .done(() => {
                 const collectionToSelect = this.tracker.collections().find(x => x.name === this.collectionToSelectName) || this.tracker.getAllDocumentsCollection();
                 this.currentCollection(collectionToSelect);
-            });
+            })
+            
     }
 
     private configureDirtyCollectionDetection() {
@@ -170,21 +179,22 @@ class documents extends viewModelBase {
 
         this.setupDisableReasons();
 
-        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.tracker.getCollectionNames(),
-            { showRowSelectionCheckbox: true, enableInlinePreview: false, showSelectAllCheckbox: true });
-
         const grid = this.gridController();
 
         grid.headerVisible(true);
+        grid.withEvaluationContext(this.customFunctionsContext);
+
+        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, this.tracker.getCollectionNames(),
+            { showRowSelectionCheckbox: true, enableInlinePreview: false, showSelectAllCheckbox: true });
 
         this.columnsSelector.init(grid, (s, t, previewCols, fullCols) => this.fetchDocs(s, t, previewCols, fullCols), (w, r) => {
             if (this.currentCollection().isAllDocuments) {
                 return [
                     new checkedColumn(true),
-                    new hyperlinkColumn<document>(x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.activeDatabase()), "Id", "300px"),
-                    new textColumn<document>(x => x.__metadata.etag(), "ETag", "200px"),
-                    new textColumn<document>(x => x.__metadata.lastModified(), "Last Modified", "300px"),
-                    new hyperlinkColumn<document>(x => x.getCollection(), x => appUrl.forDocuments(x.getCollection(), this.activeDatabase()), "Collection", "200px")
+                    new hyperlinkColumn<document>(grid, x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.activeDatabase()), "Id", "300px"),
+                    new textColumn<document>(grid, x => x.__metadata.etag(), "ETag", "200px"),
+                    new textColumn<document>(grid, x => x.__metadata.lastModified(), "Last Modified", "300px"),
+                    new hyperlinkColumn<document>(grid, x => x.getCollection(), x => appUrl.forDocuments(x.getCollection(), this.activeDatabase()), "Collection", "200px")
                 ];
             } else {
                 return documentsProvider.findColumns(w, r);
@@ -195,9 +205,11 @@ class documents extends viewModelBase {
 
         this.currentCollection.subscribe(this.onCollectionSelected, this);
 
+        const fullDocumentsProvider = new documentPropertyProvider(this.activeDatabase());
+
         this.columnPreview.install(".documents-grid", ".tooltip", (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
             if (column instanceof textColumn) {
-                this.fullDocumentsProvider.resolvePropertyValue(doc, column, (v: any) => {
+                fullDocumentsProvider.resolvePropertyValue(doc, column, (v: any) => {
                     if (!_.isUndefined(v)) {
                         const json = JSON.stringify(v, null, 4);
                         const html = Prism.highlight(json, (Prism.languages as any).javascript);

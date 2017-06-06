@@ -19,6 +19,7 @@ using Raven.Client.Server.Operations;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Client.Server.Versioning;
 using Raven.Server.Commercial;
+using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
@@ -36,6 +37,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
+using Raven.Server.Web.Studio;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -185,10 +187,13 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SqlDestination));
             scripter.AddType(typeof(EtlProcessStatistics));
             scripter.AddType(typeof(SimulateSqlEtl));
-            scripter.AddType(typeof(SqlEtlTable)); 
+            scripter.AddType(typeof(SqlEtlTable));
 
             // backup
             //TODO: scripter.AddType(typeof(PeriodicBackupConfiguration));
+
+            // custom functions
+            scripter.AddType(typeof(CustomFunctions));
 
             // storage report
             scripter.AddType(typeof(StorageReport));

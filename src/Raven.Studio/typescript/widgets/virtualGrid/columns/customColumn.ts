@@ -1,12 +1,13 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
+import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 
 class customColumn<T> extends textColumn<T> {
 
     jsCode: string;
 
-    constructor(valueAccessorAsJsCode: string, header: string, width: string) {
-        super(customColumn.parseToFunction('return (' + valueAccessorAsJsCode + ')'), header, width);
+    constructor(gridController: virtualGridController<T>, valueAccessorAsJsCode: string, header: string, width: string) {
+        super(gridController, customColumn.parseToFunction('return (' + valueAccessorAsJsCode + ')'), header, width);
         this.jsCode = valueAccessorAsJsCode;
     }
 
