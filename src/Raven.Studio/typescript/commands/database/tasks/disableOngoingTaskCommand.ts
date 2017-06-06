@@ -8,12 +8,12 @@ class disableOngoingTaskCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<void> {
+    execute(): JQueryPromise<any> {
         const args = { name: this.db.name, key: this.taskId, type: this.taskType, disable: this.disable };
-        const url = endpoints.global.ongoingTasks.adminDisableEnableTask + this.urlEncodeArgs(args);
+        const url = endpoints.global.ongoingTasks.adminTasksStatus + this.urlEncodeArgs(args);
         const operationText = this.disable ? "disable" : "enable";
      
-        return this.post(url, null)
+        return this.patch(url, null)
             .done(() => this.reportSuccess(`Successfully ${operationText}d ${this.taskType} task`))
             .fail((response: JQueryXHR) => this.reportError(`Failed to ${operationText} ${this.taskType} task. `, response.responseText));
     }
