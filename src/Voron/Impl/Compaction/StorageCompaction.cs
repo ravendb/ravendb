@@ -51,11 +51,13 @@ namespace Voron.Impl.Compaction
 
                 compactedEnv.FlushLogToDataFile();
 
+                bool synced;
+
                 using (var op = new WriteAheadJournal.JournalApplicator.SyncOperation(compactedEnv.Journal.Applicator))
                 {
                     try
                     {
-                        op.SyncDataFile();
+                        synced = op.SyncDataFile();
                     }
                     catch (Exception e)
                     {
@@ -63,7 +65,9 @@ namespace Voron.Impl.Compaction
                         throw;
                     }
                 }
-                compactedEnv.Journal.Applicator.DeleteCurrentAlreadyFlushedJournal();
+
+                if (synced)
+                    compactedEnv.Journal.Applicator.DeleteCurrentAlreadyFlushedJournal();
 
                 minimalCompactedDataFileSize = compactedEnv.NextPageNumber * Constants.Storage.PageSize;
             }

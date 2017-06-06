@@ -839,21 +839,22 @@ namespace Voron.Impl.Journal
 
                 public Task Task => _tcs.Task;
 
-                public void SyncDataFile()
+                public bool SyncDataFile()
                 {
                     if (TryGatherInformationToStartSync() == false)
-                        return;
+                        return false;
 
                     if (_parent._waj._env.Disposed)
-                        return;
+                        return false;
 
                     CallPagerSync();
 
                     // can take a long time, need to check again
                     if (_parent._waj._env.Disposed)
-                        return;
+                        return false;
 
                     UpdateDatabaseStateAfterSync();
+                    return true;
                 }
 
                 public void CompleteSync()
@@ -1195,11 +1196,13 @@ namespace Voron.Impl.Journal
 
                 var current = _waj._files.First();
 
-                if (current.Number != _lastFlushedJournalId)
+                var logInfo = _waj._env.HeaderAccessor.Get(ptr => ptr->Journal);
+
+                if (current.Number != logInfo.LastSyncedJournal)
                     throw new InvalidOperationException(string.Format("Cannot delete current journal because it isn't last synced file. Current journal number: {0}, the last one which was synced {1}", _waj.CurrentFile?.Number ?? -1, _lastFlushedJournalId));
 
 
-                if (_waj._env.NextWriteTransactionId - 1 != _lastFlushedTransactionId)
+                if (_waj._env.NextWriteTransactionId - 1 != logInfo.LastSyncedTransactionId)
                     throw new InvalidOperationException("Cannot delete current journal because it hasn't synced everything up to the last write transaction");
 
                 _waj._files = _waj._files.RemoveFront(1);
