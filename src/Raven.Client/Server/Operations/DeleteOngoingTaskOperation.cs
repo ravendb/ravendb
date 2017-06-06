@@ -7,35 +7,40 @@ using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations
 {
-    public class DeleteExternalReplicationOperation : IServerOperation<ModifyOngoingTaskResult>
+    public class DeleteOngoingTaskOperation : IServerOperation<ModifyOngoingTaskResult>
     {
         private readonly string _database;
         private readonly long _taskId;
+        private readonly OngoingTaskType _taskType;
 
-        public DeleteExternalReplicationOperation(string database, long taskId)
+        public DeleteOngoingTaskOperation(string database, long taskId, OngoingTaskType taskType)
         {
             MultiDatabase.AssertValidName(database);
             _database = database;
             _taskId = taskId;
+            _taskType = taskType;
         }
 
         public RavenCommand<ModifyOngoingTaskResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new DeleteExternalReplicationCommand(conventions, context, _database, _taskId);
+            return new DeleteOngoingTaskCommand(conventions, context, _database, _taskId, _taskType);
         }
 
-        private class DeleteExternalReplicationCommand : RavenCommand<ModifyOngoingTaskResult>
+        private class DeleteOngoingTaskCommand : RavenCommand<ModifyOngoingTaskResult>
         {
             private readonly JsonOperationContext _context;
             private readonly DocumentConventions _conventions;
             private readonly string _databaseName;
             private readonly long _taskId;
+            private readonly OngoingTaskType _taskType;
 
-            public DeleteExternalReplicationCommand(
+
+            public DeleteOngoingTaskCommand(
                 DocumentConventions conventions,
                 JsonOperationContext context,
                 string database,
-                long taskId
+                long taskId,
+                OngoingTaskType taskType
 
             )
             {
@@ -43,18 +48,19 @@ namespace Raven.Client.Server.Operations
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _databaseName = database ?? throw new ArgumentNullException(nameof(database));
                 _taskId = taskId;
+                _taskType = taskType;
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/external-replication/delete?name={_databaseName}&id={_taskId}";
+                url = $"{node.Url}/admin/tasks/delete?name={_databaseName}&id={_taskId}&type={_taskType}";
 
                 var request = new HttpRequestMessage
-                {
-                    Method = HttpMethod.Post
-                };
+                    {
+                        Method = HttpMethod.Post
+                    };
 
-                return request;
+                    return request;
             }
 
             public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
@@ -62,7 +68,7 @@ namespace Raven.Client.Server.Operations
                 if (response == null)
                     ThrowInvalidResponse();
 
-                Result = JsonDeserializationClient.ModifyExternalReplicationResult(response);
+                Result = JsonDeserializationClient.ModifyOngoingTaskResult(response);
             }
 
             public override bool IsReadRequest => false;

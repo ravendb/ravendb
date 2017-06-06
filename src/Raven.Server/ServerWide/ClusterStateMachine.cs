@@ -113,20 +113,18 @@ namespace Raven.Server.ServerWide
                 case nameof(RenameTransformerCommand):
                 case nameof(EditVersioningCommand):
                 case nameof(UpdatePeriodicBackupCommand):
-                case nameof(DeletePeriodicBackupCommand):
                 case nameof(EditExpirationCommand):
                 case nameof(ModifyConflictSolverCommand):
                 case nameof(UpdateTopologyCommand):
                 case nameof(DeleteDatabaseCommand):
                 case nameof(ModifyCustomFunctionsCommand):
                 case nameof(UpdateExternalReplicationCommand):
-                case nameof(DeleteExternalReplicationCommand):
                 case nameof(ToggleTaskStateCommand):
                 case nameof(AddRavenEtlCommand):
                 case nameof(AddSqlEtlCommand):
                 case nameof(UpdateRavenEtlCommand):
                 case nameof(UpdateSqlEtlCommand):
-                case nameof(DeleteEtlCommand):
+                case nameof(DeleteOngoingTaskCommand):
                     UpdateDatabase(context, type, cmd, index, leader);
                     break;
                 case nameof(UpdatePeriodicBackupStatusCommand):
