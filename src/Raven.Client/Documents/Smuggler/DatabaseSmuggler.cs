@@ -148,7 +148,7 @@ namespace Raven.Client.Documents.Smuggler
                 _handleStreamResponse = handleStreamResponse ?? throw new ArgumentNullException(nameof(handleStreamResponse));
                 _options = EntityToBlittable.ConvertEntityToBlittable(options, conventions, _context);
 
-                ResponseType = RavenCommandResponseType.Raw;
+                ResponseType = RavenCommandResponseType.Empty;
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
