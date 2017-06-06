@@ -83,13 +83,13 @@ namespace FastTests.Client.Attachments
                 }
 
                 using (var session = store.OpenSession())
-                using (var stream = new BigDummyStream(size))
-                using (var attachment = session.Advanced.GetAttachment("users/1", "File"))
+                using (var dummyStream = new BigDummyStream(size))
+                using (var stream = session.Advanced.GetAttachment("users/1", "File", out AttachmentDetails attachment))
                 {
-                    attachment.Stream.CopyTo(stream);
+                    stream.CopyTo(dummyStream);
                     Assert.Equal(2, attachment.Etag);
                     Assert.Equal("File", attachment.Name);
-                    Assert.Equal(size, stream.Position);
+                    Assert.Equal(size, dummyStream.Position);
                     Assert.Equal(size, attachment.Size);
                     Assert.Equal("application/pdf", attachment.ContentType);
                     Assert.Equal(hash, attachment.Hash);
@@ -99,10 +99,10 @@ namespace FastTests.Client.Attachments
                     Assert.Contains(DocumentFlags.HasAttachments.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
                     var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
                     var attachmentMetadata = attachments.Single();
-                    Assert.Equal("File", attachmentMetadata.GetString(nameof(AttachmentResult.Name)));
-                    Assert.Equal("application/pdf", attachmentMetadata.GetString(nameof(AttachmentResult.ContentType)));
-                    Assert.Equal(hash, attachmentMetadata.GetString(nameof(AttachmentResult.Hash)));
-                    Assert.Equal(size, attachmentMetadata.GetNumber(nameof(AttachmentResult.Size)));
+                    Assert.Equal("File", attachmentMetadata.GetString(nameof(AttachmentName.Name)));
+                    Assert.Equal("application/pdf", attachmentMetadata.GetString(nameof(AttachmentName.ContentType)));
+                    Assert.Equal(hash, attachmentMetadata.GetString(nameof(AttachmentName.Hash)));
+                    Assert.Equal(size, attachmentMetadata.GetNumber(nameof(AttachmentName.Size)));
                 }
             }
         }

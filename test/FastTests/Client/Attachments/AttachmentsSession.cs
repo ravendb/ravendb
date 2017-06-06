@@ -50,22 +50,22 @@ namespace FastTests.Client.Attachments
                     {
                         var name = orderedNames[i];
                         var attachment = attachments[i];
-                        Assert.Equal(name, attachment.GetString(nameof(AttachmentResult.Name)));
-                        var hash = attachment.GetString(nameof(AttachmentResult.Hash));
+                        Assert.Equal(name, attachment.GetString(nameof(AttachmentName.Name)));
+                        var hash = attachment.GetString(nameof(AttachmentName.Hash));
                         if (i == 0)
                         {
                             Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", hash);
-                            Assert.Equal(5, attachment.GetNumber(nameof(AttachmentResult.Size)));
+                            Assert.Equal(5, attachment.GetNumber(nameof(AttachmentName.Size)));
                         }
                         else if (i == 1)
                         {
                             Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", hash);
-                            Assert.Equal(5, attachment.GetNumber(nameof(AttachmentResult.Size)));
+                            Assert.Equal(5, attachment.GetNumber(nameof(AttachmentName.Size)));
                         }
                         else if (i == 2)
                         {
                             Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", hash);
-                            Assert.Equal(3, attachment.GetNumber(nameof(AttachmentResult.Size)));
+                            Assert.Equal(3, attachment.GetNumber(nameof(AttachmentName.Size)));
                         }
                     }
 
@@ -76,9 +76,9 @@ namespace FastTests.Client.Attachments
                     {
                         var name = names[i];
                         using (var attachmentStream = new MemoryStream(readBuffer))
-                        using (var attachment = session.Advanced.GetAttachment(user, name))
+                        using (var stream = session.Advanced.GetAttachment(user, name, out AttachmentDetails attachment))
                         {
-                            attachment.Stream.CopyTo(attachmentStream);
+                            stream.CopyTo(attachmentStream);
                             Assert.Equal(2 + 2 * i, attachment.Etag);
                             Assert.Equal(name, attachment.Name);
                             Assert.Equal(i == 0 ? 3 : 5, attachmentStream.Position);
@@ -238,10 +238,10 @@ namespace FastTests.Client.Attachments
                     Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
                     var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
                     Assert.Equal(2, attachments.Length);
-                    Assert.Equal("file1", attachments[0].GetString(nameof(AttachmentResult.Name)));
-                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[0].GetString(nameof(AttachmentResult.Hash)));
-                    Assert.Equal("file3", attachments[1].GetString(nameof(AttachmentResult.Name)));
-                    Assert.Equal("NRQuixiqj+xvEokF6MdQq1u+uH1dk/gk2PLChJQ58Vo=", attachments[1].GetString(nameof(AttachmentResult.Hash)));
+                    Assert.Equal("file1", attachments[0].GetString(nameof(AttachmentName.Name)));
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[0].GetString(nameof(AttachmentName.Hash)));
+                    Assert.Equal("file3", attachments[1].GetString(nameof(AttachmentName.Name)));
+                    Assert.Equal("NRQuixiqj+xvEokF6MdQq1u+uH1dk/gk2PLChJQ58Vo=", attachments[1].GetString(nameof(AttachmentName.Hash)));
                 }
 
                 using (var session = store.OpenSession())
@@ -250,9 +250,9 @@ namespace FastTests.Client.Attachments
 
                     var readBuffer = new byte[16];
                     using (var attachmentStream = new MemoryStream(readBuffer))
-                    using (var attachment = session.Advanced.GetAttachment("users/1", "file1"))
+                    using (var stream = session.Advanced.GetAttachment("users/1", "file1", out AttachmentDetails attachment))
                     {
-                        attachment.Stream.CopyTo(attachmentStream);
+                        stream.CopyTo(attachmentStream);
                         Assert.Equal(2, attachment.Etag);
                         Assert.Equal("file1", attachment.Name);
                         Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Hash);
@@ -264,9 +264,9 @@ namespace FastTests.Client.Attachments
                         Assert.Null(attachment);
                     }
                     using (var attachmentStream = new MemoryStream(readBuffer))
-                    using (var attachment = session.Advanced.GetAttachment(user, "file3"))
+                    using (var stream = session.Advanced.GetAttachment(user, "file3", out AttachmentDetails attachment))
                     {
-                        attachment.Stream.CopyTo(attachmentStream);
+                        stream.CopyTo(attachmentStream);
                         Assert.Equal(6, attachment.Etag);
                         Assert.Equal("file3", attachment.Name);
                         Assert.Equal("NRQuixiqj+xvEokF6MdQq1u+uH1dk/gk2PLChJQ58Vo=", attachment.Hash);

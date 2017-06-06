@@ -34,30 +34,60 @@ namespace Raven.Client.Documents.Session
             for (var i = 0; i < attachments.Length; i++)
             {
                 var attachment = (BlittableJsonReaderObject)attachments[i];
-                results[i] = JsonDeserializationClient.AttachmentResult(attachment);
+                results[i] = JsonDeserializationClient.AttachmentName(attachment);
             }
             return results;
         }
 
-        public AttachmentResultWithStream GetAttachment(string documentId, string name)
+        public Stream GetAttachment(string documentId, string name)
         {
             var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Document, null);
-            return DocumentStore.Operations.Send(operation);
+            var tuple = DocumentStore.Operations.Send(operation);
+            return tuple.stream;
         }
 
-        public AttachmentResultWithStream GetAttachment(object entity, string name)
+        public Stream GetAttachment(string documentId, string name, out AttachmentDetails attachment)
+        {
+            var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Document, null);
+            var tuple = DocumentStore.Operations.Send(operation);
+            attachment = tuple.attachment;
+            return tuple.stream;
+        }
+
+        public Stream GetAttachment(object entity, string name)
         {
             if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
                 ThrowEntityNotInSession(entity);
 
             var operation = new GetAttachmentOperation(document.Id, name, AttachmentType.Document, null);
-            return DocumentStore.Operations.Send(operation);
+            var tuple = DocumentStore.Operations.Send(operation);
+            return tuple.stream;
         }
 
-        public AttachmentResultWithStream GetRevisionAttachment(string documentId, string name, ChangeVectorEntry[] changeVector)
+        public Stream GetAttachment(object entity, string name, out AttachmentDetails attachment)
+        {
+            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
+                ThrowEntityNotInSession(entity);
+
+            var operation = new GetAttachmentOperation(document.Id, name, AttachmentType.Document, null);
+            var tuple = DocumentStore.Operations.Send(operation);
+            attachment = tuple.attachment;
+            return tuple.stream;
+        }
+
+        public Stream GetRevisionAttachment(string documentId, string name, ChangeVectorEntry[] changeVector)
         {
             var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Revision, changeVector);
-            return DocumentStore.Operations.Send(operation);
+            var tuple = DocumentStore.Operations.Send(operation);
+            return tuple.stream;
+        }
+
+        public Stream GetRevisionAttachment(string documentId, string name, ChangeVectorEntry[] changeVector, out AttachmentDetails attachment)
+        {
+            var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Revision, changeVector);
+            var tuple = DocumentStore.Operations.Send(operation);
+            attachment = tuple.attachment;
+            return tuple.stream;
         }
 
         public void StoreAttachment(string documentId, string name, Stream stream, string contentType = null)

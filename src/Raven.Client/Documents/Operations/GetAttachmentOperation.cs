@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -14,7 +15,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class GetAttachmentOperation : IOperation<AttachmentResultWithStream>
+    public class GetAttachmentOperation : IOperation<(Stream stream, AttachmentDetails attachment)>
     {
         private readonly string _documentId;
         private readonly string _name;
@@ -29,12 +30,12 @@ namespace Raven.Client.Documents.Operations
             _changeVector = changeVector;
         }
 
-        public RavenCommand<AttachmentResultWithStream> GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<(Stream stream, AttachmentDetails attachment)> GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
             return new GetAttachmentCommand(context, _documentId, _name, _type, _changeVector);
         }
 
-        private class GetAttachmentCommand : RavenCommand<AttachmentResultWithStream>
+        private class GetAttachmentCommand : RavenCommand<(Stream stream, AttachmentDetails attachment)>
         {
             private readonly JsonOperationContext _context;
             private readonly string _documentId;
@@ -122,16 +123,19 @@ namespace Raven.Client.Documents.Operations
                 if (response.Headers.TryGetValues("Attachment-Size", out IEnumerable<string> sizeVal))
                     long.TryParse(sizeVal.First(), out size);
 
-                Result = new AttachmentResultWithStream(response)
+                var attachmentDetails = new AttachmentDetails
                 {
                     ContentType = contentType,
-                    Etag = etag,
                     Name = _name,
-                    DocumentId = _documentId,
                     Hash = hash,
                     Size = size,
-                    Stream = await response.Content.ReadAsStreamAsync(),
+                    Etag = etag,
+                    DocumentId = _documentId,
                 };
+
+                var stream = new AttachmentStream(response, await response.Content.ReadAsStreamAsync());
+
+                Result = (stream, attachmentDetails);
             }
 
             public override bool IsReadRequest => true;

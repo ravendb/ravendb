@@ -23,17 +23,32 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Returns the attachment by the document id and attachment name.
         /// </summary>
-        AttachmentResultWithStream GetAttachment(string documentId, string name);
+        Stream GetAttachment(string documentId, string name);
 
         /// <summary>
         /// Returns the attachment by the document id and attachment name.
         /// </summary>
-        AttachmentResultWithStream GetAttachment(object entity, string name);
+        Stream GetAttachment(string documentId, string name, out AttachmentDetails attachment);
+
+        /// <summary>
+        /// Returns the attachment by the document id and attachment name.
+        /// </summary>
+        Stream GetAttachment(object entity, string name);
+
+        /// <summary>
+        /// Returns the attachment by the document id and attachment name.
+        /// </summary>
+        Stream GetAttachment(object entity, string name, out AttachmentDetails attachment);
 
         /// <summary>
         /// Returns the revision attachment by the document id and attachment name.
         /// </summary>
-        AttachmentResultWithStream GetRevisionAttachment(string documentId, string name, ChangeVectorEntry[] changeVector);
+        Stream GetRevisionAttachment(string documentId, string name, ChangeVectorEntry[] changeVector);
+
+        /// <summary>
+        /// Returns the revision attachment by the document id and attachment name.
+        /// </summary>
+        Stream GetRevisionAttachment(string documentId, string name, ChangeVectorEntry[] changeVector, out AttachmentDetails attachment);
 
         /// <summary>
         /// Stores attachment to be sent in the session.

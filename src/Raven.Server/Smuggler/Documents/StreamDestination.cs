@@ -186,7 +186,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 foreach (BlittableJsonReaderObject attachment in attachments)
                 {
-                    if (attachment.TryGet(nameof(AttachmentResult.Hash), out LazyStringValue hash) == false)
+                    if (attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false)
                     {
                         progress.Attachments.ErroredCount++;
 
@@ -224,11 +224,11 @@ namespace Raven.Server.Smuggler.Documents
                 Writer.WriteInteger((byte)DocumentType.Attachment);
                 Writer.WriteComma();
 
-                Writer.WritePropertyName(nameof(AttachmentResult.Hash));
+                Writer.WritePropertyName(nameof(AttachmentName.Hash));
                 Writer.WriteString(hash);
                 Writer.WriteComma();
 
-                Writer.WritePropertyName(nameof(AttachmentResult.Size));
+                Writer.WritePropertyName(nameof(AttachmentName.Size));
                 Writer.WriteInteger(stream.Length);
 
                 Writer.WriteEndObject();
