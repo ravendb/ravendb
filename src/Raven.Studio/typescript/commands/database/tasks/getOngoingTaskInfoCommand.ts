@@ -11,7 +11,7 @@ class getOngoingTaskInfoCommand extends commandBase {
     execute(): JQueryPromise<Raven.Client.Server.Operations.GetTaskInfoResult> {
         return this.getTaskInfo()
             .fail((response: JQueryXHR) => {
-                this.reportError(`Failed to get info for ${this.taskType} task with id: ${this.taskId}` + this.taskType, response.responseText, response.statusText);
+                this.reportError(`Failed to get info for ${this.taskType} task with id: ${this.taskId}. `, response.responseText, response.statusText);
             });
     }
 

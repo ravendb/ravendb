@@ -18,28 +18,11 @@ class editExternalReplicationTask extends viewModelBase {
             // 1. Editing an existing task
             this.isAddingNewReplicationTask(false);
             this.taskId = args.taskId;
-            const self = this;
 
             new ongoingTaskInfoCommand(this.activeDatabase(), "Replication", this.taskId)
                 .execute()
-                .done((result: Raven.Client.Server.Operations.GetTaskInfoResult) => {
-
-                    const replicationInfo: Raven.Server.Web.System.OngoingTaskReplication = {
-                        DestinationDatabase: result.DestinationDatabase,
-                        DestinationUrl: result.DestinationUrl,
-                        LastModificationTime: result.LastModificationTime,
-                        ResponsibleNode: result.ResponsibleNode,
-                        TaskConnectionStatus: result.TaskConnectionStatus,
-                        TaskId: result.TaskId,
-                        TaskState: result.TaskState,
-                        TaskType: result.TaskType
-                    };
-
-                    this.editedExternalReplication(new ongoingTaskReplication(replicationInfo));
-                })
-                .fail(() => {
-                    router.navigate(appUrl.forOngoingTasks(self.activeDatabase()));
-                });
+                .done((result: Raven.Client.Server.Operations.GetTaskInfoResult) => this.editedExternalReplication(new ongoingTaskReplication(result)))
+                .fail(() => router.navigate(appUrl.forOngoingTasks(this.activeDatabase())));
         }
         else {
             // 2. Creating a new task

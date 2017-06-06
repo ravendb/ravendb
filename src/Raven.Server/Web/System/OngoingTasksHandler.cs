@@ -396,7 +396,7 @@ namespace Raven.Server.Web.System
             var (index, _) = await ServerStore.ToggleTaskState(key.Value, type, disable.Value, dbName);
             await ServerStore.Cluster.WaitForIndexNotification(index);
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;            
+            NoContentStatus();
         }
 
         [RavenAction("/admin/external-replication/update", "POST", "/admin/external-replication/update?name={databaseName:string}")]

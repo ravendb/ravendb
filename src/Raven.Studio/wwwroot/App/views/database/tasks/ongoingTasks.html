@@ -262,9 +262,8 @@
 <script type="text/html" id="status-template">
     <h5>STATUS</h5>   
     <div class="btn-group"> 
-        <button type="button" class="btn dropdown-toggle" disabled="disabled" data-toggle="dropdown" aria-expanded="false"> <!--set-size--> 
-            <span data-bind="visible: true">Enabled</span>
-            <span data-bind="visible: false">Disabled</span><span class="caret"></span>
+        <button type="button" class="btn dropdown-toggle" data-toggle="dropdown" aria-expanded="false"> <!--set-size-->           
+            <span data-bind="text: badgeText"></span><span class="caret"></span>
         </button>
         <ul class="dropdown-menu settings-menu">
             <li><a href="#" data-bind="click: $root.confirmEnableOngoingTask"><span>Enable</span></a></li>

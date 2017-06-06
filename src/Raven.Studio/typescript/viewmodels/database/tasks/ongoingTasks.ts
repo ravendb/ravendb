@@ -16,6 +16,7 @@ import disableOngoingTaskConfirm = require("viewmodels/database/tasks/disableOng
 import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
 import deleteOngoingTaskCommand = require("commands/database/tasks/deleteOngoingTaskCommand");
 import messagePublisher = require("common/messagePublisher");
+import disableOngoingTaskCommand = require("commands/database/tasks/disableOngoingTaskCommand");
 
 type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "Backup" | "Subscription";
 
@@ -119,11 +120,14 @@ class ongoingTasks extends viewModelBase {
     confirmEnableOngoingTask(model: ongoingTaskModel) {
         const db = this.activeDatabase();
 
-        const confirmEnableViewModel = new enableOngoingTaskConfirm(db, model.taskType(), model.taskId); // todo: can we use one confirm for both enable & disable ???
+        const confirmEnableViewModel = new enableOngoingTaskConfirm(db, model.taskType(), model.taskId); 
         app.showBootstrapDialog(confirmEnableViewModel);
         confirmEnableViewModel.result.done(result => {
             if (result.can) {
-                this.enableOngoingTask(db, model.taskType(), model.taskId, true); 
+                new disableOngoingTaskCommand(db, model.taskType(), model.taskId, false)
+                    .execute()
+                    .done(() => model.taskState('Disabled'))
+                    .always(() => this.fetchOngoingTasks());
             }
         });
     }
@@ -135,24 +139,12 @@ class ongoingTasks extends viewModelBase {
         app.showBootstrapDialog(confirmDisableViewModel);
         confirmDisableViewModel.result.done(result => {
             if (result.can) {
-                this.enableOngoingTask(db, model.taskType(), model.taskId, false);
+                new disableOngoingTaskCommand(db, model.taskType(), model.taskId, true)
+                    .execute()
+                    .done(() => model.taskState('Enabled'))
+                    .always(() => this.fetchOngoingTasks());
             }
         });
-    }
-
-    private enableOngoingTask(db: database, taskType: Raven.Client.Server.Operations.OngoingTaskType, taskId: number, enable: boolean) {
-        const operationText = enable ? "enable" : "disable";
-
-        // TODO: implement this new command...!
-        //return new enableOngoingTaskCommand(db, taskType, taskId, enable)
-        //    .execute()
-        //    .done(() => {
-        //        messagePublisher.reportSuccess(`Successfully ${operationText}d task`);
-        //        this.fetchOngoingTasks();
-        //    })
-        //    .fail(() => {
-        //        messagePublisher.reportError(`Failed to ${operationText} task`);
-        //    });
     }
 
     confirmRemoveOngoingTask(model: ongoingTaskModel) {
