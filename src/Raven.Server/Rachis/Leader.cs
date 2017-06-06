@@ -273,11 +273,10 @@ namespace Raven.Server.Rachis
                             }
                             return;
                     }
+
                     EnsureThatWeHaveLeadership(VotersMajority);
                     _engine.ReportLeaderTime(LeaderShipDuration);
 
-                    _engine.ReportLeaderTime(LeaderShipDuration);
-                    
                     var lowestIndexInEntireCluster = GetLowestIndexInEntireCluster();
                     if (lowestIndexInEntireCluster != LowestIndexInEntireCluster)
                     {
@@ -378,7 +377,8 @@ namespace Raven.Server.Rachis
             {
                 _lastCommit = _engine.GetLastCommitIndex(context);
 
-                if (_lastCommit >= maxIndexOnQuorum)
+                if (_lastCommit >= maxIndexOnQuorum ||
+                    maxIndexOnQuorum == 0)
                     return; // nothing to do here
 
                 if (_engine.GetTermForKnownExisting(context, maxIndexOnQuorum) < _engine.CurrentTerm)
@@ -386,13 +386,11 @@ namespace Raven.Server.Rachis
 
                 _engine.TakeOffice();
 
-                _lastCommit = maxIndexOnQuorum;
-
                 _engine.Apply(context, maxIndexOnQuorum, this);
 
-                _lastCommit = maxIndexOnQuorum;
-
                 context.Transaction.Commit();
+
+                _lastCommit = maxIndexOnQuorum;
             }
 
             foreach (var kvp in _entries)
@@ -414,6 +412,7 @@ namespace Raven.Server.Rachis
                     }, value);
                 }
             }
+
             if (_entries.Count != 0)
             {
                 // we have still items to process, run them in 1 node cluster
