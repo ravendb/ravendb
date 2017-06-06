@@ -421,7 +421,7 @@ namespace Raven.Server.Web.System
             {
                 var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-modify-custom-functions");
                 string functions;
-                if (updateJson.TryGet("Functions", out functions) == false)
+                if (updateJson.TryGet(nameof(CustomFunctions.Functions), out functions) == false)
                 {
                     throw new InvalidDataException("Functions property was not found.");
                 }

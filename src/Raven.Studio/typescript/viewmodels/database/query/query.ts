@@ -32,6 +32,10 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
 import popoverUtils = require("common/popoverUtils");
+import getCustomFunctionsCommand = require("commands/database/documents/getCustomFunctionsCommand");
+import customFunctions = require("models/database/documents/customFunctions");
+import evaluationContextHelper = require("common/helpers/evaluationContextHelper");
+
 
 type indexItem = {
     name: string;
@@ -126,7 +130,9 @@ class query extends viewModelBase {
     isStaticIndexSelected: KnockoutComputed<boolean>;
     isLoading = ko.observable<boolean>(false);
     containsAsterixQuery: KnockoutComputed<boolean>; // query contains: *.* ?
-    
+
+    private customFunctionsContext: object;
+
 
     /*TODO
     isTestIndex = ko.observable<boolean>(false);
@@ -137,10 +143,6 @@ class query extends viewModelBase {
     warningText = ko.observable<string>();
     isWarning = ko.observable<boolean>(false);
     
-    contextName = ko.observable<string>();
-
-    currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
-
     indexSuggestions = ko.observableArray<indexSuggestion>([]);
     showSuggestions: KnockoutComputed<boolean>;
 
@@ -297,8 +299,6 @@ class query extends viewModelBase {
 
         this.loadRecentQueries();
 
-        //TODO: fetch custom functions and use $.when
-
         const initTask = $.Deferred<canActivateResultDto>();
 
         this.fetchAllTransformers(this.activeDatabase())
@@ -315,7 +315,7 @@ class query extends viewModelBase {
         
         const db = this.activeDatabase();
 
-        return $.when<any>(this.fetchAllCollections(db), this.fetchAllIndexes(db))
+        return $.when<any>(this.fetchAllCollections(db), this.fetchAllIndexes(db), this.fetchCustomFunctions(db))
             .done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
     }
 
@@ -352,8 +352,9 @@ class query extends viewModelBase {
         this.setupDisableReasons();
 
         const grid = this.gridController();
+        grid.withEvaluationContext(this.customFunctionsContext);
 
-        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.collections().map(x => x.name), {
+        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, this.collections().map(x => x.name), {
             enableInlinePreview: true
         });
 
@@ -395,6 +396,14 @@ class query extends viewModelBase {
             .execute()
             .done((results: collectionsStats) => {
                 this.collections(results.collections);
+            });
+    }
+
+    private fetchCustomFunctions(db: database): JQueryPromise<customFunctions> {
+        return new getCustomFunctionsCommand(db)
+            .execute()
+            .done(functions => {
+                this.customFunctionsContext = evaluationContextHelper.createContext(functions.functions);
             });
     }
 

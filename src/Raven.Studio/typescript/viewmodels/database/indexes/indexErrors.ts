@@ -83,15 +83,15 @@ class indexErrors extends viewModelBase {
         grid.headerVisible(true);
         grid.init((s, t) => this.fetchIndexErrors(s, t), () =>
             [
-                new actionColumn<IndexErrorPerDocument>((error, index) => this.showErrorDetails(index), "Show", `<i class="icon-preview"></i>`, "72px",
+                new actionColumn<IndexErrorPerDocument>(grid, (error, index) => this.showErrorDetails(index), "Show", `<i class="icon-preview"></i>`, "72px",
                     {
                         title: () => 'Show indexing error details'
                     }),
-                new hyperlinkColumn<IndexErrorPerDocument>(x => x.IndexName, x => appUrl.forQuery(this.activeDatabase(), x.IndexName), "Index name", "25%"),
-                new hyperlinkColumn<IndexErrorPerDocument>(x => x.Document, x => appUrl.forEditDoc(x.Document, this.activeDatabase()), "Document Id", "20%"),
-                new textColumn<IndexErrorPerDocument>(x => this.formatTimestampAsAgo(x.Timestamp), "Timestamp", "20%"),
-                new textColumn<IndexErrorPerDocument>(x => x.Action, "Action", "10%"),
-                new textColumn<IndexErrorPerDocument>(x => x.Error, "Error", "15%")
+                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.IndexName, x => appUrl.forQuery(this.activeDatabase(), x.IndexName), "Index name", "25%"),
+                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.Document, x => appUrl.forEditDoc(x.Document, this.activeDatabase()), "Document Id", "20%"),
+                new textColumn<IndexErrorPerDocument>(grid, x => this.formatTimestampAsAgo(x.Timestamp), "Timestamp", "20%"),
+                new textColumn<IndexErrorPerDocument>(grid, x => x.Action, "Action", "10%"),
+                new textColumn<IndexErrorPerDocument>(grid, x => x.Error, "Error", "15%")
             ]
         );
 

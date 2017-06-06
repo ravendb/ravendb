@@ -32,10 +32,10 @@ class pagingDetails extends abstractPerformanceHintDetails {
 
         grid.init((s, t) => this.fetcher(s, t), () => {
             return [
-                new textColumn<pagingDetailsItemDto>(x => x.Action, "Action", "30%"),
-                new textColumn<pagingDetailsItemDto>(x => x.NumberOfResults ? x.NumberOfResults.toLocaleString() : 'n/a', "# of results", "20%"),
-                new textColumn<pagingDetailsItemDto>(x => x.PageSize ? x.PageSize.toLocaleString() : 'n/a', "Page size", "20%"),
-                new textColumn<pagingDetailsItemDto>(x => x.Occurence, "Date", "30%")
+                new textColumn<pagingDetailsItemDto>(grid, x => x.Action, "Action", "30%"),
+                new textColumn<pagingDetailsItemDto>(grid, x => x.NumberOfResults ? x.NumberOfResults.toLocaleString() : 'n/a', "# of results", "20%"),
+                new textColumn<pagingDetailsItemDto>(grid, x => x.PageSize ? x.PageSize.toLocaleString() : 'n/a', "Page size", "20%"),
+                new textColumn<pagingDetailsItemDto>(grid, x => x.Occurence, "Date", "30%")
             ];
         });
     }

@@ -1,0 +1,53 @@
+﻿using System;
+using System.IO;
+using System.Net;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using Raven.Client;
+using Raven.Client.Server.Commands;
+using Raven.Server.Documents;
+using Raven.Server.Documents.Studio;
+using Raven.Server.Json;
+using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
+
+namespace Raven.Server.Web.Studio
+{
+    public class StudioCustomFunctionsHandler : DatabaseRequestHandler
+    {
+        [RavenAction("/databases/*/studio/custom-functions", "GET")]
+        public Task GetCustomFunctions()
+        {
+            using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var dbrecord = Database.ServerStore.Cluster.ReadDatabase(context, Database.Name);
+
+                var customFunctions = dbrecord?.CustomFunctions;
+
+                /*
+                 * Respond with null custom functions, instead of 404
+                 * as this function is used by Studio
+                 * Each 404 response goes to console as error, 
+                 * so we don't want to scary user.
+                 */
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(CustomFunctions.Functions)] = customFunctions
+                    });
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
+    }
+}

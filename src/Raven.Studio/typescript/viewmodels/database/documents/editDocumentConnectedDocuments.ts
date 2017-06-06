@@ -88,8 +88,6 @@ class connectedDocuments {
         this.loadDocumentAction = loadDocument;
         this.uploader = new editDocumentUploader(document, db, () => this.afterUpload());
 
-        this.initColumns();
-
         this.isUploaderActive = ko.pureComputed(() => {
             const onAttachmentsPane = this.isAttachmentsActive();
             const newDoc = isCreatingNewDocument();
@@ -112,17 +110,17 @@ class connectedDocuments {
 
     private initColumns() {
         this.docsColumns = [
-            new hyperlinkColumn<connectedDocument>(x => x.id, x => x.href, "", "100%")
+            new hyperlinkColumn<connectedDocument>(this.gridController() as virtualGridController<any>, x => x.id, x => x.href, "", "100%")
         ];
 
         this.attachmentsColumns = [
-            new actionColumn<attachmentItem>(x => this.downloadAttachment(x), "Name", x => x.name, "160px",
+            new actionColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => this.downloadAttachment(x), "Name", x => x.name, "160px",
                 {
                     extraClass: () => 'btn-link',
                     title: (item: attachmentItem) => "Download file: " + item.name
                 }),
-            new textColumn<attachmentItem>(x => generalUtils.formatBytesToSize(x.size), "Size", "70px", { extraClass: () => 'filesize' }),
-            new actionColumn<attachmentItem>(x => this.deleteAttachment(x),
+            new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => generalUtils.formatBytesToSize(x.size), "Size", "70px", { extraClass: () => 'filesize' }),
+            new actionColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => this.deleteAttachment(x),
                 "Delete",
                 `<i class="icon-trash"></i>`,
                 "35px",
@@ -130,17 +128,18 @@ class connectedDocuments {
         ];
 
         this.attachmentsInReadOnlyModeColumns = [
-            new actionColumn<attachmentItem>(x => this.downloadAttachment(x), "Name", x => x.name, "195px",
+            new actionColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => this.downloadAttachment(x), "Name", x => x.name, "195px",
                 {
                     extraClass: () => 'btn-link',
                     title: () => "Download attachment"
                 }),
-            new textColumn<attachmentItem>(x => generalUtils.formatBytesToSize(x.size), "Size", "70px", { extraClass: () => 'filesize' })
+            new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => generalUtils.formatBytesToSize(x.size), "Size", "70px", { extraClass: () => 'filesize' })
         ];
     }
 
     compositionComplete() {
         const grid = this.gridController();
+        this.initColumns();
         grid.headerVisible(false);
         grid.init((s, t) => this.fetchCurrentTabItems(s, t), () => {
             if (connectedDocuments.currentTab() === "attachments") {
