@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
-class disableDatabaseToggleCommand extends commandBase {
+class toggleDatabaseCommand extends commandBase {
 
     constructor(private dbs: Array<database>, private disable: boolean) {
         super();
@@ -29,4 +29,4 @@ class disableDatabaseToggleCommand extends commandBase {
 
 }
 
-export = disableDatabaseToggleCommand;  
+export = toggleDatabaseCommand;  

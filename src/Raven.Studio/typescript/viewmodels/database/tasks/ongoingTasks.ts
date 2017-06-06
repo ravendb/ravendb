@@ -16,7 +16,7 @@ import disableOngoingTaskConfirm = require("viewmodels/database/tasks/disableOng
 import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
 import deleteOngoingTaskCommand = require("commands/database/tasks/deleteOngoingTaskCommand");
 import messagePublisher = require("common/messagePublisher");
-import disableOngoingTaskCommand = require("commands/database/tasks/disableOngoingTaskCommand");
+import toggleOngoingTaskCommand = require("commands/database/tasks/toggleOngoingTaskCommand");
 
 type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "Backup" | "Subscription";
 
@@ -124,7 +124,7 @@ class ongoingTasks extends viewModelBase {
         app.showBootstrapDialog(confirmEnableViewModel);
         confirmEnableViewModel.result.done(result => {
             if (result.can) {
-                new disableOngoingTaskCommand(db, model.taskType(), model.taskId, false)
+                new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, false)
                     .execute()
                     .done(() => model.taskState('Disabled'))
                     .always(() => this.fetchOngoingTasks());
@@ -139,7 +139,7 @@ class ongoingTasks extends viewModelBase {
         app.showBootstrapDialog(confirmDisableViewModel);
         confirmDisableViewModel.result.done(result => {
             if (result.can) {
-                new disableOngoingTaskCommand(db, model.taskType(), model.taskId, true)
+                new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, true)
                     .execute()
                     .done(() => model.taskState('Enabled'))
                     .always(() => this.fetchOngoingTasks());

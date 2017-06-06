@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
-class disableOngoingTaskCommand extends commandBase {
+class toggleOngoingTaskCommand extends commandBase {
 
     constructor(private db: database, private taskType: Raven.Client.Server.Operations.OngoingTaskType, private taskId: number, private disable: boolean) {
         super();
@@ -19,4 +19,4 @@ class disableOngoingTaskCommand extends commandBase {
     }
 }
 
-export = disableOngoingTaskCommand; 
+export = toggleOngoingTaskCommand; 
