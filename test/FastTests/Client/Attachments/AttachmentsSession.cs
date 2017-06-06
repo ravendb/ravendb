@@ -350,5 +350,106 @@ namespace FastTests.Client.Attachments
                 AttachmentsCrud.AssertAttachmentCount(store, 0, documentsCount: 0);
             }
         }
+
+        [Fact]
+        public void GetAttachmentNames()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var names = new[]
+                {
+                    "profile.png",
+                    "background-photo.jpg",
+                    "fileNAME_#$1^%_בעברית.txt"
+                };
+
+                using (var session = store.OpenSession())
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
+                using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
+                {
+                    var user = new User { Name = "Fitzchak" };
+                    session.Store(user, "users/1");
+
+                    session.Advanced.StoreAttachment("users/1", names[0], profileStream, "image/png");
+                    session.Advanced.StoreAttachment(user, names[1], backgroundStream, "ImGgE/jPeG");
+                    session.Advanced.StoreAttachment(user, names[2], fileStream);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var attachments = session.Advanced.GetAttachmentNames<User>("users/1");
+                    Assert.Equal(3, attachments.Length);
+                    var orderedNames = names.OrderBy(x => x).ToArray();
+                    for (var i = 0; i < names.Length; i++)
+                    {
+                        var name = orderedNames[i];
+                        var attachment = attachments[i];
+                        Assert.Equal(name, attachment.Name);
+                        if (i == 0)
+                        {
+                            Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", attachment.Hash);
+                            Assert.Equal(5, attachment.Size);
+                            Assert.Equal("ImGgE/jPeG", attachment.ContentType);
+                        }
+                        else if (i == 1)
+                        {
+                            Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", attachment.Hash);
+                            Assert.Equal(5, attachment.Size);
+                            Assert.Equal("", attachment.ContentType);
+                        }
+                        else if (i == 2)
+                        {
+                            Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Hash);
+                            Assert.Equal(3, attachment.Size);
+                            Assert.Equal("image/png", attachment.ContentType);
+                        }
+                    }
+
+                    var attachments2 = session.Advanced.GetAttachmentNames<User>("users/2");
+                    Assert.Null(attachments2);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+                    var attachments = session.Advanced.GetAttachmentNames(user);
+                    Assert.Equal(3, attachments.Length);
+                    var orderedNames = names.OrderBy(x => x).ToArray();
+                    for (var i = 0; i < names.Length; i++)
+                    {
+                        var name = orderedNames[i];
+                        var attachment = attachments[i];
+                        Assert.Equal(name, attachment.Name);
+                        if (i == 0)
+                        {
+                            Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", attachment.Hash);
+                            Assert.Equal(5, attachment.Size);
+                            Assert.Equal("ImGgE/jPeG", attachment.ContentType);
+                        }
+                        else if (i == 1)
+                        {
+                            Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", attachment.Hash);
+                            Assert.Equal(5, attachment.Size);
+                            Assert.Equal("", attachment.ContentType);
+                        }
+                        else if (i == 2)
+                        {
+                            Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Hash);
+                            Assert.Equal(3, attachment.Size);
+                            Assert.Equal("image/png", attachment.ContentType);
+                        }
+                    }
+
+                    var user2 = session.Load<User>("users/2");
+                    Assert.Null(user2);
+                    // ReSharper disable once ExpressionIsAlwaysNull
+                    var attachments2 = session.Advanced.GetAttachmentNames(user2);
+                    Assert.Null(attachments2);
+                }
+            }
+        }
     }
 }

@@ -17,6 +17,16 @@ namespace Raven.Client.Documents.Session
     public partial interface IAdvancedSessionOperation
     {
         /// <summary>
+        /// Returns the attachments info of a document.
+        /// </summary>
+        AttachmentResult[] GetAttachmentNames<T>(string documentId);
+
+        /// <summary>
+        /// Returns the attachments info of a document.
+        /// </summary>
+        AttachmentResult[] GetAttachmentNames<T>(T entity);
+
+        /// <summary>
         /// Returns the attachment by the document id and attachment name.
         /// </summary>
         AttachmentResult GetAttachment(string documentId, string name, Action<AttachmentResult, Stream> stream);

@@ -11,6 +11,8 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Json.Converters;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
@@ -19,6 +21,35 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class DocumentSession
     {
+        public AttachmentResult[] GetAttachmentNames<T>(string documentId)
+        {
+            var entity = Load<T>(documentId);
+            if (entity == null)
+                return null;
+
+            return GetAttachmentNames(entity);
+        }
+
+        public AttachmentResult[] GetAttachmentNames<T>(T entity)
+        {
+            if (entity == null)
+                return null;
+
+            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
+                ThrowEntityNotInSession(entity);
+
+            if (document.Metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+                return null;
+
+            var results = new AttachmentResult[attachments.Length];
+            for (var i = 0; i < attachments.Length; i++)
+            {
+                var attachment = (BlittableJsonReaderObject)attachments[i];
+                results[i] = JsonDeserializationClient.AttachmentResult(attachment);
+            }
+            return results;
+        }
+
         public AttachmentResult GetAttachment(string documentId, string name, Action<AttachmentResult, Stream> stream)
         {
             var operation = new GetAttachmentOperation(documentId, name, stream, AttachmentType.Document, null);

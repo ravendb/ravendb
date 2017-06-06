@@ -212,13 +212,10 @@ namespace Raven.Client.Documents.Session
 
         private DocumentInfo GetDocumentInfo<T>(T instance)
         {
-            DocumentInfo documentInfo;
-            string id;
-
-            if (DocumentsByEntity.TryGetValue(instance, out documentInfo))
+            if (DocumentsByEntity.TryGetValue(instance, out DocumentInfo documentInfo))
                 return documentInfo;
 
-            if (GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out id) == false && (instance is IDynamicMetaObjectProvider == false || GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id) == false))
+            if (GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out string id) == false && (instance is IDynamicMetaObjectProvider == false || GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id) == false))
                 throw new InvalidOperationException("Could not find the document id for " + instance);
 
             AssertNoNonUniqueInstance(instance, id);
