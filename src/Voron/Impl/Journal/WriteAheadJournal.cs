@@ -581,14 +581,16 @@ namespace Voron.Impl.Journal
                     {
                         // will never wait, we ensure that we have completed the task
                         // we call Wait() here to ensure that if there was an error in 
-                        // the previous sync, we'll propogate it out and mark the env
+                        // the previous sync, we'll propagate it out and mark the env
                         // as catastrophic failure.
                         _pendingSync.Wait(token);
                         token.ThrowIfCancellationRequested();
                         var operation = new SyncOperation(this);
-                        operation.GatherInformationToStartSync();
-                        _pendingSync = operation.Task;
-                        ThreadPool.QueueUserWorkItem(state => ((SyncOperation)state).CompleteSync(), operation);
+                        if (operation.TryGatherInformationToStartSync())
+                        {
+                            _pendingSync = operation.Task;
+                            ThreadPool.QueueUserWorkItem(state => ((SyncOperation)state).CompleteSync(), operation);
+                        }
                     }
 
                     ApplyJournalStateAfterFlush(token, lastProcessedJournal, lastFlushedTransactionId, unusedJournals);
@@ -839,13 +841,13 @@ namespace Voron.Impl.Journal
 
                 public void SyncDataFile()
                 {
-                    GatherInformationToStartSync();
+                    if (TryGatherInformationToStartSync() == false)
+                        return;
 
                     if (_parent._waj._env.Disposed)
                         return;
 
                     CallPagerSync();
-
 
                     // can take a long time, need to check again
                     if (_parent._waj._env.Disposed)
@@ -912,7 +914,7 @@ namespace Voron.Impl.Journal
                     }
                 }
 
-                public void GatherInformationToStartSync()
+                public bool TryGatherInformationToStartSync()
                 {
                     // We need _transactionHeader to be the frozen value at the time we _started_ the
                     // sync process
@@ -928,17 +930,17 @@ namespace Voron.Impl.Journal
                                 _parent._waj._logger.Info(
                                     $"Asking for required sync on {_parent._waj._dataPager.FileName} because started a sync and aborted because we couldn't get the flushing lock");
                             Interlocked.Exchange(ref _parent._forceDataSync, 1);
-                            return;
+                            return false;
                         }
 
                         Interlocked.Increment(ref _parent._waj._env.LastSyncCounter);
 
                         if (_parent._waj._env.Disposed)
-                            return; // we have already disposed, nothing to do here
+                            return false; // we have already disposed, nothing to do here
 
                         if (_parent._lastFlushedJournal == null)
                             // nothing was flushed since we last synced, nothing to do
-                            return;
+                            return false;
 
                         // we only ever take the _fsyncLock _after_ we already took the flush lock
                         // so this will never be contended
@@ -947,7 +949,7 @@ namespace Voron.Impl.Journal
                         {
                             // probably another sync taking place right now, let us schedule another one, just in case
                             _parent._waj._env.QueueForSyncDataFile();
-                            return;
+                            return false;
                         }
                         _currentTotalWrittenBytes = _parent._totalWrittenButUnsyncedBytes;
                         _lastSyncedJournal = _parent._lastFlushedJournalId;
@@ -973,6 +975,8 @@ namespace Voron.Impl.Journal
                         {
                             _parent._journalsToDelete.Remove(kvp.Key);
                         }
+
+                        return true;
                     }
                     finally
                     {
