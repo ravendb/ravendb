@@ -91,11 +91,10 @@ namespace Raven.Server
             }
         }
 
-        public async Task<TcpListenerStatus> GetTcpServerStatusAsync()
+        public Task<TcpListenerStatus> GetTcpServerStatusAsync()
         {
-            return await _tcpListenerTask;
+            return _tcpListenerTask;
         }
-
 
         private void ServerMaintenanceTimerByMinute(object state)
         {
@@ -178,7 +177,7 @@ namespace Raven.Server
             try
             {
                 _webHost.Start();
-                
+
                 var serverAddressesFeature = _webHost.ServerFeatures.Get<IServerAddressesFeature>();
                 WebUrls = serverAddressesFeature.Addresses.ToArray();
 

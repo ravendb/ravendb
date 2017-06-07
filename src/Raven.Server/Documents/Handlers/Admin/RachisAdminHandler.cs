@@ -13,6 +13,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
@@ -73,8 +74,9 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                 if (topology.Members.Count == 0)
                 {
-                    var serverUrl = ServerStore.RavenServer.WebUrls[0];
                     var tag = ServerStore.NodeTag ?? "A";
+                    var serverUrl = ServerStore.NodeHttpServerUrl;
+
                     topology = new ClusterTopology(
                         "dummy",
                         null,
@@ -109,6 +111,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     writer.Flush();
                 }
             }
+
             return Task.CompletedTask;
         }
 

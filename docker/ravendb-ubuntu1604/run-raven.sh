@@ -4,21 +4,33 @@ CUSTOM_SETTINGS_PATH="/opt/raven-settings.json"
 
 cd /opt/RavenDB/Server
 
-if [ ! -f "$CUSTOM_SETTINGS_PATH" ]
-then
-    ./Raven.Server \
-        /Raven/ServerUrl=http://0.0.0.0:8080 \
-        /Raven/ServerUrl/Tcp=tcp://0.0.0.0:38888 \
-        /Raven/AllowAnonymousUserToAccessTheServer=${AllowAnonymousUserToAccessTheServer} \
-        /Raven/DataDir=${DataDir} \
-        --daemon \
-        --print-id
-else
-    ./Raven.Server \
-        /Raven/ServerUrl=http://0.0.0.0:8080 \
-        /Raven/ServerUrl/Tcp=tcp://0.0.0.0:38888 \
-        /Raven/DataDir=${DataDir} \
-        --config-path "${CUSTOM_SETTINGS_PATH}" \
-        --daemon \
-        --print-id
+COMMAND="./Raven.Server"
+
+COMMAND="$COMMAND --Raven/ServerUrl=http://0.0.0.0:8080"
+COMMAND="$COMMAND --Raven/ServerUrl/Tcp=tcp://0.0.0.0:38888"
+COMMAND="$COMMAND --print-id"
+COMMAND="$COMMAND --daemon"
+
+if [ ! -z "$PublicServerUrl" ]; then
+    COMMAND="$COMMAND --Raven/PublicServerUrl=$PublicServerUrl"
 fi
+
+if [ ! -z "$PublicTcpServerUrl" ]; then
+    COMMAND="$COMMAND --Raven/PublicServerUrl/Tcp=$PublicTcpServerUrl"
+fi
+
+if [ ! -z "$AllowAnonymousUserToAccessTheServer" ]; then
+    COMMAND="$COMMAND --Raven/AllowAnonymousUserToAccessTheServer=$AllowAnonymousUserToAccessTheServer"
+fi
+
+if [ ! -z "$DataDir" ]; then
+    COMMAND="$COMMAND --Raven/DataDir=$DataDir"
+fi
+
+if [ ! -f "$CUSTOM_SETTINGS_PATH" ]; then
+    COMMAND="$COMMAND --config-path=\"$CUSTOM_SETTINGS_PATH\""
+fi
+
+echo "Starting RavenDB server: $COMMAND"
+
+eval $COMMAND

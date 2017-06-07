@@ -177,7 +177,8 @@ namespace Raven.Server.ServerWide
                     }
                 }
                 catch (TaskCanceledException)
-                {// ServerStore dispose?
+                {
+// ServerStore dispose?
                     throw;
                 }
                 catch (Exception)
@@ -225,7 +226,7 @@ namespace Raven.Server.ServerWide
                     AlertType.NonDurableFileSystem,
                     NotificationSeverity.Warning,
                     "NonDurable Error System",
-                    details: new MessageDetails { Message = e.Details });
+                    details: new MessageDetails {Message = e.Details});
                 if (NotificationCenter.IsInitialized)
                 {
                     NotificationCenter.Add(alert);
@@ -364,26 +365,26 @@ namespace Raven.Server.ServerWide
 
         public async Task DisableAlloutgoingTasksAsync()
         {
-            var tasks = new Dictionary<string,Task<DocumentDatabase>>();
+            var tasks = new Dictionary<string, Task<DocumentDatabase>>();
             foreach (var db in DatabasesLandlord.DatabasesCache)
             {
-                tasks.Add(db.Key,db.Value);
+                tasks.Add(db.Key, db.Value);
             }
             while (tasks.Any())
             {
                 var completedTask = await Task.WhenAny(tasks.Values);
-                var name = tasks.Single(t=>t.Value == completedTask).Key;
+                var name = tasks.Single(t => t.Value == completedTask).Key;
                 tasks.Remove(name);
                 try
                 {
                     var database = await completedTask;
                     database.RefreshFeatures();
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     if (Logger.IsInfoEnabled)
                     {
-                        Logger.Info($"An error occured while disabling outgoing tasks on the database {name}",e);
+                        Logger.Info($"An error occured while disabling outgoing tasks on the database {name}", e);
                     }
                 }
             }
@@ -665,7 +666,8 @@ namespace Raven.Server.ServerWide
             return await SendToLeaderAsync(command);
         }
 
-        public async Task<(long, object)> UpdateEtl(TransactionOperationContext context, string databaseName, long id, BlittableJsonReaderObject etlConfiguration, EtlType type)
+        public async Task<(long, object)> UpdateEtl(TransactionOperationContext context, string databaseName, long id, BlittableJsonReaderObject etlConfiguration,
+            EtlType type)
         {
             UpdateDatabaseCommand command;
 
@@ -797,7 +799,8 @@ namespace Raven.Server.ServerWide
 
                         // intentionally inside the loop, so we get better concurrency overall
                         // since shutting down a database can take a while
-                        DatabasesLandlord.UnloadDatabase(db, skipIfActiveInDuration: maxTimeDatabaseCanBeIdle, shouldSkip: database => database.Configuration.Core.RunInMemory);
+                        DatabasesLandlord.UnloadDatabase(db, skipIfActiveInDuration: maxTimeDatabaseCanBeIdle,
+                            shouldSkip: database => database.Configuration.Core.RunInMemory);
                     }
 
                 }
@@ -853,29 +856,10 @@ namespace Raven.Server.ServerWide
         {
             if (_engine.CurrentState == RachisConsensus.State.Passive)
             {
-                _engine.Bootstarp(EnsureValidExternalUrl(_ravenServer.WebUrls[0]));
+                _engine.Bootstrap(_ravenServer.ServerStore.NodeHttpServerUrl);
             }
         }
 
-
-        public static string EnsureValidExternalUrl(string url)
-        {
-            if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
-            {
-                switch (uri.Host)
-                {
-                    case "::":
-                    case "::0":
-                    case "0.0.0.0":
-                        url = new UriBuilder(uri)
-                        {
-                            Host = Environment.MachineName
-                        }.Uri.ToString();
-                        break;
-                }
-            }
-            return url.TrimEnd('/');
-        }
 
         public Task<(long Etag, object Result)> PutCommandAsync(CommandBase cmd)
         {
@@ -906,7 +890,7 @@ namespace Raven.Server.ServerWide
 
             if (result == null)
             {
-                
+
                 throw new InvalidOperationException(
                     $"Expected to get result from raft command that should generate a cluster-wide identity, but didn't. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
             }
@@ -957,7 +941,7 @@ namespace Raven.Server.ServerWide
                 {
                     if (Logger.IsInfoEnabled)
                         Logger.Info("Tried to send message to leader, retrying", ex);
-                    
+
                     if (_engine.LeaderTag == cachedLeaderTag)
                         throw; // if the leader changed, let's try again                    
                 }
@@ -988,8 +972,8 @@ namespace Raven.Server.ServerWide
 
                 var command = new PutRaftCommand(context, cmdJson);
 
-                if (_clusterRequestExecutor == null 
-                    || _clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false 
+                if (_clusterRequestExecutor == null
+                    || _clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false
                     || _clusterRequestExecutor.ApiKey?.Equals(clusterTopology.ApiKey) == false)
                 {
                     _clusterRequestExecutor?.Dispose();
@@ -1071,5 +1055,38 @@ namespace Raven.Server.ServerWide
         {
             return _engine.CurrentState + ", " + _engine.LastStateChangeReason;
         }
+
+        private string _nodeHttpServerUrl;
+
+        private string _nodeTcpServerUrl;
+
+        public string NodeHttpServerUrl
+        {
+            get
+            {
+                if (_nodeHttpServerUrl != null)
+                    return _nodeHttpServerUrl;
+
+                var webUrls = _ravenServer.WebUrls;
+                Debug.Assert(webUrls != null && webUrls.Length > 0);
+                return _nodeHttpServerUrl = Configuration.Core.GetNodeHttpServerUrl(webUrls[0]);
+            }
+        }
+
+        public string NodeTcpServerUrl
+        {
+            get
+            {
+                if (_nodeTcpServerUrl != null)
+                    return _nodeTcpServerUrl;
+
+                var webUrls = _ravenServer.WebUrls;
+                Debug.Assert(webUrls != null && webUrls.Length > 0);
+                var tcpStatusTask = _ravenServer.GetTcpServerStatusAsync();
+                Debug.Assert(tcpStatusTask.IsCompleted);
+                return _nodeTcpServerUrl = Configuration.Core.GetNodeTcpServerUrl(webUrls[0], tcpStatusTask.Result.Port);
+            }
+        }
+
     }
 }

@@ -15,7 +15,7 @@ namespace Raven.Server.Utils
         {
             try
             {
-                var url = server.WebUrls.First().Replace("0.0.0.0", "localhost");
+                var url = server.ServerStore.NodeHttpServerUrl;
                 if (PlatformDetails.RunningOnPosix == false)
                 {
                     Process.Start(new ProcessStartInfo("cmd", $"/c start {url}"));

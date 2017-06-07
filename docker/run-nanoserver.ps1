@@ -4,6 +4,8 @@ param(
     $ConfigPath = "",
     $DataDir = "",
     $DataVolumeName = "ravendb",
+    $PublicServerUrl = "",
+    $PublicTcpServerUrl = "",
     [switch]$AllowAnonymousUserToAccessTheServer,
     [switch]$RemoveOnExit,
     [switch]$DryRun)
@@ -66,6 +68,16 @@ if ([string]::IsNullOrEmpty($DataDir)) {
 if ($AllowAnonymousUserToAccessTheServer) {
     $dockerArgs += '-e'
     $dockerArgs += "AllowAnonymousUserToAccessTheServer=true"
+}
+
+if ([string]::IsNullOrEmpty($PublicServerUrl) -eq $False) {
+    $dockerArgs += "-e" 
+    $dockerArgs += "PublicServerUrl=$PublicServerUrl"
+}
+
+if ([string]::IsNullOrEmpty($PublicTcpServerUrl) -eq $False) {
+    $dockerArgs += "-e" 
+    $dockerArgs += "PublicTcpServerUrl=$PublicTcpServerUrl"
 }
 
 $dockerArgs += '-p'

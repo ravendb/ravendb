@@ -1200,7 +1200,7 @@ namespace Raven.Server.Rachis
 
         public abstract Task<Stream> ConnectToPeer(string url, string apiKey, TransactionOperationContext context = null);
 
-        public void Bootstarp(string selfUrl)
+        public void Bootstrap(string selfUrl)
         {
             if (selfUrl == null)
                 throw new ArgumentNullException(nameof(selfUrl));

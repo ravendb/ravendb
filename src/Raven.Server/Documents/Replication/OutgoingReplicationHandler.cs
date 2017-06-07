@@ -330,7 +330,7 @@ namespace Raven.Server.Documents.Replication
                     ["Type"] = "GetLastEtag",
                     [nameof(ReplicationLatestEtagRequest.SourceDatabaseId)] = _database.DbId.ToString(),
                     [nameof(ReplicationLatestEtagRequest.SourceDatabaseName)] = _database.Name,
-                    [nameof(ReplicationLatestEtagRequest.SourceUrl)] = _database.Configuration.Core.ServerUrl,
+                    [nameof(ReplicationLatestEtagRequest.SourceUrl)] = _parent._server.NodeHttpServerUrl,
                     [nameof(ReplicationLatestEtagRequest.SourceTag)] = _parent._server.NodeTag,
                     [nameof(ReplicationLatestEtagRequest.SourceMachineName)] = Environment.MachineName,
                 };
