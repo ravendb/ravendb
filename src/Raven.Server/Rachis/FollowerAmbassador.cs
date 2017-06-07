@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Server.Tcp;
 using Raven.Server.ServerWide.Context;
@@ -117,7 +118,15 @@ namespace Raven.Server.Rachis
                         _connection = new RemoteConnection(_tag, _engine.Tag, stream);
                         using (_connection)
                         {
-                            _engine.AppendStateDisposable(_leader, _connection);
+                            try
+                            {
+                                _engine.AppendStateDisposable(_leader, _connection);
+                            }
+                            catch (ConcurrencyException)
+                            {
+                                return; // we are no longer leader
+                            }
+
                             var matchIndex = InitialNegotiationWithFollower();
                             if (matchIndex == null)
                                 return;

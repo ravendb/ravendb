@@ -534,24 +534,22 @@ namespace Raven.Server.Rachis
 
         public Task<(long Etag, object Result)> PutAsync(CommandBase cmd)
         {
-            long index;
-
+            var tcs = new TaskCompletionSource<(long Etag, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction())
             {
                 var djv = cmd.ToJson(context);
                 var cmdJson = context.ReadObject(djv, "raft/command");
 
-                index = _engine.InsertToLeaderLog(context, cmdJson, RachisEntryFlags.StateMachineCommand);
+                var index = _engine.InsertToLeaderLog(context, cmdJson, RachisEntryFlags.StateMachineCommand);
                 context.Transaction.Commit();
-            }
 
-            var tcs = new TaskCompletionSource<(long Etag, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
-            _entries[index] = new CommandState
-            {
-                CommandIndex = index,
-                TaskCompletionSource = tcs
-            };
+                _entries[index] = new CommandState // we need to add entry inside write tx lock to omit a situation when command will be applied (and state set) before it is added to the entries list
+                {
+                    CommandIndex = index,
+                    TaskCompletionSource = tcs
+                };
+            }
 
             _newEntry.Set();
             return tcs.Task;

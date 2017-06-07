@@ -6,7 +6,10 @@ using FastTests.Tasks;
 using RachisTests.DatabaseCluster;
 using Sparrow.Logging;
 using System.Threading.Tasks;
+using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Tryouts
 {
@@ -25,11 +28,11 @@ namespace Tryouts
                 Console.WriteLine(i);
                 //Parallel.For(0, 10, _ =>
                 //{
-                    using (var a = new RavenDB_6886())
-                    {
-                        Console.Write(".");
-                        a.Cluster_identity_for_single_document_in_parallel_on_different_nodes_should_work().Wait();
-                    }
+                using (var a = new RavenDB_6886())
+                {
+                    Console.Write(".");
+                    a.Cluster_identity_for_single_document_in_parallel_on_different_nodes_should_work().Wait();
+                }
                 //});
                 Console.WriteLine();
             }

@@ -980,7 +980,6 @@ namespace Raven.Server.ServerWide
             private readonly JsonOperationContext _context;
             private readonly BlittableJsonReaderObject _command;
             public override bool IsReadRequest => false;
-            public long CommandIndex { get; private set; }
 
             public PutRaftCommand(JsonOperationContext context, BlittableJsonReaderObject command)
             {
