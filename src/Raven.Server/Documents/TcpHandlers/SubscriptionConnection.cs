@@ -258,7 +258,7 @@ namespace Raven.Server.Documents.TcpHandlers
             void RegisterNotification(DocumentChange notification)
             {
                 if (notification.CollectionName == criteria.Collection)
-                    _waitForMoreDocuments.SetByAsyncCompletion();
+                    _waitForMoreDocuments.Set();
             }
 
             TcpConnection.DocumentDatabase.Changes.OnDocumentChange += RegisterNotification;

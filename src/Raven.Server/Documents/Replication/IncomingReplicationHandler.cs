@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Replication
 
         public void OnReplicationFromAnotherSource()
         {
-            _replicationFromAnotherSource.SetByAsyncCompletion();
+            _replicationFromAnotherSource.Set();
         }
 
         private void ReceiveReplicationBatches()

@@ -597,7 +597,7 @@ namespace Voron
 
         internal void WriteTransactionStarted()
         {
-            _writeTransactionRunning.SetInAsyncMannerFireAndForget();
+            _writeTransactionRunning.Set();
         }
 
         private void ThrowOnTimeoutWaitingForWriteTxLock(TimeSpan wait)

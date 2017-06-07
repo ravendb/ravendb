@@ -116,7 +116,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
 
         public void Set()
         {
-            _event?.SetByAsyncCompletion();
+            _event?.Set();
         }
     }
 }

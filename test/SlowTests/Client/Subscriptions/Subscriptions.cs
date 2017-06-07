@@ -49,7 +49,7 @@ namespace SlowTests.Client.Subscriptions
                         () =>
                         {
                             if (Interlocked.Read(ref counter) == 5)
-                                batchProccessedByFirstSubscription.SetByAsyncCompletion();
+                                batchProccessedByFirstSubscription.Set();
                         };
 
                     await acceptedSubscription.StartAsync();

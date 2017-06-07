@@ -427,7 +427,7 @@ namespace Raven.Server.Documents.Replication
                     // We don't care if they are locally modified or not, because we filter documents that
                     // the other side already have (based on the change vector).
                     if ((DateTime.UtcNow - _lastDocumentSentTime).TotalMilliseconds > _parent.MinimalHeartbeatInterval)
-                        _waitForChanges.SetByAsyncCompletion();
+                        _waitForChanges.Set();
                 }
             }
         }

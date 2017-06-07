@@ -1354,7 +1354,7 @@ namespace Raven.Server.Rachis
             if (_hasTimers == 0)
                 return;
 
-            _leadershipTimeChanged.SetInAsyncMannerFireAndForget();
+            _leadershipTimeChanged.Set();
         }
 
         public DynamicJsonArray GetClusterErrorsFromLeader()

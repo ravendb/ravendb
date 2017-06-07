@@ -155,7 +155,7 @@ namespace FastTests.Client.Subscriptions
                     var waitingSubscriptionList = new BlockingCollection<Thing>();
 
                     var ackSentAmre = new AsyncManualResetEvent();
-                    acceptedSubscription.AfterAcknowledgment += () => ackSentAmre.SetByAsyncCompletion();
+                    acceptedSubscription.AfterAcknowledgment += () => ackSentAmre.Set();
 
                     acceptedSubscription.Subscribe(x =>
                     {
@@ -247,7 +247,7 @@ namespace FastTests.Client.Subscriptions
                         () =>
                         {
                             if (Interlocked.Read(ref counter) == 5)
-                                batchProccessedByFirstSubscription.SetByAsyncCompletion();
+                                batchProccessedByFirstSubscription.Set();
                         };
 
                     await acceptedSubscription.StartAsync();
