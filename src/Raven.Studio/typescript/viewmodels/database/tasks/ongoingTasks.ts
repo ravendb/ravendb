@@ -15,7 +15,6 @@ import enableOngoingTaskConfirm = require("viewmodels/database/tasks/enableOngoi
 import disableOngoingTaskConfirm = require("viewmodels/database/tasks/disableOngoingTaskConfirm");
 import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
 import deleteOngoingTaskCommand = require("commands/database/tasks/deleteOngoingTaskCommand");
-import messagePublisher = require("common/messagePublisher");
 import toggleOngoingTaskCommand = require("commands/database/tasks/toggleOngoingTaskCommand");
 
 type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "Backup" | "Subscription";
@@ -162,13 +161,7 @@ class ongoingTasks extends viewModelBase {
     private deleteOngoingTask(db: database, model: ongoingTaskModel) {
         new deleteOngoingTaskCommand(db, model.taskType(), model.taskId)
             .execute()
-            .done(() => {
-                messagePublisher.reportSuccess("Successfully deleted " + model.taskType() + " task");
-                this.fetchOngoingTasks();
-            })
-            .fail(() => {
-                messagePublisher.reportError("Failed to delete " + model.taskType() + " task");
-            });
+            .done(() => this.fetchOngoingTasks());
     }
 
     addNewOngoingTask() {
