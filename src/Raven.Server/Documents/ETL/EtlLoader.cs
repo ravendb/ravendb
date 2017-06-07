@@ -179,6 +179,9 @@ namespace Raven.Server.Documents.ETL
         {
             _databaseRecord = _serverStore.LoadDatabaseRecord(_database.Name);
 
+            if (_databaseRecord == null)
+                return;
+
             RavenDestinations = _databaseRecord.RavenEtls;
             SqlDestinations = _databaseRecord.SqlEtls;
 
