@@ -18,15 +18,15 @@ namespace Raven.Client.Documents.Operations
 
         public Operation PatchByIndex<T>(string indexName, Expression<Func<T, bool>> expression, PatchRequest patch, QueryOperationOptions options = null)
         {
-            IRavenQueryable<T> query;
+            IndexQuery indexQuery;
             using (var session = _store.OpenSession())
             {
-                query = session.Query<T>(indexName).Where(expression);
+                var query = session.Query<T>(indexName).Where(expression);
+                indexQuery = new IndexQuery
+                {
+                    Query = query.ToString()
+                };
             }
-            var indexQuery = new IndexQuery
-            {
-                Query = query.ToString()
-            };
 
             return Send(new PatchByIndexOperation(indexName, indexQuery, patch, options));
         }
@@ -39,15 +39,15 @@ namespace Raven.Client.Documents.Operations
 
         public Task<Operation> PatchByIndexAsync<T>(string indexName, Expression<Func<T, bool>> expression, PatchRequest patch, QueryOperationOptions options = null, CancellationToken token = new CancellationToken())
         {
-            IRavenQueryable<T> query;
+            IndexQuery indexQuery;
             using (var session = _store.OpenSession())
             {
-                query = session.Query<T>(indexName).Where(expression);
+                var query = session.Query<T>(indexName).Where(expression);
+                indexQuery = new IndexQuery
+                {
+                    Query = query.ToString()
+                };
             }
-            var indexQuery = new IndexQuery
-            {
-                Query = query.ToString()
-            };
 
             return SendAsync(new PatchByIndexOperation(indexName, indexQuery, patch, options), token);
         }
