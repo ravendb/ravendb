@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Subscriptions
             var nonGenericCriteria = new SubscriptionCriteria(_store.Conventions.GetCollectionName(isVersioned?tType.GenericTypeArguments[0]:typeof(T)))
             {
                 FilterJavaScript = subscriptionCreationOptions.Criteria?.FilterJavaScript ?? (isVersioned?"return {Current:this.Current, Previous:this.Previous};":null),
-                IsVersioned = isVersioned
+                IsVersioned = subscriptionCreationOptions.Criteria?.IsVersioned??isVersioned
             };
 
             var subscriptionCreationDto = new SubscriptionCreationOptions
@@ -51,8 +51,14 @@ namespace Raven.Client.Documents.Subscriptions
 
         public async Task<string> CreateAsync(SubscriptionCreationOptions subscriptionCreationOptions, string database = null)
         {
-            if (subscriptionCreationOptions == null)
+            if (subscriptionCreationOptions == null )
+                throw new InvalidOperationException("Cannot create a subscription if subscriptionCretiaonOptions is null");
+
+            if (subscriptionCreationOptions.Criteria == null)
                 throw new InvalidOperationException("Cannot create a subscription if criteria is null");
+
+            if (string.IsNullOrWhiteSpace(subscriptionCreationOptions.Criteria.Collection))
+                throw new InvalidOperationException("Cannot create a subscription if criteria's collection is not set");
 
             var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
             requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);

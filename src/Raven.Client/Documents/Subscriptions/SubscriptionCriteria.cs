@@ -32,6 +32,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         }
         public string FilterJavaScript { get; set; }
+        public bool IsVersioned { get; set; }
     }
 
     public class SubscriptionCreationOptions
