@@ -8,7 +8,7 @@ class uploadAttachmentCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Client.Documents.Operations.AttachmentResult> {
+    execute(): JQueryPromise<Raven.Client.Documents.Operations.AttachmentDetails> {
         const args = {
             id: this.documentId,
             name: this.file.name
