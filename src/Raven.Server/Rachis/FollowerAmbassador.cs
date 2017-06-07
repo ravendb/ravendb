@@ -134,8 +134,11 @@ namespace Raven.Server.Rachis
                             SendSnapshot(stream);
 
                             var entries = new List<BlittableJsonReaderObject>();
-                            while (_leader.Running)
+                            var disposeRequested = false;
+                            while (_leader.Running && disposeRequested == false)
                             {
+                                disposeRequested = _dispose; // we give last loop before closing
+
                                 // TODO: how to close
                                 entries.Clear();
                                 TransactionOperationContext context;
@@ -271,6 +274,10 @@ namespace Raven.Server.Rachis
                 {
                     _engine.Log.Info("Failed to talk to remote follower: " + _tag, e);
                 }
+            }
+            finally
+            {
+                _connection?.Dispose();
             }
         }
 
@@ -656,7 +663,6 @@ namespace Raven.Server.Rachis
         public void Dispose()
         {
             _dispose = true;
-            _connection?.Dispose();
             if (_engine.Log.IsInfoEnabled)
             {
                 _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: Dispose");

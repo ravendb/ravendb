@@ -427,10 +427,17 @@ namespace Raven.Server.Web.System
                 {
                     throw new InvalidDataException("DatabaseWatcher was not found.");
                 }
-
+               
                 var watcher = JsonDeserializationClient.DatabaseWatcher(watcherBlittable);
                 var (index, _) = await ServerStore.UpdateExternalReplication(name, watcher);
                 await ServerStore.Cluster.WaitForIndexNotification(index);
+
+                string responsibleNode;
+                using (context.OpenReadTransaction())
+                {
+                    var record = ServerStore.Cluster.ReadDatabase(context,name);
+                    responsibleNode = record.Topology.WhoseTaskIsIt(watcher);
+                }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -439,7 +446,8 @@ namespace Raven.Server.Web.System
                     context.Write(writer, new DynamicJsonValue
                     {
                         [nameof(ModifyOngoingTaskResult.TaskId)] = watcher.TaskId == 0 ? index : watcher.TaskId, 
-                        [nameof(ModifyOngoingTaskResult.RaftCommandIndex)] = index 
+                        [nameof(ModifyOngoingTaskResult.RaftCommandIndex)] = index, 
+[nameof(OngoingTask.ResponsibleNode)] = responsibleNode
                     });
                     writer.Flush();
                 }
@@ -514,7 +522,7 @@ namespace Raven.Server.Web.System
             {
                 [nameof(TaskId)] = TaskId,
                 [nameof(TaskType)] = TaskType,
-                [nameof(ResponsibleNode)] = ResponsibleNode.ToJson(),
+                [nameof(ResponsibleNode)] = ResponsibleNode?.ToJson(),
                 [nameof(TaskState)] = TaskState,
                 [nameof(LastModificationTime)] = LastModificationTime,
                 [nameof(TaskConnectionStatus)] = TaskConnectionStatus

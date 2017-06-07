@@ -1,15 +1,11 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Threading.Tasks;
 using FastTests.Client.Attachments;
-using FastTests.Tasks;
 using RachisTests.DatabaseCluster;
 using Sparrow.Logging;
 using System.Threading.Tasks;
-using Raven.Server.ServerWide;
+using RachisTests;
 using Raven.Server.Utils;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Tryouts
 {
@@ -23,18 +19,13 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
 
-            for (int i = 0; i < 1000; i++)
+            for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                //Parallel.For(0, 10, _ =>
-                //{
-                using (var a = new RavenDB_6886())
+                using (var a = new AddNodeToClusterTests())
                 {
-                    Console.Write(".");
-                    a.Cluster_identity_for_single_document_in_parallel_on_different_nodes_should_work().Wait();
+                    a.RemoveNodeWithDb().Wait();
                 }
-                //});
-                Console.WriteLine();
             }
         }
     }

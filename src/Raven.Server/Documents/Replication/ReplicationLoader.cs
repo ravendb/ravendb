@@ -11,6 +11,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Http;
 using Raven.Client.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents.TcpHandlers;
@@ -339,6 +340,15 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        public ClusterTopology GetClusterTopology()
+        {
+            using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                return _server.GetClusterTopology(ctx);
+            }
+        }
+
         public void Initialize(DatabaseRecord record)
         {
             if (_isInitialized) //precaution -> probably not necessary, but still...
@@ -350,7 +360,7 @@ namespace Raven.Server.Documents.Replication
 
             lock (_locker)
             {
-                _destinations = record?.Topology?.GetDestinations(_server.NodeTag, Database.Name);
+                _destinations = record?.Topology?.GetDestinations(_server.NodeTag, Database.Name, GetClusterTopology());
                 InitializeOutgoingReplications();
             }
             _isInitialized = true;
@@ -358,10 +368,10 @@ namespace Raven.Server.Documents.Replication
 
         private readonly object _locker = new object();
 
-        public void HandleDatabaseRecordChange(DatabaseRecord dbRecord)
+        public void HandleDatabaseRecordChange(DatabaseRecord newRecord)
         {
-            HandleConflictResolverChange(dbRecord);
-            HandleTopologyChange(dbRecord, out var instancesToDispose); // this function is done under lock
+            HandleConflictResolverChange(newRecord);
+            HandleTopologyChange(newRecord, out var instancesToDispose); // this function is done under lock
             foreach (var instance in instancesToDispose)
             {
                 try
@@ -402,14 +412,14 @@ namespace Raven.Server.Documents.Replication
             lock (_locker)
             {
                 instancesToDispose = new List<OutgoingReplicationHandler>();
-                if (newRecord == null)
+                if (newRecord == null || DatabaseTopology.PartOfCluster == false)
                 {
                     DropOutgoingConnections(Destinations, ref instancesToDispose);
                     _destinations = null;
                     return;
                 }
 
-                var newDestinations = newRecord.Topology.GetDestinations(_server.NodeTag, Database.Name);
+                var newDestinations = newRecord.Topology?.GetDestinations(_server.NodeTag, Database.Name, GetClusterTopology());
                 var connectionChanged = DatabaseTopology.FindConnectionChanges(_destinations, newDestinations);
 
                 if (connectionChanged.removeDestinations.Count > 0)

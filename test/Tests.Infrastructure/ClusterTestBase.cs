@@ -432,38 +432,34 @@ namespace Tests.Infrastructure
             return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
         }
 
-        public async Task<Tuple<long, List<RavenServer>>> CreateDatabaseInCluster(string databaseName, int replicationFactor, string leasderUrl)
+        public async Task<(long, List<RavenServer>)> CreateDatabaseInCluster(DatabaseRecord record, int replicationFactor, string leadersUrl)
         {
             CreateDatabaseResult databaseResult;
             using (var store = new DocumentStore()
             {
-                Urls = new[] { leasderUrl },
-                Database = databaseName
+                Urls = new[] { leadersUrl },
+                Database = record.DatabaseName
             }.Initialize())
             {
-                var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
-                databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
+                databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(record, replicationFactor));
             }
             int numberOfInstances = 0;
             foreach (var server in Servers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)))
             {
                 await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag);
-                try
-                {
-                    await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-                    numberOfInstances++;
-                }
-                catch
-                {
-
-                }
+                await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(record.DatabaseName);
+                numberOfInstances++;
             }
             if (numberOfInstances != replicationFactor)
                 throw new InvalidOperationException("Couldn't create the db on all nodes, just on " + numberOfInstances + " out of " + replicationFactor);
-            return Tuple.Create(databaseResult.ETag,
+            return (databaseResult.ETag,
                 Servers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)).ToList());
+        }
 
-
+        public async Task<(long, List<RavenServer>)> CreateDatabaseInCluster(string databaseName, int replicationFactor, string leadersUrl)
+        {
+            var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
+            return await CreateDatabaseInCluster(doc, replicationFactor, leadersUrl);
         }
 
         public override void Dispose()
