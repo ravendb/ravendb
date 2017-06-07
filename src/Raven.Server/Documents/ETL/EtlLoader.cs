@@ -44,16 +44,16 @@ namespace Raven.Server.Documents.ETL
 
         public List<EtlConfiguration<SqlDestination>> SqlDestinations;
 
-        public void Initialize(DatabaseRecord dbRecord)
+        public void Initialize(DatabaseRecord record)
         {
-            LoadProcesses(dbRecord);
+            LoadProcesses(record);
         }
         
-        private void LoadProcesses(DatabaseRecord dbRecord)
+        private void LoadProcesses(DatabaseRecord record)
         {
             lock (_loadProcessedLock)
             {
-                _databaseRecord = dbRecord;
+                LoadConfiguration(record);
 
                 RavenDestinations = _databaseRecord.RavenEtls;
                 SqlDestinations = _databaseRecord.SqlEtls;
@@ -176,6 +176,16 @@ namespace Raven.Server.Documents.ETL
             _database.NotificationCenter.Add(alert);
         }
 
+        private void LoadConfiguration(DatabaseRecord record)
+        {
+            _databaseRecord = record;
+
+            RavenDestinations = _databaseRecord.RavenEtls;
+            SqlDestinations = _databaseRecord.SqlEtls;
+
+            // TODO arek remove destinations which has been removed or modified - EtlStorage.Remove
+        }
+
         private void NotifyAboutWork(DocumentChange documentChange)
         {
             // ReSharper disable once ForCanBeConvertedToForeach
@@ -196,9 +206,9 @@ namespace Raven.Server.Documents.ETL
             ea.ThrowIfNeeded();
         }
 
-        public void HandleDatabaseRecordChange(DatabaseRecord dbRecord)
+        public void HandleDatabaseRecordChange(DatabaseRecord record)
         {
-            if (dbRecord == null)
+            if (record == null)
                 return;
 
             var old = _processes;
@@ -218,7 +228,7 @@ namespace Raven.Server.Documents.ETL
 
             _processes = new EtlProcess[0];
 
-            LoadProcesses(dbRecord);
+            LoadProcesses(record);
 
             // unsubscribe old etls _after_ we start new processes to ensure the tombstone cleaner 
             // constantly keeps track of tombstones processed by ETLs so it won't delete them during etl processes reloading
