@@ -101,7 +101,14 @@ namespace Sparrow.Json
                         if (Interlocked.CompareExchange(ref ctx.InUse, 1, 0) != 0)
                             continue;
 
-                        ctx.Dispose();
+                        try
+                        {
+                            ctx.Dispose();
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                            // this is expected, if we were disposed as well
+                        }
                         parent.Value = null;
                     }
                 }
