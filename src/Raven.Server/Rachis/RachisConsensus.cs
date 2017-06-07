@@ -62,9 +62,9 @@ namespace Raven.Server.Rachis
             StateMachine.OnSnapshotInstalled(context, lastIncludedIndex);
         }
 
-        public override async Task<Stream> ConnectToPeer(string url, string apiKey, TransactionOperationContext context = null)
+        public override Task<Stream> ConnectToPeer(string url, string apiKey, TransactionOperationContext context = null)
         {
-            return await StateMachine.ConnectToPeer(url, apiKey);
+            return StateMachine.ConnectToPeer(url, apiKey);
         }
 
         private class NullDisposable : IDisposable

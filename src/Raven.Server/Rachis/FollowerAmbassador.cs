@@ -5,12 +5,15 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Server.Tcp;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
@@ -20,6 +23,7 @@ namespace Raven.Server.Rachis
 {
     public class FollowerAmbassador : IDisposable
     {
+        private readonly Logger _log;
         private readonly RachisConsensus _engine;
         private readonly Leader _leader;
         private ManualResetEvent _wakeLeader;
@@ -69,6 +73,7 @@ namespace Raven.Server.Rachis
             _url = url;
             _apiKey = apiKey;
             Status = "Started";
+            _log = LoggingSource.Instance.GetLogger<FollowerAmbassador>($"FollowerAmbassador -> {tag} url:[{url}]");
         }
 
         public void UpdateLeaderWake(ManualResetEvent wakeLeader)
@@ -113,7 +118,15 @@ namespace Raven.Server.Rachis
                         _connection = new RemoteConnection(_tag, _engine.Tag, stream);
                         using (_connection)
                         {
-                            _engine.AppendStateDisposable(_leader, _connection);
+                            try
+                            {
+                                _engine.AppendStateDisposable(_leader, _connection);
+                            }
+                            catch (ConcurrencyException)
+                            {
+                                return; // we are no longer leader
+                            }
+
                             var matchIndex = InitialNegotiationWithFollower();
                             if (matchIndex == null)
                                 return;
@@ -177,7 +190,13 @@ namespace Raven.Server.Rachis
                                     }
                                     _connection.Send(context, appendEntries, entries);
                                     var aer = _connection.Read<AppendEntriesResponse>(context);
-
+                                    if (aer == null)
+                                    {
+                                        if (_log.IsInfoEnabled)
+                                            _log.Info(
+                                                "Reading of AppendEntriesResponse failed with IOException. Since the remote node has closed the connection, aborting the ambassador thread.");
+                                        return;
+                                    }
                                     if (aer.Success == false)
                                     {
                                         // shouldn't happen, the connection should be aborted if this is the case, but still
@@ -206,6 +225,14 @@ namespace Raven.Server.Rachis
                             }
                         }
                     }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
+                    catch (AggregateException ae) when (ae.InnerException is OperationCanceledException)
+                    {
+                        throw;
+                    }
                     catch (Exception e)
                     {
                         Status = "Failed - " + e.Message;
@@ -214,7 +241,7 @@ namespace Raven.Server.Rachis
                             _engine.Log.Info("Failed to talk to remote follower: " + _tag, e);
                         }
                         // notify leader about an error
-                        _leader?.NotifyAboutException(this,e);
+                        _leader?.NotifyAboutException(this, e);
                         _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
                     }
                     finally
@@ -248,7 +275,7 @@ namespace Raven.Server.Rachis
         }
 
         private void SendSnapshot(Stream stream)
-        {            
+        {
             TransactionOperationContext context;
             using (_engine.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
@@ -300,6 +327,14 @@ namespace Raven.Server.Rachis
                 while (true)
                 {
                     var aer = _connection.Read<InstallSnapshotResponse>(context);
+                    if (aer == null)
+                    {
+                        if (_engine.Log.IsInfoEnabled)
+                        {
+                            _engine.Log.Info($"FollowerAmbassador {_engine.Tag} has IOException thrown while reading InstallSnapshotResponse message. This has happened since remote node closed the connection on the other side, so we are closing the current Ambassador thread.");
+                        }
+                        return;
+                    }
                     if (aer.Done)
                     {
                         UpdateLastMatchFromFollower(aer.LastLogIndex);
@@ -307,6 +342,7 @@ namespace Raven.Server.Rachis
                     }
                     UpdateLastMatchFromFollower(_followerMatchIndex);
                 }
+
                 if (_engine.Log.IsInfoEnabled)
                 {
                     _engine.Log.Info($"FollowerAmbassador {_engine.Tag}:done sending snapshot to {_tag}");
@@ -582,7 +618,7 @@ namespace Raven.Server.Rachis
                         {
                             Term = engineCurrentTerm,
                             PrevLogIndex = midIndex,
-                            PrevLogTerm = termFor??0,
+                            PrevLogTerm = termFor ?? 0,
                             Truncated = truncated || termFor == null
                         };
                         if (_engine.Log.IsInfoEnabled)
