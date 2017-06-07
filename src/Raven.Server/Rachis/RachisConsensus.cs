@@ -21,6 +21,7 @@ using Voron.Data;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Raven.Client.Http;
+using Raven.Client.Server;
 using Raven.Server.ServerWide.Commands;
 
 namespace Raven.Server.Rachis
@@ -88,7 +89,6 @@ namespace Raven.Server.Rachis
         }
 
         public State CurrentState { get; private set; }
-
 
         public string LastStateChangeReason => _lastStateChangeReason;
 
@@ -401,6 +401,8 @@ namespace Raven.Server.Rachis
             {
                 if (tx is LowLevelTransaction llt && llt.Committed)
                 {
+                    StateChanged?.Invoke(this, state);
+
                     TaskExecutor.CompleteReplaceAndExecute(ref _stateChanged, () =>
                     {
                         foreach (var d in toDispose)
@@ -421,10 +423,7 @@ namespace Raven.Server.Rachis
                                 }
                             }
                         }
-
                     });
-
-                    StateChanged?.Invoke(this, state);
                 }
             };
         }
@@ -561,16 +560,15 @@ namespace Raven.Server.Rachis
         public BlittableJsonReaderObject SetTopology(TransactionOperationContext context, ClusterTopology topology)
         {
             Debug.Assert(context.Transaction != null);
-            var tx = context.Transaction.InnerTransaction;
-            var topologyJson = SetTopology(this, tx, context, topology);
+            var topologyJson = SetTopology(this, context, topology);
 
             return topologyJson;
         }
-        public static unsafe BlittableJsonReaderObject SetTopology(RachisConsensus engine, Transaction tx, JsonOperationContext context,
+        public static unsafe BlittableJsonReaderObject SetTopology(RachisConsensus engine, TransactionOperationContext context,
             ClusterTopology clusterTopology)
         {
             var topologyJson = context.ReadObject(clusterTopology.ToJson(), "topology");
-            var state = tx.CreateTree(GlobalStateSlice);
+            var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
             using (state.DirectAdd(TopologySlice, topologyJson.Size, out byte* ptr))
             {
                 topologyJson.CopyTo(ptr);
@@ -579,7 +577,7 @@ namespace Raven.Server.Rachis
             if (engine == null)
                 return null;
 
-            tx.LowLevelTransaction.OnDispose += _ =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
             {
                 TaskExecutor.CompleteAndReplace(ref engine._topologyChanged);
                 engine.TopologyChanged?.Invoke(engine, clusterTopology);
@@ -721,7 +719,6 @@ namespace Raven.Server.Rachis
                 tvb.Add((int)flags);
                 table.Insert(tvb);
             }
-
             return lastIndex;
         }
 
@@ -1228,7 +1225,7 @@ namespace Raven.Server.Rachis
                     "A"
                 );
 
-                SetTopology(null, tx.InnerTransaction, ctx, topology);
+                SetTopology(null, ctx, topology);
 
                 SwitchToSingleLeader(ctx);
 

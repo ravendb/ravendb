@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Handlers
             using (context.OpenReadTransaction())
             {
                 var databaseRecord = Server.ServerStore.Cluster.ReadDatabase(context, Database.Name);
-
+                var clusterTopology = ServerStore.GetClusterTopology(context);
                 var replicationDiscoveryTimeout = Database.Configuration
                     .Replication
                     .ReplicationTopologyDiscoveryTimeout
@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Handlers
                         Database.DbId.ToString()
                     },
                     replicationDiscoveryTimeout,
-                    databaseRecord?.Topology.GetDestinations(Server.ServerStore.NodeTag, Database.Name).ToList()))
+                    databaseRecord?.Topology.GetDestinations(Server.ServerStore.NodeTag, Database.Name, clusterTopology).ToList()))
                 {
                     var topology = await clusterTopologyExplorer.DiscoverTopologyAsync();
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

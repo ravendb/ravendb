@@ -108,9 +108,8 @@ namespace Raven.Server.ServerWide
 
         public ClusterStateMachine Cluster => _engine.StateMachine;
         public string LeaderTag => _engine.LeaderTag;
-
-        public string NodeTag => _engine.Tag;
         public RachisConsensus.State CurrentState => _engine.CurrentState;
+        public string NodeTag => _engine.Tag;
 
         public bool Disposed => _disposed;
 
@@ -343,12 +342,50 @@ namespace Raven.Server.ServerWide
             Task.Run(ClusterMaintenanceSetupTask, ServerShutdown);
         }
 
-        private void OnStateChanged(object sender, RachisConsensus.State e)
+        private void OnStateChanged(object sender, RachisConsensus.State state)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 NotificationCenter.Add(ClusterTopologyChanged.Create(GetClusterTopology(context), LeaderTag, NodeTag));
+                DatabaseTopology.PartOfCluster = state != RachisConsensus.State.Passive;
+                if (DatabaseTopology.PartOfCluster == false)
+                {
+                    // If we are in passive state, we have prevent from tasks to be performed by this node.
+                    DisableAlloutgoingTasks();
+                }
+            }
+        }
+
+        public Task DisableAlloutgoingTasks()
+        {
+            return DisableAlloutgoingTasksAsync();
+        }
+
+        public async Task DisableAlloutgoingTasksAsync()
+        {
+            var tasks = new Dictionary<string,Task<DocumentDatabase>>();
+            foreach (var db in DatabasesLandlord.DatabasesCache)
+            {
+                tasks.Add(db.Key,db.Value);
+            }
+            while (tasks.Any())
+            {
+                var completedTask = await Task.WhenAny(tasks.Values);
+                var name = tasks.Single(t=>t.Value == completedTask).Key;
+                tasks.Remove(name);
+                try
+                {
+                    var database = await completedTask;
+                    database.RefreshFeatures();
+                }
+                catch(Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                    {
+                        Logger.Info($"An error occured while disabling outgoing tasks on the database {name}",e);
+                    }
+                }
             }
         }
 

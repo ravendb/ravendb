@@ -194,7 +194,7 @@ namespace FastTests.Server.Replication
                 }
             }
 
-            return default(T);
+            return null;
         }
 
         public class SetupResult : IDisposable

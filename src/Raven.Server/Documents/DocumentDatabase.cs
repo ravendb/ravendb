@@ -201,16 +201,20 @@ namespace Raven.Server.Documents
                 TxMerger.Start();
                 ConfigurationStorage.Initialize();
 
-                var record = ServerStore.LoadDatabaseRecord(Name, out var recordEtag);
+                DatabaseRecord record;
+                long index;
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                    record = _serverStore.Cluster.ReadDatabase(context, Name,out index);
 
-                _indexStoreTask = IndexStore.InitializeAsync(record, recordEtag);
+                _indexStoreTask = IndexStore.InitializeAsync(record, index);
                 _transformerStoreTask = TransformerStore.InitializeAsync(record);
 
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore);
                 InitializeFromDatabaseRecord(record);
 
                 EtlLoader.Initialize(record);
-                Patcher.Initialize();
+                Patcher.Initialize(record);
 
                 DocumentTombstoneCleaner.Start();
 
@@ -560,7 +564,7 @@ namespace Raven.Server.Documents
         /// this event is intended for entities that are not singletons 
         /// per database and still need to be informed on changes to the database record.
         /// </summary>
-        public event Action DatabaseRecordChanged;
+        public event Action<DatabaseRecord> DatabaseRecordChanged;
 
         public void ValueChanged(long index)
         {
@@ -568,8 +572,14 @@ namespace Raven.Server.Documents
             {
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
+                DatabaseRecord record = null;
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    record = _serverStore.Cluster.ReadDatabase(context, Name);
+                }
 
-                SubscriptionStorage?.HandleDatabaseValueChange();
+                NotifyFeaturesAboutValueChange(record, index);
             }
             catch
             {
@@ -591,16 +601,14 @@ namespace Raven.Server.Documents
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
 
-                var record = ServerStore.LoadDatabaseRecord(Name, out var etag);
+                DatabaseRecord record = null;
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    record = _serverStore.Cluster.ReadDatabase(context, Name);
+                }
 
-                InitializeFromDatabaseRecord(record);
-
-                TransformerStore.HandleDatabaseRecordChange(record);
-                IndexStore.HandleDatabaseRecordChange(record, etag);
-                ReplicationLoader?.HandleDatabaseRecordChange(record);
-                EtlLoader?.HandleDatabaseRecordChange(record);
-                
-                OnDatabaseRecordChanged();
+                NotifyFeaturesAboutStateChange(record,index);
             }
             catch
             {
@@ -615,16 +623,48 @@ namespace Raven.Server.Documents
             }
         }
 
+        private void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index)
+        {
+            InitializeFromDatabaseRecord(record);
+
+            TransformerStore.HandleDatabaseRecordChange(record);
+            IndexStore.HandleDatabaseRecordChange(record, index);
+            ReplicationLoader?.HandleDatabaseRecordChange(record);
+            EtlLoader?.HandleDatabaseRecordChange(record);
+            OnDatabaseRecordChanged(record);
+        }
+
+        private void NotifyFeaturesAboutValueChange(DatabaseRecord record, long index)
+        {
+            SubscriptionStorage?.HandleDatabaseValueChange(record);
+        }
+
+        public void RefreshFeatures()
+        {
+            if (_databaseShutdown.IsCancellationRequested)
+                ThrowDatabaseShutdown();
+
+            DatabaseRecord record = null;
+            long index;
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                record = _serverStore.Cluster.ReadDatabase(context, Name,out index);
+            }
+            NotifyFeaturesAboutStateChange(record, index);
+            NotifyFeaturesAboutValueChange(record, index);
+        }
+
         private void InitializeFromDatabaseRecord(DatabaseRecord dbRecord)
         {
-            if (dbRecord == null)
-                return;
-
             lock (this)
             {
-                DocumentsStorage.VersioningStorage.InitializeFromDatabaseRecord(dbRecord);
-                ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, dbRecord, ExpiredDocumentsCleaner);
-                PeriodicBackupRunner.UpdateConfigurations(dbRecord);
+                if (dbRecord != null)
+                {
+                    DocumentsStorage.VersioningStorage.InitializeFromDatabaseRecord(dbRecord);
+                    ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, dbRecord, ExpiredDocumentsCleaner);
+                    PeriodicBackupRunner.UpdateConfigurations(dbRecord);
+                }
             }
         }
 
@@ -637,9 +677,9 @@ namespace Raven.Server.Documents
             yield return TxMerger.TransactionPerformanceMetrics;
         }
 
-        private void OnDatabaseRecordChanged()
+        private void OnDatabaseRecordChanged(DatabaseRecord record)
         {
-            DatabaseRecordChanged?.Invoke();
+            DatabaseRecordChanged?.Invoke(record);
         }
     }
 

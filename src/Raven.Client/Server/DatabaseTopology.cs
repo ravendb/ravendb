@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Replication;
+using Raven.Client.Http;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -16,6 +17,8 @@ namespace Raven.Client.Server
 
         public bool ConflictResolutionChanged(ConflictSolver other)
         {
+            if (other == null)
+                return true;
             if (ResolveToLatest != other.ResolveToLatest)
                 return true;
             if (DatabaseResolverId != other.DatabaseResolverId)
@@ -121,6 +124,7 @@ namespace Raven.Client.Server
     
     public class DatabaseTopology
     {
+        public static bool PartOfCluster = false;
         public List<DatabaseTopologyNode> Members = new List<DatabaseTopologyNode>(); // Member of the master to master replication inside cluster
         public List<DatabaseTopologyNode> Promotables = new List<DatabaseTopologyNode>(); // Promotable is in a receive state until Leader decides it can become a Member
         public List<DatabaseWatcher> Watchers = new List<DatabaseWatcher>(); // Watcher only receives (slave)
@@ -131,9 +135,10 @@ namespace Raven.Client.Server
                    Promotables.Exists(p => p.NodeTag == nodeTag);
         }
 
-        public List<ReplicationNode> GetDestinations(string nodeTag, string databaseName)
+        public List<ReplicationNode> GetDestinations(string nodeTag, string databaseName, ClusterTopology clusterTopology)
         {
             var list = new List<ReplicationNode>();
+
             foreach (var member in Members)
             {
                 if (member.NodeTag == nodeTag) //skip me
@@ -145,6 +150,8 @@ namespace Raven.Client.Server
                 if (WhoseTaskIsIt(promotable) == nodeTag)
                     list.Add(promotable);
             }
+            // remove nodes that are not in the raft cluster topology
+            list.RemoveAll(n => clusterTopology.Contains(n.NodeTag) == false);
             foreach (var watcher in Watchers)
             {
                 if (WhoseTaskIsIt(watcher) == nodeTag)
@@ -280,10 +287,12 @@ namespace Raven.Client.Server
 
         public string WhoseTaskIsIt(IDatabaseTask task)
         {
+            if (PartOfCluster == false)
+                return null;
+
             var topology = new List<DatabaseTopologyNode>(Members);
             topology.AddRange(Promotables);
             topology.Sort();
-
 
             if (topology.Count == 0)
                 return null; // this is probably being deleted now, no one is able to run tasks

@@ -104,7 +104,7 @@ namespace Raven.Server.Rachis
                                             topology.Promotables.ContainsKey(_engine.Tag) ||
                                             topology.Watchers.ContainsKey(_engine.Tag))
                                         {
-                                            RachisConsensus.SetTopology(_engine, context.Transaction.InnerTransaction, context, topology);
+                                            RachisConsensus.SetTopology(_engine, context, topology);
                                         }
                                         else
                                         {
@@ -321,7 +321,7 @@ namespace Raven.Server.Rachis
 
                     var topology = JsonDeserializationRachis<ClusterTopology>.Deserialize(topologyJson);
 
-                    RachisConsensus.SetTopology(_engine, context.Transaction.InnerTransaction, context, topology);
+                    RachisConsensus.SetTopology(_engine, context, topology);
                 }
 
                 context.Transaction.Commit();
