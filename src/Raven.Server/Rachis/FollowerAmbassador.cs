@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Http;
 using Raven.Client.Server.Tcp;
 using Raven.Server.ServerWide.Context;
@@ -182,8 +183,9 @@ namespace Raven.Server.Rachis
                                     var aer = _connection.Read<AppendEntriesResponse>(context);
                                     if (aer == null)
                                     {
-                                        if(_log.IsInfoEnabled)
-                                            _log.Info("Reading of AppendEntriesResponse failed with IOException. Since the remote node has closed the connection, aborting the ambassador thread.");
+                                        if (_log.IsInfoEnabled)
+                                            _log.Info(
+                                                "Reading of AppendEntriesResponse failed with IOException. Since the remote node has closed the connection, aborting the ambassador thread.");
                                         return;
                                     }
                                     if (aer.Success == false)
@@ -214,6 +216,14 @@ namespace Raven.Server.Rachis
                             }
                         }
                     }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
+                    catch (AggregateException ae) when (ae.InnerException is OperationCanceledException)
+                    {
+                        throw;
+                    }
                     catch (Exception e)
                     {
                         Status = "Failed - " + e.Message;
@@ -222,7 +232,7 @@ namespace Raven.Server.Rachis
                             _engine.Log.Info("Failed to talk to remote follower: " + _tag, e);
                         }
                         // notify leader about an error
-                        _leader?.NotifyAboutException(this,e);
+                        _leader?.NotifyAboutException(this, e);
                         _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
                     }
                     finally
@@ -256,7 +266,7 @@ namespace Raven.Server.Rachis
         }
 
         private void SendSnapshot(Stream stream)
-        {            
+        {
             TransactionOperationContext context;
             using (_engine.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
@@ -599,7 +609,7 @@ namespace Raven.Server.Rachis
                         {
                             Term = engineCurrentTerm,
                             PrevLogIndex = midIndex,
-                            PrevLogTerm = termFor??0,
+                            PrevLogTerm = termFor ?? 0,
                             Truncated = truncated || termFor == null
                         };
                         if (_engine.Log.IsInfoEnabled)

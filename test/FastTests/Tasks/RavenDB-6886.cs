@@ -236,10 +236,10 @@ namespace FastTests.Tasks
         [Fact]
         public async Task Cluster_identity_for_single_document_in_parallel_on_different_nodes_should_work()
         {
-            LoggingSource.Instance.SetupLogMode(LogMode.Information, "e:\\raven-test-log");
+            LoggingSource.Instance.SetupLogMode(LogMode.Information, "D:\\raven-test-log");
             const int clusterSize = 3;
             const string databaseName = "Cluster_identity_for_multiple_documents_on_different_nodes_should_work";
-            var leaderServer = await CreateRaftClusterAndGetLeader(clusterSize);
+            var leaderServer = await CreateRaftClusterAndGetLeader(clusterSize, leaderIndex: 2);
             var followers = Servers.Where(s => s != leaderServer).ToList();
             using (var leaderStore = new DocumentStore
             {
