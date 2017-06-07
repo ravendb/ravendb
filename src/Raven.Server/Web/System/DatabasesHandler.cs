@@ -60,11 +60,10 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/topology", "GET", "/topology?name={databaseName:string}&url={url:string}")]
+        [RavenAction("/topology", "GET", "/topology?name={databaseName:string}")]
         public Task GetTopology()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var url = GetStringQueryString("url", false);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -96,7 +95,7 @@ namespace Raven.Server.Web.System
                             [nameof(Topology.Nodes)] = new DynamicJsonArray(
                                 dbRecord.Topology.Members.Select(x => new DynamicJsonValue
                                 {
-                                    [nameof(ServerNode.Url)] = GetUrl(x, url, clusterTopology),
+                                    [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
                                     [nameof(ServerNode.ClusterTag)] = x.NodeTag,
                                     [nameof(ServerNode.Database)] = dbRecord.DatabaseName,
                                 })
@@ -109,10 +108,17 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        private string GetUrl(DatabaseTopologyNode node, string clientUrl, ClusterTopology clusterTopology)
+        private string GetUrl(DatabaseTopologyNode node, ClusterTopology clusterTopology)
         {
-            var url = (Server.ServerStore.NodeTag == node.NodeTag ? clientUrl : null) ??  clusterTopology.GetUrlFromTag(node.NodeTag) ?? ServerStore.RavenServer.WebUrls[0];
-            return ServerStore.EnsureValidExternalUrl(url);
+            string url = null;
+
+            if (Server.ServerStore.NodeTag == node.NodeTag)
+                url = ServerStore.NodeHttpServerUrl;
+
+            if (url == null)
+                url = clusterTopology.GetUrlFromTag(node.NodeTag);
+
+            return url;
         }
 
         private Task DbInfo(string dbName)

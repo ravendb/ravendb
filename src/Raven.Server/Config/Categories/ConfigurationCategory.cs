@@ -124,12 +124,15 @@ namespace Raven.Server.Config.Categories
                                     else
                                         property.SetValue(this, paths.Select(x => new PathSetting(Convert.ToString(x), type, resourceName)).ToArray());
                                 }
+                                else if (t == typeof(UriSetting))
+                                {
+                                    property.SetValue(this, new UriSetting(value));
+                                }
                                 else
                                 {
                                     var safeValue = (value == null) ? null : Convert.ChangeType(value, t);
                                     property.SetValue(this, safeValue);
                                 }
-                                
                             }
                         }
                         else
