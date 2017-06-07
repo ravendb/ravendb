@@ -3,6 +3,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Extensions;
 using Xunit;
 
@@ -108,12 +110,28 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var operation1 = await session.Advanced.DeleteByIndexAsync<Person>("Person/ByName", x => x.Name == "Bob");
+                    var indexName = "Person/ByName";
+                    var query = session.Query<Person>(indexName).Where(x => x.Name == "Bob");
+                    var indexQuery = new IndexQuery
+                    {
+                        Query = query.ToString()
+                    };
+
+                    var operation1 = await store.Operations.SendAsync(new DeleteByIndexOperation(indexName , indexQuery));
+
                     await operation1.WaitForCompletionAsync();
 
                     WaitForIndexing(store);
 
-                    var operation2 = await session.Advanced.DeleteByIndexAsync<Person, Person_ByAge>(x => x.Age < 35);
+                    indexName = new Person_ByAge().IndexName;
+                    query = session.Query<Person>(indexName).Where(x => x.Age < 35);
+                    indexQuery = new IndexQuery
+                    {
+                        Query = query.ToString()
+                    };
+
+                    var operation2 = await store.Operations.SendAsync(new DeleteByIndexOperation(indexName, indexQuery));
+
                     await operation2.WaitForCompletionAsync();
 
                     await session.SaveChangesAsync();
@@ -148,12 +166,28 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var operation1 = session.Advanced.DeleteByIndex<Person>("Person/ByName", x => x.Name == "Bob");
+                    var indexName = "Person/ByName";
+                    var query = session.Query<Person>(indexName).Where(x => x.Name == "Bob");
+                    var indexQuery = new IndexQuery
+                    {
+                        Query = query.ToString()
+                    };
+
+                    var operation1 = store.Operations.Send(new DeleteByIndexOperation(indexName, indexQuery));
+
                     operation1.WaitForCompletion(TimeSpan.FromSeconds(15));
 
                     WaitForIndexing(store);
 
-                    var operation2 = session.Advanced.DeleteByIndex<Person, Person_ByAge>(x => x.Age < 35);
+                    indexName = new Person_ByAge().IndexName;
+                    query = session.Query<Person>(indexName).Where(x => x.Age < 35);
+                    indexQuery = new IndexQuery
+                    {
+                        Query = query.ToString()
+                    };
+
+                    var operation2 = store.Operations.Send(new DeleteByIndexOperation(indexName, indexQuery));
+
                     operation2.WaitForCompletion(TimeSpan.FromSeconds(15));
 
                     session.SaveChanges();

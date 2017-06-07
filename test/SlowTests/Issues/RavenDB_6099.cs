@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -42,10 +43,17 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var operation = session.Advanced.PatchByIndex<User, Users_ByAge>(x => x.Age > 11, new PatchRequest
+                    var indexName = new Users_ByAge().IndexName;
+                    var query = session.Query<User>(indexName).Where(x => x.Age > 11);
+                    var indexQuery = new IndexQuery
+                    {
+                        Query = query.ToString()
+                    };
+
+                    var operation = store.Operations.Send(new PatchByIndexOperation(indexName , indexQuery , new PatchRequest
                     {
                         Script = "this.Name = 'Patched';"
-                    });
+                    }));
 
                     operation.WaitForCompletion(TimeSpan.FromSeconds(15));
 
