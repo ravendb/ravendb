@@ -7,6 +7,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
+using System.Threading;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
@@ -51,19 +52,36 @@ namespace Voron.Impl.Compaction
 
                 compactedEnv.FlushLogToDataFile();
 
-                using (var op = new WriteAheadJournal.JournalApplicator.SyncOperation(compactedEnv.Journal.Applicator))
+                bool synced;
+
+                const int maxNumberOfRetries = 100;
+
+                var syncRetries = 0;
+
+                while (true)
                 {
-                    try
+                    using (var op = new WriteAheadJournal.JournalApplicator.SyncOperation(compactedEnv.Journal.Applicator))
                     {
-                        op.SyncDataFile();
-                    }
-                    catch (Exception e)
-                    {
-                        existingEnv.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
-                        throw;
+                        try
+                        {
+
+                            synced = op.SyncDataFile();
+
+                            if (synced || ++syncRetries >= maxNumberOfRetries)
+                                break;
+
+                            Thread.Sleep(100);
+                        }
+                        catch (Exception e)
+                        {
+                            existingEnv.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
+                            throw;
+                        }
                     }
                 }
-                compactedEnv.Journal.Applicator.DeleteCurrentAlreadyFlushedJournal();
+
+                if (synced)
+                    compactedEnv.Journal.Applicator.DeleteCurrentAlreadyFlushedJournal();
 
                 minimalCompactedDataFileSize = compactedEnv.NextPageNumber * Constants.Storage.PageSize;
             }

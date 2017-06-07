@@ -6,42 +6,50 @@ class saveExternalReplicationTaskCommand extends commandBase {
    
     private externalReplicationToSend: Raven.Client.Server.DatabaseWatcher;
 
-    constructor(private newRepTask: externalReplicationDataFromUI, private db: database, private taskId: number) {
+    constructor(private db: database, private taskId: number, private replicationSettings: externalReplicationDataFromUI) {
         super();
 
         this.externalReplicationToSend = {
             // From UI:
-            ApiKey: newRepTask.ApiKey,
-            Database: newRepTask.DestinationDB,
-            Url: newRepTask.DestinationURL,
+            ApiKey: replicationSettings.ApiKey,
+            Database: replicationSettings.DestinationDB,
+            Url: replicationSettings.DestinationURL,
             // Other vals:
             TaskId: taskId
         } as Raven.Client.Server.DatabaseWatcher;
     }
-
-    //TODO: server doesn't return: ModifyExternalReplicationResult!
-    execute(): JQueryPromise<Raven.Client.Server.Operations.ModifyExternalReplicationResult> {
-        return this.addReplication()
+ 
+    execute(): JQueryPromise<Raven.Client.Server.Operations.ModifyOngoingTaskResult> {
+        return this.updateReplication()
             .fail((response: JQueryXHR) => {
-                this.reportError("Failed to create replication task for: " + this.newRepTask.DestinationDB, response.responseText, response.statusText);
+                if (this.taskId === 0) {
+                    this.reportError("Failed to create replication task for: " + this.replicationSettings.DestinationDB, response.responseText, response.statusText);
+                } else {
+                    this.reportError("Failed to save replication task", response.responseText, response.statusText);
+                }
             })
             .done(() => {
-                this.reportSuccess(`Created replication task from database ${this.db.name} to ${this.newRepTask.DestinationDB}`);
+                if (this.taskId === 0) {
+                    this.reportSuccess(
+                        `Created replication task from database ${this.db.name} to ${this.replicationSettings.DestinationDB}`);
+                } else {
+                    this.reportSuccess(`Updated replication task`);
+                }
             });
     }
 
-    private addReplication(): JQueryPromise<Raven.Client.Server.Operations.ModifyExternalReplicationResult> {
+    private updateReplication(): JQueryPromise<Raven.Client.Server.Operations.ModifyOngoingTaskResult> {
 
         const url = endpoints.global.ongoingTasks.adminExternalReplicationUpdate + this.urlEncodeArgs({ name: this.db.name });
         
-        const addRepTask = $.Deferred<Raven.Client.Server.Operations.ModifyExternalReplicationResult>();
+        const addRepTask = $.Deferred<Raven.Client.Server.Operations.ModifyOngoingTaskResult>();
 
         const payload = {          
             DatabaseWatcher: this.externalReplicationToSend
         };
 
         this.post(url, JSON.stringify(payload))
-            .done((results: Array<Raven.Client.Server.Operations.ModifyExternalReplicationResult>) => {
+            .done((results: Array<Raven.Client.Server.Operations.ModifyOngoingTaskResult>) => {
                 addRepTask.resolve(results[0]);
             })
             .fail(response => addRepTask.reject(response));

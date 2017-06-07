@@ -25,10 +25,11 @@ namespace SlowTests.Voron.Compaction
         }
 
 
-        [Fact]
-        public void ShouldOccupyLessSpace()
+        [Theory]
+        [InlineDataWithRandomSeed()]
+        public void ShouldOccupyLessSpace(int seed)
         {
-            var r = new Random();
+            var r = new Random(seed);
             var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(DataDir);
             storageEnvironmentOptions.ManualFlushing = true;
             using (var env = new StorageEnvironment(storageEnvironmentOptions))
@@ -74,13 +75,14 @@ namespace SlowTests.Voron.Compaction
             Assert.True(newSize < oldSize, string.Format("Old size: {0:#,#;;0} MB, new size {1:#,#;;0} MB", oldSize / 1024 / 1024, newSize / 1024 / 1024));
         }
 
-        [Fact]
-        public void CompactionMustNotLooseAnyData()
+        [Theory]
+        [InlineDataWithRandomSeed()]
+        public void CompactionMustNotLooseAnyData(int seed)
         {
             var treeNames = new List<string>();
             var multiValueTreeNames = new List<string>();
 
-            var random = new Random();
+            var random = new Random(seed);
 
             var value1 = new byte[random.Next(1024 * 1024 * 2)];
             var value2 = new byte[random.Next(1024 * 1024 * 2)];

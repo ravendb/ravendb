@@ -3,6 +3,20 @@
 
 class graphHelper {
 
+    private static readonly scrollConfig = {
+        width: 8,
+        trackColor: "#63728a",
+        scrollColor: "#98a7b7"
+    }
+
+    static prefixStyle(value: string) {
+        const prefix = "-webkit-transform" in document.body.style ? "-webkit-"
+            : "-moz-transform" in document.body.style ? "-moz-"
+                : "";
+
+        return prefix + value;
+    }
+
     static truncText(input: string, measuredWidth: number, availableWidth: number, minWidth = 5): string {
         if (availableWidth >= measuredWidth) {
             return input;
@@ -13,6 +27,31 @@ class graphHelper {
 
         const approxCharactersToTake = Math.floor(availableWidth * input.length / measuredWidth);
         return input.substr(0, approxCharactersToTake);
+    }
+
+    static drawScroll(ctx: CanvasRenderingContext2D, scrollLocation: { left: number, top: number }, topScrollOffset: number, visibleHeight: number, totalHeight: number) {
+        if (visibleHeight > totalHeight) {
+            // don't draw scrollbar
+            return;
+        }
+        ctx.save();
+        ctx.translate(scrollLocation.left, scrollLocation.top);
+
+        try {
+            ctx.fillStyle = graphHelper.scrollConfig.trackColor;
+            ctx.fillRect(-graphHelper.scrollConfig.width, 0, graphHelper.scrollConfig.width, visibleHeight);
+
+            ctx.fillStyle = graphHelper.scrollConfig.scrollColor;
+
+            const scrollOffset = topScrollOffset * visibleHeight / totalHeight;
+            const scrollHeight = visibleHeight * visibleHeight / totalHeight;
+
+            ctx.fillRect(-graphHelper.scrollConfig.width, scrollOffset, graphHelper.scrollConfig.width, scrollHeight);
+
+        } finally {
+            ctx.restore();
+        }
+
     }
 
     static drawArrow(ctx: CanvasRenderingContext2D, x: number, y: number, rightArrow: boolean) {

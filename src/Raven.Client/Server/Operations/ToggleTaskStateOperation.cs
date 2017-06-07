@@ -3,51 +3,61 @@ using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations
 {
-    public class DeleteExternalReplicationOperation : IServerOperation<ModifyExternalReplicationResult>
+    public class ToggleTaskStateOperation : IServerOperation
     {
         private readonly string _database;
         private readonly long _taskId;
+        private readonly OngoingTaskType _type;
+        private readonly bool _disable;
 
-        public DeleteExternalReplicationOperation(string database, long taskId)
+        public ToggleTaskStateOperation(string database, long taskId, OngoingTaskType type, bool disable)
         {
             MultiDatabase.AssertValidName(database);
             _database = database;
             _taskId = taskId;
+            _type = type;
+            _disable = disable;
         }
 
-        public RavenCommand<ModifyExternalReplicationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new DeleteExternalReplicationCommand(conventions, context, _database, _taskId);
+            return new ToggleTaskStateCommand(conventions, context, _database, _taskId, _type, _disable);
         }
 
-        private class DeleteExternalReplicationCommand : RavenCommand<ModifyExternalReplicationResult>
+        private class ToggleTaskStateCommand : RavenCommand
         {
             private readonly JsonOperationContext _context;
             private readonly DocumentConventions _conventions;
             private readonly string _databaseName;
             private readonly long _taskId;
+            private readonly OngoingTaskType _type;
+            private readonly bool _disable;
 
-            public DeleteExternalReplicationCommand(
+            public ToggleTaskStateCommand(
                 DocumentConventions conventions,
                 JsonOperationContext context,
                 string database,
-                long taskId
-
+                long taskId,
+                OngoingTaskType type,
+                bool disable
             )
             {
                 _context = context ?? throw new ArgumentNullException(nameof(context));
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _databaseName = database ?? throw new ArgumentNullException(nameof(database));
                 _taskId = taskId;
+                _type = type;
+                _disable = disable;
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/external-replication/delete?name={_databaseName}&id={_taskId}";
+                url = $"{node.Url}/admin/tasks/state?name={_databaseName}&key={_taskId}&type={_type}&disable={_disable}";
 
                 var request = new HttpRequestMessage
                 {
@@ -59,10 +69,8 @@ namespace Raven.Client.Server.Operations
 
             public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
-                if (response == null)
-                    ThrowInvalidResponse();
-
-                Result = JsonDeserializationClient.ModifyExternalReplicationResult(response);
+                if (response != null)
+                    Result = JsonDeserializationClient.ModifyOngoingTaskResult(response);
             }
 
             public override bool IsReadRequest => false;

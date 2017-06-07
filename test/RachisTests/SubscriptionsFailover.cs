@@ -253,13 +253,13 @@ namespace RachisTests
                 Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false));
                 ackSent.Reset(true);
                 
-              //  await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId).ConfigureAwait(false);
+                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId).ConfigureAwait(false);
                 expectedVersionsCount *= 2;
                 
                 Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false));
                 ackSent.Reset(true);
 
-             //   await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId);
+                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId);
                 
                 Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime).ConfigureAwait(false));
               

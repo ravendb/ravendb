@@ -8,6 +8,7 @@ import eventsCollector = require("common/eventsCollector");
 import popoverUtils = require("common/popoverUtils");
 
 class customFunctionsEditor extends viewModelBase {
+
     documentText = ko.observable<string>();
     isSaveEnabled: KnockoutComputed<boolean>;
 
@@ -46,8 +47,9 @@ class customFunctionsEditor extends viewModelBase {
         $("#customFunctionsExample").popover({
             html: true,
             template: popoverUtils.longPopoverTemplate,
-            trigger: "hover",
-            content: "<p>Example:</p><pre>exports.greet = <span class=\"token keyword\">function</span>(name) {<br/>    <span class=\"token keyword\">return</span> <span class=\"token string\">\"Hello \" + name + \"!\"</span>;<br/>}</pre>"
+            trigger: "click",
+            content: "Custom functions can be used in:" +
+                "<ul><li>patches</li><li>custom column bindings on document grids</li> </ul><pre>exports.greet = <span class=\"token keyword\">function</span>(name) {<br/>    <span class=\"token keyword\">return</span> <span class=\"token string\">\"Hello \" + name + \"!\"</span>;<br/>}</pre>"
         });
     }
 

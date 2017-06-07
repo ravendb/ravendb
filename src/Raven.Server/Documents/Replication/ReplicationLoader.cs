@@ -339,12 +339,10 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public void Initialize()
+        public void Initialize(DatabaseRecord record)
         {
             if (_isInitialized) //precaution -> probably not necessary, but still...
                 return;
-
-            var record = _server.LoadDatabaseRecord(Database.Name);
 
             ConflictSolverConfig = record?.ConflictSolverConfig;
             ConflictResolver = new ResolveConflictOnReplicationConfigurationChange(this, _log);
@@ -360,11 +358,10 @@ namespace Raven.Server.Documents.Replication
 
         private readonly object _locker = new object();
 
-        public void HandleDatabaseRecordChange()
+        public void HandleDatabaseRecordChange(DatabaseRecord dbRecord)
         {
-            var newRecord = _server.LoadDatabaseRecord(Database.Name);
-            HandleConflictResolverChange(newRecord);
-            HandleTopologyChange(newRecord, out var instancesToDispose); // this function is done under lock
+            HandleConflictResolverChange(dbRecord);
+            HandleTopologyChange(dbRecord, out var instancesToDispose); // this function is done under lock
             foreach (var instance in instancesToDispose)
             {
                 try

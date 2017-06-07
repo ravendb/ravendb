@@ -1,5 +1,4 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
-
 import ongoingTask = require("models/database/tasks/ongoingTaskModel"); 
 
 class ongoingTaskETLModel extends ongoingTask {
@@ -31,24 +30,8 @@ class ongoingTaskETLModel extends ongoingTask {
         this.destinationURL(dto.DestinationUrl);
     }
 
-    enableTask() {
-        alert("enabling task etl");
-        // ...
-    }
-
-    disableTask() {
-        alert("disabling task etl");
-        // ...
-    }
-
     editTask() {
-        alert("edit task etl");
-        // ...
-    }
-
-    removeTask() {
-        alert("remove task etl");
-        // ...
+        // TODO...
     }
 }
 

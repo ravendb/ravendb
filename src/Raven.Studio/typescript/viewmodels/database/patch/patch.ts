@@ -15,6 +15,7 @@ import getDocumentsMetadataByIDPrefixCommand = require("commands/database/docume
 import savePatchCommand = require('commands/database/patch/savePatchCommand');
 import patchByQueryCommand = require("commands/database/patch/patchByQueryCommand");
 import patchByCollectionCommand = require("commands/database/patch/patchByCollectionCommand");
+import getCustomFunctionsCommand = require("commands/database/documents/getCustomFunctionsCommand");
 import queryUtil = require("common/queryUtil");
 import getPatchesCommand = require('commands/database/patch/getPatchesCommand');
 import eventsCollector = require("common/eventsCollector");
@@ -35,6 +36,8 @@ import patchDocumentCommand = require("commands/database/documents/patchDocument
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import verifyDocumentsIDsCommand = require("commands/database/documents/verifyDocumentsIDsCommand");
 import generalUtils = require("common/generalUtils");
+import customFunctions = require("models/database/documents/customFunctions");
+import evaluationContextHelper = require("common/helpers/evaluationContextHelper");
 
 type fetcherType = (skip: number, take: number, previewCols: string[], fullCols: string[]) => JQueryPromise<pagedResult<document>>;
 
@@ -283,6 +286,8 @@ class patch extends viewModelBase {
     private fullDocumentsProvider: documentPropertyProvider;
     private fetcher = ko.observable<fetcherType>();
 
+    private customFunctionsContext: object;
+
     patchDocument = ko.observable<patchDocument>(patchDocument.empty());
 
     indexNames = ko.observableArray<string>();
@@ -413,7 +418,7 @@ class patch extends viewModelBase {
 
         this.fullDocumentsProvider = new documentPropertyProvider(this.activeDatabase());
 
-        return $.when<any>(this.fetchAllCollections(), this.fetchAllIndexes(), this.savedPatches.loadAll(this.activeDatabase()));
+        return $.when<any>(this.fetchAllCollections(), this.fetchCustomFunctions(), this.fetchAllIndexes(), this.savedPatches.loadAll(this.activeDatabase()));
     }
 
     attached() {
@@ -447,7 +452,8 @@ class patch extends viewModelBase {
         super.compositionComplete();
 
         const grid = this.gridController();
-        this.documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.collections().map(x => x.name), {
+        grid.withEvaluationContext(this.customFunctionsContext);
+        this.documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, this.collections().map(x => x.name), {
             showRowSelectionCheckbox: false,
             showSelectAllCheckbox: false,
             createHyperlinks: false
@@ -725,6 +731,14 @@ class patch extends viewModelBase {
         } else {
             output([]);
         }
+    }
+
+    private fetchCustomFunctions(): JQueryPromise<customFunctions> {
+        return new getCustomFunctionsCommand(this.activeDatabase())
+            .execute()
+            .done(functions => {
+                this.customFunctionsContext = evaluationContextHelper.createContext(functions.functions);
+            });
     }
 
     private fetchAllCollections(): JQueryPromise<collectionsStats> {

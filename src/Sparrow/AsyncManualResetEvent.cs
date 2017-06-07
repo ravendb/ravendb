@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -79,7 +78,7 @@ namespace Sparrow
 
         public void SetByAsyncCompletion()
         {
-            SetInAsyncManner(_tcs);
+            _tcs.TrySetResult(true);
         }
 
         public void Reset(bool force = false)
@@ -101,21 +100,14 @@ namespace Sparrow
             var previousTcs = _tcs;
 
             Reset(force: true);
-            SetInAsyncManner(previousTcs);
+            previousTcs.TrySetResult(true);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void SetInAsyncManner(TaskCompletionSource<bool> tcs)
         {
-            // run the completion asynchronously to ensure that continuations (await WaitAsync()) won't happen as part of a call to TrySetResult
-            // http://blogs.msdn.com/b/pfxteam/archive/2012/02/11/10266920.aspx
-
             var currentTcs = tcs;
-
-            Task.Factory.StartNew(s => ((TaskCompletionSource<bool>)s).TrySetResult(true),
-                currentTcs, CancellationToken.None, TaskCreationOptions.PreferFairness | TaskCreationOptions.RunContinuationsAsynchronously, TaskScheduler.Default);
-
-            currentTcs.Task.Wait();
+            currentTcs.TrySetResult(true);
         }
 
         public void SetInAsyncMannerFireAndForget()

@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Server.Documents;
@@ -12,7 +11,6 @@ using Voron.Data;
 using Voron.Data.RawData;
 using Voron.Data.Tables;
 using Voron.Global;
-using Voron.Impl;
 using Voron.Impl.Paging;
 
 namespace Voron.Recovery
@@ -24,14 +22,13 @@ namespace Voron.Recovery
             _datafile = config.PathToDataFile;
             _output = config.OutputFileName;
             _pageSize = config.PageSizeInKb*Constants.Size.Kilobyte;
-            _numberOfFieldsInDocumentTable = config.NumberOfFiledsInDocumentTable;
+            _numberOfFieldsInDocumentTable = config.NumberOfFieldsInDocumentTable;
             _initialContextSize = config.InitialContextSizeInMB * Constants.Size.Megabyte;
             _initialContextLongLivedSize = config.InitialContextLongLivedSizeInKB*Constants.Size.Kilobyte;
             _option = StorageEnvironmentOptions.ForPath(config.DataFileDirectory);
             _copyOnWrite = !config.DisableCopyOnWriteMode;
             // by default CopyOnWriteMode will be true
-            //i'm setting CopyOnWriteMode this was because we want to keep it internal.
-            _option.GetType().GetProperty("CopyOnWriteMode", BindingFlags.NonPublic|BindingFlags.Instance).SetValue(_option, _copyOnWrite);
+            _option.CopyOnWriteMode = _copyOnWrite;
             _progressIntervalInSeconds = config.ProgressIntervalInSeconds;
         }
 
@@ -253,7 +250,7 @@ namespace Voron.Recovery
                 {
                     var message =
                         $"Failed to read document at position {GetFilePosition(startOffest,mem)} because the TableValueReader number of entries" +
-                        $" doesn't match NumberOfFiledsInDocumentTable expected={_numberOfFieldsInDocumentTable} actual={tvr.Count}";
+                        $" doesn't match {nameof(VoronRecoveryConfiguration.NumberOfFieldsInDocumentTable)} expected={_numberOfFieldsInDocumentTable} actual={tvr.Count}";
                     //we actually not advancing the memory here because we might write a small data section entry
                     //here i don't issue an error because we do have rawdatasections that are used for other things than documents so i'll assume 
                     //this is the case, anyway i'll log this in the log file incase it is a problem.

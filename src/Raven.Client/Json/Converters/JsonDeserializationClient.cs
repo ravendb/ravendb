@@ -35,7 +35,9 @@ namespace Raven.Client.Json.Converters
 
         public static readonly Func<BlittableJsonReaderObject, PutResult> PutResult = GenerateJsonDeserializationRoutine<PutResult>();
 
-        public static readonly Func<BlittableJsonReaderObject, AttachmentResult> AttachmentResult = GenerateJsonDeserializationRoutine<AttachmentResult>();
+        public static readonly Func<BlittableJsonReaderObject, AttachmentDetails> AttachmentDetails = GenerateJsonDeserializationRoutine<AttachmentDetails>();
+
+        public static readonly Func<BlittableJsonReaderObject, AttachmentName> AttachmentName = GenerateJsonDeserializationRoutine<AttachmentName>();
 
         public static readonly Func<BlittableJsonReaderObject, QueryResult> QueryResult = GenerateJsonDeserializationRoutine<QueryResult>();
 
@@ -55,7 +57,7 @@ namespace Raven.Client.Json.Converters
 
         public static readonly Func<BlittableJsonReaderObject, CreateDatabaseResult> CreateDatabaseResult = GenerateJsonDeserializationRoutine<CreateDatabaseResult>();
 
-        public static readonly Func<BlittableJsonReaderObject, ModifyExternalReplicationResult> ModifyExternalReplicationResult = GenerateJsonDeserializationRoutine<ModifyExternalReplicationResult>();
+        public static readonly Func<BlittableJsonReaderObject, ModifyOngoingTaskResult> ModifyOngoingTaskResult = GenerateJsonDeserializationRoutine<ModifyOngoingTaskResult>();
 
         public static readonly Func<BlittableJsonReaderObject, GetTaskInfoResult> GetTaskInfoResult = GenerateJsonDeserializationRoutine<GetTaskInfoResult>();
 
@@ -133,10 +135,6 @@ namespace Raven.Client.Json.Converters
 
         internal static readonly Func<BlittableJsonReaderObject, UpdateEtlOperationResult> UpdateEtlOperationResult = GenerateJsonDeserializationRoutine<UpdateEtlOperationResult>();
 
-        internal static readonly Func<BlittableJsonReaderObject, DeleteEtlOperationResult> DeleteEtlOperationResult = GenerateJsonDeserializationRoutine<DeleteEtlOperationResult>();
-
         internal static readonly Func<BlittableJsonReaderObject, EtlProcessState> EtlProcessState = GenerateJsonDeserializationRoutine<EtlProcessState>();
-
-        internal static readonly Func<BlittableJsonReaderObject, ToggleEtlStateOperationResult> ToggleEtlStateOperationResult = GenerateJsonDeserializationRoutine<ToggleEtlStateOperationResult>();
     }
 }

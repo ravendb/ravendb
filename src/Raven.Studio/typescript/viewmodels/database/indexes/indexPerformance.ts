@@ -93,9 +93,18 @@ class hitTest {
             const item = items[i];
 
             if (item.actionType === "toggleIndex") {
-                 this.onToggleIndex(item.arg as string);
+                this.onToggleIndex(item.arg as string);
+                return;
             } 
         }
+    }
+
+    onMouseDown() {
+        this.cursor(graphHelper.prefixStyle("grabbing"));
+    }
+
+    onMouseUp() {
+        this.cursor(graphHelper.prefixStyle("grab"));
     }
 
     onMouseMove() {
@@ -103,21 +112,21 @@ class hitTest {
         const items = this.findItems(clickLocation[0], clickLocation[1]);
 
         const overToggleIndex = items.filter(x => x.actionType === "toggleIndex").length > 0;
-        this.cursor(overToggleIndex ? "pointer" : "auto");
 
         const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as Raven.Client.Documents.Indexes.IndexingPerformanceOperation)[0];
         if (currentItem) {
             this.handleTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);
-        }
-        else {
+            this.cursor("auto");
+        } else {
             const currentGapItem = items.filter(x => x.actionType === "gapItem").map(x => x.arg as timeGapInfo)[0];
             if (currentGapItem) {
                 this.handleGapTooltip(currentGapItem, clickLocation[0], clickLocation[1]);
-            }
-            else {
+                this.cursor("auto");
+            } else {
+                this.cursor(overToggleIndex ? "pointer" : graphHelper.prefixStyle("grab"));
                 this.removeTooltip();
             }
-        }        
+        }
     }
 
     private findItems(x: number, y: number): Array<rTreeLeaf> {
@@ -375,14 +384,12 @@ class indexPerformance extends viewModelBase {
     }
 
     private setupEvents(selection: d3.Selection<any>) {
-        let mousePressed = false;
-
         const onMove = () => {
             this.hitTest.onMouseMove();
         }
 
         this.hitTest.cursor.subscribe((cursor) => {
-            selection.style("cursor", cursor);
+            selection.style('cursor', cursor);
         });
 
         selection.on("mousemove.tip", onMove);
@@ -390,17 +397,16 @@ class indexPerformance extends viewModelBase {
         selection.on("click", () => this.hitTest.onClick());
 
         selection
-            .on("mousedown.tip", () => selection.on("mousemove.tip", null))
-            .on("mouseup.tip", () => selection.on("mousemove.tip", onMove));
-
-        selection
-            .on("mousedown.live", () => {
+            .on("mousedown.hit", () => {
+                this.hitTest.onMouseDown();
+                selection.on("mousemove.tip", null);
                 if (this.liveViewClient()) {
                     this.liveViewClient().pauseUpdates();
                 }
-            });
-        selection
-            .on("mouseup.live", () => {
+            })
+            .on("mouseup.hit", () => {
+                this.hitTest.onMouseUp();
+                selection.on("mousemove.tip", onMove);
                 if (this.liveViewClient()) {
                     this.liveViewClient().resumeUpdates();
                 }
@@ -646,8 +652,8 @@ class indexPerformance extends viewModelBase {
 
     private constructYScale() {
         let currentOffset = indexPerformance.axisHeight - this.currentYOffset;
-        let domain = [] as Array<string>;
-        let range = [] as Array<number>;
+        const domain = [] as Array<string>;
+        const range = [] as Array<number>;
 
         const indexesInfo = this.filteredIndexNames();
 
@@ -680,7 +686,7 @@ class indexPerformance extends viewModelBase {
 
         const availableHeightForTracks = this.totalHeight - indexPerformance.brushSectionHeight;
 
-        const extraBottomMargin = 100;
+        const extraBottomMargin = 10;
 
         this.maxYOffset = Math.max(offset + extraBottomMargin - availableHeightForTracks, 0);
     }
@@ -815,6 +821,13 @@ class indexPerformance extends viewModelBase {
                 this.drawTracks(context, xScale, visibleTimeFrame);
                 this.drawIndexNames(context);
                 this.drawGaps(context, xScale);
+
+                graphHelper.drawScroll(context,
+                    { left: this.totalWidth, top: indexPerformance.axisHeight },
+                    this.currentYOffset,
+                    this.totalHeight - indexPerformance.brushSectionHeight - indexPerformance.axisHeight,
+                    this.maxYOffset ? this.maxYOffset + this.totalHeight - indexPerformance.brushSectionHeight - indexPerformance.axisHeight: 0);
+
             } finally {
                 context.restore();
             }
@@ -1218,10 +1231,10 @@ class indexPerformance extends viewModelBase {
     }
 
     exportAsJson() {  
-        let exportFileName;
+        let exportFileName: string;
 
-        if (this.isImport()) {           
-            exportFileName = this.importFileName().substring(0, this.importFileName().lastIndexOf('.'));                    
+        if (this.isImport()) {
+            exportFileName = this.importFileName().substring(0, this.importFileName().lastIndexOf('.'));
         } else {
             exportFileName = `indexPerf of ${this.activeDatabase().name} ${moment().format("YYYY-MM-DD HH-mm")}`; 
         }

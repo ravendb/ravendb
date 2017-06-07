@@ -356,9 +356,9 @@ namespace Raven.Server.Smuggler.Documents
 
                 foreach (BlittableJsonReaderObject attachment in attachments)
                 {
-                    if (attachment.TryGet(nameof(AttachmentResult.Name), out LazyStringValue name) == false || 
-                        attachment.TryGet(nameof(AttachmentResult.ContentType), out LazyStringValue contentType) == false || 
-                        attachment.TryGet(nameof(AttachmentResult.Hash), out LazyStringValue hash) == false)
+                    if (attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false || 
+                        attachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue contentType) == false || 
+                        attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false)
                         throw new ArgumentException($"The attachment info in missing a mandatory value: {attachment}");
 
                     var type = (document.Flags & DocumentFlags.Revision) == DocumentFlags.Revision ? AttachmentType.Revision : AttachmentType.Document;

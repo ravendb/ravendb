@@ -4,6 +4,7 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
+import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
@@ -27,16 +28,18 @@ class documentBasedColumnsProvider {
     showRowSelectionCheckbox: boolean;
     private readonly collectionNames: string[];
     private readonly db: database;
+    private readonly gridController: virtualGridController<document>;
     private readonly enableInlinePreview: boolean;
     private readonly createHyperlinks: boolean;
     private readonly showSelectAllCheckbox: boolean;
 
     private static readonly externalIdRegex = /^\w+\/\w+/ig;
 
-    constructor(db: database, collectionNames: string[], opts: documentBasedColumnsProviderOpts) {
+    constructor(db: database, gridController: virtualGridController<document>, collectionNames: string[], opts: documentBasedColumnsProviderOpts) {
         this.showRowSelectionCheckbox = _.isBoolean(opts.showRowSelectionCheckbox) ? opts.showRowSelectionCheckbox : false;
         this.collectionNames = collectionNames;
         this.db = db;
+        this.gridController = gridController;
         this.enableInlinePreview = _.isBoolean(opts.enableInlinePreview) ? opts.enableInlinePreview : false;
         this.showSelectAllCheckbox = _.isBoolean(opts.showSelectAllCheckbox) ? opts.showSelectAllCheckbox : false;
         this.createHyperlinks = _.isBoolean(opts.createHyperlinks) ? opts.createHyperlinks : true;
@@ -53,7 +56,7 @@ class documentBasedColumnsProvider {
         }
 
         if (this.enableInlinePreview) {
-            const previewColumn = new actionColumn<document>((doc: document) => this.showPreview(doc), "Preview", `<i class="icon-preview"></i>`, "70px",
+            const previewColumn = new actionColumn<document>(this.gridController, (doc: document) => this.showPreview(doc), "Preview", `<i class="icon-preview"></i>`, "70px",
             {
                 title: () => 'Show item preview'
             });
@@ -68,15 +71,15 @@ class documentBasedColumnsProvider {
         return initialColumns.concat(columnNames.map(p => {
             if (this.createHyperlinks) {
                 if (p === "__metadata") {
-                    return new hyperlinkColumn((x: document) => x.getId(), x => appUrl.forEditDoc(x.getId(), this.db, x.__metadata.collection), "Id", columnWidth);
+                    return new hyperlinkColumn(this.gridController, (x: document) => x.getId(), x => appUrl.forEditDoc(x.getId(), this.db, x.__metadata.collection), "Id", columnWidth);
                 }
 
-                return new hyperlinkColumn(p, _.partial(this.findLink, _, p).bind(this), p, columnWidth);
+                return new hyperlinkColumn(this.gridController, p, _.partial(this.findLink, _, p).bind(this), p, columnWidth);
             } else {
                 if (p === "__metadata") {
-                    return new textColumn((x: document) => x.getId(), "Id", columnWidth);
+                    return new textColumn(this.gridController, (x: document) => x.getId(), "Id", columnWidth);
                 }
-                return new textColumn(p, p, columnWidth);
+                return new textColumn(this.gridController, p, p, columnWidth);
             }
         }));
     }

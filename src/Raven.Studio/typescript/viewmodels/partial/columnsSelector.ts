@@ -86,14 +86,14 @@ class customColumnForm {
         });
     }
 
-    asColumnItem(): columnItem {
+    asColumnItem(gridController: virtualGridController<any>): columnItem {
         const editedItem = this.editedItem();
         if (editedItem) {
             editedItem.virtualColumn().header = this.header();
             (editedItem.virtualColumn() as customColumn<any>).setJsCode(this.expression());
             return editedItem;
         } else {
-            const newColumn = new customColumn(this.expression(), this.header(), columnsSelector.defaultWidth);
+            const newColumn = new customColumn(gridController, this.expression(), this.header(), columnsSelector.defaultWidth);
             const newColumnItem = new columnItem(newColumn, true);
             newColumnItem.visible(true);
             return newColumnItem;
@@ -207,7 +207,7 @@ class columnsSelector<T> {
 
     addCustomColumn() {
         if (this.customColumnForm.validationGroup.isValid()) {
-            const item = this.customColumnForm.asColumnItem();
+            const item = this.customColumnForm.asColumnItem(this.grid);
 
             if (!_.includes(this.columnLayout(), item)) {
                 this.columnLayout.push(item);
@@ -281,7 +281,7 @@ class columnsSelector<T> {
 
             const existingColumn = this.columnLayout().find(x => x.virtualColumn().header === name);
             if (!existingColumn) {
-                const virtColumn = new textColumn(name, name, columnsSelector.defaultWidth);
+                const virtColumn = new textColumn(this.grid, name, name, columnsSelector.defaultWidth);
                 this.columnLayout.push(new columnItem(virtColumn, false));
             }
         }

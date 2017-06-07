@@ -209,7 +209,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        protected static async Task<ModifyExternalReplicationResult> AddWatcherToReplicationTopology(
+        protected static async Task<ModifyOngoingTaskResult> AddWatcherToReplicationTopology(
             DocumentStore store,
             DatabaseWatcher watcher)
         {
@@ -217,11 +217,12 @@ namespace FastTests.Server.Replication
             return await store.Admin.Server.SendAsync(op);
         }
 
-        protected static async Task<ModifyExternalReplicationResult> DeleteWatcherFromReplicationTopology(
+        protected static async Task<ModifyOngoingTaskResult> DeleteOngoingTask(
             DocumentStore store,
-            long taskId)
+            long taskId,
+            OngoingTaskType taskType)
         {
-            var op = new DeleteExternalReplicationOperation(store.Database, taskId);
+            var op = new DeleteOngoingTaskOperation(store.Database, taskId, taskType);
             return await store.Admin.Server.SendAsync(op);
         }
 
@@ -240,11 +241,8 @@ namespace FastTests.Server.Replication
             return await store.Admin.Server.SendAsync(op);
         }
 
-        public DatabaseTopology CurrentDatabaseTopology;
-
         public async Task SetupReplicationAsync(DocumentStore fromStore, params DocumentStore[] toStores)
         {
-            ModifyExternalReplicationResult result = null;
             foreach (var store in toStores)
             {
                 var databaseWatcher = new DatabaseWatcher
@@ -253,9 +251,8 @@ namespace FastTests.Server.Replication
                     Url = store.Urls[0]
                 };
                 ModifyReplicationDestination(databaseWatcher);
-                result = await AddWatcherToReplicationTopology(fromStore, databaseWatcher);
+                await AddWatcherToReplicationTopology(fromStore, databaseWatcher);
             }
-            CurrentDatabaseTopology = result?.Topology;
         }
 
         public static async Task SetScriptResolutionAsync(DocumentStore store, string script, string collection)

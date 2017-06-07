@@ -2,6 +2,7 @@
 
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualRow = require("widgets/virtualGrid/virtualRow");
+import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import utils = require("widgets/virtualGrid/virtualGridUtils");
 
 type actionColumnOpts<T> = {
@@ -13,6 +14,8 @@ type provider<T> = (item: T) => string;
 class actionColumn<T> implements virtualColumn {
     private readonly action: (obj: T, idx: number) => void;
 
+    protected gridController: virtualGridController<T>;
+
     header: string;
     private buttonText: (item: T) => string;
     width: string;
@@ -22,7 +25,8 @@ class actionColumn<T> implements virtualColumn {
 
     actionUniqueId = _.uniqueId("action-");
 
-    constructor(action: (obj: T, idx: number) => void, header: string, buttonText: provider<T> | string, width: string, opts: actionColumnOpts<T> = {}) {
+    constructor(gridController: virtualGridController<T>, action: (obj: T, idx: number) => void, header: string, buttonText: provider<T> | string, width: string, opts: actionColumnOpts<T> = {}) {
+        this.gridController = gridController;
         this.action = action;
         this.header = header;
         this.buttonText = _.isString(buttonText) ? (item: T) => buttonText : buttonText;

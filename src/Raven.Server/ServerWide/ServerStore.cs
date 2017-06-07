@@ -15,10 +15,10 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Server;
 using Raven.Client.Server.ETL;
+using Raven.Client.Server.Operations;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
-using Raven.Server.Documents.ETL;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Rachis;
 using Raven.Server.NotificationCenter.Notifications;
@@ -544,7 +544,7 @@ namespace Raven.Server.ServerWide
 
         public Task<(long Etag, object Result)> ModifyCustomFunctions(string dbName, string customFunctions)
         {
-            var customFunctionsCommand = new ModifyCustomFunctionsCommand(dbName)
+            var customFunctionsCommand = new Commands.ModifyCustomFunctionsCommand(dbName)
             {
                 CustomFunctions = customFunctions
             };
@@ -560,11 +560,18 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(addWatcherCommand);
         }
 
-        public Task<(long Etag, object Result)> DeleteExternalReplication(long taskId, string dbName)
+        public Task<(long Etag, object Result)> DeleteOngoingTask(long taskId, OngoingTaskType taskType, string dbName)
         {
-            var deleteWatcherCommand = new DeleteExternalReplicationCommand(taskId, dbName);
+            var deleteTaskCommand = new DeleteOngoingTaskCommand(taskId, taskType, dbName);
 
-            return SendToLeaderAsync(deleteWatcherCommand);
+            return SendToLeaderAsync(deleteTaskCommand);
+        }
+
+        public Task<(long Etag, object Result)> ToggleTaskState(long taskId, OngoingTaskType type, bool disable, string dbName)
+        {
+            var disableEnableCommand = new ToggleTaskStateCommand(taskId, type, disable, dbName);
+
+            return SendToLeaderAsync(disableEnableCommand);
         }
 
         public Task<(long Etag, object Result)> ModifyConflictSolverAsync(string dbName, ConflictSolver solver)
@@ -602,13 +609,6 @@ namespace Raven.Server.ServerWide
             return await SendToLeaderAsync(modifyPeriodicBackup);
         }
 
-        public Task<(long, object)> DeletePeriodicBackup(TransactionOperationContext context, string name, BlittableJsonReaderObject taskIdJson)
-        {
-            taskIdJson.TryGet("TaskId", out long taskId);
-            var editPeriodicBackup = new DeletePeriodicBackupCommand(taskId, name);
-            return SendToLeaderAsync(editPeriodicBackup);
-        }
-
         public async Task<(long, object)> AddEtl(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject etlConfiguration, EtlType type)
         {
             UpdateDatabaseCommand command;
@@ -643,20 +643,6 @@ namespace Raven.Server.ServerWide
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration destination type: {type}");
             }
-
-            return await SendToLeaderAsync(command);
-        }
-
-        public async Task<(long, object)> DeleteEtl(TransactionOperationContext context, string databaseName, long id, BlittableJsonReaderObject _, EtlType type)
-        {
-            var command = new DeleteEtlCommand(id, type, databaseName);
-
-            return await SendToLeaderAsync(command);
-        }
-
-        public async Task<(long, object)> ToggleEtlState(TransactionOperationContext context, string databaseName, long id, BlittableJsonReaderObject _, EtlType type)
-        {
-            var command = new ToggleEtlStateCommand(id, type, databaseName);
 
             return await SendToLeaderAsync(command);
         }
@@ -883,20 +869,12 @@ namespace Raven.Server.ServerWide
 
             if (result == null)
             {
+                
                 throw new InvalidOperationException(
-                    "Expected to get result from raft command that should generate a cluster-wide identity, but didn't.");
+                    $"Expected to get result from raft command that should generate a cluster-wide identity, but didn't. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
             }
 
             return id + result;
-        }
-
-        public DatabaseRecord LoadDatabaseRecord(string databaseName)
-        {
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                return Cluster.ReadDatabase(context, databaseName);
-            }
         }
 
         public DatabaseRecord LoadDatabaseRecord(string databaseName, out long etag)
@@ -930,10 +908,8 @@ namespace Raven.Server.ServerWide
                 {
                     if (cachedLeaderTag == null)
                     {
-                        var completed = await Task.WhenAny(logChange, TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(10000), ServerShutdown));
-
-                        if (completed != logChange)
-                            throw new NoLeaderException("Could not send command to leader because there is no leader, and we timed out waiting for one");
+                        if (Task.WaitAny(logChange, timeoutTask) != 0)
+                            ThrowTimeoutException();
 
                         continue;
                     }
@@ -944,19 +920,19 @@ namespace Raven.Server.ServerWide
                 {
                     if (Logger.IsInfoEnabled)
                         Logger.Info("Tried to send message to leader, retrying", ex);
-
+                    
                     if (_engine.LeaderTag == cachedLeaderTag)
-                        throw; // if the leader changed, let's try again
+                        throw; // if the leader changed, let's try again                    
                 }
 
-                if (await Task.WhenAny(logChange, timeoutTask) == timeoutTask)
+                if (Task.WaitAny(logChange, timeoutTask) == 1)
                     ThrowTimeoutException();
             }
         }
 
         private static void ThrowTimeoutException()
         {
-            throw new TimeoutException();
+            throw new TimeoutException("Could not send command to leader because there is no leader, and we timed out waiting for one");
         }
 
         private async Task<(long Etag, object Result)> SendToNodeAsync(string engineLeaderTag, CommandBase cmd)
@@ -995,7 +971,6 @@ namespace Raven.Server.ServerWide
             private readonly JsonOperationContext _context;
             private readonly BlittableJsonReaderObject _command;
             public override bool IsReadRequest => false;
-            public long CommandIndex { get; private set; }
 
             public PutRaftCommand(JsonOperationContext context, BlittableJsonReaderObject command)
             {
