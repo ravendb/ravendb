@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
@@ -10,10 +12,17 @@ using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using FastTests.Server.Documents.Notifications;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
+using Raven.Client.Http;
 using Raven.Client.Server.Operations;
+using Raven.Client.Server.Versioning;
+using Raven.Client.Util;
 using Raven.Server.Rachis;
 using Sparrow;
+using Sparrow.Json;
 
 
 namespace RachisTests
@@ -25,7 +34,7 @@ namespace RachisTests
         {
             public int MaxId;
         }
-        private readonly TimeSpan _reasonableWaitTime = TimeSpan.FromSeconds(20);
+        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached?TimeSpan.FromSeconds(60*10): TimeSpan.FromSeconds(20);
 
         [Fact]
         public async Task ContinueFromThePointIStopped()
@@ -145,6 +154,172 @@ namespace RachisTests
                     using (context.OpenReadTransaction())
                     {
                         Assert.Null(ravenServer.ServerStore.Cluster.Read(context, subscriptionId.ToLowerInvariant()));
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task DistributedVersionedSubscription()
+        {
+            const int nodesAmount = 5;
+            var leader = await this.CreateRaftClusterAndGetLeader(nodesAmount);
+            
+
+            var defaultDatabase = "ContinueFromThePointIStopped";
+
+            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrls[0]).ConfigureAwait(false);
+            
+
+            using (var store = new DocumentStore
+            {
+                Urls = leader.WebUrls,
+                Database = defaultDatabase
+            }.Initialize())
+            {
+                await SetupVersioning(store);
+
+                var reachedMaxDocCountMre = new AsyncManualResetEvent();
+                var ackSent = new AsyncManualResetEvent();
+
+                var versionedDocsGenerator = GenerateDistributedVersionedData(defaultDatabase);
+
+                var subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCreationOptions<Versioned<User>>());
+
+                var subscription = store.AsyncSubscriptions.Open<Versioned<User>>(new SubscriptionConnectionOptions(subscriptionId)
+                {
+                    MaxDocsPerBatch = 1
+                });
+
+                
+                var docsCount = 0;
+                var versionsCount = 0;
+                var expectedVersionsCount = 0;
+
+                subscription.AfterAcknowledgment += () =>
+                {
+                    if (versionsCount == expectedVersionsCount)
+                        ackSent.Set();
+                };
+
+
+
+                subscription.Subscribe(x =>
+                {
+                    if (x.Previous == null)
+                    {
+                        docsCount++;
+                        versionsCount++;
+                    }
+                    else
+                    {
+                        if (x.Current.Age > x.Previous.Age)
+                        {
+                            versionsCount++;
+                        }
+                    }
+
+                    if (docsCount == 5 && versionsCount == 25)
+                        reachedMaxDocCountMre.Set();
+                });
+
+                Assert.True(await subscription.StartAsync().WaitAsync(_reasonableWaitTime));
+
+                expectedVersionsCount = 7;
+                versionedDocsGenerator.Take(7);
+
+                Assert.True(await ackSent.WaitAsync(_reasonableWaitTime));
+                ackSent.Reset();
+                
+                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId);
+                expectedVersionsCount = 14;
+                versionedDocsGenerator.Take(7);
+                Assert.True(await ackSent.WaitAsync(_reasonableWaitTime));
+                ackSent.Reset();
+
+                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId);
+
+                versionedDocsGenerator.Take(11);
+
+                Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime));
+              
+            }
+        }
+
+        private async Task SetupVersioning(IDocumentStore store)
+        {
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var versioningDoc = new VersioningConfiguration
+                {
+                    Default = new VersioningConfigurationCollection
+                    {
+                        Active = true,
+                        MaxRevisions = 10,
+                    },
+                    Collections = new Dictionary<string, VersioningConfigurationCollection>
+                    {
+                        ["Users"] = new VersioningConfigurationCollection
+                        {
+                            Active = true,
+                            MaxRevisions = 10
+                        }
+                    }
+                };
+
+                await Server.ServerStore.ModifyDatabaseVersioning(context,
+                    store.Database,
+                    EntityToBlittable.ConvertEntityToBlittable(versioningDoc,
+                        new DocumentConventions(),
+                        context));
+            }
+        }
+
+        private  IEnumerable<bool> GenerateDistributedVersionedData(string defaultDatabase)
+        {
+            var rnd = new Random(1);
+            for (var index = 0; index < Servers.Count; index++)
+            {
+                var ravenServer = Servers[index];
+                using (var nodeStore = new DocumentStore
+                {
+                    Urls = ravenServer.WebUrls,
+                    Database = defaultDatabase,
+                })
+                {
+                    var requestExecutor = nodeStore.GetRequestExecutor();
+                    AsyncHelpers.RunSync(()=>
+                        requestExecutor.UpdateTopologyAsync(new ServerNode
+                        {
+                            Url = nodeStore.Urls[0],
+                            Database = defaultDatabase,
+                        }, Timeout.Infinite));
+
+                    var curVersion = 0;
+
+                    foreach (var topologyNode in requestExecutor.TopologyNodes.OrderBy(x => rnd.Next()))
+                    {
+                        var curDocName = $"user {index} version {curVersion}";
+
+                        using (var context = JsonOperationContext.ShortTermSingleUse())
+                        {
+                            var putDocumentCommand = new PutDocumentCommand($"users/{index}",
+                                null,
+                                EntityToBlittable.ConvertEntityToBlittable(new User
+                                {
+                                    Name = curDocName,
+                                    Age = curVersion,
+                                    Id = $"users/{index}"
+                                }, DocumentConventions.Default, context),
+                                context);
+
+                            AsyncHelpers.RunSync(() => requestExecutor.ExecuteAsync(topologyNode, context, putDocumentCommand));
+                        }
+
+                        AsyncHelpers.RunSync(() => WaitForDocumentInClusterAsync<User>(requestExecutor.TopologyNodes, "users/" + index, x => x.Name == curDocName, _reasonableWaitTime));
+                        curVersion++;
+
+                        yield return true;
                     }
                 }
             }
