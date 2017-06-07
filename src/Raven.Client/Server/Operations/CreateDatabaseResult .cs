@@ -19,9 +19,9 @@ namespace Raven.Client.Server.Operations
         public string Key { get; set; }
 
         /// <summary>
-        /// Etag of the database after PUT operation.
+        /// The Raft Command Index that was executed 
         /// </summary>
-        public long ETag { get; set; }
+        public long ETag { get; set; } // Todo: Change 'Etag' property to: 'RaftCommandIndex' ! (see issue: 7393)
 
         public DatabaseTopology Topology { get; set; }
 
@@ -30,7 +30,11 @@ namespace Raven.Client.Server.Operations
 
     public class DatabasePutResult
     {
-        public long ETag { get; set; }
+        /// <summary>
+        /// The Raft Command Index that was executed 
+        /// </summary>
+        public long ETag { get; set; } 
+
         public string Key { get; set; }
         public DatabaseTopology Topology { get; set; }
         public List<string> NodesAddedTo { get; set; }

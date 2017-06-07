@@ -44,8 +44,8 @@ namespace Raven.Client.Server.Operations
         public List<string> BackupDestinations { get; set; }
     }
 
-    public class ModifyOngoingTaskResult
-    {
+    public class ModifyOngoingTaskResult { 
         public long TaskId { get; set; }
+        public long RaftCommandIndex;
     }
 }

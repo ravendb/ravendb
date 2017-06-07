@@ -25,7 +25,7 @@ class saveExternalReplicationTaskCommand extends commandBase {
                 if (this.taskId === 0) {
                     this.reportError("Failed to create replication task for: " + this.replicationSettings.DestinationDB, response.responseText, response.statusText);
                 } else {
-                    this.reportError("Failed to save replication task");
+                    this.reportError("Failed to save replication task", response.responseText, response.statusText);
                 }
             })
             .done(() => {

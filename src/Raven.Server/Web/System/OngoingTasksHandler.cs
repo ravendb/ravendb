@@ -393,10 +393,23 @@ namespace Raven.Server.Web.System
             if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
                 throw new ArgumentException($"Unknown task type: {type}", "type");
 
-            var (index, _) = await ServerStore.ToggleTaskState(key.Value, type, disable.Value, dbName);
-            await ServerStore.Cluster.WaitForIndexNotification(index);
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var (index, _) = await ServerStore.ToggleTaskState(key.Value, type, disable.Value, dbName);
+                await ServerStore.Cluster.WaitForIndexNotification(index);
+                
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK; 
 
-            NoContentStatus();
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(ModifyOngoingTaskResult.TaskId)] = key,
+                        [nameof(ModifyOngoingTaskResult.RaftCommandIndex)] = index
+                    });
+                    writer.Flush();
+                }
+            }
         }
 
         [RavenAction("/admin/external-replication/update", "POST", "/admin/external-replication/update?name={databaseName:string}")]
@@ -425,7 +438,8 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(OngoingTask.TaskId)] = watcher.TaskId == 0 ? index : watcher.TaskId
+                        [nameof(ModifyOngoingTaskResult.TaskId)] = watcher.TaskId == 0 ? index : watcher.TaskId, 
+                        [nameof(ModifyOngoingTaskResult.RaftCommandIndex)] = index 
                     });
                     writer.Flush();
                 }
@@ -457,8 +471,8 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(DatabasePutResult.ETag)] = index,
-                        [nameof(DatabasePutResult.Key)] = dbName
+                        [nameof(ModifyOngoingTaskResult.TaskId)] = id,
+                        [nameof(ModifyOngoingTaskResult.RaftCommandIndex)] = index
                     });
                     writer.Flush();
                 }
