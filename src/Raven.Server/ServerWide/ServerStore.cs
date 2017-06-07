@@ -876,15 +876,6 @@ namespace Raven.Server.ServerWide
             return id + result;
         }
 
-        public DatabaseRecord LoadDatabaseRecord(string databaseName)
-        {
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                return Cluster.ReadDatabase(context, databaseName);
-            }
-        }
-
         public DatabaseRecord LoadDatabaseRecord(string databaseName, out long etag)
         {
             TransactionOperationContext context;

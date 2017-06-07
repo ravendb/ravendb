@@ -45,12 +45,10 @@ namespace Raven.Server.Documents.Transformers
             _indexAndTransformerLocker = indexAndTransformerLocker;
         }
 
-        public void HandleDatabaseRecordChange()
+        public void HandleDatabaseRecordChange(DatabaseRecord record)
         {
             try
             {
-                var record = _serverStore.LoadDatabaseRecord(_documentDatabase.Name);
-
                 if (record == null)
                     return;
 

@@ -9,7 +9,6 @@ using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 
@@ -45,16 +44,19 @@ namespace Raven.Server.Documents.ETL
 
         public List<EtlConfiguration<SqlDestination>> SqlDestinations;
 
-        public void Initialize()
+        public void Initialize(DatabaseRecord dbRecord)
         {
-            LoadProcesses();
+            LoadProcesses(dbRecord);
         }
         
-        private void LoadProcesses()
+        private void LoadProcesses(DatabaseRecord dbRecord)
         {
             lock (_loadProcessedLock)
             {
-                LoadConfiguration();
+                _databaseRecord = dbRecord;
+
+                RavenDestinations = _databaseRecord.RavenEtls;
+                SqlDestinations = _databaseRecord.SqlEtls;
 
                 var processes = new List<EtlProcess>();
 
@@ -128,9 +130,8 @@ namespace Raven.Server.Documents.ETL
                 LogConfigurationError(config, errors);
                 return false;
             }
-
-            var databaseRecord = _database.ServerStore.LoadDatabaseRecord(_database.Name);
-            if (databaseRecord == null)
+            
+            if (_databaseRecord == null)
             {
                 LogConfigurationError(config,
                     new List<string>
@@ -139,7 +140,7 @@ namespace Raven.Server.Documents.ETL
                     });
                 return false;
             }
-            if (databaseRecord.Encrypted && config.Destination.UsingEncryptedCommunicationChannel() == false)
+            if (_databaseRecord.Encrypted && config.Destination.UsingEncryptedCommunicationChannel() == false)
             {
                 LogConfigurationError(config,
                     new List<string>
@@ -175,19 +176,6 @@ namespace Raven.Server.Documents.ETL
             _database.NotificationCenter.Add(alert);
         }
 
-        private void LoadConfiguration()
-        {
-            _databaseRecord = _serverStore.LoadDatabaseRecord(_database.Name);
-
-            if (_databaseRecord == null)
-                return;
-
-            RavenDestinations = _databaseRecord.RavenEtls;
-            SqlDestinations = _databaseRecord.SqlEtls;
-
-            // TODO arek remove destinations which has been removed or modified - EtlStorage.Remove
-        }
-
         private void NotifyAboutWork(DocumentChange documentChange)
         {
             // ReSharper disable once ForCanBeConvertedToForeach
@@ -208,8 +196,11 @@ namespace Raven.Server.Documents.ETL
             ea.ThrowIfNeeded();
         }
 
-        public void HandleDatabaseRecordChange()
+        public void HandleDatabaseRecordChange(DatabaseRecord dbRecord)
         {
+            if (dbRecord == null)
+                return;
+
             var old = _processes;
 
             Parallel.ForEach(old, x =>
@@ -227,7 +218,7 @@ namespace Raven.Server.Documents.ETL
 
             _processes = new EtlProcess[0];
 
-            LoadProcesses();
+            LoadProcesses(dbRecord);
 
             // unsubscribe old etls _after_ we start new processes to ensure the tombstone cleaner 
             // constantly keeps track of tombstones processed by ETLs so it won't delete them during etl processes reloading

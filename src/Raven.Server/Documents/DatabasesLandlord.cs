@@ -63,7 +63,7 @@ namespace Raven.Server.Documents
                 // response to changed database.
                 // if disabled, unload
 
-                var record = _serverStore.LoadDatabaseRecord(t.dbName);
+                var record = _serverStore.LoadDatabaseRecord(t.dbName, out long _);
                 if (record == null)
                 {
                     // was removed, need to make sure that it isn't loaded 
