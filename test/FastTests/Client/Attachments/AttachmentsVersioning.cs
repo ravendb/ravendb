@@ -197,6 +197,9 @@ namespace FastTests.Client.Attachments
             for (var i = 0; i < names.Length; i++)
             {
                 var name = names[i];
+                if (orderedNames.Contains(name) == false)
+                    continue;
+
                 using (var attachmentStream = new MemoryStream(readBuffer))
                 using (var stream = session.Advanced.GetRevisionAttachment("users/1", name, changeVector, out AttachmentDetails attachment))
                 {

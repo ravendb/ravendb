@@ -21,9 +21,13 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new AttachmentFailover())
+                //using (var a = new FastTests.Client.Attachments.AttachmentsReplication())
+                //{
+                //    a.AttachmentsVersioningReplication().Wait();
+                //}
+                using (var b = new FastTests.Client.Attachments.AttachmentsVersioning())
                 {
-                    a.PutAttachmentsWithFailover(false, 512 * 1024, "BfKA8g/BJuHOTHYJ+A6sOt9jmFSVEDzCM3EcLLKCRMU=").Wait();
+                    b.PutAttachments().Wait();
                 }
             }
         }

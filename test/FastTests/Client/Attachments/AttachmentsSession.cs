@@ -411,7 +411,7 @@ namespace FastTests.Client.Attachments
                     Assert.Null(user2);
                     // ReSharper disable once ExpressionIsAlwaysNull
                     var attachments2 = session.Advanced.GetAttachmentNames(user2);
-                    Assert.Null(attachments2);
+                    Assert.Empty(attachments2);
                 }
             }
         }
