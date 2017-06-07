@@ -521,7 +521,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private IEnumerable<Document> GetVerionTuplesToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch,
             Stopwatch sendingCurrentBatchStopwatch, VersioningStorage revisions)
         {
-            foreach (var versionedDocs in revisions.GetRevisionsFrom(docsContext, new CollectionName(subscription.Criteria.Collection), startEtag + 1))
+            foreach (var versionedDocs in revisions.GetRevisionsFrom(docsContext, new CollectionName(subscription.Criteria.Collection), startEtag + 1, _options.MaxDocsPerBatch))
             {
                 var item = (versionedDocs.current ?? versionedDocs.previous);
                 Debug.Assert(item != null);

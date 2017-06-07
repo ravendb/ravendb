@@ -423,13 +423,15 @@ namespace Raven.Server.Documents.Versioning
             }
         }
         
-        public IEnumerable<(Document previous, Document current)> GetRevisionsFrom(DocumentsOperationContext context, CollectionName collectionName, long etag)
+        public IEnumerable<(Document previous, Document current)> GetRevisionsFrom(DocumentsOperationContext context, CollectionName collectionName, long etag, int take)
         {
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
             var docsSchemaIndex = DocsSchema.Indexes[IdAndEtagSlice];
             
             foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], etag, 0))
             {
+                if (take-- <= 0)
+                    break;
                 var current = TableValueToRevision(context, ref tvr.Reader);
 
                 using (docsSchemaIndex.GetSlice(context.Allocator, ref tvr.Reader, out var idAndetag))
