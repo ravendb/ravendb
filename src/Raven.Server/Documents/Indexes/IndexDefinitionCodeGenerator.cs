@@ -1,13 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Org.BouncyCastle.Pkix;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
+using Raven.Server.Extensions;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace Raven.Server.Documents.Indexes
@@ -17,10 +21,11 @@ namespace Raven.Server.Documents.Indexes
     {
         private readonly IndexDefinition _indexDefinition;
         private const string IndexName = "IndexName";
+        private const string CreateIndexDefinition = "CreateIndexDefinition";
 
         private static readonly UsingDirectiveSyntax[] Usings =
         {
-            UsingDirective(IdentifierName("System")),
+            UsingDirective(IdentifierName(Identifier("System"))),
             UsingDirective(IdentifierName("System.Collections")),
             UsingDirective(IdentifierName("System.Collections.Generic")),
             UsingDirective(IdentifierName("System.Text.RegularExpressions")),
@@ -41,45 +46,211 @@ namespace Raven.Server.Documents.Indexes
 
         private static string GetText(string indexName, IndexDefinition indexDefinition)
         {
-            StringBuilder sb = new StringBuilder();
             var usings = RoslynHelper.CreateUsings(Usings);
 
-                // Create a IndexName get property
+            // Create a IndexName get property
             PropertyDeclarationSyntax indexNameProperty =
-                PropertyDeclaration(ParseTypeName("string"), Identifier(IndexName))
-                .AddModifiers(Token(SyntaxKind.PublicKeyword), Token(SyntaxKind.OverrideKeyword))
-                .AddAccessorListAccessors(
-                    AccessorDeclaration(SyntaxKind.GetAccessorDeclaration, Block(
-                        List(new[] { ReturnStatement(IdentifierName($"\"{indexName}\"")) }
-                        ))));
+                PropertyDeclaration(PredefinedType(Token(TriviaList(), SyntaxKind.StringKeyword, TriviaList(Space))),
+                        Identifier(TriviaList(), IndexName, TriviaList(Space)))
+                    .WithModifiers(TokenList(Token(TriviaList(Tab), SyntaxKind.PublicKeyword, TriviaList(Space)),
+                        Token(TriviaList(), SyntaxKind.OverrideKeyword, TriviaList(Space))))
+                    .WithExpressionBody(ArrowExpressionClause(
+                            LiteralExpression(SyntaxKind.StringLiteralExpression,
+                                SyntaxFactory.Literal($"{indexName}")))
+                        .WithArrowToken(Token(TriviaList(), SyntaxKind.EqualsGreaterThanToken, TriviaList(Space))))
+                    .WithSemicolonToken(Token(TriviaList(), SyntaxKind.SemicolonToken, TriviaList(LineFeed, LineFeed)));
 
-            var maps = indexDefinition.Maps.ToList();
-            var safeName = GetCSharpSafeName(indexName);
-            var nl = Environment.NewLine;
+            MethodDeclarationSyntax createIndexDefinition =
+                MethodDeclaration(IdentifierName(Identifier(TriviaList(), "IndexDefinition", TriviaList(Space))),
+                        Identifier(CreateIndexDefinition))
+                    .WithModifiers(TokenList(Token(TriviaList(Tab), SyntaxKind.PublicKeyword, TriviaList(Space)),
+                        Token(TriviaList(), SyntaxKind.OverrideKeyword, TriviaList(Space))))
+                    .WithParameterList(ParameterList().WithCloseParenToken(Token(TriviaList(), SyntaxKind.CloseParenToken, TriviaList(LineFeed))))
+                    .WithBody(Block(
+                        SingletonList<StatementSyntax>(ReturnStatement(
+                                ObjectCreationExpression(IdentifierName(Identifier(TriviaList(), "IndexDefinition", TriviaList(LineFeed))))
+                                    .WithNewKeyword(Token(TriviaList(), SyntaxKind.NewKeyword, TriviaList(Space)))
+                                    .WithInitializer(InitializerExpression(SyntaxKind.ObjectInitializerExpression,
+                                            SeparatedList<ExpressionSyntax>(ParsingIndexDefinitionFields(indexDefinition)))
+                                        .WithOpenBraceToken(Token(TriviaList(Tab, Tab), SyntaxKind.OpenBraceToken, TriviaList(LineFeed)))
+                                        .WithCloseBraceToken(Token(TriviaList(LineFeed, Tab, Tab), SyntaxKind.CloseBraceToken, TriviaList()))))
+                            .WithReturnKeyword(Token(TriviaList(Tab, Tab), SyntaxKind.ReturnKeyword, TriviaList(Space)))
+                            .WithSemicolonToken(Token(TriviaList(), SyntaxKind.SemicolonToken, TriviaList(LineFeed)))))
+                            .WithOpenBraceToken(Token(TriviaList(Tab), SyntaxKind.OpenBraceToken, TriviaList(LineFeed)))
+                            .WithCloseBraceToken(Token(TriviaList(Tab), SyntaxKind.CloseBraceToken, TriviaList(LineFeed))));
 
-            usings.ForEach(item => sb.Append($"{item.NormalizeWhitespace()}{nl}"));
-            sb.Append($"{nl}public class {safeName} : AbstractIndexCreationTask{nl}{{{nl}");
-            sb.Append($"{indexNameProperty.NormalizeWhitespace()}{nl}{nl}");
-            sb.Append($"public override IndexDefinition CreateIndexDefinition(){nl}{{{nl}");
-            sb.Append($"return new IndexDefinition{nl}{{{nl}");
-            sb.Append($"Maps = {{@");
-            var mapsWrite = 0;
-            foreach (var map in maps)
-            {
-                sb.Append($"\"{map}\"");
-                mapsWrite++;
-                if (mapsWrite != maps.Count)
-                    sb.Append($",{nl}");
-            }
-            sb.Append($"}},{nl}");
+
+            ClassDeclarationSyntax c = ClassDeclaration(Identifier(TriviaList(), GetCSharpSafeName(indexName), TriviaList(Space)))
+                .AddModifiers(Token(TriviaList(LineFeed, LineFeed), SyntaxKind.PublicKeyword, TriviaList(Space)))
+                .WithKeyword(Token(TriviaList(), SyntaxKind.ClassKeyword, TriviaList(Space)))
+                .AddBaseListTypes(SimpleBaseType(IdentifierName(Identifier(TriviaList(), "AbstractIndexCreationTask", TriviaList(LineFeed)))))
+                .WithOpenBraceToken(Token(TriviaList(), SyntaxKind.OpenBraceToken, TriviaList(LineFeed)))
+                .WithMembers(List(new List<MemberDeclarationSyntax> { indexNameProperty, createIndexDefinition }));
+
+            CompilationUnitSyntax cu = CompilationUnit()
+                .WithUsings(usings)
+                .NormalizeWhitespace()
+                .AddMembers(c);
+
+            return cu.ToFullString();
+        }
+
+        private static IEnumerable<SyntaxNodeOrToken> ParsingIndexDefinitionFields(IndexDefinition indexDefinition)
+        {
+            var SyntaxNodeOrToken = new List<SyntaxNodeOrToken>();
+
+            var maps = AssignmentExpression(SyntaxKind.SimpleAssignmentExpression,
+                IdentifierName(Identifier(TriviaList(Tab, Tab, Tab), "Maps", TriviaList(Space))),
+                InitializerExpression(SyntaxKind.CollectionInitializerExpression,
+                        SeparatedList<ExpressionSyntax>(ParsingIndexDefinitionMapsToRoslyn(indexDefinition.Maps)))
+                    .WithOpenBraceToken(Token(TriviaList(Tab, Tab, Tab), SyntaxKind.OpenBraceToken, TriviaList(LineFeed)))
+                    .WithCloseBraceToken(Token(TriviaList(LineFeed, Tab, Tab, Tab), SyntaxKind.CloseBraceToken, TriviaList())))
+                    .WithOperatorToken(Token(TriviaList(), SyntaxKind.EqualsToken, TriviaList(LineFeed)));
+
+            if (maps != null)
+                SyntaxNodeOrToken.Add(maps);
 
             if (indexDefinition.Reduce != null)
             {
-                sb.Append($"Reduce = @\"{indexDefinition.Reduce}\"");
+                SyntaxNodeOrToken.Add(Token(TriviaList(), SyntaxKind.CommaToken, TriviaList(LineFeed)));
+                SyntaxNodeOrToken.Add(GetLiteral("Reduce", indexDefinition.Reduce));
             }
 
-            sb.Append($"{nl}}};{nl}}}{nl}}}");
-            return sb.ToString();
+            if (indexDefinition.Fields.Count > 0)
+            {
+                SyntaxNodeOrToken.Add(Token(TriviaList(), SyntaxKind.CommaToken, TriviaList(LineFeed)));
+                var fields = AssignmentExpression(SyntaxKind.SimpleAssignmentExpression,
+                        IdentifierName(Identifier(TriviaList(Tab, Tab, Tab), "Fields", TriviaList(Space))),
+                        InitializerExpression(SyntaxKind.CollectionInitializerExpression,
+                        SeparatedList<ExpressionSyntax>(ParsingIndexDefinitionFieldsToRoslyn(indexDefinition.Fields)))
+                            .WithOpenBraceToken(Token(TriviaList(Tab, Tab, Tab), SyntaxKind.OpenBraceToken, TriviaList(LineFeed)))
+                            .WithCloseBraceToken(Token(TriviaList(LineFeed, Tab, Tab, Tab), SyntaxKind.CloseBraceToken, TriviaList())))
+                    .WithOperatorToken(Token(TriviaList(), SyntaxKind.EqualsToken, TriviaList(LineFeed)));
+
+                SyntaxNodeOrToken.Add(fields);
+
+            }
+
+            return SyntaxNodeOrToken;
+        }
+
+        private static AssignmentExpressionSyntax GetLiteral(string fieldName, string field)
+        {
+            return AssignmentExpression(SyntaxKind.SimpleAssignmentExpression,
+                    IdentifierName(Identifier(TriviaList(Tab, Tab, Tab), fieldName, TriviaList(Space))),
+                    LiteralExpression(SyntaxKind.StringLiteralExpression,
+                        SyntaxFactory.Literal(TriviaList(), $"@\"{field}\"", field, TriviaList())))
+                .WithOperatorToken(Token(TriviaList(), SyntaxKind.EqualsToken, TriviaList(Space)));
+        }
+
+
+        private static IEnumerable<SyntaxNodeOrToken> ParsingIndexDefinitionFieldsToRoslyn(Dictionary<string, IndexFieldOptions> fields)
+        {
+            var syntaxNodeOrToken = new List<SyntaxNodeOrToken>();
+
+            var countFields = 0;
+            foreach (var field in fields)
+            {
+                countFields++;
+                var initializerExpression = InitializerExpression(SyntaxKind.ComplexElementInitializerExpression,
+                    SeparatedList<ExpressionSyntax>(new SyntaxNodeOrToken[]
+                    {
+                        LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(field.Key)),
+                            Token(TriviaList(), SyntaxKind.CommaToken, TriviaList(Space)),
+                            ObjectCreationExpression(IdentifierName(Identifier(TriviaList(), field.Value.GetType().Name, TriviaList(LineFeed))))
+                                .WithNewKeyword(Token(TriviaList(), SyntaxKind.NewKeyword, TriviaList(Space)))
+                        .WithInitializer(InitializerExpression(SyntaxKind.ObjectInitializerExpression,
+                        SeparatedList<ExpressionSyntax>(InnerParsingIndexDefinitionFieldsToRoslyn(field.Value)))
+                        .WithOpenBraceToken(Token(TriviaList(Tab, Tab, Tab, Tab), SyntaxKind.OpenBraceToken, TriviaList(LineFeed)))
+                        .WithCloseBraceToken(Token(TriviaList(LineFeed, Tab, Tab, Tab, Tab),SyntaxKind.CloseBraceToken, TriviaList(Space))))
+                    }))
+                    .WithOpenBraceToken(Token(TriviaList(Tab, Tab, Tab, Tab), SyntaxKind.OpenBraceToken, TriviaList()))
+                    .WithCloseBraceToken(Token(TriviaList(), SyntaxKind.CloseBraceToken, TriviaList(Space)));
+
+                syntaxNodeOrToken.Add(initializerExpression);
+                if (countFields < fields.Count)
+                    syntaxNodeOrToken.Add(Token(TriviaList(), SyntaxKind.CommaToken, TriviaList(LineFeed)));
+            }
+
+            return syntaxNodeOrToken;
+        }
+
+        private static IEnumerable<SyntaxNodeOrToken> InnerParsingIndexDefinitionFieldsToRoslyn(IndexFieldOptions options)
+        {
+            var syntaxNodeOrToken = new List<SyntaxNodeOrToken>();
+            if (options.Sort != null)
+                syntaxNodeOrToken.Add(ParseEnum(options.Sort, nameof(options.Sort)));
+
+            if (options.Indexing != null)
+            {
+                addCommaTokenIfNecessary(syntaxNodeOrToken);
+                syntaxNodeOrToken.Add(ParseEnum(options.Indexing, nameof(options.Indexing)));
+            }
+            if (options.Storage != null)
+            {
+                addCommaTokenIfNecessary(syntaxNodeOrToken);
+                syntaxNodeOrToken.Add(ParseEnum(options.Storage, nameof(options.Storage)));
+            }
+            if (options.TermVector != null)
+            {
+                addCommaTokenIfNecessary(syntaxNodeOrToken);
+                syntaxNodeOrToken.Add(ParseEnum(options.TermVector, nameof(options.TermVector)));
+            }
+            if (!string.IsNullOrEmpty(options.Analyzer))
+            {
+                addCommaTokenIfNecessary(syntaxNodeOrToken);
+                syntaxNodeOrToken.Add(GetLiteral(nameof(options.Analyzer), options.Analyzer));
+            }
+            if (options.Suggestions != null)
+            {
+                addCommaTokenIfNecessary(syntaxNodeOrToken);
+                syntaxNodeOrToken.Add(ParseBool((bool)options.Suggestions, nameof(options.Suggestions)));
+            }
+
+            return syntaxNodeOrToken;
+        }
+
+        private static void addCommaTokenIfNecessary(ICollection<SyntaxNodeOrToken> syntaxNodeOrToken)
+        {
+            if (syntaxNodeOrToken.Count > 0)
+                syntaxNodeOrToken.Add(Token(TriviaList(), SyntaxKind.CommaToken, TriviaList(LineFeed)));
+        }
+
+        private static AssignmentExpressionSyntax ParseEnum<T>(T option, string fieldName)
+        {
+            return AssignmentExpression(SyntaxKind.SimpleAssignmentExpression,
+                IdentifierName(Identifier(TriviaList(Tab, Tab, Tab, Tab, Tab), fieldName, TriviaList(Space))),
+                MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, IdentifierName(option.GetType().Name),
+                IdentifierName(option.ToString())))
+                    .WithOperatorToken(Token(TriviaList(), SyntaxKind.EqualsToken, TriviaList(Space)));
+        }
+
+        private static AssignmentExpressionSyntax ParseBool(bool option, string fieldName)
+        {
+            return AssignmentExpression(SyntaxKind.SimpleAssignmentExpression,
+                    IdentifierName(Identifier(TriviaList(Tab, Tab, Tab, Tab, Tab), fieldName, TriviaList(Space))),
+                    LiteralExpression(option ? SyntaxKind.TrueLiteralExpression : SyntaxKind.FalseLiteralExpression)
+                        .WithToken(Token(TriviaList(), option ? SyntaxKind.TrueKeyword : SyntaxKind.FalseKeyword, TriviaList(LineFeed))))
+                .WithOperatorToken(Token(TriviaList(), SyntaxKind.EqualsToken, TriviaList(Space)));
+        }
+
+        private static IEnumerable<SyntaxNodeOrToken> ParsingIndexDefinitionMapsToRoslyn(ICollection<string> maps)
+        {
+            if (maps == null)
+                throw new InvalidOperationException(nameof(maps));
+
+            var syntaxNodeOrToken = new List<SyntaxNodeOrToken>();
+
+            var countMap = 0;
+            foreach (var map in maps)
+            {
+                countMap++;
+                syntaxNodeOrToken.Add(LiteralExpression(SyntaxKind.StringLiteralExpression,
+                    Literal(TriviaList(Tab, Tab, Tab), $"@\"{map}\"", map, TriviaList())));
+                if (countMap < maps.Count)
+                    syntaxNodeOrToken.Add(Token(TriviaList(), SyntaxKind.CommaToken, TriviaList(LineFeed)));
+            }
+            return syntaxNodeOrToken;
         }
 
         private static string GetCSharpSafeName(string name)
