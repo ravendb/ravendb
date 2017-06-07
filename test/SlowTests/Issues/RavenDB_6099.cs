@@ -40,15 +40,15 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
+                var operation = store.Operations.PatchByIndex<User, Users_ByAge>(x => x.Age > 11, new PatchRequest
+                {
+                    Script = "this.Name = 'Patched';"
+                });
+
+                operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+
                 using (var session = store.OpenSession())
                 {
-                    var operation = session.Advanced.PatchByIndex<User, Users_ByAge>(x => x.Age > 11, new PatchRequest
-                    {
-                        Script = "this.Name = 'Patched';"
-                    });
-
-                    operation.WaitForCompletion(TimeSpan.FromSeconds(15));
-
                     var users = session.Load<User>(new[] { "users/1-A", "users/2-A", "users/3-A" });
 
                     Assert.Equal(3, users.Count);
