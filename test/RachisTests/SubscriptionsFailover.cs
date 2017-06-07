@@ -170,7 +170,7 @@ namespace RachisTests
             var defaultDatabase = "ContinueFromThePointIStopped";
 
             await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrls[0]).ConfigureAwait(false);
-            Console.WriteLine("Created DBs");
+            //Console.WriteLine("Created DBs");
 
             using (var store = new DocumentStore
             {
@@ -179,15 +179,15 @@ namespace RachisTests
             }.Initialize())
             {
                 await SetupVersioning(leader, defaultDatabase).ConfigureAwait(false);
-                Console.WriteLine("Set up versioning");
+                //Console.WriteLine("Set up versioning");
                 var reachedMaxDocCountMre = new AsyncManualResetEvent();
                 var ackSent = new AsyncManualResetEvent();
 
                 GenerateDistributedVersionedData(defaultDatabase);
 
-                Console.WriteLine("Created Docs");
+                //Console.WriteLine("Created Docs");
                 var subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCreationOptions<Versioned<User>>()).ConfigureAwait(false);
-                Console.WriteLine("Created subscription");
+                //Console.WriteLine("Created subscription");
                 var subscription = store.AsyncSubscriptions.Open<Versioned<User>>(new SubscriptionConnectionOptions(subscriptionId)
                 {
                     MaxDocsPerBatch = 1,
@@ -201,26 +201,26 @@ namespace RachisTests
 
                 subscription.AfterAcknowledgment += () =>
                 {
-                    Console.WriteLine($"ack {versionsCount}");
+                   // Console.WriteLine($"ack {versionsCount}");
 
                     try
                     {
                         if (versionsCount == expectedVersionsCount)
                         {
                             ackSent.Set();
-                            Console.WriteLine("Acke mre set");
+                           // Console.WriteLine("Acke mre set");
                         }
                             
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine("Exception during ack" +e);
+                     //   Console.WriteLine("Exception during ack" +e);
                     }
                 };
 
                 subscription.Subscribe(x =>
                 {
-                    Console.WriteLine(x.Current?.Name);
+                    //Console.WriteLine(x.Current?.Name);
                     try
                     {
                         if (x.Previous == null)
@@ -241,12 +241,12 @@ namespace RachisTests
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine("Exception during Subscribe"+e);
+                        //Console.WriteLine("Exception during Subscribe"+e);
                     }
                 });
 
                 Assert.True(await subscription.StartAsync().WaitAsync(_reasonableWaitTime).ConfigureAwait(false));
-                Console.WriteLine("StartedSubscription");
+                //Console.WriteLine("StartedSubscription");
                 expectedVersionsCount = nodesAmount+2;
                 
 
