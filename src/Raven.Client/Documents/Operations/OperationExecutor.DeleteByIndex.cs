@@ -18,15 +18,15 @@ namespace Raven.Client.Documents.Operations
 
         public Operation DeleteByIndex<T>(string indexName, Expression<Func<T, bool>> expression, QueryOperationOptions options = null)
         {
-            IRavenQueryable<T> query;
+            IndexQuery indexQuery;
             using (var session = _store.OpenSession())
             {
-                query = session.Query<T>(indexName).Where(expression);
+                var query = session.Query<T>(indexName).Where(expression);
+                indexQuery = new IndexQuery
+                {
+                    Query = query.ToString()
+                };
             }
-            var indexQuery = new IndexQuery
-            {
-                Query = query.ToString()
-            };
 
             return Send(new DeleteByIndexOperation(indexName, indexQuery, options));
         }
@@ -39,15 +39,15 @@ namespace Raven.Client.Documents.Operations
 
         public Task<Operation> DeleteByIndexAsync<T>(string indexName, Expression<Func<T, bool>> expression, QueryOperationOptions options = null, CancellationToken token = default(CancellationToken))
         {
-            IRavenQueryable<T> query;
+            IndexQuery indexQuery;
             using (var session = _store.OpenSession())
             {
-                query = session.Query<T>(indexName).Where(expression);
+                var query = session.Query<T>(indexName).Where(expression);
+                indexQuery = new IndexQuery
+                {
+                    Query = query.ToString()
+                };
             }
-            var indexQuery = new IndexQuery
-            {
-                Query = query.ToString()
-            };
 
             return SendAsync(new DeleteByIndexOperation(indexName, indexQuery, options), token);
         }
