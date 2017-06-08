@@ -65,7 +65,7 @@ namespace Raven.Backup
 
 			var backupRequest = new
 								{
-									BackupLocation = BackupPath.Replace("\\", "\\\\")
+									BackupLocation = BackupPath
 								};
 
 			var json = RavenJObject.FromObject(backupRequest).ToString();
