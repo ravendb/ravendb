@@ -37,7 +37,7 @@ namespace Raven.Server.Web.Operations
         {
             var id = GetLongQueryString("id");
             // ReSharper disable once PossibleInvalidOperationException
-            Database.Operations.KillOperation(id.Value);
+            Database.Operations.KillOperation(id);
 
             return NoContent();
         }
@@ -84,7 +84,7 @@ namespace Raven.Server.Web.Operations
         {
             var id = GetLongQueryString("id");
             // ReSharper disable once PossibleInvalidOperationException
-            var state = Database.Operations.GetOperation(id.Value)?.State;
+            var state = Database.Operations.GetOperation(id)?.State;
 
             if (state == null)
             {

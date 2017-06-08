@@ -60,7 +60,7 @@ namespace Raven.Server.NotificationCenter.Handlers
             var id = GetStringQueryString("id");
             var timeInSec = GetLongQueryString("timeInSec");
 
-            Database.NotificationCenter.Postpone(id, SystemTime.UtcNow.Add(TimeSpan.FromSeconds(timeInSec.Value)));
+            Database.NotificationCenter.Postpone(id, SystemTime.UtcNow.Add(TimeSpan.FromSeconds(timeInSec)));
 
             return NoContent();
         }

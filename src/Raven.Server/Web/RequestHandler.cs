@@ -199,7 +199,12 @@ namespace Raven.Server.Web
             return result;
         }
 
-        protected long? GetLongQueryString(string name, bool required = true)
+        protected long GetLongQueryString(string name)
+        {
+            return GetLongQueryString(name, true).Value;
+        }
+
+        protected long? GetLongQueryString(string name, bool required)
         {
             var longAsString = GetStringQueryString(name, required);
             if (longAsString == null)

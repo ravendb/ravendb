@@ -158,8 +158,8 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             {
                 var tag = GetQueryStringValueAndAssertIfSingleAndNotEmpty("tag");
-                var end = GetLongQueryString("end").Value;
-                var last = GetLongQueryString("last").Value;
+                var end = GetLongQueryString("end");
+                var last = GetLongQueryString("last");
 
                 var cmd = new MergedHiLoReturnCommand
                 {
