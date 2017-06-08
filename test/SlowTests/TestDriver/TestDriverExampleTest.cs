@@ -16,11 +16,13 @@ namespace SlowTests.TestDriver
                 var testDllFile = new FileInfo(testAssemblyLocation);
 
 #if DEBUG
-                var serverDllPath = 
-                    @"..\..\..\..\..\src\Raven.Server\bin\x64\Debug\netcoreapp1.1\Raven.Server.dll";
+                var serverDllPath = @"..\..\..\..\..\src\Raven.Server\bin\x64\Debug\netcoreapp1.1\Raven.Server.dll";
+                if (File.Exists(serverDllPath) == false) // this can happen when running directly from CLI e.g. dotnet xunit
+                    serverDllPath = @"..\..\..\..\..\src\Raven.Server\bin\Debug\netcoreapp1.1\Raven.Server.dll";
 #else
-                var serverDllPath = 
-                    @"..\..\..\..\..\src\Raven.Server\bin\x64\Release\netcoreapp1.1\Raven.Server.dll";
+                var serverDllPath = @"..\..\..\..\..\src\Raven.Server\bin\x64\Release\netcoreapp1.1\Raven.Server.dll";
+                if (File.Exists(serverDllPath) == false) // this can happen when running directly from CLI e.g. dotnet xunit
+                    serverDllPath = @"..\..\..\..\..\src\Raven.Server\bin\Release\netcoreapp1.1\Raven.Server.dll";
 #endif
 
                 var serverPath = Path.Combine(
@@ -51,7 +53,7 @@ namespace SlowTests.TestDriver
             Name = "Test"
         };
 
-        protected override Stream DatabaseDumpFileStream => 
+        protected override Stream DatabaseDumpFileStream =>
             typeof(RavenServerInDebugDllLocator)
             .Assembly()
             .GetManifestResourceStream("SlowTests.Data.testing.ravendbdump");
@@ -101,7 +103,7 @@ namespace SlowTests.TestDriver
         public void ShouldDisposeDocStoreIfNotWrappedInUsing()
         {
             var docStore = GetDocumentStore();
-            DriverDisposed += 
+            DriverDisposed +=
                 (sender, args) => Assert.True(docStore.WasDisposed);
         }
     }
