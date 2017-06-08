@@ -20,20 +20,20 @@ namespace Sparrow.Json.Parsing
 
         public static bool Read(Stream stream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer)
         {
-            if (parser.Read())
-                return true;
-
-            var read = stream.Read(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Length);
-            if (read == 0)
+            while (parser.Read() == false)
             {
-                if (state.CurrentTokenType != JsonParserToken.EndObject)
-                    throw new EndOfStreamException("Stream ended without reaching end of json content");
+                var read = stream.Read(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Length);
+                if (read == 0)
+                {
+                    if (state.CurrentTokenType != JsonParserToken.EndObject)
+                        throw new EndOfStreamException("Stream ended without reaching end of json content");
 
-                return false;
+                    return false;
+                }
+
+                parser.SetBuffer(buffer, 0, read);
             }
-
-            parser.SetBuffer(buffer, 0, read);
-            return parser.Read();
+            return true;
         }
 
         public static async Task<bool> ReadAsync(Stream stream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer)
