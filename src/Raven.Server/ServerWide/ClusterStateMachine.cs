@@ -565,7 +565,9 @@ namespace Raven.Server.ServerWide
             var doc = Read(context, "db/" + name.ToLowerInvariant(), out etag);
             if (doc == null)
                 return null;
-            return JsonDeserializationCluster.DatabaseRecord(doc);
+            var rec = JsonDeserializationCluster.DatabaseRecord(doc);
+            rec.Topology.PartOfCluster = _parent.CurrentState != RachisConsensus.State.Passive;
+            return rec;
         }
         public BlittableJsonReaderObject Read(TransactionOperationContext context, string name)
         {

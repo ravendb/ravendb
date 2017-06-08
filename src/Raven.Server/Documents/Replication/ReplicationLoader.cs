@@ -412,7 +412,7 @@ namespace Raven.Server.Documents.Replication
             lock (_locker)
             {
                 instancesToDispose = new List<OutgoingReplicationHandler>();
-                if (newRecord == null || DatabaseTopology.PartOfCluster == false)
+                if (newRecord == null || newRecord.Topology.PartOfCluster == false)
                 {
                     DropOutgoingConnections(Destinations, ref instancesToDispose);
                     _destinations = null;

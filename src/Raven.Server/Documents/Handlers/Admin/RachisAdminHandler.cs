@@ -99,7 +99,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                         ["Topology"] = blit,
                         ["Leader"] = ServerStore.LeaderTag,
                         ["CurrentState"] = ServerStore.CurrentState,
-                        ["NodeTag"] = nodeTag
+                        ["NodeTag"] = nodeTag,
+                        ["CurrentTerm"] = ServerStore.Engine.CurrentTerm
                     };
                     var clusterErrors = ServerStore.GetClusterErrors();
                     if (clusterErrors.Count > 0)

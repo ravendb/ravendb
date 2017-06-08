@@ -124,7 +124,7 @@ namespace Raven.Client.Server
     
     public class DatabaseTopology
     {
-        public static bool PartOfCluster = false;
+        public bool PartOfCluster = false;
         public List<DatabaseTopologyNode> Members = new List<DatabaseTopologyNode>(); // Member of the master to master replication inside cluster
         public List<DatabaseTopologyNode> Promotables = new List<DatabaseTopologyNode>(); // Promotable is in a receive state until Leader decides it can become a Member
         public List<DatabaseWatcher> Watchers = new List<DatabaseWatcher>(); // Watcher only receives (slave)

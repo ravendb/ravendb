@@ -447,7 +447,7 @@ namespace Raven.Server.Web.System
                     {
                         [nameof(ModifyOngoingTaskResult.TaskId)] = watcher.TaskId == 0 ? index : watcher.TaskId, 
                         [nameof(ModifyOngoingTaskResult.RaftCommandIndex)] = index, 
-[nameof(OngoingTask.ResponsibleNode)] = responsibleNode
+                        [nameof(OngoingTask.ResponsibleNode)] = responsibleNode
                     });
                     writer.Flush();
                 }

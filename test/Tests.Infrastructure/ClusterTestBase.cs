@@ -320,7 +320,7 @@ namespace Tests.Infrastructure
                     }
                 };
 
-                _toDispose.Add(store);
+                //_toDispose.Add(store);
 
                 store.Initialize();
                 stores.Add(store);
@@ -444,9 +444,12 @@ namespace Tests.Infrastructure
                 databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(record, replicationFactor));
             }
             int numberOfInstances = 0;
-            foreach (var server in Servers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)))
+            foreach (var server in Servers)
             {
                 await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag);
+            }
+            foreach (var server in Servers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)))
+            {
                 await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(record.DatabaseName);
                 numberOfInstances++;
             }
