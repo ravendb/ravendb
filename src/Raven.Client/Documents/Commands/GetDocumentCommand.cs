@@ -74,7 +74,10 @@ namespace Raven.Client.Documents.Commands
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            var pathBuilder = new StringBuilder("docs?");
+            var pathBuilder = new StringBuilder(node.Url);
+            pathBuilder.Append("/databases/")
+                .Append(node.Database)
+                .Append("/docs?");
 
             if (_metadataOnly)
                 pathBuilder.Append("&metadata-only=true");
@@ -124,7 +127,7 @@ namespace Raven.Client.Documents.Commands
                 PrepareRequestWithMultipleIds(pathBuilder, request, _ids, _context);
             }
 
-            url = $"{node.Url}/databases/{node.Database}/" + pathBuilder;
+            url = pathBuilder.ToString();
             return request;
         }
 
