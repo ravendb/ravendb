@@ -552,16 +552,13 @@ namespace Voron.Data.Tables
 
         private FixedSizeTree GetFixedSizeTree(Tree parent, Slice name, ushort valSize)
         {
-            FastDictionary<Slice, FixedSizeTree, SliceStructComparer> cache;
-
-            if (_fixedSizeTreeCache.TryGetValue(parent.Name, out cache) == false)
+            if (_fixedSizeTreeCache.TryGetValue(parent.Name, out FastDictionary<Slice, FixedSizeTree, SliceStructComparer> cache) == false)
             {
                 cache = new FastDictionary<Slice, FixedSizeTree, SliceStructComparer>(SliceStructComparer.Instance);
                 _fixedSizeTreeCache[parent.Name] = cache;
             }
 
-            FixedSizeTree tree;
-            if (cache.TryGetValue(name, out tree) == false)
+            if (cache.TryGetValue(name, out FixedSizeTree tree) == false)
             {
                 var fixedSizeTree = new FixedSizeTree(_tx.LowLevelTransaction, parent, name, valSize, newPageAllocator: _tablePageAllocator);
                 return cache[fixedSizeTree.Name] = fixedSizeTree;
@@ -572,8 +569,7 @@ namespace Voron.Data.Tables
 
         private long AllocateFromSmallActiveSection(int size)
         {
-            long id;
-            if (ActiveDataSmallSection.TryAllocate(size, out id) == false)
+            if (ActiveDataSmallSection.TryAllocate(size, out long id) == false)
             {
                 InactiveSections.Add(_activeDataSmallSection.PageNumber);
 
@@ -607,9 +603,8 @@ namespace Voron.Data.Tables
 
                 _activeDataSmallSection = ActiveRawDataSmallSection.Create(_tx.LowLevelTransaction, Name, newNumberOfPages);
                 _activeDataSmallSection.DataMoved += OnDataMoved;
-                Slice pageNumber;
                 var val = _activeDataSmallSection.PageNumber;
-                using (Slice.External(_tx.Allocator, (byte*)&val, sizeof(long), out pageNumber))
+                using (Slice.External(_tx.Allocator, (byte*)&val, sizeof(long), out Slice pageNumber))
                 {
                     _tableTree.Add(TableSchema.ActiveSectionSlice, pageNumber);
                 }
@@ -623,8 +618,7 @@ namespace Voron.Data.Tables
 
         internal Tree GetTree(Slice name)
         {
-            Tree tree;
-            if (_treesBySliceCache.TryGetValue(name, out tree))
+            if (_treesBySliceCache.TryGetValue(name, out Tree tree))
                 return tree;
 
             var treeHeader = _tableTree.DirectRead(name);
@@ -797,7 +791,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public TableValueHolder SeekOneForwardFrom(TableSchema.SchemaIndexDef index, Slice value)
+        public TableValueHolder SeekOneBackwardFrom(TableSchema.SchemaIndexDef index, Slice value)
         {
             var tree = GetTree(index);
             using (var it = tree.Iterate(false))
@@ -962,6 +956,29 @@ namespace Voron.Data.Tables
                 var result = new TableValueHolder();
                 do
                 {
+                    GetTableValueReader(it, out result.Reader);
+                    yield return result;
+                } while (it.MovePrev());
+            }
+        }
+
+        public IEnumerable<TableValueHolder> SeekBackwardFromLast(TableSchema.FixedSizeSchemaIndexDef index, int skip)
+        {
+            var fst = GetFixedSizeTree(index);
+            using (var it = fst.Iterate())
+            {
+                if (it.SeekToLast() == false)
+                    yield break;
+
+                var result = new TableValueHolder();
+                do
+                {
+                    if (skip > 0)
+                    {
+                        skip--;
+                        continue;
+                    }
+
                     GetTableValueReader(it, out result.Reader);
                     yield return result;
                 } while (it.MovePrev());

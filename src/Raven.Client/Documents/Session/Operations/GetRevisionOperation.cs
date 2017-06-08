@@ -11,12 +11,12 @@ namespace Raven.Client.Documents.Session.Operations
     {
         private readonly InMemoryDocumentSessionOperations _session;
         private readonly string _id;
-        private readonly int _start;
-        private readonly int _pageSize;
+        private readonly int? _start;
+        private readonly int? _pageSize;
 
         private BlittableArrayResult _result;
 
-        public GetRevisionOperation(InMemoryDocumentSessionOperations session, string id, int start, int pageSize)
+        public GetRevisionOperation(InMemoryDocumentSessionOperations session, string id, int? start, int? pageSize)
         {
             _session = session ?? throw new ArgumentNullException(nameof(session));
             _id = id ?? throw new ArgumentNullException(nameof(id));
@@ -24,9 +24,9 @@ namespace Raven.Client.Documents.Session.Operations
             _pageSize = pageSize;
         }
 
-        public GetRevisionCommand CreateRequest()
+        public GetRevisionsCommand CreateRequest()
         {
-            return new GetRevisionCommand(_id, _start, _pageSize);
+            return new GetRevisionsCommand(_id, _start, _pageSize);
         }
 
         public void SetResult(BlittableArrayResult result)
@@ -42,9 +42,10 @@ namespace Raven.Client.Documents.Session.Operations
                 var document = (BlittableJsonReaderObject)_result.Results[i];
                 var metadata = document.GetMetadata();
                 var id = metadata.GetId();
-                var etag = metadata.GetEtag();
                 var entity = (T)_session.ConvertToEntity(typeof(T), id, document);
                 results.Add(entity);
+
+                var etag = metadata.GetEtag();
                 _session.DocumentsByEntity[entity] = new DocumentInfo
                 {
                     Id = id,

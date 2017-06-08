@@ -39,9 +39,7 @@ namespace Raven.Client.Documents.Session
 
         public Stream GetAttachment(string documentId, string name)
         {
-            var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Document, null);
-            var tuple = DocumentStore.Operations.Send(operation);
-            return tuple.stream;
+            return GetAttachment(documentId, name, out _);
         }
 
         public Stream GetAttachment(string documentId, string name, out AttachmentDetails attachment)
@@ -54,12 +52,7 @@ namespace Raven.Client.Documents.Session
 
         public Stream GetAttachment(object entity, string name)
         {
-            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
-                ThrowEntityNotInSession(entity);
-
-            var operation = new GetAttachmentOperation(document.Id, name, AttachmentType.Document, null);
-            var tuple = DocumentStore.Operations.Send(operation);
-            return tuple.stream;
+            return GetAttachment(entity, name, out _);
         }
 
         public Stream GetAttachment(object entity, string name, out AttachmentDetails attachment)
@@ -75,9 +68,7 @@ namespace Raven.Client.Documents.Session
 
         public Stream GetRevisionAttachment(string documentId, string name, ChangeVectorEntry[] changeVector)
         {
-            var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Revision, changeVector);
-            var tuple = DocumentStore.Operations.Send(operation);
-            return tuple.stream;
+            return GetRevisionAttachment(documentId, name, changeVector, out _);
         }
 
         public Stream GetRevisionAttachment(string documentId, string name, ChangeVectorEntry[] changeVector, out AttachmentDetails attachment)

@@ -12,7 +12,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class QueryCommand : RavenCommand<QueryResult>
+    public class GetDeleteDocumentsThatHaveRevisionsCommand : RavenCommand<QueryResult>
     {
         private readonly DocumentConventions _conventions;
         private readonly JsonOperationContext _context;
@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Commands
         private readonly bool _metadataOnly;
         private readonly bool _indexEntriesOnly;
 
-        public QueryCommand(DocumentConventions conventions, JsonOperationContext context, string indexName, IndexQuery indexQuery, HashSet<string> includes = null, bool metadataOnly = false, bool indexEntriesOnly = false)
+        public GetDeleteDocumentsThatHaveRevisionsCommand(DocumentConventions conventions, JsonOperationContext context, string indexName, IndexQuery indexQuery, HashSet<string> includes = null, bool metadataOnly = false, bool indexEntriesOnly = false)
         {
             if (indexQuery == null)
                 throw new ArgumentNullException(nameof(indexQuery));

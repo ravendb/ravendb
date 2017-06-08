@@ -199,7 +199,7 @@ namespace Raven.Server.Documents
 
             if (_documentsStorage.ConflictsStorage.ConflictsCount != 0)
             {
-                // Since this document resolve the conflict we dont need to alter the change vector.
+                // Since this document resolve the conflict we don't need to alter the change vector.
                 // This way we avoid another replication back to the source
                 if (_documentsStorage.ConflictsStorage.ShouldThrowConcurrencyExceptionOnConflict(context, lowerId, expectedEtag, out var currentMaxConflictEtag))
                 {

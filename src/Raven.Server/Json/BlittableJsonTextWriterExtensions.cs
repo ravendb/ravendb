@@ -1211,28 +1211,34 @@ namespace Raven.Server.Json
 
             writer.WriteStartObject();
 
-            var metadataField = context.GetLazyStringForFieldWithCaching(MetadataKeySegment);
             bool first = true;
             BlittableJsonReaderObject metadata = null;
-            var size = document.Data.GetPropertiesByInsertionOrder(_buffers);
-            var prop = new BlittableJsonReaderObject.PropertyDetails();
 
-            for (int i = 0; i < size; i++)
+            if (document.Data != null)
             {
-                document.Data.GetPropertyByIndex(_buffers.Properties[i], ref prop);
-                if (metadataField.Equals(prop.Name))
+                var metadataField = context.GetLazyStringForFieldWithCaching(MetadataKeySegment);
+
+                var size = document.Data.GetPropertiesByInsertionOrder(_buffers);
+                var prop = new BlittableJsonReaderObject.PropertyDetails();
+
+                for (int i = 0; i < size; i++)
                 {
-                    metadata = (BlittableJsonReaderObject)prop.Value;
-                    continue;
+                    document.Data.GetPropertyByIndex(_buffers.Properties[i], ref prop);
+                    if (metadataField.Equals(prop.Name))
+                    {
+                        metadata = (BlittableJsonReaderObject)prop.Value;
+                        continue;
+                    }
+                    if (first == false)
+                    {
+                        writer.WriteComma();
+                    }
+                    first = false;
+                    writer.WritePropertyName(prop.Name);
+                    writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
                 }
-                if (first == false)
-                {
-                    writer.WriteComma();
-                }
-                first = false;
-                writer.WritePropertyName(prop.Name);
-                writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
             }
+
             if (first == false)
                 writer.WriteComma();
             WriteMetadata(writer, document, metadata);
