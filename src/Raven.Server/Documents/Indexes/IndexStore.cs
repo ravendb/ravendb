@@ -1153,6 +1153,13 @@ namespace Raven.Server.Documents.Indexes
                         DeleteIndexInternal(oldIndex);
                 }
 
+                _documentDatabase.Changes.RaiseNotifications(
+                    new IndexChange
+                    {
+                        Name = oldIndexName,
+                        Type = IndexChangeTypes.SideBySideReplace
+                    });
+
                 return true;
             }
             finally
