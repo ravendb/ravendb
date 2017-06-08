@@ -4,27 +4,38 @@ using FastTests.Client.Attachments;
 using RachisTests.DatabaseCluster;
 using Sparrow.Logging;
 using System.Threading.Tasks;
-using RachisTests;
+using FastTests.Server.Documents.Notifications;
 using Raven.Server.Utils;
+using Raven.Client.Documents;
+using RachisTests;
+using Raven.Client.Util;
 
 namespace Tryouts
 {
     public class Program
     {
+        public class User
+        {
+            public string Name;
+        }
+
         public static void Main(string[] args)
         {
-            MiscUtils.DisableLongTimespan = true;
-            LoggingSource.Instance.SetupLogMode(LogMode.Information, @"c:\work\debug\ravendb");
-
-            Console.WriteLine(Process.GetCurrentProcess().Id);
-            Console.WriteLine();
-
-            for (int i = 0; i < 100; i++)
+           for (var i=0; i<10; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new AddNodeToClusterTests())
+
+                try
                 {
-                    a.RemoveNodeWithDb().Wait();
+                    using (var test = new SubscriptionsFailover())
+                    {
+                        AsyncHelpers.RunSync(() => test.ContinueFromThePointIStopped());
+                    }
+                }
+                catch (Exception e)
+                {
+
+                    Console.WriteLine(e);
                 }
             }
         }

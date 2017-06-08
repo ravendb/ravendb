@@ -30,16 +30,20 @@ namespace Raven.Client.Documents.Subscriptions
         {
             if (subscriptionCreationOptions == null)
                 throw new InvalidOperationException("Cannot create a subscription if criteria is null");
-            
-            var nonGenericCriteria = new SubscriptionCriteria(_store.Conventions.GetCollectionName(typeof(T)))
+
+            var tType = typeof(T);
+            var isVersioned = tType.IsConstructedGenericType && tType.GetGenericTypeDefinition() == typeof(Versioned<>);
+
+            var nonGenericCriteria = new SubscriptionCriteria(_store.Conventions.GetCollectionName(isVersioned?tType.GenericTypeArguments[0]:typeof(T)))
             {
-                FilterJavaScript = subscriptionCreationOptions.Criteria?.FilterJavaScript,
+                FilterJavaScript = subscriptionCreationOptions.Criteria?.FilterJavaScript ?? (isVersioned?"return {Current:this.Current, Previous:this.Previous};":null),
+                IsVersioned = subscriptionCreationOptions.Criteria?.IsVersioned??isVersioned
             };
 
             var subscriptionCreationDto = new SubscriptionCreationOptions
             {
                 Criteria =  nonGenericCriteria,
-                ChangeVector = subscriptionCreationOptions.ChangeVector
+                ChangeVector = subscriptionCreationOptions.ChangeVector,
             };
 
             return CreateAsync(subscriptionCreationDto, database);
@@ -47,14 +51,20 @@ namespace Raven.Client.Documents.Subscriptions
 
         public async Task<string> CreateAsync(SubscriptionCreationOptions subscriptionCreationOptions, string database = null)
         {
-            if (subscriptionCreationOptions == null)
+            if (subscriptionCreationOptions == null )
+                throw new InvalidOperationException("Cannot create a subscription if subscriptionCretiaonOptions is null");
+
+            if (subscriptionCreationOptions.Criteria == null)
                 throw new InvalidOperationException("Cannot create a subscription if criteria is null");
+
+            if (string.IsNullOrWhiteSpace(subscriptionCreationOptions.Criteria.Collection))
+                throw new InvalidOperationException("Cannot create a subscription if criteria's collection is not set");
 
             var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
             requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);
 
             var command = new CreateSubscriptionCommand(subscriptionCreationOptions, context);
-            await requestExecutor.ExecuteAsync(command, context);
+            await requestExecutor.ExecuteAsync(command, context).ConfigureAwait(false);
 
             return command.Result.Id;
         }

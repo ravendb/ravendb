@@ -400,10 +400,10 @@ namespace Raven.Client.Documents.Subscriptions
                         while (_processingCts.IsCancellationRequested == false)
                         {
                             BeforeBatch();
-                            var incomingBatch = await ReadSingleSubscriptionBatchFromServer(contextPool, tcpStream, buffer);
+                            var incomingBatch = await ReadSingleSubscriptionBatchFromServer(contextPool, tcpStream, buffer).ConfigureAwait(false);
                             try
                             {
-                                await notifiedSubscribers;
+                                await notifiedSubscribers.ConfigureAwait(false);
                             }
                             catch (Exception)
                             {
@@ -441,11 +441,6 @@ namespace Raven.Client.Documents.Subscriptions
             catch (OperationCanceledException)
             {
 
-            }
-            catch (Exception ex)
-            {
-                SubscriptionConnectionInterrupted(ex, true);
-                throw;
             }
         }
 

@@ -235,7 +235,7 @@ namespace Raven.Server.Documents
 
         public void Initialize(StorageEnvironmentOptions options)
         {
-            options.SchemaVersion = 5;
+            options.SchemaVersion = 6;
             try
             {
                 Environment = new StorageEnvironment(options);
@@ -253,7 +253,7 @@ namespace Raven.Server.Documents
 
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
 
-                    VersioningStorage = new VersioningStorage(_documentDatabase, tx);
+                    VersioningStorage = new VersioningStorage(_documentDatabase);
                     Identities = new IdentitiesStorage(_documentDatabase, tx);
                     ConflictsStorage = new ConflictsStorage(_documentDatabase, tx);
                     AttachmentsStorage = new AttachmentsStorage(_documentDatabase, tx);
@@ -319,7 +319,7 @@ namespace Raven.Server.Documents
 
         public static long ReadLastRevisionsEtag(Transaction tx)
         {
-            return ReadLastEtagFrom(tx, VersioningStorage.RevisionsEtagsSlice);
+            return ReadLastEtagFrom(tx, VersioningStorage.AllRevisionsEtagsSlice);
         }
 
         public static long ReadLastAttachmentsEtag(Transaction tx)
