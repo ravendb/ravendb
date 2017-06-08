@@ -3,14 +3,13 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Server.Versioning;
-using Raven.Server.Documents.Versioning;
 using Sparrow.Json;
 
 namespace FastTests.Server.Documents.Versioning
 {
     public class VersioningHelper
     {
-        public static async Task SetupVersioning(Raven.Server.ServerWide.ServerStore serverStore, string database, bool purgeOnDelete = true, long maxRevisions = 123)
+        public static async Task<long> SetupVersioning(Raven.Server.ServerWide.ServerStore serverStore, string database, bool purgeOnDelete = true, long maxRevisions = 123)
         {
             var versioningDoc = new VersioningConfiguration
             {
@@ -39,15 +38,16 @@ namespace FastTests.Server.Documents.Versioning
                 }
             };
 
-            await SetupVersioning(serverStore, database, versioningDoc);
+            return await SetupVersioning(serverStore, database, versioningDoc);
         }
 
-        private static async Task SetupVersioning(Raven.Server.ServerWide.ServerStore serverStore, string database, VersioningConfiguration configuration)
+        private static async Task<long> SetupVersioning(Raven.Server.ServerWide.ServerStore serverStore, string database, VersioningConfiguration configuration)
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                await serverStore.ModifyDatabaseVersioning(context, database,
-                    EntityToBlittable.ConvertEntityToBlittable(configuration, DocumentConventions.Default, context));
+                var configurationJson = EntityToBlittable.ConvertEntityToBlittable(configuration, DocumentConventions.Default, context);
+                (long etag, _) =  await serverStore.ModifyDatabaseVersioning(context, database, configurationJson);
+                return etag;
             }
         }
     }
