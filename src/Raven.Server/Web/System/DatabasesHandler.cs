@@ -118,9 +118,9 @@ namespace Raven.Server.Web.System
 
         private string GetUrl(DatabaseTopologyNode node, string clientUrl, ClusterTopology clusterTopology)
         {
-            var url = (Server.ServerStore.NodeTag == node.NodeTag ? clientUrl : null) ??  clusterTopology.GetUrlFromTag(node.NodeTag);
+            var url = (Server.ServerStore.NodeTag == node.NodeTag ? clientUrl : null) ??  clusterTopology.GetUrlFromTag(node.NodeTag) ?? ServerStore.RavenServer.WebUrls[0];
             return ServerStore.EnsureValidExternalUrl(url);
-                }
+        }
 
         private Task DbInfo(string dbName)
         {
@@ -160,8 +160,8 @@ namespace Raven.Server.Web.System
             // Looking for disabled indexing flag inside the database settings for offline database status
             if (dbRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Indexing.Disabled),out var val) && val == "true")
             {
-                    indexingStatus = IndexRunningStatus.Disabled;
-                }
+                 indexingStatus = IndexRunningStatus.Disabled;
+            }
             var disabled = dbRecord.Disabled;
             var topology = dbRecord.Topology;
 
@@ -171,13 +171,13 @@ namespace Raven.Server.Web.System
             {
                 foreach (var member in topology.Members)
                 {
-                        nodesTopology.Members.Add(GetNodeId(member));
-                    }
+                    nodesTopology.Members.Add(GetNodeId(member));
+                }
                 foreach (var promotable in topology.Promotables)
                 {
                     nodesTopology.Promotables.Add(GetNodeId(promotable, topology.WhoseTaskIsIt(promotable)));
-                    }
                 }
+            }
 
             if (online == false)
             {

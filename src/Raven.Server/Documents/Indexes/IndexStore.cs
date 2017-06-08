@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Indexes
             _indexAndTransformerLocker = indexAndTransformerLocker;
         }
 
-        public void HandleDatabaseRecordChange(DatabaseRecord record, long etag)
+        public void HandleDatabaseRecordChange(DatabaseRecord record,long etag)
         {
             if (record == null)
                 return;
@@ -328,7 +328,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public Task InitializeAsync(DatabaseRecord record, long etag)
+        public Task InitializeAsync(DatabaseRecord record, long index)
         {
             if (_initialized)
                 throw new InvalidOperationException($"{nameof(IndexStore)} was already initialized.");
@@ -346,7 +346,7 @@ namespace Raven.Server.Documents.Indexes
             return Task.Run(() =>
             {
                 OpenIndexes(record);
-                HandleDatabaseRecordChange(record, etag);
+                HandleDatabaseRecordChange(record, index);
             });
         }
 
