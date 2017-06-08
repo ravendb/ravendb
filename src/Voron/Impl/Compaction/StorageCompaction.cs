@@ -239,11 +239,6 @@ namespace Voron.Impl.Compaction
                             }
                             else if (existingTree.IsLeafCompressionSupported)
                             {
-                                if (newTree.State.NumberOfEntries == 170)
-                                {
-
-                                }
-
                                 using (var read = existingTree.ReadDecompressed(key))
                                 {
                                     var value = read.Reader.AsStream();
