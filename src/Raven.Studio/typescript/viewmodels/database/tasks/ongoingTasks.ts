@@ -47,7 +47,7 @@ class ongoingTasks extends viewModelBase {
     }
 
     private initObservables() {
-        this.myNodeTag(this.clusterManager.nodeTag());
+        this.myNodeTag(this.clusterManager.localNodeTag());
         this.subsCountText = ko.pureComputed(() => { return `(${this.subscriptionsCount()})`; });
         this.urlForSubscriptions = ko.pureComputed(() => appUrl.forSubscriptions(this.activeDatabase()));
     }

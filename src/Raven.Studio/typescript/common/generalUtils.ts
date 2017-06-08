@@ -1,4 +1,4 @@
-/// <reference path="../../typings/tsd.d.ts" />
+﻿/// <reference path="../../typings/tsd.d.ts" />
 
 class genUtils {
 
@@ -32,8 +32,7 @@ class genUtils {
         }
         return hash;
     }
-
-
+    
     static timeSpanAsAgo(input: string, withSuffix: boolean): string {
         if (!input) {
             return null;
@@ -214,6 +213,28 @@ class genUtils {
         // Find and return the number of lines in an html text
         const textLines = htmlText.split(lineSeparator);
         return textLines.length;
+    }
+
+    // TODO: Move all 3 validations into extensions.ts (url, apiKey, db name) - issue 7405 !!!
+
+    // Validate that the url is in the following format: http(s)://hostName:portNumber (e.g. http://localhost:8081)
+    static validateUrl(url: string): boolean {
+        const urlRegex = /^(https?:\/\/)([a-zA-Z\.-]+)\:([0-9]{1,5})$/;
+        return (urlRegex.test(url));
+    }
+
+    // Validate that the Api Key is the following format: xxxxx/xxxxx (e.g. abCD123/efGh456)
+    static validateApiKey(apiKey: string): boolean {
+
+        // TODO: Verify that this is the expected format on the server side - Currently this regex is based on: #L183 in ApiKeyAuthenticator.cs
+        const apiKeyRegex = /^([\da-z]+)\/([\da-z]+)$/;
+        return (apiKeyRegex.test(apiKey));
+    }
+
+    static validateDatabaseName(databaseName: string): boolean {
+
+        // TODO: ...
+        return true;
     }
 } 
 export = genUtils;

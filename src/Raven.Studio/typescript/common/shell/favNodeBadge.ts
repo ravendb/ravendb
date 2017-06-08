@@ -14,7 +14,7 @@ class favNodeBadge {
 
         // we set badge as side of effect of ko.computed
         ko.computed(() => {
-            const tag = clusterTopologyManager.default.nodeTag();
+            const tag = clusterTopologyManager.default.localNodeTag();
             const count = clusterTopologyManager.default.nodesCount();
 
             this.favicon.reset();

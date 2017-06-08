@@ -11,7 +11,7 @@ class manageDatabaseGroup extends viewModelBase {
     currentDatabaseInfo = ko.observable<databaseInfo>();
     selectedClusterNode = ko.observable<string>();
 
-    nodeTag = clusterTopologyManager.default.nodeTag;
+    nodeTag = clusterTopologyManager.default.localNodeTag;
     nodes: KnockoutComputed<databaseGroupNode[]>;
     additionalNodes: KnockoutComputed<string[]>;
     addNodeEnabled: KnockoutComputed<boolean>;

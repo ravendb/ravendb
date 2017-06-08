@@ -10,7 +10,8 @@ class clusterTopologyManager {
 
     topology = ko.observable<clusterTopology>();
 
-    nodeTag: KnockoutComputed<string>;
+    localNodeTag: KnockoutComputed<string>;
+    localNodeUrl: KnockoutComputed<string>;
 
     nodesCount: KnockoutComputed<number>;
 
@@ -42,9 +43,14 @@ class clusterTopologyManager {
     }
 
     private initObservables() {
-        this.nodeTag = ko.pureComputed(() => {
+        this.localNodeTag = ko.pureComputed(() => {
             const topology = this.topology();
             return topology ? topology.nodeTag() : null;
+        });
+
+        this.localNodeUrl = ko.pureComputed(() => {
+            const localNode = _.find(this.topology().nodes(), x => x.tag() === this.localNodeTag());
+            return localNode ? localNode.serverUrl() : null;
         });
 
         this.nodesCount = ko.pureComputed(() => {

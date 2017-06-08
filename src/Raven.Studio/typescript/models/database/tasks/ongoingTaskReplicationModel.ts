@@ -2,6 +2,8 @@
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import ongoingTask = require("models/database/tasks/ongoingTaskModel"); 
+import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import generalUtils = require("common/generalUtils");
 
 class ongoingTaskReplicationModel extends ongoingTask {
 
@@ -51,8 +53,8 @@ class ongoingTaskReplicationModel extends ongoingTask {
             required: true,
             validation: [
                 {
-                    validator: (val: string) => val !== null, // TODO: validate db name format like in db creation !
-                    message: "Please enter destination database name for replication"
+                    validator: (val: string) => generalUtils.validateDatabaseName(val),
+                    message: "Please enter a valid database name"
                 }]
         });
 
@@ -60,16 +62,23 @@ class ongoingTaskReplicationModel extends ongoingTask {
             required: true,
             validation: [
                 {
-                    validator: (val: string) => val !== null,  // TODO: validate url format !
-                    message: "Please enter valid Url"
+                    validator: (val: string) => generalUtils.validateUrl(val),  
+                    message: "Url format expected: 'http(s)://hostName:portNumber'"
                 }]
         });
 
         this.apiKey.extend({
+            required: false,
             validation: [
                 {
-                    validator: (val: string) => val !== "1",  // TODO: validate ApiKey format, as the server expects it to be ! I put '1' just for now... it can be null !
-                    message: "Please enter valid Api key format"
+                    validator: (val: string) => {
+                        if (val) {
+                            return generalUtils.validateApiKey(val);
+                        } else {
+                            return true;
+                        }
+                    },  
+                    message: "Please enter a valid Api Key format"
                 }]
         });
 
@@ -81,13 +90,13 @@ class ongoingTaskReplicationModel extends ongoingTask {
     }
 
     static empty(): ongoingTaskReplicationModel {
+
         return new ongoingTaskReplicationModel({
             TaskType: "Replication",
             DestinationDatabase: null,
-            DestinationUrl: null
+            DestinationUrl: clusterTopologyManager.default.localNodeUrl()
         } as Raven.Server.Web.System.OngoingTaskReplication);
     }
-
 }
 
 export = ongoingTaskReplicationModel;
