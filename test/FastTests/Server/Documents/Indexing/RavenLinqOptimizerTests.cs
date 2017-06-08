@@ -115,13 +115,6 @@ namespace FastTests.Server.Documents.Indexing
         ;
     }
 }")]
-        [InlineData(@"e1.SelectMany(x1 => e2, (x1, x2) => x2.v)", @"foreach (var x1 in e1)
-{
-    foreach (var x2 in e2)
-    {
-        yield return x2.v;
-    }
-}", Skip = "RavenDB-7170")]
         [InlineData(@"e1.SelectMany(x1 => e2, (x1, x2) => new { x2.v })", @"foreach (var x1 in e1)
 {
     foreach (var x2 in e2)

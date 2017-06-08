@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -25,11 +26,10 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 })
                 .LastOrDefault(x => x.IsKind(SyntaxKind.AnonymousObjectCreationExpression)) as AnonymousObjectCreationExpressionSyntax;
 
-            if (last == null)
-                return node;
-
-
-            VisitAnonymousObjectCreationExpression(last);
+            if (last != null)
+                VisitAnonymousObjectCreationExpression(last);
+            else
+                ThrowIndexingFunctionMustReturnAnonymousObject();
 
             return node;
         }
@@ -49,10 +49,10 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 })
                 .LastOrDefault(x => x.IsKind(SyntaxKind.AnonymousObjectCreationExpression)) as AnonymousObjectCreationExpressionSyntax;
 
-            if (last == null)
-                return node;
-
-            VisitAnonymousObjectCreationExpression(last);
+            if (last != null)
+                VisitAnonymousObjectCreationExpression(last);
+            else
+                ThrowIndexingFunctionMustReturnAnonymousObject();
 
             return node;
         }
@@ -65,6 +65,11 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             Fields = RewritersHelper.ExtractFields(node);
 
             return node;
+        }
+
+        private static void ThrowIndexingFunctionMustReturnAnonymousObject()
+        {
+            throw new InvalidOperationException("Indexing function must return an anonymous object");
         }
     }
 }
