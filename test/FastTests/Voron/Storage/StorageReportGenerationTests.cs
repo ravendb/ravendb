@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using FastTests.Voron.FixedSize;
 using Sparrow;
 using Voron;
 using Xunit;
@@ -299,6 +300,56 @@ namespace FastTests.Voron.Storage
                 Assert.True(report.Trees[1].MultiValues.PageCount == 0);
                 Assert.Equal(report.Trees[1].MultiValues.PageCount, 
                     report.Trees[1].MultiValues.LeafPages + report.Trees[1].MultiValues.BranchPages + report.Trees[1].MultiValues.OverflowPages);
+            }
+        }
+
+        [Theory]
+        [InlineDataWithRandomSeed(1)]
+        [InlineDataWithRandomSeed(5)]
+        [InlineDataWithRandomSeed(15)]
+        public void TreeReportContainsInfoAboutStreams(int numberOfStreams, int seed)
+        {
+            var r = new Random(seed);
+
+            var streamSizes = new Dictionary<string, long>();
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.CreateTree("streams-tree");
+
+                for (int streamNumber = 0; streamNumber < numberOfStreams; streamNumber++)
+                {
+                    var bytes = new byte[r.Next(0, 2 * 1024 * 1024)];
+
+                    r.NextBytes(bytes);
+
+                    var name = $"streams/{streamNumber}";
+                    tree.AddStream(name, new MemoryStream(bytes));
+
+                    streamSizes[name] = bytes.Length;
+                }
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var report = Env.GenerateDetailedReport(tx, calculateExactSizes: true);
+
+                var treeReport = report.Trees.Find(x => x.Name == "streams-tree");
+
+                Assert.Equal(numberOfStreams, treeReport.Streams.Streams.Count);
+
+                long total = 0;
+
+                foreach (var stream in treeReport.Streams.Streams)
+                {
+                    Assert.Equal(streamSizes[stream.Name], stream.Length);
+
+                    total += stream.AllocatedSpaceInBytes;
+                }
+
+                Assert.Equal(total, treeReport.Streams.AllocatedSpaceInBytes);
             }
         }
 
