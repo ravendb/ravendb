@@ -21,23 +21,22 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-            for (var i = 0; i < 100; i++)
+           for (var i=0; i<1000; i++)
             {
-                Console.Clear();
-                Console.WriteLine(i);
+                Console.WriteLine($"-------------------------------------New test iteration #{i}");
 
-                using (var a = new FastTests.Client.Attachments.AttachmentFailover())
+                try
                 {
-                    a.PutAttachmentsWithFailover(useSession: true, size: 524288, hash: "BfKA8g/BJuHOTHYJ+A6sOt9jmFSVEDzCM3EcLLKCRMU=").Wait();
+                    using (var test = new SubscriptionsFailover())
+                    {
+                        AsyncHelpers.RunSync(() => test.CreateDistributedVersionedDocuments());
+                    }
                 }
+                catch (Exception e)
+                {
 
-                //Parallel.For(0, 10, _ =>
-                //{
-                //    using (var test = new FastTests.Server.Replication.DisableDatabasePropagationInRaftCluster())
-                //    {
-                //        test.DisableDatabaseToggleOperation_should_propagate_through_raft_cluster().Wait();
-                //    }
-                //});
+                    Console.WriteLine($"Errrrrorrrrrr::::::::::::::{e}");
+                }
             }
         }
     }

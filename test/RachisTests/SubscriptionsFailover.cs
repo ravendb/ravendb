@@ -35,10 +35,11 @@ namespace RachisTests
         {
             public int MaxId;
         }
-        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached?TimeSpan.FromSeconds(60*10): TimeSpan.FromSeconds(60);
-
-        [Fact]
-        public async Task ContinueFromThePointIStopped()
+        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached?TimeSpan.FromSeconds(60*10): TimeSpan.FromSeconds(6000);
+                
+        [Theory]
+        [InlineData(1,5,10,20)]
+        public async Task ContinueFromThePointIStopped(int batchSize)
         {
             const int nodesAmount = 5;
             var leader = await this.CreateRaftClusterAndGetLeader(nodesAmount);
@@ -56,7 +57,7 @@ namespace RachisTests
             {
                 var usersCount = new List<User>();
                 var reachedMaxDocCountMre = new AsyncManualResetEvent();
-                var subscription = await CreateAndInitiateSubscription(store, defaultDatabase, usersCount, reachedMaxDocCountMre);
+                var subscription = await CreateAndInitiateSubscription(store, defaultDatabase, usersCount, reachedMaxDocCountMre, batchSize);
                 
                 await GenerateDocuments(store);
 
@@ -160,6 +161,37 @@ namespace RachisTests
             }
         }
 
+        public async Task CreateDistributedVersionedDocuments()
+        {
+            const int nodesAmount = 5;
+            var leader = await this.CreateRaftClusterAndGetLeader(nodesAmount).ConfigureAwait(false);
+
+
+            var defaultDatabase = "DistributedVersionedSubscription";
+
+            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrls[0]).ConfigureAwait(false);
+            
+            using (var store = new DocumentStore
+            {
+                Urls = leader.WebUrls,
+                Database = defaultDatabase
+            }.Initialize())
+            {
+                await SetupVersioning(leader, defaultDatabase).ConfigureAwait(false);
+
+                var reachedMaxDocCountMre = new AsyncManualResetEvent();
+                var ackSent = new AsyncManualResetEvent();
+
+                var continueMre = new AsyncManualResetEvent();
+
+
+                for (int i = 0; i < 17; i++)
+                {
+                    GenerateDistributedVersionedData(defaultDatabase);
+                }
+            }
+        }
+
         [Fact]
         public async Task DistributedVersionedSubscription()
         {
@@ -167,10 +199,10 @@ namespace RachisTests
             var leader = await this.CreateRaftClusterAndGetLeader(nodesAmount).ConfigureAwait(false);
             
 
-            var defaultDatabase = "ContinueFromThePointIStopped";
+            var defaultDatabase = "DistributedVersionedSubscription";
 
             await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrls[0]).ConfigureAwait(false);
-            //Console.WriteLine("Created DBs");
+
 
             using (var store = new DocumentStore
             {
@@ -179,15 +211,19 @@ namespace RachisTests
             }.Initialize())
             {
                 await SetupVersioning(leader, defaultDatabase).ConfigureAwait(false);
-                //Console.WriteLine("Set up versioning");
+
                 var reachedMaxDocCountMre = new AsyncManualResetEvent();
                 var ackSent = new AsyncManualResetEvent();
 
+                var continueMre = new AsyncManualResetEvent();
+                
+
                 GenerateDistributedVersionedData(defaultDatabase);
 
-                //Console.WriteLine("Created Docs");
+                
+
                 var subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCreationOptions<Versioned<User>>()).ConfigureAwait(false);
-                //Console.WriteLine("Created subscription");
+
                 var subscription = store.AsyncSubscriptions.Open<Versioned<User>>(new SubscriptionConnectionOptions(subscriptionId)
                 {
                     MaxDocsPerBatch = 1,
@@ -201,35 +237,49 @@ namespace RachisTests
 
                 subscription.AfterAcknowledgment += () =>
                 {
-                   // Console.WriteLine($"ack {versionsCount}");
+                    AsyncHelpers.RunSync(continueMre.WaitAsync);
+
 
                     try
                     {
                         if (versionsCount == expectedVersionsCount)
-                        {
+                        {                            
+                            continueMre.Reset();
                             ackSent.Set();
-                           // Console.WriteLine("Acke mre set");
+
                         }
-                            
+
+
+                        AsyncHelpers.RunSync(continueMre.WaitAsync);
                     }
                     catch (Exception e)
                     {
-                     //   Console.WriteLine("Exception during ack" +e);
+
                     }
                 };
 
                 subscription.Subscribe(x =>
-                {
-                    //Console.WriteLine(x.Current?.Name);
+                {                    
                     try
                     {
-                        if (x.Previous == null)
+
+                        if (x == null)
                         {
+
+                        }
+                        else if (x.Previous == null)
+                        {
+
                             docsCount++;
                             versionsCount++;
                         }
+                        else if (x.Current == null)
+                        {
+
+                        }
                         else
                         {
+
                             if (x.Current.Age > x.Previous.Age)
                             {
                                 versionsCount++;
@@ -241,28 +291,33 @@ namespace RachisTests
                     }
                     catch (Exception e)
                     {
-                        //Console.WriteLine("Exception during Subscribe"+e);
+
                     }
                 });
 
+                expectedVersionsCount = nodesAmount + 2;
+                continueMre.Set();
                 Assert.True(await subscription.StartAsync().WaitAsync(_reasonableWaitTime).ConfigureAwait(false));
-                //Console.WriteLine("StartedSubscription");
-                expectedVersionsCount = nodesAmount+2;
-                
+
+                           
 
                 Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false));
                 ackSent.Reset(true);
-                
+
                 await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId).ConfigureAwait(false);
-                expectedVersionsCount *= 2;
-                
+                continueMre.Set();                
+                expectedVersionsCount += 2;
+
+
                 Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false));
                 ackSent.Reset(true);
+                continueMre.Set();
 
-                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId);
-                
+
+                ///await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId);
+
                 Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime).ConfigureAwait(false));
-              
+
             }
         }
 
@@ -287,17 +342,22 @@ namespace RachisTests
                     }
                 };
 
-
                 var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(defaultDatabase);
-                await documentDatabase.ServerStore.ModifyDatabaseVersioning(context,
+                var res = await documentDatabase.ServerStore.ModifyDatabaseVersioning(context,
                     defaultDatabase,
                     EntityToBlittable.ConvertEntityToBlittable(versioningDoc,
                         new DocumentConventions(),
                         context));
+
+                foreach (var s in Servers)// need to wait for it on all servers
+                {
+                    documentDatabase = await s.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(defaultDatabase);
+                    await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(res.Item1);
+                }
             }
         }
 
-        private  void GenerateDistributedVersionedData(string defaultDatabase)
+        private void GenerateDistributedVersionedData(string defaultDatabase)
         {
             IReadOnlyList<ServerNode> nodes;
             using (var store = new DocumentStore
@@ -344,7 +404,7 @@ namespace RachisTests
                             }
                             else
                             {
-                                var user = session.Load<User>($"users/{index}");
+                                User user = session.Load<User>($"users/{index}");
                                 user.Age = curVer;
                                 user.Name = curDocName;
                                 session.Store(user, $"users/{index}");
@@ -352,15 +412,19 @@ namespace RachisTests
                             
                             session.SaveChanges();
 
-                            AsyncHelpers.RunSync(() => WaitForDocumentInClusterAsync<User>(nodes, "users/" + index, x => x.Name == curDocName, _reasonableWaitTime));
+                            Assert.True(
+                                AsyncHelpers.RunSync(() => WaitForDocumentInClusterAsync<User>(nodes, "users/" + index, x => x.Name == curDocName, _reasonableWaitTime))
+                                );
                         }
+
+
                     }
                     curVer++;
                 }
             }
         }
 
-        private async Task<Subscription<User>> CreateAndInitiateSubscription(IDocumentStore store, string defaultDatabase, List<User> usersCount, AsyncManualResetEvent reachedMaxDocCountMre)
+        private async Task<Subscription<User>> CreateAndInitiateSubscription(IDocumentStore store, string defaultDatabase, List<User> usersCount, AsyncManualResetEvent reachedMaxDocCountMre, int batchSize)
         {
             var proggress = new SubscriptionProggress()
             {
@@ -371,7 +435,8 @@ namespace RachisTests
 
             var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
             {
-                TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500)
+                TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
+                MaxDocsPerBatch= batchSize
             });
 
             var getDatabaseTopologyCommand = new GetDatabaseTopologyOperation(defaultDatabase);
@@ -384,19 +449,38 @@ namespace RachisTests
 
             subscription.Subscribe(x =>
             {
-                int curId = 0;
-                var afterSlash = x.Id.Substring(x.Id.LastIndexOf("/",StringComparison.OrdinalIgnoreCase) + 1);
-                curId = int.Parse(afterSlash.Substring(0,afterSlash.Length-2));
-                Assert.True(curId > proggress.MaxId);
-                usersCount.Add(x);
-                proggress.MaxId = curId;
+                try
+                {
+                    int curId = 0;
+                    var afterSlash = x.Id.Substring(x.Id.LastIndexOf("/", StringComparison.OrdinalIgnoreCase) + 1);
+                    curId = int.Parse(afterSlash.Substring(0, afterSlash.Length - 2));
+                    Assert.True(curId >= proggress.MaxId);// todo: change back to '>'
+                    usersCount.Add(x);
+                    proggress.MaxId = curId;
+
+                }
+                catch (Exception e)
+                {
+
+
+                }
             });
             subscription.AfterAcknowledgment += () =>
             {
-                if (usersCount.Count == 10)
+
+                try
                 {
-                    reachedMaxDocCountMre.Set();
+                    if (usersCount.Count == 10)
+                    {
+                        reachedMaxDocCountMre.Set();
+                    }
                 }
+                catch (Exception e)
+                {
+
+
+                }
+            
             };
             await subscription.StartAsync().ConfigureAwait(false);
             return subscription;
