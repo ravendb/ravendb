@@ -202,7 +202,7 @@ namespace Raven.Server.Documents
             {
                 //otherwise this is a tombstone conflict and should be treated as such
                 result.Doc = new BlittableJsonReaderObject(read, size, context);
-                DocumentsStorage.DebugDisposeReaderAfterTransction(context.Transaction, result.Doc);
+                DocumentsStorage.DebugDisposeReaderAfterTransaction(context.Transaction, result.Doc);
             }
 
             result.LastModified = new DateTime(*(long*)tvr.Read((int)ConflictsTable.LastModified, out size));
@@ -344,7 +344,7 @@ namespace Raven.Server.Documents
                         int size;
                         var dataPtr = tvr.Result.Reader.Read((int)ConflictsTable.Data, out size);
                         var doc = (size == 0) ? null : new BlittableJsonReaderObject(dataPtr, size, context);
-                        DocumentsStorage.DebugDisposeReaderAfterTransction(context.Transaction, doc);
+                        DocumentsStorage.DebugDisposeReaderAfterTransaction(context.Transaction, doc);
                         return new DocumentConflict
                         {
                             ChangeVector = currentChangeVector,
@@ -664,7 +664,7 @@ namespace Raven.Server.Documents
                 if (conflicts.Count > 0)
                 {
                     // We do have a conflict for our deletion candidate
-                    // Since this document resolve the conflict we dont need to alter the change vector.
+                    // Since this document resolve the conflict we don't need to alter the change vector.
                     // This way we avoid another replication back to the source
                     if (ShouldThrowConcurrencyExceptionOnConflict(context, lowerId, expectedEtag, out var currentMaxConflictEtag))
                     {

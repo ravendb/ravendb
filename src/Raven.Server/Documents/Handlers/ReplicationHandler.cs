@@ -26,8 +26,7 @@ namespace Raven.Server.Documents.Handlers
             var start = GetStart();
             var pageSize = GetPageSize();
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {

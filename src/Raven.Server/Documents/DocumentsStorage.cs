@@ -312,7 +312,7 @@ namespace Raven.Server.Documents
             return ReadLastEtagFrom(tx, AllTombstonesEtagsSlice);
         }
 
-        public static long ReadLastCoflictsEtag(Transaction tx)
+        public static long ReadLastConflictsEtag(Transaction tx)
         {
             return ReadLastEtagFrom(tx, ConflictsStorage.AllConflictedDocsEtagsSlice);
         }
@@ -360,7 +360,7 @@ namespace Raven.Server.Documents
             if (lastTombstoneEtag > lastEtag)
                 lastEtag = lastTombstoneEtag;
 
-            var lastConflictEtag = ReadLastCoflictsEtag(tx);
+            var lastConflictEtag = ReadLastConflictsEtag(tx);
             if (lastConflictEtag > lastEtag)
                 lastEtag = lastConflictEtag;
 
@@ -798,13 +798,13 @@ namespace Raven.Server.Documents
         public Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr)
         {
             var document = ParseDocument(context, ref tvr);
-            DebugDisposeReaderAfterTransction(context.Transaction, document.Data);
+            DebugDisposeReaderAfterTransaction(context.Transaction, document.Data);
             DocumentPutAction.AssertMetadataWasFiltered(document.Data);
             return document;
         }
 
         [Conditional("DEBUG")]
-        public static void DebugDisposeReaderAfterTransction(DocumentsTransaction tx, BlittableJsonReaderObject reader)
+        public static void DebugDisposeReaderAfterTransaction(DocumentsTransaction tx, BlittableJsonReaderObject reader)
         {
             if (reader == null)
                 return;
@@ -902,12 +902,13 @@ namespace Raven.Server.Documents
             }
 
             var local = GetDocumentOrTombstone(context, lowerId, throwOnConflict: false);
+            var modifiedTicks = lastModifiedTicks ?? _documentDatabase.Time.GetUtcNow().Ticks;
 
             if (local.Tombstone != null)
             {
                 if (expectedEtag != null)
                     throw new ConcurrencyException($"Document {local.Tombstone.LowerId} does not exist, but delete was called with etag {expectedEtag}. " +
-                                                   $"Optimistic concurrency violation, transaction will be aborted.");
+                                                   "Optimistic concurrency violation, transaction will be aborted.");
 
                 collectionName = ExtractCollectionName(context, local.Tombstone.Collection);
 
@@ -921,7 +922,7 @@ namespace Raven.Server.Documents
                     local.Tombstone.Etag,
                     collectionName,
                     local.Tombstone.ChangeVector,
-                    lastModifiedTicks,
+                    modifiedTicks,
                     changeVector,
                     DocumentFlags.None);
 
@@ -955,7 +956,7 @@ namespace Raven.Server.Documents
                 {
                     throw new ConcurrencyException(
                         $"Document {lowerId} has etag {doc.Etag}, but Delete was called with etag {expectedEtag}. " +
-                        $"Optimistic concurrency violation, transaction will be aborted.")
+                        "Optimistic concurrency violation, transaction will be aborted.")
                     {
                         ActualETag = doc.Etag,
                         ExpectedETag = (long)expectedEtag
@@ -967,25 +968,20 @@ namespace Raven.Server.Documents
                 collectionName = ExtractCollectionName(context, lowerId, doc.Data);
                 var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
-                int size;
-                var ptr = table.DirectRead(doc.StorageId, out size);
+                var ptr = table.DirectRead(doc.StorageId, out int size);
                 var tvr = new TableValueReader(ptr, size);
                 var flags = *(DocumentFlags*)tvr.Read((int)DocumentsTable.Flags, out size);
 
                 long etag;
                 using (TableValueToSlice(context, (int)DocumentsTable.LowerId, ref tvr, out Slice tombstone))
                 {
-                    etag = CreateTombstone(context, tombstone, doc.Etag, collectionName, doc.ChangeVector, lastModifiedTicks, changeVector, doc.Flags);
+                    etag = CreateTombstone(context, tombstone, doc.Etag, collectionName, doc.ChangeVector, modifiedTicks, changeVector, doc.Flags);
                 }
 
                 if (collectionName.IsSystem == false &&
-                    (flags & DocumentFlags.Versioned) == DocumentFlags.Versioned)
+                    _documentDatabase.DocumentsStorage.VersioningStorage.Configuration != null)
                 {
-                    // TODO:
-                    // Check on _documentDatabase.DocumentsStorage.VersioningStorage.Configuration != null 
-                    // instead of having DocumentFlags.Versioned
-                    // And put delete marker
-                    _documentDatabase.DocumentsStorage.VersioningStorage.Delete(context, collectionName, lowerId);
+                    _documentDatabase.DocumentsStorage.VersioningStorage.Delete(context, collectionName, id, lowerId, doc.ChangeVector, modifiedTicks);
                 }
                 table.Delete(doc.StorageId);
 
@@ -1010,7 +1006,7 @@ namespace Raven.Server.Documents
             }
             else
             {
-                // we adding a tombstone without having any pervious document, it could happened if this was called
+                // we adding a tombstone without having any previous document, it could happened if this was called
                 // from the incoming replication or if we delete document that wasn't exist at the first place.
                 if (expectedEtag != null)
                     throw new ConcurrencyException($"Document {lowerId} does not exist, but delete was called with etag {expectedEtag}. " +
@@ -1103,7 +1099,7 @@ namespace Raven.Server.Documents
             long documentEtag,
             CollectionName collectionName,
             ChangeVectorEntry[] docChangeVector,
-            long? lastModifiedTicks,
+            long lastModifiedTicks,
             ChangeVectorEntry[] changeVector,
             DocumentFlags flags)
         {
@@ -1126,8 +1122,6 @@ namespace Raven.Server.Documents
             {
                 using (Slice.From(context.Allocator, collectionName.Name, out Slice collectionSlice))
                 {
-                    var modifiedTicks = lastModifiedTicks ?? _documentDatabase.Time.GetUtcNow().Ticks;
-
                     var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                         collectionName.GetTableName(CollectionTableType.Tombstones));
                     using (table.Allocate(out TableValueBuilder tbv))
@@ -1140,7 +1134,7 @@ namespace Raven.Server.Documents
                         tbv.Add(collectionSlice);
                         tbv.Add((int)flags);
                         tbv.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
-                        tbv.Add(modifiedTicks);
+                        tbv.Add(lastModifiedTicks);
 
                         table.Insert(tbv);
                     }

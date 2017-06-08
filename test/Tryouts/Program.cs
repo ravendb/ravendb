@@ -5,6 +5,7 @@ using RachisTests.DatabaseCluster;
 using Sparrow.Logging;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Notifications;
+using FastTests.Server.Documents.Versioning;
 using Raven.Server.Utils;
 using Raven.Client.Documents;
 using RachisTests;
@@ -14,19 +15,15 @@ namespace Tryouts
 {
     public class Program
     {
-        public class User
-        {
-            public string Name;
-        }
-
         public static void Main(string[] args)
         {
-           for (var i=0; i<1000; i++)
+            for (var i = 0; i < 10; i++)
             {
                 Console.WriteLine(i);
-                using (var test = new FastTests.Client.Subscriptions.VersionedSubscriptions())
+
+                using (var test = new Versioning())
                 {
-                    test.PlainVersionedSubscriptionsCompareDocs().Wait();
+                    test.GetDeleteDocumentsThatHaveRevisions().Wait();
                 }
             }
         }

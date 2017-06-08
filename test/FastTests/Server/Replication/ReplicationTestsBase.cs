@@ -22,21 +22,9 @@ namespace FastTests.Server.Replication
 {
     public class ReplicationTestsBase : ClusterTestBase
     {
-        protected List<object> GetRevisions(DocumentStore store, string id)
-        {
-            using (var commands = store.Commands())
-            {
-                var command = new GetRevisionsCommand(id);
-
-                commands.RequestExecutor.Execute(command, commands.Context);
-
-                return command.Result;
-            }
-        }
-
         protected void EnsureReplicating(DocumentStore src, DocumentStore dst)
         {
-            var id = "marker/" + Guid.NewGuid().ToString();
+            var id = "marker/" + Guid.NewGuid();
             using (var s = src.OpenSession())
             {
                 s.Store(new { }, id);
@@ -45,11 +33,11 @@ namespace FastTests.Server.Replication
             WaitForDocumentToReplicate<object>(dst, id, 15 * 1000);
         }
 
-        protected Dictionary<string, string[]> GetConnectionFaliures(DocumentStore store)
+        protected Dictionary<string, string[]> GetConnectionFailures(DocumentStore store)
         {
             using (var commands = store.Commands())
             {
-                var command = new GetConncectionFailuresCommand();
+                var command = new GetConnectionFailuresCommand();
 
                 commands.RequestExecutor.Execute(command, commands.Context);
 
@@ -297,49 +285,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        private class GetRevisionsCommand : RavenCommand<List<object>>
-        {
-            private readonly string _id;
-
-            public GetRevisionsCommand(string id)
-            {
-                if (id == null)
-                    throw new ArgumentNullException(nameof(id));
-
-                _id = id;
-            }
-            public override bool IsReadRequest => true;
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
-            {
-                url = $"{node.Url}/databases/{node.Database}/revisions?key={_id}";
-
-                ResponseType = RavenCommandResponseType.Object;
-                return new HttpRequestMessage
-                {
-                    Method = HttpMethod.Get
-                };
-            }
-
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-            {
-                if (response == null)
-                    ThrowInvalidResponse();
-
-                BlittableJsonReaderArray array;
-                if (response.TryGet("Results", out array) == false)
-                    ThrowInvalidResponse();
-
-                var result = new List<object>();
-                foreach (var arrayItem in array.Items)
-                {
-                    result.Add(arrayItem);
-                }
-
-                Result = result;
-            }
-        }
-
-        private class GetConncectionFailuresCommand : RavenCommand<Dictionary<string, string[]>>
+        private class GetConnectionFailuresCommand : RavenCommand<Dictionary<string, string[]>>
         {
             public override bool IsReadRequest => true;
 
