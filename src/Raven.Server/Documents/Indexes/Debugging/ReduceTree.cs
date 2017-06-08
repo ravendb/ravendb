@@ -1,6 +1,8 @@
-﻿namespace Raven.Server.Documents.Indexes.Debugging
+﻿using System;
+
+namespace Raven.Server.Documents.Indexes.Debugging
 {
-    public class ReduceTree
+    public class ReduceTree : IDisposable
     {
         public ReduceTreePage Root;
 
@@ -13,5 +15,10 @@
         public long PageCount { get; set; }
 
         public long NumberOfEntries { get; set; }
+
+        public void Dispose()
+        {
+            Root?.Dispose();
+        }
     }
 }
