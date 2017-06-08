@@ -222,25 +222,36 @@ namespace Raven.Client.Connection.Request
                 //We always want to fetch a new topology if we don't know who the leader is.
                 UpdateReplicationInformationIfNeededAsync(serverClient, force:true);
 #pragma warning restore 4014
-                switch (serverClient.convention.FailoverBehavior)
+                //there is no reason for us to throw cluster not reachable for a read operation when we can read from all nodes.
+                if (method == HttpMethod.Get &&
+                    (serverClient.convention.FailoverBehavior == FailoverBehavior.ReadFromAllWriteToLeader ||
+                     serverClient.convention.FailoverBehavior == FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers))
                 {
-                    case FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers:
-                    case FailoverBehavior.ReadFromLeaderWriteToLeaderWithFailovers:
-                        var waitResult = leaderNodeSelected.Wait(WaitForLeaderTimeout);
-                        if(Log.IsDebugEnabled && waitResult == false)
-                            Log.Debug($"Failover behavior is {serverClient.convention.FailoverBehavior}, waited for {WaitForLeaderTimeout.TotalSeconds} seconds and no leader was selected.");
-                        break;
-                    default:                        
-                        if (leaderNodeSelected.Wait(WaitForLeaderTimeout) == false)
-                        {
-                            if (Log.IsDebugEnabled)
-                                Log.Debug($"Failover behavior is {serverClient.convention.FailoverBehavior}, waited for {WaitForLeaderTimeout.TotalSeconds} seconds and no leader was selected.");
-                            throw new InvalidOperationException($"Cluster is not in a stable state. No leader was selected, but we require one for making a request using {serverClient.convention.FailoverBehavior}.");
-                        }
-                        break;
+                    var primaryNode = new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null);
+                    node = GetNodeForReadOperation(primaryNode) ?? primaryNode;
                 }
+                else
+                {
+                    switch (serverClient.convention.FailoverBehavior)
+                    {
+                        case FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers:
+                        case FailoverBehavior.ReadFromLeaderWriteToLeaderWithFailovers:
+                            var waitResult = leaderNodeSelected.Wait(WaitForLeaderTimeout);
+                            if (Log.IsDebugEnabled && waitResult == false)
+                                Log.Debug($"Failover behavior is {serverClient.convention.FailoverBehavior}, waited for {WaitForLeaderTimeout.TotalSeconds} seconds and no leader was selected.");
+                            break;
+                        default:
+                            if (leaderNodeSelected.Wait(WaitForLeaderTimeout) == false)
+                            {
+                                if (Log.IsDebugEnabled)
+                                    Log.Debug($"Failover behavior is {serverClient.convention.FailoverBehavior}, waited for {WaitForLeaderTimeout.TotalSeconds} seconds and no leader was selected.");
+                                throw new InvalidOperationException($"Cluster is not in a stable state. No leader was selected, but we require one for making a request using {serverClient.convention.FailoverBehavior}.");
+                            }
+                            break;
+                    }
 
-                node = LeaderNode;
+                    node = LeaderNode;
+                }
             }
             switch (serverClient.convention.FailoverBehavior)
             {
