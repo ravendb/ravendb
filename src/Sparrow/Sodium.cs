@@ -380,5 +380,21 @@ namespace Sparrow
             else
                 Platform.Win32.WinSodium.sodium_memzero(ptr, (UIntPtr)size);
         }
+
+        public static void CopyMasterKey(out byte[] dst, byte[] src)
+        {
+            if (src == null)
+            {
+                dst = null;
+                return;
+            }
+
+            dst = new byte[src.Length];
+            fixed (byte* pSrc = src)
+            fixed (byte* pDst = dst)
+            {
+                Memory.Copy(pDst, pSrc, src.Length);
+            }
+        }
     }
 }

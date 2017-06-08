@@ -90,6 +90,19 @@ namespace Raven.Server.Documents
 
             try
             {
+
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    MasterKey = _serverStore.GetSecretKey(ctx, Name);
+
+                    var databaseRecord = _serverStore.Cluster.ReadDatabase(ctx, Name);
+                    if (databaseRecord.Encrypted && MasterKey == null)
+                        throw new InvalidOperationException($"Attempt to create encrypted db {Name} without supplying the secret key");
+                    if (databaseRecord.Encrypted == false && MasterKey != null)
+                        throw new InvalidOperationException($"Attempt to create a non-encrypted db {Name}, but a secret key exists for this db.");
+                }
+
                 IoChanges = new IoChangesNotifications();
                 Changes = new DocumentsChanges();
                 DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
@@ -185,18 +198,6 @@ namespace Raven.Server.Documents
         {
             try
             {
-                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                using (ctx.OpenReadTransaction())
-                {
-                    MasterKey = _serverStore.GetSecretKey(ctx, Name);
-
-                    var databaseRecord = _serverStore.Cluster.ReadDatabase(ctx, Name);
-                    if (databaseRecord.Encrypted && MasterKey == null)
-                        throw new InvalidOperationException($"Attempt to create encrypted db {Name} without supplying the secret key");
-                    if (databaseRecord.Encrypted == false && MasterKey != null)
-                        throw new InvalidOperationException($"Attempt to create a non-encrypted db {Name}, but a secret key exists for this db.");
-                }
-
                 NotificationCenter.Initialize(this);
 
                 DocumentsStorage.Initialize();

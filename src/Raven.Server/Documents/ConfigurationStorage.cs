@@ -2,6 +2,7 @@
 using Raven.Server.Documents.Operations;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Voron;
 
 namespace Raven.Server.Documents
@@ -31,7 +32,7 @@ namespace Raven.Server.Documents
             options.ForceUsing32BitsPager = db.Configuration.Storage.ForceUsing32BitsPager;
             options.TimeToSyncAfterFlashInSeconds = db.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
             options.NumOfConcurrentSyncsPerPhysDrive = db.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
-            options.MasterKey = db.MasterKey;
+            Sodium.CopyMasterKey(out options.MasterKey, db.MasterKey);
 
             Environment = new StorageEnvironment(options);
             
