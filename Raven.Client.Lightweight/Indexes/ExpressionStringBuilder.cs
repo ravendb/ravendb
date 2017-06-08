@@ -1651,7 +1651,7 @@ namespace Raven.Client.Indexes
                             break;
                     }
                     var oldAvoidDuplicateParameters = _avoidDuplicatedParameters;
-                    if (node.Method.Name == "Select")
+                    if (node.Method.Name == "Select" || node.Method.Name == "SelectMany")
                     {
                         _avoidDuplicatedParameters = true;
                     }
