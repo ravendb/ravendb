@@ -141,7 +141,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/revisions/zombied", "GET")]
+        [RavenAction("/databases/*/revisions/zombied", "GET", "/databases/*/revisions/zombied?etag={long.MaxValue}&pageSize=25")]
         public Task GetZombiedRevisions()
         {
             var versioningStorage = Database.DocumentsStorage.VersioningStorage;
@@ -151,12 +151,11 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var start = GetStart();
-                var pageSize = GetPageSize();
-                var result = versioningStorage.GetZombiedRevisionsWithCount(context, start, pageSize);
-                var revisions = result.Revisions;
+                var etag = GetLongQueryString("etag");
+                var pageSize = GetPageSize(); // TODO: limit page size. By default it is int.MaxValue!
+                var revisions = versioningStorage.GetZombiedRevisions(context, etag, pageSize).ToArray();
 
-                long actualEtag = revisions.Length == 0 ? -1 : revisions[0].Etag;
+                var actualEtag = revisions.Length == 0 ? -1 : revisions[0].Etag;
                 if (GetLongFromHeaders("If-None-Match") == actualEtag)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
@@ -169,13 +168,10 @@ namespace Raven.Server.Documents.Handlers
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
+
                     writer.WritePropertyName("Results");
                     writer.WriteDocuments(context, revisions, false, out count);
 
-                    writer.WriteComma();
-
-                    writer.WritePropertyName("TotalResults");
-                    writer.WriteInteger(result.Count);
                     writer.WriteEndObject();
                 }
 

@@ -23,13 +23,11 @@ namespace Raven.Server.Documents.Versioning
     public unsafe class VersioningStorage
     {
         private static readonly Slice IdAndEtagSlice;
+        private static readonly Slice FlagsAndEtagSlice;
         public static readonly Slice AllRevisionsEtagsSlice;
-        private static readonly Slice AllRevisionsDeletedMarkerSlice;
         private static readonly Slice CollectionRevisionsEtagsSlice;
         private static readonly Slice RevisionsCountSlice;
-
-        private static readonly long PutRevision = -2;
-        private static readonly long DeleteRevision = -1;
+        private static readonly Slice ZombiedRevisionSlice;
 
         private static readonly TableSchema DocsSchema;
 
@@ -51,8 +49,8 @@ namespace Raven.Server.Documents.Versioning
             Id = 4,
             Document = 5,
             Flags = 6,
-            LastModified = 7,
-            DocumentDeletedMarker = 8, // If the parent document is deleted we put here the etag. If it's recreated we put here -1 value.
+            Etag2 = 7, // Needed to get the zombied revisions with a consistent order
+            LastModified = 8,
         }
 
         private readonly VersioningConfigurationCollection _emptyConfiguration = new VersioningConfigurationCollection();
@@ -77,10 +75,12 @@ namespace Raven.Server.Documents.Versioning
         {
             Slice.From(StorageEnvironment.LabelsContext, "RevisionsChangeVector", ByteStringType.Immutable, out var changeVectorSlice);
             Slice.From(StorageEnvironment.LabelsContext, "RevisionsIdAndEtag", ByteStringType.Immutable, out IdAndEtagSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "RevisionsFlagsAndEtag", ByteStringType.Immutable, out FlagsAndEtagSlice);
             Slice.From(StorageEnvironment.LabelsContext, "AllRevisionsEtags", ByteStringType.Immutable, out AllRevisionsEtagsSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "AllRevisionsDeletedMarker", ByteStringType.Immutable, out AllRevisionsDeletedMarkerSlice);
             Slice.From(StorageEnvironment.LabelsContext, "CollectionRevisionsEtags", ByteStringType.Immutable, out CollectionRevisionsEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "RevisionsCount", ByteStringType.Immutable, out RevisionsCountSlice);
+            var zombiedRevision = DocumentFlags.ZombiedRevision;
+            Slice.From(StorageEnvironment.LabelsContext, (byte*)&zombiedRevision, sizeof(DocumentFlags), ByteStringType.Immutable, out ZombiedRevisionSlice);
 
             DocsSchema = new TableSchema();
             DocsSchema.DefineKey(new TableSchema.SchemaIndexDef
@@ -97,6 +97,13 @@ namespace Raven.Server.Documents.Versioning
                 Name = IdAndEtagSlice,
                 IsGlobal = true
             });
+            DocsSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = (int)Columns.Flags,
+                Count = 2,
+                Name = FlagsAndEtagSlice,
+                IsGlobal = true
+            });
             DocsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = (int)Columns.Etag,
@@ -107,12 +114,6 @@ namespace Raven.Server.Documents.Versioning
             {
                 StartIndex = (int)Columns.Etag,
                 Name = CollectionRevisionsEtagsSlice,
-            });
-            DocsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
-            {
-                StartIndex = (int)Columns.DocumentDeletedMarker,
-                Name = AllRevisionsDeletedMarkerSlice,
-                IsGlobal = true
             });
         }
 
@@ -260,18 +261,19 @@ namespace Raven.Server.Documents.Versioning
                 flags |= DocumentFlags.Revision;
                 var data = context.ReadObject(document, id);
                 var newEtag = _database.DocumentsStorage.GenerateNextEtag();
+                var newEtagSwapBytes = Bits.SwapBytes(newEtag);
 
                 using (table.Allocate(out TableValueBuilder tbv))
                 {
                     tbv.Add(changeVectorPtr, changeVectorSize);
                     tbv.Add(lowerId);
                     tbv.Add(SpecialChars.RecordSeparator);
-                    tbv.Add(Bits.SwapBytes(newEtag));
+                    tbv.Add(newEtagSwapBytes);
                     tbv.Add(idPtr);
                     tbv.Add(data.BasePointer, data.Size);
                     tbv.Add((int)flags);
+                    tbv.Add(newEtagSwapBytes);
                     tbv.Add(lastModifiedTicks);
-                    tbv.Add(PutRevision);
                     table.Set(tbv);
                 }
             }
@@ -350,6 +352,7 @@ namespace Raven.Server.Documents.Versioning
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
 
             var newEtag = _database.DocumentsStorage.GenerateNextEtag();
+            var newEtagSwapBytes = Bits.SwapBytes(newEtag);
             using (DocumentIdWorker.GetStringPreserveCase(context, id, out Slice idPtr))
             {
                 changeVector = ChangeVectorUtils.UpdateChangeVectorWithNewEtag(_documentsStorage.Environment.DbId, newEtag, changeVector);
@@ -358,19 +361,20 @@ namespace Raven.Server.Documents.Versioning
                     var changeVectorPtr = (byte*)pChangeVector;
                     var changeVectorSize = sizeof(ChangeVectorEntry) * changeVector.Length;
 
-                    var newEtagSwapBytes = Bits.SwapBytes(newEtag);
-                    using (table.Allocate(out TableValueBuilder tbv))
                     {
-                        tbv.Add(changeVectorPtr, changeVectorSize);
-                        tbv.Add(lowerId);
-                        tbv.Add(SpecialChars.RecordSeparator);
-                        tbv.Add(newEtagSwapBytes);
-                        tbv.Add(idPtr);
-                        tbv.Add(null, 0);
-                        tbv.Add((int)DocumentFlags.ZombiedRevision);
-                        tbv.Add(lastModifiedTicks);
-                        tbv.Add(newEtagSwapBytes);
-                        table.Set(tbv);
+                        using (table.Allocate(out TableValueBuilder tbv))
+                        {
+                            tbv.Add(changeVectorPtr, changeVectorSize);
+                            tbv.Add(lowerId);
+                            tbv.Add(SpecialChars.RecordSeparator);
+                            tbv.Add(newEtagSwapBytes);
+                            tbv.Add(idPtr);
+                            tbv.Add(null, 0);
+                            tbv.Add((int)DocumentFlags.ZombiedRevision);
+                            tbv.Add(newEtagSwapBytes);
+                            tbv.Add(lastModifiedTicks);
+                            table.Set(tbv);
+                        }
                     }
                 }
             }
@@ -449,33 +453,60 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
-        private IEnumerable<Document> GetZombiedRevisions(DocumentsOperationContext context, int start, int take)
+        public IEnumerable<Document> GetZombiedRevisions(DocumentsOperationContext context, long startEtag, int take)
         {
-            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
-            foreach (var tvr in table.SeekBackwardFromLast(DocsSchema.FixedSizeIndexes[AllRevisionsDeletedMarkerSlice], start))
+            using (GetZombiedRevisionKey(context, startEtag, out Slice zombiedKey))
             {
-                if (take-- <= 0)
-                    yield break;
+                var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+                foreach (var tvr in table.SeekBackwardFrom(DocsSchema.Indexes[FlagsAndEtagSlice], ZombiedRevisionSlice, zombiedKey))
+                {
+                    if (take-- <= 0)
+                        yield break;
 
-                var deleteMarker = DocumentsStorage.TableValueToEtag((int)Columns.DocumentDeletedMarker, ref tvr.Reader);
-                if (deleteMarker < 0)
-                    yield break;
+                    var etag = DocumentsStorage.TableValueToEtag((int)Columns.Etag, ref tvr.Result.Reader);
+                    using (DocumentsStorage.TableValueToSlice(context, (int)Columns.LowerId, ref tvr.Result.Reader, out Slice lowerId))
+                    {
+                        if (IsZombiedRevision(context, table, lowerId, etag) == false)
+                            continue;
+                    }
 
-                yield return TableValueToRevision(context, ref tvr.Reader);
+                    yield return TableValueToRevision(context, ref tvr.Result.Reader);
+                }
             }
         }
 
-        public (Document[] Revisions, long Count) GetZombiedRevisionsWithCount(DocumentsOperationContext context, int start, int take)
+        private bool IsZombiedRevision(DocumentsOperationContext context, Table table, Slice lowerId, long zombiedEtag)
         {
-            var revisions = GetZombiedRevisions(context, start, take).ToArray();
-            var count = CountOfZombiedRevisions(context);
-            return (revisions, count);
+            using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
+            using (GetLastKey(context, lowerId, out Slice lastKey))
+            {
+                var tvr = table.SeekOneBackwardFrom(DocsSchema.Indexes[IdAndEtagSlice], prefixSlice, lastKey);
+                if (tvr == null)
+                {
+                    Debug.Assert(false, "Cannot happen.");
+                    return true;
+                }
+
+                var etag = DocumentsStorage.TableValueToEtag((int)Columns.Etag, ref tvr.Reader);
+                var flags = DocumentsStorage.TableValueToFlags((int)Columns.Flags, ref tvr.Reader);
+                Debug.Assert(zombiedEtag <= etag, "Zombied etag candidate cannot meet a bigger etag.");
+                return flags == DocumentFlags.ZombiedRevision && zombiedEtag >= etag;
+            }
         }
 
-        private long CountOfZombiedRevisions(DocumentsOperationContext context)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private ByteStringContext<ByteStringMemoryCache>.InternalScope GetZombiedRevisionKey(DocumentsOperationContext context, long etag, out Slice zombiedKey)
         {
-            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
-            return table.GetNumberOfEntriesFor(DocsSchema.FixedSizeIndexes[AllRevisionsDeletedMarkerSlice]);
+            var scope = context.Allocator.Allocate(sizeof(DocumentFlags) + sizeof(long), out ByteString keyMem);
+
+            var zombiedRevision = DocumentFlags.ZombiedRevision;
+            Memory.Copy(keyMem.Ptr, (byte*)&zombiedRevision, sizeof(DocumentFlags));
+
+            var swapBytesEtag = Bits.SwapBytes(etag);
+            Memory.Copy(keyMem.Ptr + sizeof(DocumentFlags), (byte*)&swapBytesEtag, sizeof(long));
+
+            zombiedKey = new Slice(SliceOptions.Key, keyMem);
+            return scope;
         }
 
         public IEnumerable<Document> GetRevisionsFrom(DocumentsOperationContext context, long etag, int take)

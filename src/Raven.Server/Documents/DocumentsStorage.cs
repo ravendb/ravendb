@@ -1525,6 +1525,12 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static DocumentFlags TableValueToFlags(int index, ref TableValueReader tvr)
+        {
+            return *(DocumentFlags*)tvr.Read(index, out int size);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static LazyStringValue TableValueToString(JsonOperationContext context, int index, ref TableValueReader tvr)
         {
             int size;
