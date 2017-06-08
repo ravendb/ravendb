@@ -87,19 +87,6 @@ namespace Raven.Client.Http
                     }
                     writer.WriteEndArray();
                     writer.WriteComma();
-
-                    writer.WritePropertyName(context.GetLazyString(nameof(Topology.ReadBehavior)));
-                    writer.WriteString(context.GetLazyString(topology.ReadBehavior.ToString()));
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(context.GetLazyString(nameof(Topology.WriteBehavior)));
-                    writer.WriteString(context.GetLazyString(topology.WriteBehavior.ToString()));
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(context.GetLazyString(nameof(Topology.SLA)));
-                    writer.WriteStartObject();
-                    writer.WritePropertyName(context.GetLazyString(nameof(topology.SLA.RequestTimeThresholdInMilliseconds)));
-                    writer.WriteInteger(topology.SLA.RequestTimeThresholdInMilliseconds);
                     writer.WriteEndObject();
 
                     writer.WriteEndObject();

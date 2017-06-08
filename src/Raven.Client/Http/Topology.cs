@@ -6,8 +6,5 @@ namespace Raven.Client.Http
     {
         public long Etag;
         public List<ServerNode> Nodes;
-        public ReadBehavior ReadBehavior;
-        public WriteBehavior WriteBehavior;
-        public TopologySla SLA;
     }
 }
