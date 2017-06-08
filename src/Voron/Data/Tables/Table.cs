@@ -517,7 +517,10 @@ namespace Voron.Data.Tables
                     {
                         var pkIndex = GetTree(pk);
 
-                        pkIndex.Add(pkVal, idAsSlice);
+                        using (pkIndex.DirectAdd(pkVal, idAsSlice.Size, TreeNodeFlags.Data | TreeNodeFlags.NewOnly, out var ptr))
+                        {
+                            idAsSlice.CopyTo(ptr);
+                        }
                     }
                 }
 
