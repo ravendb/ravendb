@@ -17,7 +17,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Server;
@@ -29,12 +28,12 @@ namespace Raven.TestDriver
     public class RavenTestDriver<TServerLocator> : IDisposable
         where TServerLocator : RavenServerLocator, new()
     {
-        private static readonly Lazy<IDocumentStore> GlobalServer = 
+        private static readonly Lazy<IDocumentStore> GlobalServer =
             new Lazy<IDocumentStore>(RunServer, LazyThreadSafetyMode.ExecutionAndPublication);
 
         private static Process _globalServerProcess;
 
-        private readonly ConcurrentDictionary<DocumentStore, object> _documentStores = 
+        private readonly ConcurrentDictionary<DocumentStore, object> _documentStores =
             new ConcurrentDictionary<DocumentStore, object>();
 
         private int _index;
@@ -83,7 +82,8 @@ namespace Raven.TestDriver
 
             SetupDatabase(store);
 
-            WaitForIndexingInternal(store, name, waitForIndexingTimeout);
+            if (waitForIndexingTimeout.HasValue)
+                WaitForIndexing(store, name, waitForIndexingTimeout);
 
             _documentStores[store] = null;
 
@@ -100,7 +100,7 @@ namespace Raven.TestDriver
         {
             var smugglerOpts = new DatabaseSmugglerOptions()
             {
-                Database =  database
+                Database = database
             };
 
             if (DatabaseDumpFilePath != null)
@@ -161,7 +161,7 @@ namespace Raven.TestDriver
 
             var store = new DocumentStore
             {
-                Urls = new[] {url},
+                Urls = new[] { url },
                 Database = "test.manager"
             };
 
@@ -177,14 +177,9 @@ namespace Raven.TestDriver
 
         public void WaitForIndexing(IDocumentStore store, string database = null, TimeSpan? timeout = null)
         {
-            WaitForIndexingInternal(store, database ?? store.Database, timeout ?? TimeSpan.FromMinutes(1));
-        }
-
-        private void WaitForIndexingInternal(IDocumentStore store, string database = null, TimeSpan? timeout = null)
-        {
             var admin = store.Admin.ForDatabase(database);
 
-            timeout = timeout ?? TimeSpan.Zero;
+            timeout = timeout ?? TimeSpan.FromMinutes(1);
 
             var sp = Stopwatch.StartNew();
             while (sp.Elapsed < timeout.Value)
@@ -193,7 +188,7 @@ namespace Raven.TestDriver
                 var indexes = databaseStatistics.Indexes
                     .Where(x => x.State != IndexState.Disabled);
 
-                if (indexes.All(x => x.IsStale == false 
+                if (indexes.All(x => x.IsStale == false
                     && x.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix) == false))
                     return;
 
@@ -210,13 +205,13 @@ namespace Raven.TestDriver
             string allIndexErrorsText = string.Empty;
             if (errors != null && errors.Length > 0)
             {
-                var allIndexErrorsListText = string.Join("\r\n", 
+                var allIndexErrorsListText = string.Join("\r\n",
                     errors.Select(FormatIndexErrors));
                 allIndexErrorsText = $"Indexing errors:\r\n{ allIndexErrorsListText }";
 
                 string FormatIndexErrors(IndexErrors indexErrors)
                 {
-                    var errorsListText = string.Join("\r\n", 
+                    var errorsListText = string.Join("\r\n",
                         indexErrors.Errors.Select(x => $"- {x}"));
                     return $"Index '{indexErrors.Name}' ({indexErrors.Errors.Length} errors):\r\n{errorsListText}";
                 }
