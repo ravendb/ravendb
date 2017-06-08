@@ -21,23 +21,18 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
+            LoggingSource.Instance.SetupLogMode(LogMode.Information, "Logs");
             for (var i = 0; i < 100; i++)
             {
-                Console.Clear();
                 Console.WriteLine(i);
 
-                using (var a = new FastTests.Client.Attachments.AttachmentFailover())
+                Parallel.For(0, 10, _ =>
                 {
-                    a.PutAttachmentsWithFailover(useSession: true, size: 524288, hash: "BfKA8g/BJuHOTHYJ+A6sOt9jmFSVEDzCM3EcLLKCRMU=").Wait();
-                }
-
-                //Parallel.For(0, 10, _ =>
-                //{
-                //    using (var test = new FastTests.Server.Replication.DisableDatabasePropagationInRaftCluster())
-                //    {
-                //        test.DisableDatabaseToggleOperation_should_propagate_through_raft_cluster().Wait();
-                //    }
-                //});
+                    using (var a = new FastTests.Tasks.RavenDB_6886())
+                    {
+                        a.Cluster_identity_for_multiple_documents_on_different_nodes_should_work().Wait();
+                    }
+                });
             }
         }
     }

@@ -79,9 +79,7 @@ namespace FastTests.Tasks
             {
                 await CreateDatabasesInCluster(clusterSize, databaseName, leaderStore);
 
-#pragma warning disable 4014
                 var leaderInput = Task.Run(() =>
-#pragma warning restore 4014
                 {
                     using (var session = leaderStore.OpenSession())
                     {
@@ -95,9 +93,7 @@ namespace FastTests.Tasks
                     }
                 });
 
-#pragma warning disable 4014
                 var followerAInput = Task.Run(() =>
-#pragma warning restore 4014
                 {
                     using (var session = followerA.OpenSession())
                     {
@@ -109,9 +105,7 @@ namespace FastTests.Tasks
                     }
                 });
 
-#pragma warning disable 4014
                 var followerBInput = Task.Run(() =>
-#pragma warning restore 4014
                 {
                     using (var session = followerB.OpenSession())
                     {
@@ -123,7 +117,7 @@ namespace FastTests.Tasks
                     }
                 });
 
-                Task.WaitAll(leaderInput, followerAInput, followerBInput);
+                await Task.WhenAll(leaderInput, followerAInput, followerBInput);
 
                 //now add markers to test when the replication finishes..
                 using (var session = followerA.OpenSession())
