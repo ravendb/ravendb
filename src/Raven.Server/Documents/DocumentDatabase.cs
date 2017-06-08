@@ -31,6 +31,7 @@ using Sparrow.Logging;
 using Voron;
 using Voron.Exceptions;
 using Voron.Impl.Backup;
+using Voron.Util;
 using DatabaseInfo = Raven.Client.Server.Operations.DatabaseInfo;
 using Size = Raven.Client.Util.Size;
 
@@ -207,6 +208,9 @@ namespace Raven.Server.Documents
                 using (context.OpenReadTransaction())
                     record = _serverStore.Cluster.ReadDatabase(context, Name,out index);
 
+                if (record == null)
+                    throw new DatabaseDoesNotExistException("The database " + Name + " does not exist or was deleted");
+                
                 _indexStoreTask = IndexStore.InitializeAsync(record, index);
                 _transformerStoreTask = TransformerStore.InitializeAsync(record);
 
