@@ -43,6 +43,8 @@ namespace Raven.Server.Rachis
 
         public string Tag => _tag;
 
+        public System.Threading.ThreadState ThreadStatus => _thread.ThreadState;
+
         public long FollowerMatchIndex => Interlocked.Read(ref _followerMatchIndex);
 
         public DateTime LastReplyFromFollower => new DateTime(Interlocked.Read(ref _lastReplyFromFollower));

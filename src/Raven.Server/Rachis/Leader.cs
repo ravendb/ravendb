@@ -329,8 +329,10 @@ namespace Raven.Server.Rachis
                 var sinceLastSend = (long)(now - followerAmbassador.LastSendToFollower).TotalMilliseconds;
                 var lastMsg = followerAmbassador.LastSendMsg;
                 sb.AppendLine(
-                    $"{followerAmbassador.Tag}: Got last reply {sinceLastReply:#,#;;0} ms ago and sent {sinceLastSend:#,#;;0} ms ({lastMsg}) - {followerAmbassador.Status}");
+                    $"{followerAmbassador.Tag}: Got last reply {sinceLastReply:#,#;;0} ms ago and sent {sinceLastSend:#,#;;0} ms ({lastMsg}) - {followerAmbassador.Status} - {followerAmbassador.ThreadStatus}");
             }
+
+
             if (_engine.Log.IsInfoEnabled && _voters.Count != 0)
             {
                 _engine.Log.Info($"Leader {_engine.Tag}:VoteOfNoConfidence{Environment.NewLine } {sb}");
