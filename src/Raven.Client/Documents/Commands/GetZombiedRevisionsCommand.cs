@@ -10,12 +10,12 @@ namespace Raven.Client.Documents.Commands
 {
     public class GetZombiedRevisionsCommand : RavenCommand<BlittableArrayResult>
     {
-        private readonly int? _start;
+        private readonly long _etag;
         private readonly int? _pageSize;
 
-        public GetZombiedRevisionsCommand(int? start, int? pageSize)
+        public GetZombiedRevisionsCommand(long etag, int? pageSize)
         {
-            _start = start;
+            _etag = etag;
             _pageSize = pageSize;
         }
 
@@ -29,10 +29,9 @@ namespace Raven.Client.Documents.Commands
             var pathBuilder = new StringBuilder(node.Url);
             pathBuilder.Append("/databases/")
                 .Append(node.Database)
-                .Append("/revisions/zombied?");
+                .Append("/revisions/zombied?&etag=")
+                .Append(_etag);
 
-            if (_start.HasValue)
-                pathBuilder.Append("&start=").Append(_start);
             if (_pageSize.HasValue)
                 pathBuilder.Append("&pageSize=").Append(_pageSize);
 

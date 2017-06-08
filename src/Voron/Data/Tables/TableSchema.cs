@@ -238,10 +238,9 @@ namespace Voron.Data.Tables
 
             public long GetValue(ByteStringContext context, TableValueBuilder value)
             {
-                Slice slice;
-                using (value.SliceFromLocation(context, StartIndex, out slice))
+                using (value.SliceFromLocation(context, StartIndex, out Slice slice))
                 {
-                    return Bits.SwapBytes(*(long*) slice.Content.Ptr);
+                    return Bits.SwapBytes(*(long*)slice.Content.Ptr);
                 }
             }
 

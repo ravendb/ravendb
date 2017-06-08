@@ -794,6 +794,68 @@ namespace Voron.Data.Tables
             }
         }
 
+        public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.SchemaIndexDef index, Slice prefix, Slice last)
+        {
+            var tree = GetTree(index);
+            if (tree.State.NumberOfEntries == 0)
+                yield break;
+
+            using (var it = tree.Iterate(false))
+            {
+                if (it.Seek(last) == false && it.Seek(Slices.AfterAllKeys) == false)
+                    yield break;
+
+                it.SetRequiredPrefix(prefix);
+                if (SliceComparer.StartWith(it.CurrentKey, it.RequiredPrefix) == false)
+                {
+                    if (it.MovePrev() == false)
+                        yield break;
+                }
+
+                do
+                {
+                    foreach (var result in GetBackwardSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator)))
+                    {
+                        yield return new SeekResult
+                        {
+                            Key = it.CurrentKey,
+                            Result = result
+                        };
+                    }
+                } while (it.MovePrev());
+            }
+        }
+
+        public TableValueHolder SeekOneBackwardFrom(TableSchema.SchemaIndexDef index, Slice prefix, Slice last)
+        {
+            var tree = GetTree(index);
+            if (tree.State.NumberOfEntries == 0)
+                return null;
+
+            using (var it = tree.Iterate(false))
+            {
+                if (it.Seek(last) == false && it.Seek(Slices.AfterAllKeys) == false)
+                    return null;
+
+                it.SetRequiredPrefix(prefix);
+                if (SliceComparer.StartWith(it.CurrentKey, it.RequiredPrefix) == false)
+                {
+                    if (it.MovePrev() == false)
+                    return null;
+                }
+
+                do
+                {
+                    foreach (var result in GetBackwardSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator)))
+                    {
+                        return result;
+                    }
+                } while (it.MovePrev());
+            }
+
+            return null;
+        }
+
         public TableValueHolder SeekOneBackwardFrom(TableSchema.SchemaIndexDef index, Slice value)
         {
             var tree = GetTree(index);

@@ -362,8 +362,8 @@ namespace FastTests.Server.Documents.Versioning
                 await store.Commands().PutAsync("users/1", null, new User { Name = "Fitzchak" });
                 await store.Commands().DeleteAsync("users/1", null);
 
-                var deleteRevisions = await store.Commands().GetZombiedRevisionsAsync();
-                Assert.Equal(1, deleteRevisions.Count);
+                var zombiedRevisions = await store.Commands().GetZombiedRevisionsAsync(long.MaxValue);
+                Assert.Equal(1, zombiedRevisions.Count);
 
                 using (var session = store.OpenAsyncSession())
                 {
