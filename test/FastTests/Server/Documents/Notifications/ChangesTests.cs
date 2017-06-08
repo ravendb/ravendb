@@ -3,8 +3,10 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
+using System.Linq;
 using Xunit;
 
 namespace FastTests.Server.Documents.Notifications
@@ -158,6 +160,71 @@ namespace FastTests.Server.Documents.Notifications
 
                 // ensure the db still works
                 store.Admin.Send(new GetStatisticsOperation());
+            }
+        }
+
+        [Fact]
+        public async Task CanGetNotificationAboutSideBySideIndexReplacement()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var list = new BlockingCollection<IndexChange>();
+                var taskObservable = store.Changes();
+                await taskObservable.EnsureConnectedNow();
+                var observableWithTask = taskObservable.ForIndex("Users/All");
+
+                observableWithTask.Subscribe(x =>
+                {
+                    if (x.Type == IndexChangeTypes.SideBySideReplace)
+                        list.Add(x);
+                });
+                await observableWithTask.EnsureSubscribedNow();
+
+                new UsersIndex().Execute(store);
+                WaitForIndexing(store);
+                Assert.True(list.Count == 0);
+
+                new UsersIndexChanged().Execute(store);
+                WaitForIndexing(store);
+
+                Assert.True(list.TryTake(out var indexChange, TimeSpan.FromSeconds(1)));
+                Assert.Equal("Users/All", indexChange.Name);
+                Assert.Equal(IndexChangeTypes.SideBySideReplace, indexChange.Type);
+            }
+        }
+
+        private class UsersIndex : AbstractIndexCreationTask<User>
+        {
+            public override string IndexName => "Users/All";
+
+            public UsersIndex()
+            {
+                Map = users =>
+                    from user in users
+                    select new { user.Name, user.LastName , user.Age };
+
+                Sort(x => x.Name, SortOptions.String);
+                Sort(x => x.LastName, SortOptions.String);
+                Sort(x => x.Age, SortOptions.Numeric);
+            }
+        }
+
+        private class UsersIndexChanged : AbstractIndexCreationTask<User>
+        {
+            public override string IndexName => "Users/All";
+
+            public UsersIndexChanged()
+            {
+                Map = users =>
+                    from user in users
+                    select new { user.Name, user.LastName, user.Age , user.AddressId , user.Id };
+
+                Sort(x => x.Name, SortOptions.String);
+                Sort(x => x.LastName, SortOptions.String);
+                Sort(x => x.Age, SortOptions.Numeric);
+                Sort(x => x.AddressId, SortOptions.String);
+                Sort(x => x.Id, SortOptions.String);
+
             }
         }
     }
