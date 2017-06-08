@@ -91,7 +91,10 @@ namespace Raven.Server.Rachis
                             {
                                 CastVoteForSelf();
                             }
-
+                            else
+                            {
+                                ElectionTerm = _engine.CurrentTerm + 1;
+                            }
                             _engine.RandomizeTimeout(extend: true);
 
                             StateChange(); // will wake ambassadors and make them ping peers again
