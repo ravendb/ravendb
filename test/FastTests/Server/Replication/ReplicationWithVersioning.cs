@@ -10,7 +10,7 @@ namespace FastTests.Server.Replication
     public class ReplicationWithVersioning : ReplicationTestsBase
     {
         [Fact]
-        public async Task CanReplicateVersions()
+        public async Task CanReplicateRevisions()
         {
             var company = new Company {Name = "Company Name"};
             var company2 = new Company {Name = "Company Name2"};
@@ -19,7 +19,7 @@ namespace FastTests.Server.Replication
             using (var slave = GetDocumentStore())
             {
                 await VersioningHelper.SetupVersioning(Server.ServerStore, master.Database);
-                //await VersioningHelper.SetupVersioning(Server.ServerStore, slave.Database);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, slave.Database);
 
                 await SetupReplicationAsync(master, slave);
 
@@ -52,7 +52,7 @@ namespace FastTests.Server.Replication
             using (var slave = GetDocumentStore())
             {
                 await VersioningHelper.SetupVersioning(Server.ServerStore, master.Database);
-                //await VersioningHelper.SetupVersioning(Server.ServerStore, slave.Database);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, slave.Database);
 
                 using (var session = master.OpenAsyncSession())
                 {
@@ -137,7 +137,7 @@ namespace FastTests.Server.Replication
             var user2 = new User { Name = "Name2" };
             
             await VersioningHelper.SetupVersioning(Server.ServerStore, storeA.Database);
-            //await VersioningHelper.SetupVersioning(Server.ServerStore, storeB.Database);
+            await VersioningHelper.SetupVersioning(Server.ServerStore, storeB.Database);
 
             using (var session = storeA.OpenAsyncSession())
             {
@@ -174,8 +174,8 @@ namespace FastTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
 
-                Assert.Equal(1, WaitForValue(() => storeA.Commands().GetRevisionsFor("foo/bar").Count, 1));
-                Assert.Equal(1, WaitForValue(() => storeB.Commands().GetRevisionsFor("foo/bar").Count, 1));
+                Assert.Equal(1, WaitForValue(() => storeA.Commands().GetRevisionsFor("users/1").Count, 1));
+                Assert.Equal(1, WaitForValue(() => storeB.Commands().GetRevisionsFor("users/1").Count, 1));
                 Assert.True(WaitForDocument(storeB, "users/1"));
 
                 await SetupReplicationAsync(storeA, storeC);
@@ -194,7 +194,7 @@ namespace FastTests.Server.Replication
                 }
                 Assert.True(WaitForDocument(storeB, "marker"));
 
-                Assert.Equal(1, WaitForValue(() => storeC.Commands().GetRevisionsFor("foo/bar").Count, 1));
+                Assert.Equal(1, WaitForValue(() => storeC.Commands().GetRevisionsFor("users/1").Count, 1));
             }
         }
     }
