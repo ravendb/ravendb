@@ -220,7 +220,7 @@ namespace Raven.Server.Documents
             options.ForceUsing32BitsPager = _documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
             options.TimeToSyncAfterFlashInSeconds = _documentDatabase.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
             options.NumOfConcurrentSyncsPerPhysDrive = _documentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
-            options.MasterKey = _documentDatabase.MasterKey;
+            Sodium.CopyMasterKey(out options.MasterKey, _documentDatabase.MasterKey);
 
             try
             {
