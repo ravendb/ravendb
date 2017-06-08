@@ -9,8 +9,8 @@ namespace Raven.Server.Documents
 
         Artificial = 0x1,
         Versioned = 0x2,
-        DeleteRevision = 0x4,
-        DeleteRevisionWithoutParentDocument = 0x8,
+        ZombiedRevision = 0x4,
+        Reserved2 = 0x8,
 
         FromIndex = 0x10,
         Revision = 0x20,

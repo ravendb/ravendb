@@ -175,17 +175,29 @@ namespace FastTests
                 return new DynamicBlittableJson(json);
             }
 
-            public DynamicArray GetRevisionsFor(string id, int? start = null, int? pageSize = null, bool deleteDocumentsWithRevision = false)
+            public DynamicArray GetRevisionsFor(string id, int? start = null, int? pageSize = null)
             {
-                return AsyncHelpers.RunSync(() => GetRevisionsForAsync(id, start, pageSize, deleteDocumentsWithRevision));
+                return AsyncHelpers.RunSync(() => GetRevisionsForAsync(id, start, pageSize));
             }
 
-            public async Task<DynamicArray> GetRevisionsForAsync(string id, int? start = null, int? pageSize = null, bool deleteDocumentsWithRevision = false)
+            public async Task<DynamicArray> GetRevisionsForAsync(string id, int? start = null, int? pageSize = null)
             {
                 if (id == null)
                     throw new ArgumentNullException(nameof(id));
 
-                var command = new GetRevisionsCommand(id, start, pageSize, deleteDocumentsWithRevision);
+                var command = new GetRevisionsCommand(id, start, pageSize);
+                await RequestExecutor.ExecuteAsync(command, Context);
+                return new DynamicArray(command.Result.Results);
+            }
+
+            public DynamicArray GetZombiedRevisions(int? start = null, int? pageSize = null)
+            {
+                return AsyncHelpers.RunSync(() => GetZombiedRevisionsAsync(start, pageSize));
+            }
+
+            public async Task<DynamicArray> GetZombiedRevisionsAsync(int? start = null, int? pageSize = null)
+            {
+                var command = new GetZombiedRevisionsCommand(start, pageSize);
                 await RequestExecutor.ExecuteAsync(command, Context);
                 return new DynamicArray(command.Result.Results);
             }

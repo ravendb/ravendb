@@ -141,8 +141,8 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/delete-documents-with-revisions", "GET")]
-        public Task GetDeletedDocumentsThatHaveRevisions()
+        [RavenAction("/databases/*/revisions/zombied", "GET")]
+        public Task GetZombiedRevisions()
         {
             var versioningStorage = Database.DocumentsStorage.VersioningStorage;
             if (versioningStorage.Configuration == null)
@@ -153,7 +153,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var start = GetStart();
                 var pageSize = GetPageSize();
-                var result = versioningStorage.GetDeletedDocumentsThatHaveRevisionsWithCount(context, start, pageSize);
+                var result = versioningStorage.GetZombiedRevisionsWithCount(context, start, pageSize);
                 var revisions = result.Revisions;
 
                 long actualEtag = revisions.Length == 0 ? -1 : revisions[0].Etag;
