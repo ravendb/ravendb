@@ -18,10 +18,13 @@ class visualizer extends viewModelBase {
     private currentIndexUi: KnockoutComputed<string>;
     private hasIndexSelected: KnockoutComputed<boolean>;
 
+    spinners = {
+        addDocument: ko.observable<boolean>(false)
+    }
+
     private documents = {
         documentId: ko.observable(""),
         hasFocusDocumentId: ko.observable<boolean>(false),
-        loadingDocumentIdSearchResults: ko.observable<boolean>(false), //TODO: autocomplete support
         documentIds: ko.observableArray<string>(),
         documentIdsSearchResults: ko.observableArray<string>()
     }
@@ -101,7 +104,8 @@ class visualizer extends viewModelBase {
         if (_.includes(this.documents.documentIds(), documentId)) {
             this.globalGraph.zoomToDocument(documentId);
         } else {
-            //TODO: spinner
+            this.spinners.addDocument(true);
+
             new getIndexMapReduceTreeCommand(this.activeDatabase(), this.currentIndex(), documentId)
                 .execute()
                 .done((mapReduceTrees) => {
@@ -113,7 +117,8 @@ class visualizer extends viewModelBase {
 
                         this.globalGraph.zoomToDocument(documentId);
                     }
-                });
+                })
+                .always(() => this.spinners.addDocument(false));
         }
     }
 
@@ -190,7 +195,7 @@ class visualizer extends viewModelBase {
     }
 
     private fetchDocumentIdSearchResults(query: string) {
-        this.documents.loadingDocumentIdSearchResults(true);
+        this.spinners.addDocument(true);
 
         new getIndexDebugSourceDocumentsCommand(this.activeDatabase(), this.currentIndex(), query, 0, 10)
             .execute()
@@ -199,7 +204,7 @@ class visualizer extends viewModelBase {
                     this.documents.documentIdsSearchResults(result.Results);
                 }
             })
-            .always(() => this.documents.loadingDocumentIdSearchResults(false));
+            .always(() => this.spinners.addDocument(false));
     }
 
     /*

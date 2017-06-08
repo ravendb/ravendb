@@ -1,4 +1,5 @@
 import graphHelper = require("common/helpers/graph/graphHelper");
+import viewHelpers = require("common/helpers/view/viewHelpers");
 
 import d3 = require('d3');
 
@@ -433,8 +434,8 @@ class visualizerGraphDetails {
         betweenLinesOffset: 5
     }
 
-    private totalWidth = 1500; //TODO: use dynamic value
-    private totalHeight = 700; //TODO: use dynamic value
+    private totalWidth: number;
+    private totalHeight: number;
 
     private documents = [] as Array<documentItem>;
 
@@ -464,6 +465,8 @@ class visualizerGraphDetails {
         this.trees = trees;
 
         const container = d3.select("#visualizerContainer");
+
+        [this.totalWidth, this.totalHeight] = viewHelpers.getPageHostDimenensions();
 
         this.canvas = container
             .append("canvas")

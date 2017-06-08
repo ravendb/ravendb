@@ -32,6 +32,12 @@ class viewHelpers {
             return false;
         }
     }
+
+    static getPageHostDimenensions(): [number, number] {
+        const $pageHostRoot = $(".dynamic-container");
+
+        return [$pageHostRoot.innerWidth(), $pageHostRoot.innerHeight()];
+    }
 }
 
 export = viewHelpers;

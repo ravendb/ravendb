@@ -1,22 +1,32 @@
 import graphHelper = require("common/helpers/graph/graphHelper");
+import viewHelpers = require("common/helpers/view/viewHelpers");
 
 import d3 = require('d3');
 import rbush = require("rbush");
 
-class pageItem {
+abstract class abstractPageItem {
     static readonly pageWidth = 20;
     static readonly pageHeight = 20;
 
     x: number;
     y: number;
+    parent: reduceTreeItem;
+
+    constructor(parent: reduceTreeItem) {
+        this.parent = parent;
+    }
+}
+
+class pageItem extends abstractPageItem {
+    
     aggregation?: pageItem;
     pageNumber: number;
-    parent: reduceTreeItem;
+    
     incomingLinesCount: number;
 
     constructor(pageNumber: number, parent: reduceTreeItem) {
+        super(parent);
         this.pageNumber = pageNumber;
-        this.parent = parent;
         this.incomingLinesCount = 0;
     }
 
@@ -47,6 +57,10 @@ class pageItem {
     }
 }
 
+class collapsedPageItem extends abstractPageItem {
+    // empty by design
+}
+
 class reduceTreeItem {
 
     /*
@@ -65,7 +79,7 @@ class reduceTreeItem {
     displayName: string;
     depth: number;
     itemsCountAtDepth: Array<number>; // this represents non-filtered count
-    itemsAsDepth = new Map<number, Array<pageItem>>(); // items after filtering
+    itemsAsDepth = new Map<number, Array<abstractPageItem>>(); // items after filtering
 
     width = 0;
     height = 0;
@@ -109,7 +123,6 @@ class reduceTreeItem {
     }
 
     private filterVisibleItems(documents: documentItem[]) {
-        //TODO: for now display all
         const filterAtDepth = (depth: number, node: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage, aggregation: pageItem) => {
             if (!this.itemsAsDepth.has(depth)) {
                 this.itemsAsDepth.set(depth, []);
@@ -137,12 +150,63 @@ class reduceTreeItem {
         };
 
         filterAtDepth(0, this.tree.Root, null);
+
+        this.collapseNonRelevantPages();
+    }
+
+    private collapseNonRelevantPages() {
+        const relevantPageNumbersPerLevel = [] as Array<Array<number>>;
+
+        let relevantNodes = this.itemsAsDepth
+            .get(this.depth - 1)
+            .filter((x: pageItem) => x.incomingLinesCount > 0);
+
+        relevantPageNumbersPerLevel.unshift(relevantNodes.map((x: pageItem) => x.pageNumber));
+
+        for (let i = 0; i < this.depth - 1; i++) {
+            relevantNodes = _.uniq(relevantNodes.map((x: pageItem) => x.aggregation));
+            relevantPageNumbersPerLevel.unshift(relevantNodes.map((x: pageItem) => x.pageNumber));
+        }
+
+        for (let i = 0; i < this.depth; i++) {
+            const levelItems = this.itemsAsDepth.get(i);
+            const relevantPageNumbers = relevantPageNumbersPerLevel[i];
+
+            const collapsedItems = [] as Array<abstractPageItem>;
+            let collapseInserted = false;
+
+            for (let j = 0; j < levelItems.length; j++) {
+                const item = levelItems[j] as pageItem;
+                if (_.includes(relevantPageNumbers, item.pageNumber)) {
+                    collapseInserted = false;
+                    collapsedItems.push(item);
+                } else {
+                    if (!collapseInserted) {
+                        collapsedItems.push(new collapsedPageItem(this));
+                        collapseInserted = true;
+                    }
+                }
+            }
+
+            this.itemsAsDepth.set(i, collapsedItems);
+        }
+
+    }
+
+    private getMaxItems() {
+        let max = 0;
+        this.itemsAsDepth.forEach(x => {
+            if (x.length > max) {
+                max = x.length;
+            }
+        });
+        return max;
     }
 
     private layout() {
         this.calculateTreeDimensions();
 
-        const maxItems = d3.max(this.itemsCountAtDepth);
+        const maxItems = this.getMaxItems();
         const pagesTotalWidth = this.getPagesOnlyWidth(maxItems);
 
         let yStart = reduceTreeItem.margins.treeMargin +
@@ -191,7 +255,7 @@ class reduceTreeItem {
 
         this.height = height;
 
-        const maxItems = d3.max(this.itemsCountAtDepth);
+        const maxItems = this.getMaxItems();
 
         let width = reduceTreeItem.margins.treeMargin +
             visualizerGraphGlobal.totalEntriesWidth(maxItems) +
@@ -259,6 +323,9 @@ type rTreeLeaf = {
 
 class hitTest {
 
+    cursor = ko.observable<string>("auto");
+    private mouseDown = false;
+
     private rTree = rbush<rTreeLeaf>();
 
     private onPageClicked: (item: reduceTreeItem) => void;
@@ -282,13 +349,33 @@ class hitTest {
         this.rTree.clear();
     }
 
-    onClick(x: number, y: number) {
-        const items = this.findItems(x, y);
+    onMouseMove(location: [number, number]) {
+        const items = this.findItems(location[0], location[1]);
+
+        if (items.filter(x => x.actionType === "pageClicked").length > 0) {
+            this.cursor(this.mouseDown ? graphHelper.prefixStyle("grabbing") : "pointer");
+        } else {
+            this.cursor(graphHelper.prefixStyle(this.mouseDown ? "grabbing": "grab"));
+        }
+    }
+
+    onClick(location: [number, number]) {
+        const items = this.findItems(location[0], location[1]);
 
         for (let i = 0; i < items.length; i++) {
             const item = items[i];
             this.onPageClicked(item.arg as reduceTreeItem);
         }
+    }
+
+    onMouseDown() {
+        this.cursor(graphHelper.prefixStyle("grabbing"));
+        this.mouseDown = true;
+    }
+
+    onMouseUp() {
+        this.cursor(graphHelper.prefixStyle("grab"));
+        this.mouseDown = false;
     }
 
     private findItems(x: number, y: number): Array<rTreeLeaf> {
@@ -307,6 +394,9 @@ interface avgXVals {
 }
 
 class visualizerGraphGlobal {
+
+    private static collapsedSprite = "data:image/gif;base64,R0lGODlhFAAUAIABAACMyf///yH/C1hNUCBEYXRhWE1QPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNS42LWMwNjcgNzkuMTU3NzQ3LCAyMDE1LzAzLzMwLTIzOjQwOjQyICAgICAgICAiPiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPiA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOnhtcE1NPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvbW0vIiB4bWxuczpzdFJlZj0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL3NUeXBlL1Jlc291cmNlUmVmIyIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgRWxlbWVudHMgMTQuMCAoV2luZG93cykiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6RTRGMUFBMDg0QzQ0MTFFN0I2NTlBN0M3RkM0MDk3RUQiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6RTRGMUFBMDk0QzQ0MTFFN0I2NTlBN0M3RkM0MDk3RUQiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDpFNEYxQUEwNjRDNDQxMUU3QjY1OUE3QzdGQzQwOTdFRCIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDpFNEYxQUEwNzRDNDQxMUU3QjY1OUE3QzdGQzQwOTdFRCIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PgH//v38+/r5+Pf29fTz8vHw7+7t7Ovq6ejn5uXk4+Lh4N/e3dzb2tnY19bV1NPS0dDPzs3My8rJyMfGxcTDwsHAv769vLu6ubi3trW0s7KxsK+urayrqqmop6alpKOioaCfnp2cm5qZmJeWlZSTkpGQj46NjIuKiYiHhoWEg4KBgH9+fXx7enl4d3Z1dHNycXBvbm1sa2ppaGdmZWRjYmFgX15dXFtaWVhXVlVUU1JRUE9OTUxLSklIR0ZFRENCQUA/Pj08Ozo5ODc2NTQzMjEwLy4tLCsqKSgnJiUkIyIhIB8eHRwbGhkYFxYVFBMSERAPDg0MCwoJCAcGBQQDAgEAACH5BAEAAAEALAAAAAAUABQAAAIshB+pee27HII0zlobxnpT44XiSFpAgFwfmIIcC5/lPLpkd6siXkvy6tMpJAUAOw==";
+    private static collapsedImage: HTMLImageElement;
     
     static readonly documentColors = ["#2196f5", "#ef6c5a", "#80ced0", "#9ccd64", "#f06292", "#7f45e6", "#fea724", "#01acc0"];
     private nextColorIndex = 0;
@@ -324,14 +414,14 @@ class visualizerGraphGlobal {
         translate: [0, 0] as [number, number]
     }
 
-    private totalWidth = 1500; //TODO: use dynamic value
-    private totalHeight = 700; //TODO: use dynamic value
+    private totalWidth: number;
+    private totalHeight: number; 
 
     private documents = [] as Array<documentItem>;
     private reduceTrees: Array<reduceTreeItem> = [];
 
     private canvas: d3.Selection<void>;
-    private svg: d3.Selection<void>; //TODO: do we really need svg in here?
+    private svg: d3.Selection<void>;
     private zoom: d3.behavior.Zoom<void>;
 
     private dataWidth = 0; // total width of all virtual elements
@@ -341,6 +431,10 @@ class visualizerGraphGlobal {
     private yScale: d3.scale.Linear<number, number>;
 
     private goToDetailsCallback: (treeName: string) => void;
+
+    constructor() {
+        visualizerGraphGlobal.getCollapsedImage(); // call to preload image
+    }
 
     addDocument(documentName: string) {
         const document = new documentItem(documentName);
@@ -389,6 +483,8 @@ class visualizerGraphGlobal {
         this.goToDetailsCallback = goToDetailsCallback;
         const container = d3.select("#visualizerContainer");
 
+        [this.totalWidth, this.totalHeight] = viewHelpers.getPageHostDimenensions();
+
         this.canvas = container
             .append("canvas")
             .attr("width", this.totalWidth)
@@ -424,7 +520,7 @@ class visualizerGraphGlobal {
     }
 
     getDocumentsColors(): Array<documentColorPair> {
-        let documentsColorsSetup: Array<documentColorPair> = [];
+        const documentsColorsSetup: Array<documentColorPair> = [];
 
         for (let i = 0; i < this.documents.length; i++) {
             const doc = this.documents[i];
@@ -434,8 +530,16 @@ class visualizerGraphGlobal {
     }
 
     private setupEvents(selection: d3.Selection<void>) {
-        selection.on("dblclick.zoom", null);
-        selection.on("click", () => this.onClick());
+        selection
+            .on("dblclick.zoom", null)
+            .on("click", () => this.onClick())
+            .on("mousemove", () => this.hitTest.onMouseMove(this.getMouseLocation()))
+            .on("mouseup", () => this.hitTest.onMouseUp())
+            .on("mousedown", () => this.hitTest.onMouseDown());
+
+        this.hitTest.cursor.subscribe(cursor => {
+            selection.style("cursor", cursor);
+        });
     }
 
     private onZoom() {
@@ -478,13 +582,16 @@ class visualizerGraphGlobal {
     }
 
     private onClick() {
-        const clickLocation = d3.mouse(this.canvas.node());
-
         if ((d3.event as any).defaultPrevented) {
             return;
         }
 
-        this.hitTest.onClick(this.xScale.invert(clickLocation[0]), this.yScale.invert(clickLocation[1]));
+        this.hitTest.onClick(this.getMouseLocation());
+    }
+
+    private getMouseLocation(): [number, number] {
+        const clickLocation = d3.mouse(this.canvas.node());
+        return [this.xScale.invert(clickLocation[0]), this.yScale.invert(clickLocation[1])];
     }
 
     private cleanLayoutCache() {
@@ -550,13 +657,11 @@ class visualizerGraphGlobal {
 
         totalWidth += this.documents.length * (documentItem.margins.minMarginBetweenDocumentNames + 1);
 
-        let extraItemPadding = 0;
-
         if (totalWidth > this.dataWidth) {
             //TODO: handle me!
         }
 
-        let avgXValues: avgXVals[] = [];
+        const avgXValues: avgXVals[] = [];
 
         for (let currentDoc = 0; currentDoc < this.documents.length; currentDoc++) {
             const doc = this.documents[currentDoc];
@@ -581,7 +686,7 @@ class visualizerGraphGlobal {
             const doc = this.documents[avgXValues[i].docIndex];
 
             // Check for collisions..
-            let previousX = avgXValues[i - 1].avgXVal;
+            const previousX = avgXValues[i - 1].avgXVal;
             if ((doc.x >= previousX) && (doc.x <= previousX + doc.width) ||
                 (doc.x + doc.width >= previousX) && (doc.x + doc.width <= previousX + doc.width)) {
                 doc.x = previousX + doc.width + xPadding;
@@ -632,9 +737,11 @@ class visualizerGraphGlobal {
             ctx.translate(tree.x, tree.y);
 
             // text
+            ctx.beginPath();
             ctx.font = "10px Lato";
             ctx.textAlign = "center";
             ctx.fillStyle = "#686f6f";
+            ctx.strokeStyle = "#686f6f";
             ctx.fillText(tree.displayName, tree.width / 2, reduceTreeItem.margins.treeMargin, tree.width);
 
             // total entries
@@ -647,13 +754,19 @@ class visualizerGraphGlobal {
             for (let i = 1; i < tree.depth; i++) {
                 totalEntiresY += totalEntriesOffset;
                 const items = tree.itemsCountAtDepth[i];
+                ctx.beginPath();
                 ctx.font = "18px Lato";
                 ctx.textAlign = "right";
                 ctx.fillText(items.toString(),
                     reduceTreeItem.margins.treeMargin + visualizerGraphGlobal.totalEntriesWidth(items),
-                    totalEntiresY + 18 /* font size */);
+                    totalEntiresY + 16);
 
-                //TODO: draw vertical line
+                const spliterX = reduceTreeItem.margins.treeMargin + visualizerGraphGlobal.totalEntriesWidth(items) + 4;
+
+                ctx.beginPath();
+                ctx.moveTo(spliterX, totalEntiresY + 24);
+                ctx.lineTo(spliterX, totalEntiresY - 8);
+                ctx.stroke();
             }
 
             this.drawPages(ctx, tree);
@@ -663,19 +776,25 @@ class visualizerGraphGlobal {
     }
 
     private drawPages(ctx: CanvasRenderingContext2D, tree: reduceTreeItem) {
+
         ctx.fillStyle = "#008cc9";
         ctx.strokeStyle = "#686f6f";
 
         tree.itemsAsDepth.forEach(globalItems => {
             for (let i = 0; i < globalItems.length; i++) {
                 const item = globalItems[i];
-                ctx.fillRect(item.x, item.y, pageItem.pageWidth, pageItem.pageHeight);
 
-                if (item.aggregation) {
-                    const sourcePoint = item.getSourceConnectionPoint();
-                    const targetPoint = item.aggregation.getTargetConnectionPoint();
+                if (item instanceof pageItem) {
+                    
+                    ctx.fillRect(item.x, item.y, pageItem.pageWidth, pageItem.pageHeight);
 
-                    graphHelper.drawBezierDiagonal(ctx, sourcePoint, targetPoint, true);
+                    if (item.aggregation) {
+                        const sourcePoint = item.getSourceConnectionPoint();
+                        const targetPoint = item.aggregation.getTargetConnectionPoint();
+                        graphHelper.drawBezierDiagonal(ctx, sourcePoint, targetPoint, true);
+                    }
+                } else {
+                    ctx.drawImage(visualizerGraphGlobal.getCollapsedImage(), item.x, item.y);
                 }
             }
         });
@@ -684,7 +803,7 @@ class visualizerGraphGlobal {
     private drawDocumentConnections(ctx: CanvasRenderingContext2D) {
         ctx.lineWidth = 2;
         let straightLine = 8;
-        let targetXValuesDrawnOnScreen: number[] = [];
+        const targetXValuesDrawnOnScreen: number[] = [];
 
         for (let i = 0; i < this.documents.length; i++) {
             const doc = this.documents[i];
@@ -694,15 +813,16 @@ class visualizerGraphGlobal {
             for (let j = 0; j < doc.connectedPages.length; j++) {
                 const page = doc.connectedPages[j];
 
-                let targetXY: [number, number] = page.getGlobalTargetConnectionPoint();
+                const targetXY: [number, number] = page.getGlobalTargetConnectionPoint();
                 let targetXOffset = targetXY[0] - page.getGlobalTargetConnectionPointXOffset();
 
+                //TODO  it is hot path
                 while (_.includes(targetXValuesDrawnOnScreen, targetXOffset)) {
                     targetXOffset += 4;
                 }
                 targetXY[0] = targetXOffset;
 
-                let sourceXY: [number, number] = doc.getSourceConnectionPoint();
+                const sourceXY: [number, number] = doc.getSourceConnectionPoint();
 
                 if (straightLine > 60) {
                     straightLine = 11;
@@ -718,8 +838,6 @@ class visualizerGraphGlobal {
 
     private drawStraightLines(ctx: CanvasRenderingContext2D, source: [number, number], target: [number, number], straightLine: number) {
         ctx.beginPath();
-
-        const m = (source[1] + target[1]) / 2;
 
         if (source[1] < target[1]) {
             ctx.moveTo(source[0], source[1]);
@@ -791,6 +909,18 @@ ctx.stroke();*/
         const color = visualizerGraphGlobal.documentColors[this.nextColorIndex % visualizerGraphGlobal.documentColors.length];
         this.nextColorIndex++;
         return color;
+    }
+
+
+    static getCollapsedImage() {
+        if (this.collapsedImage) {
+            return this.collapsedImage;
+        }
+
+        const image = new Image();
+        image.src = visualizerGraphGlobal.collapsedSprite;
+        this.collapsedImage = image;
+        return this.collapsedImage;
     }
 }
 

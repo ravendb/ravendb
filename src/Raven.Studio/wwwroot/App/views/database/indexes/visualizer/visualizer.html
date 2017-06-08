@@ -16,56 +16,61 @@
     }
 </style>
 
-<section id="visualizerSection" class="content-margin">
-    <div class="form-inline clearfix toolbar" role="form">
-        <div class="btn-group" data-bind="visible: !detailsGraph.viewActive()">
-            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                <span data-bind="text: currentIndexUi"></span>
-                <span class="caret"></span>
-            </button>
-            <ul class="dropdown-menu" role="menu">
-                <!-- ko foreach: indexes -->
-                <li data-bind="click: $root.setSelectedIndex"><a href="#" data-bind="text: $data"></a></li>
-                <!-- /ko -->
-                <!-- ko if: indexes().length === 0 -->
-                <li data-bind="click: function() { }"><a href="#">No indexes available</a></li>
-                <!-- /ko -->
-            </ul>
-        </div>
-       
-        <div class="form-group form-group-dropdown" data-bind="visible: hasIndexSelected() && !detailsGraph.viewActive()">
-            <div class="input-group">
-                <input id="documentId" type="text" data-bind="textInput: documents.documentId, hasFocus: documents.hasFocusDocumentId" class="form-control" placeholder="Document Id" autocomplete="off">
-                <span class="input-group-btn" style="width: auto">
-                    <button data-bind="click: addCurrentDocumentId, enable: !!documents.documentId() && !documents.loadingDocumentIdSearchResults()" class="btn btn-default" type="button">
-                        <i data-bind="visible: !documents.loadingDocumentIdSearchResults()" class="icon-plus"></i>
-                        <i data-bind="visible: documents.loadingDocumentIdSearchResults" class="fa fa-spinner fa-spin"></i>
+<div class="content-margin">
+    <div class="flex-vertical absolute-fill">
+        <div class="flex-header">
+            <div class="form-inline clearfix toolbar" role="form">
+                <div class="btn-group" data-bind="visible: !detailsGraph.viewActive()">
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                        <span data-bind="text: currentIndexUi"></span>
+                        <span class="caret"></span>
                     </button>
-                </span>
-            </div>
-            <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#documentId', foreach: documents.documentIdsSearchResults">
-                <li role="presentation" data-bind="click: $root.selectDocumentId">
-                    <a role="menuitem" tabindex="-1" href="#">
-                        <span data-bind="text: $data"></span>
-                    </a>
-                </li>
-            </ul>
-        </div>
-        
-        <!--  TODO:
+                    <ul class="dropdown-menu" role="menu">
+                        <!-- ko foreach: indexes -->
+                        <li data-bind="click: $root.setSelectedIndex"><a href="#" data-bind="text: $data"></a></li>
+                        <!-- /ko -->
+                        <!-- ko if: indexes().length === 0 -->
+                        <li data-bind="click: function() { }"><a href="#">No indexes available</a></li>
+                        <!-- /ko -->
+                    </ul>
+                </div>
+
+                <div class="form-group form-group-dropdown" data-bind="visible: hasIndexSelected() && !detailsGraph.viewActive()">
+                    <div class="input-group">
+                        <input id="documentId" type="text" data-bind="textInput: documents.documentId, hasFocus: documents.hasFocusDocumentId"
+                               class="form-control" placeholder="Document Id" autocomplete="off">
+                        <span class="input-group-btn" style="width: auto">
+                            <button data-bind="click: addCurrentDocumentId, enable: !!documents.documentId() && !spinners.addDocument(), css: { 'btn-spinner': spinners.addDocument } "
+                                    class="btn btn-default" type="button">
+                                <i class="icon-plus"></i>
+                            </button>
+                        </span>
+                    </div>
+                    <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#documentId', foreach: documents.documentIdsSearchResults">
+                        <li role="presentation" data-bind="click: $root.selectDocumentId">
+                            <a role="menuitem" tabindex="-1" href="#">
+                                <span data-bind="text: $data"></span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!--  TODO:
         <button class="btn btn-default" type="button"><i class="icon-fullscreen"></i></button>
         <button class="btn btn-default" type="button"><i class="icon-import"></i></button>
         <button class="btn btn-default" type="button"><i class="icon-export"></i></button>
         <button class="btn btn-default" type="button"><i class="icon-key"></i></button>
             -->
 
-        <button data-bind="click: detailsGraph.goToMasterView, visible: detailsGraph.viewActive" class="btn btn-default">&lt; Back</button>
-        
+                <button data-bind="click: detailsGraph.goToMasterView, visible: detailsGraph.viewActive" class="btn btn-default">&lt; Back</button>
 
+
+            </div>
+        </div>
+        <div class="flex-grow dynamic-container margin-top">
+            <div id="visualizerContainer">
+
+            </div>
+        </div>
     </div>
-
-    <div id="visualizerContainer">
-
-    </div>
-
-</section>
+</div>
