@@ -1,7 +1,6 @@
 ﻿using System.Threading.Tasks;
 using FastTests.Server.Documents.Versioning;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Replication;
 using Raven.Client.Server;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -10,7 +9,7 @@ namespace FastTests.Server.Replication
 {
     public class ReplicationWithVersioning : ReplicationTestsBase
     {
-        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-6555")]
+        [Fact]
         public async Task CanReplicateVersions()
         {
             var company = new Company {Name = "Company Name"};
@@ -37,11 +36,11 @@ namespace FastTests.Server.Replication
                 }
 
                 Assert.True(WaitForDocument(slave, "foo/bar"));
-                Assert.Equal(2, WaitForValue(() => GetRevisions(slave, "foo/bar").Count, 2));
+                Assert.Equal(2, WaitForValue(() => slave.Commands().GetRevisionsFor("foo/bar").Count, 2));
             }
         }
 
-        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-6555")]
+        [Fact]
         public async Task CreateVersionsAndReplicateThemAll()
         {
             var company = new Company {Name = "Company Name"};
@@ -82,11 +81,11 @@ namespace FastTests.Server.Replication
                 await SetupReplicationAsync(master, slave);
 
                 Assert.True(WaitForDocument(slave, "foo/bar"));
-                Assert.Equal(4, WaitForValue(() => GetRevisions(slave, "foo/bar").Count, 4));
+                Assert.Equal(4, WaitForValue(() => slave.Commands().GetRevisionsFor("foo/bar").Count, 4));
             }
         }
 
-        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-6555")]
+        [Fact]
         public async Task ReplicateVersionsIgnoringConflicts()
         {
             using (var storeA = GetDocumentStore())
@@ -97,12 +96,12 @@ namespace FastTests.Server.Replication
                 Assert.Equal(2, WaitUntilHasConflict(storeA, "foo/bar").Results.Length);
                 Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar").Results.Length);
 
-                Assert.Equal(2, WaitForValue(() => GetRevisions(storeA, "foo/bar").Count, 2));
-                Assert.Equal(2, WaitForValue(() => GetRevisions(storeB, "foo/bar").Count, 2));
+                Assert.Equal(2, WaitForValue(() => storeA.Commands().GetRevisionsFor("foo/bar").Count, 2));
+                Assert.Equal(2, WaitForValue(() => storeB.Commands().GetRevisionsFor("foo/bar").Count, 2));
             }
         }
 
-        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-6555")]
+        [Fact]
         public async Task CreateConflictAndResolveItIncreaseTheVersion()
         {
             using (var storeA = GetDocumentStore())
@@ -113,8 +112,8 @@ namespace FastTests.Server.Replication
                 Assert.Equal(2, WaitUntilHasConflict(storeA, "foo/bar").Results.Length);
                 Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar").Results.Length);
 
-                Assert.Equal(2, WaitForValue(() => GetRevisions(storeA, "foo/bar").Count, 2));
-                Assert.Equal(2, WaitForValue(() => GetRevisions(storeB, "foo/bar").Count, 2));
+                Assert.Equal(2, WaitForValue(() => storeA.Commands().GetRevisionsFor("foo/bar").Count, 2));
+                Assert.Equal(2, WaitForValue(() => storeB.Commands().GetRevisionsFor("foo/bar").Count, 2));
 
                 var config = new ConflictSolver
                 {
@@ -126,8 +125,8 @@ namespace FastTests.Server.Replication
                 Assert.True(WaitForDocument(storeA, "foo/bar"));
                 Assert.True(WaitForDocument(storeB, "foo/bar"));
 
-                Assert.Equal(3, WaitForValue(() => GetRevisions(storeA, "foo/bar").Count, 3));
-                Assert.Equal(3, WaitForValue(() => GetRevisions(storeB, "foo/bar").Count, 3));
+                Assert.Equal(3, WaitForValue(() => storeA.Commands().GetRevisionsFor("foo/bar").Count, 3));
+                Assert.Equal(3, WaitForValue(() => storeB.Commands().GetRevisionsFor("foo/bar").Count, 3));
             }
         }
 
@@ -156,8 +155,8 @@ namespace FastTests.Server.Replication
             await SetupReplicationAsync(storeB, storeA);
         }
 
-        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-6555")]
-        public async Task UpdateTheSameRevisoinWhenGettingExistingRevision()
+        [Fact]
+        public async Task UpdateTheSameRevisionWhenGettingExistingRevision()
         {
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
@@ -175,8 +174,8 @@ namespace FastTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
 
-                Assert.Equal(1, WaitForValue(() => GetRevisions(storeA, "users/1").Count, 1));
-                Assert.Equal(1, WaitForValue(() => GetRevisions(storeB, "users/1").Count, 1));
+                Assert.Equal(1, WaitForValue(() => storeA.Commands().GetRevisionsFor("foo/bar").Count, 1));
+                Assert.Equal(1, WaitForValue(() => storeB.Commands().GetRevisionsFor("foo/bar").Count, 1));
                 Assert.True(WaitForDocument(storeB, "users/1"));
 
                 await SetupReplicationAsync(storeA, storeC);
@@ -195,7 +194,7 @@ namespace FastTests.Server.Replication
                 }
                 Assert.True(WaitForDocument(storeB, "marker"));
 
-                Assert.Equal(1, WaitForValue(() => GetRevisions(storeC, "users/1").Count, 1));
+                Assert.Equal(1, WaitForValue(() => storeC.Commands().GetRevisionsFor("foo/bar").Count, 1));
             }
         }
     }
