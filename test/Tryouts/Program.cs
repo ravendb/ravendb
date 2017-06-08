@@ -23,13 +23,17 @@ namespace Tryouts
         {
            for (var i=0; i<1000; i++)
             {
-                Console.WriteLine($"-------------------------------------New test iteration #{i}");
-
                 try
                 {
+                    Console.WriteLine($"-------------------------------------New test iteration #{i} for 3 size cluster");
                     using (var test = new SubscriptionsFailover())
                     {
-                        AsyncHelpers.RunSync(() => test.CreateDistributedVersionedDocuments());
+                        AsyncHelpers.RunSync(() => test.DistributedVersionedSubscription(3));
+                    }
+                    Console.WriteLine($"-------------------------------------New test iteration #{i} for 5 size cluster");
+                    using (var test = new SubscriptionsFailover())
+                    {
+                        AsyncHelpers.RunSync(() => test.DistributedVersionedSubscription(5));
                     }
                 }
                 catch (Exception e)

@@ -38,7 +38,10 @@ namespace RachisTests
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached?TimeSpan.FromSeconds(60*10): TimeSpan.FromSeconds(6000);
                 
         [Theory]
-        [InlineData(1,5,10,20)]
+        [InlineData(1)]
+        [InlineData(5)]
+        [InlineData(10)]
+        [InlineData(20)]
         public async Task ContinueFromThePointIStopped(int batchSize)
         {
             const int nodesAmount = 5;
@@ -192,10 +195,11 @@ namespace RachisTests
             }
         }
 
-        [Fact]
-        public async Task DistributedVersionedSubscription()
-        {
-            const int nodesAmount = 3;
+        [Theory]
+        [InlineData(3)]
+        [InlineData(5)]
+        public async Task DistributedVersionedSubscription(int nodesAmount)
+        {            
             var leader = await this.CreateRaftClusterAndGetLeader(nodesAmount).ConfigureAwait(false);
             
 
@@ -314,7 +318,8 @@ namespace RachisTests
                 continueMre.Set();
 
 
-                ///await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId);
+                if (nodesAmount == 5)
+                    await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId);
 
                 Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime).ConfigureAwait(false));
 
