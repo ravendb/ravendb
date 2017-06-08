@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace FastTests.Client
@@ -302,6 +303,64 @@ namespace FastTests.Client
                 {
                     var loaded = session.Load<User>(_docId);
                     Assert.Equal(loaded.Stuff[0].Key, 3);
+                }
+            }
+        }
+
+
+        [Fact]
+        public void ShouldMergePatchCalls()
+        {
+            var stuff = new Stuff[3];
+            stuff[0] = new Stuff { Key = 6 };
+            var user = new User { Numbers = new[] { 66 }, Stuff = stuff };
+            var user2 = new User { Numbers = new[] { 1, 2, 3 }, Stuff = stuff };
+            var docId2 = "users/2-A";
+
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(user);
+                    session.Store(user2, docId2);
+                    session.SaveChanges();
+                }
+
+                var now = DateTime.Now;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Patch<User, int>(_docId, u => u.Numbers[0], 31);
+                    Assert.Equal(1, ((InMemoryDocumentSessionOperations)session).DeferredCommandsCount);
+
+                    session.Advanced.Patch<User, DateTime>(_docId, u => u.LastLogin, now);
+                    Assert.Equal(1, ((InMemoryDocumentSessionOperations)session).DeferredCommandsCount);
+
+                    session.Advanced.Patch<User, int>(docId2, u => u.Numbers[0], 123);
+                    Assert.Equal(2, ((InMemoryDocumentSessionOperations)session).DeferredCommandsCount);
+
+                    session.Advanced.Patch<User, DateTime>(docId2, u => u.LastLogin, now);
+                    Assert.Equal(2, ((InMemoryDocumentSessionOperations)session).DeferredCommandsCount);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Increment<User, int>(_docId, u => u.Numbers[0], 1);
+                    Assert.Equal(1, ((InMemoryDocumentSessionOperations)session).DeferredCommandsCount);
+
+                    session.Advanced.Patch<User, int>(_docId, u => u.Numbers, roles => roles.Add(77));
+                    Assert.Equal(1, ((InMemoryDocumentSessionOperations)session).DeferredCommandsCount);
+
+                    session.Advanced.Patch<User, int>(_docId, u => u.Numbers, roles => roles.Add(88));
+                    Assert.Equal(1, ((InMemoryDocumentSessionOperations)session).DeferredCommandsCount);
+
+                    session.Advanced.Patch<User, int>(_docId, u => u.Numbers, roles => roles.RemoveAt(1));
+                    Assert.Equal(1, ((InMemoryDocumentSessionOperations)session).DeferredCommandsCount);
+
+                    session.SaveChanges();
                 }
             }
         }

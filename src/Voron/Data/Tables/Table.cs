@@ -71,7 +71,7 @@ namespace Voron.Data.Tables
         /// Tables should not be loaded using this function. The proper way to
         /// do this is to use the OpenTable method in the Transaction class.
         /// Using this constructor WILL NOT register the Table for commit in
-        /// the Transaction, and hence changes WILL NOT be commited.
+        /// the Transaction, and hence changes WILL NOT be committed.
         /// </summary>
         public Table(TableSchema schema, Slice name, Transaction tx, Tree tableTree, bool doSchemaValidation = false)
         {
@@ -383,7 +383,7 @@ namespace Voron.Data.Tables
                 pos = page.Pointer + PageHeader.SizeOf;
 
                 builder.CopyTo(pos);
-                
+
                 id = page.PageNumber * Constants.Storage.PageSize;
             }
 
@@ -715,33 +715,14 @@ namespace Voron.Data.Tables
             reader = new TableValueReader(id, ptr, size);
         }
 
-        public long GetNumberEntriesFor(TableSchema.FixedSizeSchemaIndexDef index, long afterValue, out long totalCount)
+        public long GetNumberOfEntriesAfter(TableSchema.FixedSizeSchemaIndexDef index, long afterValue, out long totalCount)
         {
             var fst = GetFixedSizeTree(index);
 
-            totalCount = fst.NumberOfEntries;
-            if (afterValue == 0 || totalCount == 0)
-                return totalCount;
-
-            long count = 0;
-            using (var it = fst.Iterate())
-            {
-                if (it.Seek(afterValue) == false)
-                    return 0;
-
-                do
-                {
-                    if (it.CurrentKey == afterValue)
-                        continue;
-
-                    count++;
-                } while (it.MoveNext());
-            }
-
-            return count;
+            return fst.GetNumberOfEntriesAfter(afterValue, out totalCount);
         }
 
-        public long GetNumberEntriesFor(TableSchema.FixedSizeSchemaIndexDef index)
+        public long GetNumberOfEntriesFor(TableSchema.FixedSizeSchemaIndexDef index)
         {
             var fst = GetFixedSizeTree(index);
             return fst.NumberOfEntries;
@@ -781,7 +762,7 @@ namespace Voron.Data.Tables
         public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.SchemaIndexDef index, Slice prefix, Slice last, int skip)
         {
             var tree = GetTree(index);
-            if(tree.State.NumberOfEntries == 0)
+            if (tree.State.NumberOfEntries == 0)
                 yield break;
 
             using (var it = tree.Iterate(false))

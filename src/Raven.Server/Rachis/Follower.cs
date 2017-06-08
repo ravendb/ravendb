@@ -6,6 +6,7 @@ using System.Threading;
 using Raven.Client.Http;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Logging;
 using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
@@ -38,7 +39,9 @@ namespace Raven.Server.Rachis
 
                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
+
                     var appendEntries = _connection.Read<AppendEntries>(context);
+                   
                     _engine.Timeout.Defer(_connection.Source);
                     var sp = Stopwatch.StartNew();
                     if (appendEntries.EntriesCount != 0)
@@ -58,7 +61,7 @@ namespace Raven.Server.Rachis
                         }
                     }
 
-                    long lastLogIndex = appendEntries.PrevLogIndex;
+                    var lastLogIndex = appendEntries.PrevLogIndex;
 
                     // don't start write transaction fro noop
                     if (lastCommit != appendEntries.LeaderCommit ||
@@ -93,7 +96,7 @@ namespace Raven.Server.Rachis
                                             topology.Promotables.ContainsKey(_engine.Tag) ||
                                             topology.Watchers.ContainsKey(_engine.Tag))
                                         {
-                                            RachisConsensus.SetTopology(_engine, context.Transaction.InnerTransaction, context, topology);
+                                            RachisConsensus.SetTopology(_engine, context, topology);
                                         }
                                         else
                                         {
@@ -175,7 +178,7 @@ namespace Raven.Server.Rachis
             using (_engine.ContextPool.AllocateOperationContext(out context))
             {
                 var logLength = _connection.Read<LogLengthNegotiation>(context);
-
+               
                 if (logLength.Term < _engine.CurrentTerm)
                 {
                     _connection.Send(context, new LogLengthNegotiationResponse
@@ -301,7 +304,7 @@ namespace Raven.Server.Rachis
 
                     var topology = JsonDeserializationRachis<ClusterTopology>.Deserialize(topologyJson);
 
-                    RachisConsensus.SetTopology(_engine, context.Transaction.InnerTransaction, context, topology);
+                    RachisConsensus.SetTopology(_engine, context, topology);
                 }
 
                 context.Transaction.Commit();
@@ -553,7 +556,7 @@ namespace Raven.Server.Rachis
                 });
 
                 var response = connection.Read<LogLengthNegotiation>(context);
-
+                
                 _engine.Timeout.Defer(_connection.Source);
                 if (response.Truncated)
                 {

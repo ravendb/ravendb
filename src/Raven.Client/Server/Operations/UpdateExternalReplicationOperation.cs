@@ -9,7 +9,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Server.Operations
 {
-    public class UpdateExternalReplicationOperation : IServerOperation<ModifyExternalReplicationResult>
+    public class UpdateExternalReplicationOperation : IServerOperation<ModifyOngoingTaskResult>
     {
         private readonly DatabaseWatcher _newWatcher;
         private readonly string _database;
@@ -21,12 +21,12 @@ namespace Raven.Client.Server.Operations
             _newWatcher = newWatcher;
         }
 
-        public RavenCommand<ModifyExternalReplicationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<ModifyOngoingTaskResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new UpdateExternalReplicationCommand(conventions, context, _database, _newWatcher);
         }
 
-        private class UpdateExternalReplicationCommand : RavenCommand<ModifyExternalReplicationResult>
+        private class UpdateExternalReplicationCommand : RavenCommand<ModifyOngoingTaskResult>
         {
             private readonly JsonOperationContext _context;
             private readonly DocumentConventions _conventions;
@@ -73,7 +73,7 @@ namespace Raven.Client.Server.Operations
                 if (response == null)
                     ThrowInvalidResponse();
 
-                Result = JsonDeserializationClient.ModifyExternalReplicationResult(response);
+                Result = JsonDeserializationClient.ModifyOngoingTaskResult(response);
             }
 
             public override bool IsReadRequest => false;

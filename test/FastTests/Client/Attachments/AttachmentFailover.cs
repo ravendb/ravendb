@@ -24,7 +24,7 @@ namespace FastTests.Client.Attachments
             {
                 using (var session = (DocumentSession)store.OpenSession())
                 {
-                    session.Store(new User {Name = "Fitzchak"}, "users/1");
+                    session.Store(new User { Name = "Fitzchak" }, "users/1");
                     session.SaveChanges();
 
                     Assert.True(await WaitForDocumentInClusterAsync<User>(
@@ -47,10 +47,9 @@ namespace FastTests.Client.Attachments
                         {
                             var currentNode = await session.RequestExecutor.GetCurrentNode();
                             var currentServer = Servers.Single(x => x.ServerStore.NodeTag == currentNode.ClusterTag);
-                            var task = session.RequestExecutor.ExecuteAsync(currentNode, session.Context, command);
-                            // We want to make sure that we started to write the stream and we set position zero before failing over
-                            // This is why we dispose the server after the operation has started.
+                            stream.Position++;// simulating that we already started to call this and we need to reset
                             DisposeServerAndWaitForFinishOfDisposal(currentServer);
+                            var task = session.RequestExecutor.ExecuteAsync(currentNode, session.Context, command);
                             await task;
                             saveChangesOperation.SetResult(command.Result);
                         }
@@ -67,10 +66,10 @@ namespace FastTests.Client.Attachments
 
                         var currentNode = await requestExecutor.GetCurrentNode();
                         var currentServer = Servers.Single(x => x.ServerStore.NodeTag == currentNode.ClusterTag);
-                        var task = requestExecutor.ExecuteAsync(currentNode, context, command);
-                        // We want to make sure that we started to write the stream and we set position zero before failing over
-                        // This is why we dispose the server after the operation has started.
+                        stream.Position++;// simulating that we already started to call this and we need to reset
                         DisposeServerAndWaitForFinishOfDisposal(currentServer);
+                        var task = requestExecutor.ExecuteAsync(currentNode, context, command);
+                     
                         await task;
                         var attachment = command.Result;
                         Assert.Equal(2, attachment.Etag);
@@ -83,25 +82,26 @@ namespace FastTests.Client.Attachments
                 }
 
                 using (var session = store.OpenSession())
-                using (var stream = new BigDummyStream(size))
+                using (var dummyStream = new BigDummyStream(size))
+                using (var stream = session.Advanced.GetAttachment("users/1", "File", out AttachmentDetails attachment))
                 {
-                    var attachment = session.Advanced.GetAttachment("users/1", "File", (result, streamResult) => streamResult.CopyTo(stream));
+                    stream.CopyTo(dummyStream);
                     Assert.Equal(2, attachment.Etag);
                     Assert.Equal("File", attachment.Name);
-                    Assert.Equal(size, stream.Position);
+                    Assert.Equal(size, dummyStream.Position);
                     Assert.Equal(size, attachment.Size);
                     Assert.Equal("application/pdf", attachment.ContentType);
                     Assert.Equal(hash, attachment.Hash);
 
                     var user = session.Load<User>("users/1");
                     var metadata = session.Advanced.GetMetadataFor(user);
-                    Assert.Equal((DocumentFlags.HasAttachments | DocumentFlags.FromReplication).ToString(), metadata[Constants.Documents.Metadata.Flags]);
+                    Assert.Contains(DocumentFlags.HasAttachments.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
                     var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
                     var attachmentMetadata = attachments.Single();
-                    Assert.Equal("File", attachmentMetadata.GetString(nameof(AttachmentResult.Name)));
-                    Assert.Equal("application/pdf", attachmentMetadata.GetString(nameof(AttachmentResult.ContentType)));
-                    Assert.Equal(hash, attachmentMetadata.GetString(nameof(AttachmentResult.Hash)));
-                    Assert.Equal(size, attachmentMetadata.GetNumber(nameof(AttachmentResult.Size)));
+                    Assert.Equal("File", attachmentMetadata.GetString(nameof(AttachmentName.Name)));
+                    Assert.Equal("application/pdf", attachmentMetadata.GetString(nameof(AttachmentName.ContentType)));
+                    Assert.Equal(hash, attachmentMetadata.GetString(nameof(AttachmentName.Hash)));
+                    Assert.Equal(size, attachmentMetadata.GetNumber(nameof(AttachmentName.Size)));
                 }
             }
         }

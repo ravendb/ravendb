@@ -67,9 +67,8 @@ namespace Raven.Server.Documents.Indexes
             _indexAndTransformerLocker = indexAndTransformerLocker;
         }
 
-        public void HandleDatabaseRecordChange()
+        public void HandleDatabaseRecordChange(DatabaseRecord record,long etag)
         {
-            var record = _serverStore.LoadDatabaseRecord(_documentDatabase.Name, out var etag);
             if (record == null)
                 return;
 
@@ -329,7 +328,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public Task InitializeAsync(DatabaseRecord record)
+        public Task InitializeAsync(DatabaseRecord record, long index)
         {
             if (_initialized)
                 throw new InvalidOperationException($"{nameof(IndexStore)} was already initialized.");
@@ -347,7 +346,7 @@ namespace Raven.Server.Documents.Indexes
             return Task.Run(() =>
             {
                 OpenIndexes(record);
-                HandleDatabaseRecordChange();
+                HandleDatabaseRecordChange(record, index);
             });
         }
 
@@ -421,7 +420,7 @@ namespace Raven.Server.Documents.Indexes
             if (definition is MapIndexDefinition)
                 return await CreateIndex(((MapIndexDefinition)definition).IndexDefinition);
 
-            await _indexAndTransformerLocker.WaitAsync();
+            await _indexAndTransformerLocker.WaitAsync(_documentDatabase.DatabaseShutdown);
 
             try
             {
@@ -1153,6 +1152,13 @@ namespace Raven.Server.Documents.Indexes
                     using (oldIndex.DrainRunningQueries())
                         DeleteIndexInternal(oldIndex);
                 }
+
+                _documentDatabase.Changes.RaiseNotifications(
+                    new IndexChange
+                    {
+                        Name = oldIndexName,
+                        Type = IndexChangeTypes.SideBySideReplace
+                    });
 
                 return true;
             }

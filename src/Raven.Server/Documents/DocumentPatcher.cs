@@ -4,6 +4,7 @@ using Jint.Native;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Server;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -25,10 +26,10 @@ namespace Raven.Server.Documents
 
         public string CustomFunctions { get; private set; }
 
-        public void Initialize()
+        public void Initialize(DatabaseRecord record)
         {
             Database.DatabaseRecordChanged += LoadCustomFunctions;
-            LoadCustomFunctions();
+            LoadCustomFunctions(record);
         }
 
         public void Dispose()
@@ -48,23 +49,17 @@ namespace Raven.Server.Documents
             engine.Global.Delete(DeleteDocument, false);
         }
 
-        private void LoadCustomFunctions()
+        private void LoadCustomFunctions(DatabaseRecord dbrecord)
         {
             lock (_locker)
             {
-                using(Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))                
-                using (context.OpenReadTransaction())
+                if (string.IsNullOrEmpty(dbrecord?.CustomFunctions))
                 {
-                    var dbrecord = Database.ServerStore.Cluster.ReadDatabase(context, Database.Name);
-
-                    if (string.IsNullOrEmpty(dbrecord?.CustomFunctions))
-                    {
-                        CustomFunctions = null;
-                        return;
-                    }
-
-                    CustomFunctions = dbrecord.CustomFunctions;
+                    CustomFunctions = null;
+                    return;
                 }
+
+                CustomFunctions = dbrecord.CustomFunctions;
             }
         }
 

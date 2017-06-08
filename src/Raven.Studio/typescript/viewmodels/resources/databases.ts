@@ -5,7 +5,7 @@ import accessHelper = require("viewmodels/shell/accessHelper");
 import deleteDatabaseConfirm = require("viewmodels/resources/deleteDatabaseConfirm");
 import createDatabase = require("viewmodels/resources/createDatabase");
 import disableDatabaseToggleConfirm = require("viewmodels/resources/disableDatabaseToggleConfirm");
-import disableDatabaseToggleCommand = require("commands/resources/disableDatabaseToggleCommand");
+import toggleDatabaseCommand = require("commands/resources/toggleDatabaseCommand");
 import togglePauseIndexingCommand = require("commands/database/index/togglePauseIndexingCommand");
 import toggleDisableIndexingCommand = require("commands/database/index/toggleDisableIndexingCommand");
 import deleteDatabaseCommand = require("commands/resources/deleteDatabaseCommand");
@@ -126,7 +126,7 @@ class databases extends viewModelBase {
         let searchText = filters.searchText();
         const hasSearchText = !!searchText;
         const localOnly = filters.localOnly();
-        const nodeTag = this.clusterManager.nodeTag();
+        const nodeTag = this.clusterManager.localNodeTag();
 
         if (hasSearchText) {
             searchText = searchText.toLowerCase();
@@ -180,7 +180,7 @@ class databases extends viewModelBase {
 
     createAllDocumentsUrlObservableForNode(dbInfo: databaseInfo, node: databaseGroupNode) {
         return ko.pureComputed(() => {
-            const currentNodeTag = this.clusterManager.nodeTag();
+            const currentNodeTag = this.clusterManager.localNodeTag();
             const nodeTag = node.tag();
             const link = appUrl.forDocuments(null, dbInfo);
             if (currentNodeTag === nodeTag) {
@@ -303,7 +303,7 @@ class databases extends viewModelBase {
                 if (result.can) {
                     this.spinners.globalToggleDisable(true);
 
-                    new disableDatabaseToggleCommand(selectedDatabases, !enableAll)
+                    new toggleDatabaseCommand(selectedDatabases, !enableAll)
                         .execute()
                         .done(disableResult => {
                             disableResult.Status.forEach(x => this.onDatabaseDisabled(x));
@@ -326,7 +326,7 @@ class databases extends viewModelBase {
             if (result.can) {
                 rsInfo.inProgressAction(disable ? "Disabling..." : "Enabling...");
 
-                new disableDatabaseToggleCommand([rs], disable)
+                new toggleDatabaseCommand([rs], disable)
                     .execute()
                     .done(disableResult => {
                         disableResult.Status.forEach(x => this.onDatabaseDisabled(x));
@@ -411,7 +411,7 @@ class databases extends viewModelBase {
 
     createIsLocalDatabaseObservable(dbName: string) {
         return ko.pureComputed(() => {
-            const nodeTag = this.clusterManager.nodeTag();
+            const nodeTag = this.clusterManager.localNodeTag();
             const dbInfo = this.databases().getByName(dbName);
 
             const nodeTags = new Set<string>();

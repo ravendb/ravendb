@@ -1,23 +1,16 @@
-﻿import documentMetadata = require("models/database/documents/documentMetadata");
+﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
 class customFunctions {
     functions: string;
-    __metadata: documentMetadata;
 
-    constructor(dto: customFunctionsDto) {
-        this.__metadata = new documentMetadata((dto as any)["@metadata"]);
+    constructor(dto: Raven.Server.Documents.CustomFunctions) {
         this.functions = dto.Functions;
     }
 
-    toDto(includeMetadata?: boolean): customFunctionsDto {
-        const dto: customFunctionsDto = {
+    toDto(): Raven.Server.Documents.CustomFunctions {
+        return {
             Functions: this.functions
         };
-
-        if (includeMetadata && this.__metadata) {
-            (dto as any)['@metadata'] = this.__metadata.toDto();
-        }
-        return dto;
     }
 
     get hasEmptyScript() {

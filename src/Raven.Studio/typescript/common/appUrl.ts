@@ -262,14 +262,15 @@ class appUrl {
     }
 
     static forNewDoc(db: database | databaseInfo, collection: string = null): string {
-        const databaseUrlPart = appUrl.getEncodedDbPart(db);
-        let url = "#databases/edit?" + databaseUrlPart;
+        const baseUrlPart = "#databases/edit?";
+        let databasePart = appUrl.getEncodedDbPart(db);
         if (collection) {
-            url += "&new=" + encodeURIComponent(collection);
+            const collectionPart = "&collection=" + encodeURIComponent(collection);
+            const idPart = "&new=" + encodeURIComponent(collection);
+            return baseUrlPart + collectionPart + idPart + databasePart;
         }
-        return url;
+        return baseUrlPart + databasePart;
     }
-
 
     /**
     * Gets the URL for status page.

@@ -28,6 +28,7 @@ namespace Raven.Server.Rachis
                     using (_engine.ContextPool.AllocateOperationContext(out context))
                     {
                         var rv = _connection.Read<RequestVote>(context);
+
                         if (rv.Term <= _engine.CurrentTerm)
                         {
                             _connection.Send(context, new RequestVoteResponse
@@ -211,7 +212,7 @@ namespace Raven.Server.Rachis
             {
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info("Failed to talk to leader: " + _engine.Tag, e);
+                    _engine.Log.Info("Failed to talk to candidate: " + _engine.Tag, e);
                 }
             }
         }

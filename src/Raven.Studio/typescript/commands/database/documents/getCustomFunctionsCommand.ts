@@ -10,20 +10,12 @@ class getCustomFunctionsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<customFunctions> {
-        const urlArgs = { id: "Raven/Javascript/Functions" };
-
         const task = $.Deferred<customFunctions>();
 
-        const url = endpoints.databases.document.docs;
-        this.query(url, urlArgs, this.db)
-            .done((queryResult: queryResultDto<customFunctionsDto>) => task.resolve(new customFunctions(queryResult.Results[0])))
-            .fail((xhr: JQueryXHR) => {
-                if (xhr.status === 404) {
-                    task.resolve(null);
-                } else {
-                    task.reject(xhr);
-                }
-            });
+        const url = endpoints.databases.studioCustomFunctions.studioCustomFunctions;
+        this.query(url, null, this.db)
+            .done((dto: Raven.Server.Documents.CustomFunctions) => task.resolve(new customFunctions(dto)))
+            .fail((xhr: JQueryXHR) => task.reject(xhr));
 
         return task;
     }

@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.Handlers
                 var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
                 var contentType = GetStringQueryString("contentType", false) ?? "";
 
-                AttachmentResult result;
+                AttachmentDetails result;
                 using (Database.DocumentsStorage.AttachmentsStorage.GetTempFile(out Stream file))
                 {
                     var hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, RequestBodyStream(), file, Database.DatabaseShutdown);
@@ -151,27 +151,27 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName(nameof(AttachmentResult.Etag));
+                    writer.WritePropertyName(nameof(AttachmentDetails.Etag));
                     writer.WriteInteger(result.Etag);
                     writer.WriteComma();
 
-                    writer.WritePropertyName(nameof(AttachmentResult.Name));
+                    writer.WritePropertyName(nameof(AttachmentDetails.Name));
                     writer.WriteString(result.Name);
                     writer.WriteComma();
 
-                    writer.WritePropertyName(nameof(AttachmentResult.DocumentId));
+                    writer.WritePropertyName(nameof(AttachmentDetails.DocumentId));
                     writer.WriteString(result.DocumentId);
                     writer.WriteComma();
 
-                    writer.WritePropertyName(nameof(AttachmentResult.ContentType));
+                    writer.WritePropertyName(nameof(AttachmentDetails.ContentType));
                     writer.WriteString(result.ContentType);
                     writer.WriteComma();
 
-                    writer.WritePropertyName(nameof(AttachmentResult.Hash));
+                    writer.WritePropertyName(nameof(AttachmentDetails.Hash));
                     writer.WriteString(result.Hash);
                     writer.WriteComma();
 
-                    writer.WritePropertyName(nameof(AttachmentResult.Size));
+                    writer.WritePropertyName(nameof(AttachmentDetails.Size));
                     writer.WriteInteger(result.Size);
 
                     writer.WriteEndObject();
@@ -210,7 +210,7 @@ namespace Raven.Server.Documents.Handlers
             public long? ExpectedEtag;
             public DocumentDatabase Database;
             public ExceptionDispatchInfo ExceptionDispatchInfo;
-            public AttachmentResult Result;
+            public AttachmentDetails Result;
             public string ContentType;
             public Stream Stream;
             public string Hash;

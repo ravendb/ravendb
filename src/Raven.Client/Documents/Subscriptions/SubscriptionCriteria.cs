@@ -22,6 +22,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         public string Collection { get;  set; }
         public string FilterJavaScript { get; set; }
+        public bool IsVersioned { get; set; }
     }
 
     public class SubscriptionCriteria<T>
@@ -31,6 +32,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         }
         public string FilterJavaScript { get; set; }
+        public bool IsVersioned { get; set; }
     }
 
     public class SubscriptionCreationOptions
@@ -47,5 +49,11 @@ namespace Raven.Client.Documents.Subscriptions
         }
         public SubscriptionCriteria<T> Criteria { get; set; }
         public ChangeVectorEntry[] ChangeVector { get; set; }
+    }
+
+    public class Versioned<T> where T : class
+    {
+        public T Previous;
+        public T Current;
     }
 }

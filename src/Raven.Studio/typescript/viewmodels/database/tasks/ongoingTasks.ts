@@ -11,9 +11,11 @@ import ongoingTaskSql = require("models/database/tasks/ongoingTaskSQLModel");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import createOngoingTask = require("viewmodels/database/tasks/createOngoingTask");
 import deleteOngoingTaskConfirm = require("viewmodels/database/tasks/deleteOngoingTaskConfirm");
+import enableOngoingTaskConfirm = require("viewmodels/database/tasks/enableOngoingTaskConfirm");
+import disableOngoingTaskConfirm = require("viewmodels/database/tasks/disableOngoingTaskConfirm");
 import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
 import deleteOngoingTaskCommand = require("commands/database/tasks/deleteOngoingTaskCommand");
-import messagePublisher = require("common/messagePublisher");
+import toggleOngoingTaskCommand = require("commands/database/tasks/toggleOngoingTaskCommand");
 
 type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "Backup" | "Subscription";
 
@@ -39,13 +41,13 @@ class ongoingTasks extends viewModelBase {
     
     constructor() {
         super();
-        this.bindToCurrentInstance("confirmRemoveOngoingTask");
+        this.bindToCurrentInstance("confirmRemoveOngoingTask", "confirmEnableOngoingTask", "confirmDisableOngoingTask");
 
         this.initObservables();
     }
 
     private initObservables() {
-        this.myNodeTag(this.clusterManager.nodeTag());
+        this.myNodeTag(this.clusterManager.localNodeTag());
         this.subsCountText = ko.pureComputed(() => { return `(${this.subscriptionsCount()})`; });
         this.urlForSubscriptions = ko.pureComputed(() => appUrl.forSubscriptions(this.activeDatabase()));
     }
@@ -114,6 +116,36 @@ class ongoingTasks extends viewModelBase {
         return appUrl.forManageDatabaseGroup(dbInfo);
     }
 
+    confirmEnableOngoingTask(model: ongoingTaskModel) {
+        const db = this.activeDatabase();
+
+        const confirmEnableViewModel = new enableOngoingTaskConfirm(db, model.taskType(), model.taskId); 
+        app.showBootstrapDialog(confirmEnableViewModel);
+        confirmEnableViewModel.result.done(result => {
+            if (result.can) {
+                new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, false)
+                    .execute()
+                    .done(() => model.taskState('Disabled'))
+                    .always(() => this.fetchOngoingTasks());
+            }
+        });
+    }
+
+    confirmDisableOngoingTask(model: ongoingTaskModel) {
+        const db = this.activeDatabase();
+
+        const confirmDisableViewModel = new disableOngoingTaskConfirm(db, model.taskType(), model.taskId);
+        app.showBootstrapDialog(confirmDisableViewModel);
+        confirmDisableViewModel.result.done(result => {
+            if (result.can) {
+                new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, true)
+                    .execute()
+                    .done(() => model.taskState('Enabled'))
+                    .always(() => this.fetchOngoingTasks());
+            }
+        });
+    }
+
     confirmRemoveOngoingTask(model: ongoingTaskModel) {
         const db = this.activeDatabase();
 
@@ -129,13 +161,7 @@ class ongoingTasks extends viewModelBase {
     private deleteOngoingTask(db: database, model: ongoingTaskModel) {
         new deleteOngoingTaskCommand(db, model.taskType(), model.taskId)
             .execute()
-            .done(() => {
-                messagePublisher.reportSuccess("Successfully deleted " + model.taskType() + " task");
-                this.fetchOngoingTasks();
-            })
-            .fail(() => {
-                messagePublisher.reportError("Failed to delete " + model.taskType() + " task");
-            });
+            .done(() => this.fetchOngoingTasks());
     }
 
     addNewOngoingTask() {

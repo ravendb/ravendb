@@ -1,29 +1,18 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Net.Http;
-using System.Runtime.CompilerServices;
-using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Exceptions;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
-using Raven.Client.Json;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
-using Raven.Server.Documents.Replication;
-using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
@@ -138,40 +127,6 @@ namespace FastTests.Server.Replication
             }
             return false;
         }
-
-        protected bool WaitForDocument(DocumentStore store,
-            string docId,
-            int timeout = 10000)
-        {
-            if (Debugger.IsAttached)
-                timeout *= 100;
-
-            var sw = Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds < timeout)
-            {
-                using (var session = store.OpenSession())
-                {
-                    try
-                    {
-                        var doc = session.Load<dynamic>(docId);
-                        if (doc != null)
-                            return true;
-                    }
-                    catch (DocumentConflictException)
-                    {
-                        // expected that we might get conflict, ignore and wait
-                    }
-                }
-            }
-            using (var session = store.OpenSession())
-            {
-                //one last try, and throw if there is still a conflict
-                var doc = session.Load<dynamic>(docId);
-                if (doc != null)
-                    return true;
-            }
-            return false;
-        }
         
         protected List<string> WaitUntilHasTombstones(
                 IDocumentStore store,
@@ -239,7 +194,7 @@ namespace FastTests.Server.Replication
                 }
             }
 
-            return default(T);
+            return null;
         }
 
         public class SetupResult : IDisposable
@@ -254,7 +209,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        protected static async Task<ModifyExternalReplicationResult> AddWatcherToReplicationTopology(
+        protected static async Task<ModifyOngoingTaskResult> AddWatcherToReplicationTopology(
             DocumentStore store,
             DatabaseWatcher watcher)
         {
@@ -262,11 +217,12 @@ namespace FastTests.Server.Replication
             return await store.Admin.Server.SendAsync(op);
         }
 
-        protected static async Task<ModifyExternalReplicationResult> DeleteWatcherFromReplicationTopology(
+        protected static async Task<ModifyOngoingTaskResult> DeleteOngoingTask(
             DocumentStore store,
-            long taskId)
+            long taskId,
+            OngoingTaskType taskType)
         {
-            var op = new DeleteExternalReplicationOperation(store.Database, taskId);
+            var op = new DeleteOngoingTaskOperation(store.Database, taskId, taskType);
             return await store.Admin.Server.SendAsync(op);
         }
 
@@ -285,11 +241,8 @@ namespace FastTests.Server.Replication
             return await store.Admin.Server.SendAsync(op);
         }
 
-        public DatabaseTopology CurrentDatabaseTopology;
-
         public async Task SetupReplicationAsync(DocumentStore fromStore, params DocumentStore[] toStores)
         {
-            ModifyExternalReplicationResult result = null;
             foreach (var store in toStores)
             {
                 var databaseWatcher = new DatabaseWatcher
@@ -298,9 +251,8 @@ namespace FastTests.Server.Replication
                     Url = store.Urls[0]
                 };
                 ModifyReplicationDestination(databaseWatcher);
-                result = await AddWatcherToReplicationTopology(fromStore, databaseWatcher);
+                await AddWatcherToReplicationTopology(fromStore, databaseWatcher);
             }
-            CurrentDatabaseTopology = result?.Topology;
         }
 
         public static async Task SetScriptResolutionAsync(DocumentStore store, string script, string collection)

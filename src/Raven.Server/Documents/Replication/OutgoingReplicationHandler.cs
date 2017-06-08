@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.Replication
                             if (response.Item1 == ReplicationMessageReply.ReplyType.Error)
                             {
                                 if (response.Item2.Exception.Contains(nameof(DatabaseDoesNotExistException)))
-                                    throw new DatabaseDoesNotExistException(response.Item2.Message, 
+                                    throw new DatabaseDoesNotExistException(response.Item2.Message,
                                         new InvalidOperationException(response.Item2.Exception));
                                 throw new InvalidOperationException(response.Item2.Exception);
                             }
@@ -180,6 +180,12 @@ namespace Raven.Server.Documents.Replication
 
                             AddAlertOnFailureToReachOtherSide(msg, e);
 
+                            throw;
+                        }
+                        catch (OperationCanceledException e)
+                        {
+                            if (_log.IsInfoEnabled)
+                                _log.Info("Got operation canceled notification while opening outgoing replication channel. Aborting and closing the channel.", e);
                             throw;
                         }
                         catch (Exception e)
@@ -219,6 +225,12 @@ namespace Raven.Server.Documents.Replication
                                                 _waitForChanges.Set();
                                                 break;
                                             }
+                                        }
+                                        catch (OperationCanceledException)
+                                        {
+                                            //cancelation is not an actual error,
+                                            //it is a "notification" that we need to cancel current operation
+                                            throw;
                                         }
                                         catch (Exception e)
                                         {
@@ -427,7 +439,7 @@ namespace Raven.Server.Documents.Replication
                     // We don't care if they are locally modified or not, because we filter documents that
                     // the other side already have (based on the change vector).
                     if ((DateTime.UtcNow - _lastDocumentSentTime).TotalMilliseconds > _parent.MinimalHeartbeatInterval)
-                        _waitForChanges.SetByAsyncCompletion();
+                        _waitForChanges.Set();
                 }
             }
         }
@@ -465,6 +477,12 @@ namespace Raven.Server.Documents.Replication
                 {
                     HandleServerResponse();
                 }
+                catch (OperationCanceledException)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info($"Got cancelation notification while parsing heartbeat response. Closing replication channel. ({FromToString})");
+                    throw;
+                }
                 catch (Exception e)
                 {
                     if (_log.IsInfoEnabled)
@@ -478,7 +496,7 @@ namespace Raven.Server.Documents.Replication
         {
             while (true)
             {
-                var timeout = 2 * 60 * 1000;// TODO: configurable
+                var timeout = 2 * 60 * 1000; // TODO: configurable
                 if (Debugger.IsAttached)
                     timeout *= 10;
                 using (var replicationBatchReplyMessage = _interruptableRead.ParseToMemory(

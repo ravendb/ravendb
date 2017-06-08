@@ -14,16 +14,19 @@ class saveCustomFunctionsCommand extends commandBase {
     execute(): JQueryPromise<string> {
         const args = JSON.stringify(this.toSave.toDto());
 
+        let validationTask: JQueryPromise<string>;
         // 1. Validate scripts if not empty
         if (!this.toSave.hasEmptyScript) {
-            this.validateCustomFunctions(args)
+            validationTask = this.validateCustomFunctions(args)
                 .fail((response) => {
                      return this.reportError("Failed to validate custom functions!", response.responseText, response.statusText);
                 });
-        } 
+        } else {
+            validationTask = $.Deferred<string>().resolve();
+        }
 
         // 2. Send to server
-        return this.saveCustomFunctionsDocument(args);
+        return validationTask.then(() => this.saveCustomFunctionsDocument(args));
     }
 
     private validateCustomFunctions(document: string): JQueryPromise<string> {

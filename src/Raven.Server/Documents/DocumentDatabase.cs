@@ -21,6 +21,7 @@ using Raven.Server.Documents.Transformers;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -31,6 +32,7 @@ using Sparrow.Logging;
 using Voron;
 using Voron.Exceptions;
 using Voron.Impl.Backup;
+using Voron.Util;
 using DatabaseInfo = Raven.Client.Server.Operations.DatabaseInfo;
 using Size = Raven.Client.Util.Size;
 
@@ -88,31 +90,44 @@ namespace Raven.Server.Documents
 
             try
             {
-            IoChanges = new IoChangesNotifications();
-            Changes = new DocumentsChanges();
-            DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
-            DocumentsStorage = new DocumentsStorage(this);
-            IndexStore = new IndexStore(this, serverStore, _indexAndTransformerLocker);
-            TransformerStore = new TransformerStore(this, serverStore, _indexAndTransformerLocker);
-            EtlLoader = new EtlLoader(this, serverStore);
-            if(serverStore != null)
-                ReplicationLoader = new ReplicationLoader(this, serverStore);
-            SubscriptionStorage = new SubscriptionStorage(this, serverStore);
-            Operations = new DatabaseOperations(this);
-            Metrics = new MetricsCountersManager();
-            Patcher = new DocumentPatcher(this);
-            TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
-            HugeDocuments = new HugeDocuments(configuration.PerformanceHints.HugeDocumentsCollectionSize,
-                configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
-            ConfigurationStorage = new ConfigurationStorage(this, serverStore);
-            NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, _databaseShutdown.Token);
-            DatabaseInfoCache = serverStore?.DatabaseInfoCache;
-            RachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
-            CatastrophicFailureNotification = new CatastrophicFailureNotification(e =>
-            {
-                serverStore?.DatabasesLandlord.UnloadResourceOnCatastrophicFailue(name, e);
-            });
-        }
+
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    MasterKey = _serverStore.GetSecretKey(ctx, Name);
+
+                    var databaseRecord = _serverStore.Cluster.ReadDatabase(ctx, Name);
+                    if (databaseRecord.Encrypted && MasterKey == null)
+                        throw new InvalidOperationException($"Attempt to create encrypted db {Name} without supplying the secret key");
+                    if (databaseRecord.Encrypted == false && MasterKey != null)
+                        throw new InvalidOperationException($"Attempt to create a non-encrypted db {Name}, but a secret key exists for this db.");
+                }
+
+                IoChanges = new IoChangesNotifications();
+                Changes = new DocumentsChanges();
+                DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
+                DocumentsStorage = new DocumentsStorage(this);
+                IndexStore = new IndexStore(this, serverStore, _indexAndTransformerLocker);
+                TransformerStore = new TransformerStore(this, serverStore, _indexAndTransformerLocker);
+                EtlLoader = new EtlLoader(this, serverStore);
+                if (serverStore != null)
+                    ReplicationLoader = new ReplicationLoader(this, serverStore);
+                SubscriptionStorage = new SubscriptionStorage(this, serverStore);
+                Operations = new DatabaseOperations(this);
+                Metrics = new MetricsCountersManager();
+                Patcher = new DocumentPatcher(this);
+                TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
+                HugeDocuments = new HugeDocuments(configuration.PerformanceHints.HugeDocumentsCollectionSize,
+                    configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
+                ConfigurationStorage = new ConfigurationStorage(this);
+                NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, _databaseShutdown.Token);
+                DatabaseInfoCache = serverStore?.DatabaseInfoCache;
+                RachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
+                CatastrophicFailureNotification = new CatastrophicFailureNotification(e =>
+                {
+                    serverStore?.DatabasesLandlord.UnloadResourceOnCatastrophicFailure(name, e);
+                });
+            }
             catch (Exception)
             {
                 Dispose();
@@ -146,7 +161,6 @@ namespace Raven.Server.Documents
 
         public DocumentsStorage DocumentsStorage { get; private set; }
 
-        public VersioningStorage VersioningStorage { get; private set; }
         public ExpiredDocumentsCleaner ExpiredDocumentsCleaner { get; private set; }
         public PeriodicBackupRunner PeriodicBackupRunner { get; private set; }
 
@@ -184,38 +198,29 @@ namespace Raven.Server.Documents
         {
             try
             {
-                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                using (ctx.OpenReadTransaction())
-                {
-                    MasterKey = _serverStore.GetSecretKey(ctx, Name);
-
-                    var databaseRecord = _serverStore.Cluster.ReadDatabase(ctx, Name);
-                    if (databaseRecord.Encrypted && MasterKey == null)
-                        throw new InvalidOperationException($"Attempt to create encrypted db {Name} without supplying the secret key");
-                    if (databaseRecord.Encrypted == false && MasterKey != null)
-                        throw new InvalidOperationException($"Attempt to create a non-encrypted db {Name}, but a secret key exists for this db.");
-                }
+                NotificationCenter.Initialize(this);
 
                 DocumentsStorage.Initialize();
-
                 TxMerger.Start();
-
-                ConfigurationStorage.InitializeNotificationsStorage();
+                ConfigurationStorage.Initialize();
 
                 DatabaseRecord record;
+                long index;
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
-                    record = _serverStore.Cluster.ReadDatabase(context, Name);
+                    record = _serverStore.Cluster.ReadDatabase(context, Name,out index);
 
-
-                _indexStoreTask = IndexStore.InitializeAsync(record);
+                if (record == null)
+                    throw new DatabaseDoesNotExistException("The database " + Name + " does not exist or was deleted");
+                
+                _indexStoreTask = IndexStore.InitializeAsync(record, index);
                 _transformerStoreTask = TransformerStore.InitializeAsync(record);
 
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore);
-                LoadBundles();
+                InitializeFromDatabaseRecord(record);
 
-                Patcher.Initialize();
-                EtlLoader.Initialize();
+                EtlLoader.Initialize(record);
+                Patcher.Initialize(record);
 
                 DocumentTombstoneCleaner.Start();
 
@@ -239,13 +244,7 @@ namespace Raven.Server.Documents
 
                 SubscriptionStorage.Initialize();
 
-                //Index Metadata Store shares Voron env and context pool with documents storage, 
-                //so replication of both documents and indexes/transformers can be made within one transaction
-                ConfigurationStorage.Initialize(IndexStore, TransformerStore);
-
-                ReplicationLoader?.Initialize();
-
-                NotificationCenter.Initialize(this);
+                ReplicationLoader?.Initialize(record);
             }
             catch (Exception)
             {
@@ -473,7 +472,7 @@ namespace Raven.Server.Documents
             var size = new Size(envs.Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes));
             var databaseInfo = new DynamicJsonValue
             {
-                [nameof(DatabaseInfo.VersioningActive)] = VersioningStorage != null,
+                [nameof(DatabaseInfo.HasVersioningConfiguration)] = DocumentsStorage.VersioningStorage.Configuration != null,
                 [nameof(DatabaseInfo.ExpirationActive)] = ExpiredDocumentsCleaner != null,
                 [nameof(DatabaseInfo.IsAdmin)] = true, //TODO: implement me!
                 [nameof(DatabaseInfo.Name)] = Name,
@@ -571,7 +570,7 @@ namespace Raven.Server.Documents
         /// this event is intended for entities that are not singletons 
         /// per database and still need to be informed on changes to the database record.
         /// </summary>
-        public event Action DatabaseRecordChanged;
+        public event Action<DatabaseRecord> DatabaseRecordChanged;
 
         public void ValueChanged(long index)
         {
@@ -579,8 +578,14 @@ namespace Raven.Server.Documents
             {
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
+                DatabaseRecord record = null;
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    record = _serverStore.Cluster.ReadDatabase(context, Name);
+                }
 
-                SubscriptionStorage?.HandleDatabaseValueChange();
+                NotifyFeaturesAboutValueChange(record, index);
             }
             catch
             {
@@ -602,13 +607,14 @@ namespace Raven.Server.Documents
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
 
-                LoadBundles();
+                DatabaseRecord record = null;
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    record = _serverStore.Cluster.ReadDatabase(context, Name);
+                }
 
-                TransformerStore.HandleDatabaseRecordChange();
-                IndexStore.HandleDatabaseRecordChange();
-                ReplicationLoader?.HandleDatabaseRecordChange();
-                EtlLoader?.HandleDatabaseRecordChange();
-                OnDatabaseRecordChanged();
+                NotifyFeaturesAboutStateChange(record,index);
             }
             catch
             {
@@ -623,14 +629,45 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void LoadBundles()
+        private void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index)
+        {
+            InitializeFromDatabaseRecord(record);
+
+            TransformerStore.HandleDatabaseRecordChange(record);
+            IndexStore.HandleDatabaseRecordChange(record, index);
+            ReplicationLoader?.HandleDatabaseRecordChange(record);
+            EtlLoader?.HandleDatabaseRecordChange(record);
+            OnDatabaseRecordChanged(record);
+        }
+
+        private void NotifyFeaturesAboutValueChange(DatabaseRecord record, long index)
+        {
+            SubscriptionStorage?.HandleDatabaseValueChange(record);
+        }
+
+        public void RefreshFeatures()
+        {
+            if (_databaseShutdown.IsCancellationRequested)
+                ThrowDatabaseShutdown();
+
+            DatabaseRecord record = null;
+            long index;
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                record = _serverStore.Cluster.ReadDatabase(context, Name,out index);
+            }
+            NotifyFeaturesAboutStateChange(record, index);
+            NotifyFeaturesAboutValueChange(record, index);
+        }
+
+        private void InitializeFromDatabaseRecord(DatabaseRecord dbRecord)
         {
             lock (this)
             {
-                var dbRecord = _serverStore.LoadDatabaseRecord(Name);
                 if (dbRecord != null)
                 {
-                    VersioningStorage = VersioningStorage.LoadConfigurations(this, dbRecord, VersioningStorage);
+                    DocumentsStorage.VersioningStorage.InitializeFromDatabaseRecord(dbRecord);
                     ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, dbRecord, ExpiredDocumentsCleaner);
                     PeriodicBackupRunner.UpdateConfigurations(dbRecord);
                 }
@@ -646,9 +683,9 @@ namespace Raven.Server.Documents
             yield return TxMerger.TransactionPerformanceMetrics;
         }
 
-        private void OnDatabaseRecordChanged()
+        private void OnDatabaseRecordChanged(DatabaseRecord record)
         {
-            DatabaseRecordChanged?.Invoke();
+            DatabaseRecordChanged?.Invoke(record);
         }
     }
 

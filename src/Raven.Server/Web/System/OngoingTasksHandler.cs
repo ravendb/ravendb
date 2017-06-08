@@ -326,7 +326,7 @@ namespace Raven.Server.Web.System
 
                         case OngoingTaskType.RavenEtl:
 
-                            var ravenEtl = record?.SqlEtls?.Find(x => x.Id == key);
+                            var ravenEtl = record?.RavenEtls?.Find(x => x.Id == key);
                             if (ravenEtl == null)
                             {
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -341,10 +341,6 @@ namespace Raven.Server.Web.System
                             else if (ravenEtl.Transforms.Any(x => x.Disabled))
                                 taskState = OngoingTaskState.PartiallyEnabled;
 
-                            (database, server) =
-                                SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(ravenEtl.Destination.Connection.FactoryName,
-                                    ravenEtl.Destination.Connection.ConnectionString);
-
                             var ravenTaskInfo = new OngoingRavenEtl
                             {
                                 TaskId = ravenEtl.Id,
@@ -354,8 +350,8 @@ namespace Raven.Server.Web.System
                                     NodeTag = tag,
                                     NodeUrl = clusterTopology.GetUrlFromTag(tag)
                                 },
-                                DestinationUrl = server,
-                                DestinationDatabase = database
+                                DestinationUrl = ravenEtl.Destination.Url,
+                                DestinationDatabase = ravenEtl.Destination.Database
                             };
 
                             WriteResult(context, ravenTaskInfo);
@@ -382,6 +378,40 @@ namespace Raven.Server.Web.System
             }
         }
 
+        [RavenAction("/admin/tasks/state", "POST", "/admin/tasks/status?name={databaseName:string}&key={taskId:string}&type={taskType:string}&disable={disable:true|false}")]
+        public async Task ToggleTaskState()
+        {
+            var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            var key = GetLongQueryString("key");
+            var typeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+            var disable = GetBoolValueQueryString("disable");
+
+            if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
+                throw new ArgumentException($"Unknown task type: {type}", "type");
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var (index, _) = await ServerStore.ToggleTaskState(key.Value, type, disable.Value, dbName);
+                await ServerStore.Cluster.WaitForIndexNotification(index);
+                
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK; 
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(ModifyOngoingTaskResult.TaskId)] = key,
+                        [nameof(ModifyOngoingTaskResult.RaftCommandIndex)] = index
+                    });
+                    writer.Flush();
+                }
+            }
+        }
+
         [RavenAction("/admin/external-replication/update", "POST", "/admin/external-replication/update?name={databaseName:string}")]
         public async Task UpdateExternalReplication()
         {
@@ -397,10 +427,17 @@ namespace Raven.Server.Web.System
                 {
                     throw new InvalidDataException("DatabaseWatcher was not found.");
                 }
-
+               
                 var watcher = JsonDeserializationClient.DatabaseWatcher(watcherBlittable);
                 var (index, _) = await ServerStore.UpdateExternalReplication(name, watcher);
                 await ServerStore.Cluster.WaitForIndexNotification(index);
+
+                string responsibleNode;
+                using (context.OpenReadTransaction())
+                {
+                    var record = ServerStore.Cluster.ReadDatabase(context,name);
+                    responsibleNode = record.Topology.WhoseTaskIsIt(watcher);
+                }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -408,30 +445,32 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(DatabasePutResult.ETag)] = index,
-                        [nameof(DatabasePutResult.Key)] = name,
-                        [nameof(OngoingTask.TaskId)] = watcher.TaskId == 0 ? index : watcher.TaskId
+                        [nameof(ModifyOngoingTaskResult.TaskId)] = watcher.TaskId == 0 ? index : watcher.TaskId, 
+                        [nameof(ModifyOngoingTaskResult.RaftCommandIndex)] = index, 
+                        [nameof(OngoingTask.ResponsibleNode)] = responsibleNode
                     });
                     writer.Flush();
                 }
             }
         }
 
-        [RavenAction("/admin/external-replication/delete", "POST", "/admin/external-replication/delete?name={databaseName:string}&id={taskId:string}")]
-        public async Task DeleteExternalReplication()
+        [RavenAction("/admin/tasks/delete", "POST", "/admin/tasks/delete?name={databaseName:string}&id={taskId:long}&type={taskType:string}")]
+        public async Task DeleteOngoingTask()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+            if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
-            var taskId = GetLongQueryString("id");
-            if (taskId == null)
-                return;
-            
+            var id = GetLongQueryString("id");
+            var typeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+
+            if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
+                throw new ArgumentException($"Unknown task type: {type}", "type");
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var (index, _) = await ServerStore.DeleteExternalReplication(taskId.Value, name);
+                var (index, _) = await ServerStore.DeleteOngoingTask(id.Value, type, dbName);
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
@@ -440,8 +479,8 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(DatabasePutResult.ETag)] = index,
-                        [nameof(DatabasePutResult.Key)] = name
+                        [nameof(ModifyOngoingTaskResult.TaskId)] = id,
+                        [nameof(ModifyOngoingTaskResult.RaftCommandIndex)] = index
                     });
                     writer.Flush();
                 }
@@ -483,7 +522,7 @@ namespace Raven.Server.Web.System
             {
                 [nameof(TaskId)] = TaskId,
                 [nameof(TaskType)] = TaskType,
-                [nameof(ResponsibleNode)] = ResponsibleNode.ToJson(),
+                [nameof(ResponsibleNode)] = ResponsibleNode?.ToJson(),
                 [nameof(TaskState)] = TaskState,
                 [nameof(LastModificationTime)] = LastModificationTime,
                 [nameof(TaskConnectionStatus)] = TaskConnectionStatus

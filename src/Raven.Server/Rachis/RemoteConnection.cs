@@ -261,14 +261,24 @@ namespace Raven.Server.Rachis
         }
 
         public T Read<T>(JsonOperationContext context)
+            where T : class
         {
-            using (
-                var json = context.ParseToMemory(_stream, "rachis-item",
-                    BlittableJsonDocumentBuilder.UsageMode.None, _buffer))
+            try
             {
-                json.BlittableValidation();
-                ValidateMessage(typeof(T).Name, json);
-                return JsonDeserializationRachis<T>.Deserialize(json);
+                using (
+                    var json = context.ParseToMemory(_stream, "rachis-item",
+                        BlittableJsonDocumentBuilder.UsageMode.None, _buffer))
+                {
+                    json.BlittableValidation();
+                    ValidateMessage(typeof(T).Name, json);
+                    return JsonDeserializationRachis<T>.Deserialize(json);
+                }
+            }
+            catch (IOException e)
+            {
+                if(_log.IsInfoEnabled)
+                    _log.Info($"Failed to read from connection. If this error happens during state change of a node, it is expected. (source : [{_src}] -> destination : [{_destTag}])",e);
+                throw new InvalidOperationException("Failed to read " + typeof(T).Name, e);
             }
         }
 

@@ -1,18 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Raven.Client;
-using Raven.Client.Documents;
 using Raven.Client.Exceptions.Database;
-using Raven.Client.Extensions;
-using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -25,9 +17,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow;
-using Sparrow.Collections;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
 
@@ -74,7 +63,7 @@ namespace Raven.Server.Documents
                 // response to changed database.
                 // if disabled, unload
 
-                var record = _serverStore.LoadDatabaseRecord(t.dbName);
+                var record = _serverStore.LoadDatabaseRecord(t.dbName, out long _);
                 if (record == null)
                 {
                     // was removed, need to make sure that it isn't loaded 
@@ -528,9 +517,6 @@ namespace Raven.Server.Documents
 
             config.Initialize();
 
-            config.CopyParentSettings(_serverStore.Configuration);
-
-
             return config;
         }
 
@@ -555,7 +541,7 @@ namespace Raven.Server.Documents
             return maxLastWork.AddMilliseconds(dbSize / 1024L);
         }
 
-        public void UnloadResourceOnCatastrophicFailue(string databaseName, Exception e)
+        public void UnloadResourceOnCatastrophicFailure(string databaseName, Exception e)
         {
             Task.Run(async () =>
             {

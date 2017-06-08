@@ -92,14 +92,14 @@ namespace Raven.Server.ServerWide
                     DeleteValue(context, cmd, index, leader);
                     break;
                 case nameof(IncrementClusterIdentityCommand):
-                    var updatedDatabaseRecord = UpdateDatabase(context, type, cmd, index, leader);
-                    if (!cmd.TryGet(nameof(IncrementClusterIdentityCommand.Prefix), out string prefix))
+                    if (cmd.TryGet(nameof(IncrementClusterIdentityCommand.Prefix), out string prefix) == false)
                     {
                         NotifyLeaderAboutError(index, leader,
                             new InvalidDataException($"Expected to find {nameof(IncrementClusterIdentityCommand)}.{nameof(IncrementClusterIdentityCommand.Prefix)} property in the Raft command but didn't find it..."));
                         return;
                     }
 
+                    var updatedDatabaseRecord = UpdateDatabase(context, type, cmd, index, leader);
                     leader?.SetStateOf(index, updatedDatabaseRecord.Identities[prefix]);
                     break;
                 case nameof(PutIndexCommand):
@@ -113,20 +113,18 @@ namespace Raven.Server.ServerWide
                 case nameof(RenameTransformerCommand):
                 case nameof(EditVersioningCommand):
                 case nameof(UpdatePeriodicBackupCommand):
-                case nameof(DeletePeriodicBackupCommand):
                 case nameof(EditExpirationCommand):
                 case nameof(ModifyConflictSolverCommand):
                 case nameof(UpdateTopologyCommand):
                 case nameof(DeleteDatabaseCommand):
                 case nameof(ModifyCustomFunctionsCommand):
                 case nameof(UpdateExternalReplicationCommand):
-                case nameof(DeleteExternalReplicationCommand):
+                case nameof(ToggleTaskStateCommand):
                 case nameof(AddRavenEtlCommand):
                 case nameof(AddSqlEtlCommand):
                 case nameof(UpdateRavenEtlCommand):
                 case nameof(UpdateSqlEtlCommand):
-                case nameof(DeleteEtlCommand):
-                case nameof(ToggleEtlStateCommand):
+                case nameof(DeleteOngoingTaskCommand):
                     UpdateDatabase(context, type, cmd, index, leader);
                     break;
                 case nameof(UpdatePeriodicBackupStatusCommand):
@@ -439,7 +437,7 @@ namespace Raven.Server.ServerWide
 
                     if (databaseRecordJson == null)
                     {
-                        if(updateCommand.ErrorOnDatabaseDoesNotExists)
+                        if (updateCommand.ErrorOnDatabaseDoesNotExists)
                             NotifyLeaderAboutError(index, leader, new DatabaseDoesNotExistException($"Cannot execute update command of type {type} for {databaseName} because it does not exists"));
                         return null;
                     }
@@ -567,7 +565,9 @@ namespace Raven.Server.ServerWide
             var doc = Read(context, "db/" + name.ToLowerInvariant(), out etag);
             if (doc == null)
                 return null;
-            return JsonDeserializationCluster.DatabaseRecord(doc);
+            var rec = JsonDeserializationCluster.DatabaseRecord(doc);
+            rec.Topology.PartOfCluster = _parent.CurrentState != RachisConsensus.State.Passive;
+            return rec;
         }
         public BlittableJsonReaderObject Read(TransactionOperationContext context, string name)
         {
@@ -640,9 +640,9 @@ namespace Raven.Server.ServerWide
         {
             if (url == null) throw new ArgumentNullException(nameof(url));
             if (_parent == null) throw new InvalidOperationException("Cannot connect to peer without a parent");
-            if (_parent.IsEncrypted &&  url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
-                    throw new InvalidOperationException($"Failed to connect to node {url}. Connections from encrypted store must use HTTPS.");
-            
+            if (_parent.IsEncrypted && url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
+                throw new InvalidOperationException($"Failed to connect to node {url}. Connections from encrypted store must use HTTPS.");
+
             var info = await ReplicationUtils.GetTcpInfoAsync(url, "Rachis.Server", apiKey, "Cluster");
             var authenticator = new ApiKeyAuthenticator();
 
@@ -745,8 +745,8 @@ namespace Raven.Server.ServerWide
 
                 if (index <= Volatile.Read(ref _lastModifiedIndex.Val))
                     break;
-                
-                if (await waitAsync  == false)
+
+                if (await waitAsync == false)
                 {
                     ThrowTimeoutException(timeout ?? TimeSpan.MaxValue, index, _lastModifiedIndex.Val);
                 }

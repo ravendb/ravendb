@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Replication
 
         public void OnReplicationFromAnotherSource()
         {
-            _replicationFromAnotherSource.SetByAsyncCompletion();
+            _replicationFromAnotherSource.Set();
         }
 
         private void ReceiveReplicationBatches()
@@ -849,13 +849,13 @@ namespace Raven.Server.Documents.Replication
 
                                     if ((item.Flags & DocumentFlags.Revision) == DocumentFlags.Revision)
                                     {
-                                        if (database.VersioningStorage == null)
+                                        if (database.DocumentsStorage.VersioningStorage.Configuration == null)
                                         {
                                             if (_incoming._log.IsOperationsEnabled)
                                                 _incoming._log.Operations("Versioning storage is disabled but the node got a versioned document from replication.");
                                             continue;
                                         }
-                                        database.VersioningStorage.Put(context, item.Id, document, item.Flags,
+                                        database.DocumentsStorage.VersioningStorage.Put(context, item.Id, document, item.Flags,
                                             NonPersistentDocumentFlags.FromReplication, _changeVector, item.LastModifiedTicks);
                                         continue;
                                     }

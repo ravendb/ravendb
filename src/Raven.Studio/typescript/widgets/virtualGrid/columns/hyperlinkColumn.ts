@@ -1,6 +1,7 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import virtualRow = require("widgets/virtualGrid/virtualRow");
+import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 
 type hypertextColumnOpts<T> = {
     extraClass?: (item: T) => string;
@@ -17,8 +18,8 @@ class hyperlinkColumn<T> extends textColumn<T> {
 
     linkActionUniqueId = _.uniqueId("link-action-");
 
-    constructor(valueAccessor: ((obj: T) => any) | string, hrefAccessor: (obj: T) => string, header: string, width: string, opts: hypertextColumnOpts<T> = {}) {
-        super(valueAccessor, header, width, opts);
+    constructor(gridController: virtualGridController<T>, valueAccessor: ((obj: T) => any) | string, hrefAccessor: (obj: T) => string, header: string, width: string, opts: hypertextColumnOpts<T> = {}) {
+        super(gridController, valueAccessor, header, width, opts);
 
         this.hrefAccessor = hrefAccessor;
         this.customHandler = opts.handler;

@@ -581,14 +581,16 @@ namespace Voron.Impl.Journal
                     {
                         // will never wait, we ensure that we have completed the task
                         // we call Wait() here to ensure that if there was an error in 
-                        // the previous sync, we'll propogate it out and mark the env
+                        // the previous sync, we'll propagate it out and mark the env
                         // as catastrophic failure.
                         _pendingSync.Wait(token);
                         token.ThrowIfCancellationRequested();
                         var operation = new SyncOperation(this);
-                        operation.GatherInformationToStartSync();
-                        _pendingSync = operation.Task;
-                        ThreadPool.QueueUserWorkItem(state => ((SyncOperation)state).CompleteSync(), operation);
+                        if (operation.TryGatherInformationToStartSync())
+                        {
+                            _pendingSync = operation.Task;
+                            ThreadPool.QueueUserWorkItem(state => ((SyncOperation)state).CompleteSync(), operation);
+                        }
                     }
 
                     ApplyJournalStateAfterFlush(token, lastProcessedJournal, lastFlushedTransactionId, unusedJournals);
@@ -837,21 +839,22 @@ namespace Voron.Impl.Journal
 
                 public Task Task => _tcs.Task;
 
-                public void SyncDataFile()
+                public bool SyncDataFile()
                 {
-                    GatherInformationToStartSync();
+                    if (TryGatherInformationToStartSync() == false)
+                        return false;
 
                     if (_parent._waj._env.Disposed)
-                        return;
+                        return false;
 
                     CallPagerSync();
 
-
                     // can take a long time, need to check again
                     if (_parent._waj._env.Disposed)
-                        return;
+                        return false;
 
                     UpdateDatabaseStateAfterSync();
+                    return true;
                 }
 
                 public void CompleteSync()
@@ -912,7 +915,7 @@ namespace Voron.Impl.Journal
                     }
                 }
 
-                public void GatherInformationToStartSync()
+                public bool TryGatherInformationToStartSync()
                 {
                     // We need _transactionHeader to be the frozen value at the time we _started_ the
                     // sync process
@@ -928,17 +931,17 @@ namespace Voron.Impl.Journal
                                 _parent._waj._logger.Info(
                                     $"Asking for required sync on {_parent._waj._dataPager.FileName} because started a sync and aborted because we couldn't get the flushing lock");
                             Interlocked.Exchange(ref _parent._forceDataSync, 1);
-                            return;
+                            return false;
                         }
 
                         Interlocked.Increment(ref _parent._waj._env.LastSyncCounter);
 
                         if (_parent._waj._env.Disposed)
-                            return; // we have already disposed, nothing to do here
+                            return false; // we have already disposed, nothing to do here
 
                         if (_parent._lastFlushedJournal == null)
                             // nothing was flushed since we last synced, nothing to do
-                            return;
+                            return false;
 
                         // we only ever take the _fsyncLock _after_ we already took the flush lock
                         // so this will never be contended
@@ -947,7 +950,7 @@ namespace Voron.Impl.Journal
                         {
                             // probably another sync taking place right now, let us schedule another one, just in case
                             _parent._waj._env.QueueForSyncDataFile();
-                            return;
+                            return false;
                         }
                         _currentTotalWrittenBytes = _parent._totalWrittenButUnsyncedBytes;
                         _lastSyncedJournal = _parent._lastFlushedJournalId;
@@ -973,6 +976,8 @@ namespace Voron.Impl.Journal
                         {
                             _parent._journalsToDelete.Remove(kvp.Key);
                         }
+
+                        return true;
                     }
                     finally
                     {
@@ -1191,11 +1196,13 @@ namespace Voron.Impl.Journal
 
                 var current = _waj._files.First();
 
-                if (current.Number != _lastFlushedJournalId)
+                var logInfo = _waj._env.HeaderAccessor.Get(ptr => ptr->Journal);
+
+                if (current.Number != logInfo.LastSyncedJournal)
                     throw new InvalidOperationException(string.Format("Cannot delete current journal because it isn't last synced file. Current journal number: {0}, the last one which was synced {1}", _waj.CurrentFile?.Number ?? -1, _lastFlushedJournalId));
 
 
-                if (_waj._env.NextWriteTransactionId - 1 != _lastFlushedTransactionId)
+                if (_waj._env.NextWriteTransactionId - 1 != logInfo.LastSyncedTransactionId)
                     throw new InvalidOperationException("Cannot delete current journal because it hasn't synced everything up to the last write transaction");
 
                 _waj._files = _waj._files.RemoveFront(1);

@@ -1,20 +1,15 @@
 ﻿using System;
-using Raven.Server.Documents.ETL;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Operations;
-using Raven.Server.Documents.Transformers;
 using Raven.Server.NotificationCenter;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Voron;
 
 namespace Raven.Server.Documents
 {
     public class ConfigurationStorage : IDisposable
     {
-        private readonly TransactionContextPool _contextPool;
-
-        public TransactionContextPool ContextPool => _contextPool;
+        public TransactionContextPool ContextPool { get; }
 
         public NotificationsStorage NotificationsStorage { get; }
 
@@ -22,7 +17,7 @@ namespace Raven.Server.Documents
 
         public StorageEnvironment Environment { get; }
 
-        public ConfigurationStorage(DocumentDatabase db, ServerStore serverStore)
+        public ConfigurationStorage(DocumentDatabase db)
         {
             var path = db.Configuration.Core.DataDirectory.Combine("Configuration");
 
@@ -37,7 +32,7 @@ namespace Raven.Server.Documents
             options.ForceUsing32BitsPager = db.Configuration.Storage.ForceUsing32BitsPager;
             options.TimeToSyncAfterFlashInSeconds = db.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
             options.NumOfConcurrentSyncsPerPhysDrive = db.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
-            options.MasterKey = db.MasterKey;
+            Sodium.CopyMasterKey(out options.MasterKey, db.MasterKey);
 
             Environment = new StorageEnvironment(options);
             
@@ -45,22 +40,18 @@ namespace Raven.Server.Documents
 
             OperationsStorage = new OperationsStorage();
 
-            _contextPool = new TransactionContextPool(Environment);
+            ContextPool = new TransactionContextPool(Environment);
         }
 
-        public void InitializeNotificationsStorage()
+        public void Initialize()
         {
-            NotificationsStorage.Initialize(Environment, _contextPool);
-        }
-
-        public void Initialize(IndexStore indexStore, TransformerStore transformerStore)
-        {
-            OperationsStorage.Initialize(Environment, _contextPool);
+            NotificationsStorage.Initialize(Environment, ContextPool);
+            OperationsStorage.Initialize(Environment, ContextPool);
         }
 
         public void Dispose()
         {
-            _contextPool?.Dispose();
+            ContextPool?.Dispose();
             Environment.Dispose();
         }
     }

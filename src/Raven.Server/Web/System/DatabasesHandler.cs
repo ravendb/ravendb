@@ -101,13 +101,6 @@ namespace Raven.Server.Web.System
                                     [nameof(ServerNode.Database)] = dbRecord.DatabaseName,
                                 })
                             ),
-                            [nameof(Topology.ReadBehavior)] =
-                            ReadBehavior.CurrentNodeWithFailoverWhenRequestTimeSlaThresholdIsReached.ToString(),
-                            [nameof(Topology.WriteBehavior)] = WriteBehavior.LeaderOnly.ToString(),
-                            [nameof(Topology.SLA)] = new DynamicJsonValue
-                            {
-                                [nameof(TopologySla.RequestTimeThresholdInMilliseconds)] = 100,
-                            },
                             [nameof(Topology.Etag)] = etag,
                         });
                     }
@@ -118,9 +111,9 @@ namespace Raven.Server.Web.System
 
         private string GetUrl(DatabaseTopologyNode node, string clientUrl, ClusterTopology clusterTopology)
         {
-            var url = (Server.ServerStore.NodeTag == node.NodeTag ? clientUrl : null) ??  clusterTopology.GetUrlFromTag(node.NodeTag);
+            var url = (Server.ServerStore.NodeTag == node.NodeTag ? clientUrl : null) ??  clusterTopology.GetUrlFromTag(node.NodeTag) ?? ServerStore.RavenServer.WebUrls[0];
             return ServerStore.EnsureValidExternalUrl(url);
-                }
+        }
 
         private Task DbInfo(string dbName)
         {
@@ -160,8 +153,8 @@ namespace Raven.Server.Web.System
             // Looking for disabled indexing flag inside the database settings for offline database status
             if (dbRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Indexing.Disabled),out var val) && val == "true")
             {
-                    indexingStatus = IndexRunningStatus.Disabled;
-                }
+                 indexingStatus = IndexRunningStatus.Disabled;
+            }
             var disabled = dbRecord.Disabled;
             var topology = dbRecord.Topology;
 
@@ -171,13 +164,13 @@ namespace Raven.Server.Web.System
             {
                 foreach (var member in topology.Members)
                 {
-                        nodesTopology.Members.Add(GetNodeId(member));
-                    }
+                    nodesTopology.Members.Add(GetNodeId(member));
+                }
                 foreach (var promotable in topology.Promotables)
                 {
                     nodesTopology.Promotables.Add(GetNodeId(promotable, topology.WhoseTaskIsIt(promotable)));
-                    }
                 }
+            }
 
             if (online == false)
             {
@@ -208,7 +201,7 @@ namespace Raven.Server.Web.System
                 IndexingErrors = db?.IndexStore.GetIndexes().Sum(index => index.GetErrorCount()) ?? 0,
 
                 DocumentsCount = db?.DocumentsStorage.GetNumberOfDocuments() ?? 0,
-                VersioningActive = db?.VersioningStorage != null,
+                HasVersioningConfiguration = db?.DocumentsStorage.VersioningStorage.Configuration != null,
                 ExpirationActive = db?.ExpiredDocumentsCleaner != null,
                 IndexesCount = db?.IndexStore.GetIndexes().Count() ?? 0,
                 IndexingStatus = indexingStatus,

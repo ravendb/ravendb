@@ -16,7 +16,7 @@ namespace Raven.Server.Utils
             if(DisableLongTimespan)
                 return;
 
-            timespan = Debugger.IsAttached ? TimeSpan.FromHours(1) : timespan;
+            timespan = Debugger.IsAttached ? TimeSpan.FromMinutes(1) : timespan;
 
         }
     }

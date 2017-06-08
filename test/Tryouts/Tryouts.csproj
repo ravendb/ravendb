@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <VersionPrefix>4.0.0</VersionPrefix>
+    <Version>4.0.0-custom-40</Version>
     <TargetFramework>netcoreapp1.1</TargetFramework>
     <WarningsAsErrors>true</WarningsAsErrors>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -33,6 +33,9 @@
     <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Databases\CanDispose_1-2017-06-07-09-27-16-130-58\Configuration" />
+    <Folder Include="Databases\CanDispose_1-2017-06-07-09-27-16-130-58\Indexes\0094DBD7-Auto_Users_ByName1" />
+    <Folder Include="Databases\CanDispose_1-2017-06-07-09-27-16-130-58\Indexes\6E130743-Auto_Users_ByName2" />
     <Folder Include="Databases\CanPersist_1-2017-06-01-15-58-56-118-372\Configuration" />
     <Folder Include="Databases\CanPersist_1-2017-06-01-15-58-56-118-372\Indexes\06F5DA55-Users_ByCount_GroupByLocation" />
     <Folder Include="Databases\CanPersist_1-2017-06-01-15-58-56-118-372\Indexes\88C6FEF1-Orders_ByCount_GroupByProduct" />

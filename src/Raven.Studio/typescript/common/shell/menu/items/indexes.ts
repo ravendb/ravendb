@@ -59,7 +59,8 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             route: 'databases/indexes/edit(/:indexName)',
             moduleId: 'viewmodels/database/indexes/editIndex',
             css: 'icon-edit',
-            nav: false
+            nav: false,
+            itemRouteToHighlight: 'databases/indexes'
         }),
         new leafMenuItem({
             title: 'Terms',

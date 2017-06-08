@@ -73,19 +73,20 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                 if (topology.Members.Count == 0)
                 {
-                    var serverUrl = GetStringQueryString("url");
+                    var serverUrl = ServerStore.RavenServer.WebUrls[0];
+                    var tag = ServerStore.NodeTag ?? "A";
                     topology = new ClusterTopology(
                         "dummy",
                         null,
                         new Dictionary<string, string>
                         {
-                            ["A"] = serverUrl
+                            [tag] = serverUrl
                         },
                         new Dictionary<string, string>(),
                         new Dictionary<string, string>(),
-                        "A"
+                        tag
                     );
-                    nodeTag = "A";
+                    nodeTag = tag;
                 }
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
@@ -98,7 +99,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                         ["Topology"] = blit,
                         ["Leader"] = ServerStore.LeaderTag,
                         ["CurrentState"] = ServerStore.CurrentState,
-                        ["NodeTag"] = nodeTag
+                        ["NodeTag"] = nodeTag,
+                        ["CurrentTerm"] = ServerStore.Engine.CurrentTerm
                     };
                     var clusterErrors = ServerStore.GetClusterErrors();
                     if (clusterErrors.Count > 0)
@@ -190,11 +192,11 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/admin/cluster/remove-node", "DELETE", "/admin/cluster/remove-node?nodeTag={nodeTag:string}")]
         public async Task DeleteNode()
         {
-            var serverUrl = GetStringQueryString("nodeTag");
+            var nodeTag = GetStringQueryString("nodeTag");
             ServerStore.EnsureNotPassive();
             if (ServerStore.IsLeader())
             {
-                await ServerStore.RemoveFromClusterAsync(serverUrl);
+                await ServerStore.RemoveFromClusterAsync(nodeTag);
                 NoContentStatus();
                 return;
             }

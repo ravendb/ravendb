@@ -132,7 +132,8 @@ namespace Raven.Server.Documents.Replication
             var docs = _parent._database.DocumentsStorage.GetDocumentsFrom(ctx, etag + 1);
             var tombs = _parent._database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1);
             var conflicts = _parent._database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(ctx, etag + 1);
-            var revisions = _parent._database.VersioningStorage?.GetRevisionsFrom(ctx, etag + 1, int.MaxValue).Select(ReplicationBatchItem.From);
+            var versioningStorage = _parent._database.DocumentsStorage.VersioningStorage;
+            var revisions = versioningStorage.Configuration != null ? versioningStorage.GetRevisionsFrom(ctx, etag + 1, int.MaxValue).Select(ReplicationBatchItem.From) : null;
             var attachments = _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsFrom(ctx, etag + 1);
 
             using (var docsIt = docs.GetEnumerator())
@@ -231,6 +232,12 @@ namespace Raven.Server.Documents.Replication
                         {
                             SendDocumentsBatch(documentsContext, _stats.Network);
                         }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Received cancelation notification while sending document replication batch.");
+                        throw;
                     }
                     catch (Exception e)
                     {
@@ -350,8 +357,8 @@ namespace Raven.Server.Documents.Replication
                 _log.Info($"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents and {_replicaAttachmentStreams.Count:#,#;;0} attachment streams in {sw.ElapsedMilliseconds:#,#;;0} ms. Last sent etag = {_lastEtag}");
 
             _parent._lastDocumentSentTime = DateTime.UtcNow;
-            _parent.HandleServerResponse();
 
+            _parent.HandleServerResponse();
         }
 
         private void WriteItemToServer(ReplicationBatchItem item, OutgoingReplicationStatsScope stats)

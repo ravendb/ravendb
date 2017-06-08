@@ -106,18 +106,13 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                using (var session = store.OpenAsyncSession())
-                {
-                    var operation1 = await session.Advanced.DeleteByIndexAsync<Person>("Person/ByName", x => x.Name == "Bob");
-                    await operation1.WaitForCompletionAsync();
+                var operation1 = await store.Operations.DeleteByIndexAsync<Person>("Person/ByName", x => x.Name == "Bob");
+                await operation1.WaitForCompletionAsync();
 
-                    WaitForIndexing(store);
+                WaitForIndexing(store);
 
-                    var operation2 = await session.Advanced.DeleteByIndexAsync<Person, Person_ByAge>(x => x.Age < 35);
-                    await operation2.WaitForCompletionAsync();
-
-                    await session.SaveChangesAsync();
-                }
+                var operation2 = await store.Operations.DeleteByIndexAsync<Person, Person_ByAge>(x => x.Age < 35);
+                await operation2.WaitForCompletionAsync();
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -146,18 +141,13 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                using (var session = store.OpenSession())
-                {
-                    var operation1 = session.Advanced.DeleteByIndex<Person>("Person/ByName", x => x.Name == "Bob");
-                    operation1.WaitForCompletion(TimeSpan.FromSeconds(15));
+                var operation1 = store.Operations.DeleteByIndex<Person>("Person/ByName", x => x.Name == "Bob");
+                operation1.WaitForCompletion(TimeSpan.FromSeconds(15));
 
-                    WaitForIndexing(store);
+                WaitForIndexing(store);
 
-                    var operation2 = session.Advanced.DeleteByIndex<Person, Person_ByAge>(x => x.Age < 35);
-                    operation2.WaitForCompletion(TimeSpan.FromSeconds(15));
-
-                    session.SaveChanges();
-                }
+                var operation2 = store.Operations.DeleteByIndex<Person, Person_ByAge>(x => x.Age < 35);
+                operation2.WaitForCompletion(TimeSpan.FromSeconds(15));
 
                 using (var session = store.OpenSession())
                 {

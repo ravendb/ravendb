@@ -47,7 +47,8 @@ namespace Raven.Client.Documents.Subscriptions
                 [nameof(this.Criteria)] = new DynamicJsonValue
                 {
                     [nameof(SubscriptionCriteria.Collection)] = Criteria.Collection,
-                    [nameof(SubscriptionCriteria.FilterJavaScript)] = Criteria.FilterJavaScript
+                    [nameof(SubscriptionCriteria.FilterJavaScript)] = Criteria.FilterJavaScript,
+                    [nameof(SubscriptionCriteria.IsVersioned)] = Criteria.IsVersioned
                 },
                 [nameof(ChangeVector)] = ChangeVector?.ToJson(),
                 [nameof(SubscriptionId)] = SubscriptionId,

@@ -172,7 +172,7 @@ namespace Raven.Client.Http
         {
             var topologyUpdate = _firstTopologyUpdate;
 
-            if ((topologyUpdate != null && topologyUpdate.Status == TaskStatus.RanToCompletion) || _withoutTopology)
+            if (topologyUpdate != null && topologyUpdate.Status == TaskStatus.RanToCompletion || _withoutTopology)
             {
                 await ExecuteAsync(_nodeSelector.CurrentNode, context, command, token).ConfigureAwait(false);
                 return;
@@ -515,9 +515,12 @@ namespace Raven.Client.Http
             chosenNode.IsFailed = true;
             await AddFailedResponseToCommand(chosenNode, context, command, request, response, e).ConfigureAwait(false);
 
-            _nodeSelector.OnFailedRequest();
-            if (command.FailedNodes.ContainsKey(_nodeSelector.CurrentNode)) //we tried all the nodes...nothing left to do
-                return false;
+            var nodeSelector = _nodeSelector;
+
+            nodeSelector?.OnFailedRequest();
+
+            if (nodeSelector == null || command.FailedNodes.ContainsKey(nodeSelector.CurrentNode))
+                return false; //we tried all the nodes...nothing left to do
 
             await ExecuteAsync(_nodeSelector.CurrentNode, context, command).ConfigureAwait(false);
 

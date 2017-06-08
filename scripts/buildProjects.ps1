@@ -46,6 +46,13 @@ function BuildClient ( $srcDir ) {
     CheckLastExitCode
 }
 
+function BuildTestDriver ( $srcDir ) {
+    write-host "Building TestDriver"
+    & dotnet build --no-incremental `
+                --configuration "Release" $srcDir;
+    CheckLastExitCode
+}
+
 function BuildTypingsGenerator ( $srcDir ) {
     & dotnet build --no-incremental --configuration "Release" $srcDir;
     CheckLastExitCode

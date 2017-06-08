@@ -13,6 +13,7 @@ using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Client.Documents.Replication.Messages;
 using System.Threading.Tasks;
 using Raven.Client.Json.Converters;
+using Raven.Client.Server;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
 
@@ -314,13 +315,11 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public void HandleDatabaseValueChange()
+        public void HandleDatabaseValueChange(DatabaseRecord databaseRecord)
         {
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var databaseRecord = _serverStore.Cluster.ReadDatabase(context, _db.Name);
-
                 foreach (var subscriptionStateKvp in _subscriptionStates)
                 {
                     var subscriptionBlittable = _serverStore.Cluster.Read(context, subscriptionStateKvp.Key);

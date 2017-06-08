@@ -31,8 +31,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
             Stats current;
             DateTime? lastIndexingErrorTime = null;
 
-            DocumentsOperationContext context;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var indexes = _database.IndexStore.GetIndexes().ToList();

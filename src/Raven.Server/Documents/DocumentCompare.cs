@@ -136,7 +136,7 @@ namespace Raven.Server.Documents
             {
                 foreach (BlittableJsonReaderObject attachment in currentAttachments)
                 {
-                    if (attachment.TryGet(nameof(AttachmentResult.Name), out string name) == false)
+                    if (attachment.TryGet(nameof(AttachmentName.Name), out string name) == false)
                         return false;   // Attachment must have a name. The user modified the value?
 
                     if (currentAttachmentNames.ContainsKey(name))
@@ -151,7 +151,7 @@ namespace Raven.Server.Documents
             {
                 foreach (BlittableJsonReaderObject attachment in modifiedAttachments)
                 {
-                    if (attachment.TryGet(nameof(AttachmentResult.Name), out string name) == false)
+                    if (attachment.TryGet(nameof(AttachmentName.Name), out string name) == false)
                         return false;   // Attachment must have a name. The user modified the value?
 
                     if (modifiedAttachmentNames.ContainsKey(name))

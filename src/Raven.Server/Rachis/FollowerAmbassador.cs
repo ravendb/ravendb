@@ -5,12 +5,15 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Server.Tcp;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
@@ -20,6 +23,7 @@ namespace Raven.Server.Rachis
 {
     public class FollowerAmbassador : IDisposable
     {
+        private readonly Logger _log;
         private readonly RachisConsensus _engine;
         private readonly Leader _leader;
         private ManualResetEvent _wakeLeader;
@@ -38,6 +42,8 @@ namespace Raven.Server.Rachis
         private bool _dispose;
 
         public string Tag => _tag;
+
+        public System.Threading.ThreadState ThreadStatus => _thread.ThreadState;
 
         public long FollowerMatchIndex => Interlocked.Read(ref _followerMatchIndex);
 
@@ -69,6 +75,7 @@ namespace Raven.Server.Rachis
             _url = url;
             _apiKey = apiKey;
             Status = "Started";
+            _log = LoggingSource.Instance.GetLogger<FollowerAmbassador>($"FollowerAmbassador -> {tag} url:[{url}]");
         }
 
         public void UpdateLeaderWake(ManualResetEvent wakeLeader)
@@ -113,16 +120,27 @@ namespace Raven.Server.Rachis
                         _connection = new RemoteConnection(_tag, _engine.Tag, stream);
                         using (_connection)
                         {
-                            _engine.AppendStateDisposable(_leader, _connection);
+                            try
+                            {
+                                _engine.AppendStateDisposable(_leader, _connection);
+                            }
+                            catch (ConcurrencyException)
+                            {
+                                // we are no longer the leader, but we'll not abort the thread here, we'll 
+                                // go to the top of the while loop and exit from there if needed
+                                continue; 
+                            }
+
                             var matchIndex = InitialNegotiationWithFollower();
-                            if (matchIndex == null)
-                                return;
-                            UpdateLastMatchFromFollower(matchIndex.Value);
+                            UpdateLastMatchFromFollower(matchIndex);
                             SendSnapshot(stream);
 
                             var entries = new List<BlittableJsonReaderObject>();
-                            while (_leader.Running)
+                            var disposeRequested = false;
+                            while (_leader.Running && disposeRequested == false)
                             {
+                                disposeRequested = _dispose; // we give last loop before closing
+
                                 // TODO: how to close
                                 entries.Clear();
                                 TransactionOperationContext context;
@@ -177,7 +195,7 @@ namespace Raven.Server.Rachis
                                     }
                                     _connection.Send(context, appendEntries, entries);
                                     var aer = _connection.Read<AppendEntriesResponse>(context);
-
+                                   
                                     if (aer.Success == false)
                                     {
                                         // shouldn't happen, the connection should be aborted if this is the case, but still
@@ -206,6 +224,14 @@ namespace Raven.Server.Rachis
                             }
                         }
                     }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
+                    catch (AggregateException ae) when (ae.InnerException is OperationCanceledException)
+                    {
+                        throw;
+                    }
                     catch (Exception e)
                     {
                         Status = "Failed - " + e.Message;
@@ -214,7 +240,7 @@ namespace Raven.Server.Rachis
                             _engine.Log.Info("Failed to talk to remote follower: " + _tag, e);
                         }
                         // notify leader about an error
-                        _leader?.NotifyAboutException(this,e);
+                        _leader?.NotifyAboutException(this, e);
                         _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
                     }
                     finally
@@ -245,10 +271,14 @@ namespace Raven.Server.Rachis
                     _engine.Log.Info("Failed to talk to remote follower: " + _tag, e);
                 }
             }
+            finally
+            {
+                _connection?.Dispose();
+            }
         }
 
         private void SendSnapshot(Stream stream)
-        {            
+        {
             TransactionOperationContext context;
             using (_engine.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
@@ -300,6 +330,7 @@ namespace Raven.Server.Rachis
                 while (true)
                 {
                     var aer = _connection.Read<InstallSnapshotResponse>(context);
+                   
                     if (aer.Done)
                     {
                         UpdateLastMatchFromFollower(aer.LastLogIndex);
@@ -307,6 +338,7 @@ namespace Raven.Server.Rachis
                     }
                     UpdateLastMatchFromFollower(_followerMatchIndex);
                 }
+
                 if (_engine.Log.IsInfoEnabled)
                 {
                     _engine.Log.Info($"FollowerAmbassador {_engine.Tag}:done sending snapshot to {_tag}");
@@ -485,7 +517,7 @@ namespace Raven.Server.Rachis
             return entry;
         }
 
-        private long? InitialNegotiationWithFollower()
+        private long InitialNegotiationWithFollower()
         {
             UpdateLastMatchFromFollower(0);
             TransactionOperationContext context;
@@ -532,10 +564,11 @@ namespace Raven.Server.Rachis
                     if (llr.CurrentTerm > engineCurrentTerm)
                     {
                         // we need to abort the current leadership
+                        var msg = "Found election term " + llr.CurrentTerm + " that is higher than ours " + engineCurrentTerm;
                         _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm,
-                            "Found election term " + llr.CurrentTerm + " that is higher than ours " + engineCurrentTerm);
+                            msg);
                         _engine.FoundAboutHigherTerm(llr.CurrentTerm);
-                        return null;
+                        throw new InvalidOperationException(msg);
                     }
 
                     if (llr.Status == LogLengthNegotiationResponse.ResponseStatus.Acceptable)
@@ -582,7 +615,7 @@ namespace Raven.Server.Rachis
                         {
                             Term = engineCurrentTerm,
                             PrevLogIndex = midIndex,
-                            PrevLogTerm = termFor??0,
+                            PrevLogTerm = termFor ?? 0,
                             Truncated = truncated || termFor == null
                         };
                         if (_engine.Log.IsInfoEnabled)
@@ -620,7 +653,6 @@ namespace Raven.Server.Rachis
         public void Dispose()
         {
             _dispose = true;
-            _connection?.Dispose();
             if (_engine.Log.IsInfoEnabled)
             {
                 _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: Dispose");

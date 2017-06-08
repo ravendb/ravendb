@@ -1,5 +1,4 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
-
 import ongoingTask = require("models/database/tasks/ongoingTaskModel"); 
 
 class ongoingTaskSQLModel extends ongoingTask {
@@ -28,24 +27,8 @@ class ongoingTaskSQLModel extends ongoingTask {
         this.destinationDatabaseText(dto.DestinationDatabase);
     }
 
-    enableTask() {
-        alert("enabling task sql");
-        // ...
-    }
-
-    disableTask() {
-        alert("disabling task sql");
-        // ...
-    }
-
     editTask() {
-        alert("edit task sql");
-        // ...
-    }
-
-    removeTask() {
-        alert("remove task sql");
-        // ...
+        // TODO...
     }
 }
 

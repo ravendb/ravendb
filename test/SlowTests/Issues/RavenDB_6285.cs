@@ -11,6 +11,15 @@ namespace SlowTests.Issues
     public class RavenDB_6285 : RavenTestBase
     {
         [Fact]
+        public async Task CanGetAllNotificationAboutDocument_ALotOfDocuments()
+        {
+            using (var x = new ChangesTests())
+            {
+                await x.CanGetAllNotificationAboutDocument_ALotOfDocuments();
+            }
+        }
+
+        [Fact]
         public async Task BasicChangesApi()
         {
             using (var store = GetDocumentStore())

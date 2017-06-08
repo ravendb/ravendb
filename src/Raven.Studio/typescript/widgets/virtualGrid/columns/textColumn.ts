@@ -1,6 +1,7 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
+import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import utils = require("widgets/virtualGrid/virtualGridUtils");
 
 type textColumnOpts<T> = {
@@ -14,6 +15,7 @@ type preparedValue = {
 
 class textColumn<T> implements virtualColumn {
     constructor(
+        protected gridController: virtualGridController<T>,
         public valueAccessor: ((item: T) => any) | string,
         public header: string, 
         public width: string,
@@ -22,7 +24,8 @@ class textColumn<T> implements virtualColumn {
 
     getCellValue(item: T) {
         return _.isFunction(this.valueAccessor)
-            ? this.valueAccessor.bind(item)(item) // item is available as this, as well as first argument
+            ? this.gridController.wrapWithEvaluationContext(this.valueAccessor.bind(item))
+                (item) // item is available as this, as well as first argument
             : (item as any)[this.valueAccessor as string];
     }
 

@@ -55,9 +55,7 @@ namespace Raven.Client.Http
                 Cache._unmanagedBuffersPool.Return(Allocation);
                 Interlocked.Add(ref Cache._totalSize, -Size);
                 Allocation = null;
-#if DEBUG
                 GC.SuppressFinalize(this);
-#endif
 
                 if (Logger.IsInfoEnabled)
                 {
@@ -70,12 +68,11 @@ namespace Raven.Client.Http
                 Release();
             }
 
-#if DEBUG
             ~HttpCacheItem()
             {
-                throw new InvalidOperationException("Did not release memory for cache item");
+                Release();
             }
-#endif
+
         }
 
         private Task _cleanupTask;
