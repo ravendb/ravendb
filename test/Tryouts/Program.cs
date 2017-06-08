@@ -25,18 +25,13 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                try
+                Parallel.For(0, 10, _ =>
                 {
-                    using (var test = new SubscriptionsFailover())
+                    using (var test = new FastTests.Server.Replication.DisableDatabasePropagationInRaftCluster())
                     {
-                        AsyncHelpers.RunSync(() => test.ContinueFromThePointIStopped());
+                        test.DisableDatabaseToggleOperation_should_propagate_through_raft_cluster().Wait();
                     }
-                }
-                catch (Exception e)
-                {
-
-                    Console.WriteLine(e);
-                }
+                });
             }
         }
     }

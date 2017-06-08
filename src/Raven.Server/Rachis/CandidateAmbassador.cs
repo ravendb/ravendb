@@ -105,7 +105,9 @@ namespace Raven.Server.Rachis
                             }
                             catch (ConcurrencyException)
                             {
-                                return; // we lost the election, because someone else changed our state to follower
+                                // we probably lost the election, because someone else changed our state to follower
+                                // we'll still return to the top of the loop to ensure that this is the case
+                                continue; 
                             }
                             
                             while (_candidate.Running)
@@ -148,11 +150,6 @@ namespace Raven.Server.Rachis
                                         });
 
                                         rvr = connection.Read<RequestVoteResponse>(context);
-                                        if (rvr == null)
-                                        {
-                                            HandleUnexpectedRemoteConnectionClosed();
-                                            return;
-                                        }
 
                                         if (rvr.Term > currentElectionTerm)
                                         {
@@ -164,7 +161,7 @@ namespace Raven.Server.Rachis
                                                 _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: {message}");
                                             }
                                             _engine.FoundAboutHigherTerm(rvr.Term);
-                                            return;
+                                            throw new InvalidOperationException(message);
                                         }
                                         NotInTopology = rvr.NotInTopology;
                                         if (rvr.VoteGranted == false)
@@ -195,12 +192,7 @@ namespace Raven.Server.Rachis
                                     });
 
                                     rvr = connection.Read<RequestVoteResponse>(context);
-                                    if (rvr == null)
-                                    {
-                                        HandleUnexpectedRemoteConnectionClosed();
-                                        return;
-                                    }
-
+                                  
                                     if (rvr.Term > currentElectionTerm)
                                     {
                                         var message = "Found election term " + rvr.Term + " that is higher than ours " + currentElectionTerm;
@@ -211,7 +203,7 @@ namespace Raven.Server.Rachis
                                         // we need to abort the current elections
                                         _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm, message);
                                         _engine.FoundAboutHigherTerm(rvr.Term);
-                                        return;
+                                        throw new InvalidOperationException(message);
                                     }
                                     NotInTopology = rvr.NotInTopology;
                                     if (rvr.VoteGranted == false)
@@ -269,16 +261,6 @@ namespace Raven.Server.Rachis
                     _engine.Log.Info("Failed to talk to remote peer: " + _url, e);
                 }
             }
-        }
-
-        private void HandleUnexpectedRemoteConnectionClosed()
-        {
-            if (_engine.Log.IsInfoEnabled)
-            {
-                _engine.Log.Info(
-                    $"CandidateAmbassador {_engine.Tag}: remote follower closed the connection while reading RequestVoteResponse message, so I am closing it on this side.");
-            }
-            _candidate.Dispose();
         }
 
         public bool NotInTopology { get; private set; }

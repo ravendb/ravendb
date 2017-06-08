@@ -28,15 +28,6 @@ namespace Raven.Server.Rachis
                     using (_engine.ContextPool.AllocateOperationContext(out context))
                     {
                         var rv = _connection.Read<RequestVote>(context);
-                        if(rv == null)
-                        {
-                            if (_engine.Log.IsInfoEnabled)
-                            {
-                                _engine.Log.Info("Failed to read the RequestVote, IOException was thrown. Most likely the remote node went down while sending the RequestVote. Aborting the vote processing.");
-                            }
-                            _connection.Dispose();
-                            return;
-                        }
 
                         if (rv.Term <= _engine.CurrentTerm)
                         {
@@ -221,7 +212,7 @@ namespace Raven.Server.Rachis
             {
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info("Failed to talk to leader: " + _engine.Tag, e);
+                    _engine.Log.Info("Failed to talk to candidate: " + _engine.Tag, e);
                 }
             }
         }

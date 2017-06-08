@@ -124,13 +124,13 @@ namespace Raven.Server.Rachis
                             }
                             catch (ConcurrencyException)
                             {
-                                return; // we are no longer leader
+                                // we are no longer the leader, but we'll not abort the thread here, we'll 
+                                // go to the top of the while loop and exit from there if needed
+                                continue; 
                             }
 
                             var matchIndex = InitialNegotiationWithFollower();
-                            if (matchIndex == null)
-                                return;
-                            UpdateLastMatchFromFollower(matchIndex.Value);
+                            UpdateLastMatchFromFollower(matchIndex);
                             SendSnapshot(stream);
 
                             var entries = new List<BlittableJsonReaderObject>();
@@ -193,13 +193,7 @@ namespace Raven.Server.Rachis
                                     }
                                     _connection.Send(context, appendEntries, entries);
                                     var aer = _connection.Read<AppendEntriesResponse>(context);
-                                    if (aer == null)
-                                    {
-                                        if (_log.IsInfoEnabled)
-                                            _log.Info(
-                                                "Reading of AppendEntriesResponse failed with IOException. Since the remote node has closed the connection, aborting the ambassador thread.");
-                                        return;
-                                    }
+                                   
                                     if (aer.Success == false)
                                     {
                                         // shouldn't happen, the connection should be aborted if this is the case, but still
@@ -334,14 +328,7 @@ namespace Raven.Server.Rachis
                 while (true)
                 {
                     var aer = _connection.Read<InstallSnapshotResponse>(context);
-                    if (aer == null)
-                    {
-                        if (_engine.Log.IsInfoEnabled)
-                        {
-                            _engine.Log.Info($"FollowerAmbassador {_engine.Tag} has IOException thrown while reading InstallSnapshotResponse message. This has happened since remote node closed the connection on the other side, so we are closing the current Ambassador thread.");
-                        }
-                        return;
-                    }
+                   
                     if (aer.Done)
                     {
                         UpdateLastMatchFromFollower(aer.LastLogIndex);
@@ -528,7 +515,7 @@ namespace Raven.Server.Rachis
             return entry;
         }
 
-        private long? InitialNegotiationWithFollower()
+        private long InitialNegotiationWithFollower()
         {
             UpdateLastMatchFromFollower(0);
             TransactionOperationContext context;
@@ -575,10 +562,11 @@ namespace Raven.Server.Rachis
                     if (llr.CurrentTerm > engineCurrentTerm)
                     {
                         // we need to abort the current leadership
+                        var msg = "Found election term " + llr.CurrentTerm + " that is higher than ours " + engineCurrentTerm;
                         _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm,
-                            "Found election term " + llr.CurrentTerm + " that is higher than ours " + engineCurrentTerm);
+                            msg);
                         _engine.FoundAboutHigherTerm(llr.CurrentTerm);
-                        return null;
+                        throw new InvalidOperationException(msg);
                     }
 
                     if (llr.Status == LogLengthNegotiationResponse.ResponseStatus.Acceptable)

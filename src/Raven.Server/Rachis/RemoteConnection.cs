@@ -278,7 +278,7 @@ namespace Raven.Server.Rachis
             {
                 if(_log.IsInfoEnabled)
                     _log.Info($"Failed to read from connection. If this error happens during state change of a node, it is expected. (source : [{_src}] -> destination : [{_destTag}])",e);
-                return null;
+                throw new InvalidOperationException("Failed to read " + typeof(T).Name, e);
             }
         }
 
