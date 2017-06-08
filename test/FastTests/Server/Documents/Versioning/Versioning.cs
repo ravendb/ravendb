@@ -351,6 +351,32 @@ namespace FastTests.Server.Documents.Versioning
             }
         }
 
+        [Fact]
+        public async Task GetDeleteDocumentsThatHaveRevisions()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database);
+                await store.Commands().PutAsync("users/1", null, new User {Name = "Fitzchak"});
+                await store.Commands().DeleteAsync("users/1", null);
+                await store.Commands().PutAsync("users/1", null, new User { Name = "Fitzchak" });
+                await store.Commands().DeleteAsync("users/1", null);
+
+                var deleteRevisions = await store.Commands().GetRevisionsForAsync("users/1", deleteDocumentsWithRevision: true);
+                Assert.Equal(1, deleteRevisions.Count);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var users = await session.Advanced.GetRevisionsForAsync<User>("users/1");
+                    Assert.Equal(4, users.Count);
+                    Assert.Equal(null, users[0].Name);
+                    Assert.Equal("Fitzchak", users[1].Name);
+                    Assert.Equal(null, users[2].Name);
+                    Assert.Equal("Fitzchak", users[3].Name);
+                }
+            }
+        }
+
         private class Comment
         {
             public string Id { get; set; }

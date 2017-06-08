@@ -175,6 +175,21 @@ namespace FastTests
                 return new DynamicBlittableJson(json);
             }
 
+            public DynamicArray GetRevisionsFor(string id, int? start = null, int? pageSize = null, bool deleteDocumentsWithRevision = false)
+            {
+                return AsyncHelpers.RunSync(() => GetRevisionsForAsync(id, start, pageSize, deleteDocumentsWithRevision));
+            }
+
+            public async Task<DynamicArray> GetRevisionsForAsync(string id, int? start = null, int? pageSize = null, bool deleteDocumentsWithRevision = false)
+            {
+                if (id == null)
+                    throw new ArgumentNullException(nameof(id));
+
+                var command = new GetRevisionsCommand(id, start, pageSize, deleteDocumentsWithRevision);
+                await RequestExecutor.ExecuteAsync(command, Context);
+                return new DynamicArray(command.Result.Results);
+            }
+
             public async Task<DynamicArray> GetAsync(string[] ids)
             {
                 if (ids == null)
@@ -250,7 +265,7 @@ namespace FastTests
             }
 
             public async Task<TResult> RawDeleteJsonAsync<TResult>(string url, object payload)
-              where TResult : BlittableJsonReaderBase
+                where TResult : BlittableJsonReaderBase
             {
                 using (var session = _store.OpenSession())
                 {
@@ -320,10 +335,10 @@ namespace FastTests
                 {
                     Result = (TResult)(object)response;
                 }
-                }
+            }
 
             private class JsonCommandWithPayload<TResult> : RavenCommand<TResult>
-               where TResult : BlittableJsonReaderBase
+                where TResult : BlittableJsonReaderBase
             {
                 private readonly string _url;
                 private readonly HttpMethod _method;
@@ -370,7 +385,7 @@ namespace FastTests
                 {
                     Result = (TResult)(object)response;
                 }
-                }
             }
         }
+    }
 }

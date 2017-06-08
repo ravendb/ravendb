@@ -4,13 +4,11 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Exceptions.Versioning;
 using Raven.Server.Json;
-using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -21,7 +19,6 @@ namespace Raven.Server.Documents.Handlers
 {
     public class VersioningHandler : DatabaseRequestHandler
     {
-
         [RavenAction("/databases/*/versioning/config", "GET")]
         public Task GetVersioningConfig()
         {
@@ -110,9 +107,53 @@ namespace Raven.Server.Documents.Handlers
             {
                 var versioningStorage = Database.DocumentsStorage.VersioningStorage;
 
-                int start = GetStart();
-                int pageSize = GetPageSize();
+                var start = GetStart();
+                var pageSize = GetPageSize();
                 var result = versioningStorage.GetRevisions(context, id, start, pageSize);
+                var revisions = result.Revisions;
+
+                var actualEtag = revisions.Length == 0 ? -1 : revisions[0].Etag;
+                if (GetLongFromHeaders("If-None-Match") == actualEtag)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                    return Task.CompletedTask;
+                }
+
+                HttpContext.Response.Headers["ETag"] = actualEtag.ToString();
+
+                int count;
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Results");
+                    writer.WriteDocuments(context, revisions, metadataOnly, out count);
+
+                    writer.WriteComma();
+
+                    writer.WritePropertyName("TotalResults");
+                    writer.WriteInteger(result.Count);
+                    writer.WriteEndObject();
+                }
+
+                AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisions), count, pageSize);
+            }
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/delete-documents-with-revisions", "GET")]
+        public Task GetDeletedDocumentsThatHaveRevisions()
+        {
+            var versioningStorage = Database.DocumentsStorage.VersioningStorage;
+            if (versioningStorage.Configuration == null)
+                throw new VersioningDisabledException();
+
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var start = GetStart();
+                var pageSize = GetPageSize();
+                var result = versioningStorage.GetDeletedDocumentsThatHaveRevisionsWithCount(context, start, pageSize);
                 var revisions = result.Revisions;
 
                 long actualEtag = revisions.Length == 0 ? -1 : revisions[0].Etag;
@@ -129,7 +170,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
-                    writer.WriteDocuments(context, revisions, metadataOnly, out count);
+                    writer.WriteDocuments(context, revisions, false, out count);
 
                     writer.WriteComma();
 
