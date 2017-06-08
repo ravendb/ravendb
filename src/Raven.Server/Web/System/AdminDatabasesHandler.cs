@@ -612,7 +612,7 @@ namespace Raven.Server.Web.System
             if (Enum.TryParse<EtlType>(type, true, out var etlType) == false)
                 throw new ArgumentException($"Unknown ETL type: {type}", "type");
 
-            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.UpdateEtl(_, databaseName, id.Value, etlConfiguration, etlType), "etl-update");
+            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.UpdateEtl(_, databaseName, id, etlConfiguration, etlType), "etl-update");
         }
     }
 }

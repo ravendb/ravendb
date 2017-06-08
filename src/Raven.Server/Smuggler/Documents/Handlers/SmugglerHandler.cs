@@ -324,7 +324,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     }
                 }
 
-                var operationId = GetLongQueryString("operationId") ?? -1;
+                var operationId = GetLongQueryString("operationId");
                 var token = CreateOperationToken();
 
                 var result = new SmugglerResult();

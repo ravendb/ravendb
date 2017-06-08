@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Handlers
 
             await Database.Operations.AddOperation("Bulk Insert", DatabaseOperations.OperationType.BulkInsert,
                 progress => DoBulkInsert(progress, operationCancelToken.Token),
-                id.Value,
+                id,
                 operationCancelToken
             );
         }

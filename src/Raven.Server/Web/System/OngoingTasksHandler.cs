@@ -395,7 +395,7 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var (index, _) = await ServerStore.ToggleTaskState(key.Value, type, disable.Value, dbName);
+                var (index, _) = await ServerStore.ToggleTaskState(key, type, disable.Value, dbName);
                 await ServerStore.Cluster.WaitForIndexNotification(index);
                 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK; 
@@ -470,7 +470,7 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var (index, _) = await ServerStore.DeleteOngoingTask(id.Value, type, dbName);
+                var (index, _) = await ServerStore.DeleteOngoingTask(id, type, dbName);
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
