@@ -20,6 +20,7 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.Utils;
 using Sparrow.Utils;
+using System.Linq;
 
 namespace Raven.Server.Documents.TcpHandlers
 {
@@ -164,7 +165,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         await connection.ProcessSubscriptionAsync();
                     }
                     catch (Exception e)
-                    {
+                    {                        
                         if (connection._logger.IsInfoEnabled)
                         {
                             connection._logger.Info(
@@ -308,7 +309,7 @@ namespace Raven.Server.Documents.TcpHandlers
         }
 
         private async Task ProcessSubscriptionAsync()
-        {
+        {            
             if (_logger.IsInfoEnabled)
             {
                 _logger.Info(
@@ -341,18 +342,25 @@ namespace Raven.Server.Documents.TcpHandlers
                         using (TcpConnection.ContextPool.AllocateOperationContext(out context))
                         using (var writer = new BlittableJsonTextWriter(context, _buffer))
                         {
-                            foreach (var doc in GetDataToSend(docsContext, subscription, startEtag, patch, sendingCurrentBatchStopwatch))
+                            foreach (var doc in GetDataToSend(docsContext, subscription, startEtag, patch))
                             {
-
+                                startEtag = doc.Etag;
+                                lastChangeVector = ChangeVectorUtils.MergeVectors(doc.ChangeVector, subscription.ChangeVector);
+                                                                
                                 if (doc.Data == null)
                                 {
-                                    await SendHeartBeat();
+                                    if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
+                                    {
+                                        await SendHeartBeat();
+                                        sendingCurrentBatchStopwatch.Restart();
+                                    }
+                                        
                                     continue;
                                 }
 
-                                lastChangeVector = ChangeVectorUtils.MergeVectors(doc.ChangeVector, subscription.ChangeVector);
+                                
                                 anyDocumentsSentInCurrentIteration = true;
-                                startEtag = doc.Etag;
+                                
 
                                 writer.WriteStartObject();
                                 writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(TypeSegment));
@@ -374,7 +382,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                     {
                                         await FlushDocsToClient(writer, docsToFlush);
                                         docsToFlush = 0;
-                                        sendingCurrentBatchStopwatch.Reset();
+                                        sendingCurrentBatchStopwatch.Restart();
                                     }
                                     else
                                     {
@@ -384,22 +392,27 @@ namespace Raven.Server.Documents.TcpHandlers
                             }
 
                             if (anyDocumentsSentInCurrentIteration)
-                            {
+                            {                                
                                 context.Write(writer, new DynamicJsonValue
                                 {
                                     [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.EndOfBatch)
                                 });
 
-                                await FlushDocsToClient(writer, docsToFlush, true);
+                                await FlushDocsToClient(writer, docsToFlush, true);                                
                             }
                         }
 
                         if (anyDocumentsSentInCurrentIteration == false)
-                        {
+                        {                            
                             await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(SubscriptionId, startEtag, lastChangeVector);
 
                             if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
                                 await SendHeartBeat();
+
+                            long globalEtag = TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext, subscription.Criteria.Collection);
+                            
+                            if (globalEtag > startEtag)
+                                continue;
 
                             if (await WaitForChangedDocuments(replyFromClientTask))
                                 continue;
@@ -425,7 +438,7 @@ namespace Raven.Server.Documents.TcpHandlers
                             }
                             await SendHeartBeat();
                         }
-
+                        
                         CancellationTokenSource.Token.ThrowIfCancellationRequested();
 
                         switch (clientReply.Type)
@@ -457,7 +470,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        private IEnumerable<Document> GetDataToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch, Stopwatch sendingCurrentBatchStopwatch)
+        private IEnumerable<Document> GetDataToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch)
         {
             
             var db = TcpConnection.DocumentDatabase;
@@ -466,15 +479,15 @@ namespace Raven.Server.Documents.TcpHandlers
                 if (db.DocumentsStorage.VersioningStorage == null || db.DocumentsStorage.VersioningStorage.IsVersioned(subscription.Criteria.Collection) == false)
                     throw new SubscriptionClosedException("Cannot use a version subscription, database does not support versioning"); // todo: improve exception handling
 
-                return GetVerionTuplesToSend(docsContext, subscription, startEtag, patch, sendingCurrentBatchStopwatch, db.DocumentsStorage.VersioningStorage);
+                return GetVerionTuplesToSend(docsContext, subscription, startEtag, patch, db.DocumentsStorage.VersioningStorage);
             }
 
 
-            return GetDocumentsToSend(docsContext, subscription, startEtag, patch, sendingCurrentBatchStopwatch, db);
+            return GetDocumentsToSend(docsContext, subscription, startEtag, patch, db);
         }
 
         private IEnumerable<Document> GetDocumentsToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch,
-            Stopwatch sendingCurrentBatchStopwatch, DocumentDatabase db)
+            DocumentDatabase db)
         {
             foreach (var doc in db.DocumentsStorage.GetDocumentsFrom(
                 docsContext,
@@ -488,38 +501,35 @@ namespace Raven.Server.Documents.TcpHandlers
                     BlittableJsonReaderObject transformResult;
                     if (ShouldSendDocument(subscription, patch, docsContext, doc, out transformResult) == false)
                     {
-                        // make sure that if we read a lot of irrelevant documents, we send keep alive over the network
-                        if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
-                        {
-                            doc.Data = null;
-                            yield return doc;
-                            sendingCurrentBatchStopwatch.Reset();
-                        }
-                        continue;
+                        doc.Data = null;
+                        yield return doc;
                     }
-                    using (transformResult)
+                    else
                     {
-                        if (transformResult == null)
+                        using (transformResult)
                         {
-                            yield return doc;
-                            continue;
-                        }
+                            if (transformResult == null)
+                            {
+                                yield return doc;
+                                continue;
+                            }
 
-                        yield return new Document
-                        {
-                            Id = doc.Id,
-                            Etag = doc.Etag,
-                            Data = transformResult,
-                            LowerId = doc.LowerId,
-                            ChangeVector = doc.ChangeVector
-                        };
+                            yield return new Document
+                            {
+                                Id = doc.Id,
+                                Etag = doc.Etag,
+                                Data = transformResult,
+                                LowerId = doc.LowerId,
+                                ChangeVector = doc.ChangeVector
+                            };
+                        }
                     }
                 }
             }
         }
 
         private IEnumerable<Document> GetVerionTuplesToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch,
-            Stopwatch sendingCurrentBatchStopwatch, VersioningStorage revisions)
+             VersioningStorage revisions)
         {
             foreach (var versionedDocs in revisions.GetRevisionsFrom(docsContext, new CollectionName(subscription.Criteria.Collection), startEtag + 1, _options.MaxDocsPerBatch))
             {
@@ -538,37 +548,35 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     if (ShouldSendDocumentWithVersioning(subscription, patch, docsContext, item, versioned, out var transformResult) == false)
                     {
-                        // make sure that if we read a lot of irrelevant documents, we send keep alive over the network
-                        if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
+                        // make sure that if we read a lot of irrelevant documents, we send keep alive over the network            
+                        var doc = new Document
                         {
-                            var doc = new Document
-                            {
-                                Data = null,
-                                ChangeVector = item.ChangeVector,
-                                Etag = item.Etag
-                            };
-
-                            yield return doc;
-                            sendingCurrentBatchStopwatch.Reset();
-                        }
-                        continue;
-                    }
-                    using (transformResult)
-                    {
-                        if (transformResult == null)
-                        {
-                            yield return versionedDocs.current;
-                            continue;
-                        }
-
-                        yield return new Document
-                        {
-                            Id = item.Id,
-                            Etag = item.Etag,
-                            Data = transformResult,
-                            LowerId = item.LowerId,
-                            ChangeVector = item.ChangeVector
+                            Data = null,
+                            ChangeVector = item.ChangeVector,
+                            Etag = item.Etag
                         };
+
+                        yield return doc;
+                    }
+                    else
+                    {
+                        using (transformResult)
+                        {
+                            if (transformResult == null)
+                            {
+                                yield return versionedDocs.current;
+                                continue;
+                            }
+
+                            yield return new Document
+                            {
+                                Id = item.Id,
+                                Etag = item.Etag,
+                                Data = transformResult,
+                                LowerId = item.LowerId,
+                                ChangeVector = item.ChangeVector
+                            };
+                        }
                     }
                 }
             }
