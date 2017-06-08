@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Reflection;
 using FastTests.Client.Attachments;
 using RachisTests.DatabaseCluster;
 using Sparrow.Logging;
@@ -9,6 +10,7 @@ using Raven.Server.Utils;
 using Raven.Client.Documents;
 using RachisTests;
 using Raven.Client.Util;
+using System.Threading;
 
 namespace Tryouts
 {
@@ -21,6 +23,12 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
+            var setMinThreads = (Func<int, int, bool>)typeof(ThreadPool).GetTypeInfo().GetMethod("SetMinThreads")
+                .CreateDelegate(typeof(Func<int, int, bool>));
+
+            setMinThreads(250, 250);
+
+
             LoggingSource.Instance.SetupLogMode(LogMode.Information, "Logs");
             for (var i = 0; i < 100; i++)
             {
