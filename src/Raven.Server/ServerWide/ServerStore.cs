@@ -342,27 +342,26 @@ namespace Raven.Server.ServerWide
             Task.Run(ClusterMaintenanceSetupTask, ServerShutdown);
         }
 
-        private void OnStateChanged(object sender, RachisConsensus.State state)
+        private void OnStateChanged(object sender, RachisConsensus.StateTransition state)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 NotificationCenter.Add(ClusterTopologyChanged.Create(GetClusterTopology(context), LeaderTag, NodeTag));
-                DatabaseTopology.PartOfCluster = state != RachisConsensus.State.Passive;
-                if (DatabaseTopology.PartOfCluster == false)
+                // If we are in passive state, we prevent from tasks to be performed by this node.
+                if (state.From == RachisConsensus.State.Passive || state.To == RachisConsensus.State.Passive)
                 {
-                    // If we are in passive state, we have prevent from tasks to be performed by this node.
-                    DisableAlloutgoingTasks();
+                    RefreshOutgoingTasks();
                 }
             }
         }
 
-        public Task DisableAlloutgoingTasks()
+        public Task RefreshOutgoingTasks()
         {
-            return DisableAlloutgoingTasksAsync();
+            return RefreshOutgoingTasksAsync();
         }
 
-        public async Task DisableAlloutgoingTasksAsync()
+        public async Task RefreshOutgoingTasksAsync()
         {
             var tasks = new Dictionary<string,Task<DocumentDatabase>>();
             foreach (var db in DatabasesLandlord.DatabasesCache)

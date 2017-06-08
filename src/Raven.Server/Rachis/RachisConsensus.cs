@@ -94,7 +94,7 @@ namespace Raven.Server.Rachis
 
         public event EventHandler<ClusterTopology> TopologyChanged;
 
-        public event EventHandler<State> StateChanged;
+        public event EventHandler<StateTransition> StateChanged;
 
         private string _tag;
         public TransactionContextPool ContextPool { get; private set; }
@@ -373,6 +373,14 @@ namespace Raven.Server.Rachis
             }
         }
 
+        public class StateTransition
+        {
+            public State From;
+            public State To;
+            public string Reason;
+            public long CurrentTerm;
+        }
+
         private void SetNewStateInTx(TransactionOperationContext context, State state, IDisposable disposable, long expectedTerm, string stateChangedReason)
         {
             if (expectedTerm != CurrentTerm && expectedTerm != -1)
@@ -395,13 +403,21 @@ namespace Raven.Server.Rachis
                 DeleteTopology(context);
             }
 
-            CurrentState = state;
+            var transition = new StateTransition
+            {
+                CurrentTerm = expectedTerm,
+                From = CurrentState,
+                To = state,
+                Reason = stateChangedReason
+            };
 
+            CurrentState = state;
+            
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
                 if (tx is LowLevelTransaction llt && llt.Committed)
                 {
-                    StateChanged?.Invoke(this, state);
+                    StateChanged?.Invoke(this, transition);
 
                     TaskExecutor.CompleteReplaceAndExecute(ref _stateChanged, () =>
                     {
@@ -1360,7 +1376,7 @@ namespace Raven.Server.Rachis
                 return new DynamicJsonArray();
 
             var dja = new DynamicJsonArray();
-            while (_currentLeader.ErrorsList.TryDequeue(out var entry))
+            foreach (var entry in _currentLeader.ErrorsList)
             {
                 var djv = new DynamicJsonValue
                 {

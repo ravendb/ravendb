@@ -21,6 +21,7 @@ using Raven.Server.Documents.Transformers;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
