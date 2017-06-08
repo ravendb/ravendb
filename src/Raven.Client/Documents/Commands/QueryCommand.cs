@@ -68,7 +68,11 @@ namespace Raven.Client.Documents.Commands
 
             EnsureIsNotNullOrEmpty(indexQueryUrl, "index");
 
-            var pathBuilder = new StringBuilder(indexQueryUrl);
+            var pathBuilder = new StringBuilder(node.Url);
+            pathBuilder.Append("/databases/")
+                .Append(node.Database)
+                .Append('/')
+                .Append(indexQueryUrl);
 
             if (_metadataOnly)
                 pathBuilder.Append("&metadata-only=true");
@@ -79,7 +83,7 @@ namespace Raven.Client.Documents.Commands
                 pathBuilder.Append("&").Append(string.Join("&", _includes.Select(x => "include=" + x).ToArray()));
             }
 
-            url = $"{node.Url}/databases/{node.Database}/" + pathBuilder;
+            url = pathBuilder.ToString();
             return request;
         }
 
