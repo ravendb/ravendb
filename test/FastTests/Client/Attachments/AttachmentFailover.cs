@@ -47,10 +47,9 @@ namespace FastTests.Client.Attachments
                         {
                             var currentNode = await session.RequestExecutor.GetCurrentNode();
                             var currentServer = Servers.Single(x => x.ServerStore.NodeTag == currentNode.ClusterTag);
-                            var task = session.RequestExecutor.ExecuteAsync(currentNode, session.Context, command);
-                            // We want to make sure that we started to write the stream and we set position zero before failing over
-                            // This is why we dispose the server after the operation has started.
+                            stream.Position++;// simulating that we already started to call this and we need to reset
                             DisposeServerAndWaitForFinishOfDisposal(currentServer);
+                            var task = session.RequestExecutor.ExecuteAsync(currentNode, session.Context, command);
                             await task;
                             saveChangesOperation.SetResult(command.Result);
                         }
@@ -67,10 +66,10 @@ namespace FastTests.Client.Attachments
 
                         var currentNode = await requestExecutor.GetCurrentNode();
                         var currentServer = Servers.Single(x => x.ServerStore.NodeTag == currentNode.ClusterTag);
-                        var task = requestExecutor.ExecuteAsync(currentNode, context, command);
-                        // We want to make sure that we started to write the stream and we set position zero before failing over
-                        // This is why we dispose the server after the operation has started.
+                        stream.Position++;// simulating that we already started to call this and we need to reset
                         DisposeServerAndWaitForFinishOfDisposal(currentServer);
+                        var task = requestExecutor.ExecuteAsync(currentNode, context, command);
+                     
                         await task;
                         var attachment = command.Result;
                         Assert.Equal(2, attachment.Etag);
