@@ -6,6 +6,7 @@ using System.Threading;
 using Raven.Client.Http;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Logging;
 using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
@@ -38,7 +39,17 @@ namespace Raven.Server.Rachis
 
                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
+
                     var appendEntries = _connection.Read<AppendEntries>(context);
+                    if (appendEntries == null)
+                    {
+                        if (_engine.Log.IsInfoEnabled)
+                        {
+                            _engine.Log.Info($"Follower {_engine.Tag}: IOException was thrown when reading AppendEntries sent fron the leader. This means that the leader has closed the connection, so we are closing the current connection as well.");
+                        }
+                        return;
+                    }
+
                     _engine.Timeout.Defer(_connection.Source);
                     var sp = Stopwatch.StartNew();
                     if (appendEntries.EntriesCount != 0)
@@ -58,7 +69,7 @@ namespace Raven.Server.Rachis
                         }
                     }
 
-                    long lastLogIndex = appendEntries.PrevLogIndex;
+                    var lastLogIndex = appendEntries.PrevLogIndex;
 
                     // don't start write transaction fro noop
                     if (lastCommit != appendEntries.LeaderCommit ||
@@ -175,6 +186,15 @@ namespace Raven.Server.Rachis
             using (_engine.ContextPool.AllocateOperationContext(out context))
             {
                 var logLength = _connection.Read<LogLengthNegotiation>(context);
+                if (logLength == null)
+                {
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Follower {_engine.Tag}: remote node has closed the connection while reading LogLengthNegotiation message. (executing Follower::CheckIfValidLeader())");
+                    }
+
+                    return null;
+                }
 
                 if (logLength.Term < _engine.CurrentTerm)
                 {
@@ -553,6 +573,15 @@ namespace Raven.Server.Rachis
                 });
 
                 var response = connection.Read<LogLengthNegotiation>(context);
+                if (response == null)
+                {
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info(
+                            $"Follower {_engine.Tag}: remote node has closed the connection while reading LogLengthNegotiation message. (executing Follower::CheckIfValidLeader())");
+                    }
+                    return;
+                }
 
                 _engine.Timeout.Defer(_connection.Source);
                 if (response.Truncated)

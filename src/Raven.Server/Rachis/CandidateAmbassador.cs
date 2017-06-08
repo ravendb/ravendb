@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Server.Tcp;
 using Raven.Server.ServerWide.Context;
@@ -98,7 +99,15 @@ namespace Raven.Server.Rachis
                         Status = "Connected";
                         using (var connection = new RemoteConnection(_tag, _engine.Tag, _conenctToPeer))
                         {
-                            _engine.AppendStateDisposable(_candidate, connection);
+                            try
+                            {
+                                _engine.AppendStateDisposable(_candidate, connection);
+                            }
+                            catch (ConcurrencyException)
+                            {
+                                return; // we lost the election, because someone else changed our state to follower
+                            }
+                            
                             while (_candidate.Running)
                             {
                                 TransactionOperationContext context;
@@ -139,6 +148,12 @@ namespace Raven.Server.Rachis
                                         });
 
                                         rvr = connection.Read<RequestVoteResponse>(context);
+                                        if (rvr == null)
+                                        {
+                                            HandleUnexpectedRemoteConnectionClosed();
+                                            return;
+                                        }
+
                                         if (rvr.Term > currentElectionTerm)
                                         {
                                             var message = "Found election term " + rvr.Term + " that is higher than ours " + currentElectionTerm;
@@ -180,6 +195,12 @@ namespace Raven.Server.Rachis
                                     });
 
                                     rvr = connection.Read<RequestVoteResponse>(context);
+                                    if (rvr == null)
+                                    {
+                                        HandleUnexpectedRemoteConnectionClosed();
+                                        return;
+                                    }
+
                                     if (rvr.Term > currentElectionTerm)
                                     {
                                         var message = "Found election term " + rvr.Term + " that is higher than ours " + currentElectionTerm;
@@ -248,6 +269,16 @@ namespace Raven.Server.Rachis
                     _engine.Log.Info("Failed to talk to remote peer: " + _url, e);
                 }
             }
+        }
+
+        private void HandleUnexpectedRemoteConnectionClosed()
+        {
+            if (_engine.Log.IsInfoEnabled)
+            {
+                _engine.Log.Info(
+                    $"CandidateAmbassador {_engine.Tag}: remote follower closed the connection while reading RequestVoteResponse message, so I am closing it on this side.");
+            }
+            _candidate.Dispose();
         }
 
         public bool NotInTopology { get; private set; }

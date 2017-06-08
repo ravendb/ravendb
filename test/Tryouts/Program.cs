@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Diagnostics;
-using Raven.Client.Documents.Exceptions;
-using Raven.Client.Documents.Session;
-using Raven.Client.Util;
+using System.Threading.Tasks;
+using FastTests.Client.Attachments;
+using FastTests.Tasks;
+using RachisTests.DatabaseCluster;
 using Sparrow.Logging;
+using System.Threading.Tasks;
+using Raven.Server.ServerWide;
 using Raven.Server.Utils;
-using Voron.Exceptions;
-using Xunit.Sdk;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Tryouts
 {
@@ -17,52 +20,22 @@ namespace Tryouts
             MiscUtils.DisableLongTimespan = true;
             LoggingSource.Instance.SetupLogMode(LogMode.Information, @"c:\work\debug\ravendb");
 
-            
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
 
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new FastTests.Server.Replication.DisableDatabasePropagationInRaftCluster())
+                //Parallel.For(0, 10, _ =>
+                //{
+                using (var a = new RavenDB_6886())
                 {
-                    a.DisableDatabaseToggleOperation_should_propagate_through_raft_cluster().Wait();
+                    Console.Write(".");
+                    a.Cluster_identity_for_single_document_in_parallel_on_different_nodes_should_work().Wait();
                 }
+                //});
+                Console.WriteLine();
             }
-        }
-
-        public static IDisposable Lock(IDocumentSession session, string docToLock)
-        {
-            var doc = session.Load<object>(docToLock);
-            if (doc == null)
-                throw new DocumentDoesNotExistException("The document " + docToLock + " does not exists and cannot be locked");
-
-            var metadata = session.Advanced.GetMetadataFor(doc);
-
-
-            if (metadata.GetBoolean("Pessimistic-Locked") &&
-                // the document is locked and the lock is still value
-                (DateTime.UtcNow <= new DateTime(metadata.GetNumber("Pessimistic-Lock-Timeout"))))
-            {
-                throw new ConcurrencyException("Document " + docToLock + " is locked using pessimistic");
-            }
-            
-            metadata["Pessimistic-Locked"] = true;
-            metadata["Pessimistic-Lock-Timeout"] = DateTime.UtcNow.AddSeconds(15).Ticks;
-
-            
-            // will throw if someone else took the look in the meantime
-            session.Advanced.UseOptimisticConcurrency = true;
-            session.SaveChanges();
-
-            return new DisposableAction(() =>
-            {
-                metadata.Remove("Pessimistic-Locked");
-                metadata.Remove("Pessimistic-Lock-Timeout");
-
-                Debug.Assert(session.Advanced.UseOptimisticConcurrency);
-                session.SaveChanges();
-            });
         }
     }
 }
