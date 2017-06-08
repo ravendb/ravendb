@@ -85,9 +85,7 @@ class viewModelBase {
     }
 
     getPageHostDimenensions(): [number, number] {
-        const $pageHostRoot = $(".dynamic-container");
-
-        return [$pageHostRoot.innerWidth(), $pageHostRoot.innerHeight()];
+        return viewHelpers.getPageHostDimenensions();
     }
 
     attached() {
