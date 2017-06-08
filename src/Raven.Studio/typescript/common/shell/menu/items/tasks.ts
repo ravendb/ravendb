@@ -55,7 +55,8 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/tasks/editExternalReplicationTask',
             title: 'Create External Replication Task',
             nav: false,
-            dynamicHash: editExternalReplicationTasksUrl
+            dynamicHash: editExternalReplicationTasksUrl,
+            itemRouteToHighlight: 'databases/tasks/ongoingTasks'
         }),
         /* TODO:
         new leafMenuItem({

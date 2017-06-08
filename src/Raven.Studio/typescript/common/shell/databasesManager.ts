@@ -190,7 +190,7 @@ class databasesManager {
     }
 
     private createDatabase(databaseInfo: Raven.Client.Server.Operations.DatabaseInfo): database {
-        return new database(databaseInfo, clusterTopologyManager.default.nodeTag);
+        return new database(databaseInfo, clusterTopologyManager.default.localNodeTag);
     }
 
     // Please remember those notifications are setup before connection to websocket

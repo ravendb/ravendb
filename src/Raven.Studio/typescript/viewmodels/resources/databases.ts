@@ -126,7 +126,7 @@ class databases extends viewModelBase {
         let searchText = filters.searchText();
         const hasSearchText = !!searchText;
         const localOnly = filters.localOnly();
-        const nodeTag = this.clusterManager.nodeTag();
+        const nodeTag = this.clusterManager.localNodeTag();
 
         if (hasSearchText) {
             searchText = searchText.toLowerCase();
@@ -180,7 +180,7 @@ class databases extends viewModelBase {
 
     createAllDocumentsUrlObservableForNode(dbInfo: databaseInfo, node: databaseGroupNode) {
         return ko.pureComputed(() => {
-            const currentNodeTag = this.clusterManager.nodeTag();
+            const currentNodeTag = this.clusterManager.localNodeTag();
             const nodeTag = node.tag();
             const link = appUrl.forDocuments(null, dbInfo);
             if (currentNodeTag === nodeTag) {
@@ -411,7 +411,7 @@ class databases extends viewModelBase {
 
     createIsLocalDatabaseObservable(dbName: string) {
         return ko.pureComputed(() => {
-            const nodeTag = this.clusterManager.nodeTag();
+            const nodeTag = this.clusterManager.localNodeTag();
             const dbInfo = this.databases().getByName(dbName);
 
             const nodeTags = new Set<string>();

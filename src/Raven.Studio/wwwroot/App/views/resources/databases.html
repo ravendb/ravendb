@@ -20,7 +20,7 @@
             <div class="btn-group">
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Filter visible databases">
                     <span data-bind="visible: !filters.localOnly()">Show all</span>
-                    <span data-bind="visible: filters.localOnly">Show local (Node <span data-bind="text: clusterManager.nodeTag"></span>)</span>
+                    <span data-bind="visible: filters.localOnly">Show local (Node <span data-bind="text: clusterManager.localNodeTag"></span>)</span>
                     &nbsp;&nbsp;
                     <span class="caret"></span>
                     <span class="sr-only">Toggle Dropdown</span>
@@ -33,7 +33,7 @@
                     </li>
                     <li data-bind="click: _.partial(filters.localOnly, true)">
                         <a href="#" title="Show only databases which are relevant for current node">
-                            <span>Show local (Node <span data-bind="text: clusterManager.nodeTag"></span>)</span>
+                            <span>Show local (Node <span data-bind="text: clusterManager.localNodeTag"></span>)</span>
                         </a>
                     </li>
                 </ul>
@@ -116,7 +116,7 @@
                             </h3>
                         </div>
                         <div class="dbgroup-node-type flex-horizontal" data-bind="foreach: nodes">
-                            <div><a data-bind="attr: { href: $root.createAllDocumentsUrlObservableForNode($parent, $data), target: tag() === $root.clusterManager.nodeTag() ? undefined : '_blank' }"><i data-bind="attr: { class: cssIcon }"></i> <span data-bind="text: 'Node ' + tag()"></span></a></div>
+                            <div><a data-bind="attr: { href: $root.createAllDocumentsUrlObservableForNode($parent, $data), target: tag() === $root.clusterManager.localNodeTag() ? undefined : '_blank' }"><i data-bind="attr: { class: cssIcon }"></i> <span data-bind="text: 'Node ' + tag()"></span></a></div>
                         </div>
                     </div>
                     <div class="vertical-divider properties-container"
