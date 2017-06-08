@@ -244,7 +244,10 @@ namespace Raven.Server.Rachis
                     finally
                     {
                         stream?.Dispose();
-                        Status = "Disconnected";
+                        if (Status == "Connected")
+                            Status = "Disconnected";
+                        else
+                            Status = "Disconnected " + Status;
                     }
                 }
             }

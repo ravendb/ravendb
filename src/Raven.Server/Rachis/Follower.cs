@@ -41,7 +41,25 @@ namespace Raven.Server.Rachis
                 {
 
                     var appendEntries = _connection.Read<AppendEntries>(context);
-                   
+
+
+                    if (appendEntries.Term != _engine.CurrentTerm)
+                    {
+                        _connection.Send(context, new AppendEntriesResponse
+                        {
+                            CurrentTerm = _engine.CurrentTerm,
+                            Message = "The current term that I have " + _engine.CurrentTerm + " doesn't match " + appendEntries.Term,
+                            Success = false,
+                        });
+                        if (_engine.Log.IsInfoEnabled && entries.Count > 0)
+                        {
+                            _engine.Log.Info($"Follower {_engine.Tag}: Got invalid term {appendEntries.Term} while the current term is {_engine.CurrentTerm}, aborting connection...");
+                        }
+
+                        return;
+                    }
+                    
+                    
                     _engine.Timeout.Defer(_connection.Source);
                     var sp = Stopwatch.StartNew();
                     if (appendEntries.EntriesCount != 0)
@@ -664,7 +682,7 @@ namespace Raven.Server.Rachis
                         }
                         if (_engine.Log.IsInfoEnabled)
                         {
-                            _engine.Log.Info($"Follower {_engine.Tag}:Failed to talk to leader", e);
+                            _engine.Log.Info($"Follower {_engine.Tag}: Failed to talk to leader", e);
                         }
                     }
                 }

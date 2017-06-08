@@ -34,8 +34,8 @@ namespace Raven.Server.ServerWide.BackgroundTasks
 
         public void Initialize()
         {
-            _latestVersionCheckTimer = new Timer((state) =>
-                AsyncHelpers.RunSync(PerformAsync), null, 0, (int)TimeSpan.FromHours(12).TotalMilliseconds);
+            //_latestVersionCheckTimer = new Timer((state) =>
+            //    AsyncHelpers.RunSync(PerformAsync), null, 0, (int)TimeSpan.FromHours(12).TotalMilliseconds);
         }
 
         private async Task PerformAsync()
