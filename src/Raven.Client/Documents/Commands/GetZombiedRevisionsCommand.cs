@@ -8,15 +8,13 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class GetRevisionsCommand : RavenCommand<BlittableArrayResult>
+    public class GetZombiedRevisionsCommand : RavenCommand<BlittableArrayResult>
     {
-        private readonly string _id;
         private readonly int? _start;
         private readonly int? _pageSize;
 
-        public GetRevisionsCommand(string id, int? start, int? pageSize)
+        public GetZombiedRevisionsCommand(int? start, int? pageSize)
         {
-            _id = id ?? throw new ArgumentNullException(nameof(id));
             _start = start;
             _pageSize = pageSize;
         }
@@ -31,9 +29,7 @@ namespace Raven.Client.Documents.Commands
             var pathBuilder = new StringBuilder(node.Url);
             pathBuilder.Append("/databases/")
                 .Append(node.Database)
-                .Append("/revisions")
-                .Append("?id=")
-                .Append(Uri.EscapeDataString(_id));
+                .Append("/revisions/zombied?");
 
             if (_start.HasValue)
                 pathBuilder.Append("&start=").Append(_start);

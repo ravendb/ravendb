@@ -367,7 +367,7 @@ namespace Raven.Server.Documents.Versioning
                         tbv.Add(newEtagSwapBytes);
                         tbv.Add(idPtr);
                         tbv.Add(null, 0);
-                        tbv.Add((int)(DocumentFlags.DeleteRevision | DocumentFlags.DeleteRevisionWithoutParentDocument));
+                        tbv.Add((int)DocumentFlags.ZombiedRevision);
                         tbv.Add(lastModifiedTicks);
                         tbv.Add(newEtagSwapBytes);
                         table.Set(tbv);
@@ -449,7 +449,7 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
-        private IEnumerable<Document> GetDeletedDocumentsThatHaveRevisions(DocumentsOperationContext context, int start, int take)
+        private IEnumerable<Document> GetZombiedRevisions(DocumentsOperationContext context, int start, int take)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
             foreach (var tvr in table.SeekBackwardFromLast(DocsSchema.FixedSizeIndexes[AllRevisionsDeletedMarkerSlice], start))
@@ -465,14 +465,14 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
-        public (Document[] Revisions, long Count) GetDeletedDocumentsThatHaveRevisionsWithCount(DocumentsOperationContext context, int start, int take)
+        public (Document[] Revisions, long Count) GetZombiedRevisionsWithCount(DocumentsOperationContext context, int start, int take)
         {
-            var revisions = GetDeletedDocumentsThatHaveRevisions(context, start, take).ToArray();
-            var count = CountOfDeletedDocumentsThatHaveRevisions(context);
+            var revisions = GetZombiedRevisions(context, start, take).ToArray();
+            var count = CountOfZombiedRevisions(context);
             return (revisions, count);
         }
 
-        private long CountOfDeletedDocumentsThatHaveRevisions(DocumentsOperationContext context)
+        private long CountOfZombiedRevisions(DocumentsOperationContext context)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
             return table.GetNumberOfEntriesFor(DocsSchema.FixedSizeIndexes[AllRevisionsDeletedMarkerSlice]);

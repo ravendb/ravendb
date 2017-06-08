@@ -352,7 +352,7 @@ namespace FastTests.Server.Documents.Versioning
         }
 
         [Fact]
-        public async Task GetDeleteDocumentsThatHaveRevisions()
+        public async Task GetZombiedRevisions()
         {
             using (var store = GetDocumentStore())
             {
@@ -362,7 +362,7 @@ namespace FastTests.Server.Documents.Versioning
                 await store.Commands().PutAsync("users/1", null, new User { Name = "Fitzchak" });
                 await store.Commands().DeleteAsync("users/1", null);
 
-                var deleteRevisions = await store.Commands().GetRevisionsForAsync("users/1", deleteDocumentsWithRevision: true);
+                var deleteRevisions = await store.Commands().GetZombiedRevisionsAsync();
                 Assert.Equal(1, deleteRevisions.Count);
 
                 using (var session = store.OpenAsyncSession())
