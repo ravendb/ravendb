@@ -101,13 +101,6 @@ namespace Raven.Server.Web.System
                                     [nameof(ServerNode.Database)] = dbRecord.DatabaseName,
                                 })
                             ),
-                            [nameof(Topology.ReadBehavior)] =
-                            ReadBehavior.CurrentNodeWithFailoverWhenRequestTimeSlaThresholdIsReached.ToString(),
-                            [nameof(Topology.WriteBehavior)] = WriteBehavior.LeaderOnly.ToString(),
-                            [nameof(Topology.SLA)] = new DynamicJsonValue
-                            {
-                                [nameof(TopologySla.RequestTimeThresholdInMilliseconds)] = 100,
-                            },
                             [nameof(Topology.Etag)] = etag,
                         });
                     }
