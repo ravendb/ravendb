@@ -231,14 +231,6 @@ namespace FastTests.Client.Subscriptions
             {
                 var subscriptionId = store.Subscriptions.Create(new SubscriptionCreationOptions<User>
                 {
-                    Criteria =
-                    {
-                        Script = @"
-                            if(this.IsActive) {
-                                return { Id: __document_id, LastLogin: this.LastLogin, Name: this.Name };     
-                            }
-                        "
-                    }
                 });
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
                 var exceptions = new BlockingCollection<Exception>();
