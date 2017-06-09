@@ -90,7 +90,7 @@ class visualizer extends viewModelBase {
         
         this.globalGraph.reset();
         this.detailsGraph.reset();
-        this.trees = [];
+        this.trees.length = 0; // don't use = [], here are we have to retain reference
     }
 
     addCurrentDocumentId() {
