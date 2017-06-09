@@ -21,7 +21,7 @@ var paths = {
         './wwwroot/Content/css/styles.less',
         './wwwroot/Content/css/legacy_styles.less'],
     lessSourcesToWatch: [
-        './wwwroot/Content/css/**/*.less',
+        './wwwroot/Content/css/**/*.less'
     ],
     lessTarget: './wwwroot/Content/',
     lessTargetSelector: './wwwroot/Content/**/*.css',
