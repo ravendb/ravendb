@@ -90,6 +90,7 @@ class visualizer extends viewModelBase {
         
         this.globalGraph.reset();
         this.detailsGraph.reset();
+        this.trees = [];
     }
 
     addCurrentDocumentId() {
