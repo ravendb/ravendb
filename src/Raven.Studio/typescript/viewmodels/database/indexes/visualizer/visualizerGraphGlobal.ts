@@ -1,5 +1,6 @@
 import graphHelper = require("common/helpers/graph/graphHelper");
 import viewHelpers = require("common/helpers/view/viewHelpers");
+import canvasIcons = require("common/helpers/graph/canvasIcons");
 
 import d3 = require('d3');
 import rbush = require("rbush");
@@ -290,7 +291,8 @@ class reduceTreeItem {
 class documentItem {
     static readonly margins = {
         minMarginBetweenDocumentNames: 30,
-        badgePadding: 30
+        badgePadding: 10,
+        deleteAreaWidth: 20
     }
 
     name: string;
@@ -317,8 +319,8 @@ type rTreeLeaf = {
     minY: number;
     maxX: number;
     maxY: number;
-    actionType: "pageClicked";
-    arg: reduceTreeItem;
+    actionType: "pageClicked" | "trashClicked";
+    arg: reduceTreeItem | documentItem;
 }
 
 class hitTest {
@@ -329,9 +331,11 @@ class hitTest {
     private rTree = rbush<rTreeLeaf>();
 
     private onPageClicked: (item: reduceTreeItem) => void;
+    private onTrashClicked: (item: documentItem) => void;
 
-    init(onPageClicked: (item: reduceTreeItem) => void) {
+    init(onPageClicked: (item: reduceTreeItem) => void, onTrashClicked: (item: documentItem) => void) {
         this.onPageClicked = onPageClicked;
+        this.onTrashClicked = onTrashClicked;
     }
 
     registerPage(page: reduceTreeItem) {
@@ -345,6 +349,18 @@ class hitTest {
         } as rTreeLeaf);
     }
 
+    registerTrash(docItem: documentItem) {
+        const trashWidth = documentItem.margins.deleteAreaWidth;
+        this.rTree.insert({
+            minX: docItem.x + docItem.width - trashWidth,
+            maxX: docItem.x + docItem.width,
+            minY: docItem.y,
+            maxY: docItem.y + docItem.height,
+            actionType: "trashClicked",
+            arg: docItem
+        } as rTreeLeaf);
+    }
+
     reset() {
         this.rTree.clear();
     }
@@ -353,6 +369,8 @@ class hitTest {
         const items = this.findItems(location[0], location[1]);
 
         if (items.filter(x => x.actionType === "pageClicked").length > 0) {
+            this.cursor(this.mouseDown ? graphHelper.prefixStyle("grabbing") : "pointer");
+        } else if (items.filter(x => x.actionType === "trashClicked").length > 0) {
             this.cursor(this.mouseDown ? graphHelper.prefixStyle("grabbing") : "pointer");
         } else {
             this.cursor(graphHelper.prefixStyle(this.mouseDown ? "grabbing": "grab"));
@@ -364,7 +382,15 @@ class hitTest {
 
         for (let i = 0; i < items.length; i++) {
             const item = items[i];
-            this.onPageClicked(item.arg as reduceTreeItem);
+            switch (item.actionType) {
+                case "pageClicked":
+                    this.onPageClicked(item.arg as reduceTreeItem);
+                    break;
+                case "trashClicked":
+                    this.onTrashClicked(item.arg as documentItem);
+                    break;
+            }
+            
         }
     }
 
@@ -431,6 +457,7 @@ class visualizerGraphGlobal {
     private yScale: d3.scale.Linear<number, number>;
 
     private goToDetailsCallback: (treeName: string) => void;
+    private deleteItemCallback: (item: documentItem) => void;
 
     constructor() {
         visualizerGraphGlobal.getCollapsedImage(); // call to preload image
@@ -439,6 +466,13 @@ class visualizerGraphGlobal {
     addDocument(documentName: string) {
         const document = new documentItem(documentName);
         this.documents.push(document);
+    }
+
+    removeDocument(documentName: string) {
+        const matchedDocument = this.documents.find(x => x.name === documentName);
+        if (matchedDocument) {
+            _.pull(this.documents, matchedDocument);
+        }
     }
 
     addTrees(result: Raven.Server.Documents.Indexes.Debugging.ReduceTree[]) {
@@ -452,6 +486,18 @@ class visualizerGraphGlobal {
         }
 
         this.layout();
+    }
+
+    syncTrees(items: Raven.Server.Documents.Indexes.Debugging.ReduceTree[]) {
+        this.reduceTrees = [];
+        for (let i = 0; i < items.length; i++) {
+            const reduceTree = items[i];
+            const newTree = new reduceTreeItem(reduceTree);
+            this.reduceTrees.push(newTree);
+        }
+
+        this.layout();
+        this.draw();
     }
 
     zoomToDocument(documentName: string) {
@@ -479,8 +525,9 @@ class visualizerGraphGlobal {
         this.draw();
     }
 
-    init(goToDetailsCallback: (treeName: string) => void) {
+    init(goToDetailsCallback: (treeName: string) => void, deleteItemCallback: (item: documentItem) => void) {
         this.goToDetailsCallback = goToDetailsCallback;
+        this.deleteItemCallback = deleteItemCallback;
         const container = d3.select("#visualizerContainer");
 
         [this.totalWidth, this.totalHeight] = viewHelpers.getPageHostDimenensions();
@@ -516,7 +563,7 @@ class visualizerGraphGlobal {
             .call(this.zoom)
             .call(d => this.setupEvents(d));
 
-        this.hitTest.init(item => this.onPageClicked(item));
+        this.hitTest.init(item => this.onPageClicked(item), item => this.onTrashClicked(item));
     }
 
     getDocumentsColors(): Array<documentColorPair> {
@@ -544,6 +591,15 @@ class visualizerGraphGlobal {
 
     private onZoom() {
         this.draw();
+    }
+
+    private onTrashClicked(item: documentItem) {
+        viewHelpers.confirmationMessage("Are you sure?", "Do you want to remove document: " + item.name + " from analysis?", ["No", "Yes, delete"])
+            .done(result => {
+                if (result.can) {
+                    this.deleteItemCallback(item);
+                }
+            });
     }
 
     private onPageClicked(item: reduceTreeItem) {
@@ -648,7 +704,8 @@ class visualizerGraphGlobal {
             const doc = this.documents[i];
             const documentNameWidthEstimation = (text: string) => text.length * 9;
 
-            doc.width = documentItem.margins.badgePadding * 2 + documentNameWidthEstimation(doc.name);
+
+            doc.width = documentItem.margins.badgePadding * 2 + documentNameWidthEstimation(doc.name) + documentItem.margins.deleteAreaWidth;
             doc.height = 35;
             doc.y = yStart;
 
@@ -701,6 +758,10 @@ class visualizerGraphGlobal {
 
         for (let i = 0; i < this.reduceTrees.length; i++) {
             this.hitTest.registerPage(this.reduceTrees[i]);
+        }
+
+        for (let i = 0; i < this.documents.length; i++) {
+            this.hitTest.registerTrash(this.documents[i]);
         }
     }
 
@@ -764,8 +825,8 @@ class visualizerGraphGlobal {
                 const spliterX = reduceTreeItem.margins.treeMargin + visualizerGraphGlobal.totalEntriesWidth(items) + 4;
 
                 ctx.beginPath();
-                ctx.moveTo(spliterX, totalEntiresY + 24);
-                ctx.lineTo(spliterX, totalEntiresY - 8);
+                ctx.moveTo(spliterX, totalEntiresY - 6);
+                ctx.lineTo(spliterX, totalEntiresY + 26);
                 ctx.stroke();
             }
 
@@ -893,7 +954,11 @@ ctx.stroke();*/
         ctx.textBaseline = "middle";
         ctx.font = "18px Lato";
         ctx.fillStyle = "black";
-        ctx.fillText(docItem.name, docItem.x + docItem.width / 2, docItem.y + docItem.height / 2);
+        ctx.fillText(docItem.name, docItem.x + (docItem.width - documentItem.margins.deleteAreaWidth) / 2 , docItem.y + docItem.height / 2);
+        
+        const offsetX = -5;
+        const offsetY = 7;
+        canvasIcons.cancel(ctx, docItem.x + docItem.width - documentItem.margins.deleteAreaWidth + offsetX, docItem.y + offsetY, 20);
     }
 
     private toggleUiElements(show: boolean) {

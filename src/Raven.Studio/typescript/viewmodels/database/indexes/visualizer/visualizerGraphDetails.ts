@@ -508,6 +508,13 @@ class visualizerGraphDetails {
         this.documents.push(document);
     }
 
+    removeDocument(documentName: string) {
+        const matchedDocument = this.documents.find(x => x.name === documentName);
+        if (matchedDocument) {
+            _.pull(this.documents, matchedDocument);
+        }
+    }
+
     reset() {
         this.restoreView();
         this.documents = [];
