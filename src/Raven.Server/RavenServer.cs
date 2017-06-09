@@ -38,11 +38,21 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using AccessModes = Raven.Client.Server.Operations.ApiKeys.AccessModes;
 using AccessToken = Raven.Server.Web.Authentication.AccessToken;
+using System.Reflection;
 
 namespace Raven.Server
 {
     public class RavenServer : IDisposable
     {
+        static RavenServer()
+        {
+            //TODO: When this method become available, update to call directly
+            var setMinThreads = (Func<int, int, bool>)typeof(ThreadPool).GetTypeInfo().GetMethod("SetMinThreads")
+             .CreateDelegate(typeof(Func<int, int, bool>));
+
+            setMinThreads(250, 250);
+        }
+
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger<RavenServer>("Raven/Server");
 
         public readonly RavenConfiguration Configuration;
