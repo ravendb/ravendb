@@ -41,9 +41,9 @@ namespace Raven.Client.Documents.Operations
             _skipPatchIfEtagMismatch = skipPatchIfEtagMismatch;
         }
 
-        public RavenCommand<PatchResult> GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<PatchResult> GetCommand(IDocumentStore store, JsonOperationContext context, HttpCache cache)
         {
-            return new PatchCommand(conventions, context, _id, _etag, _patch, _patchIfMissing, _skipPatchIfEtagMismatch, returnDebugInformation: false, test: false);
+            return new PatchCommand(store.Conventions, context, _id, _etag, _patch, _patchIfMissing, _skipPatchIfEtagMismatch, returnDebugInformation: false, test: false);
         }
 
         public class PatchCommand : RavenCommand<PatchResult>

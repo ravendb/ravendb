@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Operations
             _etag = etag;
         }
 
-        public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand GetCommand(IDocumentStore store, JsonOperationContext context, HttpCache cache)
         {
             return new DeleteAttachmentCommand(_documentId, _name, _etag);
         }

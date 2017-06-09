@@ -5,7 +5,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
@@ -15,7 +14,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class GetAttachmentOperation : IOperation<(Stream stream, AttachmentDetails attachment)>
+    public class GetAttachmentOperation : IOperation<(Stream Stream, AttachmentDetails Attachment)>
     {
         private readonly string _documentId;
         private readonly string _name;
@@ -30,7 +29,7 @@ namespace Raven.Client.Documents.Operations
             _changeVector = changeVector;
         }
 
-        public RavenCommand<(Stream stream, AttachmentDetails attachment)> GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<(Stream Stream, AttachmentDetails Attachment)> GetCommand(IDocumentStore store, JsonOperationContext context, HttpCache cache)
         {
             return new GetAttachmentCommand(context, _documentId, _name, _type, _changeVector);
         }

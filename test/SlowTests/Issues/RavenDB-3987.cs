@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Extensions;
 using Xunit;
 
@@ -106,12 +107,12 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var operation1 = await store.Operations.DeleteByIndexAsync<Person>("Person/ByName", x => x.Name == "Bob");
+                var operation1 = await store.Operations.SendAsync(new DeleteByIndexOperation<Person>("Person/ByName", x => x.Name == "Bob"));
                 await operation1.WaitForCompletionAsync();
 
                 WaitForIndexing(store);
 
-                var operation2 = await store.Operations.DeleteByIndexAsync<Person, Person_ByAge>(x => x.Age < 35);
+                var operation2 = await store.Operations.SendAsync(new DeleteByIndexOperation<Person, Person_ByAge>(x => x.Age < 35));
                 await operation2.WaitForCompletionAsync();
 
                 using (var session = store.OpenAsyncSession())
@@ -141,12 +142,12 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var operation1 = store.Operations.DeleteByIndex<Person>("Person/ByName", x => x.Name == "Bob");
+                var operation1 = store.Operations.Send(new DeleteByIndexOperation<Person>("Person/ByName", x => x.Name == "Bob"));
                 operation1.WaitForCompletion(TimeSpan.FromSeconds(15));
 
                 WaitForIndexing(store);
 
-                var operation2 = store.Operations.DeleteByIndex<Person, Person_ByAge>(x => x.Age < 35);
+                var operation2 = store.Operations.Send(new DeleteByIndexOperation<Person, Person_ByAge>(x => x.Age < 35));
                 operation2.WaitForCompletion(TimeSpan.FromSeconds(15));
 
                 using (var session = store.OpenSession())
