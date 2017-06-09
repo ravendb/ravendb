@@ -56,7 +56,7 @@ namespace FastTests.Client.Subscriptions
                 {
                     Criteria = new SubscriptionCriteria<PersonWithAddress>
                     {
-                        FilterJavaScript = "return this.Name == 'James' && this.Address.ZipCode != 54321"
+                        Script = "return this.Name == 'James' && this.Address.ZipCode != 54321"
                     }
                 };
 

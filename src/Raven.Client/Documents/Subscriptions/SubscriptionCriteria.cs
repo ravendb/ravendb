@@ -31,7 +31,7 @@ namespace Raven.Client.Documents.Subscriptions
         {
 
         }
-        public string FilterJavaScript { get; set; }
+        public string Script { get; set; }
         public bool IsVersioned { get; set; }
     }
 
@@ -45,7 +45,7 @@ namespace Raven.Client.Documents.Subscriptions
     {
         public SubscriptionCreationOptions()
         {
-
+            Criteria = new SubscriptionCriteria<T>();
         }
         public SubscriptionCriteria<T> Criteria { get; set; }
         public ChangeVectorEntry[] ChangeVector { get; set; }

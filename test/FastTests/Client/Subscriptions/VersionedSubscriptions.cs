@@ -192,7 +192,7 @@ namespace FastTests.Client.Subscriptions
                 {
                     Criteria = new SubscriptionCriteria<User>
                     {
-                        FilterJavaScript = @"
+                        Script = @"
                         if(!!this.Current && !!this.Previous && this.Current.Age > this.Previous.Age)
                         {
                             return { Id: this.Current[""@metadata""][""@id""], Age: this.Current.Age }
@@ -283,7 +283,7 @@ namespace FastTests.Client.Subscriptions
                 {
                     Criteria = new SubscriptionCriteria<User>
                     {
-                        FilterJavaScript = @"
+                        Script = @"
                         if(!!this.Current && !!this.Previous && this.Current.Age > this.Previous.Age)
                         {
                             return { Id: this.Current[""@metadata""][""@id""], Age: this.Current.Age }

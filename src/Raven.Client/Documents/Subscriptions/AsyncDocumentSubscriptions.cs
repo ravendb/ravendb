@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Subscriptions
 
             var nonGenericCriteria = new SubscriptionCriteria(_store.Conventions.GetCollectionName(isVersioned?tType.GenericTypeArguments[0]:typeof(T)))
             {
-                FilterJavaScript = subscriptionCreationOptions.Criteria?.FilterJavaScript ?? (isVersioned?"return {Current:this.Current, Previous:this.Previous};":null),
+                FilterJavaScript = subscriptionCreationOptions.Criteria?.Script ?? (isVersioned?"return {Current:this.Current, Previous:this.Previous};":null),
                 IsVersioned = subscriptionCreationOptions.Criteria?.IsVersioned??isVersioned
             };
 
