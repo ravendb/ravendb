@@ -47,7 +47,7 @@ namespace Raven.Database.FileSystem.Controllers
 
                 var endsWithSlash = startsWith.EndsWith("/") || startsWith.EndsWith("\\");
                 startsWith = FileHeader.Canonize(startsWith);
-                if (endsWithSlash) 
+                if (endsWithSlash)
                     startsWith += "/";
 
                 Storage.Batch(accessor =>
@@ -59,7 +59,7 @@ namespace Raven.Database.FileSystem.Controllers
                     do
                     {
                         fileCount = 0;
-                        
+
                         foreach (var file in accessor.GetFilesStartingWith(startsWith, actualStart, Paging.PageSize))
                         {
                             fileCount++;
@@ -69,7 +69,7 @@ namespace Raven.Database.FileSystem.Controllers
                             if (WildcardMatcher.Matches(matches, keyTest) == false)
                                 continue;
 
-                            if (FileSystem.ReadTriggers.CanReadFile(file.FullPath, file.Metadata, ReadOperation.Load) == false) 
+                            if (FileSystem.ReadTriggers.CanReadFile(file.FullPath, file.Metadata, ReadOperation.Load) == false)
                                 continue;
 
                             matchedFiles++;
@@ -126,7 +126,7 @@ namespace Raven.Database.FileSystem.Controllers
         {
             name = FileHeader.Canonize(name);
             FileAndPagesInformation fileAndPages = null;
-            
+
             Storage.Batch(accessor => fileAndPages = accessor.GetFile(name, 0, 0));
 
             if (fileAndPages.Metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
@@ -182,15 +182,16 @@ namespace Raven.Database.FileSystem.Controllers
 
                 var metadata = fileAndPages.Metadata;
 
-                if(metadata == null)
+                if (metadata == null)
                     throw new FileNotFoundException();
 
                 if (metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
                     throw new FileNotFoundException();
 
+                Historian.Update(name, metadata);
                 Files.IndicateFileToDelete(name, GetEtag());
 
-                if (!name.EndsWith(RavenFileNameHelper.DownloadingFileSuffix)) // don't create a tombstone for .downloading file
+                if (name.EndsWith(RavenFileNameHelper.DownloadingFileSuffix) == false) // don't create a tombstone for .downloading file
                 {
                     Files.PutTombstone(name, metadata);
                     accessor.DeleteConfig(RavenFileNameHelper.ConflictConfigNameForFile(name)); // delete conflict item too
@@ -208,7 +209,7 @@ namespace Raven.Database.FileSystem.Controllers
         {
             name = FileHeader.Canonize(name);
             FileAndPagesInformation fileAndPages = null;
-            
+
             Storage.Batch(accessor => fileAndPages = accessor.GetFile(name, 0, 0));
 
             if (fileAndPages.Metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
@@ -217,7 +218,7 @@ namespace Raven.Database.FileSystem.Controllers
                     log.Debug("Cannot get metadata of a file '{0}' because file was deleted", name);
                 throw new FileNotFoundException();
             }
-            
+
             var httpResponseMessage = GetEmptyMessage();
 
             var etag = new Etag(fileAndPages.Metadata.Value<string>(Constants.MetadataEtagField));
@@ -303,7 +304,7 @@ namespace Raven.Database.FileSystem.Controllers
                             MetadataAfterOperation = metadata
                         };
 
-                        accessor.SetConfig(RavenFileNameHelper.CopyOperationConfigNameForFile(name,targetFilename), JsonExtensions.ToJObject(operation));
+                        accessor.SetConfig(RavenFileNameHelper.CopyOperationConfigNameForFile(name, targetFilename), JsonExtensions.ToJObject(operation));
                         var configName = RavenFileNameHelper.CopyOperationConfigNameForFile(operation.SourceFilename, operation.TargetFilename);
                         Files.AssertPutOperationNotVetoed(operation.TargetFilename, operation.MetadataAfterOperation);
 
@@ -326,12 +327,12 @@ namespace Raven.Database.FileSystem.Controllers
                         accessor.DeleteConfig(configName);
 
                         Search.Index(operation.TargetFilename, operation.MetadataAfterOperation, putResult.Etag);
-              
+
 
                         Publisher.Publish(new ConfigurationChangeNotification { Name = configName, Action = ConfigurationChangeAction.Set });
                         Publisher.Publish(new FileChangeNotification { File = operation.TargetFilename, Action = FileChangeAction.Add });
 
-                
+
                     });
 
                     break;
@@ -368,7 +369,7 @@ namespace Raven.Database.FileSystem.Controllers
             {
                 if (Log.IsDebugEnabled)
                     Log.Debug("File '{0}' was not renamed to '{1}' due to illegal name length", name, rename);
-                return GetMessageWithString(string.Format("File '{0}' was not renamed to '{1}' due to illegal name length", name, rename),HttpStatusCode.BadRequest);
+                return GetMessageWithString(string.Format("File '{0}' was not renamed to '{1}' due to illegal name length", name, rename), HttpStatusCode.BadRequest);
             }
 
             Storage.Batch(accessor =>
