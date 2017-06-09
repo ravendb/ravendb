@@ -12,7 +12,7 @@ requirejs.config({
       '*' : {
           "jszip": "../lib/jszip/dist/jszip",
           "jszip-utils": "../lib/jszip-utils/dist/jszip-utils",
-          "d3": "../lib/d3/d3",
+          "d3": "../Content/custom_d3",
           "rbush": "../Content/rbush/rbush",
           "toastr": "../lib/toastr/toastr",
           "quickselect": "../Content/rbush/quickselect",
