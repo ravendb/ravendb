@@ -17,7 +17,8 @@ function UpdateCsprojWithVersionInfo ( $projectDir, $version ) {
     $toolsCsprojs = Get-ChildItem -Recurse -Path $(Join-Path $projectDir -ChildPath "tools") -Include *.csproj
 
     foreach ($csproj in $($srcCsprojs + $testCsprojs + $toolsCsprojs)) {
-        (Get-Content $csproj) -Replace '<Version>[A-Za-z0-9.-]*</Version>',"<Version>$version</Version>" | Out-File $csproj.FullName -Encoding utf8
+        $text = $([System.IO.File]::ReadAllText($csproj)) -Replace '<Version>[A-Za-z0-9.-]*</Version>',"<Version>$version</Version>"
+        [System.IO.File]::WriteAllText($csproj, $text, [System.Text.Encoding]::UTF8)
     }
 }
 
@@ -25,7 +26,6 @@ function UpdateCommonAssemblyInfo ( $projectDir, $buildNumber, $version, $commit
     $assemblyInfoFile = [io.path]::combine($projectDir, "src", "CommonAssemblyInfo.cs")
     Write-Host "Set version in $assemblyInfoFile..."
 
-    $versionNumbers = $version.Split(".")
     $fileVersion = "$($version.Split("-")[0]).$buildNumber"
 
     $content = (Get-Content $assemblyInfoFile) |
