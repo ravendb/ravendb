@@ -23,23 +23,10 @@ namespace Tryouts
         {
            for (var i=0; i<1000; i++)
             {
-                try
+                Console.WriteLine(i);
+                using (var test = new FastTests.Client.Subscriptions.VersionedSubscriptions())
                 {
-                    Console.WriteLine($"-------------------------------------New test iteration #{i} for 3 size cluster");
-                    using (var test = new SubscriptionsFailover())
-                    {
-                        AsyncHelpers.RunSync(() => test.DistributedVersionedSubscription(3));
-                    }
-                    Console.WriteLine($"-------------------------------------New test iteration #{i} for 5 size cluster");
-                    using (var test = new SubscriptionsFailover())
-                    {
-                        AsyncHelpers.RunSync(() => test.DistributedVersionedSubscription(5));
-                    }
-                }
-                catch (Exception e)
-                {
-
-                    Console.WriteLine($"Errrrrorrrrrr::::::::::::::{e}");
+                    test.PlainVersionedSubscriptionsCompareDocs().Wait();
                 }
             }
         }

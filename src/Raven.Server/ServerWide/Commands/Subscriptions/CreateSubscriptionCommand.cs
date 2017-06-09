@@ -51,7 +51,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(Criteria)] = new DynamicJsonValue()
             {
                 [nameof(SubscriptionCriteria.Collection)] = Criteria.Collection,
-                [nameof(SubscriptionCriteria.FilterJavaScript)] = Criteria.FilterJavaScript,
+                [nameof(SubscriptionCriteria.Script)] = Criteria.Script,
                 [nameof(SubscriptionCriteria.IsVersioned)] = Criteria.IsVersioned
             };
             json[nameof(InitialChangeVector)] = InitialChangeVector?.ToJson();

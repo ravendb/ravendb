@@ -39,7 +39,7 @@ namespace FastTests.Client.Subscriptions
                 {
                     Criteria = new SubscriptionCriteria("Things")
                     {
-                        FilterJavaScript = " return this.Name == 'ThingNo3'"
+                        Script = " return this.Name == 'ThingNo3'"
                     },
                     ChangeVector = lastChangeVector
                 };
@@ -88,7 +88,7 @@ namespace FastTests.Client.Subscriptions
                 {
                     Criteria = new SubscriptionCriteria("Things")
                     {
-                        FilterJavaScript =
+                        Script =
                             @"var namSuffix = parseInt(this.Name.replace('ThingNo', ''));  
                     if (namSuffix <= 2){
                         return false;
