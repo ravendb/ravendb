@@ -4,6 +4,8 @@ param(
     $ConfigPath = "",
     $DataDir = "",
     $DataVolumeName = "ravendb",
+    $PublicServerUrl = "",
+    $PublicTcpServerUrl = "",
     [switch]$AllowAnonymousUserToAccessTheServer,
     [switch]$RemoveOnExit,
     [switch]$DryRun,
@@ -122,6 +124,16 @@ if ([string]::IsNullOrEmpty($ConfigPath) -eq $False) {
 if ([string]::IsNullOrEmpty($Memory) -eq $False) {
     $dockerArgs += "--memory=" + $Memory
     write-host "Memory limited to " + $memory
+}
+
+if ([string]::IsNullOrEmpty($PublicServerUrl) -eq $False) {
+    $dockerArgs += "-e" 
+    $dockerArgs += "PublicServerUrl=$PublicServerUrl"
+}
+
+if ([string]::IsNullOrEmpty($PublicTcpServerUrl) -eq $False) {
+    $dockerArgs += "-e" 
+    $dockerArgs += "PublicTcpServerUrl=$PublicTcpServerUrl"
 }
 
 $dockerArgs += '-p'

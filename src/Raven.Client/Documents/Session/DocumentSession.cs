@@ -23,8 +23,6 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class DocumentSession : InMemoryDocumentSessionOperations, IDocumentQueryGenerator, IAdvancedSessionOperation, IDocumentSessionImpl
     {
-        private OperationExecutor _operations;
-
         /// <summary>
         /// Get the accessor for advanced operations
         /// </summary>

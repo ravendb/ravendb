@@ -24,7 +24,6 @@ namespace Raven.Client.Documents.Session
     public partial class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
     {
         private AsyncDocumentIdGeneration _asyncDocumentIdGeneration;
-        private OperationExecutor _operations;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.

@@ -139,7 +139,7 @@ namespace Tests.Infrastructure
             };
             if (bootstrap)
             {
-                rachis.Bootstarp(url);
+                rachis.Bootstrap(url);
             }
 
             rachis.Url = url;
