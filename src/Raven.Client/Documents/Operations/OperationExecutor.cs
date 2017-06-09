@@ -12,20 +12,12 @@ namespace Raven.Client.Documents.Operations
         private readonly DocumentStoreBase _store;
         private readonly string _databaseName;
         private readonly RequestExecutor _requestExecutor;
-        private readonly JsonOperationContext _context;
 
         public OperationExecutor(DocumentStoreBase store, string databaseName = null)
         {
             _store = store;
             _databaseName = databaseName ?? store.Database;
             _requestExecutor = store.GetRequestExecutor(databaseName);
-        }
-
-        internal OperationExecutor(DocumentStoreBase store, RequestExecutor requestExecutor, JsonOperationContext context)
-        {
-            _store = store;
-            _requestExecutor = requestExecutor;
-            _context = context;
         }
 
         public OperationExecutor ForDatabase(string databaseName)
@@ -70,11 +62,7 @@ namespace Raven.Client.Documents.Operations
 
         private IDisposable GetContext(out JsonOperationContext context)
         {
-            if (_context == null)
-                return _requestExecutor.ContextPool.AllocateOperationContext(out context);
-
-            context = _context;
-            return null;
+            return _requestExecutor.ContextPool.AllocateOperationContext(out context);
         }
     }
 }

@@ -32,12 +32,12 @@ namespace Raven.Client.Documents.Operations
             }
         }
 
-        public PatchOperation.Result<TEntity> Send<TEntity>(PatchOperation operation)
+        public PatchOperation.Result<TEntity> Send<TEntity>(PatchOperation<TEntity> operation)
         {
-            return AsyncHelpers.RunSync(() => SendAsync<TEntity>(operation));
+            return AsyncHelpers.RunSync(() => SendAsync(operation));
         }
 
-        public async Task<PatchOperation.Result<TEntity>> SendAsync<TEntity>(PatchOperation operation, CancellationToken token = default(CancellationToken))
+        public async Task<PatchOperation.Result<TEntity>> SendAsync<TEntity>(PatchOperation<TEntity> operation, CancellationToken token = default(CancellationToken))
         {
             JsonOperationContext context;
             using (GetContext(out context))

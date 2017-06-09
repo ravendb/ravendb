@@ -10,6 +10,14 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
+    public class PatchOperation<TEntity> : PatchOperation
+    {
+        public PatchOperation(string id, long? etag, PatchRequest patch, PatchRequest patchIfMissing = null, bool skipPatchIfEtagMismatch = false) 
+            : base(id, etag, patch, patchIfMissing, skipPatchIfEtagMismatch)
+        {
+        }
+    }
+
     public class PatchOperation : IOperation<PatchResult>
     {
         public class Result<TEntity>

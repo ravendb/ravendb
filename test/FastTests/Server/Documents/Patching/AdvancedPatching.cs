@@ -978,7 +978,7 @@ this.Value = another.Value;
                 {
                     await commands.PutAsync("doc", null, new CustomType { Owner = "somebody@somewhere.com" }, null);
 
-                    var result = await store.Operations.SendAsync<CustomType>(new PatchOperation("doc", null, new PatchRequest
+                    var result = await store.Operations.SendAsync(new PatchOperation<CustomType>("doc", null, new PatchRequest
                     {
                         Script = "this.Owner = '123';"
                     }));
@@ -986,7 +986,7 @@ this.Value = another.Value;
                     Assert.Equal(PatchStatus.Patched, result.Status);
                     Assert.Equal("123", result.Document.Owner);
 
-                    result = await store.Operations.SendAsync<CustomType>(new PatchOperation("doc", null, new PatchRequest
+                    result = await store.Operations.SendAsync(new PatchOperation<CustomType>("doc", null, new PatchRequest
                     {
                         Script = "this.Owner = '123';" // not-modified
                     }));
