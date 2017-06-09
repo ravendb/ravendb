@@ -718,9 +718,9 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             SubscriptionPatchDocument patch = null;
 
-            if (string.IsNullOrWhiteSpace(criteria.FilterJavaScript) == false)
+            if (string.IsNullOrWhiteSpace(criteria.Script) == false)
             {
-                patch = new SubscriptionPatchDocument(TcpConnection.DocumentDatabase, criteria.FilterJavaScript);
+                patch = new SubscriptionPatchDocument(TcpConnection.DocumentDatabase, criteria.Script);
             }
             return patch;
         }

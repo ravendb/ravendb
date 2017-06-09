@@ -40,7 +40,7 @@ namespace SlowTests.Issues
 
         private class DroneStateSnapshoot
         {
-            public string A;
+            public string A { get; set; }
             public IList<ClickAction> ClickActions { get; set; }
         }
 

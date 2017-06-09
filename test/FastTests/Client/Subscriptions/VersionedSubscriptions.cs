@@ -19,7 +19,7 @@ namespace FastTests.Client.Subscriptions
 {
     public class VersionedSubscriptions:RavenTestBase
     {
-        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);
+        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(15);
         [Fact]
         public async Task PlainVersionedSubscriptions()
         {
@@ -192,7 +192,7 @@ namespace FastTests.Client.Subscriptions
                 {
                     Criteria = new SubscriptionCriteria<User>
                     {
-                        FilterJavaScript = @"
+                        Script = @"
                         if(!!this.Current && !!this.Previous && this.Current.Age > this.Previous.Age)
                         {
                             return { Id: this.Current[""@metadata""][""@id""], Age: this.Current.Age }
@@ -200,7 +200,6 @@ namespace FastTests.Client.Subscriptions
                         else return false;
                         ",
                         IsVersioned = true
-                        
                     }
                 });
 
@@ -283,7 +282,7 @@ namespace FastTests.Client.Subscriptions
                 {
                     Criteria = new SubscriptionCriteria<User>
                     {
-                        FilterJavaScript = @"
+                        Script = @"
                         if(!!this.Current && !!this.Previous && this.Current.Age > this.Previous.Age)
                         {
                             return { Id: this.Current[""@metadata""][""@id""], Age: this.Current.Age }

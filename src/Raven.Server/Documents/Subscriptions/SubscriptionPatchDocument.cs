@@ -48,10 +48,10 @@ namespace Raven.Server.Documents.Subscriptions
                     return true;
                 }
 
-                if (result.IsNull())
+                if (result.IsNull() || result.IsUndefined())
                     return false; // todo: check if that is the value that we want here
 
-                throw new JavaScriptException($"Could not proccess script {_patchRequest.Script}. It\'s return value {result.Type}, instead of bool, object or null");
+                throw new JavaScriptException($"Could not proccess script {_patchRequest.Script}. It\'s return value {result.Type}, instead of bool, object, undefined or null");
             }
         }
     }

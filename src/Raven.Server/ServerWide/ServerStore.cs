@@ -928,7 +928,7 @@ namespace Raven.Server.ServerWide
                 {
                     if (cachedLeaderTag == null)
                     {
-                        if (Task.WaitAny(logChange, timeoutTask) != 0)
+                        if (await Task.WhenAny(logChange, timeoutTask) ==  timeoutTask)
                             ThrowTimeoutException();
 
                         continue;
@@ -945,7 +945,7 @@ namespace Raven.Server.ServerWide
                         throw; // if the leader changed, let's try again                    
                 }
 
-                if (Task.WaitAny(logChange, timeoutTask) == 1)
+                if (await Task.WhenAny(logChange, timeoutTask) == timeoutTask)
                     ThrowTimeoutException();
             }
         }

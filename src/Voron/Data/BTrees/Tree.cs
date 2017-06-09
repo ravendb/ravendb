@@ -265,7 +265,6 @@ namespace Voron.Data.BTrees
 
         public DirectAddScope DirectAdd(Slice key, int len, TreeNodeFlags nodeType, out byte* ptr)
         {
-            Debug.Assert(nodeType == TreeNodeFlags.Data || nodeType == TreeNodeFlags.MultiValuePageRef);
 
             if (_llt.Flags == TransactionFlags.ReadWrite)
             {
@@ -288,6 +287,9 @@ namespace Voron.Data.BTrees
             bool? shouldGoToOverflowPage = null;
             if (page.LastMatch == 0) // this is an update operation
             {
+                if(nodeType == TreeNodeFlags.NewOnly)
+                    ThrowConcurrencyException();
+                
                 node = page.GetNode(page.LastSearchPosition);
 
 #if DEBUG
@@ -325,6 +327,9 @@ namespace Voron.Data.BTrees
             {
                 State.NumberOfEntries++;
             }
+            
+            nodeType &= ~TreeNodeFlags.NewOnly;
+            Debug.Assert(nodeType == TreeNodeFlags.Data || nodeType == TreeNodeFlags.MultiValuePageRef);
 
             var lastSearchPosition = page.LastSearchPosition; // searching for overflow pages might change this
             byte* overFlowPos = null;
@@ -380,6 +385,11 @@ namespace Voron.Data.BTrees
 
             ptr = overFlowPos == null ? dataPos : overFlowPos;
             return new DirectAddScope(this);
+        }
+
+        private static void ThrowConcurrencyException()
+        {
+            throw new ConcurrencyException("Value already exists, but requested NewOnly");
         }
 
         public struct DirectAddScope : IDisposable

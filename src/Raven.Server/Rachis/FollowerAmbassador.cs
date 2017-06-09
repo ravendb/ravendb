@@ -23,7 +23,6 @@ namespace Raven.Server.Rachis
 {
     public class FollowerAmbassador : IDisposable
     {
-        private readonly Logger _log;
         private readonly RachisConsensus _engine;
         private readonly Leader _leader;
         private ManualResetEvent _wakeLeader;
@@ -75,7 +74,6 @@ namespace Raven.Server.Rachis
             _url = url;
             _apiKey = apiKey;
             Status = "Started";
-            _log = LoggingSource.Instance.GetLogger<FollowerAmbassador>($"FollowerAmbassador -> {tag} url:[{url}]");
         }
 
         public void UpdateLeaderWake(ManualResetEvent wakeLeader)
@@ -246,7 +244,10 @@ namespace Raven.Server.Rachis
                     finally
                     {
                         stream?.Dispose();
-                        Status = "Disconnected";
+                        if (Status == "Connected")
+                            Status = "Disconnected";
+                        else
+                            Status = "Disconnected " + Status;
                     }
                 }
             }
