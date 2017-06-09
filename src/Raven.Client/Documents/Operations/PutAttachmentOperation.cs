@@ -2,7 +2,6 @@
 using System.IO;
 using System.Net.Http;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Raven.Client.Util;
@@ -27,7 +26,7 @@ namespace Raven.Client.Documents.Operations
             _etag = etag;
         }
 
-        public RavenCommand<AttachmentDetails> GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<AttachmentDetails> GetCommand(IDocumentStore store, JsonOperationContext context, HttpCache cache)
         {
             return new PutAttachmentCommand(_documentId, _name, _stream, _contentType, _etag);
         }

@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Operations
             _query = query;
         }
 
-        public RavenCommand<FacetedQueryResult> GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<FacetedQueryResult> GetCommand(IDocumentStore store, JsonOperationContext context, HttpCache cache)
         {
             return new GetFacetsCommand(context, _query);
         }

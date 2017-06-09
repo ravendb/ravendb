@@ -62,7 +62,7 @@ namespace FastTests.Client.Attachments
                     using (var stream = new BigDummyStream(size))
                     {
                         var command = new PutAttachmentOperation("users/1", "File", stream, "application/pdf")
-                            .GetCommand(store.Conventions, context, requestExecutor.Cache);
+                            .GetCommand(store, context, requestExecutor.Cache);
 
                         var currentNode = await requestExecutor.GetCurrentNode();
                         var currentServer = Servers.Single(x => x.ServerStore.NodeTag == currentNode.ClusterTag);

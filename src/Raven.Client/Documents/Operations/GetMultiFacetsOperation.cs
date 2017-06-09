@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Operations
             _queries = queries;
         }
 
-        public RavenCommand<FacetedQueryResult[]> GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<FacetedQueryResult[]> GetCommand(IDocumentStore store, JsonOperationContext context, HttpCache cache)
         {
             return new GetMultiFacetsCommand(context, cache, _queries);
         }
