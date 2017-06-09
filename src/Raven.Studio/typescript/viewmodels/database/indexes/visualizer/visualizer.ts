@@ -69,7 +69,7 @@ class visualizer extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
-        this.globalGraph.init((treeName: string) => this.detailsGraph.openFor(treeName));
+        this.globalGraph.init((treeName: string) => this.detailsGraph.openFor(treeName), doc => this.removeDocument(doc.name));
         this.detailsGraph.init(() => this.globalGraph.restoreView(), this.trees);
     }
 
@@ -125,6 +125,41 @@ class visualizer extends viewModelBase {
     private addDocument(docName: string) {       
         this.globalGraph.addDocument(docName);
         this.detailsGraph.addDocument(docName);
+    }
+
+    private removeDocument(documentName: string) {
+        this.documents.documentIds.remove(documentName);
+        this.globalGraph.removeDocument(documentName);
+        this.detailsGraph.removeDocument(documentName);
+
+        const toDelete = [] as Raven.Server.Documents.Indexes.Debugging.ReduceTree[];
+
+        for (let i = 0; i < this.trees.length; i++) {
+            const tree = this.trees[i];
+            const leafs = visualizer.extractLeafs(tree.Root);
+
+            let containsDifferentReference = false;
+
+            leafs.forEach(leaf => {
+                leaf.Entries.map(entry => {
+                    if (entry.Source === documentName) {
+                        entry.Source = null;
+                    }
+                });
+
+                if (_.some(leaf.Entries, e => e.Source && e.Source !== documentName)) {
+                    containsDifferentReference = true;
+                }
+            });
+
+            if (!containsDifferentReference) {
+                toDelete.push(tree);
+            }
+        }
+
+        toDelete.forEach(x => _.pull(this.trees, x));
+
+        this.globalGraph.syncTrees(this.trees);
     }
 
     private addTrees(result: Raven.Server.Documents.Indexes.Debugging.ReduceTree[]) {
