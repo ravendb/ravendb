@@ -224,7 +224,7 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 try
                 {
-                    await RunSubscriptionAsync(tcs);
+                    await RunSubscriptionAsync(tcs).ConfigureAwait(false);
                 }
                 catch (Exception e) when (e is OperationCanceledException == false)
                 {

@@ -158,7 +158,7 @@ namespace Raven.Client.Exceptions
             BlittableJsonReaderObject json;
             try
             {
-                json = await context.ReadForMemoryAsync(stream, "error/response");
+                json = await context.ReadForMemoryAsync(stream, "error/response").ConfigureAwait(false);
             }
             catch (Exception e)
             {

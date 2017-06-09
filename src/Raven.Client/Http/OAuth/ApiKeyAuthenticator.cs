@@ -27,7 +27,7 @@ namespace Raven.Client.Http.OAuth
 
             if (_serverPublicKeys.TryGetValue(serverUrl, out var serverPk) == false)
             {
-                serverPk = await GetServerPublicKey(context, serverUrl);
+                serverPk = await GetServerPublicKey(context, serverUrl).ConfigureAwait(false);
                 _serverPublicKeys.TryAdd(serverUrl, serverPk);
             }
 
@@ -38,16 +38,16 @@ namespace Raven.Client.Http.OAuth
 
                 var request = BuildGetTokenRequest(context, apiKey, serverUrl, serverPk, privateKey, publicKey);
 
-                var response = await Client.SendAsync(request);
+                var response = await Client.SendAsync(request).ConfigureAwait(false);
                 if (response.StatusCode == HttpStatusCode.ExpectationFailed)
                 {
                     // the server pk is invalid, retry, once
 
                     var oldServerPk = serverPk;
-                    serverPk = await GetServerPublicKey(context, serverUrl);
+                    serverPk = await GetServerPublicKey(context, serverUrl).ConfigureAwait(false);
                     _serverPublicKeys.TryUpdate(serverUrl, serverPk, oldServerPk);
                     request = BuildGetTokenRequest(context, apiKey, serverUrl, serverPk, privateKey, publicKey);
-                    response = await Client.SendAsync(request);
+                    response = await Client.SendAsync(request).ConfigureAwait(false);
                 }
 
                 if (response.StatusCode != HttpStatusCode.OK &&
@@ -58,7 +58,7 @@ namespace Raven.Client.Http.OAuth
                 }
 
                 JsonOperationContext.ManagedPinnedBuffer pinnedBuffer;
-                using (var stream = await response.Content.ReadAsStreamAsync())
+                using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                 using (context.GetManagedBuffer(out pinnedBuffer))
                 using (var tokenJson = context.ParseToMemory(stream, "apikey", BlittableJsonDocumentBuilder.UsageMode.None, pinnedBuffer))
                 {
@@ -156,10 +156,10 @@ namespace Raven.Client.Http.OAuth
         private static async Task<byte[]> GetServerPublicKey(JsonOperationContext context, string serverUrl)
         {
             byte[] serverPk;
-            var message = await Client.GetAsync(serverUrl + "/api-key/public-key");
+            var message = await Client.GetAsync(serverUrl + "/api-key/public-key").ConfigureAwait(false);
             message.EnsureSuccessStatusCode();
             JsonOperationContext.ManagedPinnedBuffer pinnedBuffer;
-            using (var stream = await message.Content.ReadAsStreamAsync())
+            using (var stream = await message.Content.ReadAsStreamAsync().ConfigureAwait(false))
             using (context.GetManagedBuffer(out pinnedBuffer))
             using (var pkJson = context.ParseToMemory(stream, "publicKey", BlittableJsonDocumentBuilder.UsageMode.None, pinnedBuffer))
             {

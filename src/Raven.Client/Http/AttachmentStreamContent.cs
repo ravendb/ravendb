@@ -33,7 +33,7 @@ namespace Raven.Client.Http
             var count = await _stream.ReadAsync(_buffer, 0, _buffer.Length, _cancellationToken).ConfigureAwait(false); 
             while (count > 0)
             {
-                await stream.WriteAsync(_buffer, 0, count, _cancellationToken);
+                await stream.WriteAsync(_buffer, 0, count, _cancellationToken).ConfigureAwait(false);
                 count = await _stream.ReadAsync(_buffer, 0, _buffer.Length, _cancellationToken).ConfigureAwait(false);
             }
         }

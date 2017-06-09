@@ -133,7 +133,7 @@ namespace Raven.Client.Http
 
             //prevent double topology updates if execution takes too much time
             // --> in cases with transient issues
-            var lockTaken = _updateTopologySemaphore.Wait(timeout);
+            var lockTaken = await _updateTopologySemaphore.WaitAsync(timeout).ConfigureAwait(false);
             if (lockTaken == false)
                 return false;
 
@@ -404,7 +404,7 @@ namespace Raven.Client.Http
                     {
                         Url = url,
                         Database = _databaseName,
-                    }, 0);
+                    }, 0).ConfigureAwait(false);
                 }
             }
         }

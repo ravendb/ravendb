@@ -62,7 +62,7 @@ namespace Raven.Client.Http
         {
             if (_disposed)
                 return false;
-            var lockTaken = _clusterTopologySemaphore.Wait(timeout);
+            var lockTaken = await _clusterTopologySemaphore.WaitAsync(timeout).ConfigureAwait(false);
             if (lockTaken == false)
                 return false;
             try
