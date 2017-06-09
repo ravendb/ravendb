@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Net.Http;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Client.Util;
 using Sparrow.Logging;
 using Raven.Server.Json;
@@ -18,7 +16,7 @@ namespace Raven.Server.ServerWide.BackgroundTasks
     {
         private const string ApiRavenDbNet = "https://api.ravendb.net";
 
-        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<ServerStore>(null);
+        private static readonly Logger _logger = LoggingSource.Instance.GetLogger("global", typeof(LatestVersionCheck).FullName);
 
         private static AlertRaised _alert;
 
@@ -33,8 +31,7 @@ namespace Raven.Server.ServerWide.BackgroundTasks
 
         static LatestVersionCheck()
         {
-            _timer = new Timer(state =>
-                AsyncHelpers.RunSync(PerformAsync), null, (int)TimeSpan.FromMinutes(5).TotalMilliseconds, (int)TimeSpan.FromHours(12).TotalMilliseconds);
+            _timer = new Timer(state => PerformAsync(), null, (int)TimeSpan.FromMinutes(5).TotalMilliseconds, (int)TimeSpan.FromHours(12).TotalMilliseconds);
         }
 
         public static void Check(ServerStore serverStore)
@@ -48,7 +45,7 @@ namespace Raven.Server.ServerWide.BackgroundTasks
             serverStore.NotificationCenter.Add(_alert);
         }
 
-        private static async Task PerformAsync()
+        private static async void PerformAsync()
         {
             try
             {
