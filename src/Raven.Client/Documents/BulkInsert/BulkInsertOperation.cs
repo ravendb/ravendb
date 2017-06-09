@@ -15,7 +15,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
-using Raven.Client.Server;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;

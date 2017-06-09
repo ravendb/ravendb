@@ -4,8 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
-
 namespace Raven.Client.Util.Encryption
 {
     internal static class Encryptor

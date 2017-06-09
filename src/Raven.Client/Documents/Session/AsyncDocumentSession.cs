@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Linq;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Extensions;

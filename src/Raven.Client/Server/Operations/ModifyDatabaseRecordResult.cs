@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Raven.Client.Server.Operations
+﻿namespace Raven.Client.Server.Operations
 {
     public class ModifyDatabaseRecordResult
     {

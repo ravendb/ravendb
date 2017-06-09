@@ -1,11 +1,6 @@
 using System;
-using System.Collections.Generic;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Extensions;
-using Raven.Client.Server;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Subscriptions
 {

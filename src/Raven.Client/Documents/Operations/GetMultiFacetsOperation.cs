@@ -4,7 +4,6 @@ using System.IO;
 using System.Net.Http;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.MultiGet;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
