@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,38 +8,47 @@ using Sparrow.Logging;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.BackgroundTasks
 {
-    public class LatestVersionCheck : IDisposable
+    public static class LatestVersionCheck
     {
         private const string ApiRavenDbNet = "https://api.ravendb.net";
 
-        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<LatestVersionCheck>(null);
+        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<ServerStore>(null);
 
-        private Timer _latestVersionCheckTimer;
+        private static AlertRaised _alert;
 
-        private readonly ServerStore _serverStore;
+        private static Timer _timer;
 
-        private static readonly HttpClient ApiRavenDbClient = new HttpClient()
+        private static readonly ConcurrentSet<WeakReference<ServerStore>> ServerStores = new ConcurrentSet<WeakReference<ServerStore>>();
+
+        private static readonly HttpClient ApiRavenDbClient = new HttpClient
         {
             BaseAddress = new Uri(ApiRavenDbNet)
         };
 
-        public LatestVersionCheck(ServerStore serverStore)
+        static LatestVersionCheck()
         {
-            _serverStore = serverStore;
+            _timer = new Timer(state =>
+                AsyncHelpers.RunSync(PerformAsync), null, (int)TimeSpan.FromMinutes(5).TotalMilliseconds, (int)TimeSpan.FromHours(12).TotalMilliseconds);
         }
 
-        public void Initialize()
+        public static void Check(ServerStore serverStore)
         {
-            //_latestVersionCheckTimer = new Timer((state) =>
-            //    AsyncHelpers.RunSync(PerformAsync), null, 0, (int)TimeSpan.FromHours(12).TotalMilliseconds);
+            ServerStores.Add(new WeakReference<ServerStore>(serverStore));
+
+            var alert = _alert;
+            if (alert == null)
+                return;
+
+            serverStore.NotificationCenter.Add(_alert);
         }
 
-        private async Task PerformAsync()
+        private static async Task PerformAsync()
         {
             try
             {
@@ -46,22 +56,21 @@ namespace Raven.Server.ServerWide.BackgroundTasks
                 var stream =
                     await ApiRavenDbClient.GetStreamAsync("/api/v1/versions/latest?channel=dev&min=40000&max=49999");
 
-                JsonOperationContext context;
-                using (_serverStore.ContextPool.AllocateOperationContext(out context))
+                using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
                     var json = context.ReadForMemory(stream, "latest/version");
                     var latestVersionInfo = JsonDeserializationServer.LatestVersionCheckVersionInfo(json);
 
-                    if (ServerVersion.Build != ServerVersion.DevBuildNumber && 
+                    if (ServerVersion.Build != ServerVersion.DevBuildNumber &&
                         latestVersionInfo?.BuildNumber > ServerVersion.Build)
                     {
                         var severityInfo = DetermineSeverity(latestVersionInfo);
-                        
-                        var alert = AlertRaised.Create("RavenDB update available", $"Version {latestVersionInfo.Version} is avaiable",
+
+                        _alert = AlertRaised.Create("RavenDB update available", $"Version {latestVersionInfo.Version} is available",
                             AlertType.Server_NewVersionAvailable, severityInfo,
                             details: new NewVersionAvailableDetails(latestVersionInfo));
 
-                        _serverStore.NotificationCenter.Add(alert);
+                        AddAlertToNotificationCenter();
                     }
                 }
             }
@@ -69,6 +78,29 @@ namespace Raven.Server.ServerWide.BackgroundTasks
             {
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Error getting latest version info.", err);
+            }
+        }
+
+        private static void AddAlertToNotificationCenter()
+        {
+            foreach (var weak in ServerStores)
+            {
+
+                if (weak.TryGetTarget(out ServerStore serverStore) == false || serverStore == null || serverStore.Disposed)
+                {
+                    ServerStores.TryRemove(weak);
+                    continue;
+                }
+
+                try
+                {
+                    serverStore.NotificationCenter.Add(_alert);
+                }
+                catch (Exception err)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Error adding latest version alert to notification center.", err);
+                }
             }
         }
 
@@ -85,11 +117,6 @@ namespace Raven.Server.ServerWide.BackgroundTasks
                 severityInfo = NotificationSeverity.Warning;
             }
             return severityInfo;
-        }
-
-        public void Dispose()
-        {
-            _latestVersionCheckTimer?.Dispose();
         }
 
         public class VersionInfo

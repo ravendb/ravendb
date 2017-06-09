@@ -69,8 +69,6 @@ namespace Raven.Server
         private Task<TcpListenerStatus> _tcpListenerTask;
         private readonly Logger _tcpLogger;
 
-        private readonly LatestVersionCheck _latestVersionCheck;
-
         public event Action AfterDisposal;
 
         public RavenServer(RavenConfiguration configuration)
@@ -87,8 +85,6 @@ namespace Raven.Server
             ServerMaintenanceTimer = new Timer(ServerMaintenanceTimerByMinute, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
 
             _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("<TcpServer>");
-
-            _latestVersionCheck = new LatestVersionCheck(ServerStore);
 
             PublicKey = new byte[Sodium.crypto_box_publickeybytes()];
             SecretKey = new byte[Sodium.crypto_box_secretkeybytes()];
@@ -201,16 +197,6 @@ namespace Raven.Server
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations("Could not start server", e);
                 throw;
-            }
-
-            try
-            {
-                _latestVersionCheck.Initialize();
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Could not setup latest version check.", e);
             }
         }
 
@@ -712,7 +698,6 @@ namespace Raven.Server
 
                 ServerStore?.Dispose();
                 ServerMaintenanceTimer?.Dispose();
-                _latestVersionCheck?.Dispose();
 
                 AfterDisposal?.Invoke();
             }

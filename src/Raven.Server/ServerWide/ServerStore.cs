@@ -24,6 +24,7 @@ using Raven.Server.Rachis;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
+using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
@@ -330,6 +331,7 @@ namespace Raven.Server.ServerWide
                 NotificationCenter.Add(alertRaised);
             }
             LicenseManager.Initialize(_env, ContextPool);
+            LatestVersionCheck.Check(this);
 
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
