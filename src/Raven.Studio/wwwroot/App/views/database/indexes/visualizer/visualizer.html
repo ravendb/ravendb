@@ -21,18 +21,23 @@
         <div class="flex-header">
             <div class="form-inline clearfix toolbar" role="form">
                 <div class="btn-group" data-bind="visible: !detailsGraph.viewActive()">
-                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" style="min-width: 350px">
                         <span data-bind="text: currentIndexUi"></span>
                         <span class="caret"></span>
                     </button>
-                    <ul class="dropdown-menu" role="menu">
-                        <!-- ko foreach: indexes -->
-                        <li data-bind="click: $root.setSelectedIndex"><a href="#" data-bind="text: $data"></a></li>
-                        <!-- /ko -->
-                        <!-- ko if: indexes().length === 0 -->
-                        <li data-bind="click: function() { }"><a href="#">No indexes available</a></li>
-                        <!-- /ko -->
-                    </ul>
+                    <div class="dropdown-menu has-info">
+                        <ul class="menu max-height" role="menu">
+                            <!-- ko foreach: indexes -->
+                            <li data-bind="click: $root.setSelectedIndex"><a href="#" data-bind="text: $data"></a></li>
+                            <!-- /ko -->
+                            <!-- ko if: indexes().length === 0 -->
+                            <li data-bind="click: function() { }"><a href="#">No indexes available</a></li>
+                            <!-- /ko -->
+                        </ul>
+                        <div class="bg-info">
+                            <i class="icon-info text-info"></i> <span>Map indexes are not available in 'map/reduce' visualizer.</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="form-group form-group-dropdown" data-bind="visible: hasIndexSelected() && !detailsGraph.viewActive()">

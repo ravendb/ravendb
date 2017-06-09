@@ -659,6 +659,13 @@ class visualizerGraphGlobal {
     private layout() {
         this.cleanLayoutCache();
 
+        if (!this.reduceTrees.length) {
+            this.dataWidth = 0;
+            this.dataHeight = 0;
+            this.hitTest.reset();
+            return;
+        }
+
         // layout children first
         for (let i = 0; i < this.reduceTrees.length; i++) {
             const tree = this.reduceTrees[i];
