@@ -742,6 +742,8 @@ class visualizerGraphGlobal {
         for (let i = 1; i < avgXValues.length; i++) {
             const doc = this.documents[avgXValues[i].docIndex];
 
+            //TODO: this doesn't work if few elements has the same avgXvalue
+
             // Check for collisions..
             const previousX = avgXValues[i - 1].avgXVal;
             if ((doc.x >= previousX) && (doc.x <= previousX + doc.width) ||
