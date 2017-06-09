@@ -1,13 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
 using Xunit;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_7329
+    public class RavenDB_7329 : NoDisposalNeeded
     {
         [Fact]
         public void GivenZerosInServerUrlShouldUseMachineNameForNodeUrl()
@@ -29,7 +27,7 @@ namespace FastTests.Issues
         public void GivenSetPublicServerShouldUseThatForNodeUrl()
         {
             var config = GetConfiguration(
-                serverUrl: "http://0.0.0.0:8080", 
+                serverUrl: "http://0.0.0.0:8080",
                 publicServerUrl: "http://live-test.ravendb.net:80");
             var result = config.Core.GetNodeHttpServerUrl("http://localhost:8080");
             Assert.Equal($"http://live-test.ravendb.net:80".ToLowerInvariant(), result);
