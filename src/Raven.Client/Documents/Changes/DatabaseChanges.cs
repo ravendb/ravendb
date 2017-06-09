@@ -333,7 +333,7 @@ namespace Raven.Client.Documents.Changes
                 ArraySegment<byte> buffer;
                 _ms.TryGetBuffer(out buffer);
 
-                await _client.SendAsync(buffer, WebSocketMessageType.Text, endOfMessage: true, cancellationToken: _cts.Token);
+                await _client.SendAsync(buffer, WebSocketMessageType.Text, endOfMessage: true, cancellationToken: _cts.Token).ConfigureAwait(false);
             }
             finally
             {
@@ -346,7 +346,7 @@ namespace Raven.Client.Documents.Changes
         {
             try
             {
-                await _requestExecutor.GetCurrentNode();
+                await _requestExecutor.GetCurrentNode().ConfigureAwait(false); ;
             }
             catch (OperationCanceledException)
             {

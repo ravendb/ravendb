@@ -91,7 +91,7 @@ namespace Raven.Client.Http
                 if (ResponseType == RavenCommandResponseType.Empty || response.StatusCode == HttpStatusCode.NoContent)
                     return;
 
-                using (var stream = await response.Content.ReadAsStreamAsync())
+                using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                 {
                     if (response.Headers.TryGetValues("Refresh-Topology", out IEnumerable<string> values))
                     {
@@ -109,7 +109,7 @@ namespace Raven.Client.Http
 
                         // we intentionally don't dispose the reader here, we'll be using it
                         // in the command, any associated memory will be released on context reset
-                        var json = await context.ReadForMemoryAsync(stream, "response/object");
+                        var json = await context.ReadForMemoryAsync(stream, "response/object").ConfigureAwait(false);
                         if (cache != null) //precaution
                         {
                             CacheResponse(cache, url, response, json);
@@ -119,7 +119,7 @@ namespace Raven.Client.Http
                     }
 
                     // We do not cache the stream response.
-                    using (var uncompressedStream = await RequestExecutor.ReadAsStreamUncompressedAsync(response))
+                    using (var uncompressedStream = await RequestExecutor.ReadAsStreamUncompressedAsync(response).ConfigureAwait(false))
                         SetResponseRaw(response, uncompressedStream, context);
                 }
             }

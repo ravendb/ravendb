@@ -88,7 +88,7 @@ namespace Raven.Client.Documents.Subscriptions
             requestExecutor.ContextPool.AllocateOperationContext(out jsonOperationContext);
 
             var command = new GetSubscriptionsCommand(start, take);
-            await requestExecutor.ExecuteAsync(command, jsonOperationContext);
+            await requestExecutor.ExecuteAsync(command, jsonOperationContext).ConfigureAwait(false);
 
             return command.Result.ToList();
         }
@@ -100,7 +100,7 @@ namespace Raven.Client.Documents.Subscriptions
             requestExecutor.ContextPool.AllocateOperationContext(out jsonOperationContext);
 
             var command = new DeleteSubscriptionCommand(id);
-            await requestExecutor.ExecuteAsync(command, jsonOperationContext);
+            await requestExecutor.ExecuteAsync(command, jsonOperationContext).ConfigureAwait(false);
         }
 
         public void Dispose()

@@ -34,7 +34,7 @@ namespace Raven.Client.Documents.Commands
             Result = new StreamResult
             {
                 Response = response,
-                Stream = await response.Content.ReadAsStreamAsync()
+                Stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false)
             };
         }
 

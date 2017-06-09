@@ -20,7 +20,7 @@ namespace Raven.Client.Documents
 
             try
             {
-                await tcpClient.ConnectAsync(host, port);
+                await tcpClient.ConnectAsync(host, port).ConfigureAwait(false);
             }
             catch (AggregateException ae) when (ae.InnerException is SocketException)
             {
@@ -66,7 +66,7 @@ namespace Raven.Client.Documents
 
             var expectedCert = new X509Certificate2(Convert.FromBase64String(info.Certificate));
             var sslStream = new SslStream(stream, false, (sender, actualCert, chain, errors) => expectedCert.Equals(actualCert));
-            await sslStream.AuthenticateAsClientAsync("RavenDB", null, SslProtocols.Tls12, false);
+            await sslStream.AuthenticateAsClientAsync("RavenDB", null, SslProtocols.Tls12, false).ConfigureAwait(false);
             stream = sslStream;
             return stream;
         }
