@@ -10,7 +10,6 @@ using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using System;

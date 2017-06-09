@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net;
-using System.Text;
 
 namespace Raven.Client.Documents.Exceptions.Subscriptions
 {

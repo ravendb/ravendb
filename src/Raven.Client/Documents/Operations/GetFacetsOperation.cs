@@ -1,6 +1,5 @@
 ﻿using System;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Http;
 using Sparrow.Json;

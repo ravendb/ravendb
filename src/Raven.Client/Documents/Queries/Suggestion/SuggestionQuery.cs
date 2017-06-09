@@ -4,8 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-
 namespace Raven.Client.Documents.Queries.Suggestion
 {
     /// <summary>
