@@ -20,6 +20,7 @@ namespace Raven.Server.Documents
         public long Etag;
         public LazyStringValue Id;
         public LazyStringValue LowerId;
+        public LazyStringValue Collection;
         public long StorageId;
         public BlittableJsonReaderObject Data;
         public float? IndexScore;
@@ -82,6 +83,8 @@ namespace Raven.Server.Documents
                 mutatedMetadata[Constants.Documents.Metadata.Flags] = Flags.ToString();
             if (IndexScore.HasValue)
                 mutatedMetadata[Constants.Documents.Metadata.IndexScore] = IndexScore;
+            if (Collection != null) // Currently in use only for delete revision. See RavenDB-7420.
+                mutatedMetadata[Constants.Documents.Metadata.Collection] = Collection;
 
             _hash = null;
         }

@@ -160,8 +160,7 @@ namespace Raven.Server.Documents.Replication
         {
             EnsureValidStats(stats);
 
-            DocumentsOperationContext documentsContext;
-            using (_parent._database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
+            using (_parent._database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (documentsContext.OpenReadTransaction())
             {
                 try
@@ -236,7 +235,7 @@ namespace Raven.Server.Documents.Replication
                     catch (OperationCanceledException)
                     {
                         if (_log.IsInfoEnabled)
-                            _log.Info("Received cancelation notification while sending document replication batch.");
+                            _log.Info("Received cancellation notification while sending document replication batch.");
                         throw;
                     }
                     catch (Exception e)
@@ -288,8 +287,7 @@ namespace Raven.Server.Documents.Replication
                     return false;
                 }
 
-                bool isHiLo;
-                if (CollectionName.IsSystemDocument(item.Id.Buffer, item.Id.Size, out isHiLo) && isHiLo == false)
+                if (CollectionName.IsSystemDocument(item.Id.Buffer, item.Id.Size, out bool isHiLo) && isHiLo == false)
                 {
                     stats.RecordSystemDocumentSkip();
 
@@ -304,7 +302,7 @@ namespace Raven.Server.Documents.Replication
                     stats.RecordDocumentChangeVectorSkip();
 
                     if (_log.IsInfoEnabled)
-                        _log.Info($"Skipping replication of {item.Id} because destination has a higher change vector. Doc: {item.ChangeVector.Format()} < Dest: {_parent._destinationLastKnownDocumentChangeVectorAsString} ");
+                        _log.Info($"Skipping replication of {item.Id} because destination has a higher change vector. Doc: {item.ChangeVector.Format()} < Destination: {_parent._destinationLastKnownDocumentChangeVectorAsString} ");
                     return false;
                 }
             }
@@ -431,7 +429,6 @@ namespace Raven.Server.Documents.Replication
                 Memory.Copy(pTemp + tempBufferPos, item.Id.Buffer, item.Id.Size);
                 tempBufferPos += item.Id.Size;
 
-                //if data == null --> this is a tombstone, and a document otherwise
                 if (item.Data != null)
                 {
                     *(int*)(pTemp + tempBufferPos) = item.Data.Size;
@@ -454,14 +451,18 @@ namespace Raven.Server.Documents.Replication
                 }
                 else
                 {
-                    //tombstone have size == -1
-                    *(int*)(pTemp + tempBufferPos) = -1;
+                    int dataSize;
+                    if (item.Type == ReplicationBatchItem.ReplicationItemType.DocumentTombstone)
+                        dataSize = -1;
+                    else if ((item.Flags & DocumentFlags.DeleteRevision) == DocumentFlags.DeleteRevision)
+                        dataSize = 0;
+                    else
+                        throw new InvalidDataException("Cannot write document with empty data.");
+                    *(int*)(pTemp + tempBufferPos) = dataSize;
                     tempBufferPos += sizeof(int);
 
                     if (item.Collection == null) //precaution
-                    {
-                        throw new InvalidDataException("Cannot write tombstone with empty collection name...");
-                    }
+                        throw new InvalidDataException("Cannot write item with empty collection name...");
 
                     *(int*)(pTemp + tempBufferPos) = item.Collection.Size;
                     tempBufferPos += sizeof(int);
@@ -489,7 +490,7 @@ namespace Raven.Server.Documents.Replication
             if (requiredSize > _tempBuffer.Length)
                 throw new ArgumentOutOfRangeException(nameof(item),
                     $"Attachment name {item.Name} or content type {item.ContentType} or the key ({item.Id.Size} - {item.Id}) " +
-                    $"(which might include the change vector for revisions or conflicts) is too big.");
+                    "(which might include the change vector for revisions or conflicts) is too big.");
 
             fixed (byte* pTemp = _tempBuffer)
             {
