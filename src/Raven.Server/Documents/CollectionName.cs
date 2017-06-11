@@ -44,7 +44,7 @@ namespace Raven.Server.Documents
 
         public readonly string Name;
         public readonly bool IsSystem;
-        private string _revisions;
+        private readonly string _revisions;
 
         static CollectionName()
         {
@@ -199,10 +199,8 @@ namespace Raven.Server.Documents
 
         public static LazyStringValue GetLazyCollectionNameFrom(JsonOperationContext context, BlittableJsonReaderObject document)
         {
-            BlittableJsonReaderObject metadata;
-            LazyStringValue collectionName;
-            if (document.TryGet(MetadataKeySegment, out metadata) == false ||
-                metadata.TryGet(MetadataCollectionSegment, out collectionName) == false)
+            if (document.TryGet(MetadataKeySegment, out BlittableJsonReaderObject metadata) == false ||
+                metadata.TryGet(MetadataCollectionSegment, out LazyStringValue collectionName) == false)
             {
                 return context.GetLazyStringForFieldWithCaching(EmptyCollectionSegment);
             }
@@ -211,15 +209,12 @@ namespace Raven.Server.Documents
 
         public static string GetCollectionName(BlittableJsonReaderObject document)
         {
-            string collectionName;
-            BlittableJsonReaderObject metadata;
-
-            if(document == null)
+            if (document == null)
                 return EmptyCollection;
 
             document.NoCache = true;
-
-            if (document.TryGet(MetadataKeySegment, out metadata) == false || metadata.TryGet(MetadataCollectionSegment, out collectionName) == false)
+            if (document.TryGet(MetadataKeySegment, out BlittableJsonReaderObject metadata) == false || 
+                metadata.TryGet(MetadataCollectionSegment, out string collectionName) == false)
             {
                 collectionName = EmptyCollection;
             }

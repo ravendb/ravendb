@@ -858,12 +858,10 @@ namespace Raven.Server.Documents
                 StorageId = tvr.Id,
                 LowerId = TableValueToString(context, (int)TombstoneTable.LowerId, ref tvr),
                 Etag = TableValueToEtag((int)TombstoneTable.Etag, ref tvr),
-                DeletedEtag = TableValueToEtag((int)TombstoneTable.DeletedEtag, ref tvr)
+                DeletedEtag = TableValueToEtag((int)TombstoneTable.DeletedEtag, ref tvr),
+                Type = *(DocumentTombstone.TombstoneType*)tvr.Read((int)TombstoneTable.Type, out int size),
+                TransactionMarker = *(short*)tvr.Read((int)TombstoneTable.TransactionMarker, out size)
             };
-
-            int size;
-            result.Type = *(DocumentTombstone.TombstoneType*)tvr.Read((int)TombstoneTable.Type, out size);
-            result.TransactionMarker = *(short*)tvr.Read((int)TombstoneTable.TransactionMarker, out size);
 
             if (result.Type == DocumentTombstone.TombstoneType.Document)
             {
@@ -924,7 +922,7 @@ namespace Raven.Server.Documents
                     local.Tombstone.ChangeVector,
                     modifiedTicks,
                     changeVector,
-                    DocumentFlags.None);
+                    DocumentFlags.None).Etag;
 
                 // We have to raise the notification here because even though we have deleted
                 // a deleted value, we changed the change vector. And maybe we need to replicate 
@@ -975,13 +973,15 @@ namespace Raven.Server.Documents
                 long etag;
                 using (TableValueToSlice(context, (int)DocumentsTable.LowerId, ref tvr, out Slice tombstone))
                 {
-                    etag = CreateTombstone(context, tombstone, doc.Etag, collectionName, doc.ChangeVector, modifiedTicks, changeVector, doc.Flags);
+                    var tombstoneEtag = CreateTombstone(context, tombstone, doc.Etag, collectionName, doc.ChangeVector, modifiedTicks, changeVector, doc.Flags);
+                    changeVector = tombstoneEtag.ChangeVector;
+                    etag = tombstoneEtag.Etag;
                 }
 
                 if (collectionName.IsSystem == false &&
                     _documentDatabase.DocumentsStorage.VersioningStorage.Configuration != null)
                 {
-                    _documentDatabase.DocumentsStorage.VersioningStorage.Delete(context, collectionName, id, lowerId, doc.ChangeVector, modifiedTicks, doc.NonPersistentFlags);
+                    _documentDatabase.DocumentsStorage.VersioningStorage.Delete(context, collectionName, id, lowerId, changeVector, modifiedTicks, doc.NonPersistentFlags);
                 }
                 table.Delete(doc.StorageId);
 
@@ -1028,7 +1028,7 @@ namespace Raven.Server.Documents
                     changeVector,
                     DateTime.UtcNow.Ticks,
                     null,
-                    DocumentFlags.None);
+                    DocumentFlags.None).Etag;
 
                 return new DeleteOperationResult
                 {
@@ -1088,12 +1088,11 @@ namespace Raven.Server.Documents
                 return;
             var etagTree = context.Transaction.InnerTransaction.ReadTree(EtagsSlice);
             var etag = _lastEtag;
-            Slice etagSlice;
-            using (Slice.External(context.Allocator, (byte*)&etag, sizeof(long), out etagSlice))
+            using (Slice.External(context.Allocator, (byte*)&etag, sizeof(long), out Slice etagSlice))
                 etagTree.Add(LastEtagSlice, etagSlice);
         }
 
-        public long CreateTombstone(
+        public (long Etag, ChangeVectorEntry[] ChangeVector) CreateTombstone(
             DocumentsOperationContext context,
             Slice lowerId,
             long documentEtag,
@@ -1140,7 +1139,7 @@ namespace Raven.Server.Documents
                     }
                 }
             }
-            return newEtag;
+            return (newEtag, changeVector);
         }
 
         public struct PutOperationResults
@@ -1360,8 +1359,7 @@ namespace Raven.Server.Documents
 
         public CollectionName GetCollection(string collection, bool throwIfDoesNotExist)
         {
-            CollectionName collectionName;
-            if (_collectionsCache.TryGetValue(collection, out collectionName) == false && throwIfDoesNotExist)
+            if (_collectionsCache.TryGetValue(collection, out CollectionName collectionName) == false && throwIfDoesNotExist)
                 throw new InvalidOperationException($"There is no collection for '{collection}'.");
 
             return collectionName;
@@ -1381,10 +1379,9 @@ namespace Raven.Server.Documents
             return ExtractCollectionName(context, originalCollectionName);
         }
 
-        private CollectionName ExtractCollectionName(DocumentsOperationContext context, string collectionName)
+        public CollectionName ExtractCollectionName(DocumentsOperationContext context, string collectionName)
         {
-            CollectionName name;
-            if (_collectionsCache.TryGetValue(collectionName, out name))
+            if (_collectionsCache.TryGetValue(collectionName, out CollectionName name))
                 return name;
 
             if (context.Transaction == null)
@@ -1396,12 +1393,9 @@ namespace Raven.Server.Documents
             var collections = context.Transaction.InnerTransaction.OpenTable(CollectionsSchema, CollectionsSlice);
 
             name = new CollectionName(collectionName);
-
-            Slice collectionSlice;
-            using (Slice.From(context.Allocator, collectionName, out collectionSlice))
+            using (Slice.From(context.Allocator, collectionName, out Slice collectionSlice))
             {
-                TableValueBuilder tvr;
-                using (collections.Allocate(out tvr))
+                using (collections.Allocate(out TableValueBuilder tvr))
                 {
                     tvr.Add(collectionSlice);
                     collections.Set(tvr);
@@ -1533,19 +1527,16 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static LazyStringValue TableValueToString(JsonOperationContext context, int index, ref TableValueReader tvr)
         {
-            int size;
-            var ptr = tvr.Read(index, out size);
+            var ptr = tvr.Read(index, out int size);
             return context.AllocateStringValue(null, ptr, size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static LazyStringValue TableValueToId(JsonOperationContext context, int index, ref TableValueReader tvr)
         {
-            int size;
             // See format of the lazy string ID in the GetLowerIdSliceAndStorageKey method
-            byte offset;
-            var ptr = tvr.Read(index, out size);
-            size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
+            var ptr = tvr.Read(index, out int size);
+            size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out byte offset);
             return context.AllocateStringValue(null, ptr + offset, size);
         }
 
@@ -1553,8 +1544,7 @@ namespace Raven.Server.Documents
         public static ByteStringContext<ByteStringMemoryCache>.ExternalScope TableValueToSlice(
             DocumentsOperationContext context, int index, ref TableValueReader tvr, out Slice slice)
         {
-            int size;
-            var ptr = tvr.Read(index, out size);
+            var ptr = tvr.Read(index, out int size);
             return Slice.External(context.Allocator, ptr, size, out slice);
         }
     }

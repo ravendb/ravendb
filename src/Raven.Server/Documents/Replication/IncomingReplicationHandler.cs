@@ -512,7 +512,7 @@ namespace Raven.Server.Documents.Replication
         private readonly TcpConnectionOptions _connectionOptions;
         private readonly ConflictManager _conflictManager;
 
-        public struct ReplicationItem : IDisposable
+        private struct ReplicationItem : IDisposable
         {
             public short TransactionMarker;
             public ReplicationBatchItem.ReplicationItemType Type;
@@ -561,7 +561,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public struct ReplicationAttachmentStream : IDisposable
+        private struct ReplicationAttachmentStream : IDisposable
         {
             public Slice Base64Hash;
             public ByteStringContext.InternalScope Base64HashDispose;
@@ -659,13 +659,13 @@ namespace Raven.Server.Documents.Replication
                         item.Id = Encoding.UTF8.GetString(ReadExactly(keySize), keySize);
 
                         var documentSize = item.DocumentSize = *(int*)ReadExactly(sizeof(int));
-                        if (documentSize != -1) //if -1, then this is a tombstone
+                        if (documentSize > 0)
                         {
                             ReadExactly(documentSize, ref writeBuffer);
                         }
-                        else
+                        else // tombstone or deleteRevision
                         {
-                            //read the collection
+                            // read the collection
                             var collectionSize = *(int*)ReadExactly(sizeof(int));
                             if (collectionSize != -1)
                             {
@@ -832,8 +832,11 @@ namespace Raven.Server.Documents.Replication
                                 try
                                 {
                                     ReadChangeVector(item.ChangeVectorCount, item.Position, _buffer, maxReceivedChangeVectorByDatabase);
-                                    if (item.DocumentSize >= 0) //no need to load document data for tombstones
-                                        // document size == -1 --> doc is a tombstone
+
+                                    // no need to load document data for tombstones
+                                    // document size == -1 --> doc is a tombstone
+                                    // document size == 0 --> doc is deleteRevision
+                                    if (item.DocumentSize > 0)
                                     {
                                         if (item.Position + item.DocumentSize > _totalSize)
                                             throw new ArgumentOutOfRangeException($"Reading past the size of buffer! TotalSize {_totalSize} " +
@@ -860,9 +863,21 @@ namespace Raven.Server.Documents.Replication
                                         continue;
                                     }
 
-                                    ChangeVectorEntry[] conflictingVector;
-                                    var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, item.Id, _changeVector, out conflictingVector);
+                                    if ((item.Flags & DocumentFlags.DeleteRevision) == DocumentFlags.DeleteRevision)
+                                    {
+                                        if (database.DocumentsStorage.VersioningStorage.Configuration == null)
+                                        {
+                                            if (_incoming._log.IsOperationsEnabled)
+                                                _incoming._log.Operations("Versioning storage is disabled but the node got a versioned document from replication.");
+                                            continue;
+                                        }
+                                        database.DocumentsStorage.VersioningStorage.Delete(context, item.Collection, item.Id, _changeVector,
+                                            item.LastModifiedTicks, NonPersistentDocumentFlags.FromReplication);
+                                        continue;
+                                    }
 
+                                    var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, item.Id, _changeVector, 
+                                        out ChangeVectorEntry[] conflictingVector);
                                     switch (conflictStatus)
                                     {
                                         case ConflictsStorage.ConflictStatus.Update:

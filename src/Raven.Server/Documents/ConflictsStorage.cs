@@ -700,7 +700,7 @@ namespace Raven.Server.Documents
                     mergedChangeVector,
                     latestConflict.LastModified.Ticks,
                     changeVector,
-                    DocumentFlags.None);
+                    DocumentFlags.None).Etag;
             }
 
             return collectionName;
