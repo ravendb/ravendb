@@ -921,7 +921,7 @@ namespace Raven.Server.ServerWide
             return _engine.GetClusterErrorsFromLeader();
         }
 
-        public async Task<(string,long)> GenerateClusterIdentityAsync(string id, string databaseName)
+        public async Task<(long clusterEtag, string clusterId)> GenerateClusterIdentityAsync(string id, string databaseName)
         {
             var (etag, result) = await SendToLeaderAsync(new IncrementClusterIdentityCommand(databaseName)
             {
@@ -935,7 +935,7 @@ namespace Raven.Server.ServerWide
                     $"Expected to get result from raft command that should generate a cluster-wide identity, but didn't. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
             }
 
-            return (id + result,etag);
+            return (etag, id + result);
         }
 
         public DatabaseRecord LoadDatabaseRecord(string databaseName, out long etag)

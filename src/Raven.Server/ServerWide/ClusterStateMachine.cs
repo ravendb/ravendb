@@ -78,7 +78,7 @@ namespace Raven.Server.ServerWide
         {
             if (cmd.TryGet("Type", out string type) == false)
                 return;
-
+            string errorMessage;
             switch (type)
             {
                 //The reason we have a separate case for removing node from database is because we must 
@@ -92,13 +92,17 @@ namespace Raven.Server.ServerWide
                     DeleteValue(context, cmd, index, leader);
                     break;
                 case nameof(IncrementClusterIdentityCommand):
-                    if (!ValidatePropertyExistance(cmd, 
-                            index, 
-                            leader, 
-                            nameof(IncrementClusterIdentityCommand), 
-                            nameof(IncrementClusterIdentityCommand.Prefix)))
+                    if (!ValidatePropertyExistance(cmd,
+                        nameof(IncrementClusterIdentityCommand),
+                        nameof(IncrementClusterIdentityCommand.Prefix), 
+                        out errorMessage))
+                    {
+                        NotifyLeaderAboutError(index, leader,
+                            new InvalidDataException(errorMessage));
                         return;
-                   
+                    }
+
+
                     var updatedDatabaseRecord = UpdateDatabase(context, type, cmd, index, leader);
 
                     cmd.TryGet(nameof(IncrementClusterIdentityCommand.Prefix), out string prefix);
@@ -107,13 +111,16 @@ namespace Raven.Server.ServerWide
                     leader?.SetStateOf(index, updatedDatabaseRecord.Identities[prefix]);
                     break;
                 case nameof(UpdateClusterIdentityCommand):
-                    if (cmd.GetPropertyNames().Contains(nameof(UpdateClusterIdentityCommand.Identities)) == false)
+                    if (!ValidatePropertyExistance(cmd,
+                        nameof(UpdateClusterIdentityCommand),
+                        nameof(UpdateClusterIdentityCommand.Identities),
+                        out errorMessage))
                     {
                         NotifyLeaderAboutError(index, leader,
-                            new InvalidDataException(
-                                $"Expected to find {nameof(UpdateClusterIdentityCommand)}.{nameof(UpdateClusterIdentityCommand.Identities)} property in the Raft command but didn't find it..."));
+                            new InvalidDataException(errorMessage));
                         return;
                     }
+                   
                     goto case nameof(DeleteOngoingTaskCommand);
                 case nameof(PutIndexCommand):
                 case nameof(PutAutoIndexCommand):
@@ -156,13 +163,12 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static bool ValidatePropertyExistance(BlittableJsonReaderObject cmd, long index, Leader leader, string propertyTypeName, string propertyName)
+        private static bool ValidatePropertyExistance(BlittableJsonReaderObject cmd, string propertyTypeName, string propertyName, out string errorMessage)
         {
-            if (cmd.TryGet(propertyName, out string _) == false)
+            errorMessage = null;
+            if (cmd.TryGet(propertyName, out object _) == false)
             {
-                NotifyLeaderAboutError(index, leader,
-                    new InvalidDataException(
-                        $"Expected to find {propertyTypeName}.{propertyName} property in the Raft command but didn't find it..."));
+                errorMessage = $"Expected to find {propertyTypeName}.{propertyName} property in the Raft command but didn't find it...";               
                 return false;
             }
             return true;
