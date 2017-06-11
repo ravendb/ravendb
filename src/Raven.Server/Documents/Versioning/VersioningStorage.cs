@@ -224,7 +224,7 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
-        public void Put(DocumentsOperationContext context, string id, BlittableJsonReaderObject document, 
+        public void Put(DocumentsOperationContext context, string id, BlittableJsonReaderObject document,
             DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, ChangeVectorEntry[] changeVector, long lastModifiedTicks,
             VersioningConfigurationCollection configuration = null)
         {
@@ -235,7 +235,7 @@ namespace Raven.Server.Documents.Versioning
             DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr);
 
             var notFromSmuggler = (nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) != NonPersistentDocumentFlags.FromSmuggler;
-           
+
             var collectionName = _database.DocumentsStorage.ExtractCollectionName(context, id, document);
 
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
@@ -278,28 +278,25 @@ namespace Raven.Server.Documents.Versioning
                 }
             }
 
-            // TODO: Clear old delete marker here
+            if (configuration == null)
+                configuration = GetVersioningConfiguration(collectionName);
 
-            if (notFromSmuggler)
+            using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
             {
-                if (configuration == null)
-                {
-                    configuration = GetVersioningConfiguration(collectionName);
-                }
-
-                using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
-                {
-                    // We delete the old revisions after we put the current one, 
-                    // because in case that MaxRevisions is 3 or lower we may get a revision document from replication
-                    // which is old. But because we put it first, we make sure to clean this document, becuase of the order to the revisions.
-                    var revisionsCount = IncrementCountOfRevisions(context, prefixSlice, 1);
-                    DeleteOldRevisions(context, table, prefixSlice, configuration.MaxRevisions, revisionsCount);
-                }
+                // We delete the old revisions after we put the current one, 
+                // because in case that MaxRevisions is 3 or lower we may get a revision document from replication
+                // which is old. But because we put it first, we make sure to clean this document, because of the order to the revisions.
+                var revisionsCount = IncrementCountOfRevisions(context, prefixSlice, 1);
+                DeleteOldRevisions(context, table, prefixSlice, configuration.MaxRevisions, revisionsCount, nonPersistentFlags);
             }
         }
 
-        private void DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, long? maxRevisions, long revisionsCount)
+        private void DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, long? maxRevisions, long revisionsCount, 
+            NonPersistentDocumentFlags nonPersistentFlags)
         {
+            if ((nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) == NonPersistentDocumentFlags.FromSmuggler)
+                return;
+
             if (maxRevisions.HasValue == false || maxRevisions.Value == int.MaxValue)
                 return;
 
@@ -343,13 +340,25 @@ namespace Raven.Server.Documents.Versioning
             numbers.Delete(prefixedLowerId);
         }
 
-        public void Delete(DocumentsOperationContext context, CollectionName collectionName, string id, Slice lowerId, ChangeVectorEntry[] changeVector, long lastModifiedTicks)
+        public void Delete(DocumentsOperationContext context, CollectionName collectionName, string id, Slice lowerId, ChangeVectorEntry[] changeVector, 
+            long lastModifiedTicks, NonPersistentDocumentFlags nonPersistentFlags)
         {
             var configuration = GetVersioningConfiguration(collectionName);
             if (configuration.Active == false)
                 return;
 
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
+
+            if (configuration.PurgeOnDelete)
+            {
+                using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
+                {
+                    DeleteRevisions(context, table, prefixSlice, long.MaxValue);
+                    DeleteCountOfRevisions(context, prefixSlice);
+                }
+
+                return;
+            }
 
             var newEtag = _database.DocumentsStorage.GenerateNextEtag();
             var newEtagSwapBytes = Bits.SwapBytes(newEtag);
@@ -379,13 +388,13 @@ namespace Raven.Server.Documents.Versioning
                 }
             }
 
-            if (configuration.PurgeOnDelete == false)
-                return;
-
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
             {
-                DeleteRevisions(context, table, prefixSlice, long.MaxValue);
-                DeleteCountOfRevisions(context, prefixSlice);
+                // We delete the old revisions after we put the current one, 
+                // because in case that MaxRevisions is 3 or lower we may get a revision document from replication
+                // which is old. But because we put it first, we make sure to clean this document, because of the order to the revisions.
+                var revisionsCount = IncrementCountOfRevisions(context, prefixSlice, 1);
+                DeleteOldRevisions(context, table, prefixSlice, configuration.MaxRevisions, revisionsCount, nonPersistentFlags);
             }
         }
 
