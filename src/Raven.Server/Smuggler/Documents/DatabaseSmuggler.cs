@@ -71,7 +71,8 @@ namespace Raven.Server.Smuggler.Documents
                 EnsureStepProcessed(result.RevisionDocuments.Attachments);
                 EnsureStepProcessed(result.Indexes);
                 EnsureStepProcessed(result.Transformers);
-                EnsureStepProcessed(result.Identities);
+                EnsureStepProcessed(result.LocalIdentities);
+                EnsureStepProcessed(result.ClusterIdentities);
 
                 return result;
             }
@@ -112,8 +113,11 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.Transformers:
                     counts = ProcessTransformers(result);
                     break;
-                case DatabaseItemType.Identities:
-                    counts = ProcessIdentities(result);
+                case DatabaseItemType.LocalIdentities:
+                    counts = ProcessIdentities(result, IdentityType.Local);
+                    break;
+                case DatabaseItemType.ClusterIdentities:
+                    counts = ProcessIdentities(result, IdentityType.Cluster);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
@@ -151,8 +155,11 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.Transformers:
                     counts = result.Transformers;
                     break;
-                case DatabaseItemType.Identities:
-                    counts = result.Identities;
+                case DatabaseItemType.LocalIdentities:
+                    counts = result.LocalIdentities;
+                    break;
+                case DatabaseItemType.ClusterIdentities:
+                    counts = result.ClusterIdentities;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
@@ -172,34 +179,63 @@ namespace Raven.Server.Smuggler.Documents
             _onProgress.Invoke(result.Progress);
         }
 
-        private SmugglerProgressBase.Counts ProcessIdentities(SmugglerResult result)
+        private SmugglerProgressBase.Counts ProcessIdentities(SmugglerResult result, IdentityType type)
         {
-            using (var actions = _destination.Identities())
+            switch (type)
             {
-                foreach (var kvp in _source.GetIdentities())
-                {
-                    _token.ThrowIfCancellationRequested();
-                    result.Identities.ReadCount++;
-
-                    if (kvp.Equals(default(KeyValuePair<string, long>)))
+                case IdentityType.Local:
+                    using (var localIdentityActions = _destination.LocalIdentities())
                     {
-                        result.Identities.ErroredCount++;
-                        continue;
+                        var sourceIdentities = _source.GetLocalIdentities();
+                        WriteIdentities(result, sourceIdentities, localIdentityActions,
+                            () => result.LocalIdentities.ReadCount++,
+                            () => result.LocalIdentities.ErroredCount++);
                     }
-
-                    try
+                    break;
+                case IdentityType.Cluster:
+                    using (var clusterIdentityActions = _destination.ClusterIdentities())
                     {
-                        actions.WriteIdentity(kvp.Key, kvp.Value);
+                        var sourceIdentities = _source.GetClusterIdentities();
+                        WriteIdentities(result, sourceIdentities, clusterIdentityActions,
+                                () => result.ClusterIdentities.ReadCount++,
+                                () => result.ClusterIdentities.ErroredCount++
+                            );
                     }
-                    catch (Exception e)
-                    {
-                        result.Identities.ErroredCount++;
-                        result.AddError($"Could not write identity '{kvp.Key} {kvp.Value}': {e.Message}");
-                    }
-                }
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
 
-            return result.Identities;
+            return type == IdentityType.Local ? result.LocalIdentities : result.ClusterIdentities;
+        }
+
+        private void WriteIdentities(SmugglerResult result, 
+            IEnumerable<KeyValuePair<string, long>> sourceIdentities, 
+            IIdentityActions destinationIdentityActions,
+            Action incrementReadCount,
+            Action incrementErrorCount)
+        {
+            foreach (var kvp in sourceIdentities)
+            {
+                _token.ThrowIfCancellationRequested();
+                incrementReadCount();
+
+                if (kvp.Equals(default(KeyValuePair<string, long>)))
+                {
+                    incrementErrorCount();
+                    continue;
+                }
+
+                try
+                {
+                    destinationIdentityActions.WriteIdentity(kvp.Key, kvp.Value);
+                }
+                catch (Exception e)
+                {
+                    incrementErrorCount();
+                    result.AddError($"Could not write identity (of type {destinationIdentityActions.Type}) '{kvp.Key} {kvp.Value}': {e.Message}");
+                }
+            }
         }
 
         private SmugglerProgressBase.Counts ProcessTransformers(SmugglerResult result)
