@@ -426,8 +426,8 @@ namespace Tests.Infrastructure
                 {
                     states.Add((s.ServerStore.NodeTag, state));
                 }
-            }
-            return string.Join(Environment.NewLine, states.OrderBy(x => x.transition.When).Select(x=>$"{x.tag}-term{x.Item2.CurrentTerm}:{x.Item2.From}=>{x.Item2.To} at {x.Item2.When:o} because {x.Item2.Reason}"));
+            }            
+            return string.Join(Environment.NewLine, states.OrderBy(x => x.transition.When).Select(x=>$"State for {x.tag}-term{x.Item2.CurrentTerm}:{Environment.NewLine}{x.Item2.From}=>{x.Item2.To} at {x.Item2.When:o} {Environment.NewLine}because {x.Item2.Reason}"));
         }
 
         public async Task WaitForLeader(TimeSpan timeout)
