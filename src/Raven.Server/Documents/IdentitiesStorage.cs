@@ -122,6 +122,8 @@ namespace Raven.Server.Documents
             _idBuilder.Append(id);
             _idBuilder[_idBuilder.Length - 1] = '/';
             _idBuilder.AppendFormat(CultureInfo.InvariantCulture, "{0:D19}", val);
+            _idBuilder.Append("-");
+            _idBuilder.Append(_documentDatabase.ServerStore.NodeTag);
             return _idBuilder.ToString();
         }
     }
