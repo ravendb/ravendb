@@ -53,8 +53,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             var result = _result ?? new SmugglerResult();
 
-            long buildVersion;
-            using (_source.Initialize(_options, result, out buildVersion))
+            using (_source.Initialize(_options, result, out long buildVersion))
             using (_destination.Initialize(_options, result, buildVersion))
             {
                 var buildType = BuildVersion.Type(buildVersion);

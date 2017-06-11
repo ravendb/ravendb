@@ -171,9 +171,9 @@ namespace FastTests.Smuggler
                     {
                         await VersioningHelper.SetupVersioning(Server.ServerStore, store1.Database);
 
-                        await session.StoreAsync(new Person { Name = "Name1" });
-                        await session.StoreAsync(new Person { Name = "Name2" });
-                        await session.StoreAsync(new Company { Name = "Hibernating Rhinos " });
+                        await session.StoreAsync(new Person {Name = "Name1"});
+                        await session.StoreAsync(new Person {Name = "Name2"});
+                        await session.StoreAsync(new Company {Name = "Hibernating Rhinos "});
                         await session.SaveChangesAsync();
                     }
 
@@ -214,10 +214,7 @@ namespace FastTests.Smuggler
 
                     var stats = await store2.Admin.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(4, stats.CountOfDocuments);
-
-                    // the import of documents generate new revisions for the two non sys docs
-
-                    Assert.Equal(9, stats.CountOfRevisionDocuments);
+                    Assert.Equal(8, stats.CountOfRevisionDocuments);
                 }
             }
             finally

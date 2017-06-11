@@ -337,7 +337,7 @@ namespace Raven.Server.Smuggler.Documents
                         }
 
                         PutAttachments(context, document);
-                        _database.DocumentsStorage.Put(context, id, null, document.Data, nonPersistentFlags: document.NonPersistentFlags);
+                        _database.DocumentsStorage.Put(context, id, null, document.Data, null, document.ChangeVector, document.Flags, document.NonPersistentFlags);
                     }
                 }
 
