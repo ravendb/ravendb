@@ -15,7 +15,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/StudioDirectory")]
         public string StudioDirectory { get; set; }
 
-        [Description("The directory into which RavenDB will write the logs, for relative path, the applciation base directory is used")]
+        [Description("The directory into which RavenDB will write the logs, for relative path, the application base directory is used")]
         [DefaultValue("Logs")]
         [ConfigurationEntry("Raven/LogsDirectory")]
         public string LogsDirectory { get; set; }
