@@ -598,11 +598,6 @@ namespace Raven.Server.ServerWide
         {
             Debug.Assert(context.Transaction != null);
 
-            var record = Cluster.ReadDatabase(context, name);
-
-            if (record != null)
-                throw new InvalidOperationException($"Cannot delete key {name} where there is an existing database that require its usage");
-
             var tree = context.Transaction.InnerTransaction.CreateTree("SecretKeys");
 
             tree.Delete(name);
