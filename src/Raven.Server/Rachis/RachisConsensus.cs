@@ -88,7 +88,7 @@ namespace Raven.Server.Rachis
                 {
                     var entry = FollowerAmbassador.BuildRachisEntryToSend(context, value);
                     entries.Add(entry);
-                    if(entries.Count> max)
+                    if(entries.Count >= max)
                         break;
                 }
             }

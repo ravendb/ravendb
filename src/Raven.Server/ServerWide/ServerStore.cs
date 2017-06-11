@@ -1133,7 +1133,7 @@ namespace Raven.Server.ServerWide
             var entries = new DynamicJsonArray();
             foreach (var entry in Engine.GetLogEntries(range.min, context, max))
             {
-                entries.Add(new DynamicJsonValue(entry));
+                entries.Add(entry.ToString());
             }
 
             var json = new DynamicJsonValue
