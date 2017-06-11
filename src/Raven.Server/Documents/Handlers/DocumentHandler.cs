@@ -383,7 +383,7 @@ namespace Raven.Server.Documents.Handlers
 
                 if (id.EndsWith("/"))
                 {
-                    var (clusterId, clusterEtag) = await ServerStore.GenerateClusterIdentityAsync(id, Database.Name);
+                    var (clusterEtag, clusterId) = await ServerStore.GenerateClusterIdentityAsync(id, Database.Name);
                     await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, clusterEtag);
                     id = clusterId;
                 }
