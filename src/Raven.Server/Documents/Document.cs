@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Globalization;
 using Raven.Client;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -38,15 +40,26 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void EnsureMetadata(float? indexScore = null)
+        private static readonly DynamicJsonValue ZombiedRevision = new DynamicJsonValue();
+
+        public void EnsureMetadata(DocumentsOperationContext context = null)
         {
             if (_metadataEnsured)
                 return;
 
             _metadataEnsured = true;
-
             DynamicJsonValue mutatedMetadata;
-            if (Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
+
+            if (Data == null)
+            {
+                Debug.Assert(context != null);
+                Data = context.ReadObject(ZombiedRevision, nameof(ZombiedRevision));
+                Data.Modifications = new DynamicJsonValue(Data)
+                {
+                    [Constants.Documents.Metadata.Key] = mutatedMetadata = new DynamicJsonValue()
+                };
+            }
+            else if (Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
             {
                 if (metadata.Modifications == null)
                     metadata.Modifications = new DynamicJsonValue(metadata);
@@ -67,8 +80,8 @@ namespace Raven.Server.Documents
                 mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector.ToJson();
             if (Flags != DocumentFlags.None)
                 mutatedMetadata[Constants.Documents.Metadata.Flags] = Flags.ToString();
-            if (indexScore.HasValue)
-                mutatedMetadata[Constants.Documents.Metadata.IndexScore] = indexScore;
+            if (IndexScore.HasValue)
+                mutatedMetadata[Constants.Documents.Metadata.IndexScore] = IndexScore;
 
             _hash = null;
         }

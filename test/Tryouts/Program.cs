@@ -6,6 +6,7 @@ using Sparrow.Logging;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Notifications;
 using FastTests.Server.Documents.Versioning;
+using FastTests.Server.Replication;
 using Raven.Server.Utils;
 using Raven.Client.Documents;
 using RachisTests;
@@ -23,7 +24,7 @@ namespace Tryouts
 
                 using (var test = new Versioning())
                 {
-                    test.GetDeleteDocumentsThatHaveRevisions().Wait();
+                    test.GetZombiedRevisions().Wait();
                 }
             }
         }

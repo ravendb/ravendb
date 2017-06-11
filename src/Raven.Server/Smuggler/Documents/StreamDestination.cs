@@ -169,7 +169,7 @@ namespace Raven.Server.Smuggler.Documents
                         Writer.WriteComma();
                     First = false;
 
-                    document.EnsureMetadata();
+                    document.EnsureMetadata(_context);
                     _context.Write(Writer, document.Data);
                 }
             }
