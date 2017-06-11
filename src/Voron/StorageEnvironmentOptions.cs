@@ -267,9 +267,13 @@ namespace Voron
                     return GetMemoryMapPager(this, InitialFileSize, FilePath, usePageProtection: true);
                 });
 
+                // have to be before the journal check, so we'll fail on files in use
+                // TODO: Need to verify behavior on Linux, might need to maintain a file lock
+                DeleteAllTempBuffers();
+
+
                 GatherRecyclableJournalFiles(); // if there are any (e.g. after a rude db shut down) let us reuse them
 
-                DeleteAllTempBuffers();
             }
 
             private void GatherRecyclableJournalFiles()
