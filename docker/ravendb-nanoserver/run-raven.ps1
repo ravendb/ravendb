@@ -1,6 +1,25 @@
+param(
+    $ServerDir="c:/ravendb/Server")
+    
+function CheckLastExitCode {
+    param ([int[]]$SuccessCodes = @(0), [scriptblock]$CleanupScript=$null)
+
+    if ($SuccessCodes -notcontains $LastExitCode) {
+        if ($CleanupScript) {
+            "Executing cleanup script: $CleanupScript"
+            &$CleanupScript
+        }
+        $msg = @"
+EXE RETURNED EXIT CODE $LastExitCode
+CALLSTACK:$(Get-PSCallStack | Out-String)
+"@
+        throw $msg
+    }
+}
+
 $CUSTOM_SETTINGS_PATH = "c:\raven-config\$env:CustomConfigFilename"
 
-cd c:/ravendb/Server
+Push-Location $ServerDir
 
 $command = './Raven.Server.exe'
 $commandArgs = @()
@@ -12,22 +31,25 @@ $commandArgs += "--print-id"
 $commandArgs += "--register-service"
 
 if ([string]::IsNullOrEmpty($env:CustomConfigFilename) -eq $False) {
-    $commandArgs += "--config-path `"$CUSTOM_SETTINGS_PATH`""
+    $commandArgs += "--config-path"
+    $commandArgs += "`"$CUSTOM_SETTINGS_PATH`""
 }
 
 if ([string]::IsNullOrEmpty($env:AllowAnonymousUserToAccessTheServer) -eq $False) {
     $commandArgs += "/Raven/AllowAnonymousUserToAccessTheServer=$($env:AllowAnonymousUserToAccessTheServer)"
 }
 
-if ([string]::IsNullOrEmpty($env:PublicServerUrl)) {
+if ([string]::IsNullOrEmpty($env:PublicServerUrl) -eq $False) {
     $commandArgs += "/Raven/PublicServerUrl=$($env:PublicServerUrl)"
 }
 
-if ([string]::IsNullOrEmpty($env:PublicTcpServerUrl)) {
+if ([string]::IsNullOrEmpty($env:PublicTcpServerUrl) -eq $False) {
     $commandArgs += "/Raven/PublicServerUrl/Tcp=$($env:PublicTcpServerUrl)"
 }
 
+write-host "Registering Windows Service: $command $commandArgs"
 Invoke-Expression -Command "$command $commandArgs"
+CheckLastExitCode
 
 while ($true) { 
     Start-Sleep 60 
