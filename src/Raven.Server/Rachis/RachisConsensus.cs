@@ -75,6 +75,25 @@ namespace Raven.Server.Rachis
 
             }
         }
+
+        public unsafe List<BlittableJsonReaderObject> GetLogEntries(long first, TransactionOperationContext context, int max)
+        {
+            var entries = new List<BlittableJsonReaderObject>();
+            var reveredNextIndex = Bits.SwapBytes(first);
+            var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
+            Slice key;
+            using (Slice.External(context.Allocator, (byte*)&reveredNextIndex, sizeof(long), out key))
+            {
+                foreach (var value in table.SeekByPrimaryKey(key, 0))
+                {
+                    var entry = FollowerAmbassador.BuildRachisEntryToSend(context, value);
+                    entries.Add(entry);
+                    if(entries.Count> max)
+                        break;
+                }
+            }
+            return entries;
+        }
     }
 
     public abstract class RachisConsensus : IDisposable
@@ -922,7 +941,7 @@ namespace Raven.Server.Rachis
             throw new InvalidOperationException(message);
         }
 
-        private static void GetLastTruncated(TransactionOperationContext context, out long lastTruncatedIndex,
+        internal static void GetLastTruncated(TransactionOperationContext context, out long lastTruncatedIndex,
             out long lastTruncatedTerm)
         {
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
@@ -1053,21 +1072,21 @@ namespace Raven.Server.Rachis
             throw new TimeoutException();
         }
 
-        public unsafe Tuple<long, long> GetLogEntriesRange(TransactionOperationContext context)
+        public unsafe (long min, long max) GetLogEntriesRange(TransactionOperationContext context)
         {
             Debug.Assert(context.Transaction != null);
 
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
             if (table.SeekOnePrimaryKey(Slices.AfterAllKeys, out TableValueReader reader) == false)
-                return Tuple.Create(0L, 0L);
+                return (0L, 0L);
             var max = Bits.SwapBytes(*(long*)reader.Read(0, out int size));
             Debug.Assert(size == sizeof(long));
             if (table.SeekOnePrimaryKey(Slices.BeforeAllKeys, out reader) == false)
-                return Tuple.Create(0L, 0L);
+                return (0L, 0L);
             var min = Bits.SwapBytes(*(long*)reader.Read(0, out size));
             Debug.Assert(size == sizeof(long));
 
-            return Tuple.Create(min, max);
+            return (min, max);
         }
 
         public unsafe long GetFirstEntryIndex(TransactionOperationContext context)

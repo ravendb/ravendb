@@ -473,7 +473,7 @@ namespace Raven.Server.Rachis
         }
 
 
-        private static unsafe BlittableJsonReaderObject BuildRachisEntryToSend(TransactionOperationContext context,
+        internal static unsafe BlittableJsonReaderObject BuildRachisEntryToSend(TransactionOperationContext context,
             Table.TableValueHolder value)
         {
             BlittableJsonReaderObject entry;
