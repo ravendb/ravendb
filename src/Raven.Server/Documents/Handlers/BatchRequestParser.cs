@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Handlers
                 if (state.CurrentTokenType != JsonParserToken.StartArray)
                     ThrowUnexpectedToken(JsonParserToken.StartArray, state);
 
-                long maxClusterIdentityEtag = -1;
+                long lastClusterIdentityEtag = -1;
                 while (true)
                 {
                     while (parser.Read() == false)
@@ -117,17 +117,17 @@ namespace Raven.Server.Documents.Handlers
 
                     if (commandData.Type == CommandType.PUT && string.IsNullOrEmpty(commandData.Id) == false && commandData.Id[commandData.Id.Length - 1] == '/')
                     {
-                        var (id,etag) = await serverStore.GenerateClusterIdentityAsync(commandData.Id, database.Name);
+                        var (etag, id) = await serverStore.GenerateClusterIdentityAsync(commandData.Id, database.Name);
                         commandData.Id = id;
-                        maxClusterIdentityEtag = Math.Max(maxClusterIdentityEtag, etag);
+                        lastClusterIdentityEtag = etag;
                     }
                     
                     cmds[index] = commandData;
                 }
 
                 //if we have some documents with cluster identities, make sure to wait for cluster confirmation before proceeding
-                if (maxClusterIdentityEtag != -1)
-                    await serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, maxClusterIdentityEtag);
+                if (lastClusterIdentityEtag != -1)
+                    await serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastClusterIdentityEtag);
             }
             return new ArraySegment<CommandData>(cmds, 0, index + 1);
         }
