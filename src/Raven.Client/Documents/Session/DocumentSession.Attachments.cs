@@ -46,8 +46,8 @@ namespace Raven.Client.Documents.Session
         {
             var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Document, null);
             var tuple = DocumentStore.Operations.Send(operation);
-            attachment = tuple.attachment;
-            return tuple.stream;
+            attachment = tuple.Attachment;
+            return tuple.Stream;
         }
 
         public Stream GetAttachment(object entity, string name)
@@ -62,8 +62,8 @@ namespace Raven.Client.Documents.Session
 
             var operation = new GetAttachmentOperation(document.Id, name, AttachmentType.Document, null);
             var tuple = DocumentStore.Operations.Send(operation);
-            attachment = tuple.attachment;
-            return tuple.stream;
+            attachment = tuple.Attachment;
+            return tuple.Stream;
         }
 
         public Stream GetRevisionAttachment(string documentId, string name, ChangeVectorEntry[] changeVector)
@@ -75,8 +75,8 @@ namespace Raven.Client.Documents.Session
         {
             var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Revision, changeVector);
             var tuple = DocumentStore.Operations.Send(operation);
-            attachment = tuple.attachment;
-            return tuple.stream;
+            attachment = tuple.Attachment;
+            return tuple.Stream;
         }
 
         public void StoreAttachment(string documentId, string name, Stream stream, string contentType = null)
