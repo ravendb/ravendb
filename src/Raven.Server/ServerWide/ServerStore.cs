@@ -1126,5 +1126,27 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public DynamicJsonValue GetLogDetails(TransactionOperationContext context, int max = 100)
+        {
+            RachisConsensus.GetLastTruncated(context, out var index, out var term);
+            var range = Engine.GetLogEntriesRange(context);
+            var entries = new DynamicJsonArray();
+            foreach (var entry in Engine.GetLogEntries(range.min, context, max))
+            {
+                entries.Add(new DynamicJsonValue(entry));
+            }
+
+            var json = new DynamicJsonValue
+            {
+                ["CommitIndex"] = Engine.GetLastCommitIndex(context),
+                ["LastTrancatedIndex"] = index,
+                ["LastTrancatedTerm"] = term,
+                ["FirstEntryIndex"] = range.min,
+                ["LastLogEntryIndex"] = range.max,
+                ["Entries"] = entries
+            };
+            return json;
+
+        }
     }
 }

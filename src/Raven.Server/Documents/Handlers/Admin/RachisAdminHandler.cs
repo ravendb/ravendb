@@ -43,6 +43,19 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
+        [RavenAction("/admin/cluster/log", "GET", "/admin/cluster/log")]
+        public Task GetLogs()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.OpenReadTransaction();
+                context.Write(writer, ServerStore.GetLogDetails(context));
+                writer.Flush();
+            }
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/admin/cluster/node-info", "GET", "/admin/cluster/node-info")]
         public Task GetTag()
         {
