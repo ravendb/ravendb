@@ -45,8 +45,8 @@ namespace SlowTests.Issues
                     Assert.Equal(1, result.Transformers.ReadCount);
                     Assert.Equal(0, result.Transformers.ErroredCount);
 
-                    Assert.Equal(1, result.Identities.ReadCount);
-                    Assert.Equal(0, result.Identities.ErroredCount);
+                    Assert.Equal(1, result.LocalIdentities.ReadCount);
+                    Assert.Equal(0, result.LocalIdentities.ErroredCount);
 
                     Assert.Equal(0, result.RevisionDocuments.ReadCount);
                     Assert.Equal(0, result.RevisionDocuments.ErroredCount);

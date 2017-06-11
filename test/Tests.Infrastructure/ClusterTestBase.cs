@@ -482,8 +482,8 @@ namespace Tests.Infrastructure
                     continue; // must not dispose the global server
                 server?.Dispose();
             }
-
-            base.Dispose();
+            
+            base.Dispose();            
         }
     }
 }

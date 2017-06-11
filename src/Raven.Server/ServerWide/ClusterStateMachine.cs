@@ -92,16 +92,29 @@ namespace Raven.Server.ServerWide
                     DeleteValue(context, cmd, index, leader);
                     break;
                 case nameof(IncrementClusterIdentityCommand):
-                    if (cmd.TryGet(nameof(IncrementClusterIdentityCommand.Prefix), out string prefix) == false)
-                    {
-                        NotifyLeaderAboutError(index, leader,
-                            new InvalidDataException($"Expected to find {nameof(IncrementClusterIdentityCommand)}.{nameof(IncrementClusterIdentityCommand.Prefix)} property in the Raft command but didn't find it..."));
+                    if (!ValidatePropertyExistance(cmd, 
+                            index, 
+                            leader, 
+                            nameof(IncrementClusterIdentityCommand), 
+                            nameof(IncrementClusterIdentityCommand.Prefix)))
                         return;
-                    }
-
+                   
                     var updatedDatabaseRecord = UpdateDatabase(context, type, cmd, index, leader);
+
+                    cmd.TryGet(nameof(IncrementClusterIdentityCommand.Prefix), out string prefix);
+                    Debug.Assert(prefix != null,"since we verified that the property exist, it must not be null");
+
                     leader?.SetStateOf(index, updatedDatabaseRecord.Identities[prefix]);
                     break;
+                case nameof(UpdateClusterIdentityCommand):
+                    if (cmd.GetPropertyNames().Contains(nameof(UpdateClusterIdentityCommand.Identities)) == false)
+                    {
+                        NotifyLeaderAboutError(index, leader,
+                            new InvalidDataException(
+                                $"Expected to find {nameof(UpdateClusterIdentityCommand)}.{nameof(UpdateClusterIdentityCommand.Identities)} property in the Raft command but didn't find it..."));
+                        return;
+                    }
+                    goto case nameof(DeleteOngoingTaskCommand);
                 case nameof(PutIndexCommand):
                 case nameof(PutAutoIndexCommand):
                 case nameof(DeleteIndexCommand):
@@ -141,6 +154,18 @@ namespace Raven.Server.ServerWide
                     AddDatabase(context, cmd, index, leader);
                     break;
             }
+        }
+
+        private static bool ValidatePropertyExistance(BlittableJsonReaderObject cmd, long index, Leader leader, string propertyTypeName, string propertyName)
+        {
+            if (cmd.TryGet(propertyName, out string _) == false)
+            {
+                NotifyLeaderAboutError(index, leader,
+                    new InvalidDataException(
+                        $"Expected to find {propertyTypeName}.{propertyName} property in the Raft command but didn't find it..."));
+                return false;
+            }
+            return true;
         }
 
         private unsafe void SetValueForTypedDatabaseCommand(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
@@ -471,7 +496,6 @@ namespace Raven.Server.ServerWide
                     }
 
                     var updatedDatabaseBlittable = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
-
                     UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
                 }
             }
@@ -557,10 +581,11 @@ namespace Raven.Server.ServerWide
 
         public DatabaseRecord ReadDatabase(TransactionOperationContext context, string name)
         {
-            return ReadDatabase(context, name, out long etag);
+            return ReadDatabase(context, name, out long _);
         }
 
-        public DatabaseRecord ReadDatabase(TransactionOperationContext context, string name, out long etag)
+        public DatabaseRecord ReadDatabase<T>(TransactionOperationContext<T> context, string name, out long etag)
+            where T : RavenTransaction
         {
             var doc = Read(context, "db/" + name.ToLowerInvariant(), out etag);
             if (doc == null)
@@ -569,12 +594,14 @@ namespace Raven.Server.ServerWide
             rec.Topology.PartOfCluster = _parent.CurrentState != RachisConsensus.State.Passive;
             return rec;
         }
-        public BlittableJsonReaderObject Read(TransactionOperationContext context, string name)
+        public BlittableJsonReaderObject Read<T>(TransactionOperationContext<T> context, string name)
+            where T : RavenTransaction
         {
-            return Read(context, name, out long etag);
+            return Read(context, name, out long _);
         }
 
-        public BlittableJsonReaderObject Read(TransactionOperationContext context, string name, out long etag)
+        public BlittableJsonReaderObject Read<T>(TransactionOperationContext<T> context, string name, out long etag)
+            where T : RavenTransaction
         {
 
             var dbKey = name.ToLowerInvariant();
@@ -584,7 +611,8 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static unsafe BlittableJsonReaderObject ReadInternal(TransactionOperationContext context, out long etag, Slice key)
+        private static unsafe BlittableJsonReaderObject ReadInternal<T>(TransactionOperationContext<T> context, out long etag, Slice key)
+            where T : RavenTransaction
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             if (items.ReadByKey(key, out TableValueReader reader) == false)
@@ -600,7 +628,7 @@ namespace Raven.Server.ServerWide
             Debug.Assert(size == sizeof(long));
 
             return doc;
-        }
+        }     
 
         public static IEnumerable<(long, BlittableJsonReaderObject)> ReadValuesStartingWith(TransactionOperationContext context, string startsWithKey)
         {

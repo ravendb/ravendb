@@ -193,16 +193,17 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     while (files.IsCompleted == false)
                     {
                         Func<Task<Stream>> getFile;
-                        DocumentsOperationContext context;
                         try
                         {
                             getFile = files.Take();
                         }
                         catch (Exception)
                         {
+                            //TODO : add logging, _silently_ skipping is a bad idea
                             continue;
                         }
-                        using (ContextPool.AllocateOperationContext(out context))
+
+                        using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (var file = await getFile())
                         using (var stream = new GZipStream(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
                         {
@@ -234,8 +235,11 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 finalResult.RevisionDocuments.LastEtag = Math.Max(finalResult.RevisionDocuments.LastEtag, importResult.RevisionDocuments.LastEtag);
                 finalResult.RevisionDocuments.Attachments = importResult.RevisionDocuments.Attachments;
 
-                finalResult.Identities.ReadCount += importResult.Identities.ReadCount;
-                finalResult.Identities.ErroredCount += importResult.Identities.ErroredCount;
+                finalResult.LocalIdentities.ReadCount += importResult.LocalIdentities.ReadCount;
+                finalResult.LocalIdentities.ErroredCount += importResult.LocalIdentities.ErroredCount;
+
+                finalResult.ClusterIdentities.ReadCount += importResult.ClusterIdentities.ReadCount;
+                finalResult.ClusterIdentities.ErroredCount += importResult.ClusterIdentities.ErroredCount;
 
                 finalResult.Transformers.ReadCount += importResult.Transformers.ReadCount;
                 finalResult.Transformers.ErroredCount += importResult.Transformers.ErroredCount;
