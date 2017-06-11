@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
@@ -227,12 +228,32 @@ namespace Raven.Server.ServerWide
                 var secretKey = Path.Combine(path.FullPath, "secret.key.encrypted");
                 if (File.Exists(secretKey))
                 {
-                    var buffer = File.ReadAllBytes(secretKey);
+                    byte[] buffer;
+                    try
+                    {
+                        buffer = File.ReadAllBytes(secretKey);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new FileLoadException($"The server store secret key is provided in {secretKey} but the server failed to read the file. Admin assistance required.", e);
+                    }
+                    
                     var secret = new byte[buffer.Length - 32];
                     var entropy = new byte[32];
                     Array.Copy(buffer, 0, secret, 0, buffer.Length - 32);
                     Array.Copy(buffer, buffer.Length - 32, entropy, 0, 32);
-                    options.MasterKey = SecretProtection.Unprotect(secret, entropy);
+
+                    try
+                    {
+                        options.MasterKey = SecretProtection.Unprotect(secret, entropy);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new CryptographicException($"Unable to unprotect the secret key file {secretKey}. " +
+                                                         $"Was the server store encrypted using a different OS user? In that case, " +
+                                                         $"you must provide an unprotected key using the Server Store Encryption & Backup utility (put-key command). " +
+                                                         $"Admin assistance required.", e);
+                    }
                 }
             }
 
