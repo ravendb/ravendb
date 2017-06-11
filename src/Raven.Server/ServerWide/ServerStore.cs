@@ -251,7 +251,7 @@ namespace Raven.Server.ServerWide
                     {
                         throw new CryptographicException($"Unable to unprotect the secret key file {secretKey}. " +
                                                          $"Was the server store encrypted using a different OS user? In that case, " +
-                                                         $"you must provide an unprotected key using the Server Store Encryption & Backup utility (put-key command). " +
+                                                         $"you must provide an unprotected key (rvn server put-key). " +
                                                          $"Admin assistance required.", e);
                     }
                 }
@@ -597,11 +597,6 @@ namespace Raven.Server.ServerWide
         public void DeleteSecretKey(TransactionOperationContext context, string name)
         {
             Debug.Assert(context.Transaction != null);
-
-            var record = Cluster.ReadDatabase(context, name);
-
-            if (record != null)
-                throw new InvalidOperationException($"Cannot delete key {name} where there is an existing database that require its usage");
 
             var tree = context.Transaction.InnerTransaction.CreateTree("SecretKeys");
 
