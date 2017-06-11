@@ -36,7 +36,8 @@ namespace Raven.Server.Smuggler.Documents
             DatabaseItemType.RevisionDocuments,
             DatabaseItemType.Indexes,
             DatabaseItemType.Transformers,
-            DatabaseItemType.Identities,
+            DatabaseItemType.LocalIdentities,
+            DatabaseItemType.ClusterIdentities,
             DatabaseItemType.None
         };
 
@@ -140,10 +141,17 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<KeyValuePair<string, long>> GetIdentities()
+        public IEnumerable<KeyValuePair<string, long>> GetLocalIdentities()
         {
             return _database.DocumentsStorage.Identities.GetIdentities(_context);
         }
+
+        public IEnumerable<KeyValuePair<string, long>> GetClusterIdentities()
+        {
+            var dr = _database.ServerStore.LoadDatabaseRecord(_database.Name, out long _);
+            return dr.Identities;
+        }
+
 
         public long SkipType(DatabaseItemType type)
         {

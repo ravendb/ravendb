@@ -21,6 +21,7 @@ using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -383,7 +384,9 @@ namespace Raven.Server.Documents.Handlers
 
                 if (id.EndsWith("/"))
                 {
-                    id = await ServerStore.GenerateClusterIdentityAsync(id, Database.Name);
+                    var (clusterId, clusterEtag) = await ServerStore.GenerateClusterIdentityAsync(id, Database.Name);
+                    await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, clusterEtag);
+                    id = clusterId;
                 }
 
                 var etag = GetLongFromHeaders("If-Match");
