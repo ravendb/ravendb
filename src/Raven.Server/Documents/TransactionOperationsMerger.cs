@@ -581,6 +581,7 @@ namespace Raven.Server.Documents
 
         private void RunEachOperationIndependently(List<MergedTransactionCommand> pendingOps)
         {
+            var hadError = false;
             try
             {
                 foreach (var op in pendingOps)
@@ -600,6 +601,7 @@ namespace Raven.Server.Documents
                     }
                     catch (Exception e)
                     {
+                        hadError = true; // avoid modifing the list in order to prevent enumaration modification exception at NotifyOnThreadPool
                         op.Exception = e;
                         NotifyOnThreadPool(op);
                     }
@@ -607,8 +609,11 @@ namespace Raven.Server.Documents
             }
             finally
             {
-                pendingOps.Clear();
-                _opsBuffers.Enqueue(pendingOps);
+                if (hadError == false)
+                {
+                    pendingOps.Clear();
+                    _opsBuffers.Enqueue(pendingOps);
+                }
             }
         }
 
