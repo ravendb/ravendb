@@ -95,6 +95,19 @@ namespace Raven.Server.Documents
                         {
                             DatabaseHelper.DeleteDatabaseFiles(configuration);
                         }
+
+                        // At this point the db record still exists but the db was effectively deleted 
+                        // from this node so we can also remove its secret key from this node.
+                        if (record.Encrypted)
+                        {
+                            TransactionOperationContext context;
+                            using (_serverStore.ContextPool.AllocateOperationContext(out context))
+                            using (var tx = context.OpenWriteTransaction())
+                            {
+                                _serverStore.DeleteSecretKey(context, t.dbName);
+                                tx.Commit();
+                            }
+                        }
                     }
 
                     NotifyLeaderAboutRemoval(t.dbName);
