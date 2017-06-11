@@ -11,6 +11,8 @@ using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
@@ -51,9 +53,14 @@ namespace Raven.Server.Smuggler.Documents
             return new DatabaseDocumentActions(_database, _buildType, isRevision: true, log: _log);
         }
 
-        public IIdentityActions Identities()
+        public IIdentityActions LocalIdentities()
         {
-            return new DatabaseIdentityActions(_database);
+            return new DatabaseIdentityActions(_database, IdentityType.Local);
+        }
+
+        public IIdentityActions ClusterIdentities()
+        {
+            return new DatabaseIdentityActions(_database, IdentityType.Cluster);
         }
 
         public IIndexActions Indexes()
@@ -208,15 +215,16 @@ namespace Raven.Server.Smuggler.Documents
 
         private class DatabaseIdentityActions : IIdentityActions
         {
+            public IdentityType Type { get; }
             private readonly DocumentDatabase _database;
-            private readonly DocumentsOperationContext _context;
             private readonly Dictionary<string, long> _identities;
             private readonly IDisposable _returnContext;
 
-            public DatabaseIdentityActions(DocumentDatabase database)
+            public DatabaseIdentityActions(DocumentDatabase database,IdentityType type)
             {
+                Type = type;
                 _database = database;
-                _returnContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
+                _returnContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext _);
                 _identities = new Dictionary<string, long>();
             }
 
@@ -232,11 +240,41 @@ namespace Raven.Server.Smuggler.Documents
                     if (_identities.Count == 0)
                         return;
 
-                    _database.TxMerger.Enqueue(new UpdateIdentitiesCommand(_identities, _database)).Wait();
+                    switch (Type)
+                    {
+                        case IdentityType.Local:
+                            _database.TxMerger.Enqueue(new UpdateIdentitiesCommand(_identities, _database)).Wait();
+                            break;
+                        case IdentityType.Cluster:
+                            _database.TxMerger.Enqueue(new UpdateClusterIdentitiesCommand(_identities, _database)).Wait();
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
                 }
                 finally
                 {
                     _returnContext?.Dispose();
+                }
+            }
+
+            private class UpdateClusterIdentitiesCommand : TransactionOperationsMerger.MergedTransactionCommand
+            {
+                private readonly Dictionary<string, long> _identities;
+                private readonly DocumentDatabase _database;
+
+                public UpdateClusterIdentitiesCommand(Dictionary<string, long> identities, DocumentDatabase database)
+                {
+                    _identities = identities;
+                    _database = database;
+                }
+
+                public override int Execute(DocumentsOperationContext context)
+                {
+                    var (etag,_) = _database.ServerStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(_database.Name,_identities)).Result;
+                    _database.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, etag).Wait();
+
+                    return 1;
                 }
             }
 
