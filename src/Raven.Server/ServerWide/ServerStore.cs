@@ -251,7 +251,7 @@ namespace Raven.Server.ServerWide
                     {
                         throw new CryptographicException($"Unable to unprotect the secret key file {secretKey}. " +
                                                          $"Was the server store encrypted using a different OS user? In that case, " +
-                                                         $"you must provide an unprotected key using the Server Store Encryption & Backup utility (put-key command). " +
+                                                         $"you must provide an unprotected key (rvn server put-key). " +
                                                          $"Admin assistance required.", e);
                     }
                 }
