@@ -276,11 +276,10 @@ namespace Raven.Server.Documents
             BlittableJsonReaderObject metadata = null;
             if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments &&
                 (nonPersistentFlags & NonPersistentDocumentFlags.ByAttachmentUpdate) != NonPersistentDocumentFlags.ByAttachmentUpdate &&
-                (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
+                (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication /* TODO fitzchak: Test whether this is correct */)
             {
-                Debug.Assert(oldDoc != null, "Can be null when it comes from replication, but we checked for this.");
-
-                if (oldDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject oldMetadata) &&
+                if (oldDoc != null && 
+                    oldDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject oldMetadata) &&
                     oldMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray oldAttachments))
                 {
                     // Make sure the user did not changed the value of @attachments in the @metadata
