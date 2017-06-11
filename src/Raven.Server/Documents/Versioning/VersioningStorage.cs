@@ -276,21 +276,31 @@ namespace Raven.Server.Documents.Versioning
                         tbv.Add(newEtagSwapBytes);
                         tbv.Add(lastModifiedTicks);
                         tbv.Add(collectionSlice);
-                        table.Set(tbv);
+                        var isNew = table.Set(tbv);
+                        if (isNew == false)
+                            // It might be just an update from replication as we call this twice, both for the doc delete and for deleteRevision.
+                            return;
                     }
                 }
 
                 if (configuration == null)
                     configuration = GetVersioningConfiguration(collectionName);
 
-                using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
-                {
-                    // We delete the old revisions after we put the current one, 
-                    // because in case that MaxRevisions is 3 or lower we may get a revision document from replication
-                    // which is old. But because we put it first, we make sure to clean this document, because of the order to the revisions.
-                    var revisionsCount = IncrementCountOfRevisions(context, prefixSlice, 1);
-                    DeleteOldRevisions(context, table, prefixSlice, configuration.MaxRevisions, revisionsCount, nonPersistentFlags);
-                }
+                DeleteOldRevisions(context, table, lowerId, configuration.MaxRevisions, nonPersistentFlags);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice lowerId, 
+            long? maxRevisions, NonPersistentDocumentFlags nonPersistentFlags)
+        {
+            using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
+            {
+                // We delete the old revisions after we put the current one, 
+                // because in case that MaxRevisions is 3 or lower we may get a revision document from replication
+                // which is old. But because we put it first, we make sure to clean this document, because of the order to the revisions.
+                var revisionsCount = IncrementCountOfRevisions(context, prefixSlice, 1);
+                DeleteOldRevisions(context, table, prefixSlice, maxRevisions, revisionsCount, nonPersistentFlags);
             }
         }
 
@@ -404,19 +414,16 @@ namespace Raven.Server.Documents.Versioning
                         tbv.Add(newEtagSwapBytes);
                         tbv.Add(lastModifiedTicks);
                         tbv.Add(collectionSlice);
-                        table.Set(tbv);
+                        var isNew = table.Set(tbv);
+                        if (isNew == false)
+                            // It might be just an update from replication as we call this twice, both for the doc delete and for deleteRevision.
+                            return;
+
                     }
                 }
             }
 
-            using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
-            {
-                // We delete the old revisions after we put the current one, 
-                // because in case that MaxRevisions is 3 or lower we may get a revision document from replication
-                // which is old. But because we put it first, we make sure to clean this document, because of the order to the revisions.
-                var revisionsCount = IncrementCountOfRevisions(context, prefixSlice, 1);
-                DeleteOldRevisions(context, table, prefixSlice, configuration.MaxRevisions, revisionsCount, nonPersistentFlags);
-            }
+            DeleteOldRevisions(context, table, lowerId, configuration.MaxRevisions, nonPersistentFlags);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

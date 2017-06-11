@@ -23,9 +23,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var test = new Versioning())
+                using (var test = new AttachmentsReplication())
                 {
-                    test.WillDeleteRevisionsIfDeleted_OnlyIfPurgeOnDeleteIsTrue().Wait();
+                    test.AttachmentsVersioningReplication().Wait();
                 }
             }
         }

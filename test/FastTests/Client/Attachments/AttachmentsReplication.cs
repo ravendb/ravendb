@@ -512,10 +512,10 @@ namespace FastTests.Client.Attachments
                 WaitForMarker(store1, store2);
                 AssertRevisions(store2, names, (session, revisions) =>
                 {
-                    AssertRevisionAttachments(names, 3, revisions[0], session);
-                    AssertRevisionAttachments(names, 2, revisions[1], session);
-                    AssertRevisionAttachments(names, 1, revisions[2], session);
-                    AssertNoRevisionAttachment(revisions[3], session);
+                    AssertNoRevisionAttachment(revisions[0], session, true);
+                    AssertRevisionAttachments(names, 3, revisions[1], session);
+                    AssertRevisionAttachments(names, 2, revisions[2], session);
+                    AssertRevisionAttachments(names, 1, revisions[3], session);
                 }, 6);
 
                 // Create another revision which should delete old revision
@@ -528,10 +528,10 @@ namespace FastTests.Client.Attachments
                 AssertRevisions(store2, names, (session, revisions) =>
                 {
                     AssertNoRevisionAttachment(revisions[0], session);
-                    AssertRevisionAttachments(names, 3, revisions[1], session);
-                    AssertRevisionAttachments(names, 2, revisions[2], session);
-                    AssertRevisionAttachments(names, 1, revisions[3], session);
-                }, 6, expectedCountOfDocuments: 4);
+                    AssertNoRevisionAttachment(revisions[1], session, true);
+                    AssertRevisionAttachments(names, 3, revisions[2], session);
+                    AssertRevisionAttachments(names, 2, revisions[3], session);
+                }, 5, expectedCountOfDocuments: 4);
 
                 using (var session = store1.OpenSession()) // This will delete the revision #2 which is with attachment
                 {
@@ -543,9 +543,9 @@ namespace FastTests.Client.Attachments
                 {
                     AssertNoRevisionAttachment(revisions[0], session);
                     AssertNoRevisionAttachment(revisions[1], session);
-                    AssertRevisionAttachments(names, 3, revisions[2], session);
-                    AssertRevisionAttachments(names, 2, revisions[3], session);
-                }, 5, expectedCountOfDocuments: 5);
+                    AssertNoRevisionAttachment(revisions[2], session, true);
+                    AssertRevisionAttachments(names, 3, revisions[3], session);
+                }, 3, expectedCountOfDocuments: 5);
 
                 using (var session = store1.OpenSession()) // This will delete the revision #3 which is with attachment
                 {
@@ -558,8 +558,8 @@ namespace FastTests.Client.Attachments
                     AssertNoRevisionAttachment(revisions[0], session);
                     AssertNoRevisionAttachment(revisions[1], session);
                     AssertNoRevisionAttachment(revisions[2], session);
-                    AssertRevisionAttachments(names, 3, revisions[3], session);
-                }, 3, expectedCountOfDocuments: 6);
+                    AssertNoRevisionAttachment(revisions[3], session, true);
+                }, 0, expectedCountOfUniqueAttachments: 0, expectedCountOfDocuments: 6);
 
                 using (var session = store1.OpenSession()) // This will delete the revision #4 which is with attachment
                 {
@@ -595,10 +595,13 @@ namespace FastTests.Client.Attachments
             }
         }
 
-        private static void AssertNoRevisionAttachment(User revision, IDocumentSession session)
+        private static void AssertNoRevisionAttachment(User revision, IDocumentSession session, bool isDeleteRevision = false)
         {
             var metadata = session.Advanced.GetMetadataFor(revision);
-            Assert.Equal((DocumentFlags.Versioned | DocumentFlags.Revision | DocumentFlags.FromReplication).ToString(), metadata[Constants.Documents.Metadata.Flags]);
+            var flags = DocumentFlags.Versioned | DocumentFlags.Revision | DocumentFlags.FromReplication;
+            if (isDeleteRevision)
+                flags = DocumentFlags.DeleteRevision;
+            Assert.Equal(flags.ToString(), metadata[Constants.Documents.Metadata.Flags]);
             Assert.False(metadata.ContainsKey(Constants.Documents.Metadata.Attachments));
         }
 

@@ -1088,24 +1088,21 @@ namespace Voron.Data.Tables
         private void GetTableValueReader(FixedSizeTree.IFixedSizeIterator it, out TableValueReader reader)
         {
             long id;
-            Slice slice;
-            using (it.Value(out slice))
+            using (it.Value(out Slice slice))
                 slice.CopyTo((byte*)&id);
-            int size;
-            var ptr = DirectRead(id, out size);
+            var ptr = DirectRead(id, out int size);
             reader = new TableValueReader(id, ptr, size);
         }
 
 
         private void GetTableValueReader(IIterator it, out TableValueReader reader)
         {
-            long id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
-            int size;
-            var ptr = DirectRead(id, out size);
+            var id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
+            var ptr = DirectRead(id, out int size);
             reader = new TableValueReader(id, ptr, size);
         }
 
-        public long Set(TableValueBuilder builder)
+        public bool Set(TableValueBuilder builder)
         {
             // The ids returned from this function MUST NOT be stored outside of the transaction.
             // These are merely for manipulation within the same transaction, and WILL CHANGE afterwards.
@@ -1120,10 +1117,11 @@ namespace Voron.Data.Tables
             if (exists)
             {
                 id = Update(id, builder);
-                return id;
+                return false;
             }
 
-            return Insert(builder);
+            id = Insert(builder);
+            return true;
         }
 
         public int DeleteBackwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long value, long numberOfEntriesToDelete)
@@ -1133,7 +1131,7 @@ namespace Voron.Data.Tables
 
             int deleted = 0;
             var fst = GetFixedSizeTree(index);
-            // deleteing from a table can shift things around, so we delete 
+            // deleting from a table can shift things around, so we delete 
             // them one at a time
             while (deleted < numberOfEntriesToDelete)
             {

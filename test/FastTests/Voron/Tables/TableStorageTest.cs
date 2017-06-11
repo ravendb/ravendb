@@ -10,7 +10,6 @@ using Voron.Util.Conversion;
 
 namespace FastTests.Voron.Tables
 {
-
     public class TableStorageTest : StorageTest
     {
         public static readonly Slice EtagsSlice;
@@ -48,7 +47,7 @@ namespace FastTests.Voron.Tables
                 });
         }
 
-        public unsafe long SetHelper(Table table, params object[] args)
+        public unsafe void SetHelper(Table table, params object[] args)
         {
             var handles1 = new List<GCHandle>();
 
@@ -96,14 +95,12 @@ namespace FastTests.Voron.Tables
 
             var handles = handles1;
 
-            long id = table.Set(builder);
+            table.Set(builder);
 
             foreach (var gcHandle in handles)
             {
                 gcHandle.Free();
             }
-
-            return id;
         }
     }
 }

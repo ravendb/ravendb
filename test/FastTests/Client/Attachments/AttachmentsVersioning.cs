@@ -159,13 +159,10 @@ namespace FastTests.Client.Attachments
 
         private static void AssertNoRevisionAttachment(User revision, IDocumentSession session, bool isDeleteRevision = false)
         {
-
             var metadata = session.Advanced.GetMetadataFor(revision);
             var flags = DocumentFlags.Versioned | DocumentFlags.Revision;
             if (isDeleteRevision)
-            {
                 flags = DocumentFlags.DeleteRevision;
-            }
             Assert.Equal(flags.ToString(), metadata[Constants.Documents.Metadata.Flags]);
             Assert.False(metadata.ContainsKey(Constants.Documents.Metadata.Attachments));
         }
