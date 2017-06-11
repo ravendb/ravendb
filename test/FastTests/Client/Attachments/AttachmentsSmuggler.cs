@@ -43,7 +43,7 @@ namespace FastTests.Client.Attachments
 
                     var stats = await store2.Admin.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(1, stats.CountOfDocuments);
-                    Assert.Equal(5, stats.CountOfRevisionDocuments);
+                    Assert.Equal(4, stats.CountOfRevisionDocuments);
                     Assert.Equal(14, stats.CountOfAttachments);
                     Assert.Equal(4, stats.CountOfUniqueAttachments);
 
