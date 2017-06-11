@@ -3,11 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Server.Extensions;
 using Raven.Server.Utils;
 using Voron.Platform.Posix;
-
-using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Platform;
 using Sparrow.Utils;
@@ -16,7 +13,7 @@ namespace FastTests
 {
     public static class RavenTestHelper
     {
-        public static ParallelOptions DefaultParallelOptions = new ParallelOptions
+        public static readonly ParallelOptions DefaultParallelOptions = new ParallelOptions
         {
             MaxDegreeOfParallelism = ProcessorInfo.ProcessorCount * 2
         };
@@ -27,7 +24,7 @@ namespace FastTests
         {
             testName = testName?.Replace("<", "").Replace(">", "");
 
-            var newDataDir = Path.GetFullPath($".\\Databases\\{testName ?? "TestDatabase"}_{serverPort}-{DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss-fff")}-{Interlocked.Increment(ref _pathCount)}");
+            var newDataDir = Path.GetFullPath($".\\Databases\\{testName ?? "TestDatabase"}_{serverPort}-{DateTime.Now:yyyy-MM-dd-HH-mm-ss-fff}-{Interlocked.Increment(ref _pathCount)}");
 
             if (PlatformDetails.RunningOnPosix)
                 newDataDir = PosixHelper.FixLinuxPath(newDataDir);
