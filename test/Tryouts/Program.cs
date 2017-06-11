@@ -23,9 +23,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var test = new SmugglerApiTests())
+                using (var test = new Versioning())
                 {
-                    test.CanExportAndImportWithRevisionDocuments().Wait();
+                    test.WillDeleteRevisionsIfDeleted_OnlyIfPurgeOnDeleteIsTrue().Wait();
                 }
             }
         }
