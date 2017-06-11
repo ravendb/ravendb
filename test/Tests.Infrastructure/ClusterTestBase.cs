@@ -417,7 +417,7 @@ namespace Tests.Infrastructure
             return leader;
         }
 
-        private string GetLastStatesFromAllServersOrderedByTime()
+        protected string GetLastStatesFromAllServersOrderedByTime()
         {
             List<(string tag, RachisConsensus.StateTransition transition)> states = new EquatableList<(string tag, RachisConsensus.StateTransition transition)>();
             foreach (var s in Servers)
@@ -440,7 +440,7 @@ namespace Tests.Infrastructure
             await Task.WhenAny(tasks);
 
             if (Task.Delay(timeout).IsCompleted)
-                throw new TimeoutException();
+                throw new TimeoutException(GetLastStatesFromAllServersOrderedByTime());
         }
 
         protected override Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store)
@@ -481,7 +481,7 @@ namespace Tests.Infrastructure
         public async Task<(long, List<RavenServer>)> CreateDatabaseInCluster(string databaseName, int replicationFactor, string leadersUrl)
         {
             var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
-            return await CreateDatabaseInCluster(doc, replicationFactor, leadersUrl);
+            return await CreateDatabaseInCluster(doc, replicationFactor, leadersUrl);  
         }
 
         public override void Dispose()

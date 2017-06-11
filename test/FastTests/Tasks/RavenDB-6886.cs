@@ -365,11 +365,18 @@ namespace FastTests.Tasks
 
         private async Task CreateDatabasesInCluster(int clusterSize, string databaseName, IDocumentStore store)
         {
-            var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(MultiDatabase.CreateDatabaseDocument(databaseName), clusterSize));
-            Assert.Equal(clusterSize, databaseResult.Topology.AllReplicationNodes().Count());
-            foreach (var server in Servers)
+            try
             {
-                await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag);
+                var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(MultiDatabase.CreateDatabaseDocument(databaseName), clusterSize));
+                Assert.Equal(clusterSize, databaseResult.Topology.AllReplicationNodes().Count());
+                foreach (var server in Servers)
+                {
+                    await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag);
+                }
+            }
+            catch (TimeoutException te)
+            {
+                throw new TimeoutException($"{te.Message} {GetLastStatesFromAllServersOrderedByTime() }");
             }
         }
     }
