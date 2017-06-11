@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -6,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
@@ -398,6 +400,7 @@ namespace Raven.Server.Rachis
             public State To;
             public string Reason;
             public long CurrentTerm;
+            public DateTime When;
         }
 
         private void SetNewStateInTx(TransactionOperationContext context, State state, IDisposable disposable, long expectedTerm, string stateChangedReason)
@@ -427,8 +430,11 @@ namespace Raven.Server.Rachis
                 CurrentTerm = expectedTerm,
                 From = CurrentState,
                 To = state,
-                Reason = stateChangedReason
+                Reason = stateChangedReason,
+                When = DateTime.UtcNow
             };
+
+            PrevStates.LimitedSizeEnqueue(transition, 5);
 
             CurrentState = state;
             
@@ -462,6 +468,8 @@ namespace Raven.Server.Rachis
                 }
             };
         }
+
+        public ConcurrentQueue<StateTransition> PrevStates { get; set; } = new ConcurrentQueue<StateTransition>();
 
         public void TakeOffice()
         {

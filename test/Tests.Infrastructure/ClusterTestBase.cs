@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Lucene.Net.Support;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
@@ -406,9 +407,27 @@ namespace Tests.Infrastructure
             }
             // ReSharper disable once PossibleNullReferenceException
             var condition = await leader.ServerStore.WaitForState(RachisConsensus.State.Leader).WaitAsync(numberOfNodes * ElectionTimeoutInMs * 5);
+            string states = string.Empty;
+            if (condition == false)
+            {
+                states = GetLastStatesFromAllServersOrderedByTime();
+            }
             Assert.True(condition,
-                "The leader has changed while waiting for cluster to become stable. Status: " + leader.ServerStore.ClusterStatus());
+                "The leader has changed while waiting for cluster to become stable. All nodes status: " + states);
             return leader;
+        }
+
+        private string GetLastStatesFromAllServersOrderedByTime()
+        {
+            List<(string tag, RachisConsensus.StateTransition transition)> states = new EquatableList<(string tag, RachisConsensus.StateTransition transition)>();
+            foreach (var s in Servers)
+            {
+                foreach (var state in s.ServerStore.Engine.PrevStates)
+                {
+                    states.Add((s.ServerStore.NodeTag, state));
+                }
+            }
+            return string.Join(Environment.NewLine, states.OrderBy(x => x.transition.When).Select(x=>$"{x.tag}-term{x.Item2.CurrentTerm}:{x.Item2.From}=>{x.Item2.To} at {x.Item2.When:o} because {x.Item2.Reason}"));
         }
 
         public async Task WaitForLeader(TimeSpan timeout)
@@ -466,7 +485,7 @@ namespace Tests.Infrastructure
         }
 
         public override void Dispose()
-        {
+        {           
             foreach (var disposable in _toDispose)
                 disposable.Dispose();
 
