@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Versioning
         public static readonly Slice AllRevisionsEtagsSlice;
         private static readonly Slice CollectionRevisionsEtagsSlice;
         private static readonly Slice RevisionsCountSlice;
-        private static readonly Slice ZombiedRevisionSlice;
+        private static readonly Slice DeleteRevisionSlice;
 
         private static readonly TableSchema DocsSchema;
 
@@ -79,8 +79,8 @@ namespace Raven.Server.Documents.Versioning
             Slice.From(StorageEnvironment.LabelsContext, "AllRevisionsEtags", ByteStringType.Immutable, out AllRevisionsEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "CollectionRevisionsEtags", ByteStringType.Immutable, out CollectionRevisionsEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "RevisionsCount", ByteStringType.Immutable, out RevisionsCountSlice);
-            var zombiedRevision = DocumentFlags.ZombiedRevision;
-            Slice.From(StorageEnvironment.LabelsContext, (byte*)&zombiedRevision, sizeof(DocumentFlags), ByteStringType.Immutable, out ZombiedRevisionSlice);
+            var deleteRevision = DocumentFlags.DeleteRevision;
+            Slice.From(StorageEnvironment.LabelsContext, (byte*)&deleteRevision, sizeof(DocumentFlags), ByteStringType.Immutable, out DeleteRevisionSlice);
 
             DocsSchema = new TableSchema();
             DocsSchema.DefineKey(new TableSchema.SchemaIndexDef
@@ -379,7 +379,7 @@ namespace Raven.Server.Documents.Versioning
                             tbv.Add(newEtagSwapBytes);
                             tbv.Add(idPtr);
                             tbv.Add(null, 0);
-                            tbv.Add((int)DocumentFlags.ZombiedRevision);
+                            tbv.Add((int)DocumentFlags.DeleteRevision);
                             tbv.Add(newEtagSwapBytes);
                             tbv.Add(lastModifiedTicks);
                             table.Set(tbv);
@@ -467,7 +467,7 @@ namespace Raven.Server.Documents.Versioning
             using (GetZombiedRevisionKey(context, startEtag, out Slice zombiedKey))
             {
                 var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
-                foreach (var tvr in table.SeekBackwardFrom(DocsSchema.Indexes[FlagsAndEtagSlice], ZombiedRevisionSlice, zombiedKey))
+                foreach (var tvr in table.SeekBackwardFrom(DocsSchema.Indexes[FlagsAndEtagSlice], DeleteRevisionSlice, zombiedKey))
                 {
                     if (take-- <= 0)
                         yield break;
@@ -499,7 +499,7 @@ namespace Raven.Server.Documents.Versioning
                 var etag = DocumentsStorage.TableValueToEtag((int)Columns.Etag, ref tvr.Reader);
                 var flags = DocumentsStorage.TableValueToFlags((int)Columns.Flags, ref tvr.Reader);
                 Debug.Assert(zombiedEtag <= etag, "Zombied etag candidate cannot meet a bigger etag.");
-                return flags == DocumentFlags.ZombiedRevision && zombiedEtag >= etag;
+                return flags == DocumentFlags.DeleteRevision && zombiedEtag >= etag;
             }
         }
 
@@ -508,7 +508,7 @@ namespace Raven.Server.Documents.Versioning
         {
             var scope = context.Allocator.Allocate(sizeof(DocumentFlags) + sizeof(long), out ByteString keyMem);
 
-            var zombiedRevision = DocumentFlags.ZombiedRevision;
+            var zombiedRevision = DocumentFlags.DeleteRevision;
             Memory.Copy(keyMem.Ptr, (byte*)&zombiedRevision, sizeof(DocumentFlags));
 
             var swapBytesEtag = Bits.SwapBytes(etag);
