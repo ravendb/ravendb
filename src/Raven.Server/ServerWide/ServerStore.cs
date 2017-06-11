@@ -216,9 +216,25 @@ namespace Raven.Server.ServerWide
             var path = Configuration.Core.DataDirectory.Combine("System");
             var storeAlertForLateRaise = new List<AlertRaised>();
 
-            var options = Configuration.Core.RunInMemory
-                ? StorageEnvironmentOptions.CreateMemoryOnly()
-                : StorageEnvironmentOptions.ForPath(path.FullPath);
+            StorageEnvironmentOptions options;
+            if (Configuration.Core.RunInMemory)
+            {
+                options = StorageEnvironmentOptions.CreateMemoryOnly();
+            }
+            else
+            {
+                options = StorageEnvironmentOptions.ForPath(path.FullPath);
+                var secretKey = Path.Combine(path.FullPath, "secret.key.encrypted");
+                if (File.Exists(secretKey))
+                {
+                    var buffer = File.ReadAllBytes(secretKey);
+                    var secret = new byte[buffer.Length - 32];
+                    var entropy = new byte[32];
+                    Array.Copy(buffer, 0, secret, 0, buffer.Length - 32);
+                    Array.Copy(buffer, buffer.Length - 32, entropy, 0, 32);
+                    options.MasterKey = SecretProtection.Unprotect(secret, entropy);
+                }
+            }
 
             options.OnNonDurableFileSystemError += (obj, e) =>
             {
