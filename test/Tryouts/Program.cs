@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Documents.Notifications;
 using FastTests.Server.Documents.Versioning;
 using FastTests.Server.Replication;
+using FastTests.Smuggler;
 using Raven.Server.Utils;
 using Raven.Client.Documents;
 using RachisTests;
@@ -22,9 +23,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var test = new Versioning())
+                using (var test = new SmugglerApiTests())
                 {
-                    test.GetZombiedRevisions().Wait();
+                    test.CanExportAndImportWithRevisionDocuments().Wait();
                 }
             }
         }
