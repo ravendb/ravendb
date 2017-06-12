@@ -442,7 +442,17 @@ namespace Raven.Server.Rachis
             {
                 if (tx is LowLevelTransaction llt && llt.Committed)
                 {
-                    StateChanged?.Invoke(this, transition);
+                    try
+                    {
+                        StateChanged?.Invoke(this, transition);
+                    }
+                    catch (Exception e)
+                    {
+                        if (Log.IsInfoEnabled)
+                        {
+                            Log.Info("State change invocation function failed.", e);
+                        }
+                    }
 
                     TaskExecutor.CompleteReplaceAndExecute(ref _stateChanged, () =>
                     {
