@@ -295,6 +295,27 @@ class branchPageItem extends pageItem {
 
 }
 
+class aggregatedLeafPageItem extends layoutableItem {
+
+    parentPage?: branchPageItem;
+    aggregationCount: number;
+
+    constructor(parentPage: branchPageItem, aggregationCount: number) {
+        super();
+        this.parentPage = parentPage;
+        this.aggregationCount = aggregationCount;
+    }
+
+    layout() {
+        this.width = 200;
+        this.height = 40;
+    }
+
+    getSourceConnectionPoint(): [number, number] {
+        return [this.x + this.width / 2, this.y];
+    }
+}
+
 class reduceTreeItem {
     private tree: Raven.Server.Documents.Indexes.Debugging.ReduceTree;
 
@@ -303,7 +324,7 @@ class reduceTreeItem {
     displayName: string;
     depth: number;
     itemsCountAtDepth: Array<number>; // this represents non-filtered count
-    itemsAtDepth = new Map<number, Array<pageItem>>(); // items after filtering depth -> list of items
+    itemsAtDepth = new Map<number, Array<pageItem | aggregatedLeafPageItem>>(); // items after filtering depth -> list of items
 
     constructor(tree: Raven.Server.Documents.Indexes.Debugging.ReduceTree) {
         this.tree = tree;
@@ -347,8 +368,6 @@ class reduceTreeItem {
 
             const items = this.itemsAtDepth.get(depth);
 
-            //TODO: can we have both in simple pages?
-
             if (node.Children) {
                 const item = new branchPageItem(parentPage, node.PageNumber, node.AggregationResult);
                 items.push(item);
@@ -368,6 +387,48 @@ class reduceTreeItem {
         };
 
         filterAtDepth(0, this.tree.Root, null);
+        this.collapseNonRelevantPages();
+    }
+
+    private collapseNonRelevantPages() {
+        const relevantPageNumbersPerLevel = [] as Array<Array<number>>;
+
+        let relevantNodes = this.itemsAtDepth
+            .get(this.depth - 1)
+            .filter((x: leafPageItem) => _.some(x.entries, (e: layoutableItem) => (e instanceof entryItem) && e.source));
+
+        relevantPageNumbersPerLevel.unshift(relevantNodes.map((x: pageItem) => x.pageNumber));
+
+        for (let i = 0; i < this.depth - 1; i++) {
+            relevantNodes = _.uniq(relevantNodes.map((x: pageItem) => x.parentPage));
+            relevantPageNumbersPerLevel.unshift(relevantNodes.map((x: pageItem) => x.pageNumber));
+        }
+
+        for (let i = 0; i < this.depth; i++) {
+            const levelItems = this.itemsAtDepth.get(i);
+            const relevantPageNumbers = relevantPageNumbersPerLevel[i];
+
+            const collapsedItems = [] as Array<pageItem | aggregatedLeafPageItem>;
+            let currentAggregation: aggregatedLeafPageItem = null;
+
+            for (let j = 0; j < levelItems.length; j++) {
+                const item = levelItems[j] as pageItem;
+                if (_.includes(relevantPageNumbers, item.pageNumber)) {
+                    currentAggregation = null;
+                    collapsedItems.push(item);
+                } else {
+                    if (currentAggregation && currentAggregation.parentPage === item.parentPage) {
+                        currentAggregation.aggregationCount += 1;
+                    } else {
+                        currentAggregation = new aggregatedLeafPageItem(item.parentPage, 1);
+                        collapsedItems.push(currentAggregation);
+                    }
+                }
+            }
+
+            this.itemsAtDepth.set(i, collapsedItems);
+        }
+
     }
 
     private layout(): number {
@@ -377,12 +438,18 @@ class reduceTreeItem {
 
         const lastLevelItems = this.itemsAtDepth.get(this.depth - 1);
 
-        /*
         // make all items at last level at the same size
         const maxWidth = d3.max(lastLevelItems, x => x.width);
         for (let i = 0; i < lastLevelItems.length; i++) {
-            lastLevelItems[i].width = maxWidth;
-        }*/
+            const item = lastLevelItems[i] as leafPageItem;
+            item.width = maxWidth;
+
+            if (item.entries) {
+                for (let j = 0; j < item.entries.length; j++) {
+                    item.entries[j].width = item.width - 2 * pageItem.margins.entryTextPadding;
+                }
+            }
+        }
 
         this.totalWidth = lastLevelItems.reduce((p, c) => p + c.width, 0)
             + (lastLevelItems.length + 1) * pageItem.margins.betweenPagesMinWidth;
@@ -420,7 +487,6 @@ class reduceTreeItem {
         return yStart;
     }
 }
-
 
 class visualizerGraphDetails {
 
@@ -665,7 +731,11 @@ class visualizerGraphDetails {
         tree.itemsAtDepth.forEach(pages => {
             for (let i = 0; i < pages.length; i++) {
                 const page = pages[i];
-                this.drawPage(ctx, page);
+                if (page instanceof pageItem) {
+                    this.drawPage(ctx, page);
+                } else {
+                    this.drawAggregationPage(ctx, page as aggregatedLeafPageItem);
+                }
 
                 if (page.parentPage) {
                     ctx.strokeStyle = "#686f6f";
@@ -726,6 +796,25 @@ class visualizerGraphDetails {
                 this.drawEntries(ctx, page);
             }
             
+        } finally {
+            ctx.restore();
+        }
+    }
+
+    private drawAggregationPage(ctx: CanvasRenderingContext2D, page: aggregatedLeafPageItem) {
+        ctx.fillStyle = "#3a4242";
+        ctx.fillRect(page.x, page.y, page.width, page.height);
+
+        ctx.save();
+        ctx.translate(page.x, page.y);
+        try {
+
+            ctx.font = "11px Lato";
+            ctx.fillStyle = "#a9adad";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "top";
+            ctx.fillText("Aggregation of " + page.aggregationCount + " trees", page.width / 2, pageItem.margins.pageNumberTopMargin);
+
         } finally {
             ctx.restore();
         }

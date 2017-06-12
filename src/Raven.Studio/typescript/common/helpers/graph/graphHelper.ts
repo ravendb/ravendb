@@ -80,7 +80,7 @@ class graphHelper {
 
     /**
      * Divide elements
-     * Ex. For Total width = 100, eleemntWidth = 20, elements = 2
+     * Ex. For Total width = 100, elementWidth = 20, elements = 2
      * We have:
      * | 20px padding | 20px element | 20px padding | 20px element | 20px padding |
      * So elements width stays the same and padding is divided equally,
