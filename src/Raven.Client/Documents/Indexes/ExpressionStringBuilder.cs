@@ -1516,8 +1516,10 @@ namespace Raven.Client.Documents.Indexes
                             _castLambdas = false;
                             break;
                     }
+
                     var oldAvoidDuplicateParameters = _avoidDuplicatedParameters;
-                    if (node.Method.Name == "Select" || node.Method.Name == "SelectMany")
+                    _isSelectMany = node.Method.Name == "SelectMany";
+                    if (node.Method.Name == "Select" || _isSelectMany)
                     {
                         _avoidDuplicatedParameters = true;
                     }
@@ -1899,7 +1901,9 @@ namespace Raven.Client.Documents.Indexes
             "volatile",
             "while"
         });
+
         private bool _avoidDuplicatedParameters;
+        private bool _isSelectMany;
 
         /// <summary>
         ///   Visits the <see cref = "T:System.Linq.Expressions.ParameterExpression" />.
@@ -1920,12 +1924,13 @@ namespace Raven.Client.Documents.Indexes
                 return node;
             }
 
-
             var name = node.Name;
             if (_avoidDuplicatedParameters)
             {
                 object other;
-                if (_duplicatedParams.TryGetValue(name, out other) && ReferenceEquals(other, node) == false)
+                if (_isSelectMany == false &&
+                    _duplicatedParams.TryGetValue(name, out other) && 
+                    ReferenceEquals(other, node) == false)
                 {
                     name += GetParamId(node);
                     _duplicatedParams[name] = node;
