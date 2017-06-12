@@ -53,13 +53,21 @@ namespace FastTests.Client.Subscriptions
                     concurrentSubscription.Subscribe(users.Add);
                     concurrentSubscription.Start();
                 });
-                thread.Start();
-                Assert.Throws(typeof(AggregateException), () => subscription.SubscriptionLifetimeTask.Wait(_reasonableWaitTime));
 
-                Assert.True(subscription.SubscriptionLifetimeTask.IsFaulted);
+                try
+                {
+                    thread.Start();
 
-                Assert.Equal(typeof(SubscriptionInUseException), subscription.SubscriptionLifetimeTask.Exception.InnerException.GetType());
+                    Assert.Throws(typeof(AggregateException), () => subscription.SubscriptionLifetimeTask.Wait(_reasonableWaitTime));
 
+                    Assert.True(subscription.SubscriptionLifetimeTask.IsFaulted);
+
+                    Assert.Equal(typeof(SubscriptionInUseException), subscription.SubscriptionLifetimeTask.Exception.InnerException.GetType());
+                }
+                finally
+                {
+                    thread.Join();
+                }
             }
         }
 
@@ -135,7 +143,7 @@ namespace FastTests.Client.Subscriptions
                 Assert.True(users.TryTake(out User, _reasonableWaitTime));
 
 
-                
+
 
                 store.Subscriptions.Delete(subscriptionId);
                 beforeAckMre.Set();
@@ -184,9 +192,16 @@ namespace FastTests.Client.Subscriptions
                     Thread.Sleep(400);
                     store.Subscriptions.Delete(subscriptionId);
                 });
-                thread.Start();
 
-                Assert.True(mre.WaitOne(_reasonableWaitTime));
+                try
+                {
+                    thread.Start();
+                    Assert.True(mre.WaitOne(_reasonableWaitTime));
+                }
+                finally
+                {
+                    thread.Join();
+                }
             }
         }
 
