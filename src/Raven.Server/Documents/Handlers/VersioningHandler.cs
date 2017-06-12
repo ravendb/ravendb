@@ -14,6 +14,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -22,15 +23,13 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/versioning/config", "GET")]
         public Task GetVersioningConfig()
         {
-            TransactionOperationContext context;
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var databaseRecord = Server.ServerStore.Cluster.ReadDatabase(context, Database.Name);
                 var versioningConfig = databaseRecord?.Versioning;
                 if (versioningConfig != null)
                 {
-
                     var versioningCollection = new DynamicJsonValue();
                     foreach (var collection in versioningConfig.Collections)
                     {
@@ -109,29 +108,29 @@ namespace Raven.Server.Documents.Handlers
 
                 var start = GetStart();
                 var pageSize = GetPageSize();
-                var result = versioningStorage.GetRevisions(context, id, start, pageSize);
-                var revisions = result.Revisions;
+                var revisions = versioningStorage.GetRevisions(context, id, start, pageSize);
 
-                var actualEtag = revisions.Length == 0 ? -1 : revisions[0].Etag;
+                var actualEtag = revisions.Revisions.Length == 0 ? -1 : revisions.Revisions[0].Etag;
+
                 if (GetLongFromHeaders("If-None-Match") == actualEtag)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                     return Task.CompletedTask;
                 }
 
-                HttpContext.Response.Headers["ETag"] = actualEtag.ToString();
+                HttpContext.Response.Headers["ETag"] = "\"" + actualEtag + "\"";
 
                 int count;
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
-                    writer.WriteDocuments(context, revisions, metadataOnly, out count);
+                    writer.WriteDocuments(context, revisions.Revisions, metadataOnly, out count);
 
                     writer.WriteComma();
 
                     writer.WritePropertyName("TotalResults");
-                    writer.WriteInteger(result.Count);
+                    writer.WriteInteger(revisions.Count);
                     writer.WriteEndObject();
                 }
 
@@ -148,21 +147,20 @@ namespace Raven.Server.Documents.Handlers
             if (versioningStorage.Configuration == null)
                 throw new VersioningDisabledException();
 
+            var etag = GetLongQueryString("etag");
+            var pageSize = GetPageSize();
+
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
+            using (versioningStorage.GetZombiedRevisionsEtag(context, etag, out Slice zombiedKey, out long actualEtag))
             {
-                var etag = GetLongQueryString("etag");
-                var pageSize = GetPageSize(); // TODO: limit page size. By default it is int.MaxValue!
-                var revisions = versioningStorage.GetZombiedRevisions(context, etag, pageSize).ToArray();
-
-                var actualEtag = revisions.Length == 0 ? -1 : revisions[0].Etag;
                 if (GetLongFromHeaders("If-None-Match") == actualEtag)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                     return Task.CompletedTask;
                 }
 
-                HttpContext.Response.Headers["ETag"] = actualEtag.ToString();
+                HttpContext.Response.Headers["ETag"] = "\"" + actualEtag + "\"";
 
                 int count;
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -170,12 +168,13 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteStartObject();
 
                     writer.WritePropertyName("Results");
+                    var revisions = versioningStorage.GetZombiedRevisions(context, zombiedKey, pageSize);
                     writer.WriteDocuments(context, revisions, false, out count);
 
                     writer.WriteEndObject();
                 }
 
-                AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisions), count, pageSize);
+                AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetZombiedRevisions), count, pageSize);
             }
 
             return Task.CompletedTask;

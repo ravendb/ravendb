@@ -1227,9 +1227,8 @@ namespace Raven.Server.Documents
 
         public long GetNumberOfDocuments()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            using (var tx = context.OpenReadTransaction())
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
                 return GetNumberOfDocuments(context);
         }
 
