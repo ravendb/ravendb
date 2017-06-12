@@ -97,8 +97,8 @@ class entryItem extends layoutableItem {
         this.dataAsString = reduceValuesFormatter.formatData(data);
     }
 
-    static estimateTextWidth(text: string) {
-        return text.length * 6;
+    static estimateTextWidth(textLength: number) {
+        return textLength * 5.7;
     }
 
     getGlobalTargetConnectionPoint(): [number, number] {
@@ -157,8 +157,9 @@ abstract class pageItem extends layoutableItem {
             + pageItem.margins.bottomPadding;
 
         const longestTextWidth = pageItem.estimateAggregationTextWidth(this.findLongestAggregationTextLength());
+        const pageNumberWidth = pageItem.estimatePageNumberTextWidth(this.pageNumber);
 
-        this.width = pageItem.margins.aggragationTextHorizontalPadding + longestTextWidth + pageItem.margins.aggragationTextHorizontalPadding;
+        this.width = pageItem.margins.aggragationTextHorizontalPadding + longestTextWidth + pageItem.margins.aggragationTextHorizontalPadding + pageNumberWidth + pageItem.margins.aggragationTextHorizontalPadding;
     }
 
     private findLongestAggregationTextLength(): number {
@@ -176,6 +177,11 @@ abstract class pageItem extends layoutableItem {
 
     private static estimateAggregationTextWidth(textLength: number) {
         return textLength * 6;
+    }
+
+    private static estimatePageNumberTextWidth(pageNumber: number) {
+        const textLength = 1 /* hash sign */ + pageNumber.toString().length;
+        return textLength * 14;
     }
 
     getSourceConnectionPoint(): [number, number] {
@@ -205,13 +211,11 @@ class leafPageItem extends pageItem {
     layout() {
         super.layout();
 
-        const entriesData = this.entries
+        const longestTextLength = _.max(this.entries
             .filter(x => x instanceof entryItem)
-            .map(x => (x as entryItem).dataAsString)
-            .sort((a, b) => a.length > b.length ? -1 : 1);
+            .map(x => (x as entryItem).dataAsString.length));
 
-        const longestText = entriesData[0];
-        const longestTextWidth = longestText ? entryItem.estimateTextWidth(longestText) : entryPaddingItem.margins.minWidth;
+        const longestTextWidth = longestTextLength ? entryItem.estimateTextWidth(longestTextLength) : entryPaddingItem.margins.minWidth;
 
         const entriesWidth = pageItem.margins.horizonalPadding + pageItem.margins.entryTextPadding + longestTextWidth + pageItem.margins.entryTextPadding + pageItem.margins.horizonalPadding;
         this.width = Math.max(entriesWidth, this.width);
@@ -221,13 +225,13 @@ class leafPageItem extends pageItem {
         this.entriesTextY = this.height;
 
         let yStart = this.height + pageItem.margins.entriesAndAggregationTextHeight;
-        let yOffset = pageItem.margins.betweenEntryPadding + pageItem.margins.entryHeight;
+        const yOffset = pageItem.margins.betweenEntryPadding + pageItem.margins.entryHeight;
 
         for (let i = 0; i < this.entries.length; i++) {
             const entry = this.entries[i];
             entry.x = pageItem.margins.horizonalPadding;
             entry.y = yStart;
-            entry.width = longestTextWidth + 2 * pageItem.margins.entryTextPadding;
+            entry.width = this.width - 2 * pageItem.margins.entryTextPadding;
             entry.height = pageItem.margins.entryHeight;
 
             yStart += yOffset;
@@ -239,8 +243,6 @@ class leafPageItem extends pageItem {
     }
 
     static findEntries(documents: documentItem[], entries: Array<Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf>) {
-        const documentNames = documents.map(x => x.name);
-
         let hasAnySource = false;
 
         // get elements with source and one before and ahead
@@ -290,14 +292,13 @@ class branchPageItem extends pageItem {
     constructor(parentPage: branchPageItem, pageNumber: number, aggregationResult: any) {
         super(parentPage, pageNumber, aggregationResult);
     }
-    
+
 }
 
 class reduceTreeItem {
     private tree: Raven.Server.Documents.Indexes.Debugging.ReduceTree;
 
     totalWidth: number;
-    totalHeigh: number;
 
     displayName: string;
     depth: number;
@@ -370,17 +371,18 @@ class reduceTreeItem {
     }
 
     private layout(): number {
-        this.itemsAtDepth.forEach((pages, depth) => {
+        this.itemsAtDepth.forEach((pages) => {
             pages.forEach(page => page.layout());
         });
 
         const lastLevelItems = this.itemsAtDepth.get(this.depth - 1);
 
+        /*
         // make all items at last level at the same size
         const maxWidth = d3.max(lastLevelItems, x => x.width);
         for (let i = 0; i < lastLevelItems.length; i++) {
             lastLevelItems[i].width = maxWidth;
-        }
+        }*/
 
         this.totalWidth = lastLevelItems.reduce((p, c) => p + c.width, 0)
             + (lastLevelItems.length + 1) * pageItem.margins.betweenPagesMinWidth;
@@ -451,7 +453,7 @@ class visualizerGraphDetails {
 
     private trees: Raven.Server.Documents.Indexes.Debugging.ReduceTree[];
     private currentTreeIndex = 0;
-    private currentTree: reduceTreeItem;
+    private currentTree = ko.observable<reduceTreeItem>();
 
     private currentLineOffset = 0;
     private connectionsBaseY = 0;
@@ -522,7 +524,7 @@ class visualizerGraphDetails {
 
     setDocumentsColors(documentsColorsSetup: Array<documentColorPair>) {
         for (let i = 0; i < documentsColorsSetup.length; i++) {
-            let documentItem = this.documents.find((d) => d.name === documentsColorsSetup[i].docName);
+            const documentItem = this.documents.find((d) => d.name === documentsColorsSetup[i].docName);
             documentItem.color = documentsColorsSetup[i].docColor;
         }
     }
@@ -556,18 +558,18 @@ class visualizerGraphDetails {
 
         const treeIdx = this.trees.findIndex(x => x.Name === treeName);
         this.currentTreeIndex = treeIdx;
-        this.currentTree = new reduceTreeItem(this.trees[this.currentTreeIndex]); //TODO: consider moving this to layout?
+        this.currentTree(new reduceTreeItem(this.trees[this.currentTreeIndex])); //TODO: consider moving this to layout?
 
         this.layout();
 
-        const initialTranslation: [number, number] = [this.totalWidth / 2 - this.currentTree.totalWidth / 2, 0];
+        const initialTranslation: [number, number] = [this.totalWidth / 2 - this.currentTree().totalWidth / 2, 0];
         this.zoom.translate(initialTranslation).scale(1).event(this.canvas);
 
         this.draw();
     }
 
     private layout() {
-        let yStart = this.currentTree.filterAndLayoutVisibleItems(this.documents);
+        let yStart = this.currentTree().filterAndLayoutVisibleItems(this.documents);
 
         const visibleDocuments = this.getVisibleDocuments();
 
@@ -607,10 +609,10 @@ class visualizerGraphDetails {
 
         let extraItemPadding = 0;
 
-        if (totalWidth > this.currentTree.totalWidth) {
+        if (totalWidth > this.currentTree().totalWidth) {
             //TODO: handle me!
         } else {
-            extraItemPadding = (this.currentTree.totalWidth - totalWidth) / (visibleDocuments.length + 1);
+            extraItemPadding = (this.currentTree().totalWidth - totalWidth) / (visibleDocuments.length + 1);
         }
 
         // if there are many documents to draw than we better start with a lower y coordinate
@@ -641,8 +643,8 @@ class visualizerGraphDetails {
             ctx.translate(translation[0], translation[1]);
             ctx.scale(this.zoom.scale(), this.zoom.scale());
 
-            if (this.currentTree) {
-                this.drawTree(ctx, this.currentTree);
+            if (this.currentTree()) {
+                this.drawTree(ctx, this.currentTree());
             }
 
             const visibleDocuments = this.getVisibleDocuments();
@@ -746,7 +748,7 @@ class visualizerGraphDetails {
             ctx.font = "12px Lato";
             if (entry instanceof entryPaddingItem) {
                 ctx.textAlign = "center";
-                ctx.fillText("...", entry.x + entry.width / 2, entry.y);
+                ctx.fillText(". . .", entry.x + entry.width / 2, entry.y);
             } else {
                 const castedEntry = entry as entryItem;
                 ctx.textAlign = "left";
