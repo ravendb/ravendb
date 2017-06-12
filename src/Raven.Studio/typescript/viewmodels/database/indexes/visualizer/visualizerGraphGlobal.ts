@@ -201,6 +201,7 @@ class reduceTreeItem {
     }
 
     private layout() {
+        this.totalLeavesNumberWidth = visualizerGraphGlobal.totalEntriesWidth(_.max(this.itemsCountAtDepth));
         this.calculateTreeDimensions();
 
         const maxItems = this.getMaxItems();
@@ -213,8 +214,6 @@ class reduceTreeItem {
         const yOffset = pageItem.pageHeight +
             reduceTreeItem.margins.betweenPagesVerticalPadding;
 
-        this.totalLeavesNumberWidth = visualizerGraphGlobal.totalEntriesWidth(_.max(this.itemsCountAtDepth));
-
         for (let depth = 0; depth < this.depth; depth++) {
             const items = this.itemsAtDepth.get(depth);
 
@@ -226,7 +225,7 @@ class reduceTreeItem {
             const xOffset = startAndOffset.offset;
 
             let xStart = reduceTreeItem.margins.treeMargin +
-                visualizerGraphGlobal.totalEntriesWidth(maxItems) +
+                this.totalLeavesNumberWidth +
                 reduceTreeItem.margins.treeMargin +
                 this.extraLeftPadding +
                 startAndOffset.start;
@@ -317,7 +316,7 @@ type rTreeLeaf = {
     minY: number;
     maxX: number;
     maxY: number;
-    actionType: "pageClicked" | "trashClicked";
+    actionType: "reduceTreeClicked" | "trashClicked";
     arg: reduceTreeItem | documentItem;
 }
 
@@ -325,25 +324,30 @@ class hitTest {
 
     cursor = ko.observable<string>("auto");
     private mouseDown = false;
+    private currentPage: reduceTreeItem = null;
 
     private rTree = rbush<rTreeLeaf>();
 
-    private onPageClicked: (item: reduceTreeItem) => void;
+    private onReduceTreeClicked: (item: reduceTreeItem) => void;
     private onTrashClicked: (item: documentItem) => void;
+    private onReduceTreeEnter: (item: reduceTreeItem) => void;
+    private onReduceTreeExit: (item: reduceTreeItem) => void;
 
-    init(onPageClicked: (item: reduceTreeItem) => void, onTrashClicked: (item: documentItem) => void) {
-        this.onPageClicked = onPageClicked;
+    init(onReduceTreeClicked: (item: reduceTreeItem) => void, onTrashClicked: (item: documentItem) => void, onReduceTreeEnter: (item: reduceTreeItem) => void, onReduceTreeExit: (item: reduceTreeItem) => void) {
+        this.onReduceTreeClicked = onReduceTreeClicked;
         this.onTrashClicked = onTrashClicked;
+        this.onReduceTreeEnter = onReduceTreeEnter;
+        this.onReduceTreeExit = onReduceTreeExit;
     }
 
-    registerPage(page: reduceTreeItem) {
+    registerReduceTree(tree: reduceTreeItem) {
         this.rTree.insert({
-            minX: page.x,
-            maxX: page.x + page.width,
-            minY: page.y,
-            maxY: page.y + page.height,
-            actionType: "pageClicked",
-            arg: page
+            minX: tree.x,
+            maxX: tree.x + tree.width,
+            minY: tree.y,
+            maxY: tree.y + tree.height,
+            actionType: "reduceTreeClicked",
+            arg: tree
         } as rTreeLeaf);
     }
 
@@ -366,12 +370,28 @@ class hitTest {
     onMouseMove(location: [number, number]) {
         const items = this.findItems(location[0], location[1]);
 
-        if (items.filter(x => x.actionType === "pageClicked").length > 0) {
+        const tree = items.find(x => x.actionType === "reduceTreeClicked");
+
+        if (tree) {
             this.cursor(this.mouseDown ? graphHelper.prefixStyle("grabbing") : "pointer");
-        } else if (items.filter(x => x.actionType === "trashClicked").length > 0) {
-            this.cursor(this.mouseDown ? graphHelper.prefixStyle("grabbing") : "pointer");
+
+            const reduceTree = tree.arg as reduceTreeItem;
+            if (this.currentPage !== reduceTree) {
+                this.onReduceTreeEnter(reduceTree);
+                this.currentPage = reduceTree;
+            }
+            
         } else {
-            this.cursor(graphHelper.prefixStyle(this.mouseDown ? "grabbing": "grab"));
+            if (this.currentPage) {
+                this.onReduceTreeExit(this.currentPage);
+                this.currentPage = null;
+            }
+
+            if (items.filter(x => x.actionType === "trashClicked").length > 0) {
+                this.cursor(this.mouseDown ? graphHelper.prefixStyle("grabbing") : "pointer");
+            } else {
+                this.cursor(graphHelper.prefixStyle(this.mouseDown ? "grabbing" : "grab"));
+            }
         }
     }
 
@@ -381,8 +401,8 @@ class hitTest {
         for (let i = 0; i < items.length; i++) {
             const item = items[i];
             switch (item.actionType) {
-                case "pageClicked":
-                    this.onPageClicked(item.arg as reduceTreeItem);
+                case "reduceTreeClicked":
+                    this.onReduceTreeClicked(item.arg as reduceTreeItem);
                     break;
                 case "trashClicked":
                     this.onTrashClicked(item.arg as documentItem);
@@ -444,6 +464,8 @@ class visualizerGraphGlobal {
     private canvas: d3.Selection<void>;
     private svg: d3.Selection<void>;
     private zoom: d3.behavior.Zoom<void>;
+    private currentReduceTreeHighlight: d3.Selection<void>;
+    private reduceTreeHighlightHandler: () => void = () => { };
 
     private dataWidth = 0; // total width of all virtual elements
     private dataHeight = 0; // total heigth of all virtual elements
@@ -452,6 +474,7 @@ class visualizerGraphGlobal {
     private yScale: d3.scale.Linear<number, number>;
 
     private goToDetailsCallback: (treeName: string) => void;
+    private goToDetailsAnimationInProgress = false;
     private deleteItemCallback: (item: documentItem) => void;
 
     addDocument(documentName: string) {
@@ -546,6 +569,12 @@ class visualizerGraphGlobal {
             .y(this.yScale)
             .on("zoom", () => this.onZoom());
 
+        this.currentReduceTreeHighlight = this.svg
+            .append("svg:rect")
+            .attr("class", "highlight")
+            .attr("fill", "white")
+            .style("opacity", 0);
+
         this.svg
             .append("svg:rect")
             .attr("class", "pane")
@@ -554,7 +583,7 @@ class visualizerGraphGlobal {
             .call(this.zoom)
             .call(d => this.setupEvents(d));
 
-        this.hitTest.init(item => this.onPageClicked(item), item => this.onTrashClicked(item));
+        this.hitTest.init(item => this.onReduceTreeClicked(item), item => this.onTrashClicked(item), item => this.onReduceTreeEnter(item), item => this.onReduceTreeExit(item));
     }
 
     getDocumentsColors(): Array<documentColorPair> {
@@ -593,7 +622,8 @@ class visualizerGraphGlobal {
             });
     }
 
-    private onPageClicked(item: reduceTreeItem) {
+    private onReduceTreeClicked(item: reduceTreeItem) {
+        this.goToDetailsAnimationInProgress = true;
         this.saveCurrentZoom();
 
         const requestedScale = Math.min(this.totalWidth / item.width, this.totalHeight / item.height);
@@ -601,6 +631,11 @@ class visualizerGraphGlobal {
         const extraXOffset = (this.totalWidth - requestedScale * item.width) / 2;
 
         const requestedTranslation: [number, number] = [-item.x * requestedScale + extraXOffset, -item.y * requestedScale];
+
+        this.currentReduceTreeHighlight
+            .style("opacity", 0);
+        this.reduceTreeHighlightHandler = () => { };
+
 
         this.canvas
             .transition()
@@ -610,7 +645,41 @@ class visualizerGraphGlobal {
             .each("end", () => {
                 this.toggleUiElements(false);
                 this.goToDetailsCallback(item.name);
+                this.goToDetailsAnimationInProgress = false;
             });
+    }
+
+    private onReduceTreeEnter(item: reduceTreeItem) {
+        if (this.goToDetailsAnimationInProgress) {
+            return;
+        }
+
+        this.reduceTreeHighlightHandler = () => {
+            const [x1, y1] = [this.xScale(item.x), this.yScale(item.y)];
+            const [x2, y2] = [this.xScale(item.x + item.width), this.yScale(item.y + item.height)];
+
+            this.currentReduceTreeHighlight
+                .attr("width", x2 - x1)
+                .attr("height", y2 - y1)
+                .attr("x", x1)
+                .attr("y", y1)
+                .transition()
+                .duration(200)
+                .style("opacity", 0.1);
+        }
+
+        this.reduceTreeHighlightHandler();
+    }
+
+    private onReduceTreeExit(item: reduceTreeItem) {
+        this.reduceTreeHighlightHandler = () => {
+            this.currentReduceTreeHighlight
+                .transition()
+                .duration(200)
+                .style("opacity", 0);
+        }
+
+        this.reduceTreeHighlightHandler();
     }
 
     restoreView() {
@@ -627,6 +696,7 @@ class visualizerGraphGlobal {
         this.savedZoomStatus.scale = this.zoom.scale();
         this.savedZoomStatus.translate = this.zoom.translate();
     }
+
 
     private onClick() {
         if ((d3.event as any).defaultPrevented) {
@@ -757,7 +827,7 @@ class visualizerGraphGlobal {
         this.hitTest.reset();
 
         for (let i = 0; i < this.reduceTrees.length; i++) {
-            this.hitTest.registerPage(this.reduceTrees[i]);
+            this.hitTest.registerReduceTree(this.reduceTrees[i]);
         }
 
         for (let i = 0; i < this.documents.length; i++) {
@@ -787,6 +857,7 @@ class visualizerGraphGlobal {
 
         this.drawDocumentConnections(ctx);
         ctx.restore();
+        this.reduceTreeHighlightHandler();
     }
 
     private drawTree(ctx: CanvasRenderingContext2D, tree: reduceTreeItem) {
@@ -955,8 +1026,8 @@ class visualizerGraphGlobal {
         ctx.fillText(docItem.name, docItem.x + (docItem.width - documentItem.margins.deleteAreaWidth) / 2 , docItem.y + docItem.height / 2);
         
         const offsetX = -5;
-        const offsetY = 7;
-        canvasIcons.cancel(ctx, docItem.x + docItem.width - documentItem.margins.deleteAreaWidth + offsetX, docItem.y + offsetY, 20);
+        const offsetY = 11;
+        canvasIcons.cancel(ctx, docItem.x + docItem.width - documentItem.margins.deleteAreaWidth + offsetX, docItem.y + offsetY, 16);
     }
 
     private toggleUiElements(show: boolean) {
