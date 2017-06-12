@@ -164,9 +164,24 @@ namespace FastTests.Client.Attachments
             }
         }
 
-        [Fact(Skip = "TODO")]
-        public void TwoAttachmentsWithTheSameName()
+        [Fact]
+        public void ThrowWhenTwoAttachmentsWithTheSameNameInSession()
         {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                using (var stream2 = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
+                {
+                    var user = new User { Name = "Fitzchak" };
+                    session.Store(user, "users/1");
+
+                    session.Advanced.StoreAttachment(user, "profile", stream, "image/png");
+
+                    var exception = Assert.Throws<InvalidOperationException>(() => session.Advanced.StoreAttachment(user, "profile", stream2));
+                    Assert.Equal("Can't store attachment profile of document users/1, there is a deferred command registered to create an attachment with the same name.", exception.Message);
+                }
+            }
         }
 
         [Fact]
