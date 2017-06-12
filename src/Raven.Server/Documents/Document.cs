@@ -41,8 +41,6 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static readonly DynamicJsonValue ZombiedRevision = new DynamicJsonValue();
-
         public void EnsureMetadata(DocumentsOperationContext context = null)
         {
             if (_metadataEnsured)
@@ -54,7 +52,7 @@ namespace Raven.Server.Documents
             if (Data == null)
             {
                 Debug.Assert(context != null);
-                Data = context.ReadObject(ZombiedRevision, nameof(ZombiedRevision));
+                Data = context.ReadObject(new DynamicJsonValue(), "ZombiedRevision");
                 Data.Modifications = new DynamicJsonValue(Data)
                 {
                     [Constants.Documents.Metadata.Key] = mutatedMetadata = new DynamicJsonValue()
