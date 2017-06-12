@@ -129,114 +129,114 @@ namespace Raven.Server.Documents
             }
 
             // Attachment etag should be generated before updating the document
-            var attachmenEtag = _documentsStorage.GenerateNextEtag();
+            var attachmentEtag = _documentsStorage.GenerateNextEtag();
 
-            DocumentIdWorker.GetSliceFromId(context, documentId, out Slice lowerDocumentId);
-
-            // This will validate that we cannot put an attachment on a conflicted document
-            var hasDoc = TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out TableValueReader tvr);
-            if (hasDoc == false)
-                throw new InvalidOperationException($"Cannot put attachment {name} on a non existent document '{documentId}'.");
-
-            DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice namePtr);
-            DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr);
-
-            using (Slice.From(context.Allocator, hash, out Slice base64Hash)) // Hash is a base64 string, so this is a special case that we do not need to escape
-            using (GetAttachmentKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash,
-                lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Document, null, out Slice keySlice))
+            using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice lowerDocumentId))
             {
-                Debug.Assert(base64Hash.Size == 44, $"Hash size should be 44 but was: {keySlice.Size}");
+                // This will validate that we cannot put an attachment on a conflicted document
+                var hasDoc = TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out TableValueReader tvr);
+                if (hasDoc == false)
+                    throw new InvalidOperationException($"Cannot put attachment {name} on a non existent document '{documentId}'.");
 
-                var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+                using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice namePtr))
+                using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
+                using (Slice.From(context.Allocator, hash, out Slice base64Hash)) // Hash is a base64 string, so this is a special case that we do not need to escape
+                using (GetAttachmentKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash,
+                    lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Document, null, out Slice keySlice))
                 {
-                    void SetTableValue(TableValueBuilder tbv)
-                    {
-                        tbv.Add(keySlice.Content.Ptr, keySlice.Size);
-                        tbv.Add(Bits.SwapBytes(attachmenEtag));
-                        tbv.Add(namePtr);
-                        tbv.Add(contentTypePtr);
-                        tbv.Add(base64Hash.Content.Ptr, base64Hash.Size);
-                        tbv.Add(context.GetTransactionMarker());
-                    }
+                    Debug.Assert(base64Hash.Size == 44, $"Hash size should be 44 but was: {keySlice.Size}");
 
-                    if (table.ReadByKey(keySlice, out TableValueReader oldValue))
+                    var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
                     {
-                        // This is an update to the attachment with the same stream and content type
-                        // Just updating the etag and casing of the name and the content type.
-
-                        if (expectedEtag != null)
+                        void SetTableValue(TableValueBuilder tbv)
                         {
-                            var oldEtag = DocumentsStorage.TableValueToEtag(1, ref oldValue);
-                            if (oldEtag != expectedEtag)
-                                throw new ConcurrencyException($"Attachment {name} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
-                                {
-                                    ActualETag = oldEtag,
-                                    ExpectedETag = expectedEtag ?? -1
-                                };
+                            tbv.Add(keySlice.Content.Ptr, keySlice.Size);
+                            tbv.Add(Bits.SwapBytes(attachmentEtag));
+                            tbv.Add(namePtr);
+                            tbv.Add(contentTypePtr);
+                            tbv.Add(base64Hash.Content.Ptr, base64Hash.Size);
+                            tbv.Add(context.GetTransactionMarker());
                         }
 
-                        using (table.Allocate(out TableValueBuilder tbv))
+                        if (table.ReadByKey(keySlice, out TableValueReader oldValue))
                         {
-                            SetTableValue(tbv);
-                            table.Update(oldValue.Id, tbv);
-                        }
-                    }
-                    else
-                    {
-                        var putStream = true;
+                            // This is an update to the attachment with the same stream and content type
+                            // Just updating the etag and casing of the name and the content type.
 
-                        // We already asserted that the document is not in conflict, so we might have just one partial key, not more.
-                        using (GetAttachmentPartialKey(context, keySlice, base64Hash.Size, lowerContentType.Size, out Slice partialKeySlice))
-                        {
-                            if (table.SeekOnePrimaryKeyPrefix(partialKeySlice, out TableValueReader partialTvr))
+                            if (expectedEtag != null)
                             {
-                                // Delete the attachment stream only if we have a different hash
-                                using (DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.Hash, ref partialTvr, out Slice existingHash))
-                                {
-                                    putStream = existingHash.Content.Match(base64Hash.Content) == false;
-                                    if (putStream)
+                                var oldEtag = DocumentsStorage.TableValueToEtag(1, ref oldValue);
+                                if (oldEtag != expectedEtag)
+                                    throw new ConcurrencyException($"Attachment {name} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
                                     {
-                                        using (DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType,
-                                            ref partialTvr, out Slice existingKey))
-                                        {
-                                            var existingEtag = DocumentsStorage.TableValueToEtag((int)AttachmentsTable.Etag, ref partialTvr);
-                                            DeleteInternal(context, existingKey, existingEtag, existingHash);
-                                        }
-                                    }
-                                }
+                                        ActualETag = oldEtag,
+                                        ExpectedETag = expectedEtag ?? -1
+                                    };
+                            }
 
-                                table.Delete(partialTvr.Id);
+                            using (table.Allocate(out TableValueBuilder tbv))
+                            {
+                                SetTableValue(tbv);
+                                table.Update(oldValue.Id, tbv);
                             }
                         }
-
-                        if (expectedEtag.HasValue && expectedEtag.Value != 0)
+                        else
                         {
-                            ThrowConcurrentExceptionOnMissingAttachment(documentId, name, expectedEtag.Value);
-                        }
+                            var putStream = true;
 
-                        using (table.Allocate(out TableValueBuilder tbv))
-                        {
-                            SetTableValue(tbv);
-                            table.Insert(tbv);
-                        }
+                            // We already asserted that the document is not in conflict, so we might have just one partial key, not more.
+                            using (GetAttachmentPartialKey(context, keySlice, base64Hash.Size, lowerContentType.Size, out Slice partialKeySlice))
+                            {
+                                if (table.SeekOnePrimaryKeyPrefix(partialKeySlice, out TableValueReader partialTvr))
+                                {
+                                    // Delete the attachment stream only if we have a different hash
+                                    using (DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.Hash, ref partialTvr, out Slice existingHash))
+                                    {
+                                        putStream = existingHash.Content.Match(base64Hash.Content) == false;
+                                        if (putStream)
+                                        {
+                                            using (DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType,
+                                                ref partialTvr, out Slice existingKey))
+                                            {
+                                                var existingEtag = DocumentsStorage.TableValueToEtag((int)AttachmentsTable.Etag, ref partialTvr);
+                                                DeleteInternal(context, existingKey, existingEtag, existingHash);
+                                            }
+                                        }
+                                    }
 
-                        if (putStream)
-                        {
-                            PutAttachmentStream(context, keySlice, base64Hash, stream);
+                                    table.Delete(partialTvr.Id);
+                                }
+                            }
+
+                            if (expectedEtag.HasValue && expectedEtag.Value != 0)
+                            {
+                                ThrowConcurrentExceptionOnMissingAttachment(documentId, name, expectedEtag.Value);
+                            }
+
+                            using (table.Allocate(out TableValueBuilder tbv))
+                            {
+                                SetTableValue(tbv);
+                                table.Insert(tbv);
+                            }
+
+                            if (putStream)
+                            {
+                                PutAttachmentStream(context, keySlice, base64Hash, stream);
+                            }
                         }
                     }
+
+                    _documentDatabase.Metrics.AttachmentPutsPerSecond.MarkSingleThreaded(1);
+
+                    // Update the document with an etag which is bigger than the attachmentEtag
+                    // We need to call this after we already put the attachment, so it can version also this attachment
+                    _documentsStorage.UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, tvr);
                 }
-
-                _documentDatabase.Metrics.AttachmentPutsPerSecond.MarkSingleThreaded(1);
-
-                // Update the document with an etag which is bigger than the attachmenEtag
-                // We need to call this after we already put the attachment, so it can version also this attachment
-                _documentsStorage.UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, tvr);
             }
 
             return new AttachmentDetails
             {
-                Etag = attachmenEtag,
+                Etag = attachmentEtag,
                 ContentType = contentType,
                 Name = name,
                 DocumentId = documentId,
@@ -294,16 +294,15 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void PutRevisionAttachment(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, 
+        private void PutRevisionAttachment(DocumentsOperationContext context, byte* lowerId, int lowerIdSize,
             ChangeVectorEntry[] changeVector, (LazyStringValue name, LazyStringValue contentType, Slice base64Hash) attachment)
         {
             var attachmentEtag = _documentsStorage.GenerateNextEtag();
 
-            DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.name, out Slice lowerName, out Slice namePtr);
-            DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.contentType, out Slice lowerContentType, out Slice contentTypePtr);
-
-            using (GetAttachmentKey(context, lowerId, lowerIdSize, lowerName.Content.Ptr, lowerName.Size, attachment.base64Hash, 
-                lowerContentType.Content.Ptr, lowerContentType.Size,  AttachmentType.Revision, changeVector, out Slice keySlice))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.name, out Slice lowerName, out Slice namePtr))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.contentType, out Slice lowerContentType, out Slice contentTypePtr))
+            using (GetAttachmentKey(context, lowerId, lowerIdSize, lowerName.Content.Ptr, lowerName.Size, attachment.base64Hash,
+                lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Revision, changeVector, out Slice keySlice))
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
                 using (table.Allocate(out TableValueBuilder tbv))
