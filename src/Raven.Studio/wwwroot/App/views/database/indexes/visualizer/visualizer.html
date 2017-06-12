@@ -66,13 +66,18 @@
         <button class="btn btn-default" type="button"><i class="icon-export"></i></button>
         <button class="btn btn-default" type="button"><i class="icon-key"></i></button>
             -->
+                
+                <div data-bind="visible: detailsGraph.viewActive">
+                    <button data-bind="click: detailsGraph.goToMasterView, if: detailsGraph.viewActive" class="btn btn-default">
+                        <i class="icon-arrow-left"></i> <span>Back</span>
+                    </button>
 
-                <button data-bind="click: detailsGraph.goToMasterView, visible: detailsGraph.viewActive" class="btn btn-default">&lt; Back</button>
-
+                    <span data-bind="if: detailsGraph.currentTree">Reduce tree for key: <span data-bind="text: detailsGraph.currentTree().displayName"></span></span>
+                </div>
 
             </div>
         </div>
-        <div class="flex-grow dynamic-container margin-top">
+        <div class="flex-grow dynamic-container">
             <div id="visualizerContainer">
 
             </div>
