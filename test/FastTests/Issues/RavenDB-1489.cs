@@ -1,25 +1,48 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace FastTests.Issues
 {
     public class RavenDB_1489 : RavenTestBase
     {
+        [Fact]
+        public void Querying_index_with_condtional_count_should_work()
+        {
+            var dataEntries = GenerateDataEntries();
+
+            using (var documentStore = GetDocumentStore())
+            {
+                new MapReduceIndexWithCountAndCondition().Execute(documentStore);
+
+                using (var session = documentStore.OpenSession())
+                {
+                    foreach (var entry in dataEntries)
+                        session.Store(entry);
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(documentStore);
+
+                using (var session = documentStore.OpenSession())
+                {
+                    var fetchedIndexedDocuments = session.Query<IndexEntry, MapReduceIndexWithCountAndCondition>().ToList();
+
+                    Assert.NotEmpty(fetchedIndexedDocuments);
+                }
+            }
+        }
+
         public class DataEntry
         {
             public string Id { get; set; }
 
             public int Property1 { get; set; }
-            
-            public IEnumerable<Tuple<int,int>> Property2 { get; set; }
 
+            public IEnumerable<Tuple<int, int>> Property2 { get; set; }
         }
 
         public class IndexEntry
@@ -37,12 +60,12 @@ namespace Raven.Tests.Issues
             {
                 Map = dataEntries => from entry in dataEntries
                     let numbersMapping = from tuple in entry.Property2
-                        select new
-                        {
-                            P1 = entry.Property1,
-                            Key = tuple.Item1,
-                            Value = tuple.Item2
-                        }
+                    select new
+                    {
+                        P1 = entry.Property1,
+                        Key = tuple.Item1,
+                        Value = tuple.Item2
+                    }
 
                     from numberMap in numbersMapping
                     group numberMap by new { numberMap.P1 }
@@ -68,39 +91,11 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
-        public void Querying_index_with_condtional_count_should_work()
-        {
-            var dataEntries = GenerateDataEntries();
-
-            using (var documentStore = NewRemoteDocumentStore())
-            {
-                new MapReduceIndexWithCountAndCondition().Execute(documentStore); 
-                
-                using (var session = documentStore.OpenSession())
-                {
-                    foreach (var entry in dataEntries)
-                        session.Store(entry);
-
-                    session.SaveChanges();
-                }
-                
-                WaitForIndexing(documentStore);
-
-                using (var session = documentStore.OpenSession())
-                {
-                    var fetchedIndexedDocuments = session.Query<IndexEntry, MapReduceIndexWithCountAndCondition>().ToList();
-
-                    Assert.NotEmpty(fetchedIndexedDocuments);
-                }			
-            }
-        }
-
         private IEnumerable<DataEntry> GenerateDataEntries()
         {
             for (int i = 0; i < 10; i++)
             {
-                if (i%2 == 0)
+                if (i % 2 == 0)
                 {
                     var dataEntry = new DataEntry()
                     {
@@ -138,10 +133,8 @@ namespace Raven.Tests.Issues
                     };
 
                     yield return dataEntry;
-                    
                 }
             }
         }
     }
-
 }
