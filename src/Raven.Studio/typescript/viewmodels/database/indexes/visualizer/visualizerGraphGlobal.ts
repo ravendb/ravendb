@@ -80,7 +80,7 @@ class reduceTreeItem {
     displayName: string;
     depth: number;
     itemsCountAtDepth: Array<number>; // this represents non-filtered count
-    itemsAsDepth = new Map<number, Array<abstractPageItem>>(); // items after filtering
+    itemsAtDepth = new Map<number, Array<abstractPageItem>>(); // items after filtering
 
     width = 0;
     height = 0;
@@ -120,16 +120,16 @@ class reduceTreeItem {
     }
 
     private cleanCache(documents: documentItem[]) {
-        this.itemsAsDepth.clear();
+        this.itemsAtDepth.clear();
     }
 
     private filterVisibleItems(documents: documentItem[]) {
         const filterAtDepth = (depth: number, node: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage, aggregation: pageItem) => {
-            if (!this.itemsAsDepth.has(depth)) {
-                this.itemsAsDepth.set(depth, []);
+            if (!this.itemsAtDepth.has(depth)) {
+                this.itemsAtDepth.set(depth, []);
             }
 
-            const items = this.itemsAsDepth.get(depth);
+            const items = this.itemsAtDepth.get(depth);
             const item = new pageItem(node.PageNumber, this);
             item.aggregation = aggregation;
             items.push(item);
@@ -158,7 +158,7 @@ class reduceTreeItem {
     private collapseNonRelevantPages() {
         const relevantPageNumbersPerLevel = [] as Array<Array<number>>;
 
-        let relevantNodes = this.itemsAsDepth
+        let relevantNodes = this.itemsAtDepth
             .get(this.depth - 1)
             .filter((x: pageItem) => x.incomingLinesCount > 0);
 
@@ -170,7 +170,7 @@ class reduceTreeItem {
         }
 
         for (let i = 0; i < this.depth; i++) {
-            const levelItems = this.itemsAsDepth.get(i);
+            const levelItems = this.itemsAtDepth.get(i);
             const relevantPageNumbers = relevantPageNumbersPerLevel[i];
 
             const collapsedItems = [] as Array<abstractPageItem>;
@@ -189,14 +189,14 @@ class reduceTreeItem {
                 }
             }
 
-            this.itemsAsDepth.set(i, collapsedItems);
+            this.itemsAtDepth.set(i, collapsedItems);
         }
 
     }
 
     private getMaxItems() {
         let max = 0;
-        this.itemsAsDepth.forEach(x => {
+        this.itemsAtDepth.forEach(x => {
             if (x.length > max) {
                 max = x.length;
             }
@@ -218,7 +218,7 @@ class reduceTreeItem {
             reduceTreeItem.margins.betweenPagesVerticalPadding;
 
         for (let depth = 0; depth < this.depth; depth++) {
-            const items = this.itemsAsDepth.get(depth);
+            const items = this.itemsAtDepth.get(depth);
 
             const startAndOffset = graphHelper
                 .computeStartAndOffset(pagesTotalWidth,
@@ -843,7 +843,7 @@ class visualizerGraphGlobal {
         ctx.fillStyle = "#008cc9";
         ctx.strokeStyle = "#686f6f";
 
-        tree.itemsAsDepth.forEach(globalItems => {
+        tree.itemsAtDepth.forEach(globalItems => {
             for (let i = 0; i < globalItems.length; i++) {
                 const item = globalItems[i];
 
