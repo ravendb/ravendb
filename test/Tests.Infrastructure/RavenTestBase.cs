@@ -59,6 +59,14 @@ namespace FastTests
             for (var i = 0; i < tasks.Count; i++)
             {
                 message += $"{Environment.NewLine}Url: {Servers[i].WebUrls[0]}. Applied: {tasks[i].IsCompleted}.";
+                if (tasks[i].IsCompleted == false)
+                {
+                    using (Servers[i].ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))                    
+                    {
+                        context.OpenReadTransaction();
+                        message += $"{Environment.NewLine}Log state for non responsing server:{Environment.NewLine}{context.ReadObject(Servers[i].ServerStore.GetLogDetails(context),"LogSummary/"+i)}";
+                    }
+                }
             }
 
             throw new TimeoutException(message);
