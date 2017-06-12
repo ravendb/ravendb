@@ -39,7 +39,7 @@ namespace Raven.Server.Documents
             if (context.Transaction == null)
             {
                 ThrowRequiresTransaction();
-                return default(DocumentsStorage.PutOperationResults);// never hit
+                return default(DocumentsStorage.PutOperationResults); // never hit
             }
 
 #if DEBUG
@@ -58,138 +58,139 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(DocumentsStorage.DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
             id = BuildDocumentId(context, id, table, newEtag, out bool knownNewId);
-            DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr);
-
-            var oldValue = default(TableValueReader);
-            if (knownNewId == false)
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
-                // delete a tombstone if it exists, if it known that it is a new ID, no need, so we can skip it
-                DeleteTombstoneIfNeeded(context, collectionName, lowerId.Content.Ptr, lowerId.Size);
-
-                table.ReadByKey(lowerId, out oldValue);
-            }
-
-            BlittableJsonReaderObject oldDoc = null;
-            if (oldValue.Pointer == null)
-            {
-                if (expectedEtag != null && expectedEtag != 0)
+                var oldValue = default(TableValueReader);
+                if (knownNewId == false)
                 {
-                    ThrowConcurrentExceptionOnMissingDoc(id, expectedEtag.Value);
-                }
-            }
-            else
-            {
-                if (expectedEtag != null)
-                {
-                    var oldEtag = DocumentsStorage.TableValueToEtag(1, ref oldValue);
-                    if (oldEtag != expectedEtag)
-                        ThrowConcurrentException(id, expectedEtag, oldEtag);
+                    // delete a tombstone if it exists, if it known that it is a new ID, no need, so we can skip it
+                    DeleteTombstoneIfNeeded(context, collectionName, lowerId.Content.Ptr, lowerId.Size);
+
+                    table.ReadByKey(lowerId, out oldValue);
                 }
 
-                oldDoc = new BlittableJsonReaderObject(oldValue.Read((int)DocumentsStorage.DocumentsTable.Data, out int oldSize), oldSize, context);
-                var oldCollectionName = _documentsStorage.ExtractCollectionName(context, id, oldDoc);
-                if (oldCollectionName != collectionName)
-                    ThrowInvalidCollectionNameChange(id, oldCollectionName, collectionName);
-
-                var oldFlags = *(DocumentFlags*)oldValue.Read((int)DocumentsStorage.DocumentsTable.Flags, out int size);
-                if ((oldFlags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments ||
-                    (nonPersistentFlags & NonPersistentDocumentFlags.ResolvedAttachmentConflict) == NonPersistentDocumentFlags.ResolvedAttachmentConflict)
+                BlittableJsonReaderObject oldDoc = null;
+                if (oldValue.Pointer == null)
                 {
-                    flags |= DocumentFlags.HasAttachments;
+                    if (expectedEtag != null && expectedEtag != 0)
+                    {
+                        ThrowConcurrentExceptionOnMissingDoc(id, expectedEtag.Value);
+                    }
                 }
-            }
-
-            changeVector = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, changeVector, expectedEtag, flags, oldValue);
-
-            if (collectionName.IsSystem == false &&
-                (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
-            {
-                if (ShouldRecreateAttachment(context, lowerId, oldDoc, document, flags, nonPersistentFlags))
+                else
                 {
+                    if (expectedEtag != null)
+                    {
+                        var oldEtag = DocumentsStorage.TableValueToEtag(1, ref oldValue);
+                        if (oldEtag != expectedEtag)
+                            ThrowConcurrentException(id, expectedEtag, oldEtag);
+                    }
+
+                    oldDoc = new BlittableJsonReaderObject(oldValue.Read((int)DocumentsStorage.DocumentsTable.Data, out int oldSize), oldSize, context);
+                    var oldCollectionName = _documentsStorage.ExtractCollectionName(context, id, oldDoc);
+                    if (oldCollectionName != collectionName)
+                        ThrowInvalidCollectionNameChange(id, oldCollectionName, collectionName);
+
+                    var oldFlags = *(DocumentFlags*)oldValue.Read((int)DocumentsStorage.DocumentsTable.Flags, out int size);
+                    if ((oldFlags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments ||
+                        (nonPersistentFlags & NonPersistentDocumentFlags.ResolvedAttachmentConflict) == NonPersistentDocumentFlags.ResolvedAttachmentConflict)
+                    {
+                        flags |= DocumentFlags.HasAttachments;
+                    }
+                }
+
+                changeVector = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, changeVector, expectedEtag, flags, oldValue);
+
+                if (collectionName.IsSystem == false &&
+                    (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
+                {
+                    if (ShouldRecreateAttachment(context, lowerId, oldDoc, document, flags, nonPersistentFlags))
+                    {
 #if DEBUG
-                    if (document.DebugHash != documentDebugHash)
-                    {
-                        throw new InvalidDataException("The incoming document " + id + " has changed _during_ the put process, " +
-                                                       "this is likely because you are trying to save a document that is already stored and was moved");
-                    }
+                        if (document.DebugHash != documentDebugHash)
+                        {
+                            throw new InvalidDataException("The incoming document " + id + " has changed _during_ the put process, " +
+                                                           "this is likely because you are trying to save a document that is already stored and was moved");
+                        }
 #endif
-                    document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                        document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 #if DEBUG
-                    documentDebugHash = document.DebugHash;
-                    document.BlittableValidation();
+                        documentDebugHash = document.DebugHash;
+                        document.BlittableValidation();
 #endif
+                    }
+
+                    if (_documentDatabase.DocumentsStorage.VersioningStorage.Configuration != null &&
+                        (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
+                    {
+                        if (_documentDatabase.DocumentsStorage.VersioningStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document,
+                            ref flags, out VersioningConfigurationCollection configuration))
+                        {
+                            _documentDatabase.DocumentsStorage.VersioningStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration);
+                        }
+                    }
                 }
 
-                if (_documentDatabase.DocumentsStorage.VersioningStorage.Configuration != null &&
-                    (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
+                fixed (ChangeVectorEntry* pChangeVector = changeVector)
                 {
-                    if (_documentDatabase.DocumentsStorage.VersioningStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document,
-                        ref flags, out VersioningConfigurationCollection configuration))
+                    using (table.Allocate(out TableValueBuilder tbv))
                     {
-                        _documentDatabase.DocumentsStorage.VersioningStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration);
+                        tbv.Add(lowerId);
+                        tbv.Add(Bits.SwapBytes(newEtag));
+                        tbv.Add(idPtr);
+                        tbv.Add(document.BasePointer, document.Size);
+                        tbv.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
+                        tbv.Add(modifiedTicks);
+                        tbv.Add((int)flags);
+                        tbv.Add(context.GetTransactionMarker());
+
+                        if (oldValue.Pointer == null)
+                        {
+                            table.Insert(tbv);
+                        }
+                        else
+                        {
+                            table.Update(oldValue.Id, tbv);
+                        }
                     }
                 }
-            }
 
-            fixed (ChangeVectorEntry* pChangeVector = changeVector)
-            {
-                using (table.Allocate(out TableValueBuilder tbv))
+                if (collectionName.IsSystem == false)
                 {
-                    tbv.Add(lowerId);
-                    tbv.Add(Bits.SwapBytes(newEtag));
-                    tbv.Add(idPtr);
-                    tbv.Add(document.BasePointer, document.Size);
-                    tbv.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
-                    tbv.Add(modifiedTicks);
-                    tbv.Add((int)flags);
-                    tbv.Add(context.GetTransactionMarker());
-
-                    if (oldValue.Pointer == null)
-                    {
-                        table.Insert(tbv);
-                    }
-                    else
-                    {
-                        table.Update(oldValue.Id, tbv);
-                    }
+                    _documentDatabase.ExpiredDocumentsCleaner?.Put(context, lowerId, document);
                 }
-            }
 
-            if (collectionName.IsSystem == false)
-            {
-                _documentDatabase.ExpiredDocumentsCleaner?.Put(context, lowerId, document);
-            }
+                _documentDatabase.DocumentsStorage.SetDatabaseChangeVector(context, changeVector);
+                _documentDatabase.Metrics.DocPutsPerSecond.MarkSingleThreaded(1);
+                _documentDatabase.Metrics.BytesPutsPerSecond.MarkSingleThreaded(document.Size);
 
-            _documentDatabase.DocumentsStorage.SetDatabaseChangeVector(context,changeVector);
-            _documentDatabase.Metrics.DocPutsPerSecond.MarkSingleThreaded(1);
-            _documentDatabase.Metrics.BytesPutsPerSecond.MarkSingleThreaded(document.Size);
-
-            context.Transaction.AddAfterCommitNotification(new DocumentChange
-            {
-                Etag = newEtag,
-                CollectionName = collectionName.Name,
-                Id = id,
-                Type = DocumentChangeTypes.Put,
-                IsSystemDocument = collectionName.IsSystem,
-            });
+                context.Transaction.AddAfterCommitNotification(new DocumentChange
+                {
+                    Etag = newEtag,
+                    CollectionName = collectionName.Name,
+                    Id = id,
+                    Type = DocumentChangeTypes.Put,
+                    IsSystemDocument = collectionName.IsSystem,
+                });
 
 #if DEBUG
-            if (document.DebugHash != documentDebugHash)
-            {
-                throw new InvalidDataException("The incoming document " + id + " has changed _during_ the put process, " +
-                                               "this is likely because you are trying to save a document that is already stored and was moved");
-            }
+                if (document.DebugHash != documentDebugHash)
+                {
+                    throw new InvalidDataException("The incoming document " + id + " has changed _during_ the put process, " +
+                                                   "this is likely because you are trying to save a document that is already stored and was moved");
+                }
 #endif
 
-            return new DocumentsStorage.PutOperationResults
-            {
-                Etag = newEtag,
-                Id = id,
-                Collection = collectionName,
-                ChangeVector = changeVector,
-                Flags = flags,
-                LastModified = new DateTime(modifiedTicks) 
-            };
+                return new DocumentsStorage.PutOperationResults
+                {
+                    Etag = newEtag,
+                    Id = id,
+                    Collection = collectionName,
+                    ChangeVector = changeVector,
+                    Flags = flags,
+                    LastModified = new DateTime(modifiedTicks)
+                };
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
