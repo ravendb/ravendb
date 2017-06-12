@@ -12,22 +12,12 @@ abstract class abstractPageItem {
     x: number;
     y: number;
     parent: reduceTreeItem;
+    incomingLinesCount: number;
+
+    aggregation?: pageItem;
 
     constructor(parent: reduceTreeItem) {
         this.parent = parent;
-    }
-}
-
-class pageItem extends abstractPageItem {
-    
-    aggregation?: pageItem;
-    pageNumber: number;
-    
-    incomingLinesCount: number;
-
-    constructor(pageNumber: number, parent: reduceTreeItem) {
-        super(parent);
-        this.pageNumber = pageNumber;
         this.incomingLinesCount = 0;
     }
 
@@ -58,8 +48,20 @@ class pageItem extends abstractPageItem {
     }
 }
 
-class collapsedPageItem extends abstractPageItem {
-    // empty by design
+class pageItem extends abstractPageItem {
+    
+    pageNumber: number;
+
+    constructor(pageNumber: number, parent: reduceTreeItem) {
+        super(parent);
+        this.pageNumber = pageNumber;
+    }
+    
+}
+
+class collapsedPageItem extends pageItem {
+
+    aggregationCount: number = 1;
 }
 
 class reduceTreeItem {
@@ -152,46 +154,39 @@ class reduceTreeItem {
 
         filterAtDepth(0, this.tree.Root, null);
 
-        this.collapseNonRelevantPages();
+        this.collapseNonRelevantLeaves();
     }
 
-    private collapseNonRelevantPages() {
-        const relevantPageNumbersPerLevel = [] as Array<Array<number>>;
+    private collapseNonRelevantLeaves() {
+        const lastLevel = this.depth - 1;
+        const levelItems = this.itemsAtDepth.get(lastLevel);
 
-        let relevantNodes = this.itemsAtDepth
+        const relevantPageNumbers = this.itemsAtDepth
             .get(this.depth - 1)
-            .filter((x: pageItem) => x.incomingLinesCount > 0);
+            .filter(x => x.incomingLinesCount > 0)
+            .map((x: pageItem) => x.pageNumber);
 
-        relevantPageNumbersPerLevel.unshift(relevantNodes.map((x: pageItem) => x.pageNumber));
 
-        for (let i = 0; i < this.depth - 1; i++) {
-            relevantNodes = _.uniq(relevantNodes.map((x: pageItem) => x.aggregation));
-            relevantPageNumbersPerLevel.unshift(relevantNodes.map((x: pageItem) => x.pageNumber));
-        }
+        const collapsedItems = [] as Array<abstractPageItem>;
+        let currentAggregation: collapsedPageItem = null;
 
-        for (let i = 0; i < this.depth; i++) {
-            const levelItems = this.itemsAtDepth.get(i);
-            const relevantPageNumbers = relevantPageNumbersPerLevel[i];
-
-            const collapsedItems = [] as Array<abstractPageItem>;
-            let collapseInserted = false;
-
-            for (let j = 0; j < levelItems.length; j++) {
-                const item = levelItems[j] as pageItem;
-                if (_.includes(relevantPageNumbers, item.pageNumber)) {
-                    collapseInserted = false;
-                    collapsedItems.push(item);
+        for (let i = 0; i < levelItems.length; i++) {
+            const item = levelItems[i] as pageItem;
+            if (_.includes(relevantPageNumbers, item.pageNumber)) {
+                currentAggregation = null;
+                collapsedItems.push(item);
+            } else {
+                if (currentAggregation && currentAggregation.aggregation === item.aggregation) {
+                    currentAggregation.aggregationCount += 1;
                 } else {
-                    if (!collapseInserted) {
-                        collapsedItems.push(new collapsedPageItem(this));
-                        collapseInserted = true;
-                    }
+                    currentAggregation = new collapsedPageItem(item.aggregation.pageNumber, item.parent);
+                    currentAggregation.aggregation = item.aggregation;
+                    collapsedItems.push(currentAggregation);
                 }
             }
-
-            this.itemsAtDepth.set(i, collapsedItems);
         }
 
+        this.itemsAtDepth.set(lastLevel, collapsedItems);
     }
 
     private getMaxItems() {
@@ -847,16 +842,7 @@ class visualizerGraphGlobal {
             for (let i = 0; i < globalItems.length; i++) {
                 const item = globalItems[i];
 
-                if (item instanceof pageItem) {
-                    
-                    ctx.fillRect(item.x, item.y, pageItem.pageWidth, pageItem.pageHeight);
-
-                    if (item.aggregation) {
-                        const sourcePoint = item.getSourceConnectionPoint();
-                        const targetPoint = item.aggregation.getTargetConnectionPoint();
-                        graphHelper.drawBezierDiagonal(ctx, sourcePoint, targetPoint, true);
-                    }
-                } else {
+                if (item instanceof collapsedPageItem) {
                     ctx.save();
                     ctx.translate(item.x, item.y);
                     ctx.beginPath();
@@ -879,6 +865,15 @@ class visualizerGraphGlobal {
 
                     ctx.fill();
                     ctx.restore();
+                    
+                } else {
+                    ctx.fillRect(item.x, item.y, pageItem.pageWidth, pageItem.pageHeight);
+                }
+
+                if (item.aggregation) {
+                    const sourcePoint = item.getSourceConnectionPoint();
+                    const targetPoint = item.aggregation.getTargetConnectionPoint();
+                    graphHelper.drawBezierDiagonal(ctx, sourcePoint, targetPoint, true);
                 }
             }
         });
