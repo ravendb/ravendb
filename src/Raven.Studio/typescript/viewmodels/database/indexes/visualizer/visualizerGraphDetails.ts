@@ -410,47 +410,37 @@ class reduceTreeItem {
         };
 
         filterAtDepth(0, this.tree.Root, null);
-        this.collapseNonRelevantPages();
+        this.collapseNonRelevantLeaves();
     }
 
-    private collapseNonRelevantPages() {
-        const relevantPageNumbersPerLevel = [] as Array<Array<number>>;
+    private collapseNonRelevantLeaves() {
+        const lastLevel = this.depth - 1;
+        const levelItems = this.itemsAtDepth.get(lastLevel);
 
-        let relevantNodes = this.itemsAtDepth
+        const relevantPageNumbers = this.itemsAtDepth
             .get(this.depth - 1)
-            .filter((x: leafPageItem) => _.some(x.entries, (e: layoutableItem) => (e instanceof entryItem) && e.source));
+            .filter((x: leafPageItem) => _.some(x.entries, (e: layoutableItem) => (e instanceof entryItem) && e.source))
+            .map((x: leafPageItem) => x.pageNumber);
 
-        relevantPageNumbersPerLevel.unshift(relevantNodes.map((x: pageItem) => x.pageNumber));
+        const collapsedItems = [] as Array<pageItem | collapsedLeavesItem>;
+        let currentAggregation: collapsedLeavesItem = null;
 
-        for (let i = 0; i < this.depth - 1; i++) {
-            relevantNodes = _.uniq(relevantNodes.map((x: pageItem) => x.parentPage));
-            relevantPageNumbersPerLevel.unshift(relevantNodes.map((x: pageItem) => x.pageNumber));
-        }
-
-        for (let i = 0; i < this.depth; i++) {
-            const levelItems = this.itemsAtDepth.get(i);
-            const relevantPageNumbers = relevantPageNumbersPerLevel[i];
-
-            const collapsedItems = [] as Array<pageItem | collapsedLeavesItem>;
-            let currentAggregation: collapsedLeavesItem = null;
-
-            for (let j = 0; j < levelItems.length; j++) {
-                const item = levelItems[j] as pageItem;
-                if (_.includes(relevantPageNumbers, item.pageNumber)) {
-                    currentAggregation = null;
-                    collapsedItems.push(item);
+        for (let i = 0; i < levelItems.length; i++) {
+            const item = levelItems[i] as pageItem;
+            if (_.includes(relevantPageNumbers, item.pageNumber)) {
+                currentAggregation = null;
+                collapsedItems.push(item);
+            } else {
+                if (currentAggregation && currentAggregation.parentPage === item.parentPage) {
+                    currentAggregation.aggregationCount += 1;
                 } else {
-                    if (currentAggregation && currentAggregation.parentPage === item.parentPage) {
-                        currentAggregation.aggregationCount += 1;
-                    } else {
-                        currentAggregation = new collapsedLeavesItem(item.parentPage, 1);
-                        collapsedItems.push(currentAggregation);
-                    }
+                    currentAggregation = new collapsedLeavesItem(item.parentPage, 1);
+                    collapsedItems.push(currentAggregation);
                 }
             }
-
-            this.itemsAtDepth.set(i, collapsedItems);
         }
+
+        this.itemsAtDepth.set(lastLevel, collapsedItems);
 
     }
 
@@ -826,7 +816,7 @@ class visualizerGraphDetails {
             ctx.fillStyle = "#a9adad";
             ctx.textAlign = "center";
             ctx.textBaseline = "top";
-            ctx.fillText("Aggregation of " + page.aggregationCount + " trees", page.width / 2, pageItem.margins.pageNumberTopMargin);
+            ctx.fillText("Aggregation of " + page.aggregationCount + " trees. ", page.width / 2, pageItem.margins.pageNumberTopMargin);
 
         } finally {
             ctx.restore();
