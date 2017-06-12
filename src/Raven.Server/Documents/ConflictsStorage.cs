@@ -261,8 +261,8 @@ namespace Raven.Server.Documents
             if (ConflictsCount == 0)
                 return;
 
-            DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId);
-            DeleteConflictsFor(context, lowerId);
+            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+                DeleteConflictsFor(context, lowerId);
         }
 
         public IReadOnlyList<ChangeVectorEntry[]> DeleteConflictsFor(DocumentsOperationContext context, Slice lowerId)
@@ -514,142 +514,144 @@ namespace Raven.Server.Documents
             var tx = context.Transaction.InnerTransaction;
             var conflictsTable = tx.OpenTable(ConflictsSchema, ConflictsSlice);
 
-            CollectionName collectionName;
-
-            DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr);
-            // ReSharper disable once ArgumentsStyleLiteral
-            var existing = _documentsStorage.GetDocumentOrTombstone(context, id, throwOnConflict: false);
-            if (existing.Document != null)
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
-                var existingDoc = existing.Document;
+                CollectionName collectionName;
 
-                fixed (ChangeVectorEntry* pChangeVector = existingDoc.ChangeVector)
+                // ReSharper disable once ArgumentsStyleLiteral
+                var existing = _documentsStorage.GetDocumentOrTombstone(context, id, throwOnConflict: false);
+                if (existing.Document != null)
                 {
-                    var lazyCollectionName = CollectionName.GetLazyCollectionNameFrom(context, existingDoc.Data);
+                    var existingDoc = existing.Document;
 
-                    using (conflictsTable.Allocate(out TableValueBuilder tbv))
+                    fixed (ChangeVectorEntry* pChangeVector = existingDoc.ChangeVector)
                     {
-                        tbv.Add(lowerId);
-                        tbv.Add(SpecialChars.RecordSeparator);
-                        tbv.Add((byte*)pChangeVector, existingDoc.ChangeVector.Length * sizeof(ChangeVectorEntry));
-                        tbv.Add(idPtr);
-                        tbv.Add(existingDoc.Data.BasePointer, existingDoc.Data.Size);
-                        tbv.Add(Bits.SwapBytes(_documentsStorage.GenerateNextEtag()));
-                        tbv.Add(lazyCollectionName.Buffer, lazyCollectionName.Size);
-                        tbv.Add(existingDoc.LastModified.Ticks);
+                        var lazyCollectionName = CollectionName.GetLazyCollectionNameFrom(context, existingDoc.Data);
 
-                        conflictsTable.Set(tbv);
-                    }
-
-                    Interlocked.Increment(ref ConflictsCount);
-                    // we delete the data directly, without generating a tombstone, because we have a 
-                    // conflict instead
-                    _documentsStorage.EnsureLastEtagIsPersisted(context, existingDoc.Etag);
-                    collectionName = _documentsStorage.ExtractCollectionName(context, existingDoc.Id, existingDoc.Data);
-
-                    //make sure that the relevant collection tree exists
-                    var table = tx.OpenTable(DocumentsStorage.DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
-                    table.Delete(existingDoc.StorageId);
-                }
-            }
-            else if (existing.Tombstone != null)
-            {
-                var existingTombstone = existing.Tombstone;
-
-                fixed (ChangeVectorEntry* pChangeVector = existingTombstone.ChangeVector)
-                {
-                    using (conflictsTable.Allocate(out TableValueBuilder tableValueBuilder))
-                    {
-                        tableValueBuilder.Add(lowerId);
-                        tableValueBuilder.Add(SpecialChars.RecordSeparator);
-                        tableValueBuilder.Add((byte*)pChangeVector, existingTombstone.ChangeVector.Length * sizeof(ChangeVectorEntry));
-                        tableValueBuilder.Add(idPtr);
-                        tableValueBuilder.Add(null, 0);
-                        tableValueBuilder.Add(Bits.SwapBytes(_documentsStorage.GenerateNextEtag()));
-                        tableValueBuilder.Add(existingTombstone.Collection.Buffer, existingTombstone.Collection.Size);
-                        tableValueBuilder.Add(existingTombstone.LastModified.Ticks);
-                        conflictsTable.Set(tableValueBuilder);
-                    }
-                    Interlocked.Increment(ref ConflictsCount);
-                    // we delete the data directly, without generating a tombstone, because we have a 
-                    // conflict instead
-                    _documentsStorage.EnsureLastEtagIsPersisted(context, existingTombstone.Etag);
-
-                    collectionName = _documentsStorage.GetCollection(existingTombstone.Collection, throwIfDoesNotExist: true);
-
-                    var table = tx.OpenTable(DocumentsStorage.TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
-                    table.Delete(existingTombstone.StorageId);
-                }
-            }
-            else // has existing conflicts
-            {
-                collectionName = _documentsStorage.ExtractCollectionName(context, id, incomingDoc);
-
-                using (GetConflictsIdPrefix(context, lowerId, out Slice prefixSlice))
-                {
-                    var conflicts = GetConflictsFor(context, prefixSlice);
-                    foreach (var conflict in conflicts)
-                    {
-                        var conflictStatus = GetConflictStatus(incomingChangeVector, conflict.ChangeVector);
-                        switch (conflictStatus)
+                        using (conflictsTable.Allocate(out TableValueBuilder tbv))
                         {
-                            case ConflictStatus.Update:
-                                DeleteConflictsFor(context, conflict.ChangeVector); // delete this, it has been subsumed
-                                break;
-                            case ConflictStatus.Conflict:
-                                break; // we'll add this conflict if no one else also includes it
-                            case ConflictStatus.AlreadyMerged:
-                                return; // we already have a conflict that includes this version
-                            default:
-                                throw new ArgumentOutOfRangeException("Invalid conflict status " + conflictStatus);
+                            tbv.Add(lowerId);
+                            tbv.Add(SpecialChars.RecordSeparator);
+                            tbv.Add((byte*)pChangeVector, existingDoc.ChangeVector.Length * sizeof(ChangeVectorEntry));
+                            tbv.Add(idPtr);
+                            tbv.Add(existingDoc.Data.BasePointer, existingDoc.Data.Size);
+                            tbv.Add(Bits.SwapBytes(_documentsStorage.GenerateNextEtag()));
+                            tbv.Add(lazyCollectionName.Buffer, lazyCollectionName.Size);
+                            tbv.Add(existingDoc.LastModified.Ticks);
+
+                            conflictsTable.Set(tbv);
+                        }
+
+                        Interlocked.Increment(ref ConflictsCount);
+                        // we delete the data directly, without generating a tombstone, because we have a 
+                        // conflict instead
+                        _documentsStorage.EnsureLastEtagIsPersisted(context, existingDoc.Etag);
+                        collectionName = _documentsStorage.ExtractCollectionName(context, existingDoc.Id, existingDoc.Data);
+
+                        //make sure that the relevant collection tree exists
+                        var table = tx.OpenTable(DocumentsStorage.DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+                        table.Delete(existingDoc.StorageId);
+                    }
+                }
+                else if (existing.Tombstone != null)
+                {
+                    var existingTombstone = existing.Tombstone;
+
+                    fixed (ChangeVectorEntry* pChangeVector = existingTombstone.ChangeVector)
+                    {
+                        using (conflictsTable.Allocate(out TableValueBuilder tableValueBuilder))
+                        {
+                            tableValueBuilder.Add(lowerId);
+                            tableValueBuilder.Add(SpecialChars.RecordSeparator);
+                            tableValueBuilder.Add((byte*)pChangeVector, existingTombstone.ChangeVector.Length * sizeof(ChangeVectorEntry));
+                            tableValueBuilder.Add(idPtr);
+                            tableValueBuilder.Add(null, 0);
+                            tableValueBuilder.Add(Bits.SwapBytes(_documentsStorage.GenerateNextEtag()));
+                            tableValueBuilder.Add(existingTombstone.Collection.Buffer, existingTombstone.Collection.Size);
+                            tableValueBuilder.Add(existingTombstone.LastModified.Ticks);
+                            conflictsTable.Set(tableValueBuilder);
+                        }
+                        Interlocked.Increment(ref ConflictsCount);
+                        // we delete the data directly, without generating a tombstone, because we have a 
+                        // conflict instead
+                        _documentsStorage.EnsureLastEtagIsPersisted(context, existingTombstone.Etag);
+
+                        collectionName = _documentsStorage.GetCollection(existingTombstone.Collection, throwIfDoesNotExist: true);
+
+                        var table = tx.OpenTable(DocumentsStorage.TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+                        table.Delete(existingTombstone.StorageId);
+                    }
+                }
+                else // has existing conflicts
+                {
+                    collectionName = _documentsStorage.ExtractCollectionName(context, id, incomingDoc);
+
+                    using (GetConflictsIdPrefix(context, lowerId, out Slice prefixSlice))
+                    {
+                        var conflicts = GetConflictsFor(context, prefixSlice);
+                        foreach (var conflict in conflicts)
+                        {
+                            var conflictStatus = GetConflictStatus(incomingChangeVector, conflict.ChangeVector);
+                            switch (conflictStatus)
+                            {
+                                case ConflictStatus.Update:
+                                    DeleteConflictsFor(context, conflict.ChangeVector); // delete this, it has been subsumed
+                                    break;
+                                case ConflictStatus.Conflict:
+                                    break; // we'll add this conflict if no one else also includes it
+                                case ConflictStatus.AlreadyMerged:
+                                    return; // we already have a conflict that includes this version
+                                default:
+                                    throw new ArgumentOutOfRangeException("Invalid conflict status " + conflictStatus);
+                            }
                         }
                     }
                 }
+
+                var etag = _documentsStorage.GenerateNextEtag();
+
+                fixed (ChangeVectorEntry* pChangeVector = incomingChangeVector)
+                {
+                    byte* doc = null;
+                    var docSize = 0;
+                    LazyStringValue lazyCollectionName;
+                    if (incomingDoc != null) // can be null if it is a tombstone
+                    {
+                        doc = incomingDoc.BasePointer;
+                        docSize = incomingDoc.Size;
+                        lazyCollectionName = CollectionName.GetLazyCollectionNameFrom(context, incomingDoc);
+                    }
+                    else
+                    {
+                        lazyCollectionName = context.GetLazyString(incomingTombstoneCollection);
+                    }
+
+                    using (lazyCollectionName)
+                    using (conflictsTable.Allocate(out TableValueBuilder tvb))
+                    {
+                        tvb.Add(lowerId);
+                        tvb.Add(SpecialChars.RecordSeparator);
+                        tvb.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * incomingChangeVector.Length);
+                        tvb.Add(idPtr);
+                        tvb.Add(doc, docSize);
+                        tvb.Add(Bits.SwapBytes(etag));
+                        tvb.Add(lazyCollectionName.Buffer, lazyCollectionName.Size);
+                        tvb.Add(lastModifiedTicks);
+
+                        Interlocked.Increment(ref ConflictsCount);
+                        conflictsTable.Set(tvb);
+                    }
+                }
+
+                context.Transaction.AddAfterCommitNotification(new DocumentChange
+                {
+                    Etag = etag,
+                    CollectionName = collectionName.Name,
+                    Id = id,
+                    Type = DocumentChangeTypes.Conflict,
+                    IsSystemDocument = false,
+                });
             }
-
-            var etag = _documentsStorage.GenerateNextEtag();
-
-            fixed (ChangeVectorEntry* pChangeVector = incomingChangeVector)
-            {
-                byte* doc = null;
-                int docSize = 0;
-                LazyStringValue lazyCollectionName;
-                if (incomingDoc != null) // can be null if it is a tombstone
-                {
-                    doc = incomingDoc.BasePointer;
-                    docSize = incomingDoc.Size;
-                    lazyCollectionName = CollectionName.GetLazyCollectionNameFrom(context, incomingDoc);
-                }
-                else
-                {
-                    lazyCollectionName = context.GetLazyString(incomingTombstoneCollection);
-                }
-
-                using (lazyCollectionName)
-                using (conflictsTable.Allocate(out TableValueBuilder tvb))
-                {
-                    tvb.Add(lowerId);
-                    tvb.Add(SpecialChars.RecordSeparator);
-                    tvb.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * incomingChangeVector.Length);
-                    tvb.Add(idPtr);
-                    tvb.Add(doc, docSize);
-                    tvb.Add(Bits.SwapBytes(etag));
-                    tvb.Add(lazyCollectionName.Buffer, lazyCollectionName.Size);
-                    tvb.Add(lastModifiedTicks);
-
-                    Interlocked.Increment(ref ConflictsCount);
-                    conflictsTable.Set(tvb);
-                }
-            }
-
-            context.Transaction.AddAfterCommitNotification(new DocumentChange
-            {
-                Etag = etag,
-                CollectionName = collectionName.Name,
-                Id = id,
-                Type = DocumentChangeTypes.Conflict,
-                IsSystemDocument = false,
-            });
         }
 
         public DocumentsStorage.DeleteOperationResult? DeleteConflicts(DocumentsOperationContext context,

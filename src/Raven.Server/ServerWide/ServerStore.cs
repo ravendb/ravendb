@@ -1140,12 +1140,12 @@ namespace Raven.Server.ServerWide
 
             var json = new DynamicJsonValue
             {
-                ["CommitIndex"] = Engine.GetLastCommitIndex(context),
-                ["LastTrancatedIndex"] = index,
-                ["LastTrancatedTerm"] = term,
-                ["FirstEntryIndex"] = range.min,
-                ["LastLogEntryIndex"] = range.max,
-                ["Entries"] = entries
+                [nameof(LogSummary.CommitIndex)] = Engine.GetLastCommitIndex(context),
+                [nameof(LogSummary.LastTrancatedIndex)] = index,
+                [nameof(LogSummary.LastTrancatedTerm)] = term,
+                [nameof(LogSummary.FirstEntryIndex)] = range.min,
+                [nameof(LogSummary.LastLogEntryIndex)] = range.max,
+                [nameof(LogSummary.Entries)] = entries
             };
             return json;
 
