@@ -455,7 +455,7 @@ namespace Raven.Server.Documents.Replication
                     if (item.Type == ReplicationBatchItem.ReplicationItemType.DocumentTombstone)
                         dataSize = -1;
                     else if ((item.Flags & DocumentFlags.DeleteRevision) == DocumentFlags.DeleteRevision)
-                        dataSize = 0;
+                        dataSize = -2;
                     else
                         throw new InvalidDataException("Cannot write document with empty data.");
                     *(int*)(pTemp + tempBufferPos) = dataSize;

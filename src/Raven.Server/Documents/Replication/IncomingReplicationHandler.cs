@@ -835,7 +835,7 @@ namespace Raven.Server.Documents.Replication
 
                                     // no need to load document data for tombstones
                                     // document size == -1 --> doc is a tombstone
-                                    // document size == 0 --> doc is deleteRevision
+                                    // document size == -2 --> doc is deleteRevision
                                     if (item.DocumentSize > 0)
                                     {
                                         if (item.Position + item.DocumentSize > _totalSize)
