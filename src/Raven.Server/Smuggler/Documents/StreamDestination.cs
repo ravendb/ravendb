@@ -60,10 +60,16 @@ namespace Raven.Server.Smuggler.Documents
             return new StreamDocumentActions(_writer, _context, _source, isRevision: true);
         }
 
-        public IIdentityActions Identities()
+        public IIdentityActions LocalIdentities()
         {
-            return new StreamIdentityActions(_writer);
+            return new StreamIdentityActions(_writer,IdentityType.Local);
         }
+
+        public IIdentityActions ClusterIdentities()
+        {
+            return new StreamIdentityActions(_writer, IdentityType.Cluster);
+        }
+
 
         public IIndexActions Indexes()
         {
@@ -235,14 +241,17 @@ namespace Raven.Server.Smuggler.Documents
 
                 Writer.WriteStream(stream);
             }
-        }
-
+        }        
+        
         private class StreamIdentityActions : StreamActionsBase, IIdentityActions
         {
-            public StreamIdentityActions(BlittableJsonTextWriter writer)
-                : base(writer, "Identities")
+            public StreamIdentityActions(BlittableJsonTextWriter writer, IdentityType type)
+                : base(writer, $"{type}Identities")
             {
+                Type = type;
             }
+
+            public IdentityType Type { get; }
 
             public void WriteIdentity(string key, long value)
             {

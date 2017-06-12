@@ -11,6 +11,7 @@ namespace Raven.Client.Documents.Smuggler
         RevisionDocuments = 1 << 1,
         Indexes = 1 << 2,
         Transformers = 1 << 3,
-        Identities = 1 << 4,
+        LocalIdentities = 1 << 4,
+        ClusterIdentities = 1 << 5,
     }
 }
