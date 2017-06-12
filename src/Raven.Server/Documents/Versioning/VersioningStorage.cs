@@ -490,25 +490,36 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
-        public IEnumerable<Document> GetZombiedRevisions(DocumentsOperationContext context, long startEtag, int take)
+        public ByteStringContext<ByteStringMemoryCache>.InternalScope GetZombiedRevisionsEtag(DocumentsOperationContext context, long startEtag, 
+            out Slice zombiedKey, out long latestEtag)
         {
-            using (GetZombiedRevisionKey(context, startEtag, out Slice zombiedKey))
+            var dispose = GetZombiedRevisionKey(context, startEtag, out zombiedKey);
+            foreach (var zombiedRevision in GetZombiedRevisions(context, zombiedKey, 1))
             {
-                var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
-                foreach (var tvr in table.SeekBackwardFrom(DocsSchema.Indexes[FlagsAndEtagSlice], DeleteRevisionSlice, zombiedKey))
+                latestEtag = zombiedRevision.Etag;
+                return dispose;
+            }
+
+            latestEtag = -1;
+            return dispose;
+        }
+
+        public IEnumerable<Document> GetZombiedRevisions(DocumentsOperationContext context, Slice zombiedKey, int take)
+        {
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+            foreach (var tvr in table.SeekBackwardFrom(DocsSchema.Indexes[FlagsAndEtagSlice], DeleteRevisionSlice, zombiedKey))
+            {
+                if (take-- <= 0)
+                    yield break;
+
+                var etag = DocumentsStorage.TableValueToEtag((int)Columns.Etag, ref tvr.Result.Reader);
+                using (DocumentsStorage.TableValueToSlice(context, (int)Columns.LowerId, ref tvr.Result.Reader, out Slice lowerId))
                 {
-                    if (take-- <= 0)
-                        yield break;
-
-                    var etag = DocumentsStorage.TableValueToEtag((int)Columns.Etag, ref tvr.Result.Reader);
-                    using (DocumentsStorage.TableValueToSlice(context, (int)Columns.LowerId, ref tvr.Result.Reader, out Slice lowerId))
-                    {
-                        if (IsZombiedRevision(context, table, lowerId, etag) == false)
-                            continue;
-                    }
-
-                    yield return TableValueToRevision(context, ref tvr.Result.Reader);
+                    if (IsZombiedRevision(context, table, lowerId, etag) == false)
+                        continue;
                 }
+
+                yield return TableValueToRevision(context, ref tvr.Result.Reader);
             }
         }
 

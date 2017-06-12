@@ -276,7 +276,7 @@ namespace Raven.Server.Documents
             BlittableJsonReaderObject metadata = null;
             if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments &&
                 (nonPersistentFlags & NonPersistentDocumentFlags.ByAttachmentUpdate) != NonPersistentDocumentFlags.ByAttachmentUpdate &&
-                (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication /* TODO fitzchak: Test whether this is correct */)
+                (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
             {
                 if (oldDoc != null && 
                     oldDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject oldMetadata) &&
