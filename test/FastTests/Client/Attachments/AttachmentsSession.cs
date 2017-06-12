@@ -114,7 +114,7 @@ namespace FastTests.Client.Attachments
             }
         }
 
-        [Fact(Skip = "TODO")]
+        [Fact]
         public void ThrowIfStreamIsDisposed()
         {
             using (var store = GetDocumentStore())
@@ -138,14 +138,50 @@ namespace FastTests.Client.Attachments
                     using (var fileStream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
                         session.Advanced.StoreAttachment(user, names[2], fileStream, null);
 
-                    session.SaveChanges();
+                    var exception = Assert.Throws<InvalidOperationException>(() => session.SaveChanges());
+                    Assert.Equal("Cannot put an attachment with a not readable stream. Make sure that the specified stream is readable and was not disposed.", exception.Message);
                 }
             }
         }
 
-        [Fact(Skip = "TODO")]
-        public void TwoAttachmentsWithTheSameName()
+        [Fact]
+        public void ThrowIfStreamIsUseTwice()
         {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                using (var stream = new MemoryStream(new byte[] {1, 2, 3}))
+                {
+                    var user = new User {Name = "Fitzchak"};
+                    session.Store(user, "users/1");
+
+                    session.Advanced.StoreAttachment(user, "profile", stream, "image/png");
+                    session.Advanced.StoreAttachment(user, "other", stream, null);
+
+                    var exception = Assert.Throws<InvalidOperationException>(() => session.SaveChanges());
+                    Assert.Equal("It is forbidden to re-use the same stream for more than one attachment. Use a unique stream per put attachment command.", exception.Message);
+                }
+            }
+        }
+
+        [Fact]
+        public void ThrowWhenTwoAttachmentsWithTheSameNameInSession()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                using (var stream2 = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
+                {
+                    var user = new User { Name = "Fitzchak" };
+                    session.Store(user, "users/1");
+
+                    session.Advanced.StoreAttachment(user, "profile", stream, "image/png");
+
+                    var exception = Assert.Throws<InvalidOperationException>(() => session.Advanced.StoreAttachment(user, "profile", stream2));
+                    Assert.Equal("Can't store attachment profile of document users/1, there is a deferred command registered to create an attachment with the same name.", exception.Message);
+                }
+            }
         }
 
         [Fact]

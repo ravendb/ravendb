@@ -52,12 +52,7 @@ namespace Raven.Client.Documents.Operations
                 _contentType = contentType;
                 _etag = etag;
 
-                if (_stream.CanRead == false)
-                    PutAttachmentCommandHelper.ThrowNotReadableStream();
-                if (_stream.CanSeek == false)
-                    PutAttachmentCommandHelper.ThrowNotSeekableStream();
-                if (_stream.Position != 0)
-                    PutAttachmentCommandHelper.ThrowPositionNotZero(_stream.Position);
+                PutAttachmentCommandHelper.ValidateStream(stream);
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)

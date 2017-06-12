@@ -21,12 +21,7 @@ namespace Raven.Client.Documents.Commands.Batches
             ContentType = contentType;
             Etag = etag;
 
-            if (Stream.CanRead == false)
-                PutAttachmentCommandHelper.ThrowNotReadableStream();
-            if (Stream.CanSeek == false)
-                PutAttachmentCommandHelper.ThrowNotSeekableStream();
-            if (Stream.Position != 0)
-                PutAttachmentCommandHelper.ThrowPositionNotZero(Stream.Position);
+            PutAttachmentCommandHelper.ValidateStream(stream);
         }
 
         public string Id { get; }
