@@ -712,28 +712,13 @@ namespace Raven.Server.ServerWide
 
     public class RachisLogIndexNotifications
     {
-        private readonly CancellationToken _token;
-        private Holder _lastModifiedIndex = new Holder();
-        private readonly AsyncManualResetEvent _notifiedListeners;
 
-        private class Holder
-        {
-            public long Val;
-            public string CachedToString;
-        }
+        private long _lastModifiedIndex;
+        private readonly AsyncManualResetEvent _notifiedListeners;
 
         public RachisLogIndexNotifications(CancellationToken token)
         {
-            _token = token;
             _notifiedListeners = new AsyncManualResetEvent(token);
-        }
-
-        public bool IsMatch(string etag)
-        {
-            var copy = _lastModifiedIndex;
-            if (copy.CachedToString == null)
-                copy.CachedToString = copy.Val.ToString();
-            return etag == copy.CachedToString;
         }
 
         public async Task WaitForIndexNotification(long index, TimeSpan? timeout = null)
@@ -743,12 +728,12 @@ namespace Raven.Server.ServerWide
                 // first get the task, then wait on it
                 var waitAsync = timeout.HasValue == false ? _notifiedListeners.WaitAsync() : _notifiedListeners.WaitAsync(timeout.Value);
 
-                if (index <= Volatile.Read(ref _lastModifiedIndex.Val))
+                if (index <= Volatile.Read(ref _lastModifiedIndex))
                     break;
 
                 if (await waitAsync == false)
                 {
-                    ThrowTimeoutException(timeout ?? TimeSpan.MaxValue, index, _lastModifiedIndex.Val);
+                    ThrowTimeoutException(timeout ?? TimeSpan.MaxValue, index, _lastModifiedIndex);
                 }
             }
         }
@@ -762,13 +747,9 @@ namespace Raven.Server.ServerWide
         public void NotifyListenersAbout(long index)
         {
             var lastModified = _lastModifiedIndex;
-            var holder = new Holder
+             while (index > lastModified)
             {
-                Val = index
-            };
-            while (index > lastModified.Val)
-            {
-                lastModified = Interlocked.CompareExchange(ref _lastModifiedIndex, holder, lastModified);
+                lastModified = Interlocked.CompareExchange(ref _lastModifiedIndex, index, lastModified);
             }
             _notifiedListeners.SetAndResetAtomically();
         }

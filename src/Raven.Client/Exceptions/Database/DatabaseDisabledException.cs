@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+
 namespace Raven.Client.Exceptions.Database
 {
     public class DatabaseDisabledException : RavenException
@@ -14,6 +16,10 @@ namespace Raven.Client.Exceptions.Database
 
         public DatabaseDisabledException(string message)
             : base(message)
+        {
+        }
+
+        public DatabaseDisabledException(string message, Exception inner) : base(message, inner)
         {
         }
     }

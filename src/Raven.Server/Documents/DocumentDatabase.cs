@@ -55,6 +55,7 @@ namespace Raven.Server.Documents
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
         private long _lastIdleTicks = DateTime.UtcNow.Ticks;
+        private (long Etag, string EtagString) _lastTopologyEtag = (0, "0");
 
         public void ResetIdleTime()
         {
@@ -258,9 +259,9 @@ namespace Raven.Server.Documents
             return new DatabaseUsage(this, skipUsagesCount);
         }
 
-        internal void ThrowDatabaseShutdown()
+        internal void ThrowDatabaseShutdown(Exception e= null)
         {
-            throw new DatabaseDisabledException("The database " + Name + " is shutting down");
+            throw new DatabaseDisabledException("The database " + Name + " is shutting down", e);
         }
 
         public struct DatabaseUsage : IDisposable
@@ -614,12 +615,17 @@ namespace Raven.Server.Documents
                     record = _serverStore.Cluster.ReadDatabase(context, Name);
                 }
 
+                if (_lastTopologyEtag.Etag < record.Topology.Stamp.Index)
+                {
+                    _lastTopologyEtag = (record.Topology.Stamp.Index, record.Topology.Stamp.Index.ToString());
+                }
+
                 NotifyFeaturesAboutStateChange(record,index);
             }
-            catch
+            catch(Exception e)
             {
                 if (_databaseShutdown.IsCancellationRequested)
-                    ThrowDatabaseShutdown();
+                    ThrowDatabaseShutdown(e);
 
                 throw;
             }
@@ -686,6 +692,11 @@ namespace Raven.Server.Documents
         private void OnDatabaseRecordChanged(DatabaseRecord record)
         {
             DatabaseRecordChanged?.Invoke(record);
+        }
+
+        public bool DidTopologyChanged(string topologyEtag)
+        {
+            return _lastTopologyEtag.EtagString == topologyEtag;
         }
     }
 

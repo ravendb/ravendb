@@ -28,8 +28,8 @@ namespace Raven.Server.Documents
             Logger = LoggingSource.Instance.GetLogger(Database.Name, GetType().FullName);
 
             if (context.HttpContext.Request.Headers.TryGetValue("Topology-Etag", out var topologyEtag) &&
-                topologyEtag.Count == 1 &&
-                Database.RachisLogIndexNotifications.IsMatch(topologyEtag[0]))
+                topologyEtag.Count == 1 && 
+                Database.DidTopologyChanged(topologyEtag[0]))
             {
                 context.HttpContext.Response.Headers["Refresh-Topology"] = "true";
             }
