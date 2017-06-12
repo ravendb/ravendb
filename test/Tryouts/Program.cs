@@ -23,9 +23,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
  
-                using (var test = new FastTests.Server.Replication.ReplicationResolveToDatabase())
+                using (var test = new SlowTests.Bugs.Indexing.ComplexUsage())
                 {
-                    test.ResolveToTombstone().Wait();
+                    test.ShouldNotOutputNull();
                 }
             }
         }

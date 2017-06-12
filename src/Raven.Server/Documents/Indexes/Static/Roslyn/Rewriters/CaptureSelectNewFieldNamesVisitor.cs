@@ -4,6 +4,7 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Raven.Client.Exceptions;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
@@ -15,6 +16,13 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         {
             if (Fields != null)
                 return node;
+
+            var mae = node.Expression as MemberAccessExpressionSyntax;
+            if (mae == null)
+                return base.Visit(node.Expression);
+
+            if (mae.Name.Identifier.Text != "Select")
+                return base.Visit(node.Expression);
 
             var last = node.DescendantNodes(descendIntoChildren: syntaxNode =>
                 {
