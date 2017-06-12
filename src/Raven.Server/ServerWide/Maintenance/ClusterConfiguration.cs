@@ -43,5 +43,11 @@ namespace Raven.Server.ServerWide.Maintenance
         [ConfigurationEntry("Raven/Cluster/ClusterOperationTimeoutInSec")]
         public TimeSetting ClusterOperationTimeout { get; set; }
 
+        [Description("The time we give to the cluster stats to stabilize after a database topology change.")]
+        [DefaultValue(5)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Raven/Cluster/StatsStabilizationTime")]
+        public TimeSetting StabilizationTime { get; set; }
+
     }
 }

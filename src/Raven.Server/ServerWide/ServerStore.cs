@@ -880,6 +880,12 @@ namespace Raven.Server.ServerWide
 
         public Task<(long Etag, object Result)> WriteDatabaseRecordAsync(string databaseName, DatabaseRecord record, long? etag)
         {
+            record.Topology.Stamp = new LeaderStamp
+            {
+                    Term = _engine.CurrentTerm,
+                    LeadersTicks = _engine.CurrentLeader.LeaderShipDuration
+            };
+
             var addDatabaseCommand = new AddDatabaseCommand
             {
                 Name = databaseName,

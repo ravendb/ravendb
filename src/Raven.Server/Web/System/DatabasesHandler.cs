@@ -69,7 +69,7 @@ namespace Raven.Server.Web.System
             {
                 var dbId = Constants.Documents.Prefix + name;
                 using (context.OpenReadTransaction())
-                using (var dbBlit = ServerStore.Cluster.Read(context, dbId, out long etag))
+                using (var dbBlit = ServerStore.Cluster.Read(context, dbId, out long _))
                 {
                     if (dbBlit == null)
                     {
@@ -100,7 +100,7 @@ namespace Raven.Server.Web.System
                                     [nameof(ServerNode.Database)] = dbRecord.DatabaseName,
                                 })
                             ),
-                            [nameof(Topology.Etag)] = etag,
+                            [nameof(Topology.Etag)] = dbRecord.Topology.Stamp.Index,
                         });
                     }
                 }
