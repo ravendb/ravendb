@@ -138,9 +138,6 @@ namespace Raven.Server.Documents
                 if (hasDoc == false)
                     throw new InvalidOperationException($"Cannot put attachment {name} on a non existent document '{documentId}'.");
 
-                if (string.IsNullOrEmpty(contentType))
-                    contentType = GuessContentTypeFromName(name);
-
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice namePtr))
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
                 using (Slice.From(context.Allocator, hash, out Slice base64Hash)) // Hash is a base64 string, so this is a special case that we do not need to escape
@@ -246,67 +243,6 @@ namespace Raven.Server.Documents
                 Hash = hash,
                 Size = stream.Length
             };
-        }
-
-        private static string GuessContentTypeFromName(string name)
-        {
-            var lastDot = name.LastIndexOf('.');
-            if (lastDot == -1)
-                return string.Empty;
-
-            var ext = name.Substring(lastDot);
-            switch (ext)
-            {
-                case "js":
-                    return "application/javascript";
-                case "json":
-                    return "application/json";
-                case "xml":
-                    return "application/xml";
-                case "7z":
-                case "rar":
-                case "zip":
-                    return "application/zip";
-                case "pdf":
-                    return "application/pdf";
-
-                case "png":
-                    return "image/png";
-                case "jpeg":
-                case "jpg":
-                    return "image/png";
-                case "gif":
-                    return "image/gif";
-                case "bmp":
-                    return "image/bmp";
-                case "webp":
-                    return "image/webp";
-
-                case "midi":
-                    return "audio/midi";
-                case "mpg":
-                case "mpeg":
-                    return "audio/mpeg";
-                case "oga":
-                    return "audio/ogg";
-                case "wav":
-                    return "audio/wav";
-
-                case "webm":
-                    return "video/webm";
-                case "ogv":
-                    return "video/ogg";
-
-                case "css":
-                    return "text/css";
-                case "html":
-                    return "text/html";
-                case "txt":
-                    return "text/plain";
-
-                default:
-                    return string.Empty;
-            }
         }
 
         /// <summary>
