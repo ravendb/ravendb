@@ -49,7 +49,10 @@ namespace Raven.Server.ServerWide.Commands
                 foreach (var node in allNodes)
                     record.DeletionInProgress[node] = deletionInProgressStatus;
 
-                record.Topology = new DatabaseTopology();
+                record.Topology = new DatabaseTopology
+                {
+                    Stamp = record.Topology.Stamp
+                };
             }
 
             return null;

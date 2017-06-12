@@ -875,6 +875,7 @@ namespace Raven.Server.ServerWide
 
         public Task<(long Etag, object Result)> WriteDatabaseRecordAsync(string databaseName, DatabaseRecord record, long? etag)
         {
+            Debug.Assert(record.Topology != null);
             record.Topology.Stamp = new LeaderStamp
             {
                     Term = _engine.CurrentTerm,

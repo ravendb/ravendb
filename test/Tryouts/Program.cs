@@ -22,10 +22,10 @@ namespace Tryouts
             for (var i = 0; i < 10; i++)
             {
                 Console.WriteLine(i);
-
-                using (var test = new AttachmentsLots())
+ 
+                using (var test = new FastTests.Server.Replication.ReplicationResolveToDatabase())
                 {
-                    test.PutLotOfAttachments();
+                    test.ResolveToTombstone().Wait();
                 }
             }
         }
