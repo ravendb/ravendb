@@ -82,6 +82,14 @@ class documentItem extends layoutableItem {
     reset() {
         this.connectedEntries = [];
     }
+
+    layout(y: number) {
+        const documentNameWidthEstimation = (text: string) => text.length * 9;
+
+        this.width = visualizerGraphDetails.margins.badgePadding * 2 + documentNameWidthEstimation(this.name);
+        this.height = 35;
+        this.y = y;
+    }
 }
 
 class entryItem extends layoutableItem {
@@ -242,6 +250,16 @@ class leafPageItem extends pageItem {
         this.height = yStart;
     }
 
+    backpropagateWidth(requestedWidth: number) {
+        this.width = requestedWidth;
+
+        if (this.entries) {
+            for (let j = 0; j < this.entries.length; j++) {
+                this.entries[j].width = this.width - 2 * pageItem.margins.entryTextPadding;
+            }
+        }
+    }
+
     static findEntries(documents: documentItem[], entries: Array<Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf>) {
         let hasAnySource = false;
 
@@ -295,7 +313,7 @@ class branchPageItem extends pageItem {
 
 }
 
-class aggregatedLeafPageItem extends layoutableItem {
+class collapsedLeavesItem extends layoutableItem {
 
     parentPage?: branchPageItem;
     aggregationCount: number;
@@ -314,6 +332,11 @@ class aggregatedLeafPageItem extends layoutableItem {
     getSourceConnectionPoint(): [number, number] {
         return [this.x + this.width / 2, this.y];
     }
+
+    backpropagateWidth(requestedWidth: number) {
+        this.width = requestedWidth;
+    }
+
 }
 
 class reduceTreeItem {
@@ -324,7 +347,7 @@ class reduceTreeItem {
     displayName: string;
     depth: number;
     itemsCountAtDepth: Array<number>; // this represents non-filtered count
-    itemsAtDepth = new Map<number, Array<pageItem | aggregatedLeafPageItem>>(); // items after filtering depth -> list of items
+    itemsAtDepth = new Map<number, Array<pageItem | collapsedLeavesItem>>(); // items after filtering depth -> list of items
 
     constructor(tree: Raven.Server.Documents.Indexes.Debugging.ReduceTree) {
         this.tree = tree;
@@ -408,8 +431,8 @@ class reduceTreeItem {
             const levelItems = this.itemsAtDepth.get(i);
             const relevantPageNumbers = relevantPageNumbersPerLevel[i];
 
-            const collapsedItems = [] as Array<pageItem | aggregatedLeafPageItem>;
-            let currentAggregation: aggregatedLeafPageItem = null;
+            const collapsedItems = [] as Array<pageItem | collapsedLeavesItem>;
+            let currentAggregation: collapsedLeavesItem = null;
 
             for (let j = 0; j < levelItems.length; j++) {
                 const item = levelItems[j] as pageItem;
@@ -420,7 +443,7 @@ class reduceTreeItem {
                     if (currentAggregation && currentAggregation.parentPage === item.parentPage) {
                         currentAggregation.aggregationCount += 1;
                     } else {
-                        currentAggregation = new aggregatedLeafPageItem(item.parentPage, 1);
+                        currentAggregation = new collapsedLeavesItem(item.parentPage, 1);
                         collapsedItems.push(currentAggregation);
                     }
                 }
@@ -441,14 +464,9 @@ class reduceTreeItem {
         // make all items at last level at the same size
         const maxWidth = d3.max(lastLevelItems, x => x.width);
         for (let i = 0; i < lastLevelItems.length; i++) {
-            const item = lastLevelItems[i] as leafPageItem;
-            item.width = maxWidth;
+            const item = lastLevelItems[i] as leafPageItem | collapsedLeavesItem;
 
-            if (item.entries) {
-                for (let j = 0; j < item.entries.length; j++) {
-                    item.entries[j].width = item.width - 2 * pageItem.margins.entryTextPadding;
-                }
-            }
+            item.backpropagateWidth(maxWidth);
         }
 
         this.totalWidth = lastLevelItems.reduce((p, c) => p + c.width, 0)
@@ -508,7 +526,7 @@ class visualizerGraphDetails {
     private documents = [] as Array<documentItem>;
 
     private canvas: d3.Selection<void>;
-    private svg: d3.Selection<void>; //TODO: do we really need svg in here?
+    private svg: d3.Selection<void>;
     private zoom: d3.behavior.Zoom<void>;
 
     private xScale: d3.scale.Linear<number, number>;
@@ -661,12 +679,7 @@ class visualizerGraphDetails {
 
         for (let i = 0; i < visibleDocuments.length; i++) {
             const doc = visibleDocuments[i];
-
-            const documentNameWidthEstimation = (text: string) => text.length * 9;
-
-            doc.width = visualizerGraphDetails.margins.badgePadding * 2 + documentNameWidthEstimation(doc.name);
-            doc.height = 35;
-            doc.y = yStart;
+            doc.layout(yStart);
 
             totalWidth += doc.width;
         }
@@ -734,7 +747,7 @@ class visualizerGraphDetails {
                 if (page instanceof pageItem) {
                     this.drawPage(ctx, page);
                 } else {
-                    this.drawAggregationPage(ctx, page as aggregatedLeafPageItem);
+                    this.drawCollapsedLeaves(ctx, page as collapsedLeavesItem);
                 }
 
                 if (page.parentPage) {
@@ -801,7 +814,7 @@ class visualizerGraphDetails {
         }
     }
 
-    private drawAggregationPage(ctx: CanvasRenderingContext2D, page: aggregatedLeafPageItem) {
+    private drawCollapsedLeaves(ctx: CanvasRenderingContext2D, page: collapsedLeavesItem) {
         ctx.fillStyle = "#3a4242";
         ctx.fillRect(page.x, page.y, page.width, page.height);
 
