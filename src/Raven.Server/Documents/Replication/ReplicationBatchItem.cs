@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.Replication
         {
             return new ReplicationBatchItem
             {
-                Type = ReplicationItemType.Document,
+                Type = doc.Doc == null ? ReplicationItemType.DocumentTombstone : ReplicationItemType.Document,
                 Etag = doc.Etag,
                 ChangeVector = doc.ChangeVector,
                 Collection = doc.Collection,
