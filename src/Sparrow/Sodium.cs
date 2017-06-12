@@ -381,6 +381,18 @@ namespace Sparrow
                 Platform.Win32.WinSodium.sodium_memzero(ptr, (UIntPtr)size);
         }
 
+        public static void ZeroBuffer(byte[] buffer)
+        {
+            var size = buffer.Length;
+            fixed (byte* ptr = buffer)
+            {
+                if (Platform.PlatformDetails.RunningOnPosix)
+                    Platform.Posix.PosixSodium.sodium_memzero(ptr, (UIntPtr)size);
+                else
+                    Platform.Win32.WinSodium.sodium_memzero(ptr, (UIntPtr)size);
+            }
+        }
+
         public static void CopyMasterKey(out byte[] dst, byte[] src)
         {
             if (src == null)
