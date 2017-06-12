@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Server;
@@ -25,6 +26,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public readonly TimeSpan SupervisorSamplePeriod;
         private readonly ServerStore _server;
+        private readonly long _stabilizationTime;
 
         public ClusterObserver(
             ServerStore server,
@@ -43,6 +45,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             var config = server.Configuration.Cluster;
             SupervisorSamplePeriod = config.SupervisorSamplePeriod.AsTimeSpan;
+            _stabilizationTime = (long)config.StabilizationTime.AsTimeSpan.TotalMilliseconds;
 
             _observe = Run(_cts.Token);
         }
@@ -87,6 +90,17 @@ namespace Raven.Server.ServerWide.Maintenance
                     foreach (var database in _engine.StateMachine.GetDatabaseNames(context))
                     {
                         var databaseRecord = _engine.StateMachine.ReadDatabase(context, database, out long etag);
+                        var graceIfLeaderChanged = _engine.CurrentTerm > databaseRecord.Topology.Stamp.Term && _engine.CurrentLeader.LeaderShipDuration < _stabilizationTime;
+                        var letStatsBecomeStable = _engine.CurrentTerm == databaseRecord.Topology.Stamp.Term && 
+                            (_engine.CurrentLeader.LeaderShipDuration - databaseRecord.Topology.Stamp.LeadersTicks < _stabilizationTime);
+                        if (graceIfLeaderChanged || letStatsBecomeStable)
+                        {
+                            if (_logger.IsInfoEnabled)
+                            {
+                                _logger.Info($"We give more time for the {database} stats to become stable, so we skip analyzing it for now.");
+                            }
+                            continue;
+                        }
 
                         if (UpdateDatabaseTopology(database, databaseRecord.Topology, newStats, prevStats))
                         {

@@ -17,7 +17,7 @@ namespace RachisTests
             var nodeCurrentState = node.CurrentState;
             Assert.True(nodeCurrentState == RachisConsensus.State.LeaderElect ||
                         nodeCurrentState == RachisConsensus.State.Leader);
-            Assert.True(await node.WaitForState(RachisConsensus.State.Leader).WaitAsync(node.ElectionTimeout), "Node didn't become leader although he is alone in his cluster.");
+            Assert.True(await node.WaitForState(RachisConsensus.State.Leader).WaitAsync(node.ElectionTimeout), $"Node is in state {node.CurrentState} and didn't become leader although he is alone in his cluster.");
         }
 
         /// <summary>

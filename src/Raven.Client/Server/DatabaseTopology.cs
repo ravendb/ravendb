@@ -111,6 +111,7 @@ namespace Raven.Client.Server
         {
             var json = base.ToJson();
             json[nameof(TaskId)] = TaskId;
+            json[nameof(ApiKey)] = ApiKey;
             return json;
         }
 
@@ -121,13 +122,32 @@ namespace Raven.Client.Server
             return hashCode;
         }
 }
-    
+
+    public class LeaderStamp : IDynamicJson
+    {
+        public long Index = -1;
+        public long Term = -1;
+        public long LeadersTicks = -1;
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Index)] = Index,
+                [nameof(Term)] = Term,
+                [nameof(LeadersTicks)] = LeadersTicks
+            };
+        }
+    }
+
     public class DatabaseTopology
     {
         public bool PartOfCluster = false;
         public List<DatabaseTopologyNode> Members = new List<DatabaseTopologyNode>(); // Member of the master to master replication inside cluster
         public List<DatabaseTopologyNode> Promotables = new List<DatabaseTopologyNode>(); // Promotable is in a receive state until Leader decides it can become a Member
         public List<DatabaseWatcher> Watchers = new List<DatabaseWatcher>(); // Watcher only receives (slave)
+
+        public LeaderStamp Stamp;
 
         public bool RelevantFor(string nodeTag)
         {
@@ -276,6 +296,7 @@ namespace Raven.Client.Server
                 [nameof(Members)] = new DynamicJsonArray(Members.Select(m => m.ToJson())),
                 [nameof(Promotables)] = new DynamicJsonArray(Promotables.Select(p => p.ToJson())),
                 [nameof(Watchers)] = new DynamicJsonArray(Watchers.Select(w => w.ToJson())),
+                [nameof(Stamp)] = Stamp.ToJson()
             };
         }
 

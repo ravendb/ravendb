@@ -65,6 +65,7 @@ namespace Raven.Server.Rachis
             set { Interlocked.Exchange(ref _lowestIndexInEntireCluster, value); }
         }
 
+        public long Term => _engine.CurrentTerm;
         public Leader(RachisConsensus engine)
         {
             _engine = engine;
