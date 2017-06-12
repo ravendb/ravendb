@@ -86,6 +86,7 @@ class reduceTreeItem {
 
     width = 0;
     height = 0;
+    totalLeavesNumberWidth = 0;
     x: number;
     y: number;
     extraLeftPadding = 0; //used when text (reduce key) is longer than contents
@@ -212,6 +213,8 @@ class reduceTreeItem {
         const yOffset = pageItem.pageHeight +
             reduceTreeItem.margins.betweenPagesVerticalPadding;
 
+        this.totalLeavesNumberWidth = visualizerGraphGlobal.totalEntriesWidth(_.max(this.itemsCountAtDepth));
+
         for (let depth = 0; depth < this.depth; depth++) {
             const items = this.itemsAtDepth.get(depth);
 
@@ -254,7 +257,7 @@ class reduceTreeItem {
         const maxItems = this.getMaxItems();
 
         let width = reduceTreeItem.margins.treeMargin +
-            visualizerGraphGlobal.totalEntriesWidth(maxItems) +
+            this.totalLeavesNumberWidth +
             reduceTreeItem.margins.treeMargin;
 
         width += this.getPagesOnlyWidth(maxItems);
@@ -816,10 +819,10 @@ class visualizerGraphGlobal {
                 ctx.font = "18px Lato";
                 ctx.textAlign = "right";
                 ctx.fillText(items.toString(),
-                    reduceTreeItem.margins.treeMargin + visualizerGraphGlobal.totalEntriesWidth(items),
+                    reduceTreeItem.margins.treeMargin + tree.totalLeavesNumberWidth,
                     totalEntiresY + 16);
 
-                const spliterX = reduceTreeItem.margins.treeMargin + visualizerGraphGlobal.totalEntriesWidth(items) + 4;
+                const spliterX = reduceTreeItem.margins.treeMargin + tree.totalLeavesNumberWidth + 4;
 
                 ctx.beginPath();
                 ctx.moveTo(spliterX, totalEntiresY - 6);
@@ -942,29 +945,6 @@ class visualizerGraphGlobal {
         ctx.stroke();
     }
 
-    /* TODO striped curves
-
-    ctx.lineWidth = 2;
-ctx.strokeStyle = "black";
-ctx.setLineDash([16, 16]);
-ctx.lineDashOffset = 0;
-
-ctx.beginPath();
-ctx.moveTo(20,20);
-
-ctx.bezierCurveTo(20,100,200,100,200,20);
-ctx.stroke();
-
-
-ctx.strokeStyle = "red"
-ctx.setLineDash([16, 16]);
-ctx.lineDashOffset = 16;
-
-ctx.beginPath();
-ctx.moveTo(20,20);
-ctx.bezierCurveTo(20,100,200,100,200,20);
-ctx.stroke();*/
-
     private drawDocument(ctx: CanvasRenderingContext2D, docItem: documentItem) {
         ctx.fillStyle = docItem.color;
         ctx.fillRect(docItem.x, docItem.y, docItem.width, docItem.height);
@@ -985,7 +965,7 @@ ctx.stroke();*/
     }
 
     static totalEntriesWidth(entries: number) {
-        return Math.ceil(Math.log10(entries)) * 10;
+        return Math.ceil(Math.log10(entries)) * 13;
     }
 
     private getNextColor() {
