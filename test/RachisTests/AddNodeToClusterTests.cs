@@ -65,13 +65,9 @@ namespace RachisTests
             {
                 tasks.Add(ravenServer.ServerStore.Cluster.WaitForIndexNotification(watcherRes.RaftCommandIndex));
             }
-            await Task.WhenAll(tasks).WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.True(await Task.WhenAll(tasks).WaitAsync(TimeSpan.FromSeconds(5)));
 
             var responsibleServer = Servers.Single(s => s.ServerStore.NodeTag == watcherRes.ResponsibleNode);
-//
-//            Console.WriteLine("LeaderNode = " + leader.ServerStore.NodeTag);
-//            Console.WriteLine("WathcerNode = " + watcherDb.Item2.Single().ServerStore.NodeTag);
-//            Console.WriteLine("ResponsibleNode = " + watcherRes.ResponsibleNode);
 
             var responsibleStore = new DocumentStore
             {
@@ -101,8 +97,8 @@ namespace RachisTests
             Assert.True(WaitForDocument<User>(watcherStore, "users/1", u => u.Name == "Karmel", 30_000));
 
             // remove the node from the cluster that is responsible for the external replication
-            await leader.ServerStore.RemoveFromClusterAsync(watcherRes.ResponsibleNode).WaitAsync(fromSeconds);
-            await responsibleServer.ServerStore.WaitForState(RachisConsensus.State.Passive).WaitAsync(fromSeconds);
+            Assert.True(await leader.ServerStore.RemoveFromClusterAsync(watcherRes.ResponsibleNode).WaitAsync(fromSeconds));
+            Assert.True(await responsibleServer.ServerStore.WaitForState(RachisConsensus.State.Passive).WaitAsync(fromSeconds));
 
             // replication from the removed node should be suspended
             using (var session = responsibleStore.OpenAsyncSession())
@@ -133,12 +129,12 @@ namespace RachisTests
                 }, "users/3");
                 session.SaveChanges();
             }
-            Assert.True(WaitForDocument<User>(watcherStore, "users/3", u => u.Name == "Karmel2"));
+            Assert.True(WaitForDocument<User>(watcherStore, "users/3", u => u.Name == "Karmel2", 30_000));
 
             // rejoin the node
             var newLeader = Servers.Single(s => s.ServerStore.IsLeader());
-            await newLeader.ServerStore.AddNodeToClusterAsync(responsibleServer.WebUrls[0], watcherRes.ResponsibleNode).WaitAsync(fromSeconds);
-            await responsibleServer.ServerStore.WaitForState(RachisConsensus.State.Follower).WaitAsync(fromSeconds);
+            Assert.True(await newLeader.ServerStore.AddNodeToClusterAsync(responsibleServer.WebUrls[0], watcherRes.ResponsibleNode).WaitAsync(fromSeconds));
+            Assert.True(await responsibleServer.ServerStore.WaitForState(RachisConsensus.State.Follower).WaitAsync(fromSeconds));
 
             using (var session = responsibleStore.OpenSession())
             {
