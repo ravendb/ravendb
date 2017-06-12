@@ -27,15 +27,15 @@ namespace FastTests.Client.Attachments
                     var user = session.Load<User>("users/1");
 
                     using (var bigStream = new BigDummyStream(size))
-                    using (var stream = session.Advanced.GetAttachment(user, "big-file", out AttachmentDetails attachment))
+                    using (var attachment = session.Advanced.GetAttachment(user, "big-file"))
                     {
-                        stream.CopyTo(bigStream);
-                        Assert.Equal(2, attachment.Etag);
-                        Assert.Equal("big-file", attachment.Name);
-                        Assert.Equal(hash, attachment.Hash);
+                        attachment.Stream.CopyTo(bigStream);
+                        Assert.Equal(2, attachment.Details.Etag);
+                        Assert.Equal("big-file", attachment.Details.Name);
+                        Assert.Equal(hash, attachment.Details.Hash);
                         Assert.Equal(size, bigStream.Position);
-                        Assert.Equal(size, attachment.Size);
-                        Assert.Equal("", attachment.ContentType);
+                        Assert.Equal(size, attachment.Details.Size);
+                        Assert.Equal("", attachment.Details.ContentType);
                     }
                 }
             }
@@ -70,15 +70,15 @@ namespace FastTests.Client.Attachments
                     var user = session.Load<User>("users/1");
 
                     using (var bigStream = new BigDummyStream(size))
-                    using (var stream = session.Advanced.GetAttachment(user, "huge-file", out AttachmentDetails attachment))
+                    using (var attachment = session.Advanced.GetAttachment(user, "huge-file"))
                     {
-                        stream.CopyTo(bigStream);
-                        Assert.Equal(2, attachment.Etag);
-                        Assert.Equal("huge-file", attachment.Name);
-                        Assert.Equal(hash, attachment.Hash);
+                        attachment.Stream.CopyTo(bigStream);
+                        Assert.Equal(2, attachment.Details.Etag);
+                        Assert.Equal("huge-file", attachment.Details.Name);
+                        Assert.Equal(hash, attachment.Details.Hash);
                         Assert.Equal(size, bigStream.Position);
-                        Assert.Equal(size, attachment.Size);
-                        Assert.Equal("", attachment.ContentType);
+                        Assert.Equal(size, attachment.Details.Size);
+                        Assert.Equal("", attachment.Details.ContentType);
                     }
                 }
             }

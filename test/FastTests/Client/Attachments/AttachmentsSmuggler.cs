@@ -51,12 +51,12 @@ namespace FastTests.Client.Attachments
                     {
                         var readBuffer = new byte[1024 * 1024];
                         using (var attachmentStream = new MemoryStream(readBuffer))
-                        using (var stream = session.Advanced.GetAttachment("users/1", "big-file", out AttachmentDetails attachment))
+                        using (var attachment = session.Advanced.GetAttachment("users/1", "big-file"))
                         {
-                            stream.CopyTo(attachmentStream);
-                            Assert.Equal(2, attachment.Etag);
-                            Assert.Equal("big-file", attachment.Name);
-                            Assert.Equal("zKHiLyLNRBZti9DYbzuqZ/EDWAFMgOXB+SwKvjPAINk=", attachment.Hash);
+                            attachment.Stream.CopyTo(attachmentStream);
+                            Assert.Equal(2, attachment.Details.Etag);
+                            Assert.Equal("big-file", attachment.Details.Name);
+                            Assert.Equal("zKHiLyLNRBZti9DYbzuqZ/EDWAFMgOXB+SwKvjPAINk=", attachment.Details.Hash);
                             Assert.Equal(999 * 1024, attachmentStream.Position);
                             Assert.Equal(Enumerable.Range(1, 999 * 1024).Select(x => (byte)x), readBuffer.Take((int)attachmentStream.Position));
                         }
@@ -307,13 +307,13 @@ namespace FastTests.Client.Attachments
                     {
                         var readBuffer = new byte[1024 * 1024];
                         using (var attachmentStream = new MemoryStream(readBuffer))
-                        using (var stream = session.Advanced.GetAttachment("users/1", "empty-file", out AttachmentDetails attachment))
+                        using (var attachment = session.Advanced.GetAttachment("users/1", "empty-file"))
                         {
-                            stream.CopyTo(attachmentStream);
-                            Assert.Equal(1, attachment.Etag);
-                            Assert.Equal("empty-file", attachment.Name);
-                            Assert.Equal(0, attachment.Size);
-                            Assert.Equal("DldRwCblQ7Loqy6wYJnaodHl30d3j3eH+qtFzfEv46g=", attachment.Hash);
+                            attachment.Stream.CopyTo(attachmentStream);
+                            Assert.Equal(1, attachment.Details.Etag);
+                            Assert.Equal("empty-file", attachment.Details.Name);
+                            Assert.Equal(0, attachment.Details.Size);
+                            Assert.Equal("DldRwCblQ7Loqy6wYJnaodHl30d3j3eH+qtFzfEv46g=", attachment.Details.Hash);
                             Assert.Equal(0, attachmentStream.Position);
                             Assert.Equal(new byte[0], readBuffer.Take((int)attachmentStream.Position));
                         }

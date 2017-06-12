@@ -204,54 +204,54 @@ namespace FastTests.Client.Attachments
                     continue;
 
                 using (var attachmentStream = new MemoryStream(readBuffer))
-                using (var stream = session.Advanced.GetRevisionAttachment("users/1", name, changeVector, out AttachmentDetails attachment))
+                using (var attachment = session.Advanced.GetRevisionAttachment("users/1", name, changeVector))
                 {
-                    stream.CopyTo(attachmentStream);
+                    attachment.Stream.CopyTo(attachmentStream);
                     if (i >= expectedCount)
                     {
                         Assert.Null(attachment);
                         continue;
                     }
 
-                    Assert.Equal(name, attachment.Name);
+                    Assert.Equal(name, attachment.Details.Name);
                     if (name == names[0])
                     {
                         if (expectedCount == 1)
-                            Assert.Equal(5, attachment.Etag);
+                            Assert.Equal(5, attachment.Details.Etag);
                         else if (expectedCount == 2)
-                            Assert.Equal(10, attachment.Etag);
+                            Assert.Equal(10, attachment.Details.Etag);
                         else if (expectedCount == 3)
-                            Assert.Equal(16, attachment.Etag);
+                            Assert.Equal(16, attachment.Details.Etag);
                         else
                             throw new ArgumentOutOfRangeException(nameof(i));
                         Assert.Equal(new byte[] {1, 2, 3}, readBuffer.Take(3));
-                        Assert.Equal("image/png", attachment.ContentType);
+                        Assert.Equal("image/png", attachment.Details.ContentType);
                         Assert.Equal(3, attachmentStream.Position);
-                        Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Hash);
+                        Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Details.Hash);
                     }
                     else if (name == names[1])
                     {
                         if (expectedCount == 2)
-                            Assert.Equal(9, attachment.Etag);
+                            Assert.Equal(9, attachment.Details.Etag);
                         else if (expectedCount == 3)
-                            Assert.Equal(14, attachment.Etag);
+                            Assert.Equal(14, attachment.Details.Etag);
                         else
                             throw new ArgumentOutOfRangeException(nameof(i));
                         Assert.Equal(new byte[] {10, 20, 30, 40, 50}, readBuffer.Take(5));
-                        Assert.Equal("ImGgE/jPeG", attachment.ContentType);
+                        Assert.Equal("ImGgE/jPeG", attachment.Details.ContentType);
                         Assert.Equal(5, attachmentStream.Position);
-                        Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", attachment.Hash);
+                        Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", attachment.Details.Hash);
                     }
                     else if (name == names[2])
                     {
                         if (expectedCount == 3)
-                            Assert.Equal(15, attachment.Etag);
+                            Assert.Equal(15, attachment.Details.Etag);
                         else
                             throw new ArgumentOutOfRangeException(nameof(i));
                         Assert.Equal(new byte[] {1, 2, 3, 4, 5}, readBuffer.Take(5));
-                        Assert.Equal("", attachment.ContentType);
+                        Assert.Equal("", attachment.Details.ContentType);
                         Assert.Equal(5, attachmentStream.Position);
-                        Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", attachment.Hash);
+                        Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", attachment.Details.Hash);
                     }
                 }
             }

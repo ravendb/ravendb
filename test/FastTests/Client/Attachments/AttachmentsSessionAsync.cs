@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
@@ -9,10 +10,10 @@ using Xunit;
 
 namespace FastTests.Client.Attachments
 {
-    public class AttachmentsSession : RavenTestBase
+    public class AttachmentsSessionAsync : RavenTestBase
     {
         [Fact]
-        public void PutAttachments()
+        public async Task PutAttachments()
         {
             using (var store = GetDocumentStore())
             {
@@ -23,24 +24,24 @@ namespace FastTests.Client.Attachments
                     "fileNAME_#$1^%_בעברית.txt"
                 };
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
                 using (var backgroundStream = new MemoryStream(new byte[] {10, 20, 30, 40, 50}))
                 using (var fileStream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
                 {
                     var user = new User {Name = "Fitzchak"};
-                    session.Store(user, "users/1");
+                    await session.StoreAsync(user, "users/1");
 
                     session.Advanced.StoreAttachment("users/1", names[0], profileStream, "image/png");
                     session.Advanced.StoreAttachment(user, names[1], backgroundStream, "ImGgE/jPeG");
                     session.Advanced.StoreAttachment(user, names[2], fileStream);
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = await session.LoadAsync<User>("users/1");
                     var metadata = session.Advanced.GetMetadataFor(user);
                     Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
                     var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
@@ -76,7 +77,7 @@ namespace FastTests.Client.Attachments
                     {
                         var name = names[i];
                         using (var attachmentStream = new MemoryStream(readBuffer))
-                        using (var attachment = session.Advanced.GetAttachment(user, name))
+                        using (var attachment = await session.Advanced.GetAttachmentAsync(user, name))
                         {
                             attachment.Stream.CopyTo(attachmentStream);
                             Assert.Equal(2 + 2 * i, attachment.Details.Etag);
@@ -106,7 +107,7 @@ namespace FastTests.Client.Attachments
                         }
                     }
 
-                    using (var notExistsAttachment = session.Advanced.GetAttachment("users/1", "not-there"))
+                    using (var notExistsAttachment = await session.Advanced.GetAttachmentAsync("users/1", "not-there"))
                     {
                         Assert.Null(notExistsAttachment);
                     }
@@ -115,7 +116,7 @@ namespace FastTests.Client.Attachments
         }
 
         [Fact]
-        public void ThrowIfStreamIsDisposed()
+        public async Task ThrowIfStreamIsDisposed()
         {
             using (var store = GetDocumentStore())
             {
@@ -126,10 +127,10 @@ namespace FastTests.Client.Attachments
                     "fileNAME_#$1^%_בעברית.txt"
                 };
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     var user = new User {Name = "Fitzchak"};
-                    session.Store(user, "users/1");
+                    await session.StoreAsync(user, "users/1");
                     
                     using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
                         session.Advanced.StoreAttachment(user, names[0], profileStream, "image/png");
@@ -138,43 +139,43 @@ namespace FastTests.Client.Attachments
                     using (var fileStream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
                         session.Advanced.StoreAttachment(user, names[2], fileStream, null);
 
-                    var exception = Assert.Throws<InvalidOperationException>(() => session.SaveChanges());
+                    var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () => await session.SaveChangesAsync());
                     Assert.Equal("Cannot put an attachment with a not readable stream. Make sure that the specified stream is readable and was not disposed.", exception.Message);
                 }
             }
         }
 
         [Fact]
-        public void ThrowIfStreamIsUseTwice()
+        public async Task ThrowIfStreamIsUseTwice()
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 using (var stream = new MemoryStream(new byte[] {1, 2, 3}))
                 {
                     var user = new User {Name = "Fitzchak"};
-                    session.Store(user, "users/1");
+                    await session.StoreAsync(user, "users/1");
 
                     session.Advanced.StoreAttachment(user, "profile", stream, "image/png");
                     session.Advanced.StoreAttachment(user, "other", stream, null);
 
-                    var exception = Assert.Throws<InvalidOperationException>(() => session.SaveChanges());
+                    var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () => await session.SaveChangesAsync());
                     Assert.Equal("It is forbidden to re-use the same stream for more than one attachment. Use a unique stream per put attachment command.", exception.Message);
                 }
             }
         }
 
         [Fact]
-        public void ThrowWhenTwoAttachmentsWithTheSameNameInSession()
+        public async Task ThrowWhenTwoAttachmentsWithTheSameNameInSession()
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 using (var stream2 = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                 {
                     var user = new User { Name = "Fitzchak" };
-                    session.Store(user, "users/1");
+                    await session.StoreAsync(user, "users/1");
 
                     session.Advanced.StoreAttachment(user, "profile", stream, "image/png");
 
@@ -185,60 +186,60 @@ namespace FastTests.Client.Attachments
         }
 
         [Fact]
-        public void PutDocumentAndAttachmentAndDeleteShouldThrow()
+        public async Task PutDocumentAndAttachmentAndDeleteShouldThrow()
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
                     var user = new User { Name = "Fitzchak" };
-                    session.Store(user, "users/1");
+                    await session.StoreAsync(user, "users/1");
 
                     session.Advanced.StoreAttachment(user, "profile.png", profileStream, "image/png");
 
                     session.Delete(user);
 
-                    var exception = Assert.Throws<InvalidOperationException>(() => session.SaveChanges());
+                    var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () => await session.SaveChangesAsync());
                     Assert.Equal("Cannot perform save because document users/1 has been deleted by the session and is also taking part in deferred AttachmentPUT command", exception.Message);
                 }
             }
         }
 
         [Fact]
-        public void PutAttachmentAndDeleteShouldThrow()
+        public async Task PutAttachmentAndDeleteShouldThrow()
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     var user = new User {Name = "Fitzchak"};
-                    session.Store(user, "users/1");
-                    session.SaveChanges();
+                    await session.StoreAsync(user, "users/1");
+                    await session.SaveChangesAsync();
                 }
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = await session.LoadAsync<User>("users/1");
                     session.Advanced.StoreAttachment(user, "profile.png", profileStream, "image/png");
                     session.Delete(user);
 
-                    var exception = Assert.Throws<InvalidOperationException>(() => session.SaveChanges());
+                    var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () => await session.SaveChangesAsync());
                     Assert.Equal("Cannot perform save because document users/1 has been deleted by the session and is also taking part in deferred AttachmentPUT command", exception.Message);
                 }
             }
         }
 
         [Fact]
-        public void DeleteAttachments()
+        public async Task DeleteAttachments()
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     var user = new User {Name = "Fitzchak"};
-                    session.Store(user, "users/1");
+                    await session.StoreAsync(user, "users/1");
 
                     using (var stream1 = new MemoryStream(Enumerable.Range(1, 3).Select(x => (byte)x).ToArray()))
                     using (var stream2 = new MemoryStream(Enumerable.Range(1, 6).Select(x => (byte)x).ToArray()))
@@ -250,26 +251,26 @@ namespace FastTests.Client.Attachments
                         session.Advanced.StoreAttachment(user, "file3", stream3, "image/png");
                         session.Advanced.StoreAttachment(user, "file4", stream4, "image/png");
 
-                        session.SaveChanges();
+                        await session.SaveChangesAsync();
                     }
                 }
 
                 AttachmentsCrud.AssertAttachmentCount(store, 4, documentsCount: 1);
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = await session.LoadAsync<User>("users/1");
 
                     session.Advanced.DeleteAttachment("users/1", "file2");
                     session.Advanced.DeleteAttachment(user, "file4");
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
                 AttachmentsCrud.AssertAttachmentCount(store, 2, documentsCount: 1);
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = await session.LoadAsync<User>("users/1");
                     var metadata = session.Advanced.GetMetadataFor(user);
                     Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
                     var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
@@ -280,13 +281,13 @@ namespace FastTests.Client.Attachments
                     Assert.Equal("NRQuixiqj+xvEokF6MdQq1u+uH1dk/gk2PLChJQ58Vo=", attachments[1].GetString(nameof(AttachmentName.Hash)));
                 }
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = await session.LoadAsync<User>("users/1");
 
                     var readBuffer = new byte[16];
                     using (var attachmentStream = new MemoryStream(readBuffer))
-                    using (var attachment = session.Advanced.GetAttachment("users/1", "file1"))
+                    using (var attachment = await session.Advanced.GetAttachmentAsync("users/1", "file1"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
                         Assert.Equal(2, attachment.Details.Etag);
@@ -295,12 +296,12 @@ namespace FastTests.Client.Attachments
                         Assert.Equal(3, attachmentStream.Position);
                         Assert.Equal(new byte[] { 1, 2, 3 }, readBuffer.Take(3));
                     }
-                    using (var attachment = session.Advanced.GetAttachment(user, "file2"))
+                    using (var attachment = await session.Advanced.GetAttachmentAsync(user, "file2"))
                     {
                         Assert.Null(attachment);
                     }
                     using (var attachmentStream = new MemoryStream(readBuffer))
-                    using (var attachment = session.Advanced.GetAttachment(user, "file3"))
+                    using (var attachment = await session.Advanced.GetAttachmentAsync(user, "file3"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
                         Assert.Equal(6, attachment.Details.Etag);
@@ -309,84 +310,84 @@ namespace FastTests.Client.Attachments
                         Assert.Equal(9, attachmentStream.Position);
                         Assert.Equal(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }, readBuffer.Take(9));
                     }
-                    using (var attachment = session.Advanced.GetAttachment(user, "file4"))
+                    using (var attachment = await session.Advanced.GetAttachmentAsync(user, "file4"))
                     {
                         Assert.Null(attachment);
                     }
 
                     // Delete document should delete all the attachments
                     session.Delete(user);
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
                 AttachmentsCrud.AssertAttachmentCount(store, 0, documentsCount: 0);
             }
         }
 
         [Fact]
-        public void DeleteDocumentAndThanItsAttachments_ThisIsNoOpButShouldBeSupported()
+        public async Task DeleteDocumentAndThanItsAttachments_ThisIsNoOpButShouldBeSupported()
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     var user = new User {Name = "Fitzchak"};
-                    session.Store(user, "users/1");
+                    await session.StoreAsync(user, "users/1");
 
                     using (var stream = new MemoryStream(Enumerable.Range(1, 3).Select(x => (byte)x).ToArray()))
                     {
                         session.Advanced.StoreAttachment(user, "file", stream, "image/png");
-                        session.SaveChanges();
+                        await session.SaveChangesAsync();
                     }
                 }
 
                 AttachmentsCrud.AssertAttachmentCount(store, 1, documentsCount: 1);
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = await session.LoadAsync<User>("users/1");
 
                     session.Delete(user);
                     session.Advanced.DeleteAttachment(user, "file");
                     session.Advanced.DeleteAttachment(user, "file"); // this should be no-op
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
                 AttachmentsCrud.AssertAttachmentCount(store, 0, documentsCount: 0);
             }
         }
 
         [Fact]
-        public void DeleteDocumentByCommandAndThanItsAttachments_ThisIsNoOpButShouldBeSupported()
+        public async Task DeleteDocumentByCommandAndThanItsAttachments_ThisIsNoOpButShouldBeSupported()
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(new User {Name = "Fitzchak"}, "users/1");
+                    await session.StoreAsync(new User {Name = "Fitzchak"}, "users/1");
 
                     using (var stream = new MemoryStream(Enumerable.Range(1, 3).Select(x => (byte)x).ToArray()))
                     {
                         session.Advanced.StoreAttachment("users/1", "file", stream, "image/png");
-                        session.SaveChanges();
+                        await session.SaveChangesAsync();
                     }
                 }
 
                 AttachmentsCrud.AssertAttachmentCount(store, 1, documentsCount: 1);
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     session.Advanced.Defer(new DeleteCommandData("users/1", null));
                     session.Advanced.DeleteAttachment("users/1", "file");
                     session.Advanced.DeleteAttachment("users/1", "file"); // this should be no-op
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
                 AttachmentsCrud.AssertAttachmentCount(store, 0, documentsCount: 0);
             }
         }
 
         [Fact]
-        public void GetAttachmentNames()
+        public async Task GetAttachmentNames()
         {
             using (var store = GetDocumentStore())
             {
@@ -397,24 +398,24 @@ namespace FastTests.Client.Attachments
                     "fileNAME_#$1^%_בעברית.txt"
                 };
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
                 using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                 {
                     var user = new User { Name = "Fitzchak" };
-                    session.Store(user, "users/1");
+                    await session.StoreAsync(user, "users/1");
 
                     session.Advanced.StoreAttachment("users/1", names[0], profileStream, "image/png");
                     session.Advanced.StoreAttachment(user, names[1], backgroundStream, "ImGgE/jPeG");
                     session.Advanced.StoreAttachment(user, names[2], fileStream);
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = await session.LoadAsync<User>("users/1");
                     var attachments = session.Advanced.GetAttachmentNames(user);
                     Assert.Equal(3, attachments.Length);
                     var orderedNames = names.OrderBy(x => x).ToArray();
@@ -443,7 +444,7 @@ namespace FastTests.Client.Attachments
                         }
                     }
 
-                    var user2 = session.Load<User>("users/2");
+                    var user2 = await session.LoadAsync<User>("users/2");
                     Assert.Null(user2);
                     // ReSharper disable once ExpressionIsAlwaysNull
                     var attachments2 = session.Advanced.GetAttachmentNames(user2);
