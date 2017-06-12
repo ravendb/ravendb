@@ -21,7 +21,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (mae == null)
                 return base.Visit(node.Expression);
 
-            if (mae.Name.Identifier.Text != "Select")
+            if (mae.Name.Identifier.Text != "Select" &&
+                mae.Name.Identifier.Text != "SelectMany")
                 return base.Visit(node.Expression);
 
             var last = node.DescendantNodes(descendIntoChildren: syntaxNode =>
