@@ -23,9 +23,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var test = new AttachmentsReplication())
+                using (var test = new AttachmentsLots())
                 {
-                    test.AttachmentsVersioningReplication().Wait();
+                    test.PutLotOfAttachments();
                 }
             }
         }
