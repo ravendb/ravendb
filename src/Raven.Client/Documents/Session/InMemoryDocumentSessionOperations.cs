@@ -31,7 +31,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// Abstract implementation for in memory session operations
     /// </summary>
-    public abstract class InMemoryDocumentSessionOperations : IDisposable
+    public abstract partial class InMemoryDocumentSessionOperations : IDisposable
     {
         protected readonly RequestExecutor _requestExecutor;
         private readonly IDisposable _releaseOperationContext;

@@ -15,7 +15,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class GetAttachmentOperation : IOperation<(Stream Stream, AttachmentDetails Attachment)>
+    public class GetAttachmentOperation : IOperation<AttachmentResult>
     {
         private readonly string _documentId;
         private readonly string _name;
@@ -30,12 +30,12 @@ namespace Raven.Client.Documents.Operations
             _changeVector = changeVector;
         }
 
-        public RavenCommand<(Stream Stream, AttachmentDetails Attachment)> GetCommand(IDocumentStore store, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<AttachmentResult> GetCommand(IDocumentStore store, JsonOperationContext context, HttpCache cache)
         {
             return new GetAttachmentCommand(context, _documentId, _name, _type, _changeVector);
         }
 
-        private class GetAttachmentCommand : RavenCommand<(Stream stream, AttachmentDetails attachment)>
+        private class GetAttachmentCommand : RavenCommand<AttachmentResult>
         {
             private readonly JsonOperationContext _context;
             private readonly string _documentId;
@@ -135,7 +135,11 @@ namespace Raven.Client.Documents.Operations
 
                 var stream = new AttachmentStream(response, await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
 
-                Result = (stream, attachmentDetails);
+                Result = new AttachmentResult
+                {
+                    Stream = stream,
+                    Details = attachmentDetails,
+                };
             }
 
             public override bool IsReadRequest => true;

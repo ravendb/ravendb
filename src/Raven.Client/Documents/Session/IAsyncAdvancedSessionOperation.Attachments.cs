@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System.IO;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Replication.Messages;
 
@@ -13,7 +14,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///     Advanced synchronous session operations
     /// </summary>
-    public partial interface IAdvancedSessionOperation
+    public partial interface IAsyncAdvancedSessionOperations
     {
         /// <summary>
         /// Returns the attachments info of a document.
@@ -23,17 +24,17 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Returns the attachment by the document id and attachment name.
         /// </summary>
-        AttachmentResult GetAttachment(string documentId, string name);
+        Task<AttachmentResult> GetAttachmentAsync(string documentId, string name);
 
         /// <summary>
         /// Returns the attachment by the document id and attachment name.
         /// </summary>
-        AttachmentResult GetAttachment(object entity, string name);
+        Task<AttachmentResult> GetAttachmentAsync(object entity, string name);
 
         /// <summary>
         /// Returns the revision attachment by the document id and attachment name.
         /// </summary>
-        AttachmentResult GetRevisionAttachment(string documentId, string name, ChangeVectorEntry[] changeVector);
+        Task<AttachmentResult> GetRevisionAttachmentAsync(string documentId, string name, ChangeVectorEntry[] changeVector);
 
         /// <summary>
         /// Stores attachment to be sent in the session.

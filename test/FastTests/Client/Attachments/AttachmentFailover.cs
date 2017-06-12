@@ -83,15 +83,15 @@ namespace FastTests.Client.Attachments
 
                 using (var session = store.OpenSession())
                 using (var dummyStream = new BigDummyStream(size))
-                using (var stream = session.Advanced.GetAttachment("users/1", "File", out AttachmentDetails attachment))
+                using (var attachment = session.Advanced.GetAttachment("users/1", "File"))
                 {
-                    stream.CopyTo(dummyStream);
-                    Assert.Equal(2, attachment.Etag);
-                    Assert.Equal("File", attachment.Name);
+                    attachment.Stream.CopyTo(dummyStream);
+                    Assert.Equal(2, attachment.Details.Etag);
+                    Assert.Equal("File", attachment.Details.Name);
                     Assert.Equal(size, dummyStream.Position);
-                    Assert.Equal(size, attachment.Size);
-                    Assert.Equal("application/pdf", attachment.ContentType);
-                    Assert.Equal(hash, attachment.Hash);
+                    Assert.Equal(size, attachment.Details.Size);
+                    Assert.Equal("application/pdf", attachment.Details.ContentType);
+                    Assert.Equal(hash, attachment.Details.Hash);
 
                     var user = session.Load<User>("users/1");
                     var metadata = session.Advanced.GetMetadataFor(user);
