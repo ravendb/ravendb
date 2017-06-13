@@ -161,10 +161,15 @@ namespace Raven.Server.Documents.Patch
 
         private Engine CreateEngine(PatchRequest patch)
         {
-            var scriptWithProperLines = patch.Script.NormalizeLineEnding();
+            return CreateEngine(patch.Script, ExecutionString);
+        }
+
+        protected Engine CreateEngine(string script, string executionString)
+        {
+            var scriptWithProperLines = script.NormalizeLineEnding();
             // NOTE: we merged few first lines of wrapping script to make sure {0} is at line 0.
             // This will all us to show proper line number using user lines locations.
-            var wrapperScript = string.Format(ExecutionString, scriptWithProperLines);
+            var wrapperScript = string.Format(executionString, scriptWithProperLines);
 
             var jintEngine = new Engine(cfg =>
             {
