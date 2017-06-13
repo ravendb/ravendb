@@ -14,7 +14,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///     Advanced synchronous session operations
     /// </summary>
-    public partial interface IAdvancedSessionOperation
+    public partial interface IAdvancedSessionOperations
     {
         /// <summary>
         ///     Check if document exists

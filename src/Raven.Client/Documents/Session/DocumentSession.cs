@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// Implements Unit of Work for accessing the RavenDB server
     /// </summary>
-    public partial class DocumentSession : InMemoryDocumentSessionOperations, IDocumentQueryGenerator, IAdvancedSessionOperation, IDocumentSessionImpl
+    public partial class DocumentSession : InMemoryDocumentSessionOperations, IDocumentQueryGenerator, IAdvancedSessionOperations, IDocumentSessionImpl
     {
         /// <summary>
         /// Get the accessor for advanced operations
@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Session
         /// Those operations are rarely needed, and have been moved to a separate 
         /// property to avoid cluttering the API
         /// </remarks>
-        public IAdvancedSessionOperation Advanced => this;
+        public IAdvancedSessionOperations Advanced => this;
 
         /// <summary>
         /// Access the lazy operations
