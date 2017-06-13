@@ -19,13 +19,13 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            for (var i = 0; i < 10; i++)
+            for (var i = 0; i < 10000; i++)
             {
                 Console.WriteLine(i);
  
-                using (var test = new SlowTests.Bugs.Indexing.ComplexUsage())
+                using (var test = new AttachmentFailover())
                 {
-                    test.ShouldNotOutputNull();
+                    test.PutAttachmentsWithFailover(true, 524288, "BfKA8g/BJuHOTHYJ+A6sOt9jmFSVEDzCM3EcLLKCRMU=").Wait();
                 }
             }
         }

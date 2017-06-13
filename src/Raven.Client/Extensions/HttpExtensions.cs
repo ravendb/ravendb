@@ -15,8 +15,8 @@ namespace Raven.Client.Extensions
     {
         public static long GetRequiredEtagHeader(this HttpResponseMessage response)
         {
-            IEnumerable<string> values;
-            if (response.Headers.TryGetValues(Constants.Headers.Etag, out values) == false || values == null)
+            if (response.Headers.TryGetValues(Constants.Headers.Etag, out IEnumerable<string> values) == false || 
+                values == null)
                 throw new InvalidOperationException("Response didn't had an ETag header");
 
             var value = values.FirstOrDefault();
@@ -28,8 +28,8 @@ namespace Raven.Client.Extensions
 
         public static long? GetEtagHeader(this HttpResponseMessage response)
         {
-            IEnumerable<string> values;
-            if (response.Headers.TryGetValues(Constants.Headers.Etag, out values) == false || values == null)
+            if (response.Headers.TryGetValues(Constants.Headers.Etag, out IEnumerable<string> values) == false || 
+                values == null)
                 return null;
 
             var value = values.FirstOrDefault();

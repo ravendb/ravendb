@@ -21,6 +21,11 @@ namespace Raven.Client.Documents.Session
         AttachmentName[] GetAttachmentNames(object entity);
 
         /// <summary>
+        /// Check if attachment exists
+        /// </summary>
+        bool AttachmentExists(string documentId, string name);
+
+        /// <summary>
         /// Returns the attachment by the document id and attachment name.
         /// </summary>
         AttachmentResult GetAttachment(string documentId, string name);
