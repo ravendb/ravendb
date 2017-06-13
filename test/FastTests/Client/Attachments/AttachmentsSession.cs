@@ -477,5 +477,29 @@ namespace FastTests.Client.Attachments
             foreach (var stream in streams)
                 stream.Dispose();
         }
+
+        [Fact]
+        public void AttachmentExists()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    var user = new User { Name = "Fitzchak" };
+                    session.Store(user, "users/1");
+
+                    session.Advanced.StoreAttachment("users/1", "profile", stream, "image/png");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    Assert.True(session.Advanced.AttachmentExists("users/1", "profile"));
+                    Assert.False(session.Advanced.AttachmentExists("users/1", "background-photo"));
+                    Assert.False(session.Advanced.AttachmentExists("users/2", "profile"));
+                }
+            }
+        }
     }
 }
