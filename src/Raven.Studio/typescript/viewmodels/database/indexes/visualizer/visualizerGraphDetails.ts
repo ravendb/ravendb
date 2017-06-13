@@ -250,16 +250,6 @@ class leafPageItem extends pageItem {
         this.height = yStart;
     }
 
-    backpropagateWidth(requestedWidth: number) {
-        this.width = requestedWidth;
-
-        if (this.entries) {
-            for (let j = 0; j < this.entries.length; j++) {
-                this.entries[j].width = this.width - 2 * pageItem.margins.entryTextPadding;
-            }
-        }
-    }
-
     static findEntries(documents: documentItem[], entries: Array<Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf>) {
         let hasAnySource = false;
 
@@ -331,10 +321,6 @@ class collapsedLeavesItem extends layoutableItem {
 
     getSourceConnectionPoint(): [number, number] {
         return [this.x + this.width / 2, this.y];
-    }
-
-    backpropagateWidth(requestedWidth: number) {
-        this.width = requestedWidth;
     }
 
 }
@@ -449,50 +435,57 @@ class reduceTreeItem {
             pages.forEach(page => page.layout());
         });
 
-        const lastLevelItems = this.itemsAtDepth.get(this.depth - 1);
-
-        // make all items at last level at the same size
-        const maxWidth = d3.max(lastLevelItems, x => x.width);
-        for (let i = 0; i < lastLevelItems.length; i++) {
-            const item = lastLevelItems[i] as leafPageItem | collapsedLeavesItem;
-
-            item.backpropagateWidth(maxWidth);
-        }
-
-        this.totalWidth = lastLevelItems.reduce((p, c) => p + c.width, 0)
-            + (lastLevelItems.length + 1) * pageItem.margins.betweenPagesMinWidth;
-
-        let yStart = visualizerGraphDetails.margins.top;
-
-        const avgElementWidthPerDepth = Array.from(this.itemsAtDepth.values()).map(pages => {
+        const widthPerLevel = Array.from(this.itemsAtDepth.values()).map(pages => {
             const totalWidth = pages.reduce((p, c) => p + c.width, 0);
-            return totalWidth / pages.length;
+            return totalWidth + (pages.length + 1) * pageItem.margins.betweenPagesMinWidth;
         });
+
+        this.totalWidth = _.max(widthPerLevel);
 
         const maxHeightPerLevel = Array.from(this.itemsAtDepth.values()).map(pages => d3.max(pages, x => x.height));
 
-        for (let depth = 0; depth < this.depth; depth++) {
+        const yEnd = visualizerGraphDetails.margins.top + _.sum(maxHeightPerLevel) + visualizerGraphDetails.margins.verticalMarginBetweenLevels * this.depth;
+        let currentY = yEnd;
+
+        const avgX = new Map<number, { count: number, total: number }>();
+
+        for (let depth = this.depth - 1; depth >= 0; depth--) {
             const items = this.itemsAtDepth.get(depth);
 
-            const startAndOffset = graphHelper.computeStartAndOffset(this.totalWidth, items.length,
-                avgElementWidthPerDepth[depth]);
-
-            const xOffset = startAndOffset.offset;
-
-            let xStart = startAndOffset.start;
+            currentY -= maxHeightPerLevel[depth] + visualizerGraphDetails.margins.verticalMarginBetweenLevels;
 
             for (let i = 0; i < items.length; i++) {
                 const item = items[i];
-                item.x = xStart;
-                item.y = yStart;
+                item.y = currentY;
 
-                xStart += xOffset;
+                if (depth !== this.depth - 1) {
+                    const branch = item as branchPageItem;
+                    const avgItem = avgX.get(branch.pageNumber);
+                    item.x = avgItem.total / avgItem.count;
+                } else {
+                    item.x = this.totalWidth / 2;
+                }
             }
 
-            yStart += maxHeightPerLevel[depth] + visualizerGraphDetails.margins.verticalMarginBetweenLevels;
+            graphHelper.layoutUsingNearestCenters(items, pageItem.margins.betweenPagesMinWidth);
+
+            // collect stats for next level
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+
+                if (item.parentPage) {
+                    const avgItem = avgX.get(item.parentPage.pageNumber);
+                    if (avgItem) {
+                        avgItem.count++;
+                        avgItem.total += item.x + item.width / 2;
+                    } else {
+                        avgX.set(item.parentPage.pageNumber, { count: 1, total: item.x + item.width / 2 });
+                    }
+                }
+            }
         }
 
-        return yStart;
+        return yEnd;
     }
 }
 
