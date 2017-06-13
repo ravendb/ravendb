@@ -6,7 +6,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
@@ -102,8 +101,7 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.RevisionDocuments:
                 case DatabaseItemType.Indexes:
                 case DatabaseItemType.Transformers:
-                case DatabaseItemType.LocalIdentities:
-                case DatabaseItemType.ClusterIdentities:
+                case DatabaseItemType.Identities:
                     return SkipArray();
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
@@ -175,17 +173,12 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<KeyValuePair<string, long>> GetLocalIdentities()
-        {
-            return InternalGetIdentities(IdentityType.Local);
-        }
-
         public IEnumerable<KeyValuePair<string, long>> GetClusterIdentities()
         {            
-            return InternalGetIdentities(IdentityType.Cluster);
+            return InternalGetIdentities();
         }
 
-        private IEnumerable<KeyValuePair<string, long>> InternalGetIdentities(IdentityType type)
+        private IEnumerable<KeyValuePair<string, long>> InternalGetIdentities()
         {
             foreach (var reader in ReadArray())
             {
@@ -195,8 +188,7 @@ namespace Raven.Server.Smuggler.Documents
                         reader.TryGet("Value", out string identityValueString) == false ||
                         long.TryParse(identityValueString, out long identityValue) == false)
                     {
-                        IncrementErrorCount(type);
-
+                        _result.Identities.ErroredCount++;
                         _result.AddWarning("Could not read identity.");
 
                         continue;
@@ -206,23 +198,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
         }
-
-        private void IncrementErrorCount(IdentityType type)
-        {
-            switch (type)
-            {
-                case IdentityType.Local:
-                    _result.LocalIdentities.ErroredCount++;
-                    break;
-                case IdentityType.Cluster:
-                    _result.ClusterIdentities.ErroredCount++;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
-            }
-        }
-
-       
+      
         private unsafe string ReadType()
         {
             if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
@@ -451,11 +427,8 @@ namespace Raven.Server.Smuggler.Documents
             if (type.Equals("Transformers", StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.Transformers;
 
-            if (type.Equals($"{IdentityType.Local}Identities", StringComparison.OrdinalIgnoreCase))
-                return DatabaseItemType.LocalIdentities;
-
-            if (type.Equals($"{IdentityType.Cluster}Identities", StringComparison.OrdinalIgnoreCase))
-                return DatabaseItemType.ClusterIdentities;
+            if (type.Equals("Identities", StringComparison.OrdinalIgnoreCase))
+                return DatabaseItemType.Identities;
 
             throw new InvalidOperationException();
         }

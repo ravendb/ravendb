@@ -683,7 +683,7 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName(nameof(statistics.DatabaseChangeVector));
             writer.WriteChangeVector(statistics.DatabaseChangeVector);
-            writer.WriteComma();
+            writer.WriteComma();            
 
             writer.WritePropertyName(nameof(statistics.DatabaseId));
             writer.WriteString(statistics.DatabaseId.ToString());

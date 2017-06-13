@@ -921,7 +921,7 @@ namespace Raven.Server.ServerWide
             return _engine.GetClusterErrorsFromLeader();
         }
 
-        public async Task<(long clusterEtag, string clusterId)> GenerateClusterIdentityAsync(string id, string databaseName)
+        public async Task<(long ClusterEtag, string ClusterId)> GenerateClusterIdentityAsync(string id, string databaseName)
         {
             var (etag, result) = await SendToLeaderAsync(new IncrementClusterIdentityCommand(databaseName)
             {

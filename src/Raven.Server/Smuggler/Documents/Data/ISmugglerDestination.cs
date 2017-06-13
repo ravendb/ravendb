@@ -14,7 +14,6 @@ namespace Raven.Server.Smuggler.Documents.Data
         IDocumentActions RevisionDocuments();
         IIndexActions Indexes();
         ITransformerActions Transformers();
-        IIdentityActions LocalIdentities();
         IIdentityActions ClusterIdentities();
     }
 
@@ -39,9 +38,9 @@ namespace Raven.Server.Smuggler.Documents.Data
         void WriteTransformer(TransformerDefinition transformerDefinition);
     }
 
+
     public interface IIdentityActions : IDisposable
     {
-        IdentityType Type { get; }
         void WriteIdentity(string key, long value);
     }
 }

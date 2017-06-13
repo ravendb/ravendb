@@ -21,8 +21,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
             Documents = new CountsWithSkippedCountAndLastEtag();
             RevisionDocuments = new CountsWithLastEtag();
-            LocalIdentities = new Counts();
-            ClusterIdentities = new Counts();
+            Identities = new Counts();
             Indexes = new Counts();
             Transformers = new Counts();
         }
@@ -88,8 +87,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
             public override CountsWithSkippedCountAndLastEtag Documents => _result.Documents;
             public override CountsWithLastEtag RevisionDocuments => _result.RevisionDocuments;
-            public override Counts ClusterIdentities => _result.ClusterIdentities;
-            public override Counts LocalIdentities => _result.LocalIdentities;
+            public override Counts Identities => _result.Identities;
             public override Counts Indexes => _result.Indexes;
             public override Counts Transformers => _result.Transformers;
 
@@ -120,9 +118,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         public virtual CountsWithLastEtag RevisionDocuments { get; set; }
 
-        public virtual Counts LocalIdentities { get; set; }
-
-        public virtual Counts ClusterIdentities { get; set; }
+        public virtual Counts Identities { get; set; }
 
         public virtual Counts Indexes { get; set; }
 
@@ -134,8 +130,7 @@ namespace Raven.Server.Smuggler.Documents.Data
             {
                 [nameof(Documents)] = Documents.ToJson(),
                 [nameof(RevisionDocuments)] = RevisionDocuments.ToJson(),
-                [nameof(LocalIdentities)] = LocalIdentities.ToJson(),
-                [nameof(ClusterIdentities)] = ClusterIdentities.ToJson(),
+                [nameof(Identities)] = Identities.ToJson(),
                 [nameof(Indexes)] = Indexes.ToJson(),
                 [nameof(Transformers)] = Transformers.ToJson()
             };
