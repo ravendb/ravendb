@@ -134,7 +134,7 @@ class graphHelper {
                 const prevItem = getItem(i - 1);
                 const emptySpace = item.x - (prevItem.x + prevItem.width);
                 emptySpaceInfo.push({
-                    space: emptySpace - 2,
+                    space: emptySpace - padding,
                     idx: i
                 });
             } else {
