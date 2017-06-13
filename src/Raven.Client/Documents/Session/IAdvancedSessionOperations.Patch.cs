@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///     Advanced synchronous session operations
     /// </summary>
-    public partial interface IAdvancedSessionOperation
+    public partial interface IAdvancedSessionOperations
     {
         void Increment<T, U>(T entity, Expression<Func<T, U>> path, U valToAdd);
 
