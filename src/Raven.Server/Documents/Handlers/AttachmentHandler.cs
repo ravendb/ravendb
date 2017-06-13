@@ -219,7 +219,8 @@ namespace Raven.Server.Documents.Handlers
             {
                 try
                 {
-                    Result = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, DocumentId, Name, ContentType, Hash, ExpectedEtag, Stream);
+                    Result = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, DocumentId, Name, 
+                        ContentType, Hash, ExpectedEtag, Stream);
                 }
                 catch (ConcurrencyException e)
                 {

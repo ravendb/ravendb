@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Routing;
@@ -145,7 +146,7 @@ namespace Raven.Server.Documents.Handlers
         private async Task WaitForIndexesAsync(TimeSpan timeout, long lastEtag, HashSet<string> modifiedCollections)
         {
             // waitForIndexesTimeout=timespan & waitForIndexThrow=false (default true)
-            // waitForspecificIndex=specific index1 & waitForspecificIndex=specific index 2
+            // waitForSpecificIndex=specific index1 & waitForSpecificIndex=specific index 2
 
             if (modifiedCollections.Count == 0)
                 return;
@@ -177,8 +178,7 @@ namespace Raven.Server.Documents.Handlers
                 indexesToWait.Add(indexToWait);
             }
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 while (true)
                 {
@@ -246,6 +246,7 @@ namespace Raven.Server.Documents.Handlers
             public Queue<AttachmentStream> AttachmentStreams;
             public DocumentDatabase Database;
             public long LastEtag;
+            private HashSet<string> _documentsToUpdateAfterAttachmentChange;
 
             public HashSet<string> ModifiedCollections;
 
@@ -276,35 +277,35 @@ namespace Raven.Server.Documents.Handlers
                     switch (cmd.Type)
                     {
                         case CommandType.PUT:
+                        {
+                            var putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.Etag, cmd.Document);
+                            context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);
+                            LastEtag = putResult.Etag;
+                            ModifiedCollections?.Add(putResult.Collection.Name);
+
+                            var changeVector = new DynamicJsonArray();
+                            if (putResult.ChangeVector != null)
                             {
-                                var putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.Etag, cmd.Document);
-                                context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);
-                                LastEtag = putResult.Etag;
-                                ModifiedCollections?.Add(putResult.Collection.Name);
-
-                                var changeVector = new DynamicJsonArray();
-                                if (putResult.ChangeVector != null)
-                                {
-                                    foreach (var entry in putResult.ChangeVector)
-                                        changeVector.Add(entry.ToJson());
-                                }
-
-                                // Make sure all the metadata fields are always been add
-                                var putReply = new DynamicJsonValue
-                                {
-                                    ["Type"] = CommandType.PUT.ToString(),
-                                    [Constants.Documents.Metadata.Id] = putResult.Id,
-                                    [Constants.Documents.Metadata.Etag] = putResult.Etag,
-                                    [Constants.Documents.Metadata.Collection] = putResult.Collection.Name,
-                                    [Constants.Documents.Metadata.ChangeVector] = changeVector,
-                                    [Constants.Documents.Metadata.LastModified] = putResult.LastModified,
-                                };
-
-                                if (putResult.Flags != DocumentFlags.None)
-                                    putReply[Constants.Documents.Metadata.Flags] = putResult.Flags;
-
-                                Reply.Add(putReply);
+                                foreach (var entry in putResult.ChangeVector)
+                                    changeVector.Add(entry.ToJson());
                             }
+
+                            // Make sure all the metadata fields are always been add
+                            var putReply = new DynamicJsonValue
+                            {
+                                ["Type"] = CommandType.PUT.ToString(),
+                                [Constants.Documents.Metadata.Id] = putResult.Id,
+                                [Constants.Documents.Metadata.Etag] = putResult.Etag,
+                                [Constants.Documents.Metadata.Collection] = putResult.Collection.Name,
+                                [Constants.Documents.Metadata.ChangeVector] = changeVector,
+                                [Constants.Documents.Metadata.LastModified] = putResult.LastModified,
+                            };
+
+                            if (putResult.Flags != DocumentFlags.None)
+                                putReply[Constants.Documents.Metadata.Flags] = putResult.Flags;
+
+                            Reply.Add(putReply);
+                        }
                             break;
                         case CommandType.PATCH:
                             cmd.PatchCommand.Execute(context);
@@ -366,8 +367,13 @@ namespace Raven.Server.Documents.Handlers
                         case CommandType.AttachmentPUT:
                             using (var attachmentStream = AttachmentStreams.Dequeue())
                             {
-                                var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, cmd.Id, cmd.Name, cmd.ContentType, attachmentStream.Hash, cmd.Etag, attachmentStream.File);
+                                var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, cmd.Id, cmd.Name,
+                                    cmd.ContentType, attachmentStream.Hash, cmd.Etag, attachmentStream.File, updateDocument: false);
                                 LastEtag = attachmentPutResult.Etag;
+
+                                if (_documentsToUpdateAfterAttachmentChange == null)
+                                    _documentsToUpdateAfterAttachmentChange = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                                _documentsToUpdateAfterAttachmentChange.Add(cmd.Id);
 
                                 Reply.Add(new DynamicJsonValue
                                 {
@@ -375,29 +381,41 @@ namespace Raven.Server.Documents.Handlers
                                     [nameof(BatchRequestParser.CommandData.Type)] = CommandType.AttachmentPUT.ToString(),
                                     [nameof(BatchRequestParser.CommandData.Name)] = attachmentPutResult.Name,
                                     [nameof(BatchRequestParser.CommandData.Etag)] = attachmentPutResult.Etag,
-                                    ["Hash"] = attachmentPutResult.Hash,
+                                    [nameof(AttachmentDetails.Hash)] = attachmentPutResult.Hash,
                                     [nameof(BatchRequestParser.CommandData.ContentType)] = attachmentPutResult.ContentType,
-                                    ["Size"] = attachmentPutResult.Size,
+                                    [nameof(AttachmentDetails.Size)] = attachmentPutResult.Size,
                                 });
                             }
 
                             break;
                         case CommandType.AttachmentDELETE:
-                            var deleteEtag = Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.Etag);
-                            if (deleteEtag.HasValue)
-                                LastEtag = deleteEtag.Value;
+                            Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.Etag, updateDocument: false);
+
+                            if (_documentsToUpdateAfterAttachmentChange == null)
+                                _documentsToUpdateAfterAttachmentChange = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                            _documentsToUpdateAfterAttachmentChange.Add(cmd.Id);
 
                             Reply.Add(new DynamicJsonValue
                             {
                                 ["Type"] = CommandType.AttachmentPUT.ToString(),
                                 [Constants.Documents.Metadata.Id] = cmd.Id,
                                 ["Name"] = cmd.Name,
-                                [Constants.Documents.Metadata.Etag] = deleteEtag,
                             });
 
                             break;
                     }
                 }
+
+                if (_documentsToUpdateAfterAttachmentChange != null)
+                {
+                    foreach (var documentId in _documentsToUpdateAfterAttachmentChange)
+                    {
+                        var etag = Database.DocumentsStorage.AttachmentsStorage.UpdateDocumentAfterAttachmentChange(context, documentId);
+                        if (etag.HasValue)
+                            LastEtag = etag.Value;
+                    }
+                }
+
                 return Reply.Count;
             }
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
+using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Operations;
@@ -120,12 +121,13 @@ namespace Raven.Server.Documents
             string contentType,
             string hash,
             long? expectedEtag,
-            Stream stream)
+            Stream stream,
+            bool updateDocument = true)
         {
             if (context.Transaction == null)
             {
                 DocumentPutAction.ThrowRequiresTransaction();
-                return default(AttachmentDetails);// never hit
+                Debug.Assert(false);// never hit
             }
 
             // Attachment etag should be generated before updating the document
@@ -228,9 +230,8 @@ namespace Raven.Server.Documents
 
                     _documentDatabase.Metrics.AttachmentPutsPerSecond.MarkSingleThreaded(1);
 
-                    // Update the document with an etag which is bigger than the attachmentEtag
-                    // We need to call this after we already put the attachment, so it can version also this attachment
-                    _documentsStorage.UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, tvr);
+                    if (updateDocument)
+                        UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, tvr);
                 }
             }
 
@@ -266,6 +267,79 @@ namespace Raven.Server.Documents
             }
 
             _documentDatabase.Metrics.AttachmentPutsPerSecond.MarkSingleThreaded(1);
+        }
+
+        /// <summary>
+        /// Update the document with an etag which is bigger than the attachmentEtag
+        /// We need to call this after we already put the attachment, so it can version also this attachment
+        /// </summary>
+        private long UpdateDocumentAfterAttachmentChange(DocumentsOperationContext context, 
+            Slice lowerDocumentId, string documentId, TableValueReader tvr)
+        {
+            // We can optimize this by copy just the document's data instead of the all tvr
+            var copyOfDoc = context.GetMemory(tvr.Size);
+            try
+            {
+                // we have to copy it to the side because we might do a defrag during update, and that
+                // can cause corruption if we read from the old value (which we just deleted)
+                Memory.Copy(copyOfDoc.Address, tvr.Pointer, tvr.Size);
+                var copyTvr = new TableValueReader(copyOfDoc.Address, tvr.Size);
+                var data = new BlittableJsonReaderObject(copyTvr.Read((int)DocumentsStorage.DocumentsTable.Data, out int size), size, context);
+
+                var attachments = GetAttachmentsMetadataForDocument(context, lowerDocumentId);
+
+                var flags = DocumentFlags.None;
+                data.Modifications = new DynamicJsonValue(data);
+                if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
+                {
+                    metadata.Modifications = new DynamicJsonValue(metadata);
+
+                    if (attachments.Count > 0)
+                    {
+                        flags = DocumentFlags.HasAttachments;
+                        metadata.Modifications[Constants.Documents.Metadata.Attachments] = attachments;
+                    }
+                    else
+                    {
+                        metadata.Modifications.Remove(Constants.Documents.Metadata.Attachments);
+                    }
+
+                    data.Modifications[Constants.Documents.Metadata.Key] = metadata;
+                }
+                else
+                {
+                    if (attachments.Count > 0)
+                    {
+                        flags = DocumentFlags.HasAttachments;
+                        data.Modifications[Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                        {
+                            [Constants.Documents.Metadata.Attachments] = attachments
+                        };
+                    }
+                    else
+                    {
+                        Debug.Assert(false, "Cannot remove an attachment and not have @attachments in @metadata");
+                    }
+                }
+
+                data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                return _documentsStorage.Put(context, documentId, null, data, null, null, flags, NonPersistentDocumentFlags.ByAttachmentUpdate).Etag;
+            }
+            finally
+            {
+                context.ReturnMemory(copyOfDoc);
+            }
+        }
+
+        public long? UpdateDocumentAfterAttachmentChange(DocumentsOperationContext context, string documentId)
+        {
+            using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice lowerDocumentId))
+            {
+                var exists = _documentsStorage.GetTableValueReaderForDocument(context, lowerDocumentId, out TableValueReader tvr);
+                if (exists == false)
+                    return null;
+                return UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, tvr);
+            }
         }
 
         public void RevisionAttachments(DocumentsOperationContext context, Slice lowerId, ChangeVectorEntry[] changeVector)
@@ -608,7 +682,7 @@ namespace Raven.Server.Documents
             };
         }
 
-        public long? DeleteAttachment(DocumentsOperationContext context, string documentId, string name, long? expectedEtag)
+        public void DeleteAttachment(DocumentsOperationContext context, string documentId, string name, long? expectedEtag, bool updateDocument = true)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentException("Argument is null or whitespace", nameof(documentId));
@@ -628,7 +702,7 @@ namespace Raven.Server.Documents
                                                        $"Optimistic concurrency violation, transaction will be aborted.");
 
                     // this basically mean that we tried to delete attachment whose document doesn't exist.
-                    return null;
+                    return;
                 }
 
                 using (DocumentIdWorker.GetSliceFromId(context, name, out Slice lowerName))
@@ -637,8 +711,8 @@ namespace Raven.Server.Documents
                     DeleteAttachmentDirect(context, partialKeySlice, true, name, expectedEtag);
                 }
 
-                var documentPutResult = _documentsStorage.UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, docTvr);
-                return documentPutResult.Etag;
+                if (updateDocument)
+                    UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, docTvr);
             }
         }
 
