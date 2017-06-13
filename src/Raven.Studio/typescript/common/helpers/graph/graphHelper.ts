@@ -97,6 +97,84 @@ class graphHelper {
         };
     }
 
+    static layoutUsingNearestCenters(items: Array<{ x: number, width: number }>, padding: number) {
+        if (items.length === 0) {
+            return;
+        }
+
+        const desiredX = items.map(item => item.x);
+
+        const mapping = new Map<number, number>();
+
+        _.sortBy(items.map((item, idx) => ({ idx: idx, value: item.x })), x => x.value).forEach((v, k) => {
+            mapping.set(k, v.idx);
+        });
+
+        const getItem = (idx: number) => {
+            return items[mapping.get(idx)];
+        }
+
+        const getDesiredX = (idx: number) => {
+            return desiredX[mapping.get(idx)];
+        }
+
+        getItem(0).x = getDesiredX(0) - getItem(0).width / 2;
+
+        const emptySpaceInfo = [] as Array<{ space: number, idx: number }>;
+
+        let currentPosition = getItem(0).x + getItem(0).width + padding;
+
+        for (let i = 1; i < items.length; i++) {
+            let item = getItem(i);
+            let requestedX = getDesiredX(i);
+
+            if (requestedX - item.width / 2 >= currentPosition) {
+                item.x = requestedX - item.width / 2;
+                currentPosition = item.x + item.width + padding;
+                const prevItem = getItem(i - 1);
+                const emptySpace = item.x - (prevItem.x + prevItem.width);
+                emptySpaceInfo.push({
+                    space: emptySpace - 2,
+                    idx: i
+                });
+            } else {
+                // move items to left
+                item.x = currentPosition;
+
+                const xShift = currentPosition - requestedX + item.width / 2;
+                let startMoveIdx = 0;
+                let avgShift = 0;
+                let done = false;
+                while (!done) {
+                    if (emptySpaceInfo.length > 0) {
+                        const space = emptySpaceInfo[emptySpaceInfo.length - 1];
+                        startMoveIdx = space.idx;
+                        avgShift = xShift * 1.0 / (i - startMoveIdx + 1);
+                        if (avgShift < space.space) {
+                            // we have more space then we need
+                            space.space -= avgShift;
+                            done = true;
+                        } else {
+                            avgShift = space.space;
+                            emptySpaceInfo.pop();
+                        }
+                    } else {
+                        // move all elements
+                        startMoveIdx = 0;
+                        avgShift = xShift * 1.0 / (i + 1);
+                        done = true;
+                    }
+
+                    for (var j = startMoveIdx; j <= i; j++) {
+                        getItem(j).x -= avgShift;
+                    }
+
+                    currentPosition = item.x + item.width + padding;
+                }
+            }
+        }
+    }
+
     private static readonly arrowConfig = {
         halfWidth: 6,
         height: 8,
