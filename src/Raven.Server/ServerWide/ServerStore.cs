@@ -879,7 +879,7 @@ namespace Raven.Server.ServerWide
             record.Topology.Stamp = new LeaderStamp
             {
                     Term = _engine.CurrentTerm,
-                    LeadersTicks = _engine.CurrentLeader.LeaderShipDuration
+                    LeadersTicks = _engine.CurrentLeader?.LeaderShipDuration ?? 0
             };
 
             var addDatabaseCommand = new AddDatabaseCommand
@@ -969,7 +969,8 @@ namespace Raven.Server.ServerWide
                 {
                     if (cachedLeaderTag == null)
                     {
-                        if (await Task.WhenAny(logChange, timeoutTask) ==  timeoutTask)
+                        await Task.WhenAny(logChange, timeoutTask);
+                        if (logChange.IsCompleted == false)
                             ThrowTimeoutException();
 
                         continue;
@@ -986,7 +987,8 @@ namespace Raven.Server.ServerWide
                         throw; // if the leader changed, let's try again                    
                 }
 
-                if (await Task.WhenAny(logChange, timeoutTask) == timeoutTask)
+                await Task.WhenAny(logChange, timeoutTask);
+                if (logChange.IsCompleted == false)
                     ThrowTimeoutException();
             }
         }
