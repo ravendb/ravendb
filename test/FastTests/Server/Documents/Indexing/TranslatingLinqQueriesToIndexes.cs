@@ -9,7 +9,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Indexing
 {
-    public class TranslatingLinqQueriesToIndexes
+    public class TranslatingLinqQueriesToIndexes : NoDisposalNeeded
     {
         [Fact]
         public void WillTranslateReferenceToIdTo__document_id()

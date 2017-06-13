@@ -12,6 +12,17 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
     {
         public HashSet<string> Fields;
 
+        public static HashSet<string> KnonwMethodsToInsepct = new HashSet<string>
+        {
+            "Select",
+            "SelectMany",
+            "Boost",
+            "GroupBy",
+            "OrderBy",
+            "Distinct",
+            "Where",
+        };
+        
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             if (Fields != null)
@@ -21,8 +32,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (mae == null)
                 return base.Visit(node.Expression);
 
-            if (mae.Name.Identifier.Text != "Select" &&
-                mae.Name.Identifier.Text != "SelectMany")
+            if (KnonwMethodsToInsepct.Contains(mae.Name.Identifier.Text) == false)
                 return base.Visit(node.Expression);
 
             var last = node.DescendantNodes(descendIntoChildren: syntaxNode =>
