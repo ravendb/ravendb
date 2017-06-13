@@ -190,7 +190,7 @@ class reduceTreeItem {
         this.itemsAtDepth.set(lastLevel, collapsedItems);
     }
 
-    private getMaxItems() {
+    private getMaxVisibleItems() {
         let max = 0;
         this.itemsAtDepth.forEach(x => {
             if (x.length > max) {
@@ -204,40 +204,65 @@ class reduceTreeItem {
         this.totalLeavesNumberWidth = visualizerGraphGlobal.totalEntriesWidth(_.max(this.itemsCountAtDepth));
         this.calculateTreeDimensions();
 
-        const maxItems = this.getMaxItems();
+        const maxItems = this.getMaxVisibleItems();
         const pagesTotalWidth = this.getPagesOnlyWidth(maxItems);
-
-        let yStart = reduceTreeItem.margins.treeMargin +
-            reduceTreeItem.margins.titleHeight +
-            reduceTreeItem.margins.treeMargin;
 
         const yOffset = pageItem.pageHeight +
             reduceTreeItem.margins.betweenPagesVerticalPadding;
 
-        for (let depth = 0; depth < this.depth; depth++) {
+        let yStart = reduceTreeItem.margins.treeMargin +
+            reduceTreeItem.margins.titleHeight +
+            reduceTreeItem.margins.treeMargin
+            + (this.depth - 1) * yOffset;
+
+        const avgX = new Map<number, { count: number, total: number }>();
+
+        for (let depth = this.depth - 1; depth >= 0; depth--) {
             const items = this.itemsAtDepth.get(depth);
 
-            const startAndOffset = graphHelper
-                .computeStartAndOffset(pagesTotalWidth,
+            if (depth === this.depth - 1) { // leaves level
+                const startAndOffset = graphHelper
+                    .computeStartAndOffset(pagesTotalWidth,
                     items.length,
                     pageItem.pageWidth);
 
-            const xOffset = startAndOffset.offset;
+                const xOffset = startAndOffset.offset;
 
-            let xStart = reduceTreeItem.margins.treeMargin +
-                this.totalLeavesNumberWidth +
-                reduceTreeItem.margins.treeMargin +
-                this.extraLeftPadding +
-                startAndOffset.start;
+                let xStart = reduceTreeItem.margins.treeMargin +
+                    this.totalLeavesNumberWidth +
+                    reduceTreeItem.margins.treeMargin +
+                    this.extraLeftPadding +
+                    startAndOffset.start;
+
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    item.x = xStart;
+                    xStart += xOffset;
+                }
+            } else {
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i] as pageItem;
+                    const avgItem = avgX.get(item.pageNumber);
+                    item.x = avgItem.total / avgItem.count;
+                }
+            }
 
             for (let i = 0; i < items.length; i++) {
                 const item = items[i];
                 item.y = yStart;
-                item.x = xStart;
-                xStart += xOffset;
+
+                if (item.aggregation) {
+                    const avgItem = avgX.get(item.aggregation.pageNumber);
+                    if (avgItem) {
+                        avgItem.count++;
+                        avgItem.total += item.x;
+                    } else {
+                        avgX.set(item.aggregation.pageNumber, { count: 1, total: item.x });
+                    }
+                }
             }
 
-            yStart += yOffset;
+            yStart -= yOffset;
         }
     }
 
@@ -253,7 +278,7 @@ class reduceTreeItem {
 
         this.height = height;
 
-        const maxItems = this.getMaxItems();
+        const maxItems = this.getMaxVisibleItems();
 
         let width = reduceTreeItem.margins.treeMargin +
             this.totalLeavesNumberWidth +
