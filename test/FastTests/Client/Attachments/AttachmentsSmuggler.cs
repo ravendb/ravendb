@@ -39,26 +39,29 @@ namespace FastTests.Client.Attachments
                 {
                     await VersioningHelper.SetupVersioning(Server.ServerStore, store2.Database);
 
-                    await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
-
-                    var stats = await store2.Admin.SendAsync(new GetStatisticsOperation());
-                    Assert.Equal(1, stats.CountOfDocuments);
-                    Assert.Equal(4, stats.CountOfRevisionDocuments);
-                    Assert.Equal(14, stats.CountOfAttachments);
-                    Assert.Equal(4, stats.CountOfUniqueAttachments);
-
-                    using (var session = store2.OpenSession())
+                    for (var i = 0; i < 2; i++) // Make sure that we can import attachments twice and it will overwrite
                     {
-                        var readBuffer = new byte[1024 * 1024];
-                        using (var attachmentStream = new MemoryStream(readBuffer))
-                        using (var attachment = session.Advanced.GetAttachment("users/1", "big-file"))
+                        await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
+
+                        var stats = await store2.Admin.SendAsync(new GetStatisticsOperation());
+                        Assert.Equal(1, stats.CountOfDocuments);
+                        Assert.Equal(4, stats.CountOfRevisionDocuments);
+                        Assert.Equal(14, stats.CountOfAttachments);
+                        Assert.Equal(4, stats.CountOfUniqueAttachments);
+
+                        using (var session = store2.OpenSession())
                         {
-                            attachment.Stream.CopyTo(attachmentStream);
-                            Assert.Equal(2, attachment.Details.Etag);
-                            Assert.Equal("big-file", attachment.Details.Name);
-                            Assert.Equal("zKHiLyLNRBZti9DYbzuqZ/EDWAFMgOXB+SwKvjPAINk=", attachment.Details.Hash);
-                            Assert.Equal(999 * 1024, attachmentStream.Position);
-                            Assert.Equal(Enumerable.Range(1, 999 * 1024).Select(x => (byte)x), readBuffer.Take((int)attachmentStream.Position));
+                            var readBuffer = new byte[1024 * 1024];
+                            using (var attachmentStream = new MemoryStream(readBuffer))
+                            using (var attachment = session.Advanced.GetAttachment("users/1", "big-file"))
+                            {
+                                attachment.Stream.CopyTo(attachmentStream);
+                                Assert.Equal(2 + 20 * i, attachment.Details.Etag);
+                                Assert.Equal("big-file", attachment.Details.Name);
+                                Assert.Equal("zKHiLyLNRBZti9DYbzuqZ/EDWAFMgOXB+SwKvjPAINk=", attachment.Details.Hash);
+                                Assert.Equal(999 * 1024, attachmentStream.Position);
+                                Assert.Equal(Enumerable.Range(1, 999 * 1024).Select(x => (byte)x), readBuffer.Take((int)attachmentStream.Position));
+                            }
                         }
                     }
                 }
