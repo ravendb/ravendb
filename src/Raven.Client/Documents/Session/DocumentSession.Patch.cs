@@ -169,13 +169,14 @@ namespace Raven.Client.Documents.Session
 
         private bool TryMergePatches(string id, PatchRequest patchRequest)
         {
-            var oldPatch = _deferredCommands.OfType<PatchCommandData>().FirstOrDefault(p => p.Id == id);
-
-            if (oldPatch == null)
+            if (DeferredCommandsDictionary.TryGetValue((id, CommandType.PATCH, null), out ICommandData command) == false)
                 return false;
 
-            _deferredCommands.Remove(oldPatch);
+            DeferredCommands.Remove(command);
+            // We'll overwrite the DeferredCommandsDictionary when calling Defer
+            // No need to call DeferredCommandsDictionary.Remove((id, CommandType.PATCH, null));
 
+            var oldPatch = (PatchCommandData)command;
             var newScript = oldPatch.Patch.Script + '\n' + patchRequest.Script;
             var newVals = oldPatch.Patch.Values;
 

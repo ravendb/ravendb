@@ -19,6 +19,7 @@ using Raven.Client.Documents.Exceptions.Session;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session.Operations.Lazy;
+using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -137,8 +138,10 @@ namespace Raven.Client.Documents.Session
         /// <value></value>
         public bool UseOptimisticConcurrency { get; set; }
 
-        protected readonly List<ICommandData> _deferredCommands = new List<ICommandData>();
-        public int DeferredCommandsCount => _deferredCommands.Count;
+        protected readonly List<ICommandData> DeferredCommands = new List<ICommandData>();
+        protected readonly Dictionary<(string, CommandType, string), ICommandData> DeferredCommandsDictionary = new Dictionary<(string, CommandType, string), ICommandData>();
+
+        public int DeferredCommandsCount => DeferredCommands.Count;
 
         public GenerateEntityIdOnTheClient GenerateEntityIdOnTheClient { get; }
         public EntityToBlittable EntityToBlittable { get; }
@@ -502,8 +505,7 @@ more responsive application.
         /// </summary>
         public void Store(object entity)
         {
-            string id;
-            var hasId = GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id);
+            var hasId = GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out string id);
             StoreInternal(entity, null, null, hasId == false ? ConcurrencyCheckMode.Forced : ConcurrencyCheckMode.Auto);
         }
 
@@ -562,7 +564,7 @@ more responsive application.
                 GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
             }
 
-            if (_deferredCommands.Any(c => c.Id == id))
+            if (DeferredCommandsDictionary.ContainsKey((id, CommandType.ClientAnyCommand, null)))
                 throw new InvalidOperationException("Can't store document, there is a deferred command registered for this document in the session. Document id: " + id);
 
             if (DeletedEntities.Contains(entity))
@@ -701,12 +703,9 @@ more responsive application.
 
         public SaveChangesData PrepareForSaveChanges()
         {
-            var result = new SaveChangesData
-            {
-                DeferredCommands = new List<ICommandData>(_deferredCommands),
-                Options = _saveChangesOptions
-            };
-            _deferredCommands.Clear();
+            var result = new SaveChangesData(this);
+            DeferredCommands.Clear();
+            DeferredCommandsDictionary.Clear();
 
             PrepareForEntitiesDeletion(result, null);
             PrepareForEntitiesPuts(result);
@@ -750,11 +749,8 @@ more responsive application.
                 }
                 else
                 {
-                    foreach (var resultCommand in result.DeferredCommands)
-                    {
-                        if (resultCommand.Id == documentInfo.Id)
-                            ThrowInvalidDeletedDocumentWithDeferredCommand(resultCommand);
-                    }
+                    if (DeferredCommandsDictionary.TryGetValue((documentInfo.Id, CommandType.ClientAnyCommand, null), out ICommandData command))
+                        ThrowInvalidDeletedDocumentWithDeferredCommand(command);
 
                     long? etag = null;
                     if (DocumentsById.TryGetValue(documentInfo.Id, out documentInfo))
@@ -790,12 +786,8 @@ more responsive application.
                 if (entity.Value.IgnoreChanges || EntityChanged(document, entity.Value, null) == false)
                     continue;
 
-                foreach (var resultCommand in result.DeferredCommands)
-                {
-                    if (resultCommand.Type != CommandType.AttachmentPUT &&
-                        resultCommand.Id == entity.Value.Id)
-                        ThrowInvalidModifiedDocumentWithDeferredCommand(resultCommand);
-                }
+                if (DeferredCommandsDictionary.TryGetValue((entity.Value.Id, CommandType.ClientNotAttachmentPUT, null), out ICommandData command))
+                    ThrowInvalidModifiedDocumentWithDeferredCommand(command);
 
                 var beforeStoreEventArgs = new BeforeStoreEventArgs(this, entity.Value.Id, entity.Key);
                 OnBeforeStore?.Invoke(this, beforeStoreEventArgs);
@@ -963,8 +955,13 @@ more responsive application.
         /// <param name="commands">Array of commands to be executed.</param>
         public void Defer(ICommandData command, params ICommandData[] commands)
         {
-            _deferredCommands.Add(command);
-            _deferredCommands.AddRange(commands);
+            DeferredCommands.Add(command);
+            DeferredCommandsDictionary[(command.Id, command.Type, command.Name)] = command;
+            DeferredCommandsDictionary[(command.Id, CommandType.ClientAnyCommand, null)] = command;
+            if (command.Type != CommandType.AttachmentPUT)
+                DeferredCommandsDictionary[(command.Id, CommandType.ClientNotAttachmentPUT, null)] = command;
+
+            Defer(commands);
         }
 
         /// <summary>
@@ -973,7 +970,17 @@ more responsive application.
         /// <param name="commands">The commands to be executed</param>
         public void Defer(ICommandData[] commands)
         {
-            _deferredCommands.AddRange(commands);
+            if (commands == null)
+                return;
+
+            DeferredCommands.AddRange(commands);
+            foreach (var command in commands)
+            {
+                DeferredCommandsDictionary[(command.Id, command.Type, command.Name)] = command;
+                DeferredCommandsDictionary[(command.Id, CommandType.ClientAnyCommand, null)] = command;
+                if (command.Type != CommandType.AttachmentPUT)
+                    DeferredCommandsDictionary[(command.Id, CommandType.ClientNotAttachmentPUT, null)] = command;
+            }
         }
 
         private void Dispose(bool isDisposing)
@@ -1130,10 +1137,9 @@ more responsive application.
                 if (KnownMissingIds.Contains(id))
                     continue;
 
-                DocumentInfo documentInfo;
-
                 // Check if document was already loaded, the check if we've received it through include
-                if (DocumentsById.TryGetValue(id, out documentInfo) == false && IncludedDocumentsById.TryGetValue(id, out documentInfo) == false)
+                if (DocumentsById.TryGetValue(id, out DocumentInfo documentInfo) == false && 
+                    IncludedDocumentsById.TryGetValue(id, out documentInfo) == false)
                     return false;
 
                 if (documentInfo.Entity == null)
@@ -1164,12 +1170,10 @@ more responsive application.
                 throw new InvalidOperationException("Document '" + documentInfo.Id +
                                                     "' no longer exists and was probably deleted");
 
-            object value;
-            document.TryGetMember(Constants.Documents.Metadata.Key, out value);
+            document.TryGetMember(Constants.Documents.Metadata.Key, out object value);
             documentInfo.Metadata = value as BlittableJsonReaderObject;
 
-            object etag;
-            document.TryGetMember(Constants.Documents.Metadata.Etag, out etag);
+            document.TryGetMember(Constants.Documents.Metadata.Etag, out object etag);
             documentInfo.ETag = etag as long?;
 
             documentInfo.Document = document;
@@ -1237,10 +1241,18 @@ more responsive application.
         /// </summary>
         public class SaveChangesData
         {
-            public List<ICommandData> DeferredCommands;
+            public readonly List<ICommandData> DeferredCommands;
+            public readonly Dictionary<(string, CommandType, string), ICommandData> DeferredCommandsDictionary;
             public readonly List<ICommandData> SessionCommands = new List<ICommandData>();
             public readonly List<object> Entities = new List<object>();
-            public BatchOptions Options;
+            public readonly BatchOptions Options;
+
+            public SaveChangesData(InMemoryDocumentSessionOperations session)
+            {
+                DeferredCommands = new List<ICommandData>(session.DeferredCommands);
+                DeferredCommandsDictionary = new Dictionary<(string, CommandType, string), ICommandData>(session.DeferredCommandsDictionary);
+                Options = session._saveChangesOptions;
+            }
         }
 
         public void OnAfterStoreInvoke(AfterStoreEventArgs afterStoreEventArgs)
