@@ -80,7 +80,7 @@ namespace FastTests.Client.Attachments
                         using (var attachment = await session.Advanced.GetAttachmentAsync(user, name))
                         {
                             attachment.Stream.CopyTo(attachmentStream);
-                            Assert.Equal(2 + 2 * i, attachment.Details.Etag);
+                            Assert.Equal(2 + i, attachment.Details.Etag);
                             Assert.Equal(name, attachment.Details.Name);
                             Assert.Equal(i == 0 ? 3 : 5, attachmentStream.Position);
                             if (i == 0)
@@ -304,7 +304,7 @@ namespace FastTests.Client.Attachments
                     using (var attachment = await session.Advanced.GetAttachmentAsync(user, "file3"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
-                        Assert.Equal(6, attachment.Details.Etag);
+                        Assert.Equal(4, attachment.Details.Etag);
                         Assert.Equal("file3", attachment.Details.Name);
                         Assert.Equal("NRQuixiqj+xvEokF6MdQq1u+uH1dk/gk2PLChJQ58Vo=", attachment.Details.Hash);
                         Assert.Equal(9, attachmentStream.Position);
@@ -449,6 +449,56 @@ namespace FastTests.Client.Attachments
                     // ReSharper disable once ExpressionIsAlwaysNull
                     var attachments2 = session.Advanced.GetAttachmentNames(user2);
                     Assert.Empty(attachments2);
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData(1000)]
+        public async Task PutLotOfAttachments(int count)
+        {
+            var streams = new MemoryStream[count];
+
+            using (var store = GetDocumentStore())
+            using (var session = store.OpenAsyncSession())
+            {
+                var user = new User { Name = "Fitzchak" };
+                await session.StoreAsync(user, "users/1");
+
+                for (var i = 0; i < count; i++)
+                {
+                    var stream = new MemoryStream(new byte[] { 1, 2, 3 });
+                    session.Advanced.StoreAttachment("users/1", "Big And Very Long File Name " + i, stream, "image/png");
+                    streams[i] = stream;
+                }
+
+                await session.SaveChangesAsync();
+            }
+
+            foreach (var stream in streams)
+                stream.Dispose();
+        }
+
+        [Fact]
+        public async Task AttachmentExists()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    var user = new User { Name = "Fitzchak" };
+                    await session.StoreAsync(user, "users/1");
+
+                    session.Advanced.StoreAttachment("users/1", "profile", stream, "image/png");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    Assert.True(await session.Advanced.AttachmentExistsAsync("users/1", "profile"));
+                    Assert.False(await session.Advanced.AttachmentExistsAsync("users/1", "background-photo"));
+                    Assert.False(await session.Advanced.AttachmentExistsAsync("users/2", "profile"));
                 }
             }
         }

@@ -11,7 +11,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///     Advanced synchronous session operations
     /// </summary>
-    public partial interface IAdvancedSessionOperation : IAdvancedDocumentSessionOperations
+    public partial interface IAdvancedSessionOperations : IAdvancedDocumentSessionOperations
     {
         /// <summary>
         ///     Access the eager operations

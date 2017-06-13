@@ -4,16 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
-using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Json.Converters;
-using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
@@ -22,6 +16,13 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class AsyncDocumentSession
     {
+        public async Task<bool> AttachmentExistsAsync(string documentId, string name)
+        {
+            var command = new HeadAttachmentCommand(documentId, name, null);
+            await RequestExecutor.ExecuteAsync(command, Context).ConfigureAwait(false);
+            return command.Result != null;
+        }
+
         public async Task<AttachmentResult> GetAttachmentAsync(string documentId, string name)
         {
             var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Document, null);

@@ -13,12 +13,17 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///     Advanced synchronous session operations
     /// </summary>
-    public partial interface IAdvancedSessionOperation
+    public partial interface IAdvancedSessionOperations
     {
         /// <summary>
         /// Returns the attachments info of a document.
         /// </summary>
         AttachmentName[] GetAttachmentNames(object entity);
+
+        /// <summary>
+        /// Check if attachment exists
+        /// </summary>
+        bool AttachmentExists(string documentId, string name);
 
         /// <summary>
         /// Returns the attachment by the document id and attachment name.

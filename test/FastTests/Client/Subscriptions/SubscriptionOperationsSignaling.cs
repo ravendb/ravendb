@@ -47,11 +47,19 @@ namespace FastTests.Client.Subscriptions
                         Strategy = SubscriptionOpeningStrategy.TakeOver
                     });
 
+                Exception threadException = null;
                 var thread = new Thread(() =>
                 {
-                    Thread.Sleep(300);
-                    concurrentSubscription.Subscribe(users.Add);
-                    concurrentSubscription.Start();
+                    try
+                    {
+                        Thread.Sleep(300);
+                        concurrentSubscription.Subscribe(users.Add);
+                        concurrentSubscription.Start();
+                    }
+                    catch (Exception e)
+                    {
+                        threadException = e;
+                    }
                 });
 
                 try
@@ -68,6 +76,9 @@ namespace FastTests.Client.Subscriptions
                 {
                     thread.Join();
                 }
+
+                if (threadException != null)
+                    throw threadException;
             }
         }
 
@@ -187,10 +198,18 @@ namespace FastTests.Client.Subscriptions
                 User User;
                 Assert.True(users.TryTake(out User, _reasonableWaitTime));
 
+                Exception threadException = null;
                 var thread = new Thread(() =>
                 {
-                    Thread.Sleep(400);
-                    store.Subscriptions.Delete(subscriptionId);
+                    try
+                    {
+                        Thread.Sleep(400);
+                        store.Subscriptions.Delete(subscriptionId);
+                    }
+                    catch (Exception e)
+                    {
+                        threadException = e;
+                    }
                 });
 
                 try
@@ -202,6 +221,9 @@ namespace FastTests.Client.Subscriptions
                 {
                     thread.Join();
                 }
+
+                if (threadException != null)
+                    throw threadException;
             }
         }
 

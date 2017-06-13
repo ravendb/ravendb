@@ -15,6 +15,13 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class DocumentSession
     {
+        public bool AttachmentExists(string documentId, string name)
+        {
+            var command = new HeadAttachmentCommand(documentId, name, null);
+            RequestExecutor.Execute(command, Context);
+            return command.Result != null;
+        }
+
         public AttachmentResult GetAttachment(string documentId, string name)
         {
             var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Document, null);

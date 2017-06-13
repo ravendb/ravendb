@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions;
 using Raven.Server.Documents.Replication;
@@ -20,7 +19,6 @@ using Voron.Impl;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Collections;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron.Data;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
@@ -1448,64 +1446,6 @@ namespace Raven.Server.Documents
             }
 
             return result;
-        }
-
-        public PutOperationResults UpdateDocumentAfterAttachmentChange(DocumentsOperationContext context, Slice lowerDocumentId, string documentId, TableValueReader tvr)
-        {
-            // We can optimize this by copy just the document's data instead of the all tvr
-            var copyOfDoc = context.GetMemory(tvr.Size);
-            try
-            {
-                // we have to copy it to the side because we might do a defrag during update, and that
-                // can cause corruption if we read from the old value (which we just deleted)
-                Memory.Copy(copyOfDoc.Address, tvr.Pointer, tvr.Size);
-                var copyTvr = new TableValueReader(copyOfDoc.Address, tvr.Size);
-                int size;
-                var data = new BlittableJsonReaderObject(copyTvr.Read((int)DocumentsTable.Data, out size), size, context);
-
-                var attachments = AttachmentsStorage.GetAttachmentsMetadataForDocument(context, lowerDocumentId);
-
-                var flags = DocumentFlags.None;
-                data.Modifications = new DynamicJsonValue(data);
-                if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
-                {
-                    metadata.Modifications = new DynamicJsonValue(metadata);
-
-                    if (attachments.Count > 0)
-                    {
-                        flags = DocumentFlags.HasAttachments;
-                        metadata.Modifications[Constants.Documents.Metadata.Attachments] = attachments;
-                    }
-                    else
-                    {
-                        metadata.Modifications.Remove(Constants.Documents.Metadata.Attachments);
-                    }
-
-                    data.Modifications[Constants.Documents.Metadata.Key] = metadata;
-                }
-                else
-                {
-                    if (attachments.Count > 0)
-                    {
-                        flags = DocumentFlags.HasAttachments;
-                        data.Modifications[Constants.Documents.Metadata.Key] = new DynamicJsonValue
-                        {
-                            [Constants.Documents.Metadata.Attachments] = attachments
-                        };
-                    }
-                    else
-                    {
-                        Debug.Assert(false, "Cannot remove an attachment and not have @attachments in @metadata");
-                    }
-                }
-
-                data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                return Put(context, documentId, null, data, null, null, flags, NonPersistentDocumentFlags.ByAttachmentUpdate);
-            }
-            finally
-            {
-                context.ReturnMemory(copyOfDoc);
-            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

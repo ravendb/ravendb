@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Binary;
+using Sparrow.Collections;
 using Sparrow.Extensions;
 using Sparrow.Utils;
 
@@ -135,7 +136,7 @@ namespace Sparrow.Logging
                 {
                     StartNewLoggingThread();
                 }
-                else if(copyLoggingThread.ManagedThreadId == Thread.CurrentThread.ManagedThreadId)
+                else if (copyLoggingThread.ManagedThreadId == Thread.CurrentThread.ManagedThreadId)
                 {
                     // have to do this on a separate thread
                     Task.Run(() =>
@@ -151,7 +152,7 @@ namespace Sparrow.Logging
                 {
                     _keepLogging = false;
                     _hasEntries.Set();
-                    
+
                     copyLoggingThread.Join();
                     StartNewLoggingThread();
                 }
@@ -170,7 +171,7 @@ namespace Sparrow.Logging
                 IsBackground = true,
                 Name = LoggingThreadName
             };
-            _loggingThread.Start();            
+            _loggingThread.Start();
         }
 
 
@@ -199,7 +200,7 @@ namespace Sparrow.Logging
                     continue;
                 // TODO: If avialable file size on the disk is too small, emit a warning, and return a Null Stream, instead
                 // TODO: We don't want to have the debug log kill us
-                var fileStream = new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.Read, 32*1024,
+                var fileStream = new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.Read, 32 * 1024,
                     false);
                 fileStream.Write(_headerRow, 0, _headerRow.Length);
                 return fileStream;
@@ -345,9 +346,10 @@ namespace Sparrow.Logging
             {
                 Interlocked.Increment(ref _generation);
                 var threadStates = new List<WeakReference<LocalThreadWriterState>>();
+                var threadStatesToRemove = new FastStack<WeakReference<LocalThreadWriterState>>();
                 while (_keepLogging)
                 {
-                    const int maxFileSize = 1024*1024*256;
+                    const int maxFileSize = 1024 * 1024 * 256;
                     using (var currentFile = GetNewStream(maxFileSize))
                     {
                         var sizeWritten = 0;
@@ -367,20 +369,21 @@ namespace Sparrow.Logging
 
                                 _hasEntries.Reset();
                             }
+
                             foundEntry = false;
-                            foreach (var threadStateWeakRef in threadStates)
+                            foreach (var threadStateRef in threadStates)
                             {
-                                LocalThreadWriterState threadState;
-                                if (threadStateWeakRef.TryGetTarget(out threadState) == false)
+                                if (threadStateRef.TryGetTarget(out LocalThreadWriterState threadState) == false)
                                 {
-                                    threadStates.Remove(threadStateWeakRef);
-                                    break; // so we won't try to iterate over the mutated collection
+                                    threadStatesToRemove.Push(threadStateRef);
+                                    continue;
                                 }
+
                                 for (var i = 0; i < 16; i++)
                                 {
-                                    WebSocketMessageEntry item;
-                                    if (threadState.Full.Dequeue(out item) == false)
+                                    if (threadState.Full.Dequeue(out WebSocketMessageEntry item) == false)
                                         break;
+
                                     foundEntry = true;
 
                                     sizeWritten += ActualWriteToLogTargets(item, currentFile);
@@ -388,14 +391,15 @@ namespace Sparrow.Logging
                                     threadState.Free.Enqueue(item);
                                 }
                             }
-                            if (_newThreadStates.IsEmpty == false)
-                            {
-                                WeakReference<LocalThreadWriterState> result;
-                                while (_newThreadStates.TryDequeue(out result))
-                                {
-                                    threadStates.Add(result);
-                                }
-                            }
+
+                            while (threadStatesToRemove.TryPop(out var ts))
+                                threadStates.Remove(ts);
+
+                            if (_newThreadStates.IsEmpty)
+                                continue;
+
+                            while (_newThreadStates.TryDequeue(out WeakReference<LocalThreadWriterState> result))
+                                threadStates.Add(result);
                         }
                     }
                 }
@@ -432,7 +436,7 @@ namespace Sparrow.Logging
         private void SendToWebSockets(WebSocketMessageEntry item, ArraySegment<byte> bytes)
         {
             if (_tasks.Length != item.WebSocketsList.Count)
-                _tasks = new Task[item.WebSocketsList.Count];
+                Array.Resize(ref _tasks, item.WebSocketsList.Count);
 
             for (int i = 0; i < item.WebSocketsList.Count; i++)
             {
