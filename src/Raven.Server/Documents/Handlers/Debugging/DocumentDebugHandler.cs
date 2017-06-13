@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -7,7 +8,7 @@ using Sparrow.Json;
 namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class DocumentDebugHandler : DatabaseRequestHandler
-    {
+    {       
         [RavenAction("/databases/*/debug/documents/huge", "GET")]
         public Task HugeDocuments()
         {

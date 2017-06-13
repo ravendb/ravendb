@@ -36,8 +36,7 @@ namespace Raven.Server.Smuggler.Documents
             DatabaseItemType.RevisionDocuments,
             DatabaseItemType.Indexes,
             DatabaseItemType.Transformers,
-            DatabaseItemType.LocalIdentities,
-            DatabaseItemType.ClusterIdentities,
+            DatabaseItemType.Identities,
             DatabaseItemType.None
         };
 
@@ -139,11 +138,6 @@ namespace Raven.Server.Smuggler.Documents
             {
                 yield return transformer.Definition;
             }
-        }
-
-        public IEnumerable<KeyValuePair<string, long>> GetLocalIdentities()
-        {
-            return _database.DocumentsStorage.Identities.GetIdentities(_context);
         }
 
         public IEnumerable<KeyValuePair<string, long>> GetClusterIdentities()

@@ -1,17 +1,5 @@
 ﻿using System;
-using System.Diagnostics;
-using FastTests.Client.Attachments;
-using RachisTests.DatabaseCluster;
-using Sparrow.Logging;
-using System.Threading.Tasks;
-using FastTests.Server.Documents.Notifications;
-using FastTests.Server.Documents.Versioning;
-using FastTests.Server.Replication;
-using FastTests.Smuggler;
-using Raven.Server.Utils;
-using Raven.Client.Documents;
-using RachisTests;
-using Raven.Client.Util;
+using FastTests.Tasks;
 
 namespace Tryouts
 {
@@ -19,15 +7,16 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            for (var i = 0; i < 10000; i++)
+
+            for (var i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
- 
-                using (var test = new AttachmentFailover())
+                using (var test = new RavenDB_7059())
                 {
-                    test.PutAttachmentsWithFailover(true, 524288, "BfKA8g/BJuHOTHYJ+A6sOt9jmFSVEDzCM3EcLLKCRMU=").Wait();
+                    test.Cluster_identity_should_work_with_smuggler().Wait();
                 }
             }
         }
     }
+
 }

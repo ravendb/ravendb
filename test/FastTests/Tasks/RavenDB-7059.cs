@@ -1,8 +1,11 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
@@ -41,9 +44,12 @@ namespace FastTests.Tasks
                 {
                     session.Store(new User { Name = "John Dow" }, "users/");
                     session.Store(new User { Name = "Jake Dow" }, "users/");
+                    session.Store(new User { Name = "Jessie Dow" }, "users/");
                     session.SaveChanges();                   
                 }
-                
+
+                WaitForIdentity(leaderStore, "users", 3);
+
                 await leaderStore.Smuggler.ExportAsync(new DatabaseSmugglerOptions
                 {
                     Database = databaseName,
@@ -82,7 +88,7 @@ namespace FastTests.Tasks
                 using (var session = leaderStore.OpenSession())
                 {
                     var julieDow = session.Query<User>().First(u => u.Name.StartsWith("Julie"));
-                    Assert.Equal("users/3",julieDow.Id);
+                    Assert.Equal("users/4",julieDow.Id);
 
                 }
             }                        
@@ -102,6 +108,25 @@ namespace FastTests.Tasks
         {
             base.Dispose();
             IOExtensions.DeleteFile(_fileName);
+        }
+
+        public bool WaitForIdentity(DocumentStore store, string collection, long identityToWaitFor, int timeout = 2000)
+        {
+            var sw = Stopwatch.StartNew();
+            while (true)
+            {
+                if (sw.ElapsedMilliseconds >= timeout)
+                    return false;
+
+
+                var identities = store.Admin.Send(new GetClusterIdentitiesOperation());
+                if (identities.TryGetValue(collection, out long value) && identityToWaitFor >= value)
+                {
+                    break;
+                }
+                Thread.Sleep(250);
+            }
+            return true;
         }
     }
 }

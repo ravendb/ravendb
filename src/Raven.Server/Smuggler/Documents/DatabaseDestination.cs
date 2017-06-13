@@ -28,7 +28,7 @@ namespace Raven.Server.Smuggler.Documents
     {
         private readonly DocumentDatabase _database;
 
-        private Logger _log;
+        private readonly Logger _log;
         private BuildVersionType _buildType;
 
         public DatabaseDestination(DocumentDatabase database)
@@ -52,15 +52,10 @@ namespace Raven.Server.Smuggler.Documents
         {
             return new DatabaseDocumentActions(_database, _buildType, isRevision: true, log: _log);
         }
-
-        public IIdentityActions LocalIdentities()
-        {
-            return new DatabaseIdentityActions(_database, IdentityType.Local);
-        }
-
+     
         public IIdentityActions ClusterIdentities()
         {
-            return new DatabaseIdentityActions(_database, IdentityType.Cluster);
+            return new DatabaseIdentityActions(_database);
         }
 
         public IIndexActions Indexes()
@@ -215,16 +210,12 @@ namespace Raven.Server.Smuggler.Documents
 
         private class DatabaseIdentityActions : IIdentityActions
         {
-            public IdentityType Type { get; }
             private readonly DocumentDatabase _database;
             private readonly Dictionary<string, long> _identities;
-            private readonly IDisposable _returnContext;
 
-            public DatabaseIdentityActions(DocumentDatabase database,IdentityType type)
+            public DatabaseIdentityActions(DocumentDatabase database)
             {
-                Type = type;
                 _database = database;
-                _returnContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext _);
                 _identities = new Dictionary<string, long>();
             }
 
@@ -235,66 +226,11 @@ namespace Raven.Server.Smuggler.Documents
 
             public void Dispose()
             {
-                try
-                {
-                    if (_identities.Count == 0)
-                        return;
+                if (_identities.Count == 0)
+                    return;
 
-                    switch (Type)
-                    {
-                        case IdentityType.Local:
-                            _database.TxMerger.Enqueue(new UpdateIdentitiesCommand(_identities, _database)).Wait();
-                            break;
-                        case IdentityType.Cluster:
-                            _database.TxMerger.Enqueue(new UpdateClusterIdentitiesCommand(_identities, _database)).Wait();
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
-                }
-                finally
-                {
-                    _returnContext?.Dispose();
-                }
-            }
-
-            private class UpdateClusterIdentitiesCommand : TransactionOperationsMerger.MergedTransactionCommand
-            {
-                private readonly Dictionary<string, long> _identities;
-                private readonly DocumentDatabase _database;
-
-                public UpdateClusterIdentitiesCommand(Dictionary<string, long> identities, DocumentDatabase database)
-                {
-                    _identities = identities;
-                    _database = database;
-                }
-
-                public override int Execute(DocumentsOperationContext context)
-                {
-                    var (etag,_) = _database.ServerStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(_database.Name,_identities)).Result;
-                    _database.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, etag).Wait();
-
-                    return 1;
-                }
-            }
-
-            private class UpdateIdentitiesCommand : TransactionOperationsMerger.MergedTransactionCommand
-            {
-                private readonly Dictionary<string, long> _identities;
-                private readonly DocumentDatabase _database;
-
-                public UpdateIdentitiesCommand(Dictionary<string, long> identities, DocumentDatabase database)
-                {
-                    _identities = identities;
-                    _database = database;
-                }
-
-                public override int Execute(DocumentsOperationContext context)
-                {
-                    _database.DocumentsStorage.Identities.Update(context, _identities);
-
-                    return 1;
-                }
+                //fire and forget, do not hold-up smuggler operations waiting for Raft command
+                _database.ServerStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(_database.Name, _identities)).Wait();
             }
         }
 
