@@ -499,7 +499,7 @@ class visualizerGraphGlobal {
     private yScale: d3.scale.Linear<number, number>;
 
     private goToDetailsCallback: (treeName: string) => void;
-    private goToDetailsAnimationInProgress = false;
+    private animationInProgress = false;
     private deleteItemCallback: (item: documentItem) => void;
 
     addDocument(documentName: string) {
@@ -649,7 +649,7 @@ class visualizerGraphGlobal {
     }
 
     private onReduceTreeClicked(item: reduceTreeItem) {
-        this.goToDetailsAnimationInProgress = true;
+        this.animationInProgress = true;
         this.saveCurrentZoom();
 
         const requestedScale = Math.min(this.totalWidth / item.width, this.totalHeight / item.height);
@@ -658,10 +658,13 @@ class visualizerGraphGlobal {
 
         const requestedTranslation: [number, number] = [-item.x * requestedScale + extraXOffset, -item.y * requestedScale];
 
-        this.currentReduceTreeHighlight
-            .style("opacity", 0);
         this.reduceTreeHighlightHandler = () => { };
 
+        // cancel transition
+        this.currentReduceTreeHighlight
+            .transition()
+            .duration(0)
+            .style("opacity", 0);
 
         this.canvas
             .transition()
@@ -671,12 +674,12 @@ class visualizerGraphGlobal {
             .each("end", () => {
                 this.toggleUiElements(false);
                 this.goToDetailsCallback(item.name);
-                this.goToDetailsAnimationInProgress = false;
+                this.animationInProgress = false;
             });
     }
 
     private onReduceTreeEnter(item: reduceTreeItem) {
-        if (this.goToDetailsAnimationInProgress) {
+        if (this.animationInProgress) {
             return;
         }
 
@@ -698,6 +701,10 @@ class visualizerGraphGlobal {
     }
 
     private onReduceTreeExit(item: reduceTreeItem) {
+        if (this.animationInProgress) {
+            return;
+        }
+
         this.reduceTreeHighlightHandler = () => {
             this.currentReduceTreeHighlight
                 .transition()
@@ -709,13 +716,15 @@ class visualizerGraphGlobal {
     }
 
     restoreView() {
+        this.animationInProgress = true;
         this.toggleUiElements(true);
 
         this.canvas
             .transition()
             .duration(500)
             .call(this.zoom.translate(this.savedZoomStatus.translate).scale(this.savedZoomStatus.scale).event)
-            .style('opacity', 1);
+            .style('opacity', 1)
+            .each("end", () => this.animationInProgress = false);
     }
 
     private saveCurrentZoom() {
