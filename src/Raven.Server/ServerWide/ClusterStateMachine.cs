@@ -120,8 +120,8 @@ namespace Raven.Server.ServerWide
                             new InvalidDataException(errorMessage));
                         return;
                     }
-                   
-                    goto case nameof(DeleteOngoingTaskCommand);
+                    UpdateDatabase(context, type, cmd, index, leader);
+                    break;
                 case nameof(PutIndexCommand):
                 case nameof(PutAutoIndexCommand):
                 case nameof(DeleteIndexCommand):
