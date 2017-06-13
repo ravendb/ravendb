@@ -8,6 +8,8 @@ namespace Raven.Client.Documents.Commands.Batches
     {
         string Id { get; }
 
+        string Name { get; }
+
         long? Etag { get; }
 
         CommandType Type { get; }
@@ -23,5 +25,8 @@ namespace Raven.Client.Documents.Commands.Batches
         DELETE,
         AttachmentPUT,
         AttachmentDELETE,
+
+        ClientAnyCommand,
+        ClientNotAttachmentPUT,
     }
 }

@@ -34,6 +34,7 @@ namespace Raven.Client.Documents.Commands.Batches
         }
 
         public string Id { get; }
+        public string Name { get; } = null;
         public long? Etag { get; }
         public T Document { get; }
         public CommandType Type { get; } = CommandType.PUT;

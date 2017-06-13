@@ -17,6 +17,7 @@ namespace Raven.Client.Documents.Commands.Batches
         }
 
         public string Id { get; }
+        public string Name { get; } = null;
         public long? Etag { get; }
         public PatchRequest Patch { get; }
         public PatchRequest PatchIfMissing { get; }
