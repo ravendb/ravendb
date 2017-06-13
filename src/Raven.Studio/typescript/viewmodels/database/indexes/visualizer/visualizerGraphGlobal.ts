@@ -560,6 +560,7 @@ class visualizerGraphGlobal {
     reset() {
         this.documents = [];
         this.reduceTrees = [];
+        this.hitTest.reset();
 
         this.draw();
     }
@@ -782,7 +783,7 @@ class visualizerGraphGlobal {
                 visualizerGraphGlobal.margins.betweenPagesAndDocuments;
 
         const height = documentNamesYStart
-            + 100 //TODO: it is space for document names
+            + 100 
             + visualizerGraphGlobal.margins.globalMargin; // top and bottom margin
         this.dataHeight = height;
 
@@ -811,41 +812,20 @@ class visualizerGraphGlobal {
             //TODO: handle me!
         }
 
-        const avgXValues: avgXVals[] = [];
-
         for (let currentDoc = 0; currentDoc < this.documents.length; currentDoc++) {
             const doc = this.documents[currentDoc];
 
             // Calc document x value as average of connectedPages
-            const totalXValuesOfConnectedPages = doc.connectedPages.reduce((a, b) => a + b.parent.x, 0);
+            const totalXValuesOfConnectedPages = doc.connectedPages.reduce((a, b) => a + b.x + b.parent.x + pageItem.pageWidth / 2, 0);
             doc.x = totalXValuesOfConnectedPages / doc.connectedPages.length;
-
-            avgXValues.push({ docIndex: currentDoc, avgXVal: doc.x });
         }
 
-        // Sort the avg x values 
-        avgXValues.sort((a1, a2) => a1.avgXVal - a2.avgXVal);
-
-        // set color of 1'st document
         this.nextColorIndex = 0;
-        this.documents[0].color = this.getNextColor();
+        this.documents.forEach(x => x.color = this.getNextColor());
 
-        // Order documents according to the sorted values and set documents colors 
         const xPadding = 20;
-        for (let i = 1; i < avgXValues.length; i++) {
-            const doc = this.documents[avgXValues[i].docIndex];
 
-            //TODO: this doesn't work if few elements has the same avgXvalue
-
-            // Check for collisions..
-            const previousX = avgXValues[i - 1].avgXVal;
-            if ((doc.x >= previousX) && (doc.x <= previousX + doc.width) ||
-                (doc.x + doc.width >= previousX) && (doc.x + doc.width <= previousX + doc.width)) {
-                doc.x = previousX + doc.width + xPadding;
-                avgXValues[i].avgXVal = doc.x;
-            }
-            doc.color = this.getNextColor();
-        }
+        graphHelper.layoutUsingNearestCenters(this.documents, xPadding);
     }
 
     private registerHitAreas() {
@@ -897,7 +877,7 @@ class visualizerGraphGlobal {
             ctx.beginPath();
             ctx.font = "10px Lato";
             ctx.textAlign = "center";
-            ctx.fillStyle = "#686f6f";
+            ctx.fillStyle = "#f0f4f6";
             ctx.strokeStyle = "#686f6f";
             ctx.fillText(tree.displayName, tree.width / 2, reduceTreeItem.margins.treeMargin, tree.width);
 
@@ -908,6 +888,7 @@ class visualizerGraphGlobal {
             const totalEntriesOffset = pageItem.pageHeight +
                 reduceTreeItem.margins.betweenPagesVerticalPadding;
 
+            ctx.fillStyle = "#686f6f";
             for (let i = 1; i < tree.depth; i++) {
                 totalEntiresY += totalEntriesOffset;
                 const items = tree.itemsCountAtDepth[i];

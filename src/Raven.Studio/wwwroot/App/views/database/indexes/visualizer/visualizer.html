@@ -14,9 +14,13 @@
         fill: none;
         pointer-events: all;
     }
+
+    .visualizer ol {
+        padding-left: 20px;
+    }
 </style>
 
-<div class="content-margin">
+<div class="content-margin visualizer">
     <div class="flex-vertical absolute-fill">
         <div class="flex-header">
             <div class="form-inline clearfix toolbar" role="form">
@@ -35,7 +39,7 @@
                             <!-- /ko -->
                         </ul>
                         <div class="bg-info">
-                            <i class="icon-info text-info"></i> <span>Map indexes are not available in 'map/reduce' visualizer.</span>
+                            <i class="icon-info text-info"></i> <span>Map indexes are not available in 'Map/Reduce' visualizer.</span>
                         </div>
                     </div>
                 </div>
@@ -59,13 +63,6 @@
                         </li>
                     </ul>
                 </div>
-
-                <!--  TODO:
-        <button class="btn btn-default" type="button"><i class="icon-fullscreen"></i></button>
-        <button class="btn btn-default" type="button"><i class="icon-import"></i></button>
-        <button class="btn btn-default" type="button"><i class="icon-export"></i></button>
-        <button class="btn btn-default" type="button"><i class="icon-key"></i></button>
-            -->
                 
                 <div data-bind="visible: detailsGraph.viewActive">
                     <button data-bind="click: detailsGraph.goToMasterView, if: detailsGraph.viewActive" class="btn btn-default">
@@ -80,6 +77,16 @@
         <div class="flex-grow dynamic-container">
             <div id="visualizerContainer">
 
+            </div>
+            <div class="absolute-center panel padding" data-bind="visible: !documents.documentIds().length">
+                <i class="icon-info icon-xl"></i>
+
+                <ol>
+                    <li>Select index.</li>
+                    <li>Enter document ids.</li>
+                    <li>Select area of interest by dragging. Zoom with the mousewheel.</li>
+                    <li>Click on the tree for map/reduce details. </li>
+                </ol>
             </div>
         </div>
     </div>
