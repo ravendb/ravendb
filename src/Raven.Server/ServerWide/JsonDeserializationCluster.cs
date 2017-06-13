@@ -6,6 +6,7 @@ using Raven.Client.Server.ETL;
 using Raven.Client.Server.Expiration;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Client.Server.Versioning;
+using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
@@ -41,6 +42,8 @@ namespace Raven.Server.ServerWide
         public static Func<BlittableJsonReaderObject, EtlConfiguration<SqlDestination>> SqlEtlConfiguration = GenerateJsonDeserializationRoutine<EtlConfiguration<SqlDestination>>();
 
         public static readonly Func<BlittableJsonReaderObject, ServerStore.PutRaftCommandResult> PutRaftCommandResult = GenerateJsonDeserializationRoutine<ServerStore.PutRaftCommandResult>();
+
+        public static readonly Func<BlittableJsonReaderObject, AdminJsScript> AdminJsScript = GenerateJsonDeserializationRoutine<AdminJsScript>();
 
         public static Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>> Commands = new Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>>
         {

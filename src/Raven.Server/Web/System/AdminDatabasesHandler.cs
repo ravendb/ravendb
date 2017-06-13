@@ -30,6 +30,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Server.Documents.ETL;
+using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.ETL;
 
@@ -613,6 +614,35 @@ namespace Raven.Server.Web.System
                 throw new ArgumentException($"Unknown ETL type: {type}", "type");
 
             await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.UpdateEtl(_, databaseName, id, etlConfiguration, etlType), "etl-update");
+        }
+
+        [RavenAction("/admin/console", "POST", "/admin/console?name={databaseName:string}")]
+        public async Task AdminConsole()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            if (ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(name, out var database) && database.Status == TaskStatus.RanToCompletion)
+            {
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                {
+                    var content = await context.ReadForMemoryAsync(RequestBodyStream(), "read-admin-script");
+                    if (content.TryGet(nameof(AdminJsScript), out BlittableJsonReaderObject adminJsBlittable) == false)
+                    {
+                        throw new InvalidDataException("AdminJsScript was not found.");
+                    }
+
+                    var adminJsScript = JsonDeserializationCluster.AdminJsScript(adminJsBlittable);
+                    var console = new AdminJsConsole(database.Result);
+                    var result = console.ApplyScript(adminJsScript);
+
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(writer, result);
+                        writer.Flush();
+                    }
+                }
+            }
         }
     }
 }
