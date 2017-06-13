@@ -191,7 +191,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         if (nodeInfo.TopologyId != null && topologyId != nodeInfo.TopologyId)
                         {
                             throw new TopologyMismatchException(
-                                $"Adding a new node to cluster failed due to topology mismatch, we expected topology id {topologyId}, but get {nodeInfo.TopologyId}");
+                                $"Adding a new node to cluster failed. The new node is already in another cluster. Expected topology id: {topologyId}, but we get {nodeInfo.TopologyId}");
                         }
 
                         var nodeTag = nodeInfo.NodeTag == "?" 
