@@ -1,7 +1,9 @@
 using System;
 using Jint;
+using Jint.Native;
 using Raven.Client.Documents.Exceptions.Patching;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 
@@ -9,11 +11,16 @@ namespace Raven.Server.Documents.Patch
 {
     public class AdminJsConsole : DocumentPatcherBase
     {
-        private readonly DocumentDatabase _database;
+        private readonly RavenServer _server;
+
 
         public AdminJsConsole(DocumentDatabase database) : base(database)
         {
-            _database = database;
+        }
+
+        public AdminJsConsole(RavenServer server)
+        {
+            _server = server;
         }
 
         protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
@@ -24,14 +31,45 @@ namespace Raven.Server.Documents.Patch
         {
         }
 
-        private const string ExecString = @"function ExecuteAdminScript(databaseInner){{ return (function(database){{ {0} }}).apply(this, [databaseInner]); }};";
+        private const string ExececutionStr = @"function ExecuteAdminScript(databaseInner){{ return (function(database){{ {0} }}).apply(this, [databaseInner]); }};";
+        private const string ServerExeceutionStr = @"function ExecuteAdminScript(serverInner){{ return (function(server){{ {0} }}).apply(this, [serverInner]); }};";
 
         public DynamicJsonValue ApplyScript(AdminJsScript script)
+        {
+            var jintEngine = GetEngine(script, ExececutionStr);
+
+            var jsVal = jintEngine.Invoke("ExecuteAdminScript", Database);
+
+            return ConvertResultsToJson(jsVal, Database);
+        }
+
+        public DynamicJsonValue ApplyServerScript(AdminJsScript script)
+        {
+            var jintEngine = GetEngine(script, ServerExeceutionStr);
+
+            var jsVal = jintEngine.Invoke("ExecuteAdminScript", _server);
+
+            return ConvertResultsToJson(jsVal);
+        }
+
+        private static DynamicJsonValue ConvertResultsToJson(JsValue jsVal, DocumentDatabase database = null)
+        {
+            if (jsVal.IsUndefined())
+                return null;
+
+            using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+            using (var scope = new PatcherOperationScope(database).Initialize(context))
+            {
+                return scope.ToBlittable(jsVal.AsObject());
+            }
+        }
+
+        private Engine GetEngine(AdminJsScript script, string executionString)
         {
             Engine jintEngine;
             try
             {
-                jintEngine = CreateEngine(script.Script, ExecString);
+                jintEngine = CreateEngine(script.Script, executionString);
             }
             catch (NotSupportedException e)
             {
@@ -45,17 +83,7 @@ namespace Raven.Server.Documents.Patch
             {
                 throw new JavaScriptParseException("Could not parse: " + Environment.NewLine + script.Script, e);
             }
-
-            var jsVal = jintEngine.Invoke("ExecuteAdminScript", _database);
-
-            if (jsVal.IsUndefined())
-                return null;
-
-            using (var context = DocumentsOperationContext.ShortTermSingleUse(_database))
-            using (var scope = new PatcherOperationScope(_database).Initialize(context))
-            {
-                return scope.ToBlittable(jsVal.AsObject());
-            }
+            return jintEngine;
         }
     }
 
