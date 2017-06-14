@@ -40,6 +40,7 @@ namespace Raven.Server.Documents.Handlers
         private static Stack<CommandData[]> _cache;
 
         private static readonly CommandData[] Empty = new CommandData[0];
+        private static int MaxSizeOfCommandsInBatchToCache = 128;
 
         public static void ReturnBuffer(ArraySegment<CommandData> cmds)
         {
@@ -49,6 +50,8 @@ namespace Raven.Server.Documents.Handlers
 
         private static void ReturnBuffer(CommandData[] cmds)
         {
+            if (cmds.Length > MaxSizeOfCommandsInBatchToCache)
+                return;
             if (_cache == null)
                 _cache = new Stack<CommandData[]>();
 
@@ -355,9 +358,17 @@ namespace Raven.Server.Documents.Handlers
 
         private static CommandData[] IncreaseSizeOfCommandsBuffer(int index, CommandData[] cmds)
         {
+            CommandData[] tmp = null;
+            if (cmds.Length > MaxSizeOfCommandsInBatchToCache)
+            {
+                tmp = new CommandData[Math.Max(index + 8, cmds.Length * 2)];
+                Array.Copy(cmds, 0, tmp, 0, index);
+                Array.Clear(cmds, 0, cmds.Length);
+                return tmp;
+            }
+
             if (_cache == null)
                 _cache = new Stack<CommandData[]>();
-            CommandData[] tmp = null;
             while (_cache.Count > 0)
             {
                 tmp = _cache.Pop();
