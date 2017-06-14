@@ -131,8 +131,6 @@ namespace Voron.Data.BTrees
         /// </summary>
         public long Increment(Slice key, long delta)
         {
-            State.IsModified = true;
-
             long currentValue = 0;
 
             var read = Read(key);
@@ -160,8 +158,6 @@ namespace Voron.Data.BTrees
                     return false;
             }
 
-            State.IsModified = true;
-
             byte* ptr;
             using (DirectAdd(key, sizeof(long), out ptr))
                 *(long*)ptr = value;
@@ -172,8 +168,6 @@ namespace Voron.Data.BTrees
         public void Add(Slice key, Stream value)
         {
             ValidateValueLength(value);
-
-            State.IsModified = true;
 
             var length = (int)value.Length;
 
@@ -206,8 +200,7 @@ namespace Voron.Data.BTrees
             if (value == null)
                 ThrowNullReferenceException();
             Debug.Assert(value != null);
-
-            State.IsModified = true;
+            
             byte* ptr;
             using (DirectAdd(key, value.Length, out ptr))
             {
@@ -222,8 +215,7 @@ namespace Voron.Data.BTrees
         {
             if (!value.HasValue)
                 ThrowNullReferenceException();
-
-            State.IsModified = true;
+            
             byte* ptr;
             using (DirectAdd(key, value.Size, out ptr))
                 value.CopyTo(ptr);
@@ -265,7 +257,6 @@ namespace Voron.Data.BTrees
 
         public DirectAddScope DirectAdd(Slice key, int len, TreeNodeFlags nodeType, out byte* ptr)
         {
-
             if (_llt.Flags == TransactionFlags.ReadWrite)
             {
                 State.IsModified = true;
