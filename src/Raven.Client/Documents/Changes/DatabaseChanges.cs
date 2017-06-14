@@ -252,9 +252,10 @@ namespace Raven.Client.Documents.Changes
         {
             _cts.Cancel();
 
-            _task.Wait();
             _counters.Clear();
             _client?.Dispose();
+
+            _task.Wait();
 
             ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
             ConnectionStatusChanged -= OnConnectionStatusChanged;
@@ -392,6 +393,9 @@ namespace Raven.Client.Documents.Changes
                 }
                 catch (Exception e)
                 {
+                    if (_cts.IsCancellationRequested)
+                        return;
+
                     using (var client = _client)
                         _client = new ClientWebSocket();
 
