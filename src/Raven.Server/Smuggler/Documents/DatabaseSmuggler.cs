@@ -174,8 +174,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private SmugglerProgressBase.Counts ProcessIdentities(SmugglerResult result)
         {
-            //using (var identityActions = _destination.Identities())
-            var identityActions = _destination.Identities();
+            using (var identityActions = _destination.Identities())
             {
                 var sourceIdentities = _source.GetIdentities();
                 foreach (var kvp in sourceIdentities)
