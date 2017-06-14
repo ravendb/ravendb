@@ -617,10 +617,11 @@ namespace Raven.Server.Web.System
             await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.UpdateEtl(_, databaseName, id, etlConfiguration, etlType), "etl-update");
         }
 
-        [RavenAction("/admin/console", "POST", "/admin/console?database={databaseName:string}")]
+        [RavenAction("/admin/console", "POST", "/admin/console?database={databaseName:string}&server-script={isServerScript:bool|optional(false)}")]
         public async Task AdminConsole()
         {
             var name = GetStringValuesQueryString("database", false);
+            var isServerScript = GetBoolValueQueryString("server-script", false) ?? false;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var content = await context.ReadForMemoryAsync(RequestBodyStream(), "read-admin-script");
@@ -632,28 +633,30 @@ namespace Raven.Server.Web.System
                 var adminJsScript = JsonDeserializationCluster.AdminJsScript(adminJsBlittable);
                 DynamicJsonValue result = null;
 
-                if (name.Equals(default(StringValues)) == false)
+                if (isServerScript)
+                {
+                    var console = new AdminJsConsole(Server);
+                    result = console.ApplyServerScript(adminJsScript);
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                }
+
+                else if(name.Equals(default(StringValues)) == false)
                 {
                     //database script
-                    if (ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(name.ToString(), out var database) == false)
+                    var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name.ToString());
+                    if (database == null)
                     {
-                        throw new InvalidOperationException($"Database {name} doesn't exists");
+                        throw new InvalidOperationException($"Database {name} was not found");
                     }
 
-                    if (database.Status == TaskStatus.RanToCompletion)
-                    {
-                        var console = new AdminJsConsole(database.Result);
-                        result = console.ApplyScript(adminJsScript);
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                    }
+                    var console = new AdminJsConsole(database);
+                    result = console.ApplyScript(adminJsScript);
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;                    
                 }
 
                 else
                 {
-                    //server script
-                    var console = new AdminJsConsole(Server);
-                    result = console.ApplyServerScript(adminJsScript);
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 }
 
                 if (result != null)
@@ -663,10 +666,6 @@ namespace Raven.Server.Web.System
                         context.Write(writer, result);
                         writer.Flush();
                     }
-                }
-                else
-                {
-                    await NoContent();
                 }
             }
         }
