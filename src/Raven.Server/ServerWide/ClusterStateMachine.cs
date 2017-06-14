@@ -110,10 +110,10 @@ namespace Raven.Server.ServerWide
 
                     leader?.SetStateOf(index, updatedDatabaseRecord.Identities[prefix]);
                     break;
-                case nameof(UpdateClusterIdentityCommand):
+                case nameof(UpdateDatabaseIdentityCommand):
                     if (!ValidatePropertyExistance(cmd,
-                        nameof(UpdateClusterIdentityCommand),
-                        nameof(UpdateClusterIdentityCommand.Identities),
+                        nameof(UpdateDatabaseIdentityCommand),
+                        nameof(UpdateDatabaseIdentityCommand.Identities),
                         out errorMessage))
                     {
                         NotifyLeaderAboutError(index, leader,

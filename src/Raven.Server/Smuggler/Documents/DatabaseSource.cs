@@ -140,7 +140,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<KeyValuePair<string, long>> GetClusterIdentities()
+        public IEnumerable<KeyValuePair<string, long>> GetIdentities()
         {
             var dr = _database.ServerStore.LoadDatabaseRecord(_database.Name, out long _);
             return dr.Identities;

@@ -60,7 +60,7 @@ namespace Raven.Server.Smuggler.Documents
             return new StreamDocumentActions(_writer, _context, _source, isRevision: true);
         }
 
-        public IIdentityActions ClusterIdentities()
+        public IIdentityActions Identities()
         {
             return new StreamIdentityActions(_writer);
         }

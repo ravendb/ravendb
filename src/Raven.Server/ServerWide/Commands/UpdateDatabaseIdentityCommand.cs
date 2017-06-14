@@ -6,15 +6,15 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class UpdateClusterIdentityCommand : UpdateDatabaseCommand
+    public class UpdateDatabaseIdentityCommand : UpdateDatabaseCommand
     {
         public Dictionary<string,long> Identities { get; set; }
 
-        public UpdateClusterIdentityCommand() : base(null)
+        public UpdateDatabaseIdentityCommand() : base(null)
         {            
         }
 
-        public UpdateClusterIdentityCommand(string databaseName, IDictionary<string, long> identities) : base(databaseName)
+        public UpdateDatabaseIdentityCommand(string databaseName, IDictionary<string, long> identities) : base(databaseName)
         {
             Identities = new Dictionary<string, long>(identities);
         }

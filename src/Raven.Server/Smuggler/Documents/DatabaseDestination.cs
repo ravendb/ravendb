@@ -53,7 +53,7 @@ namespace Raven.Server.Smuggler.Documents
             return new DatabaseDocumentActions(_database, _buildType, isRevision: true, log: _log);
         }
      
-        public IIdentityActions ClusterIdentities()
+        public IIdentityActions Identities()
         {
             return new DatabaseIdentityActions(_database);
         }
@@ -229,8 +229,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (_identities.Count == 0)
                     return;
 
-                //fire and forget, do not hold-up smuggler operations waiting for Raft command
-                _database.ServerStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(_database.Name, _identities)).Wait();
+                _database.ServerStore.SendToLeaderAsync(new UpdateDatabaseIdentityCommand(_database.Name, _identities)).Wait();
             }
         }
 

@@ -173,12 +173,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<KeyValuePair<string, long>> GetClusterIdentities()
-        {            
-            return InternalGetIdentities();
-        }
-
-        private IEnumerable<KeyValuePair<string, long>> InternalGetIdentities()
+        public IEnumerable<KeyValuePair<string, long>> GetIdentities()
         {
             foreach (var reader in ReadArray())
             {
@@ -197,7 +192,7 @@ namespace Raven.Server.Smuggler.Documents
                     yield return new KeyValuePair<string, long>(identityKey, identityValue);
                 }
             }
-        }
+        }    
       
         private unsafe string ReadType()
         {
