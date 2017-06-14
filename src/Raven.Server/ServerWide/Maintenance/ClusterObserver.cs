@@ -90,9 +90,15 @@ namespace Raven.Server.ServerWide.Maintenance
                     foreach (var database in _engine.StateMachine.GetDatabaseNames(context))
                     {
                         var databaseRecord = _engine.StateMachine.ReadDatabase(context, database, out long etag);
-                        var graceIfLeaderChanged = _engine.CurrentTerm > databaseRecord.Topology.Stamp.Term && _engine.CurrentLeader.LeaderShipDuration < _stabilizationTime;
-                        var letStatsBecomeStable = _engine.CurrentTerm == databaseRecord.Topology.Stamp.Term && 
-                            (_engine.CurrentLeader.LeaderShipDuration - databaseRecord.Topology.Stamp.LeadersTicks < _stabilizationTime);
+                        var topologyStamp = databaseRecord?.Topology?.Stamp ?? new LeaderStamp
+                        {
+                            Index = -1,
+                            LeadersTicks = -1,
+                            Term = -1
+                        };
+                        var graceIfLeaderChanged = _engine.CurrentTerm > topologyStamp.Term && _engine.CurrentLeader.LeaderShipDuration < _stabilizationTime;
+                        var letStatsBecomeStable = _engine.CurrentTerm == topologyStamp.Term && 
+                            (_engine.CurrentLeader.LeaderShipDuration - topologyStamp.LeadersTicks < _stabilizationTime);
                         if (graceIfLeaderChanged || letStatsBecomeStable)
                         {
                             if (_logger.IsInfoEnabled)
