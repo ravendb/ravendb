@@ -1,11 +1,12 @@
 ﻿using FastTests.Client.Attachments;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace StressTests.Client.Attachments
 {
     public class AttachmentsSessionStress
     {
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(100_000)]
         [InlineData(1_000_000)]
         public void PutLotOfAttachments(int count)
