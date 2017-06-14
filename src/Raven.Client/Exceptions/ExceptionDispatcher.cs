@@ -53,9 +53,9 @@ namespace Raven.Client.Exceptions
                 return new RavenException(error, exception);
 
             return exception;
-        }
+        }        
 
-        public static async Task Throw(JsonOperationContext context, HttpResponseMessage response)
+        public static async Task Throw(JsonOperationContext context, HttpResponseMessage response, Func<string> timeoutExceptionAdditionalInfoFunc = null)
         {
             if (response == null)
                 throw new ArgumentNullException(nameof(response));
@@ -78,7 +78,17 @@ namespace Raven.Client.Exceptions
                 Exception exception;
                 try
                 {
-                    exception = (Exception)Activator.CreateInstance(type, schema.Error);
+                    string message;
+                    if (type == typeof(TimeoutException))
+                    {
+                        var timeoutMessage = timeoutExceptionAdditionalInfoFunc?.Invoke();
+                        message = $"{schema.Error}{Environment.NewLine}{timeoutMessage}";
+                    }
+                    else
+                    {
+                        message = schema.Error;
+                    }
+                    exception = (Exception)Activator.CreateInstance(type, message);
                 }
                 catch (Exception)
                 {

@@ -11,6 +11,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Server;
@@ -132,9 +133,9 @@ namespace FastTests
                         Database = name,
                         ApiKey = apiKey
                     };
-                    ModifyStore(store);
+                    ModifyStore(store);                    
                     store.Initialize();
-
+                    
                     if (createDatabase)
                     {
                         foreach (var server in Servers)
@@ -219,7 +220,11 @@ namespace FastTests
 
         protected virtual void ModifyStore(DocumentStore store)
         {
-
+            store.CustomizeRequestExecutor = re =>
+            {
+                re.TimeoutExceptionAdditionalInfoFunc = GetLastStatesFromAllServersOrderedByTime;
+                return re;
+            };
         }
 
         public static void WaitForIndexing(IDocumentStore store, string dbName = null, TimeSpan? timeout = null)
