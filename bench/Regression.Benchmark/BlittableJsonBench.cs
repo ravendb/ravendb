@@ -1,13 +1,11 @@
-﻿using Microsoft.Xunit.Performance;
-using Sparrow.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
+using Microsoft.Xunit.Performance;
+using Sparrow.Json;
 
-namespace Regression
+namespace Regression.Benchmark
 {
     public class BlittableJsonBench : BenchBase
     {

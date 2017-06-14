@@ -1,11 +1,7 @@
-﻿using Microsoft.Xunit.Performance;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
 
-namespace Regression
+namespace Regression.Benchmark
 {
     public class BenchBase
     {
@@ -17,7 +13,7 @@ namespace Regression
             }
             else
             {
-                foreach (var iteration in Benchmark.Iterations)
+                foreach (var iteration in Microsoft.Xunit.Performance.Benchmark.Iterations)
                 {
                     using (iteration.StartMeasurement())
                     {

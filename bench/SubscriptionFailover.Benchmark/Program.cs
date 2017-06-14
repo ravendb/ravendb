@@ -1,15 +1,15 @@
-﻿using Raven.Client.Documents;
-using Raven.Client.Documents.Subscriptions;
-using Raven.Tests.Core.Utils.Entities;
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Subscriptions;
+using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
-using FastTests.Server.Documents.Notifications;
-using System.Collections.Generic;
 using Voron.Util;
 
-namespace SubscriptionFailoverBenchmark
+namespace SubscriptionFailover.Benchmark
 {
     public class SubscriptionFailoverBenchmark : ClusterTestBase
     {

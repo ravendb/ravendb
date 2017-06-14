@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Collections;
 using System.Diagnostics;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-using Voron;
 using Voron.Impl;
 
-namespace Regression.PageLocator
+namespace Micro.Benchmark.PageLocatorImpl
 {
     /// <summary>
     /// Implements 4 loop unroll, uses ushorts rather than ints

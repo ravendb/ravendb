@@ -1,15 +1,16 @@
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
-using System.Linq;
 using Xunit;
 
-namespace FastTests.Server.Documents.Notifications
+namespace SlowTests.Server.Documents.Notifications
 {
     public class ChangesTests : RavenTestBase
     {
@@ -201,7 +202,7 @@ namespace FastTests.Server.Documents.Notifications
             {
                 Map = users =>
                     from user in users
-                    select new { user.Name, user.LastName , user.Age };
+                    select new { user.Name, user.LastName, user.Age };
 
                 Sort(x => x.Name, SortOptions.String);
                 Sort(x => x.LastName, SortOptions.String);
@@ -217,7 +218,7 @@ namespace FastTests.Server.Documents.Notifications
             {
                 Map = users =>
                     from user in users
-                    select new { user.Name, user.LastName, user.Age , user.AddressId , user.Id };
+                    select new { user.Name, user.LastName, user.Age, user.AddressId, user.Id };
 
                 Sort(x => x.Name, SortOptions.String);
                 Sort(x => x.LastName, SortOptions.String);

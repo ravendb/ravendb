@@ -1,7 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
-using Voron;
 
-namespace Regression.PageLocator
+namespace Micro.Benchmark.PageLocatorImpl
 {
     public class MyPage
     {

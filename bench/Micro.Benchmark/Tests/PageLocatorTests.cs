@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
-using Regression.PageLocator;
+using Micro.Benchmark.PageLocatorImpl;
 using Xunit;
 
 namespace Micro.Benchmark.Tests

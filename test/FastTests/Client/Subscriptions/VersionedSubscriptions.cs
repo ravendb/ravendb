@@ -1,18 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Server.Versioning;
-using Raven.Client.Util;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
-using FastTests.Server.Documents.Notifications;
 using Sparrow;
 
 namespace FastTests.Client.Subscriptions

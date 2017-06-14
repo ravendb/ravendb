@@ -14,7 +14,6 @@ namespace FastTests.Client
     {
         [Theory]
         [InlineData(false)]
-        [InlineData(true)]
         public async Task Simple_Bulk_Insert(bool useSsl)
         {
             if (useSsl)

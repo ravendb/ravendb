@@ -1,10 +1,10 @@
 ﻿using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Documents.Notifications;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Subscriptions;
+using SlowTests.Server.Documents.Notifications;
 using Xunit;
 
 namespace SlowTests.Tests

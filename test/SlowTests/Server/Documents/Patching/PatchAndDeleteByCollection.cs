@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Linq;
+using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace FastTests.Server.Documents.Patching
+namespace SlowTests.Server.Documents.Patching
 {
     public class PatchAndDeleteByCollection : RavenTestBase
     {

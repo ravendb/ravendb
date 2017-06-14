@@ -2,8 +2,8 @@
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Documents.Notifications;
 using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Server.Documents.Notifications;
 using Xunit;
 
 namespace SlowTests.Issues

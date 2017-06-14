@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices.ComTypes;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Raven.Client.Extensions;
 using Raven.Client.Util;
 
-namespace FastTests.Server.Documents.Notifications
+namespace FastTests
 {
     public static class ObservableExtensions
     {

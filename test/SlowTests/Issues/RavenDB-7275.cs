@@ -2,12 +2,12 @@
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Client.Attachments;
-using FastTests.Server.Documents.Notifications;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Server.Operations.ApiKeys;
 using Raven.Client.Util;
 using Raven.Server.Config.Attributes;
+using SlowTests.Server.Documents.Notifications;
 using Sparrow;
 using Xunit;
 

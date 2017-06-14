@@ -1,13 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Subscriptions;
 
-namespace SubscriptionsBenchmark
+namespace Subscriptions.Benchmark
 {
     public class CounterObserver : IObserver<object>
     {

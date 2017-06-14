@@ -3,8 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using FastTests.Server.Basic.Entities;
-using FastTests.Server.Documents.Notifications;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;

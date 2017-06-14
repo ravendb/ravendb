@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading;
-using FastTests.Server.Documents.Notifications;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;

@@ -1,15 +1,14 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client;
+using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Json;
 using Xunit;
 
-namespace FastTests.Client
+namespace SlowTests.Client
 {
     public class IndexesDeleteByIndexTests : RavenTestBase
     {

@@ -1,10 +1,10 @@
 ﻿using System.Threading.Tasks;
-using FastTests.Server.Basic.Entities;
+using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace FastTests.Server.Basic
+namespace SlowTests.Server.Basic
 {
     public class CollectionTests : RavenTestBase
     {
