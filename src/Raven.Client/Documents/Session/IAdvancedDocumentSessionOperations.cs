@@ -77,13 +77,14 @@ namespace Raven.Client.Documents.Session
         ///     Defer commands to be executed on SaveChanges()
         /// </summary>
         /// <param name="command">Command to be executed</param>
-        void Defer(ICommandData command);
+        /// <param name="commands">Array of commands to be executed.</param>
+        void Defer(ICommandData command, params ICommandData[] commands);
 
         /// <summary>
         ///     Defer commands to be executed on SaveChanges()
         /// </summary>
         /// <param name="commands">Array of commands to be executed.</param>
-        void Defer(params ICommandData[] commands);
+        void Defer(ICommandData[] commands);
 
         /// <summary>
         ///     Evicts the specified entity from the session.
