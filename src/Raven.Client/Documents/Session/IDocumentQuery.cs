@@ -39,7 +39,7 @@ namespace Raven.Client.Documents.Session
         Lazy<int> CountLazily();
 
         /// <summary>
-        ///     Get the facets as per the specified facets with the given start and pageSize
+        ///     Set the transformer parameters for this query
         /// </summary>
         /// <param name="transformerParameters"></param>
         IDocumentQuery<T> SetTransformerParameters(Dictionary<string, object> transformerParameters);
