@@ -174,9 +174,10 @@ namespace Raven.Server.Smuggler.Documents
 
         private SmugglerProgressBase.Counts ProcessIdentities(SmugglerResult result)
         {
-            using (var actions = _destination.Identities())
+            using (var clusterIdentityActions = _destination.ClusterIdentities())
             {
-                foreach (var kvp in _source.GetIdentities())
+                var sourceIdentities = _source.GetClusterIdentities();
+                foreach (var kvp in sourceIdentities)
                 {
                     _token.ThrowIfCancellationRequested();
                     result.Identities.ReadCount++;
@@ -189,12 +190,12 @@ namespace Raven.Server.Smuggler.Documents
 
                     try
                     {
-                        actions.WriteIdentity(kvp.Key, kvp.Value);
+                        clusterIdentityActions.WriteIdentity(kvp.Key, kvp.Value);
                     }
                     catch (Exception e)
                     {
                         result.Identities.ErroredCount++;
-                        result.AddError($"Could not write identity '{kvp.Key} {kvp.Value}': {e.Message}");
+                        result.AddError($"Could not write identity '{kvp.Key}->{kvp.Value}': {e.Message}");
                     }
                 }
             }

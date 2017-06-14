@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
@@ -18,18 +19,20 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/stats", "GET")]
         public Task Stats()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))            
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
                 var indexes = Database.IndexStore.GetIndexes().ToList();
                 var transformersCount = Database.TransformerStore.GetTransformersCount();
 
-                var stats = new DatabaseStatistics();
-                stats.LastDocEtag = DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction);
+                var stats = new DatabaseStatistics
+                {
+                    LastDocEtag = DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction),
+                    CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context),
+                    CountOfRevisionDocuments = Database.DocumentsStorage.VersioningStorage.GetNumberOfRevisionDocuments(context)
+                };
 
-                stats.CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context);
-                stats.CountOfRevisionDocuments = Database.DocumentsStorage.VersioningStorage.GetNumberOfRevisionDocuments(context);
                 var attachments = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(context);
                 stats.CountOfAttachments = attachments.AttachmentCount;
                 stats.CountOfUniqueAttachments = attachments.StreamsCount;

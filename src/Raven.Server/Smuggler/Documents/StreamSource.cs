@@ -6,7 +6,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
@@ -174,19 +173,20 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<KeyValuePair<string, long>> GetIdentities()
+        public IEnumerable<KeyValuePair<string, long>> GetClusterIdentities()
+        {            
+            return InternalGetIdentities();
+        }
+
+        private IEnumerable<KeyValuePair<string, long>> InternalGetIdentities()
         {
             foreach (var reader in ReadArray())
             {
                 using (reader)
                 {
-                    string identityKey;
-                    string identityValueString;
-                    long identityValue;
-
-                    if (reader.TryGet("Key", out identityKey) == false ||
-                        reader.TryGet("Value", out identityValueString) == false ||
-                        long.TryParse(identityValueString, out identityValue) == false)
+                    if (reader.TryGet("Key", out string identityKey) == false ||
+                        reader.TryGet("Value", out string identityValueString) == false ||
+                        long.TryParse(identityValueString, out long identityValue) == false)
                     {
                         _result.Identities.ErroredCount++;
                         _result.AddWarning("Could not read identity.");
@@ -198,7 +198,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
         }
-
+      
         private unsafe string ReadType()
         {
             if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)

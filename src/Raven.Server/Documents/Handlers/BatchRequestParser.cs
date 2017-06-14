@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -115,7 +116,8 @@ namespace Raven.Server.Documents.Handlers
 
                     if (commandData.Type == CommandType.PUT && string.IsNullOrEmpty(commandData.Id) == false && commandData.Id[commandData.Id.Length - 1] == '/')
                     {
-                        commandData.Id = await serverStore.GenerateClusterIdentityAsync(commandData.Id, database.Name);
+                        var (_, id) = await serverStore.GenerateClusterIdentityAsync(commandData.Id, database.Name);
+                        commandData.Id = id;
                     }
                     
                     cmds[index] = commandData;
