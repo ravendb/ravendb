@@ -656,40 +656,28 @@ class visualizerGraphDetails {
 
     // set x & y of document & the draw offsets
     private layoutDocuments(yStart: number) {
-        let totalWidth = 0;
-
         const visibleDocuments = this.getVisibleDocuments();
 
         for (let i = 0; i < visibleDocuments.length; i++) {
             const doc = visibleDocuments[i];
             doc.layout(yStart);
 
-            totalWidth += doc.width;
-        }
-
-        totalWidth += visibleDocuments.length * (visualizerGraphDetails.margins.minMarginBetweenDocumentNames + 1);
-
-        let extraItemPadding = 0;
-
-        if (totalWidth > this.currentTree().totalWidth) {
-            //TODO: handle me!
-        } else {
-            extraItemPadding = (this.currentTree().totalWidth - totalWidth) / (visibleDocuments.length + 1);
         }
 
         // if there are many documents to draw than we better start with a lower y coordinate
         let yOffsetOfHorizontalLine = visibleDocuments.length > 10 ?  20 : 0;
 
-        let currentX = visualizerGraphDetails.margins.minMarginBetweenDocumentNames + extraItemPadding;
         for (let i = 0; i < visibleDocuments.length; i++) {
             const doc = visibleDocuments[i];
 
-            doc.x = currentX;
-            currentX += doc.width + visualizerGraphDetails.margins.minMarginBetweenDocumentNames + extraItemPadding;
-
             doc.drawOffset = yOffsetOfHorizontalLine;
             yOffsetOfHorizontalLine -= visualizerGraphDetails.margins.betweenLinesOffset;
+
+            const entriesAvg = _.sum(doc.connectedEntries.map(entry => entry.x + entry.parent.x)) / doc.connectedEntries.length;
+            doc.x = entriesAvg;
         }
+
+        graphHelper.layoutUsingNearestCenters(visibleDocuments, visualizerGraphDetails.margins.minMarginBetweenDocumentNames);
     }
 
     private draw() {
@@ -809,7 +797,7 @@ class visualizerGraphDetails {
             ctx.fillStyle = "#a9adad";
             ctx.textAlign = "center";
             ctx.textBaseline = "top";
-            ctx.fillText("Aggregation of " + page.aggregationCount + " trees. ", page.width / 2, pageItem.margins.pageNumberTopMargin);
+            ctx.fillText(page.aggregationCount + " leafes collapsed", page.width / 2, pageItem.margins.pageNumberTopMargin);
 
         } finally {
             ctx.restore();
