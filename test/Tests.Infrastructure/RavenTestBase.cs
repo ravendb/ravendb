@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -18,6 +19,7 @@ using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Documents;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
@@ -86,113 +88,133 @@ namespace FastTests
             bool deleteDatabaseWhenDisposed = true,
             bool createDatabase = true)
         {
-            lock (_getDocumentStoreSync)
+            try
             {
-                defaultServer = defaultServer ?? Server;
-                var name = caller != null
-                    ? $"{caller}_{Interlocked.Increment(ref _counter)}"
-                    : Guid.NewGuid().ToString("N");
-
-                if (dbSuffixIdentifier != null)
-                    name = $"{name}_{dbSuffixIdentifier}";
-
-                if (modifyName != null)
-                    name = modifyName(name);
-
-                var hardDelete = true;
-                var runInMemory = true;
-
-                if (path == null)
-                    path = NewDataPath(name);
-                else
+                lock (_getDocumentStoreSync)
                 {
-                    hardDelete = false;
-                    runInMemory = false;
-                }
+                    defaultServer = defaultServer ?? Server;
+                    var name = caller != null
+                        ? $"{caller}_{Interlocked.Increment(ref _counter)}"
+                        : Guid.NewGuid().ToString("N");
 
-                var doc = MultiDatabase.CreateDatabaseDocument(name);
-                doc.Settings[RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "100";
-                doc.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString();
-                doc.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = path;
-                doc.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] =
-                    "true";
-                doc.Settings[
-                        RavenConfiguration.GetKey(
-                            x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] =
-                    int.MaxValue.ToString();
-                modifyDatabaseRecord?.Invoke(doc);
+                    if (dbSuffixIdentifier != null)
+                        name = $"{name}_{dbSuffixIdentifier}";
 
-                var store = new DocumentStore
-                {
-                    Urls = UseFiddler(defaultServer.WebUrls),
-                    Database = name,
-                    ApiKey = apiKey
-                };
-                ModifyStore(store);
-                store.Initialize();
+                    if (modifyName != null)
+                        name = modifyName(name);
 
-                if (createDatabase)
-                {
-                    foreach (var server in Servers)
+                    var hardDelete = true;
+                    var runInMemory = true;
+
+                    if (path == null)
+                        path = NewDataPath(name);
+                    else
                     {
-                        using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                        {
-                            context.OpenReadTransaction();
-                            if (server.ServerStore.Cluster.Read(context, Constants.Documents.Prefix + name) != null)
-                                throw new InvalidOperationException($"Database '{name}' already exists");
-                        }
+                        hardDelete = false;
+                        runInMemory = false;
                     }
 
-                    var result = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
-                    Assert.True(result.ETag > 0); //sanity check             
-                    store.Urls = result.NodesAddedTo;
-                    var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
-                    var task = WaitForRaftIndexToBeAppliedInCluster(result.ETag, timeout);
-                    task.ConfigureAwait(false).GetAwaiter().GetResult();
-                }
+                    var doc = MultiDatabase.CreateDatabaseDocument(name);
+                    doc.Settings[RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "100";
+                    doc.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString();
+                    doc.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = path;
+                    doc.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] =
+                        "true";
+                    doc.Settings[
+                            RavenConfiguration.GetKey(
+                                x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] =
+                        int.MaxValue.ToString();
+                    modifyDatabaseRecord?.Invoke(doc);
 
-                store.AfterDispose += (sender, args) =>
-                {
-                    if (CreatedStores.TryRemove(store) == false)
-                        return; // can happen if we are wrapping the store inside sharded one
-
-                    foreach (var server in Servers)
+                    var store = new DocumentStore
                     {
-                        if (server.Disposed)
-                            continue;
+                        Urls = UseFiddler(defaultServer.WebUrls),
+                        Database = name,
+                        ApiKey = apiKey
+                    };
+                    ModifyStore(store);
+                    store.Initialize();
 
-                        if (store.Urls.Any(url => server.WebUrls.Contains(url)) == false)
-                            continue;
-
-                        var databaseTask = server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name, ignoreDisabledDatabase);
-                        if (databaseTask != null && databaseTask.IsCompleted == false)
-                            databaseTask.Wait();
-                        // if we are disposing store before database had chance to load then we need to wait
-
-                        server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
-                        if (deleteDatabaseWhenDisposed)
+                    if (createDatabase)
+                    {
+                        foreach (var server in Servers)
                         {
-                            DeleteDatabaseResult result;
-                            try
+                            using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                             {
-                                result = store.Admin.Server.Send(new DeleteDatabaseOperation(name, hardDelete));
+                                context.OpenReadTransaction();
+                                if (server.ServerStore.Cluster.Read(context, Constants.Documents.Prefix + name) != null)
+                                    throw new InvalidOperationException($"Database '{name}' already exists");
                             }
-                            catch (DatabaseDoesNotExistException)
-                            {
-                                continue;
-                            }
-                            catch (NoLeaderException)
-                            {
-                                continue;
-                            }
-
-                            server.ServerStore.Cluster.WaitForIndexNotification(result.ETag).ConfigureAwait(false).GetAwaiter().GetResult();
                         }
+
+                        var result = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
+                        Assert.True(result.ETag > 0); //sanity check             
+                        store.Urls = result.NodesAddedTo;
+                        var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
+                        var task = WaitForRaftIndexToBeAppliedInCluster(result.ETag, timeout);
+                        task.ConfigureAwait(false).GetAwaiter().GetResult();
                     }
-                };
-                CreatedStores.Add(store);
-                return store;
+
+                    store.AfterDispose += (sender, args) =>
+                    {
+                        if (CreatedStores.TryRemove(store) == false)
+                            return; // can happen if we are wrapping the store inside sharded one
+
+                        foreach (var server in Servers)
+                        {
+                            if (server.Disposed)
+                                continue;
+
+                            if (store.Urls.Any(url => server.WebUrls.Contains(url)) == false)
+                                continue;
+
+                            var databaseTask = server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name, ignoreDisabledDatabase);
+                            if (databaseTask != null && databaseTask.IsCompleted == false)
+                                databaseTask.Wait();
+                            // if we are disposing store before database had chance to load then we need to wait
+
+                            server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
+                            if (deleteDatabaseWhenDisposed)
+                            {
+                                DeleteDatabaseResult result;
+                                try
+                                {
+                                    result = store.Admin.Server.Send(new DeleteDatabaseOperation(name, hardDelete));
+                                }
+                                catch (DatabaseDoesNotExistException)
+                                {
+                                    continue;
+                                }
+                                catch (NoLeaderException)
+                                {
+                                    continue;
+                                }
+
+                                server.ServerStore.Cluster.WaitForIndexNotification(result.ETag).ConfigureAwait(false).GetAwaiter().GetResult();
+                            }
+                        }
+                    };
+                    CreatedStores.Add(store);
+                    return store;
+                }
             }
+            catch (TimeoutException te)
+            {
+                throw new TimeoutException($"{te.Message} {Environment.NewLine} {te.StackTrace}{Environment.NewLine}Servers states:{Environment.NewLine}{GetLastStatesFromAllServersOrderedByTime()}");
+            }
+        }
+
+        protected string GetLastStatesFromAllServersOrderedByTime()
+        {
+            List<(string tag, RachisConsensus.StateTransition transition)> states = new List<(string tag, RachisConsensus.StateTransition transition)>();
+            foreach (var s in Servers)
+            {
+                foreach (var state in s.ServerStore.Engine.PrevStates)
+                {
+                    states.Add((s.ServerStore.NodeTag, state));
+                }
+            }
+            return string.Join(Environment.NewLine, states.OrderBy(x => x.transition.When).Select(x => $"State for {x.tag}-term{x.Item2.CurrentTerm}:{Environment.NewLine}{x.Item2.From}=>{x.Item2.To} at {x.Item2.When:o} {Environment.NewLine}because {x.Item2.Reason}"));
         }
 
         protected virtual void ModifyStore(DocumentStore store)
