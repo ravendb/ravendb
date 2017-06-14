@@ -343,7 +343,12 @@ namespace Raven.Server.Documents
         {
             var config = CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase);
             if (config == null)
-                return null;
+            {
+                var tcs = new TaskCompletionSource<DocumentDatabase>();
+                tcs.SetResult(null);
+                return tcs.Task;
+            }
+                
 
             if (!_resourceSemaphore.Wait(0))
                 return UnlikelyCreateDatabaseUnderContention(databaseName, config);
