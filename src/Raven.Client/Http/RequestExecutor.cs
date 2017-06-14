@@ -376,6 +376,8 @@ namespace Raven.Client.Http
                     if (command.ResponseType == RavenCommandResponseType.Object)
                         command.SetResponse(cachedValue, fromCache: true);
 
+                    response.Dispose();
+
                     return;
                 }
                 if (response.IsSuccessStatusCode == false)
