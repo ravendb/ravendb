@@ -1129,6 +1129,21 @@ namespace Voron.Data.BTrees
 
                                 var pages = fixedSizeTree.AllPages();
                                 results.AddRange(pages);
+
+                                if ((State.Flags & TreeFlags.Streams) == TreeFlags.Streams)
+                                {
+                                    Debug.Assert(fixedSizeTree.ValueSize == ChunkDetails.SizeOf);
+
+                                    foreach (var chunk in GetStreamChunks(fixedSizeTree))
+                                    {
+                                        var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(chunk.ChunkSize);
+
+                                        for (int j = 0; j < numberOfPages; j++)
+                                        {
+                                            results.Add(chunk.PageNumber + j);
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

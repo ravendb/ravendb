@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow;
@@ -118,7 +119,7 @@ namespace Voron.Data.BTrees
 
                     RecordStreamInfo();
 
-                    _parent._tx.LowLevelTransaction.ShrinkOverflowPage(_currentPage.PageNumber, chunkSize + infoSize); 
+                    _parent._tx.LowLevelTransaction.ShrinkOverflowPage(_currentPage.PageNumber, chunkSize + infoSize, _parent.State); 
                 }
             }
 
@@ -291,7 +292,6 @@ namespace Voron.Data.BTrees
 
         public int DeleteStream(Slice key)
         {
-            var tree = FixedTreeFor(key, valSize: (byte)sizeof(ChunkDetails));
             int version = 0;
 
             var info = GetStreamInfo(key, writeable: false);
@@ -299,29 +299,40 @@ namespace Voron.Data.BTrees
             if (info != null)
                 version = info->Version;
 
-            using (var it = tree.Iterate())// we can use the iterator exactly once
+            var llt = _tx.LowLevelTransaction;
+
+            foreach (var chunk in GetStreamChunks(GetStreamChunksTree(key)))
             {
-                var llt = _tx.LowLevelTransaction;
-
-                if (it.Seek(0) == false)
-                    return version;
-
-                do
+                var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(chunk.ChunkSize);
+                for (int i = 0; i < numberOfPages; i++)
                 {
-                    var chunkDetails = ((ChunkDetails*)it.CreateReaderForCurrent().Base);
-                    var pageNumber = chunkDetails->PageNumber;
-                    var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(chunkDetails->ChunkSize);
-                    for (int i = 0; i < numberOfPages; i++)
-                    {
-                        llt.FreePage(pageNumber + i);
-                    }
-                    State.OverflowPages -= numberOfPages;
-                } while (it.MoveNext());
+                    llt.FreePage(chunk.PageNumber + i);
+                }
+
+                State.OverflowPages -= numberOfPages;
             }
 
             DeleteFixedTreeFor(key, ChunkDetails.SizeOf);
 
             return version;
+        }
+
+        internal List<ChunkDetails> GetStreamChunks(FixedSizeTree chunksTree)
+        {
+            var chunks = new List<ChunkDetails>();
+
+            using (var it = chunksTree.Iterate())
+            {
+                if (it.Seek(0) == false)
+                    return chunks;
+
+                do
+                {
+                    chunks.Add(*((ChunkDetails*)it.CreateReaderForCurrent().Base));
+                } while (it.MoveNext());
+
+                return chunks;
+            }
         }
 
         public string GetStreamTag(Slice key)

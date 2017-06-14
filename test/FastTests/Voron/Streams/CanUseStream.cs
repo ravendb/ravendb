@@ -174,5 +174,30 @@ namespace FastTests.Voron.Streams
                 Assert.Null(readStream);
             }
         }
+
+        [Theory]
+        [InlineDataWithRandomSeed(null)]
+        [InlineDataWithRandomSeed("RavenDB")]
+        public void TreeShouldReturnAllPagesOccupiedByStreams_RavenDB_5990(string tag, int size)
+        {
+            var buffer = new byte[size % 100000];
+            new Random().NextBytes(buffer);
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.CreateTree("Files");
+                tree.AddStream("test", new MemoryStream(buffer), tag);
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var tree = tx.ReadTree("Files");
+
+                using (Slice.From(tx.Allocator, "test", out var fileName))
+                {
+                    Assert.Equal(tree.State.OverflowPages + tree.State.BranchPages + tree.State.LeafPages, tree.AllPages().Count);
+                }
+            }
+        }
     }
 }

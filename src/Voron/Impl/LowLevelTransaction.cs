@@ -616,7 +616,7 @@ namespace Voron.Impl
             }
         }
 
-        internal void ShrinkOverflowPage(long pageNumber, int newSize)
+        internal void ShrinkOverflowPage(long pageNumber, int newSize, TreeMutableState treeState)
         {
             if (_disposed)
                 throw new ObjectDisposedException("Transaction");
@@ -657,6 +657,8 @@ namespace Voron.Impl
             _scratchPagesTable[pageNumber] = shrinked;
             _transactionPages.Remove(value);
             _transactionPages.Add(shrinked);
+
+            treeState.OverflowPages -= prevNumberOfPages - lowerNumberOfPages;
         }
 
         [Conditional("DEBUG")]
