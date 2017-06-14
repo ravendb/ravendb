@@ -953,17 +953,23 @@ more responsive application.
         ///     Defer commands to be executed on SaveChanges()
         /// </summary>
         /// <param name="command">Command to be executed</param>
-        public void Defer(ICommandData command)
+        /// <param name="commands">Array of commands to be executed.</param>
+        public void Defer(ICommandData command, params ICommandData[] commands)
         {
+            // The signature here is like this in order to avoid calling 'Defer()' without any parameter.
+
             DeferredCommands.Add(command);
             DeferInternal(command);
+
+            if (commands != null)
+                Defer(commands);
         }
 
         /// <summary>
         /// Defer commands to be executed on SaveChanges()
         /// </summary>
         /// <param name="commands">The commands to be executed</param>
-        public void Defer(params ICommandData[] commands)
+        public void Defer(ICommandData[] commands)
         {
             DeferredCommands.AddRange(commands);
             foreach (var command in commands)
