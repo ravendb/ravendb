@@ -1,14 +1,10 @@
 ﻿using System;
-using System.Collections;
 using System.Diagnostics;
-using System.Numerics;
-using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.LowMemory;
-using Voron;
 using Voron.Impl;
 
-namespace Regression.PageLocator
+namespace Micro.Benchmark.PageLocatorImpl
 {
     /// <summary>
     /// Implements loop unrolling with 8 fingerprint checks per loop

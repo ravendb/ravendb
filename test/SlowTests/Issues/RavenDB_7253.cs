@@ -2,10 +2,10 @@
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Client.Attachments;
-using FastTests.Server.Documents.Notifications;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.Server.Operations;
+using SlowTests.Server.Documents.Notifications;
 using Sparrow;
 using Xunit;
 

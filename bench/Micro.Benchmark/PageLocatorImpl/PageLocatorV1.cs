@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
-using Voron;
 using Voron.Impl;
 
-namespace Regression.PageLocator
+namespace Micro.Benchmark.PageLocatorImpl
 {
     public class PageLocatorV1
     {

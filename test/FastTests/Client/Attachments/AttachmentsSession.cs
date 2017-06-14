@@ -24,11 +24,11 @@ namespace FastTests.Client.Attachments
                 };
 
                 using (var session = store.OpenSession())
-                using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
-                using (var backgroundStream = new MemoryStream(new byte[] {10, 20, 30, 40, 50}))
-                using (var fileStream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
+                using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                 {
-                    var user = new User {Name = "Fitzchak"};
+                    var user = new User { Name = "Fitzchak" };
                     session.Store(user, "users/1");
 
                     session.Advanced.StoreAttachment("users/1", names[0], profileStream, "image/png");
@@ -128,14 +128,14 @@ namespace FastTests.Client.Attachments
 
                 using (var session = store.OpenSession())
                 {
-                    var user = new User {Name = "Fitzchak"};
+                    var user = new User { Name = "Fitzchak" };
                     session.Store(user, "users/1");
-                    
-                    using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
+
+                    using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
                         session.Advanced.StoreAttachment(user, names[0], profileStream, "image/png");
-                    using (var backgroundStream = new MemoryStream(new byte[] {10, 20, 30, 40, 50}))
+                    using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
                         session.Advanced.StoreAttachment(user, names[1], backgroundStream, "ImGgE/jPeG");
-                    using (var fileStream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
+                    using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                         session.Advanced.StoreAttachment(user, names[2], fileStream, null);
 
                     var exception = Assert.Throws<InvalidOperationException>(() => session.SaveChanges());
@@ -150,9 +150,9 @@ namespace FastTests.Client.Attachments
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
-                using (var stream = new MemoryStream(new byte[] {1, 2, 3}))
+                using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
-                    var user = new User {Name = "Fitzchak"};
+                    var user = new User { Name = "Fitzchak" };
                     session.Store(user, "users/1");
 
                     session.Advanced.StoreAttachment(user, "profile", stream, "image/png");
@@ -212,7 +212,7 @@ namespace FastTests.Client.Attachments
             {
                 using (var session = store.OpenSession())
                 {
-                    var user = new User {Name = "Fitzchak"};
+                    var user = new User { Name = "Fitzchak" };
                     session.Store(user, "users/1");
                     session.SaveChanges();
                 }
@@ -237,7 +237,7 @@ namespace FastTests.Client.Attachments
             {
                 using (var session = store.OpenSession())
                 {
-                    var user = new User {Name = "Fitzchak"};
+                    var user = new User { Name = "Fitzchak" };
                     session.Store(user, "users/1");
 
                     using (var stream1 = new MemoryStream(Enumerable.Range(1, 3).Select(x => (byte)x).ToArray()))
@@ -329,7 +329,7 @@ namespace FastTests.Client.Attachments
             {
                 using (var session = store.OpenSession())
                 {
-                    var user = new User {Name = "Fitzchak"};
+                    var user = new User { Name = "Fitzchak" };
                     session.Store(user, "users/1");
 
                     using (var stream = new MemoryStream(Enumerable.Range(1, 3).Select(x => (byte)x).ToArray()))
@@ -362,7 +362,7 @@ namespace FastTests.Client.Attachments
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User {Name = "Fitzchak"}, "users/1");
+                    session.Store(new User { Name = "Fitzchak" }, "users/1");
 
                     using (var stream = new MemoryStream(Enumerable.Range(1, 3).Select(x => (byte)x).ToArray()))
                     {
@@ -453,7 +453,7 @@ namespace FastTests.Client.Attachments
         }
 
         [Theory]
-        [InlineData(1000)]
+        [InlineData(100)]
         public void PutLotOfAttachments(int count)
         {
             var streams = new MemoryStream[count];
@@ -461,12 +461,12 @@ namespace FastTests.Client.Attachments
             using (var store = GetDocumentStore())
             using (var session = store.OpenSession())
             {
-                var user = new User {Name = "Fitzchak"};
+                var user = new User { Name = "Fitzchak" };
                 session.Store(user, "users/1");
 
                 for (var i = 0; i < count; i++)
                 {
-                    var stream = new MemoryStream(new byte[] {1, 2, 3});
+                    var stream = new MemoryStream(new byte[] { 1, 2, 3 });
                     session.Advanced.StoreAttachment("users/1", "Big And Very Long File Name " + i, stream, "image/png");
                     streams[i] = stream;
                 }

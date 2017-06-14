@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 
-namespace FastTests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_1489 : RavenTestBase
     {
@@ -59,33 +60,33 @@ namespace FastTests.Issues
             public MapReduceIndexWithCountAndCondition()
             {
                 Map = dataEntries => from entry in dataEntries
-                    let numbersMapping = from tuple in entry.Property2
-                    select new
-                    {
-                        P1 = entry.Property1,
-                        Key = tuple.Item1,
-                        Value = tuple.Item2
-                    }
+                                     let numbersMapping = from tuple in entry.Property2
+                                                          select new
+                                                          {
+                                                              P1 = entry.Property1,
+                                                              Key = tuple.Item1,
+                                                              Value = tuple.Item2
+                                                          }
 
-                    from numberMap in numbersMapping
-                    group numberMap by new { numberMap.P1 }
+                                     from numberMap in numbersMapping
+                                     group numberMap by new { numberMap.P1 }
                     into g
-                    select new
-                    {
-                        Property1 = g.Key.P1,
-                        EntryCountWithPositiveValue = g.Count(row => row.Value > 0),//g.Where(row => row.Value > 0).Count(),
-                        TotalCount = 1
-                    };
+                                     select new
+                                     {
+                                         Property1 = g.Key.P1,
+                                         EntryCountWithPositiveValue = g.Count(row => row.Value > 0),//g.Where(row => row.Value > 0).Count(),
+                                         TotalCount = 1
+                                     };
 
                 Reduce = results => from result in results
-                    group result by result.Property1
+                                    group result by result.Property1
                     into g
-                    select new
-                    {
-                        Property1 = g.Key,
-                        EntryCountWithPositiveValue = g.Max(row => row.EntryCountWithPositiveValue),
-                        TotalCount = g.Sum(row => row.TotalCount)
-                    };
+                                    select new
+                                    {
+                                        Property1 = g.Key,
+                                        EntryCountWithPositiveValue = g.Max(row => row.EntryCountWithPositiveValue),
+                                        TotalCount = g.Sum(row => row.TotalCount)
+                                    };
 
                 StoreAllFields(FieldStorage.No);
             }

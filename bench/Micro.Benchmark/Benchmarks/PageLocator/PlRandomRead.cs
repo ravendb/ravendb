@@ -10,7 +10,7 @@ using BenchmarkDotNet.Environments;
 using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Validators;
-using Regression.PageLocator;
+using Micro.Benchmark.PageLocatorImpl;
 
 namespace Micro.Benchmark.Benchmarks.PageLocator
 {

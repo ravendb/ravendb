@@ -1,11 +1,8 @@
-﻿using Microsoft.Xunit.Performance;
+﻿using System;
+using Microsoft.Xunit.Performance;
 using Sparrow.Compression;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
-namespace Regression
+namespace Regression.Benchmark
 {
     public unsafe class CompressionBench : BenchBase
     {

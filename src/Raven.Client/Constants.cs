@@ -73,8 +73,12 @@ namespace Raven.Client
             public const string Prefix = "apikeys/";
         }
 
-        public static class Documents
+        public class Documents
         {
+            private Documents()
+            {
+            }
+
             public const string Prefix = "db/";
 
             public const string UrlPrefix = "databases";

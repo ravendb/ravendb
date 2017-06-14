@@ -11,8 +11,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
-using FastTests.Server.Documents.Notifications;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
@@ -28,15 +26,15 @@ using Sparrow.Json;
 
 namespace RachisTests
 {
-    public class SubscriptionsFailover: ClusterTestBase
+    public class SubscriptionsFailover : ClusterTestBase
     {
 
         private class SubscriptionProggress
         {
             public int MaxId;
         }
-        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached?TimeSpan.FromSeconds(60*10): TimeSpan.FromSeconds(6000);
-                
+        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(6000);
+
         [Theory]
         [InlineData(1)]
         [InlineData(5)]
@@ -48,9 +46,9 @@ namespace RachisTests
             var leader = await this.CreateRaftClusterAndGetLeader(nodesAmount);
 
             var defaultDatabase = "ContinueFromThePointIStopped";
-            
+
             await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrls[0]).ConfigureAwait(false);
-            
+
             string tag1, tag2, tag3;
             using (var store = new DocumentStore
             {
@@ -61,7 +59,7 @@ namespace RachisTests
                 var usersCount = new List<User>();
                 var reachedMaxDocCountMre = new AsyncManualResetEvent();
                 var subscription = await CreateAndInitiateSubscription(store, defaultDatabase, usersCount, reachedMaxDocCountMre, batchSize);
-                
+
                 await GenerateDocuments(store);
 
                 Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime));
@@ -71,26 +69,26 @@ namespace RachisTests
                 usersCount.Clear();
                 reachedMaxDocCountMre.Reset();
 
-                await KillServerWhereSubscriptionWorks( defaultDatabase, subscription.SubscriptionId);
+                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId);
 
                 await GenerateDocuments(store);
                 Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime));
 
                 tag2 = subscription.CurrentNodeTag;
 
-           //     Assert.NotEqual(tag1,tag2);
+                //     Assert.NotEqual(tag1,tag2);
                 usersCount.Clear();
                 reachedMaxDocCountMre.Reset();
 
-                await KillServerWhereSubscriptionWorks( defaultDatabase, subscription.SubscriptionId);
+                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId);
 
                 await GenerateDocuments(store);
 
                 Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime));
 
                 tag3 = subscription.CurrentNodeTag;
-               // Assert.NotEqual(tag1, tag3);
-            //    Assert.NotEqual(tag2, tag3);
+                // Assert.NotEqual(tag1, tag3);
+                //    Assert.NotEqual(tag2, tag3);
 
             }
         }
@@ -104,7 +102,7 @@ namespace RachisTests
             var defaultDatabase = "ContinueFromThePointIStopped";
 
             await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrls[0]).ConfigureAwait(false);
-            
+
             using (var store = new DocumentStore
             {
                 Urls = leader.WebUrls,
@@ -114,7 +112,7 @@ namespace RachisTests
                 var usersCount = new List<User>();
                 var reachedMaxDocCountMre = new AsyncManualResetEvent();
 
-                var subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCreationOptions<User>(){});
+                var subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCreationOptions<User>() { });
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -152,7 +150,7 @@ namespace RachisTests
                     await ravenServer.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, deleteResult.ETag + nodesAmount).WaitWithTimeout(TimeSpan.FromSeconds(60));
                 }
                 Thread.Sleep(2000);
-                
+
                 foreach (var ravenServer in Servers)
                 {
                     using (ravenServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -173,7 +171,7 @@ namespace RachisTests
             var defaultDatabase = "DistributedVersionedSubscription";
 
             await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrls[0]).ConfigureAwait(false);
-            
+
             using (var store = new DocumentStore
             {
                 Urls = leader.WebUrls,
@@ -199,9 +197,9 @@ namespace RachisTests
         [InlineData(3)]
         [InlineData(5)]
         public async Task DistributedVersionedSubscription(int nodesAmount)
-        {            
+        {
             var leader = await this.CreateRaftClusterAndGetLeader(nodesAmount).ConfigureAwait(false);
-            
+
 
             var defaultDatabase = "DistributedVersionedSubscription";
 
@@ -220,11 +218,11 @@ namespace RachisTests
                 var ackSent = new AsyncManualResetEvent();
 
                 var continueMre = new AsyncManualResetEvent();
-                
+
 
                 GenerateDistributedVersionedData(defaultDatabase);
 
-                
+
 
                 var subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCreationOptions<Versioned<User>>()).ConfigureAwait(false);
 
@@ -234,7 +232,7 @@ namespace RachisTests
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(100)
                 });
 
-                
+
                 var docsCount = 0;
                 var versionsCount = 0;
                 var expectedVersionsCount = 0;
@@ -247,7 +245,7 @@ namespace RachisTests
                     try
                     {
                         if (versionsCount == expectedVersionsCount)
-                        {                            
+                        {
                             continueMre.Reset();
                             ackSent.Set();
 
@@ -263,7 +261,7 @@ namespace RachisTests
                 };
 
                 subscription.Subscribe(x =>
-                {                    
+                {
                     try
                     {
 
@@ -290,7 +288,7 @@ namespace RachisTests
                             }
                         }
 
-                        if (docsCount == nodesAmount && versionsCount == Math.Pow(nodesAmount,2))
+                        if (docsCount == nodesAmount && versionsCount == Math.Pow(nodesAmount, 2))
                             reachedMaxDocCountMre.Set();
                     }
                     catch (Exception e)
@@ -303,13 +301,13 @@ namespace RachisTests
                 continueMre.Set();
                 Assert.True(await subscription.StartAsync().WaitAsync(_reasonableWaitTime).ConfigureAwait(false));
 
-                           
+
 
                 Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false));
                 ackSent.Reset(true);
 
                 await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId).ConfigureAwait(false);
-                continueMre.Set();                
+                continueMre.Set();
                 expectedVersionsCount += 2;
 
 
@@ -371,7 +369,7 @@ namespace RachisTests
                 Database = defaultDatabase
             })
             {
-                AsyncHelpers.RunSync(()=>store.GetRequestExecutor()
+                AsyncHelpers.RunSync(() => store.GetRequestExecutor()
                     .UpdateTopologyAsync(new ServerNode
                     {
                         Url = store.Urls[0],
@@ -383,7 +381,7 @@ namespace RachisTests
             for (var index = 0; index < Servers.Count; index++)
             {
                 var curVer = 0;
-                foreach (var server in Servers.OrderBy(x=>rnd.Next()))
+                foreach (var server in Servers.OrderBy(x => rnd.Next()))
                 {
                     using (var curStore = new DocumentStore
                     {
@@ -414,7 +412,7 @@ namespace RachisTests
                                 user.Name = curDocName;
                                 session.Store(user, $"users/{index}");
                             }
-                            
+
                             session.SaveChanges();
 
                             Assert.True(
@@ -441,12 +439,12 @@ namespace RachisTests
             var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
             {
                 TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
-                MaxDocsPerBatch= batchSize
+                MaxDocsPerBatch = batchSize
             });
 
             var getDatabaseTopologyCommand = new GetDatabaseTopologyOperation(defaultDatabase);
             var topology = await store.Admin.Server.SendAsync(getDatabaseTopologyCommand).ConfigureAwait(false);
-            
+
             foreach (var server in Servers.Where(s => topology.RelevantFor(s.ServerStore.NodeTag)))
             {
                 await server.ServerStore.Cluster.WaitForIndexNotification(subscriptionEtag).ConfigureAwait(false);
@@ -485,7 +483,7 @@ namespace RachisTests
 
 
                 }
-            
+
             };
             await subscription.StartAsync().ConfigureAwait(false);
             return subscription;
@@ -513,9 +511,9 @@ namespace RachisTests
                 for (int i = 0; i < 10; i++)
                 {
                     await session.StoreAsync(new User()
-                        {
-                            Name = "John" + i
-                        })
+                    {
+                        Name = "John" + i
+                    })
                         .ConfigureAwait(false);
                 }
                 await session.SaveChangesAsync().ConfigureAwait(false);

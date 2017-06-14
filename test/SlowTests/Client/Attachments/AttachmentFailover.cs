@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Client.Attachments;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
@@ -10,7 +11,7 @@ using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 
-namespace FastTests.Client.Attachments
+namespace SlowTests.Client.Attachments
 {
     public class AttachmentFailover : ClusterTestBase
     {
@@ -69,7 +70,7 @@ namespace FastTests.Client.Attachments
                         stream.Position++;// simulating that we already started to call this and we need to reset
                         DisposeServerAndWaitForFinishOfDisposal(currentServer);
                         var task = requestExecutor.ExecuteAsync(currentNode, context, command);
-                     
+
                         await task;
                         var attachment = command.Result;
                         Assert.Equal(2, attachment.Etag);

@@ -1,13 +1,10 @@
-﻿using Microsoft.Xunit.Performance;
+﻿using System;
+using System.Text;
+using Microsoft.Xunit.Performance;
 using Sparrow.Binary;
 using Sparrow.Collections;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Regression
+namespace Regression.Benchmark
 {
     public class PrefixTreesBench : BenchBase
     {

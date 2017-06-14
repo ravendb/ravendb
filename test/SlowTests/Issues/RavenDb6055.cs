@@ -2,12 +2,12 @@
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Documents.Notifications;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Indexes;
+using SlowTests.Server.Documents.Notifications;
 using Xunit;
 
 namespace SlowTests.Issues
