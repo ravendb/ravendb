@@ -11,7 +11,8 @@ class uploadAttachmentCommand extends commandBase {
     execute(): JQueryPromise<Raven.Client.Documents.Operations.AttachmentDetails> {
         const args = {
             id: this.documentId,
-            name: this.file.name
+            name: this.file.name,
+            contentType: this.file.type
         };
 
         //TODO: progress support, see: https://github.com/ravendb/ravendb/blob/v3.5/Raven.Studio.Html5/App/commands/filesystem/uploadFileToFilesystemCommand.ts
