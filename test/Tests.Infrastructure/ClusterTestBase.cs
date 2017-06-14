@@ -417,19 +417,6 @@ namespace Tests.Infrastructure
             return leader;
         }
 
-        protected string GetLastStatesFromAllServersOrderedByTime()
-        {
-            List<(string tag, RachisConsensus.StateTransition transition)> states = new EquatableList<(string tag, RachisConsensus.StateTransition transition)>();
-            foreach (var s in Servers)
-            {
-                foreach (var state in s.ServerStore.Engine.PrevStates)
-                {
-                    states.Add((s.ServerStore.NodeTag, state));
-                }
-            }            
-            return string.Join(Environment.NewLine, states.OrderBy(x => x.transition.When).Select(x=>$"State for {x.tag}-term{x.Item2.CurrentTerm}:{Environment.NewLine}{x.Item2.From}=>{x.Item2.To} at {x.Item2.When:o} {Environment.NewLine}because {x.Item2.Reason}"));
-        }
-
         public async Task WaitForLeader(TimeSpan timeout)
         {
             var tasks = Servers
