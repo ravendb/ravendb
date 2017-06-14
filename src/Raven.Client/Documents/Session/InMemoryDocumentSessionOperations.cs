@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
@@ -749,7 +750,7 @@ more responsive application.
                 }
                 else
                 {
-                    if (DeferredCommandsDictionary.TryGetValue((documentInfo.Id, CommandType.ClientAnyCommand, null), out ICommandData command))
+                    if (result.DeferredCommandsDictionary.TryGetValue((documentInfo.Id, CommandType.ClientAnyCommand, null), out ICommandData command))
                         ThrowInvalidDeletedDocumentWithDeferredCommand(command);
 
                     long? etag = null;
@@ -786,7 +787,7 @@ more responsive application.
                 if (entity.Value.IgnoreChanges || EntityChanged(document, entity.Value, null) == false)
                     continue;
 
-                if (DeferredCommandsDictionary.TryGetValue((entity.Value.Id, CommandType.ClientNotAttachmentPUT, null), out ICommandData command))
+                if (result.DeferredCommandsDictionary.TryGetValue((entity.Value.Id, CommandType.ClientNotAttachmentPUT, null), out ICommandData command))
                     ThrowInvalidModifiedDocumentWithDeferredCommand(command);
 
                 var beforeStoreEventArgs = new BeforeStoreEventArgs(this, entity.Value.Id, entity.Key);
@@ -952,35 +953,32 @@ more responsive application.
         ///     Defer commands to be executed on SaveChanges()
         /// </summary>
         /// <param name="command">Command to be executed</param>
-        /// <param name="commands">Array of commands to be executed.</param>
-        public void Defer(ICommandData command, params ICommandData[] commands)
+        public void Defer(ICommandData command)
         {
             DeferredCommands.Add(command);
-            DeferredCommandsDictionary[(command.Id, command.Type, command.Name)] = command;
-            DeferredCommandsDictionary[(command.Id, CommandType.ClientAnyCommand, null)] = command;
-            if (command.Type != CommandType.AttachmentPUT)
-                DeferredCommandsDictionary[(command.Id, CommandType.ClientNotAttachmentPUT, null)] = command;
-
-            Defer(commands);
+            DeferInternal(command);
         }
 
         /// <summary>
         /// Defer commands to be executed on SaveChanges()
         /// </summary>
         /// <param name="commands">The commands to be executed</param>
-        public void Defer(ICommandData[] commands)
+        public void Defer(params ICommandData[] commands)
         {
-            if (commands == null)
-                return;
-
             DeferredCommands.AddRange(commands);
             foreach (var command in commands)
             {
-                DeferredCommandsDictionary[(command.Id, command.Type, command.Name)] = command;
-                DeferredCommandsDictionary[(command.Id, CommandType.ClientAnyCommand, null)] = command;
-                if (command.Type != CommandType.AttachmentPUT)
-                    DeferredCommandsDictionary[(command.Id, CommandType.ClientNotAttachmentPUT, null)] = command;
+                DeferInternal(command);
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DeferInternal(ICommandData command)
+        {
+            DeferredCommandsDictionary[(command.Id, command.Type, command.Name)] = command;
+            DeferredCommandsDictionary[(command.Id, CommandType.ClientAnyCommand, null)] = command;
+            if (command.Type != CommandType.AttachmentPUT)
+                DeferredCommandsDictionary[(command.Id, CommandType.ClientNotAttachmentPUT, null)] = command;
         }
 
         private void Dispose(bool isDisposing)
