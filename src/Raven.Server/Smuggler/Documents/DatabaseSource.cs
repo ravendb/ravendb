@@ -142,8 +142,10 @@ namespace Raven.Server.Smuggler.Documents
 
         public IEnumerable<KeyValuePair<string, long>> GetIdentities()
         {
-            return _database.DocumentsStorage.Identities.GetIdentities(_context);
+            var dr = _database.ServerStore.LoadDatabaseRecord(_database.Name, out long _);
+            return dr.Identities;
         }
+
 
         public long SkipType(DatabaseItemType type)
         {

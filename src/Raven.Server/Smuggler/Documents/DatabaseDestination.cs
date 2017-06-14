@@ -11,6 +11,8 @@ using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
@@ -26,7 +28,7 @@ namespace Raven.Server.Smuggler.Documents
     {
         private readonly DocumentDatabase _database;
 
-        private Logger _log;
+        private readonly Logger _log;
         private BuildVersionType _buildType;
 
         public DatabaseDestination(DocumentDatabase database)
@@ -50,7 +52,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             return new DatabaseDocumentActions(_database, _buildType, isRevision: true, log: _log);
         }
-
+     
         public IIdentityActions Identities()
         {
             return new DatabaseIdentityActions(_database);
@@ -209,14 +211,11 @@ namespace Raven.Server.Smuggler.Documents
         private class DatabaseIdentityActions : IIdentityActions
         {
             private readonly DocumentDatabase _database;
-            private readonly DocumentsOperationContext _context;
             private readonly Dictionary<string, long> _identities;
-            private readonly IDisposable _returnContext;
 
             public DatabaseIdentityActions(DocumentDatabase database)
             {
                 _database = database;
-                _returnContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
                 _identities = new Dictionary<string, long>();
             }
 
@@ -227,36 +226,10 @@ namespace Raven.Server.Smuggler.Documents
 
             public void Dispose()
             {
-                try
-                {
-                    if (_identities.Count == 0)
-                        return;
+                if (_identities.Count == 0)
+                    return;
 
-                    _database.TxMerger.Enqueue(new UpdateIdentitiesCommand(_identities, _database)).Wait();
-                }
-                finally
-                {
-                    _returnContext?.Dispose();
-                }
-            }
-
-            private class UpdateIdentitiesCommand : TransactionOperationsMerger.MergedTransactionCommand
-            {
-                private readonly Dictionary<string, long> _identities;
-                private readonly DocumentDatabase _database;
-
-                public UpdateIdentitiesCommand(Dictionary<string, long> identities, DocumentDatabase database)
-                {
-                    _identities = identities;
-                    _database = database;
-                }
-
-                public override int Execute(DocumentsOperationContext context)
-                {
-                    _database.DocumentsStorage.Identities.Update(context, _identities);
-
-                    return 1;
-                }
+                _database.ServerStore.SendToLeaderAsync(new UpdateDatabaseIdentityCommand(_database.Name, _identities)).Wait();
             }
         }
 

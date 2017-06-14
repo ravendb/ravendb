@@ -38,6 +38,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         void WriteTransformer(TransformerDefinition transformerDefinition);
     }
 
+
     public interface IIdentityActions : IDisposable
     {
         void WriteIdentity(string key, long value);

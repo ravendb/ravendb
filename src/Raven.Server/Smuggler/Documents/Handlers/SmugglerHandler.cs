@@ -193,16 +193,17 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     while (files.IsCompleted == false)
                     {
                         Func<Task<Stream>> getFile;
-                        DocumentsOperationContext context;
                         try
                         {
                             getFile = files.Take();
                         }
                         catch (Exception)
                         {
+                            //TODO : add logging, _silently_ skipping is a bad idea
                             continue;
                         }
-                        using (ContextPool.AllocateOperationContext(out context))
+
+                        using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (var file = await getFile())
                         using (var stream = new GZipStream(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
                         {

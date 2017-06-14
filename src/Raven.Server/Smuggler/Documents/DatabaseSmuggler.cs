@@ -174,9 +174,11 @@ namespace Raven.Server.Smuggler.Documents
 
         private SmugglerProgressBase.Counts ProcessIdentities(SmugglerResult result)
         {
-            using (var actions = _destination.Identities())
+            //using (var identityActions = _destination.Identities())
+            var identityActions = _destination.Identities();
             {
-                foreach (var kvp in _source.GetIdentities())
+                var sourceIdentities = _source.GetIdentities();
+                foreach (var kvp in sourceIdentities)
                 {
                     _token.ThrowIfCancellationRequested();
                     result.Identities.ReadCount++;
@@ -189,17 +191,18 @@ namespace Raven.Server.Smuggler.Documents
 
                     try
                     {
-                        actions.WriteIdentity(kvp.Key, kvp.Value);
+                        identityActions.WriteIdentity(kvp.Key, kvp.Value);
                     }
                     catch (Exception e)
                     {
                         result.Identities.ErroredCount++;
-                        result.AddError($"Could not write identity '{kvp.Key} {kvp.Value}': {e.Message}");
+                        result.AddError($"Could not write identity '{kvp.Key}->{kvp.Value}': {e.Message}");
                     }
                 }
             }
 
             return result.Identities;
+            
         }
 
         private SmugglerProgressBase.Counts ProcessTransformers(SmugglerResult result)

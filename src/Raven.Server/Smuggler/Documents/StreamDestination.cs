@@ -65,6 +65,7 @@ namespace Raven.Server.Smuggler.Documents
             return new StreamIdentityActions(_writer);
         }
 
+
         public IIndexActions Indexes()
         {
             return new StreamIndexActions(_writer, _context);
@@ -235,8 +236,8 @@ namespace Raven.Server.Smuggler.Documents
 
                 Writer.WriteStream(stream);
             }
-        }
-
+        }        
+        
         private class StreamIdentityActions : StreamActionsBase, IIdentityActions
         {
             public StreamIdentityActions(BlittableJsonTextWriter writer)
