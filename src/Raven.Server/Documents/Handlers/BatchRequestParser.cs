@@ -358,17 +358,15 @@ namespace Raven.Server.Documents.Handlers
 
         private static CommandData[] IncreaseSizeOfCommandsBuffer(int index, CommandData[] cmds)
         {
-            CommandData[] tmp = null;
             if (cmds.Length > MaxSizeOfCommandsInBatchToCache)
             {
-                tmp = new CommandData[Math.Max(index + 8, cmds.Length * 2)];
-                Array.Copy(cmds, 0, tmp, 0, index);
-                Array.Clear(cmds, 0, cmds.Length);
-                return tmp;
+                Array.Resize(ref cmds, Math.Max(index + 8, cmds.Length * 2));
+                return cmds;
             }
 
             if (_cache == null)
                 _cache = new Stack<CommandData[]>();
+            CommandData[] tmp = null;
             while (_cache.Count > 0)
             {
                 tmp = _cache.Pop();
