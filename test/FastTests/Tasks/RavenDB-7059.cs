@@ -119,7 +119,7 @@ namespace FastTests.Tasks
                     return false;
 
 
-                var identities = store.Admin.Send(new GetClusterIdentitiesOperation());
+                var identities = store.Admin.Send(new GetIdentitiesOperation());
                 if (identities.TryGetValue(collection, out long value) && identityToWaitFor >= value)
                 {
                     break;

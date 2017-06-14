@@ -53,7 +53,7 @@ namespace Raven.Server.Smuggler.Documents
             return new DatabaseDocumentActions(_database, _buildType, isRevision: true, log: _log);
         }
      
-        public IIdentityActions ClusterIdentities()
+        public IIdentityActions Identities()
         {
             return new DatabaseIdentityActions(_database);
         }

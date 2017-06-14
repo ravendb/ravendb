@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class GetClusterIdentitiesCommand : RavenCommand<Dictionary<string, long>>
+    public class GetIdentitiesCommand : RavenCommand<Dictionary<string, long>>
     {
         private static readonly Func<BlittableJsonReaderObject, IdentitiesResult> _deserializeIdentities = 
             JsonDeserializationBase.GenerateJsonDeserializationRoutine<IdentitiesResult>();
@@ -38,11 +38,11 @@ namespace Raven.Client.Documents.Operations
         }
     }
 
-    public class GetClusterIdentitiesOperation : IAdminOperation<Dictionary<string,long>>
+    public class GetIdentitiesOperation : IAdminOperation<Dictionary<string,long>>
     {
         public RavenCommand<Dictionary<string, long>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetClusterIdentitiesCommand();
+            return new GetIdentitiesCommand();
         }
     }
 }

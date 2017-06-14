@@ -173,7 +173,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<KeyValuePair<string, long>> GetClusterIdentities()
+        public IEnumerable<KeyValuePair<string, long>> GetIdentities()
         {            
             return InternalGetIdentities();
         }
