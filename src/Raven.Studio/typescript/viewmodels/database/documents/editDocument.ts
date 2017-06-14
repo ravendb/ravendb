@@ -266,8 +266,11 @@ class editDocument extends viewModelBase {
 
         this.documentSize = ko.pureComputed(() => {
             try {
-                const size: number = genUtils.getSizeInBytesAsUTF8(this.documentText()) / 1024;
-                return genUtils.formatAsCommaSeperatedString(size, 2);
+                const textSize: number = genUtils.getSizeInBytesAsUTF8(this.documentText());
+                const metadataAsString = JSON.stringify(this.metadata().toDto());
+                const metadataSize = genUtils.getSizeInBytesAsUTF8(metadataAsString);
+                const metadataKey = genUtils.getSizeInBytesAsUTF8(", @metadata: ");
+                return genUtils.formatAsCommaSeperatedString((textSize + metadataSize + metadataKey) / 1024, 2);
             } catch (e) {
                 return "cannot compute";
             }
