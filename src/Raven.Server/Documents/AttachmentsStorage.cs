@@ -20,6 +20,7 @@ using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Utils;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
 
@@ -847,7 +848,8 @@ namespace Raven.Server.Documents
                 _file.Dispose();
 
                 // Linux does not clean the file, so we should clean it manually
-                IOExtensions.DeleteFile(_tempFile);
+                if (PlatformDetails.RunningOnPosix)
+                    IOExtensions.DeleteFile(_tempFile);
             }
         }
     }
