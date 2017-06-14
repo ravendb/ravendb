@@ -31,6 +31,9 @@ namespace Raven.Server.Documents.Patch
         protected readonly Logger Logger;
         protected readonly DocumentDatabase Database;
 
+        protected DocumentPatcherBase()
+        { }
+
         protected DocumentPatcherBase(DocumentDatabase database)
         {
             Database = database;

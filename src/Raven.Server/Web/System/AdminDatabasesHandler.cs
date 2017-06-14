@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
@@ -616,31 +617,56 @@ namespace Raven.Server.Web.System
             await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.UpdateEtl(_, databaseName, id, etlConfiguration, etlType), "etl-update");
         }
 
-        [RavenAction("/admin/console", "POST", "/admin/console?name={databaseName:string}")]
+        [RavenAction("/admin/console", "POST", "/admin/console?database={databaseName:string}")]
         public async Task AdminConsole()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            if (ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(name, out var database) && database.Status == TaskStatus.RanToCompletion)
+            var name = GetStringValuesQueryString("database", false);
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                var content = await context.ReadForMemoryAsync(RequestBodyStream(), "read-admin-script");
+                if (content.TryGet(nameof(AdminJsScript), out BlittableJsonReaderObject adminJsBlittable) == false)
                 {
-                    var content = await context.ReadForMemoryAsync(RequestBodyStream(), "read-admin-script");
-                    if (content.TryGet(nameof(AdminJsScript), out BlittableJsonReaderObject adminJsBlittable) == false)
+                    throw new InvalidDataException("AdminJsScript was not found.");
+                }
+
+                var adminJsScript = JsonDeserializationCluster.AdminJsScript(adminJsBlittable);
+                DynamicJsonValue result = null;
+
+                if (name.Equals(default(StringValues)) == false)
+                {
+                    //database script
+                    if (ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(name.ToString(), out var database) == false)
                     {
-                        throw new InvalidDataException("AdminJsScript was not found.");
+                        throw new InvalidOperationException($"Database {name} doesn't exists");
                     }
 
-                    var adminJsScript = JsonDeserializationCluster.AdminJsScript(adminJsBlittable);
-                    var console = new AdminJsConsole(database.Result);
-                    var result = console.ApplyScript(adminJsScript);
+                    if (database.Status == TaskStatus.RanToCompletion)
+                    {
+                        var console = new AdminJsConsole(database.Result);
+                        result = console.ApplyScript(adminJsScript);
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                    }
+                }
 
+                else
+                {
+                    //server script
+                    var console = new AdminJsConsole(Server);
+                    result = console.ApplyServerScript(adminJsScript);
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                }
 
+                if (result != null)
+                {
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         context.Write(writer, result);
                         writer.Flush();
                     }
+                }
+                else
+                {
+                    await NoContent();
                 }
             }
         }

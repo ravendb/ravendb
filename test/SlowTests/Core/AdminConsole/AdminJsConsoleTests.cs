@@ -3,7 +3,7 @@ using FastTests;
 using Raven.Server.Documents.Patch;
 using Xunit;
 
-namespace SlowTests.Core.AdminJsConsole
+namespace SlowTests.Core.AdminConsole
 {
     public class AdminJsConsoleTests : RavenTestBase
     {
@@ -14,7 +14,7 @@ namespace SlowTests.Core.AdminJsConsole
             {
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 
-                var result = new Raven.Server.Documents.Patch.AdminJsConsole(database).ApplyScript(new AdminJsScript
+                var result = new AdminJsConsole(database).ApplyScript(new AdminJsScript
                 {
                     Script = @"
                                 return { 
@@ -42,17 +42,16 @@ namespace SlowTests.Core.AdminJsConsole
 
                 Assert.True(configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened);
                 Assert.False(configuration.Patching.AllowScriptsToAdjustNumberOfSteps);
-                Assert.Null(database.Configuration.Queries.MaxClauseCount);
-                Assert.Equal(10, database.Configuration.Storage.MaxConcurrentFlushes);
+                Assert.Null(configuration.Queries.MaxClauseCount);
+                Assert.Equal(10, configuration.Storage.MaxConcurrentFlushes);
 
-                new Raven.Server.Documents.Patch.AdminJsConsole(database).ApplyScript(new AdminJsScript
+                new AdminJsConsole(database).ApplyScript(new AdminJsScript
                 {
                     Script = @"
                                 database.Configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = false;
                                 database.Configuration.Patching.AllowScriptsToAdjustNumberOfSteps = true;
                                 database.Configuration.Queries.MaxClauseCount = 2048;
                                 database.Configuration.Storage.MaxConcurrentFlushes = 40;
-
                              "
                 });
 
@@ -63,5 +62,48 @@ namespace SlowTests.Core.AdminJsConsole
             }
         }
 
+        [Fact]
+        public void CanGetServerSettings()
+        {
+            var result = new AdminJsConsole(Server).ApplyServerScript(new AdminJsScript
+            {
+                Script = @"
+                            return { 
+                                AllowScriptsToAdjustNumberOfSteps: server.Configuration.Patching.AllowScriptsToAdjustNumberOfSteps,
+                                MaxConcurrentFlushes: server.Configuration.Storage.MaxConcurrentFlushes
+                            };
+                            "
+            });
+
+            Assert.NotNull(result);
+            Assert.Equal(false, result["AllowScriptsToAdjustNumberOfSteps"]);
+            Assert.Equal(10L, result["MaxConcurrentFlushes"]);           
+        }
+
+        [Fact]
+        public void CanModifyServerConfigurationOnTheFly()
+        {
+            var configuration = Server.Configuration;
+
+            Assert.False(configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened);
+            Assert.False(configuration.Patching.AllowScriptsToAdjustNumberOfSteps);
+            Assert.Null(configuration.Queries.MaxClauseCount);
+            Assert.Equal(10, configuration.Storage.MaxConcurrentFlushes);
+
+            new AdminJsConsole(Server).ApplyServerScript(new AdminJsScript
+            {
+                Script = @"
+                            server.Configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = true;
+                            server.Configuration.Patching.AllowScriptsToAdjustNumberOfSteps = true;
+                            server.Configuration.Queries.MaxClauseCount = 2048;
+                            server.Configuration.Storage.MaxConcurrentFlushes = 40;
+                            "
+            });
+
+            Assert.True(configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened);
+            Assert.True(configuration.Patching.AllowScriptsToAdjustNumberOfSteps);
+            Assert.Equal(2048, configuration.Queries.MaxClauseCount);
+            Assert.Equal(40, configuration.Storage.MaxConcurrentFlushes);            
+        }
     }
 }
