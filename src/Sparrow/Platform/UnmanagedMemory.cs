@@ -31,12 +31,12 @@ namespace Sparrow
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int Move(byte* b1, byte* b2, long count)
+        public static int Move(byte* dest, byte* src, long count)
         {
             Debug.Assert(count >= 0);
             return PlatformDetails.RunningOnPosix
-                ? Syscall.Move(b1, b2, count)
-                : Win32UnmanagedMemory.Move(b1, b2, count);
+                ? Syscall.Move(dest, src, count)
+                : Win32UnmanagedMemory.Move(dest, src, count);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
