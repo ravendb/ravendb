@@ -71,8 +71,7 @@ namespace SlowTests.Core.AdminConsole
                             return { 
                                 AllowScriptsToAdjustNumberOfSteps: server.Configuration.Patching.AllowScriptsToAdjustNumberOfSteps,
                                 MaxConcurrentFlushes: server.Configuration.Storage.MaxConcurrentFlushes
-                            };
-                            "
+                            };"
             });
 
             Assert.NotNull(result);
