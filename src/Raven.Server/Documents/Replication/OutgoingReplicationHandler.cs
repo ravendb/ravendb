@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using Raven.Client.Documents;
@@ -15,7 +14,6 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Http.OAuth;
 using Raven.Client.Server;
-using Raven.Client.Server.Commands;
 using Raven.Client.Server.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Json;
@@ -38,7 +36,6 @@ namespace Raven.Server.Documents.Replication
         public event Action<OutgoingReplicationHandler> DocumentsSend;
 
         internal readonly DocumentDatabase _database;
-        internal readonly string ServerNode;
         private readonly Logger _log;
         private readonly AsyncManualResetEvent _waitForChanges = new AsyncManualResetEvent();
         private readonly CancellationTokenSource _cts;
@@ -77,13 +74,13 @@ namespace Raven.Server.Documents.Replication
 
         private OutgoingReplicationStatsAggregator _lastStats;
 
-        public OutgoingReplicationHandler(ReplicationLoader parent,DocumentDatabase database,ReplicationNode node)
+        public OutgoingReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node)
         {
             _parent = parent;
             _database = database;
             Destination = node;
             _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
-            
+
             _database.Changes.OnDocumentChange += OnDocumentChange;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
         }
@@ -118,7 +115,7 @@ namespace Raven.Server.Documents.Replication
         {
             var watcher = Destination as DatabaseWatcher;
             return watcher == null ? _parent.GetClusterApiKey() : watcher.ApiKey;
-        } 
+        }
 
         private void ReplicateToDestination()
         {
@@ -136,7 +133,7 @@ namespace Raven.Server.Documents.Replication
                     var record = _parent.LoadDatabaseRecord();
                     if (record == null)
                         throw new InvalidOperationException($"The database record for {_parent.Database.Name} does not exist?!");
-                    
+
                     if (record.Encrypted && Destination.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
                         throw new InvalidOperationException(
                             $"{record.DatabaseName} is encrypted, and require HTTPS for replication, but had endpoint with url {Destination.Url} to database {Destination.Database}");
@@ -160,12 +157,13 @@ namespace Raven.Server.Documents.Replication
                         try
                         {
                             var response = HandleServerResponse(getFullResponse: true);
-                            if (response.Item1 == ReplicationMessageReply.ReplyType.Error)
+                            if (response.ReplyType == ReplicationMessageReply.ReplyType.Error)
                             {
-                                if (response.Item2.Exception.Contains(nameof(DatabaseDoesNotExistException)))
-                                    throw new DatabaseDoesNotExistException(response.Item2.Message,
-                                        new InvalidOperationException(response.Item2.Exception));
-                                throw new InvalidOperationException(response.Item2.Exception);
+                                var exception = new InvalidOperationException(response.Reply.Exception);
+                                if (response.Reply.Exception.Contains(nameof(DatabaseDoesNotExistException)))
+                                    DatabaseDoesNotExistException.ThrowWithMessageAndException(Destination.Database, response.Reply.Message, exception);
+
+                                throw exception;
                             }
                         }
                         catch (DatabaseDoesNotExistException e)
@@ -312,7 +310,7 @@ namespace Raven.Server.Documents.Replication
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
             using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
             {
-                 //send initial connection information               
+                //send initial connection information               
                 var token = AsyncHelpers.RunSync(() => _authenticator.GetAuthenticationTokenAsync(GetApiKey(), Destination.Url, documentsContext));
 
                 documentsContext.Write(writer, new DynamicJsonValue
@@ -480,7 +478,7 @@ namespace Raven.Server.Documents.Replication
                 catch (OperationCanceledException)
                 {
                     if (_log.IsInfoEnabled)
-                        _log.Info($"Got cancelation notification while parsing heartbeat response. Closing replication channel. ({FromToString})");
+                        _log.Info($"Got cancellation notification while parsing heartbeat response. Closing replication channel. ({FromToString})");
                     throw;
                 }
                 catch (Exception e)
@@ -492,7 +490,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        internal Tuple<ReplicationMessageReply.ReplyType, ReplicationMessageReply> HandleServerResponse(bool getFullResponse = false)
+        internal (ReplicationMessageReply.ReplyType ReplyType, ReplicationMessageReply Reply) HandleServerResponse(bool getFullResponse = false)
         {
             while (true)
             {
@@ -525,7 +523,9 @@ namespace Raven.Server.Documents.Replication
                     var sendFullReply = replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Error ||
                                         getFullResponse;
 
-                    return Tuple.Create(replicationBatchReply.Type, sendFullReply ? replicationBatchReply : null);
+                    var type = replicationBatchReply.Type;
+                    var reply = sendFullReply ? replicationBatchReply : null;
+                    return (type, reply);
                 }
             }
         }
@@ -596,7 +596,7 @@ namespace Raven.Server.Documents.Replication
                 return;
             _waitForChanges.Set();
         }
-      
+
         private int _disposed;
         public void Dispose()
         {

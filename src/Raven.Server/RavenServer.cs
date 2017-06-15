@@ -516,7 +516,7 @@ namespace Raven.Server
             var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(header.DatabaseName);
             if (databaseLoadingTask == null)
             {
-                ThrowNoSuchDatabase(header);
+                DatabaseDoesNotExistException.Throw(header.DatabaseName);
                 return true;
             }
 
@@ -649,11 +649,6 @@ namespace Raven.Server
         private static void ThrowTimeoutOnDatabaseLoad(TcpConnectionHeaderMessage header)
         {
             throw new DatabaseLoadTimeoutException($"Timeout when loading database {header.DatabaseName}, try again later");
-        }
-
-        private static void ThrowNoSuchDatabase(TcpConnectionHeaderMessage header)
-        {
-            throw new DatabaseDoesNotExistException("There is no database named " + header.DatabaseName);
         }
 
         public RequestRouter Router { get; private set; }

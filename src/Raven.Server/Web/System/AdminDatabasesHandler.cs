@@ -11,18 +11,16 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
-using Raven.Client.Json.Converters;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Server;
 using Raven.Client.Server.Commands;
 using Raven.Client.Server.ETL;
 using Raven.Client.Server.Operations;
 using Raven.Server.Documents;
-using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -30,10 +28,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Client.Server.PeriodicBackup;
-using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Patch;
-using Raven.Server.ServerWide.Commands;
-using Raven.Server.ServerWide.Commands.ETL;
 
 namespace Raven.Server.Web.System
 {
@@ -151,7 +146,7 @@ namespace Raven.Server.Web.System
                         .Concat(clusterTopology.Promotables.Keys)
                         .Concat(clusterTopology.Watchers.Keys)
                         .ToList();
-                    
+
                     allNodes.RemoveAll(n => databaseRecord.Topology.AllNodes.Contains(n) || (databaseRecord.Encrypted && NotUsingHttps(clusterTopology.GetUrlFromTag(n))));
 
                     if (databaseRecord.Encrypted && allNodes.Count == 0)
@@ -192,7 +187,7 @@ namespace Raven.Server.Web.System
         public bool NotUsingHttps(string url)
         {
             return url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false;
-                
+
         }
 
         [RavenAction("/admin/databases", "PUT", "/admin/databases/{databaseName:string}")]
@@ -620,7 +615,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/console", "POST", "/admin/console?database={databaseName:string}&server-script={isServerScript:bool|optional(false)}")]
         public async Task AdminConsole()
         {
-            var name = GetStringValuesQueryString("database", false);
+            var name = GetStringQueryString("database", false);
             var isServerScript = GetBoolValueQueryString("server-script", false) ?? false;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -631,7 +626,7 @@ namespace Raven.Server.Web.System
                 }
 
                 var adminJsScript = JsonDeserializationCluster.AdminJsScript(adminJsBlittable);
-                DynamicJsonValue result = null;
+                DynamicJsonValue result;
 
                 if (isServerScript)
                 {
@@ -640,18 +635,18 @@ namespace Raven.Server.Web.System
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                 }
 
-                else if(name.Equals(default(StringValues)) == false)
+                else if (string.IsNullOrWhiteSpace(name) == false)
                 {
                     //database script
-                    var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name.ToString());
+                    var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
                     if (database == null)
                     {
-                        throw new InvalidOperationException($"Database {name} was not found");
+                        DatabaseDoesNotExistException.Throw(name);
                     }
 
                     var console = new AdminJsConsole(database);
                     result = console.ApplyScript(adminJsScript);
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;                    
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                 }
 
                 else

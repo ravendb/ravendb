@@ -469,7 +469,7 @@ namespace Raven.Server.ServerWide
                     if (databaseRecordJson == null)
                     {
                         if (updateCommand.ErrorOnDatabaseDoesNotExists)
-                            NotifyLeaderAboutError(index, leader, new DatabaseDoesNotExistException($"Cannot execute update command of type {type} for {databaseName} because it does not exists"));
+                            NotifyLeaderAboutError(index, leader, DatabaseDoesNotExistException.CreateWithMessage(databaseName, $"Could not execute update command of type '{type}'."));
                         return null;
                     }
 
