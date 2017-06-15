@@ -249,7 +249,8 @@ namespace Voron.Data.BTrees
             Memory.Set((byte*) node, 0, node->GetNodeSize() - Constants.Tree.NodeOffsetSize);
 
             ushort* offsets = KeysOffsets;
-            for (int i = index + 1; i < NumberOfEntries; i++)
+            int numberOfEntries = NumberOfEntries;
+            for (int i = index + 1; i < numberOfEntries; i++)
             {
                 offsets[i - 1] = offsets[i];
             }

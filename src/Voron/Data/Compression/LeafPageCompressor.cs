@@ -49,9 +49,11 @@ namespace Voron.Data.Compression
             var compressedOffsets = (ushort*)compressionResult;
             var offsets = page.KeysOffsets;
 
-            for (var i = 0; i < page.NumberOfEntries; i++)
+            int numberOfEntries = page.NumberOfEntries;
+            ushort upper = page.Upper;
+            for (var i = 0; i < numberOfEntries; i++)
             {
-                compressedOffsets[i] = (ushort)(offsets[i] - page.Upper);
+                compressedOffsets[i] = (ushort)(offsets[i] - upper);
             }
             
             var compressionSectionSize = compressedSize + offsetsSize;

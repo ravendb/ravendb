@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Sparrow.Json
 {
@@ -38,7 +39,7 @@ namespace Sparrow.Json
             else if (current == BlittableJsonToken.PropertyIdSizeInt)
                 size = sizeof(int);
             else
-                size = ThrowInvalidOfsetSize(currentType);
+                size = ThrowInvalidOffsetSize(currentType);
                 
             return size;                        
         }
@@ -63,12 +64,12 @@ namespace Sparrow.Json
             else if (current == BlittableJsonToken.OffsetSizeInt)
                 size = sizeof(int);
             else
-                size = ThrowInvalidOfsetSize(currentType);
+                size = ThrowInvalidOffsetSize(currentType);
 
             return size;
         }
 
-        private static int ThrowInvalidOfsetSize(BlittableJsonToken currentType)
+        private static int ThrowInvalidOffsetSize(BlittableJsonToken currentType)
         {
             throw new ArgumentException($"Illegal offset size {currentType}");
         }
@@ -113,21 +114,26 @@ namespace Sparrow.Json
         {
             int returnValue = *value;
             if (sizeOfValue == sizeof(byte))
-                return returnValue;
+                goto Successful;
 
             returnValue |= *(value + 1) << 8;
             if (sizeOfValue == sizeof(short))
-                return returnValue;
+                goto Successful;
 
             returnValue |= *(short*)(value + 2) << 16;
             if (sizeOfValue == sizeof(int))
-                return returnValue;          
+                goto Successful;
 
-            ThrowInvalidSizeForNumber(sizeOfValue);
-            return -1;// will never happen
+            goto Error;
+            
+            Successful:
+            return returnValue;
+
+            Error:
+            return ThrowInvalidSizeForNumber(sizeOfValue);
         }
 
-        private static void ThrowInvalidSizeForNumber(long sizeOfValue)
+        private static int ThrowInvalidSizeForNumber(long sizeOfValue)
         {
             throw new ArgumentException($"Unsupported size {sizeOfValue}");
         }

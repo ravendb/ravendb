@@ -49,11 +49,13 @@ namespace Sparrow.Json.Parsing
         public static int FindEscapePositionsMaxSize(string str)
         {
             var count = 0;
+            
             var escapeCharsAsBytes = EscapeCharsAsBytes;
+            int escapeCharsLength = escapeCharsAsBytes.Length;
 
             for (int i = 0; i < str.Length; i++)
             {
-                for (int j = 0; j < escapeCharsAsBytes.Length; j++)
+                for (int j = 0; j < escapeCharsLength; j++)
                 {
                     if (str[i] == escapeCharsAsBytes[j])
                     {
@@ -86,10 +88,11 @@ namespace Sparrow.Json.Parsing
             }
             var lastEscape = 0;
             var escapeCharsAsBytes = EscapeCharsAsBytes;
+            int escapeCharsLength = escapeCharsAsBytes.Length;
 
             for (int i = 0; i < len; i++)
             {
-                for (int j = 0; j < escapeCharsAsBytes.Length; j++)
+                for (int j = 0; j < escapeCharsLength; j++)
                 {
                     if (str[i] == escapeCharsAsBytes[j])
                     {

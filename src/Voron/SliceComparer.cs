@@ -36,8 +36,10 @@ namespace Voron
             int r, keyDiff;
             unsafe
             {
-                var size = Math.Min(x1.Length, y1.Length);
-                keyDiff = x1.Length - y1.Length;
+                int x1Length = x1.Length;
+                int y1Length = y1.Length;
+                var size = Math.Min(x1Length, y1Length);
+                keyDiff = x1Length - y1Length;
 
                 r = Memory.CompareInline(x1.Ptr, y1.Ptr, size);
             }
@@ -130,8 +132,10 @@ namespace Voron
             int r, keyDiff;
             unsafe
             {
-                var size = Math.Min(x1.Length, y1.Length);
-                keyDiff = x1.Length - y1.Length;
+                int x1Length = x1.Length;
+                int y1Length = y1.Length;
+                var size = Math.Min(x1Length, y1Length);
+                keyDiff = x1Length - y1Length;
 
                 r = Memory.CompareInline(x1.Ptr, y1.Ptr, size);
             }
