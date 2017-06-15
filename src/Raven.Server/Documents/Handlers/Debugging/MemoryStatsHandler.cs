@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class MemoryStatsHandler : RequestHandler
     {
-        [RavenAction("/debug/memory/stats", "GET")]
+        [RavenAction("/debug/memory/stats", "GET", IsDebugInformationEndpoint = true)]
         public Task MemoryStats()
         {
             JsonOperationContext context;

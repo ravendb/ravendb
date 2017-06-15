@@ -22,19 +22,24 @@ namespace Raven.Server.Routing
         private HandleRequest _request;
         private RouteType _typeOfRoute;
 
-        private enum RouteType
+        public bool IsDebugInformationEndpoint;
+
+        public enum RouteType
         {
             None,
             Databases
         }
 
-        public RouteInformation(string method, string path, bool noAuthorizationRequired, bool skipUsagesCount)
+        public RouteInformation(string method, string path, bool noAuthorizationRequired, bool skipUsagesCount, bool isDebugInformationEndpoint = false)
         {
+            IsDebugInformationEndpoint = isDebugInformationEndpoint;
             Method = method;
             Path = path;
             NoAuthorizationRequired = noAuthorizationRequired;
             SkipUsagesCount = skipUsagesCount;
         }
+
+        public RouteType TypeOfRoute => _typeOfRoute;
 
         public void Build(MethodInfo action)
         {

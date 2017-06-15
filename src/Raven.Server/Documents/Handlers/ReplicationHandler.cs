@@ -288,7 +288,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/replication/debug/outgoing-failures", "GET")]
+        [RavenAction("/databases/*/replication/debug/outgoing-failures", "GET", IsDebugInformationEndpoint = true)]
         public Task GetReplicationOugoingFailureStats()
         {
             DocumentsOperationContext context;
@@ -321,7 +321,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/replication/debug/incoming-last-activity-time", "GET")]
+        [RavenAction("/databases/*/replication/debug/incoming-last-activity-time", "GET", IsDebugInformationEndpoint = true)]
         public Task GetReplicationIncomingActivityTimes()
         {
             DocumentsOperationContext context;
@@ -349,7 +349,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/replication/debug/incoming-rejection-info", "GET")]
+        [RavenAction("/databases/*/replication/debug/incoming-rejection-info", "GET", IsDebugInformationEndpoint = true)]
         public Task GetReplicationIncomingRejectionInfo()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -384,7 +384,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/replication/debug/outgoing-reconnect-queue", "GET")]
+        [RavenAction("/databases/*/replication/debug/outgoing-reconnect-queue", "GET", IsDebugInformationEndpoint = true)]
         public Task GetReplicationReconnectionQueue()
         {
             DocumentsOperationContext context;

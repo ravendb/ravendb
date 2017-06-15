@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Jint.Parser.Ast;
 
 namespace Raven.Server.Routing
 {
@@ -17,7 +18,7 @@ namespace Raven.Server.Routing
     /// </summary>
     public class RouteScanner
     {
-        public static Dictionary<string, RouteInformation> Scan()
+        public static Dictionary<string, RouteInformation> Scan(Func<RavenActionAttribute, bool> predicate = null)
         {
             var routes = new Dictionary<string, RouteInformation>(StringComparer.OrdinalIgnoreCase);
 
@@ -30,11 +31,19 @@ namespace Raven.Server.Routing
             {
                 foreach (var route in memberInfo.GetCustomAttributes<RavenActionAttribute>())
                 {
-                    RouteInformation routeInfo;
+                    if(predicate != null && predicate(route) == false)
+                        continue;
+
+                    RouteInformation routeInfo;                    
                     var routeKey = route.Method + route.Path;
                     if (routes.TryGetValue(routeKey, out routeInfo) == false)
                     {
-                        routes[routeKey] = routeInfo = new RouteInformation(route.Method, route.Path, route.NoAuthorizationRequired, route.SkipUsagesCount);
+                        routes[routeKey] = routeInfo = new RouteInformation(
+                            route.Method, 
+                            route.Path, 
+                            route.NoAuthorizationRequired, 
+                            route.SkipUsagesCount,
+                            route.IsDebugInformationEndpoint);
                     }
                     else
                     {
