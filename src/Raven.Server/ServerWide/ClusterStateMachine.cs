@@ -237,9 +237,7 @@ namespace Raven.Server.ServerWide
                 }
                 remove.UpdateDatabaseRecord(databaseRecord, index);
 
-                if (databaseRecord.Topology.Members.Count == 0 &&
-                    databaseRecord.Topology.Promotables.Count == 0 &&
-                    databaseRecord.Topology.Watchers.Count == 0)
+                if (databaseRecord.Topology.AllNodes.Any() == false)
                 {
                     // delete database record
                     items.DeleteByKey(lowerKey);

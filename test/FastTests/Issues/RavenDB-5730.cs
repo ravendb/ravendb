@@ -51,7 +51,7 @@ namespace FastTests.Issues
 
         private void DoReplicationTest(DocumentStore storeA, DocumentStore storeB, string url)
         {
-            var watcher = new DatabaseWatcher
+            var watcher = new ExternalReplication
             {                
                 Database = storeB.Database,
                 Url = url,               

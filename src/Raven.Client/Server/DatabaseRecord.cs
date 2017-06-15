@@ -61,6 +61,8 @@ namespace Raven.Client.Server
 
         public List<EtlConfiguration<RavenDestination>> RavenEtls;
 
+        public List<ExternalReplication> ExternalReplication = new List<ExternalReplication>(); // Watcher only receives (slave)
+
         public List<EtlConfiguration<SqlDestination>> SqlEtls;
 
         public string CustomFunctions { get; set; }

@@ -199,7 +199,7 @@ namespace FastTests.Server.Replication
 
         protected static async Task<ModifyOngoingTaskResult> AddWatcherToReplicationTopology(
             DocumentStore store,
-            DatabaseWatcher watcher)
+            ExternalReplication watcher)
         {
             var op = new UpdateExternalReplicationOperation(store.Database, watcher);
             return await store.Admin.Server.SendAsync(op);
@@ -233,7 +233,7 @@ namespace FastTests.Server.Replication
         {
             foreach (var store in toStores)
             {
-                var databaseWatcher = new DatabaseWatcher
+                var databaseWatcher = new ExternalReplication
                 {
                     Database = store.Database,
                     Url = store.Urls[0]
@@ -276,7 +276,7 @@ namespace FastTests.Server.Replication
         {
             foreach (var node in toNodes)
             {
-                var databaseWatcher = new DatabaseWatcher
+                var databaseWatcher = new ExternalReplication
                 {
                     Database = node.Database,
                     Url = node.Url,

@@ -49,7 +49,7 @@ namespace Raven.Server.Web.System
 
                 foreach (var tasks in new []
                 {
-                    CollectExternalReplicationTasks(dbTopology, clusterTopology),
+                    CollectExternalReplicationTasks(databaseRecord.ExternalReplication, dbTopology,clusterTopology),
                     CollectEtlTasks(databaseRecord, dbTopology, clusterTopology),
                     CollectBackupTasks(databaseRecord, dbTopology, clusterTopology)
                 })
@@ -66,12 +66,12 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private static IEnumerable<OngoingTask> CollectExternalReplicationTasks(DatabaseTopology dbTopology, ClusterTopology clusterTopology)
+        private static IEnumerable<OngoingTask> CollectExternalReplicationTasks(List<ExternalReplication> watchers, DatabaseTopology dbTopology, ClusterTopology clusterTopology)
         {
             if (dbTopology == null)
                 yield break;
 
-            foreach (var watcher in dbTopology.Watchers)
+            foreach (var watcher in watchers)
             {
                 var tag = dbTopology.WhoseTaskIsIt(watcher);
 
@@ -232,7 +232,7 @@ namespace Raven.Server.Web.System
                     {
                         case OngoingTaskType.Replication:
 
-                            var watcher = dbTopology?.Watchers.Find(x => x.TaskId == key);
+                            var watcher = record?.ExternalReplication.Find(x => x.TaskId == key);
                             if (watcher == null)
                             {
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -423,7 +423,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-update-replication");
-                if (updateJson.TryGet(nameof(DatabaseWatcher), out BlittableJsonReaderObject watcherBlittable) == false)
+                if (updateJson.TryGet(nameof(ExternalReplication), out BlittableJsonReaderObject watcherBlittable) == false)
                 {
                     throw new InvalidDataException("DatabaseWatcher was not found.");
                 }

@@ -116,19 +116,24 @@ namespace Raven.Server.Documents.Replication
 
         private string GetApiKey()
         {
-            var watcher = Destination as DatabaseWatcher;
+            var watcher = Destination as ExternalReplication;
             return watcher == null ? _parent.GetClusterApiKey() : watcher.ApiKey;
-        } 
+        }
 
+        public string GetNode()
+        {
+            var node = Destination as InternalReplication;
+            return node?.NodeTag;
+        }
         private void ReplicateToDestination()
         {
             NativeMemory.EnsureRegistered();
             try
             {
-                var connectionInfo = ReplicationUtils.GetTcpInfo(Destination.Url, Destination.NodeTag, GetApiKey(), "Replication");
+                var connectionInfo = ReplicationUtils.GetTcpInfo(Destination.Url, GetNode(), GetApiKey(), "Replication");
 
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Will replicate to {Destination.NodeTag} @ {Destination.Url} via {connectionInfo.Url}");
+                    _log.Info($"Will replicate to {Destination.FromString()} via {connectionInfo.Url}");
 
                 using (_parent._server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
@@ -365,7 +370,7 @@ namespace Raven.Server.Documents.Replication
                         //All good nothing to do
                         break;
                     default:
-                        throw new UnauthorizedAccessException($"{Destination.Url}/{Destination.NodeTag} replied with failure {headerResponse.Status}");
+                        throw new UnauthorizedAccessException($"{Destination.FromString()} replied with failure {headerResponse.Status}");
                 }
             }
         }
@@ -444,7 +449,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public string FromToString => $"from {_database.Name} at {_parent._server.NodeTag} to {Destination.NodeTag}({Destination.Database}) at {Destination.Url}";
+        public string FromToString => $"from {_database.Name} at {_parent._server.NodeTag} to {Destination.FromString()}";
 
         public ReplicationNode Node => Destination;
         public string DestinationFormatted => $"{Destination.Url}/databases/{Destination.Database}";
@@ -573,11 +578,11 @@ namespace Raven.Server.Documents.Replication
                 {
                     case ReplicationMessageReply.ReplyType.Ok:
                         _log.Info(
-                            $"Received reply for replication batch from {Destination.NodeTag} @ {Destination.Url}. New destination change vector is {_destinationLastKnownDocumentChangeVectorAsString}");
+                            $"Received reply for replication batch from {Destination.FromString()}. New destination change vector is {_destinationLastKnownDocumentChangeVectorAsString}");
                         break;
                     case ReplicationMessageReply.ReplyType.Error:
                         _log.Info(
-                            $"Received reply for replication batch from {Destination.NodeTag} at {Destination.Url}. There has been a failure, error string received : {replicationBatchReply.Exception}");
+                            $"Received reply for replication batch from {Destination.FromString()}. There has been a failure, error string received : {replicationBatchReply.Exception}");
                         throw new InvalidOperationException(
                             $"Received failure reply for replication batch. Error string received = {replicationBatchReply.Exception}");
                     default:

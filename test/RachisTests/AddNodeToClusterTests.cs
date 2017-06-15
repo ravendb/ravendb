@@ -53,7 +53,7 @@ namespace RachisTests
             }.Initialize();
             watcherStore.Conventions.DisableTopologyUpdates = true;
 
-            var watcher = new DatabaseWatcher
+            var watcher = new ExternalReplication
             {
                 Database = "WatcherDB",
                 Url = watcherDb.Item2.Single().WebUrls[0]

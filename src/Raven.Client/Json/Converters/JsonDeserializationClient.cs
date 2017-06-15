@@ -127,7 +127,7 @@ namespace Raven.Client.Json.Converters
 
         internal static readonly Func<BlittableJsonReaderObject, SubscriptionState> SubscriptionState = GenerateJsonDeserializationRoutine<SubscriptionState>();
 
-        internal static readonly Func<BlittableJsonReaderObject, DatabaseWatcher> DatabaseWatcher= GenerateJsonDeserializationRoutine<DatabaseWatcher>();
+        internal static readonly Func<BlittableJsonReaderObject, ExternalReplication> DatabaseWatcher= GenerateJsonDeserializationRoutine<ExternalReplication>();
 
         internal static readonly Func<BlittableJsonReaderObject, ModifyCustomFunctionsResult> ModifyCustomFunctionResult = GenerateJsonDeserializationRoutine<ModifyCustomFunctionsResult>();
 

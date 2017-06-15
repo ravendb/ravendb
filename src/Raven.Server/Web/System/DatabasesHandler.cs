@@ -96,7 +96,7 @@ namespace Raven.Server.Web.System
                                 dbRecord.Topology.Members.Select(x => new DynamicJsonValue
                                 {
                                     [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
-                                    [nameof(ServerNode.ClusterTag)] = x.NodeTag,
+                                    [nameof(ServerNode.ClusterTag)] = x,
                                     [nameof(ServerNode.Database)] = dbRecord.DatabaseName,
                                 })
                             ),
@@ -108,15 +108,15 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        private string GetUrl(DatabaseTopologyNode node, ClusterTopology clusterTopology)
+        private string GetUrl(string tag, ClusterTopology clusterTopology)
         {
             string url = null;
 
-            if (Server.ServerStore.NodeTag == node.NodeTag)
+            if (Server.ServerStore.NodeTag == tag)
                 url = ServerStore.NodeHttpServerUrl;
 
             if (url == null)
-                url = clusterTopology.GetUrlFromTag(node.NodeTag);
+                url = clusterTopology.GetUrlFromTag(tag);
 
             return url;
         }
@@ -163,6 +163,7 @@ namespace Raven.Server.Web.System
             }
             var disabled = dbRecord.Disabled;
             var topology = dbRecord.Topology;
+            var clusterTopology = ServerStore.GetClusterTopology(context);
 
             var nodesTopology = new NodesTopology();
 
@@ -170,11 +171,26 @@ namespace Raven.Server.Web.System
             {
                 foreach (var member in topology.Members)
                 {
-                    nodesTopology.Members.Add(GetNodeId(member));
+                    var url = clusterTopology.GetUrlFromTag(member);
+                    var node = new InternalReplication
+                    {
+                        Database = databaseName,
+                        NodeTag = member,
+                        Url = url
+                    };
+                    nodesTopology.Members.Add(GetNodeId(node));
                 }
                 foreach (var promotable in topology.Promotables)
                 {
-                    nodesTopology.Promotables.Add(GetNodeId(promotable, topology.WhoseTaskIsIt(promotable)));
+                    var url = clusterTopology.GetUrlFromTag(promotable);
+                    var node = new InternalReplication
+                    {
+                        Database = databaseName,
+                        NodeTag = promotable,
+                        Url = url
+                    };
+                    var promotableTask = new PromotableTask(promotable,url,databaseName);
+                    nodesTopology.Promotables.Add(GetNodeId(node, topology.WhoseTaskIsIt(promotableTask)));
                 }
             }
 
@@ -252,7 +268,7 @@ namespace Raven.Server.Web.System
                 db.GetAllStoragesEnvironment().Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes);
         }
 
-        private NodeId GetNodeId(ReplicationNode node,string responsible = null)
+        private NodeId GetNodeId(InternalReplication node,string responsible = null)
         {
             var nodeId = new NodeId
             {

@@ -136,12 +136,7 @@ namespace Raven.Server.Web.System
                     if (databaseRecord.Encrypted && NotUsingHttps(url))
                         throw new InvalidOperationException($"Can't add node {node} to database {name} topology because database {name} is encrypted but node {node} doesn't have an SSL certificate.");
 
-                    databaseRecord.Topology.Promotables.Add(new DatabaseTopologyNode
-                    {
-                        Database = name,
-                        NodeTag = node,
-                        Url = url
-                    });
+                    databaseRecord.Topology.Promotables.Add(node);
                 }
 
                 //The case were we don't care where the database will be added to
@@ -163,12 +158,7 @@ namespace Raven.Server.Web.System
                     var rand = new Random().Next();
                     var newNode = allNodes[rand % allNodes.Count];
 
-                    databaseRecord.Topology.Promotables.Add(new DatabaseTopologyNode
-                    {
-                        Database = name,
-                        NodeTag = newNode,
-                        Url = clusterTopology.GetUrlFromTag(newNode)
-                    });
+                    databaseRecord.Topology.Promotables.Add(newNode);
                 }
 
                 var (newEtag, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, etag);
@@ -279,12 +269,7 @@ namespace Raven.Server.Web.System
             {
                 var selectedNode = allNodes[(i + offset) % allNodes.Count];
                 var url = clusterTopology.GetUrlFromTag(selectedNode);
-                topology.Members.Add(new DatabaseTopologyNode
-                {
-                    Database = name,
-                    NodeTag = selectedNode,
-                    Url = url,
-                });
+                topology.Members.Add(selectedNode);
                 nodesAddedTo.Add(url);
             }
 
@@ -295,14 +280,11 @@ namespace Raven.Server.Web.System
         {
             var clusterTopology = ServerStore.GetClusterTopology(context);
 
-            foreach (var node in topology.AllReplicationNodes())
+            foreach (var node in topology.AllNodes)
             {
-                var result = clusterTopology.TryGetNodeTagByUrl(node.Url);
-                if (result.hasUrl == false || result.nodeTag != node.NodeTag)
-                    throw new InvalidOperationException($"The Url {node.Url} for node {node.NodeTag} is not a part of the cluster, the incoming topology is wrong!");
-
-                if (databaseRecord.Encrypted && NotUsingHttps(node.Url))
-                    throw new InvalidOperationException($"{databaseRecord.DatabaseName} is encrypted but node {node.NodeTag} with url {node.Url} doesn't use HTTPS. This is not allowed.");
+                var url = clusterTopology.GetUrlFromTag(node);
+                if (databaseRecord.Encrypted && NotUsingHttps(url))
+                    throw new InvalidOperationException($"{databaseRecord.DatabaseName} is encrypted but node {node} with url {url} doesn't use HTTPS. This is not allowed.");
             }
         }
 

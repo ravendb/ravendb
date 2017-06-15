@@ -24,12 +24,10 @@ using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
 using Sparrow;
@@ -545,10 +543,6 @@ namespace Raven.Server
                 case TcpConnectionHeaderMessage.OperationTypes.Replication:
                     var documentReplicationLoader = tcp.DocumentDatabase.ReplicationLoader;
                     documentReplicationLoader.AcceptIncomingConnection(tcp);
-                    break;
-                case TcpConnectionHeaderMessage.OperationTypes.TopologyDiscovery:
-                    var responder = new TopologyRequestHandler();
-                    responder.AcceptIncomingConnectionAndRespond(tcp, "topology");
                     break;
                 default:
                     throw new InvalidOperationException("Unknown operation for TCP " + header.Operation);

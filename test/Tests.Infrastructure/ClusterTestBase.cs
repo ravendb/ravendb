@@ -147,12 +147,12 @@ namespace Tests.Infrastructure
 
         protected async Task<T> WaitForValueOnGroupAsync<T>(DatabaseTopology topology, Func<ServerStore, T> func, T expected)
         {
-            var nodes = topology.AllReplicationNodes();
+            var nodes = topology.AllNodes;
             var servers = new List<ServerStore>();
             var tasks = new Dictionary<string, Task<T>>();
             foreach (var node in nodes)
             {
-                var server = Servers.Single(s => s.ServerStore.NodeTag == node.NodeTag);
+                var server = Servers.Single(s => s.ServerStore.NodeTag == node);
                 servers.Add(server.ServerStore);
 
             }
@@ -189,12 +189,14 @@ namespace Tests.Infrastructure
             return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores);
         }
 
-        protected async Task<bool> WaitForDocumentInClusterAsync<T>(DatabaseTopology topology, string docId, Func<T, bool> predicate, TimeSpan timeout)
+        protected async Task<bool> WaitForDocumentInClusterAsync<T>(DatabaseTopology topology,string db, string docId, Func<T, bool> predicate, TimeSpan timeout)
         {
-            var nodes = topology.AllReplicationNodes().Select(x => new ServerNode
+            var allNodes = topology.AllNodes;
+            var serversTopology = Servers.Where(s => allNodes.Contains(s.ServerStore.NodeTag));
+            var nodes = serversTopology.Select(x => new ServerNode
             {
-                Url = x.Url,
-                Database = x.Database
+                Url = x.WebUrls[0],
+                Database = db
             });
             var stores = GetDocumentStores(nodes, disableTopologyUpdates: true);
             return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores);

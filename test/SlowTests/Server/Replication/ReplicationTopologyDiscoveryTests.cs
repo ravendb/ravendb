@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
+using Raven.Client.Server;
 using Raven.Server.Config.Settings;
 using Xunit;
 
@@ -233,12 +234,12 @@ namespace SlowTests.Server.Replication
             {
                 var destinations = new[]
                 {
-                    new ReplicationNode
+                    new ExternalReplication
                     {
                         Database = "FooBar",
                         Url = "http://foo.bar/:1234"
                     },
-                    new ReplicationNode
+                    new ExternalReplication
                     {
                         Database = "FooBar2",
                         Url = "http://foo.bar/:4567"

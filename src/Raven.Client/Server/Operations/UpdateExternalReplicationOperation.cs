@@ -11,10 +11,10 @@ namespace Raven.Client.Server.Operations
 {
     public class UpdateExternalReplicationOperation : IServerOperation<ModifyOngoingTaskResult>
     {
-        private readonly DatabaseWatcher _newWatcher;
+        private readonly ExternalReplication _newWatcher;
         private readonly string _database;
 
-        public UpdateExternalReplicationOperation(string database, DatabaseWatcher newWatcher)
+        public UpdateExternalReplicationOperation(string database, ExternalReplication newWatcher)
         {
             MultiDatabase.AssertValidName(database);
             _database = database;
@@ -31,13 +31,13 @@ namespace Raven.Client.Server.Operations
             private readonly JsonOperationContext _context;
             private readonly DocumentConventions _conventions;
             private readonly string _databaseName;
-            private readonly DatabaseWatcher _newWatcher;
+            private readonly ExternalReplication _newWatcher;
 
             public UpdateExternalReplicationCommand(
                 DocumentConventions conventions,
                 JsonOperationContext context,
                 string database,
-                DatabaseWatcher newWatcher
+                ExternalReplication newWatcher
 
             )
             {
@@ -58,7 +58,7 @@ namespace Raven.Client.Server.Operations
                     {
                         var json = new DynamicJsonValue
                         {
-                            [nameof(DatabaseWatcher)] = _newWatcher.ToJson(),
+                            [nameof(ExternalReplication)] = _newWatcher.ToJson(),
                         };
 
                         _context.Write(stream, _context.ReadObject(json, "update-replication"));

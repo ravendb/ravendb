@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Http;
 using Raven.Client.Server;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Notifications;
@@ -87,6 +88,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 using (context.OpenReadTransaction())
                 {
+                    var clusterTopology = _server.GetClusterTopology(context);
                     foreach (var database in _engine.StateMachine.GetDatabaseNames(context))
                     {
                         var databaseRecord = _engine.StateMachine.ReadDatabase(context, database, out long etag);
@@ -102,7 +104,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             continue;
                         }
 
-                        if (UpdateDatabaseTopology(database, databaseRecord.Topology, newStats, prevStats))
+                        if (UpdateDatabaseTopology(database, databaseRecord.Topology, clusterTopology, newStats, prevStats))
                         {
                             var cmd = new UpdateTopologyCommand(database)
                             {
@@ -121,7 +123,7 @@ namespace Raven.Server.ServerWide.Maintenance
         }
 
         private bool _hasLivingNodesFlag;
-        private bool UpdateDatabaseTopology(string dbName, DatabaseTopology topology,
+        private bool UpdateDatabaseTopology(string dbName, DatabaseTopology topology, ClusterTopology clusterTopology,
             Dictionary<string, ClusterNodeStatusReport> currentClusterStats,
             Dictionary<string, ClusterNodeStatusReport> previousClusterStats)
         {
@@ -130,7 +132,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 var hasLivingNode = false;
                 foreach (var member in topology.Members)
                 {
-                    if (currentClusterStats.TryGetValue(member.NodeTag, out var nodeStats) &&
+                    if (currentClusterStats.TryGetValue(member, out var nodeStats) &&
                         nodeStats.LastReportStatus == ClusterNodeStatusReport.ReportStatus.Ok &&
                         nodeStats.LastReport.TryGetValue(dbName, out var dbStats) &&
                         dbStats.Status == DatabaseStatus.Loaded)
@@ -163,7 +165,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 foreach (var member in topology.Members)
                 {
-                    if (currentClusterStats.TryGetValue(member.NodeTag, out var nodeStats) == false ||
+                    if (currentClusterStats.TryGetValue(member, out var nodeStats) == false ||
                         nodeStats.LastReportStatus != ClusterNodeStatusReport.ReportStatus.Ok ||
                         nodeStats.LastReport.TryGetValue(dbName, out var dbStats) == false ||
                         dbStats.Status == DatabaseStatus.Faulted)
@@ -173,14 +175,14 @@ namespace Raven.Server.ServerWide.Maintenance
 
                         if (_logger.IsOperationsEnabled)
                         {
-                            _logger.Operations($"We demote the database {dbName} on {member.NodeTag}");
+                            _logger.Operations($"We demote the database {dbName} on {member}");
                         }
                         return true;
                     }
 
                     if (dbStats.Status == DatabaseStatus.Loading)
                     {
-                        if (previousClusterStats.TryGetValue(member.NodeTag, out var prevNodeStats) &&
+                        if (previousClusterStats.TryGetValue(member, out var prevNodeStats) &&
                             prevNodeStats.LastReport.TryGetValue(dbName, out var prevDbStats) &&
                             prevDbStats.Status == DatabaseStatus.Loading)
                         {
@@ -189,7 +191,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                             if (_logger.IsOperationsEnabled)
                             {
-                                _logger.Operations($"We demote the database {dbName} on {member.NodeTag}, because it is too long in Loading state.");
+                                _logger.Operations($"We demote the database {dbName} on {member}, because it is too long in Loading state.");
                             }
                             return true;
                         }
@@ -202,20 +204,22 @@ namespace Raven.Server.ServerWide.Maintenance
 
             foreach (var promotable in topology.Promotables)
             {
-                var mentorNode = topology.WhoseTaskIsIt(promotable);
+                var url = clusterTopology.GetUrlFromTag(promotable);
+                var task = new PromotableTask(promotable,url, dbName);
+                var mentorNode = topology.WhoseTaskIsIt(task);
 
                 if (previousClusterStats.TryGetValue(mentorNode, out var mentorPrevClusterStats) == false ||
                     mentorPrevClusterStats.LastReport.TryGetValue(dbName, out var mentorPrevDbStats) == false)
                     continue;
 
-                if (currentClusterStats.TryGetValue(promotable.NodeTag, out var promotableClusterStats) == false ||
+                if (currentClusterStats.TryGetValue(promotable, out var promotableClusterStats) == false ||
                    promotableClusterStats.LastReport.TryGetValue(dbName, out var promotableDbStats) == false)
                     continue;
 
                 var status = ConflictsStorage.GetConflictStatus(mentorPrevDbStats.LastDocumentChangeVector, promotableDbStats.LastDocumentChangeVector);
                 if (status == ConflictsStorage.ConflictStatus.AlreadyMerged)
                 {
-                    if (previousClusterStats.TryGetValue(promotable.NodeTag, out var promotablePrevClusterStats) == false ||
+                    if (previousClusterStats.TryGetValue(promotable, out var promotablePrevClusterStats) == false ||
                         promotablePrevClusterStats.LastReport.TryGetValue(dbName, out var promotablePrevDbStats) == false)
                         continue;
 
@@ -226,20 +230,20 @@ namespace Raven.Server.ServerWide.Maintenance
                         topology.Members.Add(promotable);
                         if (_logger.IsOperationsEnabled)
                         {
-                            _logger.Operations($"We promote the database {dbName} on {promotable.NodeTag} to be a full member");
+                            _logger.Operations($"We promote the database {dbName} on {promotable} to be a full member");
                         }
                         return true;
                     }
                     if (_logger.IsInfoEnabled)
                     {
-                        _logger.Info($"The database {dbName} on {promotable.NodeTag} not ready to be promoted, because the indexes are not up-to-date.\n");
+                        _logger.Info($"The database {dbName} on {promotable} not ready to be promoted, because the indexes are not up-to-date.\n");
                     }
                 }
                 else
                 {
                     if (_logger.IsInfoEnabled)
                     {
-                        _logger.Info($"The database {dbName} on {promotable.NodeTag} not ready to be promoted, because the change vectors are {status}.\n" +
+                        _logger.Info($"The database {dbName} on {promotable} not ready to be promoted, because the change vectors are {status}.\n" +
                                            $"mentor's change vector : {mentorPrevDbStats.LastDocumentChangeVector}, node's change vector : {promotableDbStats.LastDocumentChangeVector}");
                     }
                 }

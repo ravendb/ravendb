@@ -368,7 +368,7 @@ namespace FastTests.Tasks
             try
             {
                 var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(MultiDatabase.CreateDatabaseDocument(databaseName), clusterSize));
-                Assert.Equal(clusterSize, databaseResult.Topology.AllReplicationNodes().Count());
+                Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
                 foreach (var server in Servers)
                 {
                     await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag);

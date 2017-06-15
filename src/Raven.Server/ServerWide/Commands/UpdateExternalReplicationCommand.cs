@@ -5,7 +5,7 @@ namespace Raven.Server.ServerWide.Commands
 {
     public class UpdateExternalReplicationCommand : UpdateDatabaseCommand
     {
-        public DatabaseWatcher Watcher;
+        public ExternalReplication Watcher;
 
         public UpdateExternalReplicationCommand() : base(null)
         {
@@ -22,7 +22,7 @@ namespace Raven.Server.ServerWide.Commands
             if (Watcher == null)
                 return null;
 
-            record.Topology.EnsureUniqueDbAndUrl(Watcher);
+            ExternalReplication.EnsureUniqueDbAndUrl(record.ExternalReplication,Watcher);
 
             if (Watcher.TaskId == 0)
             {
@@ -31,10 +31,10 @@ namespace Raven.Server.ServerWide.Commands
             else
             {
                 //modified watcher, remove the old one
-                record.Topology.RemoveWatcher(Watcher.TaskId);
+                ExternalReplication.RemoveWatcher(ref record.ExternalReplication, Watcher.TaskId);
             }
 
-            record.Topology.Watchers.Add(Watcher);
+            record.ExternalReplication.Add(Watcher);
             return null;
         }
 
