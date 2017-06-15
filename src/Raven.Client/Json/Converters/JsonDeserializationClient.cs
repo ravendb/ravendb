@@ -107,8 +107,6 @@ namespace Raven.Client.Json.Converters
 
         public static readonly Func<BlittableJsonReaderObject, GetApiKeysResponse> GetApiKeysResponse = GenerateJsonDeserializationRoutine<GetApiKeysResponse>();
 
-        public static readonly Func<BlittableJsonReaderObject, LiveTopologyInfo> LiveTopologyInfo = GenerateJsonDeserializationRoutine<LiveTopologyInfo>();
-
         public static readonly Func<BlittableJsonReaderObject, BuildNumber> BuildNumber = GenerateJsonDeserializationRoutine<BuildNumber>();
 
         internal static readonly Func<BlittableJsonReaderObject, ExceptionDispatcher.ExceptionSchema> ExceptionSchema = GenerateJsonDeserializationRoutine<ExceptionDispatcher.ExceptionSchema>();

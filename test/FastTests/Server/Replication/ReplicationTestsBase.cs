@@ -156,18 +156,6 @@ namespace FastTests.Server.Replication
             }
         }
 
-        protected LiveTopologyInfo GetLiveTopology(IDocumentStore store)
-        {
-            using (var commands = store.Commands())
-            {
-                var command = new GetLiveTopologyCommand();
-
-                commands.RequestExecutor.Execute(command, commands.Context);
-
-                return command.Result;
-            }
-        }
-
         protected T WaitForDocumentToReplicate<T>(IDocumentStore store, string id, int timeout)
             where T : class
         {
@@ -324,29 +312,6 @@ namespace FastTests.Server.Replication
                     result.Add(name, list.ToArray());
                 }
                 Result = result;
-            }
-        }
-
-        private class GetLiveTopologyCommand : RavenCommand<LiveTopologyInfo>
-        {
-            public override bool IsReadRequest => true;
-
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
-            {
-                url = $"{node.Url}/databases/{node.Database}/debug/live-topology";
-
-                return new HttpRequestMessage
-                {
-                    Method = HttpMethod.Get
-                };
-            }
-
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-            {
-                if (response == null)
-                    ThrowInvalidResponse();
-
-                Result = JsonDeserializationClient.LiveTopologyInfo(response);
             }
         }
 
