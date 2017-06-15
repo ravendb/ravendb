@@ -349,7 +349,9 @@ namespace Raven.Server.ServerWide
 
 
             _engine = new RachisConsensus<ClusterStateMachine>();
-            _engine.Initialize(_env, Configuration.Cluster);
+
+            var myUrl = Configuration.Core.PublicServerUrl.HasValue ? Configuration.Core.PublicServerUrl.Value.UriValue : Configuration.Core.ServerUrl;
+            _engine.Initialize(_env, Configuration.Cluster, myUrl);
 
             _engine.StateMachine.DatabaseChanged += DatabasesLandlord.ClusterOnDatabaseChanged;
             _engine.StateMachine.DatabaseChanged += OnDatabaseChanged;
@@ -622,7 +624,7 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(customFunctionsCommand);
         }
 
-        public Task<(long Etag, object Result)> UpdateExternalReplication(string dbName, DatabaseWatcher watcher)
+        public Task<(long Etag, object Result)> UpdateExternalReplication(string dbName, ExternalReplication watcher)
         {
             var addWatcherCommand = new UpdateExternalReplicationCommand(dbName)
             {

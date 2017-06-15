@@ -242,7 +242,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(BackupType));
             scripter.AddType(typeof(NodeId));
             scripter.AddType(typeof(ModifyOngoingTaskResult));
-            scripter.AddType(typeof(DatabaseWatcher));
+            scripter.AddType(typeof(ExternalReplication));
             scripter.AddType(typeof(GetTaskInfoResult));
 
             return scripter;

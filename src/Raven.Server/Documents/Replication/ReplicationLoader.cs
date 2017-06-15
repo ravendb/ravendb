@@ -110,8 +110,8 @@ namespace Raven.Server.Documents.Replication
 
         internal readonly ServerStore _server;
       
-        public List<ReplicationNode> Destinations => _destinations ?? new List<ReplicationNode>();
-        private List<ReplicationNode> _destinations;
+        public List<ReplicationNode> Destinations => _destinations;
+        private List<ReplicationNode> _destinations = new List<ReplicationNode>();
         public ConflictSolver ConflictSolverConfig;
 
         public ReplicationLoader(DocumentDatabase database, ServerStore server)
@@ -142,7 +142,7 @@ namespace Raven.Server.Documents.Replication
         {
             foreach (var replicationHandler in _outgoing)
             {
-                if (replicationHandler.Node.IsMatch(dest))
+                if (replicationHandler.Node.IsEqualTo(dest))
                     return replicationHandler._lastSentDocumentEtag;
             }
             return null;
@@ -354,19 +354,26 @@ namespace Raven.Server.Documents.Replication
             if (_isInitialized) //precaution -> probably not necessary, but still...
                 return;
 
-            ConflictSolverConfig = record?.ConflictSolverConfig;
+            ConflictSolverConfig = record.ConflictSolverConfig;
             ConflictResolver = new ResolveConflictOnReplicationConfigurationChange(this, _log);
             ConflictResolver.RunConflictResolversOnce();
 
             lock (_locker)
             {
-                _destinations = record?.Topology?.GetDestinations(_server.NodeTag, Database.Name, GetClusterTopology());
+                _internalDestinations = record.Topology.GetDestinations(_server.NodeTag, Database.Name, GetClusterTopology());
+                _externalDestinations = record.ExternalReplication;
+                
+                _destinations.AddRange(_internalDestinations);
+                _destinations.AddRange(_externalDestinations);
+
                 InitializeOutgoingReplications();
             }
             _isInitialized = true;
         }
 
         private readonly object _locker = new object();
+        private List<ReplicationNode> _internalDestinations = new List<ReplicationNode>();
+        private List<ExternalReplication> _externalDestinations = new List<ExternalReplication>();
 
         public void HandleDatabaseRecordChange(DatabaseRecord newRecord)
         {
@@ -419,19 +426,59 @@ namespace Raven.Server.Documents.Replication
                     return;
                 }
 
-                var newDestinations = newRecord.Topology?.GetDestinations(_server.NodeTag, Database.Name, GetClusterTopology());
-                var connectionChanged = DatabaseTopology.FindConnectionChanges(_destinations, newDestinations);
-
-                if (connectionChanged.removeDestinations.Count > 0)
-                {
-                    DropOutgoingConnections(connectionChanged.removeDestinations, ref instancesToDispose);
-                }
-                if (connectionChanged.addDestinations.Count > 0)
-                {
-                    StartOutgoingConnections(connectionChanged.addDestinations);
-                }
-                _destinations = newDestinations;
+                HandleInternalReplication(newRecord, ref instancesToDispose);
+                HandleExternalReplication(newRecord, ref instancesToDispose);
+                _destinations.Clear();
+                _destinations.AddRange(_internalDestinations);
+                _destinations.AddRange(_externalDestinations);
             }
+        }
+
+        private void HandleExternalReplication(DatabaseRecord newRecord, ref List<OutgoingReplicationHandler> instancesToDispose)
+        {
+            var changes = ExternalReplication.FindExternalConnectionChanges(_externalDestinations, newRecord.ExternalReplication);
+            if (changes.removeDestinations.Count > 0)
+            {
+                var removed = _externalDestinations.Where(n => changes.removeDestinations.Contains(n.Url + "@" + n.Database));
+                DropOutgoingConnections(removed, ref instancesToDispose);
+            }
+            if (changes.addDestinations.Count > 0)
+            {
+                var added = newRecord.ExternalReplication.Where(n => changes.addDestinations.Contains(n.Url + "@" + n.Database));
+                StartOutgoingConnections(added.ToList());
+            }
+            _externalDestinations.Clear();
+            _externalDestinations.AddRange(newRecord.ExternalReplication);
+        }
+
+        private void HandleInternalReplication(DatabaseRecord newRecord, ref List<OutgoingReplicationHandler> instancesToDispose)
+        {
+            var newInternalDestinations = newRecord.Topology?.GetDestinations(_server.NodeTag, Database.Name, GetClusterTopology());
+            var internalConnections = DatabaseTopology.InternalReplicationChanges(_internalDestinations, newInternalDestinations);
+
+            if (internalConnections.removeDestinations.Count > 0)
+            {
+                var removed = internalConnections.removeDestinations.Select(r => new InternalReplication
+                {
+                    NodeTag = _server.NodeTag,
+                    Url = r,
+                    Database = Database.Name
+                });
+
+                DropOutgoingConnections(removed, ref instancesToDispose);
+            }
+            if (internalConnections.addDestinations.Count > 0)
+            {
+                var added = internalConnections.addDestinations.Select(r => new InternalReplication
+                {
+                    NodeTag = _server.NodeTag,
+                    Url = r,
+                    Database = Database.Name
+                });
+                StartOutgoingConnections(added.ToList());
+            }
+            _internalDestinations.Clear();
+            _internalDestinations.AddRange(newInternalDestinations);
         }
 
         private void StartOutgoingConnections(IReadOnlyCollection<ReplicationNode> connectionsToAdd)
@@ -449,7 +496,7 @@ namespace Raven.Server.Documents.Replication
 
                 _numberOfSiblings++;
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Initialized outgoing replication for [{destination.NodeTag}/{destination.Url}]");
+                    _log.Info("Initialized outgoing replication for " + destination.FromString());
                 AddAndStartOutgoingReplication(destination);
             }
 
@@ -457,7 +504,7 @@ namespace Raven.Server.Documents.Replication
                 _log.Info("Finished initialization of outgoing replications..");
         }
 
-        private  void DropOutgoingConnections(ICollection<ReplicationNode> connectionsToRemove, ref List<OutgoingReplicationHandler> instancesToDispose)
+        private  void DropOutgoingConnections(IEnumerable<ReplicationNode> connectionsToRemove, ref List<OutgoingReplicationHandler> instancesToDispose)
         {
             var outgoingChanged = _outgoing.Where(o => connectionsToRemove.Contains(o.Destination)).ToList();
             if (outgoingChanged.Count == 0)
@@ -469,7 +516,7 @@ namespace Raven.Server.Documents.Replication
             foreach (var instance in outgoingChanged)
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Stopping replication to {instance.Destination.Database} on {instance.Destination.NodeTag}.");
+                    _log.Info($"Stopping replication to " + instance.Destination.FromString());
 
                 instance.Failed -= OnOutgoingSendingFailed;
                 instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
@@ -686,12 +733,11 @@ namespace Raven.Server.Documents.Replication
                 PerformanceHint.Create(
                     title: "Large number of tombstones because of disabled replication destination",
                     msg:
-                        $"The disabled replication destination {disabledReplicationNode.NodeTag} on " +
-                        $"{disabledReplicationNode.Url} prevents from cleaning large number of tombstones.",
+                        $"The disabled replication destination {disabledReplicationNode.FromString()} prevents from cleaning large number of tombstones.",
 
                     type: PerformanceHintType.Replication,
                     notificationSeverity: NotificationSeverity.Warning,
-                    source: $"{disabledReplicationNode.NodeTag} on {disabledReplicationNode.Url}"
+                    source: disabledReplicationNode.FromString()
                 ));
 
             return result;

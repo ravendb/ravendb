@@ -132,7 +132,7 @@ namespace Tests.Infrastructure
             var storageEnvironment = new StorageEnvironment(server);
             var configuration = new RavenConfiguration(caller, ResourceType.Server);
             configuration.Initialize();
-            rachis.Initialize(storageEnvironment, configuration.Cluster);
+            rachis.Initialize(storageEnvironment, configuration.Cluster,configuration.Core.ServerUrl);
             rachis.OnDispose += (sender, args) =>
             {
                 storageEnvironment.Dispose();

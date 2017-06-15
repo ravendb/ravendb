@@ -51,8 +51,10 @@ namespace RachisTests.DatabaseCluster
                 var createRes = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc));
 
                 var member = createRes.Topology.Members.Single();
-                var dbServer = Servers.Single(s => s.ServerStore.NodeTag == member.NodeTag);
+
+                var dbServer = Servers.Single(s => s.ServerStore.NodeTag == member);    
                 await dbServer.ServerStore.Cluster.WaitForIndexNotification(createRes.RaftCommandIndex);
+                
                 await dbServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
 
                 using (var dbStore = new DocumentStore
@@ -71,8 +73,13 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(1, res.Topology.Members.Count);
                 Assert.Equal(1, res.Topology.Promotables.Count);
 
+<<<<<<< HEAD
                 await WaitForRaftIndexToBeAppliedInCluster(res.RaftCommandIndex, TimeSpan.FromSeconds(5));
                 await WaitForDocumentInClusterAsync<ReplicationBasicTests.User>(res.Topology, "users/1", u => u.Name == "Karmel",TimeSpan.FromSeconds(10));
+=======
+                await WaitForRaftIndexToBeAppliedInCluster(res.ETag, TimeSpan.FromSeconds(5));
+                await WaitForDocumentInClusterAsync<ReplicationBasicTests.User>(res.Topology, databaseName, "users/1", u => u.Name == "Karmel",TimeSpan.FromSeconds(10));
+>>>>>>> 03b6f08de543b6af926cc143be9471ca81363a95
                                 
                 var val = await WaitForValueAsync(async () => await GetPromotableCount(store, databaseName), 0);
                 Assert.Equal(0, val);

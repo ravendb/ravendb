@@ -179,11 +179,7 @@ class databaseCreationModel {
         if (this.replication.manualMode()) {
             const nodes = this.replication.nodes();
             return {
-                Members: nodes.map(node => ({
-                    Database: this.name(),
-                    NodeTag: node.tag(),
-                    Url: node.serverUrl()
-                }))
+                Members: nodes.map(node => node.tag())
             } as Raven.Client.Server.DatabaseTopology;
         }
         return undefined;

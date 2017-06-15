@@ -38,7 +38,7 @@ namespace RachisTests.DatabaseCluster
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
                 databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
             }
-            Assert.Equal(clusterSize, databaseResult.Topology.AllReplicationNodes().Count());
+            Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
             foreach (var server in Servers)
             {
                 await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
@@ -65,6 +65,7 @@ namespace RachisTests.DatabaseCluster
                 }
                 Assert.True(await WaitForDocumentInClusterAsync<User>(
                     databaseResult.Topology,
+                    databaseName,
                     "users/1",
                     u => u.Name.Equals("Karmel"),
                     TimeSpan.FromSeconds(clusterSize + 5)));
@@ -80,7 +81,7 @@ namespace RachisTests.DatabaseCluster
             var clusterSize = 3;
             var databaseName = "ReplicationTestDB";
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, useSsl: useSsl);
-            var watchers = new List<DatabaseWatcher>();
+            var watchers = new List<ExternalReplication>();
 
             using (var store = new DocumentStore()
             {
@@ -94,7 +95,7 @@ namespace RachisTests.DatabaseCluster
             {
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
                 var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
-                Assert.Equal(clusterSize, databaseResult.Topology.AllReplicationNodes().Count());
+                Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
                 foreach (var server in Servers)
                 {
                     await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
@@ -110,6 +111,7 @@ namespace RachisTests.DatabaseCluster
                 }
                 Assert.True(await WaitForDocumentInClusterAsync<User>(
                     databaseResult.Topology,
+                    databaseName,
                     "users/1",
                     u => u.Name.Equals("Karmel"),
                     TimeSpan.FromSeconds(clusterSize + 5)));
@@ -122,7 +124,7 @@ namespace RachisTests.DatabaseCluster
                     await server.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
                     await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore($"Watcher{i}");
 
-                    var watcher = new DatabaseWatcher
+                    var watcher = new ExternalReplication
                     {
                         Database = $"Watcher{i}",
                         Url = res.NodesAddedTo[0]
@@ -157,7 +159,7 @@ namespace RachisTests.DatabaseCluster
             var clusterSize = 3;
             var databaseName = "ReplicationTestDB";
             var leader = await CreateRaftClusterAndGetLeader(clusterSize);
-            DatabaseWatcher watcher;
+            ExternalReplication watcher;
 
             using (var store = new DocumentStore()
             {
@@ -171,7 +173,7 @@ namespace RachisTests.DatabaseCluster
             {
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
                 var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
-                Assert.Equal(clusterSize, databaseResult.Topology.AllReplicationNodes().Count());
+                Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
                 foreach (var server in Servers)
                 {
                     await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
@@ -187,6 +189,7 @@ namespace RachisTests.DatabaseCluster
                 }
                 Assert.True(await WaitForDocumentInClusterAsync<User>(
                     databaseResult.Topology,
+                    databaseName,
                     "users/1",
                     u => u.Name.Equals("Karmel"),
                     TimeSpan.FromSeconds(clusterSize + 5)));
@@ -198,7 +201,7 @@ namespace RachisTests.DatabaseCluster
                 await node.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
                 await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore("Watcher");
 
-                watcher = new DatabaseWatcher
+                watcher = new ExternalReplication
                 {
                     Database = "Watcher",
                     Url = res.NodesAddedTo[0]
@@ -309,7 +312,7 @@ namespace RachisTests.DatabaseCluster
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
                 var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                 var topology = databaseResult.Topology;
-                Assert.Equal(clusterSize, topology.AllReplicationNodes().Count());
+                Assert.Equal(clusterSize, topology.AllNodes.Count());
 
                 await WaitForValueOnGroupAsync(topology, s =>
                {
@@ -324,6 +327,7 @@ namespace RachisTests.DatabaseCluster
                 }
                 Assert.True(await WaitForDocumentInClusterAsync<User>(
                     databaseResult.Topology,
+                    databaseName,
                     "users/1",
                     u => u.Name.Equals("Karmel"),
                     TimeSpan.FromSeconds(clusterSize + 5)));
@@ -362,7 +366,7 @@ namespace RachisTests.DatabaseCluster
             {
                 var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                 var topology = databaseResult.Topology;
-                Assert.Equal(clusterSize, topology.AllReplicationNodes().Count());
+                Assert.Equal(clusterSize, topology.AllNodes.Count());
                 foreach (var server in Servers)
                 {
                     await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
@@ -378,6 +382,7 @@ namespace RachisTests.DatabaseCluster
                 }
                 Assert.True(await WaitForDocumentInClusterAsync<User>(
                     topology,
+                    databaseName,
                     "users/1",
                     u => u.Name.Equals("Karmel"),
                     TimeSpan.FromSeconds(clusterSize + 5)));
@@ -431,7 +436,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.NotNull(doc);
                 Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
 
-                var watcher = new DatabaseWatcher
+                var watcher = new ExternalReplication
                 {
                     Database = store2.Database,
                     Url = store2.Urls.First(),

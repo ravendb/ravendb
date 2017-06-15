@@ -208,7 +208,7 @@ namespace Raven.Server.Documents.Replication
                     }
 
                     if (_log.IsInfoEnabled)
-                        _log.Info($"Found {_orderedReplicaItems.Count:#,#;;0} documents and {_replicaAttachmentStreams.Count} attachment's streams to replicate to {_parent.Node.NodeTag} @ {_parent.Node.Url}.");
+                        _log.Info($"Found {_orderedReplicaItems.Count:#,#;;0} documents and {_replicaAttachmentStreams.Count} attachment's streams to replicate to {_parent.Node.FromString()}.");
 
                     if (_orderedReplicaItems.Count == 0)
                     {

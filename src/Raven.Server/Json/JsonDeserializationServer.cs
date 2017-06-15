@@ -34,24 +34,6 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, TcpConnectionInfo> TcpConnectionInfo =
             GenerateJsonDeserializationRoutine<TcpConnectionInfo>();
 
-        public static readonly Func<BlittableJsonReaderObject, TopologyDiscoveryRequest> TopologyDiscoveryRequest =
-            GenerateJsonDeserializationRoutine<TopologyDiscoveryRequest>();
-
-        public static readonly Func<BlittableJsonReaderObject, TopologyDiscoveryResponseHeader> TopologyDiscoveryResponse =
-            GenerateJsonDeserializationRoutine<TopologyDiscoveryResponseHeader>();
-
-        public static readonly Func<BlittableJsonReaderObject, NodeTopologyInfo> NodeTopologyInfo =
-            GenerateJsonDeserializationRoutine<NodeTopologyInfo>();
-
-        public static readonly Func<BlittableJsonReaderObject, LiveTopologyInfo> LiveTopologyInfo =
-            GenerateJsonDeserializationRoutine<LiveTopologyInfo>();
-
-        public static readonly Func<BlittableJsonReaderObject, ActiveNodeStatus> ActiveNodeStatus =
-            GenerateJsonDeserializationRoutine<ActiveNodeStatus>();
-
-        public static readonly Func<BlittableJsonReaderObject, InactiveNodeStatus> InactiveNodeStatus =
-            GenerateJsonDeserializationRoutine<InactiveNodeStatus>();
-
         public static readonly Func<BlittableJsonReaderObject, DatabaseSmugglerOptions> DatabaseSmugglerOptions = GenerateJsonDeserializationRoutine<DatabaseSmugglerOptions>();
 
         public static readonly Func<BlittableJsonReaderObject, ReplicationMessageReply> ReplicationMessageReply = GenerateJsonDeserializationRoutine<ReplicationMessageReply>();

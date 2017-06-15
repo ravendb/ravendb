@@ -41,8 +41,8 @@ namespace Raven.Server.ServerWide.Commands
             }
             else
             {
-                var allNodes = record.Topology.Members.Select(m => m.NodeTag)
-                    .Concat(record.Topology.Promotables.Select(p => p.NodeTag));
+                var allNodes = record.Topology.Members.Select(m => m)
+                    .Concat(record.Topology.Promotables.Select(p => p));
                     // TODO: we need to delete databases from watchers too but watcher nodeTag seems to be null
                     //.Concat(record.Topology.Watchers.Select(w => w.NodeTag));
 

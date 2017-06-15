@@ -23,7 +23,7 @@ namespace RachisTests.DatabaseCluster
             ModifyOngoingTaskResult addWatcherRes;
             UpdatePeriodicBackupOperationResult updateBackupResult;
             EtlConfiguration<RavenDestination> etlConfiguration;
-            DatabaseWatcher watcher;
+            ExternalReplication watcher;
 
             using (var store = new DocumentStore
             {
@@ -33,7 +33,7 @@ namespace RachisTests.DatabaseCluster
             {
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
                 var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
-                Assert.Equal(clusterSize, databaseResult.Topology.AllReplicationNodes().Count());
+                Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
                 foreach (var server in Servers)
                 {
                     await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
@@ -43,7 +43,7 @@ namespace RachisTests.DatabaseCluster
                     await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
                 }
 
-                watcher = new DatabaseWatcher
+                watcher = new ExternalReplication
                 {
                     Database = "Watcher1",
                     Url = "http://127.0.0.1:9090"
@@ -139,7 +139,7 @@ namespace RachisTests.DatabaseCluster
             {
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
                 var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
-                Assert.Equal(clusterSize, databaseResult.Topology.AllReplicationNodes().Count());
+                Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
                 foreach (var server in Servers)
                 {
                     await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
@@ -149,7 +149,7 @@ namespace RachisTests.DatabaseCluster
                     await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
                 }
 
-                var watcher = new DatabaseWatcher
+                var watcher = new ExternalReplication
                 {
                     Database = "Watcher1",
                     Url = "http://127.0.0.1:9090"

@@ -52,7 +52,7 @@ namespace RachisTests
                     Assert.Equal(replicationFactor, val);
                     var res = await store.Admin.Server.SendAsync(new GetDatabaseTopologyOperation(databaseName));
 
-                    var serverTagToBeDeleted = res.Members[0].NodeTag;
+                    var serverTagToBeDeleted = res.Members[0];
                     replicationFactor--;
                     deleteResult = store.Admin.Server.Send(new DeleteDatabaseOperation(databaseName, hardDelete: true, fromNode: serverTagToBeDeleted));
                     //The +1 is for NotifyLeaderAboutRemoval

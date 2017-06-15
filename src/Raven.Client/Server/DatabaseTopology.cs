@@ -1,128 +1,41 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Http;
 using Sparrow;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using System.Linq;
 
 namespace Raven.Client.Server
 {
-    public class ConflictSolver
-    {
-        public string DatabaseResolverId;
-        public Dictionary<string, ScriptResolver> ResolveByCollection;
-        public bool ResolveToLatest;
-
-        public bool ConflictResolutionChanged(ConflictSolver other)
-        {
-            if (other == null)
-                return true;
-            if (ResolveToLatest != other.ResolveToLatest)
-                return true;
-            if (DatabaseResolverId != other.DatabaseResolverId)
-                return true;
-            if (ResolveByCollection == null && other.ResolveByCollection == null)
-                return false;
-
-            if (ResolveByCollection != null && other.ResolveByCollection != null)
-            {
-                return ResolveByCollection.SequenceEqual(other.ResolveByCollection) == false;
-            }
-            return true;
-        }
-
-
-        public bool IsEmpty()
-        {
-            return
-                ResolveByCollection?.Count == 0 &&
-                ResolveToLatest == false &&
-                DatabaseResolverId == null;
-        }
-
-        public DynamicJsonValue ToJson()
-        {
-            DynamicJsonValue resolveByCollection = null;
-            if(ResolveByCollection != null)
-            {
-                resolveByCollection = new DynamicJsonValue();
-                foreach (var scriptResolver in ResolveByCollection)
-                {
-                    resolveByCollection[scriptResolver.Key] = scriptResolver.Value.ToJson();
-                }
-            }
-            return new DynamicJsonValue
-            {
-                [nameof(DatabaseResolverId)] = DatabaseResolverId,
-                [nameof(ResolveToLatest)] = ResolveToLatest,
-                [nameof(ResolveByCollection)] = resolveByCollection
-            };
-        }
-    }
-
-    public class ScriptResolver
-    {
-        public string Script { get; set; }
-        public DateTime LastModifiedTime { get; } = DateTime.UtcNow;
-
-        public object ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(Script)] = Script,
-                [nameof(LastModifiedTime)] = LastModifiedTime
-            };
-        }
-
-        public override bool Equals(object obj)
-        {
-            var resolver = obj as ScriptResolver;
-            if (resolver == null)
-                return false;
-            return string.Equals(Script, resolver.Script, StringComparison.OrdinalIgnoreCase) && LastModifiedTime == resolver.LastModifiedTime;
-        }
-
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                return ((Script != null ? Script.GetHashCode() : 0) * 397) ^ LastModifiedTime.GetHashCode();
-            }
-        }
-    }
-
     public interface IDatabaseTask
     {
         ulong GetTaskKey();
     }
-
-    public class DatabaseTopologyNode : ReplicationNode, IDatabaseTask
-    {
-    }
-
-    public class DatabaseWatcher : ReplicationNode, IDatabaseTask, IDynamicJsonValueConvertible
-    {
-        public string ApiKey;
-        public long TaskId;
-
-        public override DynamicJsonValue ToJson()
-        {
-            var json = base.ToJson();
-            json[nameof(TaskId)] = TaskId;
-            json[nameof(ApiKey)] = ApiKey;
-            return json;
-        }
-
-        public override ulong GetTaskKey()
-        {
-            var hashCode = CalculateStringHash(Database);
-            hashCode = (hashCode* 397) ^ CalculateStringHash(Url);
-            return hashCode;
-        }
-}
-
+//
+//    public class DatabaseTopologyNode : ReplicationNode, IDatabaseTask, IComparable<DatabaseTopologyNode>
+//    {
+//        public string NodeTag;
+//
+//        public int CompareTo(DatabaseTopologyNode other)
+//        {
+//            return string.Compare(NodeTag, other.NodeTag, StringComparison.OrdinalIgnoreCase);
+//        }
+//
+//        public override DynamicJsonValue ToJson()
+//        {
+//            var djv = base.ToJson();
+//            djv[nameof(NodeTag)] = NodeTag;
+//            return djv;
+//        }
+//
+//        public ulong GetTaskKey()
+//        {
+//            var hashCode = CalculateStringHash(NodeTag);
+//            return (hashCode * 397) ^ CalculateStringHash(Database);
+//        }
+//    }
+//    
     public class LeaderStamp : IDynamicJson
     {
         public long Index = -1;
@@ -140,126 +53,119 @@ namespace Raven.Client.Server
         }
     }
 
+    public class PromotableTask : IDatabaseTask
+    {
+        private readonly string _tag;
+        private readonly string _url;
+        private readonly string _name;
+
+        public PromotableTask(string tag, string url, string name)
+        {
+            _tag = tag;
+            _url = url;
+            _name = name;
+        }
+
+        protected static ulong CalculateStringHash(string s)
+        {
+            return string.IsNullOrEmpty(s) ? 0 : Hashing.XXHash64.Calculate(s, Encodings.Utf8);
+        }
+
+        public ulong GetTaskKey()
+        {
+            var hashCode = CalculateStringHash(_tag);
+            hashCode = (hashCode * 397) ^ CalculateStringHash(_url);
+            return (hashCode * 397) ^ CalculateStringHash(_name);
+        }
+    }
+
+    public class InternalReplication : ReplicationNode
+    {
+        public string NodeTag;
+        public override string FromString()
+        {
+            return $"[{NodeTag}/{Url}]";
+        }
+    }
+
     public class DatabaseTopology
     {
         public bool PartOfCluster = false;
-        public List<DatabaseTopologyNode> Members = new List<DatabaseTopologyNode>(); // Member of the master to master replication inside cluster
-        public List<DatabaseTopologyNode> Promotables = new List<DatabaseTopologyNode>(); // Promotable is in a receive state until Leader decides it can become a Member
-        public List<DatabaseWatcher> Watchers = new List<DatabaseWatcher>(); // Watcher only receives (slave)
+        public List<string> Members = new List<string>();
+        public List<string> Promotables = new List<string>();
 
         public LeaderStamp Stamp;
 
         public bool RelevantFor(string nodeTag)
         {
-            return Members.Exists(m => m.NodeTag == nodeTag) ||
-                   Promotables.Exists(p => p.NodeTag == nodeTag);
+            return Members.Contains(nodeTag) ||
+                   Promotables.Contains(nodeTag);
         }
-
+        
         public List<ReplicationNode> GetDestinations(string nodeTag, string databaseName, ClusterTopology clusterTopology)
         {
-            var list = new List<ReplicationNode>();
+            var list = new List<string>();
+            var destinations = new List<ReplicationNode>();
 
             foreach (var member in Members)
             {
-                if (member.NodeTag == nodeTag) //skip me
+                if (member == nodeTag) //skip me
                     continue;
-                list.Add(member);
+                list.Add(clusterTopology.GetUrlFromTag(member));
             }
             foreach (var promotable in Promotables)
             {
-                if (WhoseTaskIsIt(promotable) == nodeTag)
-                    list.Add(promotable);
+                var url = clusterTopology.GetUrlFromTag(promotable);
+                if (WhoseTaskIsIt(new PromotableTask(promotable, url, databaseName)) == nodeTag)
+                {
+                    list.Add(url);
+                }
             }
             // remove nodes that are not in the raft cluster topology
-            list.RemoveAll(n => clusterTopology.Contains(n.NodeTag) == false);
-            foreach (var watcher in Watchers)
+            list.RemoveAll(url => clusterTopology.TryGetNodeTagByUrl(url).hasUrl == false);
+
+            foreach (var url in list)
             {
-                if (WhoseTaskIsIt(watcher) == nodeTag)
-                    list.Add(watcher);
+                destinations.Add(new InternalReplication
+                {
+                    NodeTag = nodeTag,
+                    Url = url,
+                    Database = databaseName
+                });
             }
-            return list;
+
+            return destinations;
         }
 
-        public static (List<ReplicationNode> addDestinations, List<ReplicationNode> removeDestinations) FindConnectionChanges(List<ReplicationNode> oldDestinations, List<ReplicationNode> newDestinations)
+        // Find changes in the connection of the internal database group
+        public static (HashSet<string> addDestinations, HashSet<string> removeDestinations) 
+            InternalReplicationChanges(List<ReplicationNode> oldDestinations, List<ReplicationNode> newDestinations)
         {
-            var addDestinations = new List<ReplicationNode>();
-            var removeDestinations = new List<ReplicationNode>();
+            var oldList = new List<string>();
+            var newList = new List<string>();
 
-            if (oldDestinations == null)
+            if (oldDestinations != null)
             {
-                oldDestinations = new List<ReplicationNode>();
+                oldList.AddRange(oldDestinations.Select(s => s.Url));
             }
-            if (newDestinations == null)
+            if (newDestinations != null)
             {
-                newDestinations = new List<ReplicationNode>();
+                newList.AddRange(newDestinations.Select(s => s.Url));
             }
 
-            // this will work because the destinations are sorted. 
-            using (var oldEnum = oldDestinations.GetEnumerator())
-            using (var newEnum = newDestinations.GetEnumerator())
+            var addDestinations = new HashSet<string>(newList);
+            var removeDestinations = new HashSet<string>(oldList);
+
+            foreach (var destination in newList)
             {
-                var hasNewValues = newEnum.MoveNext();
-                var hasOldValues = oldEnum.MoveNext();
-
-                while (hasNewValues && hasOldValues)
+                if (removeDestinations.Contains(destination))
                 {
-                    var res = oldEnum.Current.CompareTo(newEnum.Current);
-                    if (res > 0)
-                    {
-                        addDestinations.Add(newEnum.Current);
-                        hasNewValues = newEnum.MoveNext();
-                        continue;
-                    }
-                    if (res < 0)
-                    {
-                        removeDestinations.Add(oldEnum.Current);
-                        hasOldValues = oldEnum.MoveNext();
-                        continue;
-                    }
-
-                    hasNewValues = newEnum.MoveNext();
-                    hasOldValues = oldEnum.MoveNext();
-                }
-
-                // the remaining nodes of the old destinations should be removed
-                while (hasOldValues)
-                {
-                    removeDestinations.Add(oldEnum.Current);
-                    hasOldValues = oldEnum.MoveNext();
-                }
-
-                // the remaining nodes of the new destinations should be added
-                while (hasNewValues)
-                {
-                    addDestinations.Add(newEnum.Current);
-                    hasNewValues = newEnum.MoveNext();
+                    removeDestinations.Remove(destination);
+                    addDestinations.Remove(destination);
                 }
             }
+
             return (addDestinations, removeDestinations);
-        }
-
-        public void RemoveWatcher(long taskId)
-        {
-            foreach (var watcher in Watchers)
-            {
-                if (watcher.TaskId != taskId)
-                    continue;
-                Watchers.Remove(watcher);
-                return;
-            }
-        }
-
-        public void EnsureUniqueDbAndUrl(DatabaseWatcher watcher)
-        {
-            var dbName = watcher.Database;
-            var url = watcher.Url;
-            foreach (var w in Watchers)
-            {
-                if (w.Database != dbName || w.Url != url)
-                    continue;
-                Watchers.Remove(watcher);
-                return;
-            }
         }
 
         public IEnumerable<string> AllNodes
@@ -268,24 +174,12 @@ namespace Raven.Client.Server
             {
                 foreach (var member in Members)
                 {
-                    yield return member.NodeTag;
+                    yield return member;
                 }
                 foreach (var promotable in Promotables)
                 {
-                    yield return promotable.NodeTag;
+                    yield return promotable;
                 }
-            }
-        }
-
-        public IEnumerable<ReplicationNode> AllReplicationNodes()
-        {
-            foreach (var member in Members)
-            {
-                yield return member;
-            }
-            foreach (var promotable in Promotables)
-            {
-                yield return promotable;
             }
         }
 
@@ -293,17 +187,16 @@ namespace Raven.Client.Server
         {
             return new DynamicJsonValue
             {
-                [nameof(Members)] = new DynamicJsonArray(Members.Select(m => m.ToJson())),
-                [nameof(Promotables)] = new DynamicJsonArray(Promotables.Select(p => p.ToJson())),
-                [nameof(Watchers)] = new DynamicJsonArray(Watchers.Select(w => w.ToJson())),
+                [nameof(Members)] = new DynamicJsonArray(Members),
+                [nameof(Promotables)] = new DynamicJsonArray(Promotables),
                 [nameof(Stamp)] = Stamp.ToJson()
             };
         }
 
         public void RemoveFromTopology(string delDbFromNode)
         {
-            Members.RemoveAll(m => m.NodeTag == delDbFromNode);
-            Promotables.RemoveAll(p => p.NodeTag == delDbFromNode);
+            Members.RemoveAll(m => m == delDbFromNode);
+            Promotables.RemoveAll(p => p == delDbFromNode);
         }
 
         public string WhoseTaskIsIt(IDatabaseTask task)
@@ -311,7 +204,7 @@ namespace Raven.Client.Server
             if (PartOfCluster == false)
                 return null;
 
-            var topology = new List<DatabaseTopologyNode>(Members);
+            var topology = new List<string>(Members);
             topology.AddRange(Promotables);
             topology.Sort();
 
@@ -323,8 +216,8 @@ namespace Raven.Client.Server
             {
                 var index = (int)Hashing.JumpConsistentHash.Calculate(key, topology.Count);
                 var entry = topology[index];
-                if (entry.Disabled == false && Members.Contains(entry))
-                    return entry.NodeTag;
+                if (Members.Contains(entry))
+                    return entry;
 
                 topology.RemoveAt(index);
 

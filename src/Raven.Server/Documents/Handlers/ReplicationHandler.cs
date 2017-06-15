@@ -274,8 +274,6 @@ namespace Raven.Server.Documents.Handlers
                         ["Url"] = item.Url,
                         ["Database"] = item.Database,
                         ["Disabled"] = item.Disabled,
-                        ["IgnoredClient"] = item.IgnoredClient,
-                        ["SpecifiedCollections"] = item.SpecifiedCollections
                     });
                 }
 
@@ -305,8 +303,6 @@ namespace Raven.Server.Documents.Handlers
                             ["Url"] = item.Key.Url,
                             ["Database"] = item.Key.Database,
                             ["Disabled"] = item.Key.Disabled,
-                            ["IgnoredClient"] = item.Key.IgnoredClient,
-                            ["SpecifiedCollections"] = item.Key.SpecifiedCollections
                         },
                         ["Value"] = new DynamicJsonValue
                         {
@@ -399,8 +395,6 @@ namespace Raven.Server.Documents.Handlers
                         ["Url"] = queueItem.Url,
                         ["Database"] = queueItem.Database,
                         ["Disabled"] = queueItem.Disabled,
-                        ["IgnoredClient"] = queueItem.IgnoredClient,
-                        ["SpecifiedCollections"] = queueItem.SpecifiedCollections
                     });
                 }
 
