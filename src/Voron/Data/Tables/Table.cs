@@ -1209,13 +1209,53 @@ namespace Voron.Data.Tables
 
                         if (beforeDelete != null)
                         {
-                            int size;
-                            var ptr = DirectRead(fstIt.CurrentKey, out size);
+                            var ptr = DirectRead(fstIt.CurrentKey, out int size);
                             if (tableValueHolder == null)
                                 tableValueHolder = new TableValueHolder();
                             tableValueHolder.Reader = new TableValueReader(fstIt.CurrentKey, ptr, size);
                             beforeDelete(tableValueHolder);
                         }
+
+                        Delete(fstIt.CurrentKey);
+                        deleted++;
+                    }
+                }
+            }
+            return deleted;
+        }
+
+        public long DeleteForwardFrom(TableSchema.SchemaIndexDef index, Slice value, bool startsWith, long numberOfEntriesToDelete,
+            Func<TableValueHolder, bool> beforeDelete)
+        {
+            if (numberOfEntriesToDelete < 0)
+                ThrowNonNegativeNumberOfEntriesToDelete();
+
+            var deleted = 0;
+            var tree = GetTree(index);
+            TableValueHolder tableValueHolder = null;
+            while (deleted < numberOfEntriesToDelete)
+            {
+                // deleting from a table can shift things around, so we delete 
+                // them one at a time
+                using (var it = tree.Iterate(false))
+                {
+                    if (startsWith)
+                        it.SetRequiredPrefix(value);
+                    if (it.Seek(value) == false)
+                        return deleted;
+
+                    var fst = GetFixedSizeTree(tree, it.CurrentKey.Clone(_tx.Allocator), 0);
+                    using (var fstIt = fst.Iterate())
+                    {
+                        if (fstIt.Seek(long.MinValue) == false)
+                            break;
+
+                        var ptr = DirectRead(fstIt.CurrentKey, out int size);
+                        if (tableValueHolder == null)
+                            tableValueHolder = new TableValueHolder();
+                        tableValueHolder.Reader = new TableValueReader(fstIt.CurrentKey, ptr, size);
+                        if (beforeDelete(tableValueHolder) == false)
+                            return deleted;
 
                         Delete(fstIt.CurrentKey);
                         deleted++;

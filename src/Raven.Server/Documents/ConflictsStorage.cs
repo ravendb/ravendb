@@ -272,8 +272,7 @@ namespace Raven.Server.Documents
                 return list;
 
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
-            Slice prefixSlice;
-            using (GetConflictsIdPrefix(context, lowerId, out prefixSlice))
+            using (GetConflictsIdPrefix(context, lowerId, out Slice prefixSlice))
             {
                 conflictsTable.DeleteForwardFrom(ConflictsSchema.Indexes[IdAndChangeVectorSlice], prefixSlice, true, long.MaxValue, before =>
                 {

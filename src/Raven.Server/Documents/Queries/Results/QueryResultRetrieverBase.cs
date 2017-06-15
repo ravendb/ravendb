@@ -242,7 +242,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         private class UniqueFieldNames : IEqualityComparer<IFieldable>
         {
-            public static UniqueFieldNames Instance = new UniqueFieldNames();
+            public static readonly UniqueFieldNames Instance = new UniqueFieldNames();
 
             public bool Equals(IFieldable x, IFieldable y)
             {
