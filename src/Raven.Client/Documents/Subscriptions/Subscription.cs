@@ -330,7 +330,7 @@ namespace Raven.Client.Documents.Subscriptions
             if (connectionStatus.Type == SubscriptionConnectionServerMessage.MessageType.Error)
             {
                 if (connectionStatus.Exception.Contains(nameof(DatabaseDoesNotExistException)))
-                    throw new DatabaseDoesNotExistException(connectionStatus.Message);
+                    DatabaseDoesNotExistException.ThrowWithMessage(_dbName, connectionStatus.Message);
             }
             if (connectionStatus.Type != SubscriptionConnectionServerMessage.MessageType.ConnectionStatus)
                 throw new Exception("Server returned illegal type message when expecting connection status, was: " +

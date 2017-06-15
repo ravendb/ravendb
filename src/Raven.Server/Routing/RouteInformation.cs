@@ -67,14 +67,13 @@ namespace Raven.Server.Routing
             var databaseName = context.RouteMatch.GetCapture();
             var databasesLandlord = context.RavenServer.ServerStore.DatabasesLandlord;
             var database = databasesLandlord.TryGetOrCreateResourceStore(databaseName);
-           
+
             if (database.IsCompleted)
             {
                 context.Database = database.Result;
-                
+
                 if (context.Database == null)
-                    ThrowDatabaseDoesNotExist(databaseName);
-                
+                    DatabaseDoesNotExistException.Throw(databaseName);
 
                 return context.Database.DatabaseShutdown.IsCancellationRequested == false
                     ? Task.CompletedTask
@@ -84,7 +83,7 @@ namespace Raven.Server.Routing
             return UnlikelyWaitForDatabaseToLoad(context, database, databasesLandlord, databaseName);
         }
 
-        private async Task UnlikelyWaitForDatabaseToUnload(RequestHandlerContext context, DocumentDatabase database, 
+        private async Task UnlikelyWaitForDatabaseToUnload(RequestHandlerContext context, DocumentDatabase database,
             DatabasesLandlord databasesLandlord, StringSegment databaseName)
         {
             var time = databasesLandlord.DatabaseLoadTimeout;
@@ -106,7 +105,7 @@ namespace Raven.Server.Routing
             }
             context.Database = await database;
             if (context.Database == null)
-                ThrowDatabaseDoesNotExist(databaseName);
+                DatabaseDoesNotExistException.Throw(databaseName);
         }
 
         private static void ThrowDatabaseUnloadTimeout(StringSegment databaseName, TimeSpan timeout)
@@ -119,12 +118,7 @@ namespace Raven.Server.Routing
             throw new DatabaseLoadTimeoutException($"Timeout when loading database {databaseName} after {timeout}, try again later");
         }
 
-        private static void ThrowDatabaseDoesNotExist(StringSegment databaseName)
-        {
-            throw new DatabaseDoesNotExistException($"Database '{databaseName}' was not found");
-        }
-
-        public Tuple<HandleRequest,Task<HandleRequest>> TryGetHandler(RequestHandlerContext context)
+        public Tuple<HandleRequest, Task<HandleRequest>> TryGetHandler(RequestHandlerContext context)
         {
             if (_typeOfRoute == RouteType.None)
             {

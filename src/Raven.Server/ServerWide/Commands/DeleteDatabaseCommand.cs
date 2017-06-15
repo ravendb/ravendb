@@ -33,7 +33,7 @@ namespace Raven.Server.ServerWide.Commands
             {
                 if (record.Topology.RelevantFor(FromNode) == false)
                 {
-                    throw new DatabaseDoesNotExistException($"We were requested to delete {record.DatabaseName} from {FromNode} but it does not exists in the database record.");
+                    DatabaseDoesNotExistException.ThrowWithMessage(record.DatabaseName, $"Request to delete database from node '{FromNode}' failed.");
                 }
                 record.Topology.RemoveFromTopology(FromNode);
 

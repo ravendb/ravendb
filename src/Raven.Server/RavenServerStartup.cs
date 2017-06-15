@@ -54,7 +54,7 @@ namespace Raven.Server
             {
                 app.Run(UnsafeRequestHandler);
                 return;
-            }            
+            }
             app.Run(RequestHandler);
         }
 
@@ -85,7 +85,7 @@ namespace Raven.Server
                 return RequestHandler(context);
             }
 
-            context.Response.StatusCode = (int) HttpStatusCode.ServiceUnavailable;
+            context.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
 
             if (IsHtmlAcceptable(context))
             {
@@ -132,7 +132,7 @@ namespace Raven.Server
             foreach (var acceptHeader in acceptHeaders)
             {
                 if (acceptHeader != null
-                    && (acceptHeader.Contains("text/html") 
+                    && (acceptHeader.Contains("text/html")
                         || acceptHeader.Contains("text/*")))
                 {
                     result = true;
@@ -152,7 +152,7 @@ namespace Raven.Server
         private async Task RequestHandler(HttpContext context)
         {
             try
-            {                
+            {
                 context.Response.StatusCode = (int)HttpStatusCode.OK;
                 context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
 
@@ -201,7 +201,7 @@ namespace Raven.Server
                 var response = context.Response;
 
                 MaybeSetExceptionStatusCode(response, e);
-            
+
                 JsonOperationContext ctx;
                 using (_server.ServerStore.ContextPool.AllocateOperationContext(out ctx))
                 {
@@ -301,7 +301,7 @@ namespace Raven.Server
                 return;
             }
 
-            if (exception is DatabaseNotFoundException || exception is DatabaseDisabledException)
+            if (exception is DatabaseDisabledException)
             {
                 response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
                 return;

@@ -254,7 +254,7 @@ namespace RachisTests
 
                         AsyncHelpers.RunSync(continueMre.WaitAsync);
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
 
                     }
@@ -291,7 +291,7 @@ namespace RachisTests
                         if (docsCount == nodesAmount && versionsCount == Math.Pow(nodesAmount, 2))
                             reachedMaxDocCountMre.Set();
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
 
                     }
@@ -462,7 +462,7 @@ namespace RachisTests
                     proggress.MaxId = curId;
 
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
 
 
@@ -478,7 +478,7 @@ namespace RachisTests
                         reachedMaxDocCountMre.Set();
                     }
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
 
 

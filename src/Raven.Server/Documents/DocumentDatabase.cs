@@ -212,7 +212,7 @@ namespace Raven.Server.Documents
                     record = _serverStore.Cluster.ReadDatabase(context, Name,out index);
 
                 if (record == null)
-                    throw new DatabaseDoesNotExistException("The database " + Name + " does not exist or was deleted");
+                    DatabaseDoesNotExistException.Throw(Name);
                 
                 _indexStoreTask = IndexStore.InitializeAsync(record, index);
                 _transformerStoreTask = TransformerStore.InitializeAsync(record);
