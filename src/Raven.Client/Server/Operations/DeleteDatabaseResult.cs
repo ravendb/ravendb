@@ -8,6 +8,6 @@ namespace Raven.Client.Server.Operations
 {
     public class DeleteDatabaseResult
     {
-        public long ETag { get; set; }
+        public long RaftCommandIndex { get; set; }
     }
 }

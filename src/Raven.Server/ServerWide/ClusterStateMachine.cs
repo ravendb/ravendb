@@ -324,9 +324,9 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name.ToLowerInvariant(), out Slice valueNameLowered))
                 using (var databaseRecordAsJson = EntityToBlittable.ConvertEntityToBlittable(addDatabaseCommand.Record, DocumentConventions.Default, context))
                 {
-                    if (addDatabaseCommand.Etag != null)
+                    if (addDatabaseCommand.RaftCommandIndex != null)
                     {
-                        if (items.ReadByKey(valueNameLowered, out TableValueReader reader) == false && addDatabaseCommand.Etag != 0)
+                        if (items.ReadByKey(valueNameLowered, out TableValueReader reader) == false && addDatabaseCommand.RaftCommandIndex != 0)
                         {
                             NotifyLeaderAboutError(index, leader, new ConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " does not exists, but had a non zero etag"));
                             return;
@@ -335,10 +335,10 @@ namespace Raven.Server.ServerWide
                         var actualEtag = Bits.SwapBytes(*(long*)reader.Read(3, out int size));
                         Debug.Assert(size == sizeof(long));
 
-                        if (actualEtag != addDatabaseCommand.Etag.Value)
+                        if (actualEtag != addDatabaseCommand.RaftCommandIndex.Value)
                         {
                             NotifyLeaderAboutError(index, leader,
-                                new ConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " has etag " + actualEtag + " but was expecting " + addDatabaseCommand.Etag));
+                                new ConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " has etag " + actualEtag + " but was expecting " + addDatabaseCommand.RaftCommandIndex));
                             return;
                         }
                     }
@@ -475,10 +475,10 @@ namespace Raven.Server.ServerWide
 
                     databaseRecord = JsonDeserializationCluster.DatabaseRecord(databaseRecordJson);
 
-                    if (updateCommand.Etag != null && etag != updateCommand.Etag.Value)
+                    if (updateCommand.RaftCommandIndex != null && etag != updateCommand.RaftCommandIndex.Value)
                     {
                         NotifyLeaderAboutError(index, leader,
-                            new ConcurrencyException($"Concurrency violation at executing {type} command, the database {databaseRecord.DatabaseName} has etag {etag} but was expecting {updateCommand.Etag}"));
+                            new ConcurrencyException($"Concurrency violation at executing {type} command, the database {databaseRecord.DatabaseName} has etag {etag} but was expecting {updateCommand.RaftCommandIndex}"));
                         return null;
                     }
 

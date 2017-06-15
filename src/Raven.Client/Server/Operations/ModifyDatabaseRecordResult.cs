@@ -2,6 +2,6 @@
 {
     public class ModifyDatabaseRecordResult
     {
-        public long ETag { get; set; }
+        public long RaftCommandIndex { get; set; }
     }
 }

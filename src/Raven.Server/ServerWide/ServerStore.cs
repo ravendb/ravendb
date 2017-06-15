@@ -873,7 +873,7 @@ namespace Raven.Server.ServerWide
         }
 
 
-        public Task<(long Etag, object Result)> WriteDatabaseRecordAsync(string databaseName, DatabaseRecord record, long? etag)
+        public Task<(long Etag, object Result)> WriteDatabaseRecordAsync(string databaseName, DatabaseRecord record, long? index)
         {
             Debug.Assert(record.Topology != null);
             record.Topology.Stamp = new LeaderStamp
@@ -885,7 +885,7 @@ namespace Raven.Server.ServerWide
             var addDatabaseCommand = new AddDatabaseCommand
             {
                 Name = databaseName,
-                Etag = etag,
+                RaftCommandIndex = index,
                 Record = record
             };
 
@@ -1025,7 +1025,7 @@ namespace Raven.Server.ServerWide
 
                 await _clusterRequestExecutor.ExecuteAsync(command, context, ServerShutdown);
 
-                return (command.Result.Etag, command.Result.Data);
+                return (command.Result.RaftCommandIndex, command.Result.Data);
             }
         }
 
@@ -1068,7 +1068,7 @@ namespace Raven.Server.ServerWide
 
         public class PutRaftCommandResult
         {
-            public long Etag { get; set; }
+            public long RaftCommandIndex { get; set; }
 
             public object Data { get; set; }
         }

@@ -61,8 +61,8 @@ namespace Tests.Infrastructure
 
             var databaseResult = CreateClusterDatabase(databaseName, store);
 
-            Assert.True(databaseResult.ETag > 0); //sanity check                
-            await WaitForRaftIndexToBeAppliedInCluster(databaseResult.ETag, TimeSpan.FromSeconds(5));
+            Assert.True(databaseResult.RaftCommandIndex > 0); //sanity check                
+            await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(5));
         }
 
         protected static CreateDatabaseResult CreateClusterDatabase(string databaseName, IDocumentStore store, int replicationFactor = 2)
@@ -452,7 +452,7 @@ namespace Tests.Infrastructure
             int numberOfInstances = 0;
             foreach (var server in Servers)
             {
-                await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag);
+                await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
             }
             foreach (var server in Servers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)))
             {
@@ -461,7 +461,7 @@ namespace Tests.Infrastructure
             }
             if (numberOfInstances != replicationFactor)
                 throw new InvalidOperationException("Couldn't create the db on all nodes, just on " + numberOfInstances + " out of " + replicationFactor);
-            return (databaseResult.ETag,
+            return (databaseResult.RaftCommandIndex,
                 Servers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)).ToList());
         }
 

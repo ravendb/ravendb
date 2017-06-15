@@ -149,10 +149,10 @@ namespace FastTests
                         }
 
                         var result = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
-                        Assert.True(result.ETag > 0); //sanity check             
+                        Assert.True(result.RaftCommandIndex > 0); //sanity check             
                         store.Urls = result.NodesAddedTo;
                         var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
-                        var task = WaitForRaftIndexToBeAppliedInCluster(result.ETag, timeout);
+                        var task = WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout);
                         task.ConfigureAwait(false).GetAwaiter().GetResult();
                     }
 
@@ -191,7 +191,7 @@ namespace FastTests
                                     continue;
                                 }
 
-                                server.ServerStore.Cluster.WaitForIndexNotification(result.ETag).ConfigureAwait(false).GetAwaiter().GetResult();
+                                server.ServerStore.Cluster.WaitForIndexNotification(result.RaftCommandIndex).ConfigureAwait(false).GetAwaiter().GetResult();
                             }
                         }
                     };

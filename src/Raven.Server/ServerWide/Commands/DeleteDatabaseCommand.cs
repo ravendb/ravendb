@@ -62,7 +62,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             json[nameof(HardDelete)] = HardDelete;
             json[nameof(FromNode)] = FromNode;
-            json[nameof(Etag)] = Etag;
+            json[nameof(RaftCommandIndex)] = RaftCommandIndex;
         }
     }
 }

@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(ServerStore.PutRaftCommandResult.Etag)] = etag,
+                        [nameof(ServerStore.PutRaftCommandResult.RaftCommandIndex)] = etag,
                         [nameof(ServerStore.PutRaftCommandResult.Data)] = result
                     });
                     writer.Flush();

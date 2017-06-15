@@ -41,7 +41,7 @@ namespace RachisTests.DatabaseCluster
             Assert.Equal(clusterSize, databaseResult.Topology.AllReplicationNodes().Count());
             foreach (var server in Servers)
             {
-                await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag);
+                await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
             }
             foreach (var server in Servers.Where(s => databaseResult.NodesAddedTo.Any(n => n == s.WebUrls[0])))
             {
@@ -97,7 +97,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(clusterSize, databaseResult.Topology.AllReplicationNodes().Count());
                 foreach (var server in Servers)
                 {
-                    await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag);
+                    await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
                 }
                 foreach (var server in Servers)
                 {
@@ -119,7 +119,7 @@ namespace RachisTests.DatabaseCluster
                     doc = MultiDatabase.CreateDatabaseDocument($"Watcher{i}");
                     var res = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc));
                     var server = Servers.Single(x => x.WebUrls[0] == res.NodesAddedTo[0]);
-                    await server.ServerStore.Cluster.WaitForIndexNotification(res.ETag);
+                    await server.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
                     await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore($"Watcher{i}");
 
                     var watcher = new DatabaseWatcher
@@ -174,7 +174,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(clusterSize, databaseResult.Topology.AllReplicationNodes().Count());
                 foreach (var server in Servers)
                 {
-                    await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag);
+                    await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
                 }
                 foreach (var server in Servers)
                 {
@@ -195,7 +195,7 @@ namespace RachisTests.DatabaseCluster
                 doc = MultiDatabase.CreateDatabaseDocument("Watcher");
                 var res = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc));
                 var node = Servers.Single(x => x.WebUrls[0] == res.NodesAddedTo[0]);
-                await node.ServerStore.Cluster.WaitForIndexNotification(res.ETag);
+                await node.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
                 await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore("Watcher");
 
                 watcher = new DatabaseWatcher
@@ -241,7 +241,7 @@ namespace RachisTests.DatabaseCluster
                 var doc = MultiDatabase.CreateDatabaseDocument("Watcher2");
                 var res = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc));
                 var node = Servers.Single(x => x.WebUrls[0] == res.NodesAddedTo[0]);
-                await node.ServerStore.Cluster.WaitForIndexNotification(res.ETag);
+                await node.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
                 await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore("Watcher2");
 
                 //modify watcher
@@ -365,7 +365,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(clusterSize, topology.AllReplicationNodes().Count());
                 foreach (var server in Servers)
                 {
-                    await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag);
+                    await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
                 }
                 foreach (var server in Servers)
                 {

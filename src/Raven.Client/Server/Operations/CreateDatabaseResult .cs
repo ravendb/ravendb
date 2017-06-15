@@ -21,7 +21,7 @@ namespace Raven.Client.Server.Operations
         /// <summary>
         /// The Raft Command Index that was executed 
         /// </summary>
-        public long ETag { get; set; } // Todo: Change 'Etag' property to: 'RaftCommandIndex' ! (see issue: 7393)
+        public long RaftCommandIndex { get; set; }
 
         public DatabaseTopology Topology { get; set; }
 
@@ -33,7 +33,7 @@ namespace Raven.Client.Server.Operations
         /// <summary>
         /// The Raft Command Index that was executed 
         /// </summary>
-        public long ETag { get; set; } 
+        public long RaftCommandIndex { get; set; } 
 
         public string Key { get; set; }
         public DatabaseTopology Topology { get; set; }
