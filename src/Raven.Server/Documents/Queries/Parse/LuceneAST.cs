@@ -423,7 +423,8 @@ This edge-case has a very slim chance of happening, but still we should not igno
     public class RangeLuceneASTNode : LuceneASTNodeBase
     {
         private bool _maxIsNull;
-        private bool _minIsNull;        
+        private bool _minIsNull;
+        public static TermLuceneASTNode StarTerm = new TermLuceneASTNode { Term = "*", Type = TermLuceneASTNode.TermType.Null };
         public override IEnumerable<LuceneASTNodeBase> Children
         {
             get { yield break; }

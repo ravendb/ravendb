@@ -7,7 +7,7 @@
 %union { 
 			public string s; 
 			public FieldLuceneASTNode fn;
-                        public FieldName f;
+            public FieldName f;
 			public ParenthesistLuceneASTNode pn;
 			public PostfixModifiers pm;
 			public LuceneASTNodeBase nb;
@@ -22,6 +22,7 @@
 %start main
 
 %token NOT OR AND INTERSECT PLUS MINUS EOF OPEN_CURLY_BRACKET CLOSE_CURLY_BRACKET OPEN_SQUARE_BRACKET CLOSE_SQUARE_BRACKET 
+%token EQUAL GREATER_EQUAL GREATER LESS_EQUAL LESS
 %token TILDA BOOST QUOTE TO COLON OPEN_PAREN CLOSE_PAREN ALL_DOC
 %token <s> LONG_RANGE_TERM DOUBLE_RANGE_TERM UNANALIZED_TERM METHOD UNQUOTED_TERM QUOTED_TERM QUOTED_WILDCARD_TERM FLOAT_NUMBER INT_NUMBER DOUBLE_NUMBER LONG_NUMBER DATETIME NULL PREFIX_TERM WILDCARD_TERM HEX_NUMBER
 
@@ -119,6 +120,80 @@ field_exp: fieldname range_operator_exp {
 		//Console.WriteLine("Found rule field_exp -> fieldname paren_exp");
 		$$ = new FieldLuceneASTNode(){FieldName = $1, Node = $2};
 	}
+	| UNQUOTED_TERM GREATER_EQUAL term_exp
+	{
+		//Console.WriteLine("Found rule field_exp -> UNQUOTED_TERM GREATER_EQUAL term_exp");
+		var node = new RangeLuceneASTNode(){RangeMin = $3, RangeMax = RangeLuceneASTNode.StarTerm, InclusiveMin = true, InclusiveMax = true}; 
+		$$ = new FieldLuceneASTNode(){FieldName = new FieldName($1,FieldName.FieldType.String), Node = node};
+	}
+	|
+	UNQUOTED_TERM GREATER term_exp
+	{
+		//Console.WriteLine("Found rule field_exp -> UNQUOTED_TERM GREATER term_exp");
+		var node = new RangeLuceneASTNode(){RangeMin = $3, RangeMax = RangeLuceneASTNode.StarTerm, InclusiveMin = false, InclusiveMax = true}; 
+		$$ = new FieldLuceneASTNode(){FieldName = new FieldName($1,FieldName.FieldType.String), Node = node};
+	}
+	|UNQUOTED_TERM LESS_EQUAL term_exp
+	{
+		//Console.WriteLine("Found rule field_exp -> UNQUOTED_TERM LESS_EQUAL term_exp");
+		var node = new RangeLuceneASTNode(){RangeMin = RangeLuceneASTNode.StarTerm, RangeMax = $3, InclusiveMin = true, InclusiveMax = true}; 
+		$$ = new FieldLuceneASTNode(){FieldName = new FieldName($1,FieldName.FieldType.String), Node = node};
+	}
+	|UNQUOTED_TERM LESS term_exp
+	{
+		//Console.WriteLine("Found rule field_exp -> UNQUOTED_TERM LESS term_exp");
+		var node = new RangeLuceneASTNode(){RangeMin = RangeLuceneASTNode.StarTerm, RangeMax = $3, InclusiveMin = true, InclusiveMax = false}; 
+		$$ = new FieldLuceneASTNode(){FieldName = new FieldName($1,FieldName.FieldType.String), Node = node};
+	}
+	| LONG_RANGE_TERM GREATER_EQUAL term_exp
+	{
+		//Console.WriteLine("Found rule field_exp -> LONG_RANGE_TERM GREATER_EQUAL term_exp");
+		var node = new RangeLuceneASTNode(){RangeMin = $3, RangeMax = RangeLuceneASTNode.StarTerm, InclusiveMin = true, InclusiveMax = true}; 
+		$$ = new FieldLuceneASTNode(){FieldName = new FieldName($1,FieldName.FieldType.Long), Node = node};
+	}
+	|
+	LONG_RANGE_TERM GREATER term_exp
+	{
+		//Console.WriteLine("Found rule field_exp -> LONG_RANGE_TERM GREATER term_exp");
+		var node = new RangeLuceneASTNode(){RangeMin = $3, RangeMax = RangeLuceneASTNode.StarTerm, InclusiveMin = false, InclusiveMax = true}; 
+		$$ = new FieldLuceneASTNode(){FieldName = new FieldName($1,FieldName.FieldType.Long), Node = node};
+	}
+	|LONG_RANGE_TERM LESS_EQUAL term_exp
+	{
+		//Console.WriteLine("Found rule field_exp -> LONG_RANGE_TERM LESS_EQUAL term_exp");
+		var node = new RangeLuceneASTNode(){RangeMin = RangeLuceneASTNode.StarTerm, RangeMax = $3, InclusiveMin = true, InclusiveMax = true}; 
+		$$ = new FieldLuceneASTNode(){FieldName = new FieldName($1,FieldName.FieldType.Long), Node = node};
+	}
+	|LONG_RANGE_TERM LESS term_exp
+	{
+		//Console.WriteLine("Found rule field_exp -> LONG_RANGE_TERM LESS term_exp");
+		var node = new RangeLuceneASTNode(){RangeMin = RangeLuceneASTNode.StarTerm, RangeMax = $3, InclusiveMin = true, InclusiveMax = false}; 
+		$$ = new FieldLuceneASTNode(){FieldName = new FieldName($1,FieldName.FieldType.Long), Node = node};
+	}
+	| DOUBLE_RANGE_TERM GREATER_EQUAL term_exp
+	{
+		//Console.WriteLine("Found rule field_exp -> DOUBLE_RANGE_TERM GREATER_EQUAL term_exp");
+		var node = new RangeLuceneASTNode(){RangeMin = $3, RangeMax = RangeLuceneASTNode.StarTerm, InclusiveMin = true, InclusiveMax = true}; 
+		$$ = new FieldLuceneASTNode(){FieldName = new FieldName($1,FieldName.FieldType.Double), Node = node};
+	}
+	| DOUBLE_RANGE_TERM GREATER term_exp
+	{
+		//Console.WriteLine("Found rule field_exp -> DOUBLE_RANGE_TERM GREATER term_exp");
+		var node = new RangeLuceneASTNode(){RangeMin = $3, RangeMax = RangeLuceneASTNode.StarTerm, InclusiveMin = false, InclusiveMax = true}; 
+		$$ = new FieldLuceneASTNode(){FieldName = new FieldName($1,FieldName.FieldType.Double), Node = node};
+	}
+	|DOUBLE_RANGE_TERM LESS_EQUAL term_exp
+	{
+		//Console.WriteLine("Found rule field_exp -> DOUBLE_RANGE_TERM LESS_EQUAL term_exp");
+		var node = new RangeLuceneASTNode(){RangeMin = RangeLuceneASTNode.StarTerm, RangeMax = $3, InclusiveMin = true, InclusiveMax = true}; 
+		$$ = new FieldLuceneASTNode(){FieldName = new FieldName($1,FieldName.FieldType.Double), Node = node};
+	}
+	|DOUBLE_RANGE_TERM LESS term_exp
+	{
+		//Console.WriteLine("Found rule field_exp -> DOUBLE_RANGE_TERM LESS term_exp");
+		var node = new RangeLuceneASTNode(){RangeMin = RangeLuceneASTNode.StarTerm, RangeMax = $3, InclusiveMin = true, InclusiveMax = false}; 
+		$$ = new FieldLuceneASTNode(){FieldName = new FieldName($1,FieldName.FieldType.Double), Node = node};
+	}
 	;
 
 method_exp: methodName OPEN_PAREN term_match_list CLOSE_PAREN{
@@ -163,8 +238,13 @@ methodName: METHOD COLON{
 		//Console.WriteLine("Found rule methodName -> METHOD COLON");
 		$$ = $1;
 		InMethod = true;
-}
-;
+	}
+	|	METHOD EQUAL{
+		//Console.WriteLine("Found rule methodName -> METHOD EQUAL");
+		$$ = $1;
+		InMethod = true;
+	}
+	;
 fieldname: UNQUOTED_TERM COLON {
 		//Console.WriteLine("Found rule fieldname -> UNQUOTED_TERM COLON");
 		$$ = new FieldName($1);
@@ -175,6 +255,18 @@ fieldname: UNQUOTED_TERM COLON {
 	}
     |   DOUBLE_RANGE_TERM COLON {
 		//Console.WriteLine("Found rule fieldname -> DOUBLE_RANGE_TERM COLON");
+		$$ = new FieldName($1,FieldName.FieldType.Double);
+	}
+	|  UNQUOTED_TERM EQUAL {
+		//Console.WriteLine("Found rule fieldname -> UNQUOTED_TERM EQUAL");
+		$$ = new FieldName($1);
+	}
+    |   LONG_RANGE_TERM EQUAL {
+		//Console.WriteLine("Found rule fieldname -> LONG_RANGE_TERM EQUAL");
+		$$ = new FieldName($1,FieldName.FieldType.Long);
+	}
+    |   DOUBLE_RANGE_TERM EQUAL {
+		//Console.WriteLine("Found rule fieldname -> DOUBLE_RANGE_TERM EQUAL");
 		$$ = new FieldName($1,FieldName.FieldType.Double);
 	}
 	;
