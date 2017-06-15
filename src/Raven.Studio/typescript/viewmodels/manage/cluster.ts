@@ -50,6 +50,7 @@ class cluster extends viewModelBase {
 
         const serverUrl = prompt("Enter server URL:");
         if (serverUrl) {
+            // TODO: use url validation from extensions.ts when implementing the dialog instead of the prompt
             new addNodeToClusterCommand(serverUrl)
                 .execute();
         }
