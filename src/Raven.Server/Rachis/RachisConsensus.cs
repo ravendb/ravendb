@@ -207,7 +207,7 @@ namespace Raven.Server.Rachis
             Timeout.TimeoutPeriod = _rand.Next(timeout / 3 * 2, timeout);
         }
 
-        public unsafe void Initialize(StorageEnvironment env, ClusterConfiguration configuration)
+        public unsafe void Initialize(StorageEnvironment env, ClusterConfiguration configuration, string myUrl)
         {
             try
             {
@@ -243,6 +243,15 @@ namespace Raven.Server.Rachis
                         CurrentTerm = read.Reader.ReadLittleEndianInt64();
 
                     topology = GetTopology(context);
+                    if (topology.AllNodes.Count == 1 && topology.Members.Count == 1)
+                    {
+                        if (topology.GetUrlFromTag(_tag) != myUrl)
+                        {
+                            topology.Members.Remove(_tag);
+                            topology.Members.Add(_tag, myUrl);
+                            SetTopology(this, context, topology);
+                        }
+                    }
 
                     InitializeState(context);
 
@@ -266,10 +275,13 @@ namespace Raven.Server.Rachis
                 if (topology.Members.Count == 1)
                 {
                     using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                    using (ctx.OpenWriteTransaction())
                     {
-                        SwitchToSingleLeader(ctx);
-                        ctx.Transaction.Commit();
+                        using (ctx.OpenWriteTransaction())
+                        {
+                            SwitchToSingleLeader(ctx);
+                            ctx.Transaction.Commit();
+                        }
+                        
                     }
                 }
                 else
