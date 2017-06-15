@@ -106,6 +106,20 @@ namespace FastTests.Client.BulkInsert
             });
         }
 
+        [Fact]
+        public void ShouldNotAcceptIdsEndingWithSlash()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    var exception = Assert.Throws<NotSupportedException>(() =>
+                            bulkInsert.Store(new FooBar { Name = "John Doe" }, "foobars/"));
+                    Assert.Contains("Document ids cannot end with '/', but was called with foobars/", exception.Message);
+                }
+            }
+        }
+
         private class FooBar
         {
             public string Name { get; set; }
