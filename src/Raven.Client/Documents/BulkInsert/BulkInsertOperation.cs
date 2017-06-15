@@ -182,6 +182,11 @@ namespace Raven.Client.Documents.BulkInsert
 
         public async Task StoreAsync(object entity, string id)
         {
+            if (id.EndsWith("/"))
+            {
+                throw new NotSupportedException("Document ids cannot end with '/', but was called with " + id);
+            }
+
             if (_stream == null)
             {
                 await WaitForId().ConfigureAwait(false);
