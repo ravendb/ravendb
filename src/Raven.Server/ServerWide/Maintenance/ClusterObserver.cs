@@ -113,7 +113,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             var cmd = new UpdateTopologyCommand(database)
                             {
                                 Topology = databaseRecord.Topology,
-                                Etag = etag
+                                RaftCommandIndex = etag
                             };
 
                             updateCommands.Add(cmd);

@@ -19,7 +19,7 @@ namespace Raven.Server.ServerWide.Commands
                 ["Type"] = nameof(AddDatabaseCommand),
                 [nameof(Name)] = Name,
                 [nameof(Record)] = EntityToBlittable.ConvertEntityToBlittable(Record, DocumentConventions.Default, context),
-                [nameof(Etag)] = Etag,
+                [nameof(RaftCommandIndex)] = RaftCommandIndex,
                 [nameof(Encrypted)] = Encrypted
             };
         }

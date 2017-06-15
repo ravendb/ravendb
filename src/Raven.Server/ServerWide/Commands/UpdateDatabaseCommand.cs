@@ -40,7 +40,7 @@ namespace Raven.Server.ServerWide.Commands
             };
         }
 
-        public long? Etag;
+        public long? RaftCommandIndex;
 
         public static CommandBase CreateFrom(BlittableJsonReaderObject json)
         {

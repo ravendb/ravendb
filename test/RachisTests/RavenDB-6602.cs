@@ -34,8 +34,8 @@ namespace RachisTests
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
                 var databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
 
-                Assert.True(databaseResult.ETag > 0); //sanity check                
-                await WaitForRaftIndexToBeAppliedInCluster(databaseResult.ETag, TimeSpan.FromSeconds(5));
+                Assert.True(databaseResult.RaftCommandIndex > 0); //sanity check                
+                await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(5));
 
                 //before dispose there is such a document
                 using (var session = store.OpenSession(databaseName))

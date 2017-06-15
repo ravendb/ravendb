@@ -40,11 +40,11 @@ namespace RachisTests
                 databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
 
                 int numberOfInstances = 0;
-                await AssertNumberOfNodesContainingDatabase(databaseResult.ETag, databaseName, numberOfInstances, replicationFactor);
+                await AssertNumberOfNodesContainingDatabase(databaseResult.RaftCommandIndex, databaseName, numberOfInstances, replicationFactor);
                 databaseResult = store.Admin.Server.Send(new AddDatabaseNodeOperation(databaseName));
                 Assert.Equal(databaseResult.Topology.AllNodes.Count(), ++replicationFactor);
                 numberOfInstances = 0;
-                await AssertNumberOfNodesContainingDatabase(databaseResult.ETag, databaseName, numberOfInstances, replicationFactor);
+                await AssertNumberOfNodesContainingDatabase(databaseResult.RaftCommandIndex, databaseName, numberOfInstances, replicationFactor);
                 DeleteDatabaseResult deleteResult;
                 while (replicationFactor > 0)
                 {
@@ -56,7 +56,7 @@ namespace RachisTests
                     replicationFactor--;
                     deleteResult = store.Admin.Server.Send(new DeleteDatabaseOperation(databaseName, hardDelete: true, fromNode: serverTagToBeDeleted));
                     //The +1 is for NotifyLeaderAboutRemoval
-                    await AssertNumberOfNodesContainingDatabase(deleteResult.ETag + 1, databaseName, numberOfInstances, replicationFactor);
+                    await AssertNumberOfNodesContainingDatabase(deleteResult.RaftCommandIndex + 1, databaseName, numberOfInstances, replicationFactor);
                 }
                 TransactionOperationContext context;
                 using (leader.ServerStore.ContextPool.AllocateOperationContext(out context))

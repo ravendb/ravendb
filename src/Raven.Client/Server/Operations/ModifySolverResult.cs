@@ -10,7 +10,7 @@ namespace Raven.Client.Server.Operations
         /// <summary>
         /// long? of the database after PUT operation.
         /// </summary>
-        public long? ETag { get; set; }
+        public long? RaftCommandIndex { get; set; }
 
         public ConflictSolver Solver { get; set; }
     }

@@ -119,8 +119,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                long etag;
-                var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out etag);
+                var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out var index);
                 var clusterTopology = ServerStore.GetClusterTopology(context);
 
                 //The case where an explicit node was requested 
@@ -171,8 +170,8 @@ namespace Raven.Server.Web.System
                     });
                 }
 
-                var (newEtag, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, etag);
-                await ServerStore.Cluster.WaitForIndexNotification(newEtag);
+                var (newIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
+                await ServerStore.Cluster.WaitForIndexNotification(newIndex);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -180,7 +179,7 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(DatabasePutResult.ETag)] = newEtag,
+                        [nameof(DatabasePutResult.RaftCommandIndex)] = newIndex,
                         [nameof(DatabasePutResult.Key)] = name,
                         [nameof(DatabasePutResult.Topology)] = databaseRecord.Topology.ToJson()
                     });
@@ -209,7 +208,7 @@ namespace Raven.Server.Web.System
             {
                 context.OpenReadTransaction();
 
-                var etag = GetLongFromHeaders("ETag");
+                var index = GetLongFromHeaders("ETag");
 
                 var json = context.ReadForDisk(RequestBodyStream(), name);
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(json);
@@ -235,8 +234,8 @@ namespace Raven.Server.Web.System
                     databaseRecord.Topology = topology = AssignNodesToDatabase(context, factor, name, databaseRecord, out nodesAddedTo);
                 }
 
-                var (newEtag, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, etag);
-                await ServerStore.Cluster.WaitForIndexNotification(newEtag);
+                var (newIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
+                await ServerStore.Cluster.WaitForIndexNotification(newIndex);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -244,7 +243,7 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(DatabasePutResult.ETag)] = newEtag,
+                        [nameof(DatabasePutResult.RaftCommandIndex)] = newIndex,
                         [nameof(DatabasePutResult.Key)] = name,
                         [nameof(DatabasePutResult.Topology)] = topology.ToJson(),
                         [nameof(DatabasePutResult.NodesAddedTo)] = nodesAddedTo
@@ -373,7 +372,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
                 var configurationJson = await context.ReadForMemoryAsync(RequestBodyStream(), debug);
-                var (etag, _) = await setupConfigurationFunc(context, name, configurationJson);
+                var (index, _) = await setupConfigurationFunc(context, name, configurationJson);
                 DatabaseRecord dbRecord;
                 using (context.OpenReadTransaction())
                 {
@@ -383,11 +382,11 @@ namespace Raven.Server.Web.System
                 if (dbRecord.Topology.RelevantFor(ServerStore.NodeTag))
                 {
                     var db = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
-                    await db.RachisLogIndexNotifications.WaitForIndexNotification(etag);
+                    await db.RachisLogIndexNotifications.WaitForIndexNotification(index);
                 }
                 else
                 {
-                    await ServerStore.Cluster.WaitForIndexNotification(etag);
+                    await ServerStore.Cluster.WaitForIndexNotification(index);
                 }
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
@@ -395,9 +394,9 @@ namespace Raven.Server.Web.System
                 {
                     var json = new DynamicJsonValue
                     {
-                        ["ETag"] = etag
+                        ["RaftCommandIndex"] = index
                     };
-                    fillJson?.Invoke(json, configurationJson, etag);
+                    fillJson?.Invoke(json, configurationJson, index);
                     context.Write(writer, json);
                     writer.Flush();
                 }
@@ -422,8 +421,8 @@ namespace Raven.Server.Web.System
                     throw new InvalidDataException("Functions property was not found.");
                 }
 
-                var (etag, _) = await ServerStore.ModifyCustomFunctions(name, functions);
-                await ServerStore.Cluster.WaitForIndexNotification(etag);
+                var (index, _) = await ServerStore.ModifyCustomFunctions(name, functions);
+                await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -431,7 +430,7 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(DatabasePutResult.ETag)] = etag,
+                        [nameof(DatabasePutResult.RaftCommandIndex)] = index,
                     });
                     writer.Flush();
                 }
@@ -455,8 +454,8 @@ namespace Raven.Server.Web.System
                 {
                     var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out _);
 
-                    var (etag, _) = await ServerStore.ModifyConflictSolverAsync(name, conflictResolver);
-                    await ServerStore.Cluster.WaitForIndexNotification(etag);
+                    var (index, _) = await ServerStore.ModifyConflictSolverAsync(name, conflictResolver);
+                    await ServerStore.Cluster.WaitForIndexNotification(index);
 
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -464,7 +463,7 @@ namespace Raven.Server.Web.System
                     {
                         context.Write(writer, new DynamicJsonValue
                         {
-                            ["ETag"] = etag,
+                            ["RaftCommandIndex"] = index,
                             ["Key"] = name,
                             [nameof(DatabaseRecord.ConflictSolverConfig)] = databaseRecord.ConflictSolverConfig.ToJson()
                         });
@@ -496,20 +495,20 @@ namespace Raven.Server.Web.System
                     }
                 }
 
-                long etag = -1;
+                long index = -1;
                 foreach (var name in names)
                 {
-                    var (newEtag, _) = await ServerStore.DeleteDatabaseAsync(name, isHardDelete, fromNode);
-                    etag = newEtag;
+                    var (newIndex, _) = await ServerStore.DeleteDatabaseAsync(name, isHardDelete, fromNode);
+                    index = newIndex;
                 }
-                await ServerStore.Cluster.WaitForIndexNotification(etag);
+                await ServerStore.Cluster.WaitForIndexNotification(index);
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        ["ETag"] = etag
+                        ["RaftCommandIndex"] = index
                     });
                     writer.Flush();
                 }
@@ -576,8 +575,8 @@ namespace Raven.Server.Web.System
 
                     databaseRecord.Disabled = disableRequested;
 
-                    var (etag, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, null);
-                    await ServerStore.Cluster.WaitForIndexNotification(etag);
+                    var (index, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, null);
+                    await ServerStore.Cluster.WaitForIndexNotification(index);
 
                     context.Write(writer, new DynamicJsonValue
                     {

@@ -26,7 +26,7 @@ namespace Raven.Server.ServerWide.Commands
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(NodeTag)] = NodeTag;
-            json[nameof(Etag)] = Etag;
+            json[nameof(RaftCommandIndex)] = RaftCommandIndex;
         }
     }
 }
