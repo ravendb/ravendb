@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return NoContent();
         }
 
-        [RavenAction("/databases/*/debug/queries/running", "GET")]
+        [RavenAction("/databases/*/debug/queries/running", "GET", IsDebugInformationEndpoint = true)]
         public Task RunningQueries()
         {
             var indexes = Database

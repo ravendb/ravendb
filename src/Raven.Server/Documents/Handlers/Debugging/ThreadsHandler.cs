@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class ThreadsHandler : RequestHandler
     {
-        [RavenAction("/debug/threads/runaway", "GET")]
+        [RavenAction("/debug/threads/runaway", "GET", IsDebugInformationEndpoint = true)]
         public Task RunawayThreads()
         {            
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -25,20 +25,23 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         .ToDictionary(g=>g.Key, x=>x.First().Name);
 
                     context.Write(write,
-                        new DynamicJsonArray(GetCurrentProcessThreads()
+                        new DynamicJsonValue
+                        {                            
+                            ["Runaway Threads"] = new DynamicJsonArray(GetCurrentProcessThreads()
                                 .OrderByDescending(thread => thread.TotalProcessorTime.TotalMilliseconds)
                                 .Select(thread => new DynamicJsonValue
-                                    {
-                                        [nameof(ThreadInfo.Id)] = thread.Id,
-                                        [nameof(ThreadInfo.Name)] = threadAllocations.TryGetValue(thread.Id, out var threadName) ? 
-                                                                (threadName  ?? "Thread Pool Thread") : "Unmanaged Thread",
-                                        [nameof(ThreadInfo.StartingTime)] = thread.StartTime,
-                                        [nameof(ThreadInfo.State)] = thread.ThreadState,
-                                        [nameof(ThreadInfo.WaitReason)] = thread.ThreadState == ThreadState.Wait ? thread.WaitReason : (ThreadWaitReason?)null,
-                                        [nameof(ThreadInfo.TotalProcessorTime)] = thread.TotalProcessorTime,
-                                        [nameof(ThreadInfo.PrivilegedProcessorTime)] = thread.PrivilegedProcessorTime,
-                                        [nameof(ThreadInfo.UserProcessorTime)] = thread.UserProcessorTime
-                                    })));
+                                {
+                                    [nameof(ThreadInfo.Id)] = thread.Id,
+                                    [nameof(ThreadInfo.Name)] = threadAllocations.TryGetValue(thread.Id, out var threadName) ?
+                                        (threadName ?? "Thread Pool Thread") : "Unmanaged Thread",
+                                    [nameof(ThreadInfo.StartingTime)] = thread.StartTime,
+                                    [nameof(ThreadInfo.State)] = thread.ThreadState,
+                                    [nameof(ThreadInfo.WaitReason)] = thread.ThreadState == ThreadState.Wait ? thread.WaitReason : (ThreadWaitReason?)null,
+                                    [nameof(ThreadInfo.TotalProcessorTime)] = thread.TotalProcessorTime,
+                                    [nameof(ThreadInfo.PrivilegedProcessorTime)] = thread.PrivilegedProcessorTime,
+                                    [nameof(ThreadInfo.UserProcessorTime)] = thread.UserProcessorTime
+                                }))
+                        });
                     write.Flush();
                 }
             }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -87,7 +88,7 @@ namespace Raven.Client.Http
         public virtual async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
             using (response)
-            {
+            {               
                 if (ResponseType == RavenCommandResponseType.Empty || response.StatusCode == HttpStatusCode.NoContent)
                     return;
 
@@ -106,7 +107,7 @@ namespace Raven.Client.Http
                         var contentLength = response.Content.Headers.ContentLength;
                         if (contentLength.HasValue && contentLength == 0)
                             return;
-
+                        
                         // we intentionally don't dispose the reader here, we'll be using it
                         // in the command, any associated memory will be released on context reset
                         var json = await context.ReadForMemoryAsync(stream, "response/object").ConfigureAwait(false);

@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class StorageHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/debug/storage/report", "GET")]
+        [RavenAction("/databases/*/debug/storage/report", "GET", IsDebugInformationEndpoint = true)]
         public Task Report()
         {
             DocumentsOperationContext context;
@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/debug/storage/environment/report", "GET")]
+        [RavenAction("/databases/*/debug/storage/environment/report", "GET", IsDebugInformationEndpoint = true)]
         public Task EnvironmentReport()
         {
             var name = GetStringQueryString("name");

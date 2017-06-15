@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public List<LowLevelTransaction> Information;
         }
 
-        [RavenAction("/databases/*/debug/txinfo", "GET")]
+        [RavenAction("/databases/*/debug/txinfo", "GET", IsDebugInformationEndpoint = true)]
         public Task TxInfo()
         {
             

@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class DocumentDebugHandler : DatabaseRequestHandler
     {       
-        [RavenAction("/databases/*/debug/documents/huge", "GET")]
+        [RavenAction("/databases/*/debug/documents/huge", "GET", IsDebugInformationEndpoint = true)]
         public Task HugeDocuments()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

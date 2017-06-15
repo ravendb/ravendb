@@ -7,6 +7,8 @@ namespace Raven.Server.Routing
     [MeansImplicitUse]
     public class RavenActionAttribute : Attribute
     {
+        public bool IsDebugInformationEndpoint { get; set; }
+
         public string Path { get; }
 
         public string Method { get; }
@@ -17,11 +19,12 @@ namespace Raven.Server.Routing
 
         public bool SkipUsagesCount { get; set; }
 
-        public RavenActionAttribute(string path, string method, string description = null)
+        public RavenActionAttribute(string path, string method, string description = null, bool isDebugInformationEndpoint = false)
         {
             Path = path;
             Method = method;
             Description = description;
+            IsDebugInformationEndpoint = isDebugInformationEndpoint;
         }
     }
 }
