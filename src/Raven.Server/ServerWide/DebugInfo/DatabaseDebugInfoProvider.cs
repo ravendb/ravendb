@@ -20,7 +20,7 @@ namespace Raven.Server.ServerWide.DebugInfo
 
         public IEnumerable<IDebugInfoDataSource> GetDebugPackage()
         {
-            foreach (var node in _databaseRecord.Topology.AllReplicationNodes())
+            foreach (var node in _databaseRecord.Topology.AllNodes)
             {
 
             }
