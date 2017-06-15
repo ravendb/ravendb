@@ -4,7 +4,6 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
-using Raven.Server.ServerWide.Commands;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -59,7 +58,7 @@ namespace Raven.Client.Server.Operations
                     {
                         var json = new DynamicJsonValue
                         {
-                            [nameof(UpdateExternalReplicationCommand.Watcher)] = _newWatcher.ToJson(),
+                            ["Watcher"] = _newWatcher.ToJson(),
                         };
 
                         _context.Write(stream, _context.ReadObject(json, "update-replication"));

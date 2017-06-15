@@ -97,7 +97,7 @@ namespace FastTests.Tasks
         private async Task CreateDatabasesInCluster(int clusterSize, string databaseName, IDocumentStore store)
         {
             var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(MultiDatabase.CreateDatabaseDocument(databaseName), clusterSize));
-            Assert.Equal(clusterSize, databaseResult.Topology.AllReplicationNodes().Count());
+            Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
             foreach (var server in Servers)
             {
                 await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
