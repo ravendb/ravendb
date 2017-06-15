@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class TopologyHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/debug/live-topology", "GET")]
+        [RavenAction("/databases/*/debug/live-topology", "GET", IsDebugInformationEndpoint = true)]
         public async Task GetLiveTopology()
         {
             var sp = Stopwatch.StartNew();
