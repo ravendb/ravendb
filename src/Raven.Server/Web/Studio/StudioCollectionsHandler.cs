@@ -302,12 +302,12 @@ namespace Raven.Server.Web.Studio
             }
 
             ExecuteCollectionOperation((runner, collectionName, options, onProgress, token) => Task.Run(async () => await runner.ExecuteDelete(collectionName, options, onProgress, token)),
-                context, returnContextToPool, DatabaseOperations.OperationType.DeleteByCollection, excludeIds);
+                context, returnContextToPool, Documents.Operations.Operations.OperationType.DeleteByCollection, excludeIds);
             return Task.CompletedTask;
         }
 
        
-        private void ExecuteCollectionOperation(Func<CollectionRunner, string, CollectionOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, DatabaseOperations.OperationType operationType, HashSet<LazyStringValue> excludeIds)
+        private void ExecuteCollectionOperation(Func<CollectionRunner, string, CollectionOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, Documents.Operations.Operations.OperationType operationType, HashSet<LazyStringValue> excludeIds)
         {
             var collectionName = GetStringQueryString("name");
 

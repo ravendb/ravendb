@@ -7,6 +7,7 @@ using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Auto;
@@ -26,6 +27,10 @@ namespace Raven.Server.Smuggler.Documents
         private readonly Action<IOperationProgress> _onProgress;
         private readonly SmugglerPatcher _patcher;
         private CancellationToken _token;
+
+        public Action<IndexDefinitionAndType> OnIndexAction;
+        public Action<TransformerDefinition> OnTransformerAction;
+        public Action<KeyValuePair<string, long>> OnIdentityAction;
 
         public DatabaseSmuggler(
             ISmugglerSource source,
@@ -187,6 +192,12 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
+                    if (OnIdentityAction != null)
+                    {
+                        OnIdentityAction(kvp);
+                        continue;
+                    }
+
                     try
                     {
                         clusterIdentityActions.WriteIdentity(kvp.Key, kvp.Value);
@@ -217,6 +228,12 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
+                    if (OnTransformerAction != null)
+                    {
+                        OnTransformerAction(transformer);
+                        continue;
+                    }
+
                     try
                     {
                         actions.WriteTransformer(transformer);
@@ -244,6 +261,12 @@ namespace Raven.Server.Smuggler.Documents
                     if (index == null)
                     {
                         result.Indexes.ErroredCount++;
+                        continue;
+                    }
+
+                    if (OnIndexAction != null)
+                    {
+                        OnIndexAction(index);
                         continue;
                     }
 

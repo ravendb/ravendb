@@ -289,12 +289,11 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void CleanupDatabaseRelatedValues(TransactionOperationContext context, Table items, string dbNameLowered)
+        private static void CleanupDatabaseRelatedValues(TransactionOperationContext context, Table items, string dbNameLowered)
         {
-            var subscriptionItemsPrefix = SubscriptionState.GenerateSubscriptionPrefix(dbNameLowered).ToLowerInvariant();
-            using (Slice.From(context.Allocator, subscriptionItemsPrefix, out Slice loweredKey))
+            var dbValuesPrefix = Helpers.ClusterStateMachineValuesPrefix(dbNameLowered).ToLowerInvariant();
+            using (Slice.From(context.Allocator, dbValuesPrefix, out Slice loweredKey))
             {
-
                 items.DeleteByPrimaryKeyPrefix(loweredKey);
             }
         }
@@ -342,11 +341,32 @@ namespace Raven.Server.ServerWide
                     }
 
                     UpdateValue(index, items, valueNameLowered, valueName, databaseRecordAsJson);
+                    SetDatabaseValues(addDatabaseCommand.DatabaseValues, context, index, items);
                 }
             }
             finally
             {
                 NotifyDatabaseChanged(context, addDatabaseCommand.Name, index, nameof(AddDatabaseCommand));
+            }
+        }
+
+        private static void SetDatabaseValues(
+            Dictionary<string, object> databaseValues, 
+            TransactionOperationContext context, 
+            long index, 
+            Table items)
+        {
+            if (databaseValues == null)
+                return;
+
+            foreach (var keyValue in databaseValues)
+            {
+                using (Slice.From(context.Allocator, keyValue.Key, out Slice databaseValueName))
+                using (Slice.From(context.Allocator, keyValue.Key.ToLowerInvariant(), out Slice databaseValueNameLowered))
+                using (var value = EntityToBlittable.ConvertEntityToBlittable(keyValue.Value, DocumentConventions.Default, context))
+                {
+                    UpdateValue(index, items, databaseValueNameLowered, databaseValueName, value);
+                }
             }
         }
 
@@ -546,7 +566,7 @@ namespace Raven.Server.ServerWide
                     if (take-- <= 0)
                         yield break;
 
-                    yield return GetCurrentItem(context, result);
+                    yield return GetCurrentItem(context, result.Value);
                 }
             }
         }
@@ -563,7 +583,7 @@ namespace Raven.Server.ServerWide
                     if (take-- <= 0)
                         yield break;
 
-                    yield return GetCurrentItemKey(context, result).Substring(3);
+                    yield return GetCurrentItemKey(context, result.Value).Substring(3);
                 }
             }
         }
@@ -634,28 +654,23 @@ namespace Raven.Server.ServerWide
             return doc;
         }     
 
-        public static IEnumerable<(long, BlittableJsonReaderObject)> ReadValuesStartingWith(TransactionOperationContext context, string startsWithKey)
+        public static IEnumerable<(Slice Key, BlittableJsonReaderObject Value)> ReadValuesStartingWith(
+            TransactionOperationContext context, string startsWithKey)
         {
             var startsWithKeyLower = startsWithKey.ToLowerInvariant();
             using (Slice.From(context.Allocator, startsWithKeyLower, out Slice startsWithSlice))
             {
-                return ReadValuesStartingWith(context, startsWithSlice);
+                var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+
+                foreach (var holder in items.SeekByPrimaryKeyPrefix(startsWithSlice, Slices.Empty, 0))
+                {
+                    var reader = holder.Value.Reader;
+                    var size = GetDataAndEtagTupleFromReader(context, reader, out BlittableJsonReaderObject doc, out long _);
+                    Debug.Assert(size == sizeof(long));
+
+                    yield return (holder.Key, doc);
+                }
             }
-        }
-
-        public static IEnumerable<(long, BlittableJsonReaderObject)> ReadValuesStartingWith(TransactionOperationContext context, Slice startsWithKey)
-        {
-            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-
-            foreach (var holder in items.SeekByPrimaryKeyPrefix(startsWithKey, Slices.Empty, 0))
-            {
-                var reader = holder.Reader;
-                int size = GetDataAndEtagTupleFromReader(context, reader, out BlittableJsonReaderObject doc, out long etag);
-                Debug.Assert(size == sizeof(long));
-
-                yield return (etag, doc);
-            }
-
         }
 
         private static unsafe int GetDataAndEtagTupleFromReader(TransactionOperationContext context, TableValueReader reader, out BlittableJsonReaderObject doc, out long etag)

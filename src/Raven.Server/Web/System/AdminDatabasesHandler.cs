@@ -29,6 +29,8 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.PeriodicBackup;
+using Sparrow;
 
 namespace Raven.Server.Web.System
 {
@@ -175,9 +177,7 @@ namespace Raven.Server.Web.System
 
         public bool NotUsingHttps(string url)
         {
-            return url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false;
-
-        }
+            return url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false;        }
 
         [RavenAction("/admin/databases", "PUT", "/admin/databases/{databaseName:string}")]
         public async Task Put()
@@ -216,7 +216,7 @@ namespace Raven.Server.Web.System
                 else
                 {
                     var factor = Math.Max(1, GetIntValueQueryString("replication-factor", required: false) ?? 0);
-                    databaseRecord.Topology = topology = AssignNodesToDatabase(context, factor, name, databaseRecord, out nodesAddedTo);
+                    databaseRecord.Topology = topology = AssignNodesToDatabase(context, factor, name, databaseRecord.Encrypted, out nodesAddedTo);
                 }
 
                 var (newIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
@@ -238,7 +238,12 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private DatabaseTopology AssignNodesToDatabase(TransactionOperationContext context, int factor, string name, DatabaseRecord databaseRecord, out List<string> nodesAddedTo)
+        private DatabaseTopology AssignNodesToDatabase(
+            TransactionOperationContext context,
+            int factor, 
+            string name, 
+            bool isEncrypted,
+            out List<string> nodesAddedTo)
         {
             var topology = new DatabaseTopology();
 
@@ -249,7 +254,7 @@ namespace Raven.Server.Web.System
                 .Concat(clusterTopology.Watchers.Keys)
                 .ToList();
 
-            if (databaseRecord.Encrypted)
+            if (isEncrypted)
             {
                 allNodes.RemoveAll(n => NotUsingHttps(clusterTopology.GetUrlFromTag(n)));
                 if (allNodes.Count == 0)
@@ -332,6 +337,69 @@ namespace Raven.Server.Web.System
             }
 
             return Task.CompletedTask;
+        }
+
+        [RavenAction("/admin/database-restore", "POST", "/admin/database-restore")]
+        public async Task RestoreDatabase()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            //using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                context.OpenReadTransaction();
+
+                var operationId = GetLongQueryString("operationId", required: false);
+
+                var restoreConfiguration = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore");
+                var restoreConfigurationJson = JsonDeserializationCluster.RestoreBackupConfiguraionConfiguration(restoreConfiguration);
+
+                var databaseName = restoreConfigurationJson.DatabaseName;
+                if (string.IsNullOrWhiteSpace(databaseName))
+                    throw new ArgumentException("Database name can't be null or empty");
+
+                string errorMessage;
+                if (ResourceNameValidator.IsValidResourceName(databaseName, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
+                    throw new BadRequestException(errorMessage);
+
+                if (ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(new StringSegment(databaseName), out _))
+                    throw new ArgumentException($"Cannot restore data to an existing database named {databaseName}");
+
+                // TODO: prevent the creation of a database with the same name during restore
+
+                using (var token = new OperationCancelToken(ServerStore.ServerShutdown))
+                {
+                    var restoreBackupTask = new RestoreBackupTask(
+                        ServerStore, 
+                        restoreConfigurationJson, 
+                        context, 
+                        isEncrypted => AssignNodesToDatabase(context, 1, restoreConfigurationJson.DatabaseName, isEncrypted, out _), 
+                        token.Token);
+
+                    if (operationId.HasValue)
+                    {
+                        try
+                        {
+                            await
+                                ServerStore.Operations.AddOperation(
+                                    "Restoring database: " + databaseName,
+                                    Documents.Operations.Operations.OperationType.DatabaseRestore,
+                                    taskFactory: onProgress => Task.Run(async() => await restoreBackupTask.Execute(onProgress), token.Token), id: operationId.Value, token: token);
+                        }
+                        catch (Exception)
+                        {
+                            HttpContext.Abort();
+                        }
+
+                    }
+                    else
+                    {
+                        var result = (RestoreResult)await restoreBackupTask.Execute(null);
+                        using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                        {
+                            context.Write(writer, result.ToJson());
+                        }
+                    }
+                }
+            }
         }
 
         private async Task DatabaseConfigurations(Func<TransactionOperationContext, string,

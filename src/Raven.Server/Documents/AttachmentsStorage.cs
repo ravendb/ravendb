@@ -351,10 +351,11 @@ namespace Raven.Server.Documents
                 var currentAttachments = new List<(LazyStringValue name, LazyStringValue contentType, Slice base64Hash)>();
                 foreach (var sr in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
                 {
-                    var name = DocumentsStorage.TableValueToId(context, (int)AttachmentsTable.Name, ref sr.Reader);
-                    var contentType = DocumentsStorage.TableValueToId(context, (int)AttachmentsTable.ContentType, ref sr.Reader);
+                    var tableValueHolder = sr.Value;
+                    var name = DocumentsStorage.TableValueToId(context, (int)AttachmentsTable.Name, ref tableValueHolder.Reader);
+                    var contentType = DocumentsStorage.TableValueToId(context, (int)AttachmentsTable.ContentType, ref tableValueHolder.Reader);
 
-                    var ptr = sr.Reader.Read((int)AttachmentsTable.Hash, out int size);
+                    var ptr = tableValueHolder.Reader.Read((int)AttachmentsTable.Hash, out int size);
                     Slice.From(context.Allocator, ptr, size, out Slice base64Hash);
 
                     currentAttachments.Add((name, contentType, base64Hash));
@@ -434,7 +435,7 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             foreach (var sr in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
             {
-                var attachment = TableValueToAttachment(context, ref sr.Reader);
+                var attachment = TableValueToAttachment(context, ref sr.Value.Reader);
                 if (attachment == null)
                     continue;
 

@@ -8,7 +8,6 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
-using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Server;
 using Raven.Client.Extensions;
@@ -20,6 +19,7 @@ using Raven.Client.Server.Operations;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Operations;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Rachis;
 using Raven.Server.NotificationCenter.Notifications;
@@ -58,6 +58,7 @@ namespace Raven.Server.ServerWide
         private StorageEnvironment _env;
 
         private readonly NotificationsStorage _notificationsStorage;
+        private readonly OperationsStorage _operationsStorage;
 
         private RequestExecutor _clusterRequestExecutor;
 
@@ -70,6 +71,8 @@ namespace Raven.Server.ServerWide
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases;
 
+        public Operations Operations { get; }
+
         public ServerStore(RavenConfiguration configuration, RavenServer ravenServer)
         {
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
@@ -81,6 +84,10 @@ namespace Raven.Server.ServerWide
             _notificationsStorage = new NotificationsStorage(ResourceName);
 
             NotificationCenter = new NotificationCenter.NotificationCenter(_notificationsStorage, ResourceName, ServerShutdown);
+
+            _operationsStorage = new OperationsStorage();
+
+            Operations = new Operations(ResourceName, _operationsStorage, NotificationCenter, null);
 
             LicenseManager = new LicenseManager(NotificationCenter);
 
@@ -362,6 +369,7 @@ namespace Raven.Server.ServerWide
 
             _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
             _notificationsStorage.Initialize(_env, ContextPool);
+            _operationsStorage.Initialize(_env, ContextPool);
             DatabaseInfoCache.Initialize(_env, ContextPool);
 
             NotificationCenter.Initialize();
@@ -875,8 +883,13 @@ namespace Raven.Server.ServerWide
         }
 
 
-        public Task<(long Etag, object Result)> WriteDatabaseRecordAsync(string databaseName, DatabaseRecord record, long? index)
+        public Task<(long Etag, object Result)> WriteDatabaseRecordAsync(
+            string databaseName, DatabaseRecord record, long? index,
+            Dictionary<string, object> databaseValues = null)
         {
+            if (databaseValues == null)
+                databaseValues = new Dictionary<string, object>();
+
             Debug.Assert(record.Topology != null);
             record.Topology.Stamp = new LeaderStamp
             {
@@ -888,7 +901,8 @@ namespace Raven.Server.ServerWide
             {
                 Name = databaseName,
                 RaftCommandIndex = index,
-                Record = record
+                Record = record,
+                DatabaseValues = databaseValues
             };
 
             return SendToLeaderAsync(addDatabaseCommand);

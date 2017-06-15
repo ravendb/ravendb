@@ -882,7 +882,7 @@ namespace Voron.Data.Tables
             return fstIndex.NumberOfEntries;
         }
 
-        public IEnumerable<TableValueHolder> SeekByPrimaryKeyPrefix(Slice requiredPrefix, Slice startAfter, int skip)
+        public IEnumerable<(Slice Key, TableValueHolder Value)> SeekByPrimaryKeyPrefix(Slice requiredPrefix, Slice startAfter, int skip)
         {
             var isStartAfter = startAfter.Equals(Slices.Empty) == false;
 
@@ -906,7 +906,7 @@ namespace Voron.Data.Tables
                 do
                 {
                     GetTableValueReader(it, out result.Reader);
-                    yield return result;
+                    yield return (it.CurrentKey, result);
                 }
                 while (it.MoveNext());
             }

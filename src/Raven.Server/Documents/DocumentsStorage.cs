@@ -190,7 +190,7 @@ namespace Raven.Server.Documents
             exceptionAggregator.ThrowIfNeeded();
         }
 
-        public void Initialize()
+        public void Initialize(bool generateNewDatabaseId = false)
         {
             if (_logger.IsInfoEnabled)
             {
@@ -223,7 +223,7 @@ namespace Raven.Server.Documents
 
             try
             {
-                Initialize(options);
+                Initialize(options, generateNewDatabaseId);
             }
             catch (Exception)
             {
@@ -232,12 +232,12 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void Initialize(StorageEnvironmentOptions options)
+        public void Initialize(StorageEnvironmentOptions options, bool generateNewDatabaseId = false)
         {
             options.SchemaVersion = 6;
             try
             {
-                Environment = new StorageEnvironment(options);
+                Environment = new StorageEnvironment(options, generateNewDatabaseId);
                 ContextPool = new DocumentsContextPool(_documentDatabase);
 
                 using (var tx = Environment.WriteTransaction())
@@ -396,7 +396,7 @@ namespace Raven.Server.Documents
             {
                 foreach (var result in table.SeekByPrimaryKeyPrefix(prefixSlice, startAfterSlice, 0))
                 {
-                    var document = TableValueToDocument(context, ref result.Reader);
+                    var document = TableValueToDocument(context, ref result.Value.Reader);
                     string documentId = document.Id;
                     if (documentId.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase) == false)
                         break;
@@ -1067,7 +1067,7 @@ namespace Raven.Server.Documents
                     foreach (var holder in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
                     {
                         hasMore = true;
-                        var id = TableValueToId(context, (int)DocumentsTable.Id, ref holder.Reader);
+                        var id = TableValueToId(context, (int)DocumentsTable.Id, ref holder.Value.Reader);
 
                         var deleteOperationResult = Delete(context, id, null);
                         if (deleteOperationResult != null)

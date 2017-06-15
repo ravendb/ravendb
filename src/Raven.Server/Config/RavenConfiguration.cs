@@ -210,11 +210,17 @@ namespace Raven.Server.Config
             return prop.GetCustomAttributes<DefaultValueAttribute>().FirstOrDefault()?.Value;
         }
 
+        public static string GetDataDirectoryPath(CoreConfiguration coreConfiguration, string name, ResourceType type)
+        {
+            var dataDirectory = coreConfiguration.DataDirectory;
+            var dataDirectoryPath = dataDirectory != null ? coreConfiguration.DataDirectory.Combine(Inflector.Pluralize(type.ToString())).Combine(name).ToFullPath() :
+                GenerateDefaultDataDirectory(coreConfiguration.GetDefaultValue<CoreConfiguration>(v => v.DataDirectory).ToString(), type, name);
+            return dataDirectoryPath;
+        }
+
         public static RavenConfiguration CreateFrom(RavenConfiguration parent, string name, ResourceType type)
         {
-            var dataDirectory = parent.Core.DataDirectory;
-            var dataDirectoryPath = dataDirectory != null ? parent.Core.DataDirectory.Combine(Inflector.Pluralize(type.ToString())).Combine(name).ToFullPath() :
-                      GenerateDefaultDataDirectory(parent.Core.GetDefaultValue<CoreConfiguration>(v => v.DataDirectory).ToString(), type, name);
+            var dataDirectoryPath = GetDataDirectoryPath(parent.Core, name, type);
 
             var result = new RavenConfiguration(name, type)
             {

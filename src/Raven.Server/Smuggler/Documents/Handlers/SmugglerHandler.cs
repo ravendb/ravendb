@@ -12,12 +12,10 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Jint;
 using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
@@ -112,7 +110,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                         await
                             Database.Operations.AddOperation(
                                 "Export database: " + Database.Name,
-                                DatabaseOperations.OperationType.DatabaseExport,
+                                Operations.OperationType.DatabaseExport,
                                 onProgress => Task.Run(() => ExportDatabaseInternal(options, onProgress, context, token), token.Token), operationId.Value, token);
                     }
                     catch (Exception)
@@ -288,10 +286,9 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             {
                 var options = DatabaseSmugglerOptionsServerSide.Create(HttpContext, context);
-                var token = CreateOperationToken();
 
                 using (var stream = new GZipStream(new BufferedStream(await GetImportStream(), 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
-                using (token)
+                using (var token = CreateOperationToken())
                 {
                     var source = new StreamSource(stream, context, Database);
                     var destination = new DatabaseDestination(Database);
@@ -330,7 +327,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 var result = new SmugglerResult();
                 await Database.Operations.AddOperation("Import to: " + Database.Name,
-                    DatabaseOperations.OperationType.DatabaseImport,
+                    Operations.OperationType.DatabaseImport,
                     onProgress =>
                     {
                         return Task.Run(async () =>

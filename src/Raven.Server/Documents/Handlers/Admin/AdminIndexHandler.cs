@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             Database.Operations.AddOperation(
                 "Compact index: " + index.Name,
-                DatabaseOperations.OperationType.IndexCompact,
+                Operations.Operations.OperationType.IndexCompact,
                 onProgress => Task.Factory.StartNew(() => index.Compact(onProgress), token.Token), operationId, token);
 
             JsonOperationContext context;

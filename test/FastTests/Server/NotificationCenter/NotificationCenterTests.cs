@@ -364,7 +364,7 @@ namespace FastTests.Server.NotificationCenter
         {
             using (var database = CreateDocumentDatabase())
             {
-                database.NotificationCenter.Add(OperationChanged.Create(1, new DatabaseOperations.OperationDescription(), new OperationState()
+                database.NotificationCenter.Add(OperationChanged.Create(1, new Operations.OperationDescription(), new OperationState()
                 {
                     Result = new PersistableResult()
                 }, false));

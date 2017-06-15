@@ -16,6 +16,7 @@ using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Subscriptions
 {
@@ -173,10 +174,10 @@ namespace Raven.Server.Documents.Subscriptions
 
         public IEnumerable<SubscriptionGeneralDataAndStats> GetAllSubscriptions(TransactionOperationContext serverStoreContext, bool history, int start, int take)
         {
-            foreach (var subscriptionStateBlittable in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext,
-                SubscriptionState.GenerateSubscriptionPrefix(_db.Name)))
+            foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext,
+                SubscriptionState.SubscriptionPrefix(_db.Name)))
             {
-                var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionStateBlittable.Item2);
+                var subscriptionState = JsonDeserializationClient.SubscriptionState(keyValue.Value);
                 var subscriptionGeneralData = new SubscriptionGeneralDataAndStats(subscriptionState);
                 GetSubscriptionInternal(subscriptionGeneralData, history);
                 yield return subscriptionGeneralData;
@@ -285,7 +286,7 @@ namespace Raven.Server.Documents.Subscriptions
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                return ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.GenerateSubscriptionPrefix(_db.Name))
+                return ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(_db.Name))
                     .Count();
             }
         }

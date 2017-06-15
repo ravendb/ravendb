@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Server;
@@ -18,21 +22,19 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Transformers;
-using Raven.Server.Documents.Versioning;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
-using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
 using Voron.Exceptions;
 using Voron.Impl.Backup;
-using Voron.Util;
 using DatabaseInfo = Raven.Client.Server.Operations.DatabaseInfo;
 using Size = Raven.Client.Util.Size;
 
@@ -91,17 +93,19 @@ namespace Raven.Server.Documents
 
             try
             {
-
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
                     MasterKey = _serverStore.GetSecretKey(ctx, Name);
 
                     var databaseRecord = _serverStore.Cluster.ReadDatabase(ctx, Name);
-                    if (databaseRecord.Encrypted && MasterKey == null)
-                        throw new InvalidOperationException($"Attempt to create encrypted db {Name} without supplying the secret key");
-                    if (databaseRecord.Encrypted == false && MasterKey != null)
-                        throw new InvalidOperationException($"Attempt to create a non-encrypted db {Name}, but a secret key exists for this db.");
+                    if (databaseRecord != null)
+                    {
+                        if (databaseRecord.Encrypted && MasterKey == null)
+                            throw new InvalidOperationException($"Attempt to create encrypted db {Name} without supplying the secret key");
+                        if (databaseRecord.Encrypted == false && MasterKey != null)
+                            throw new InvalidOperationException($"Attempt to create a non-encrypted db {Name}, but a secret key exists for this db.");
+                    }
                 }
 
                 IoChanges = new IoChangesNotifications();
@@ -114,7 +118,6 @@ namespace Raven.Server.Documents
                 if (serverStore != null)
                     ReplicationLoader = new ReplicationLoader(this, serverStore);
                 SubscriptionStorage = new SubscriptionStorage(this, serverStore);
-                Operations = new DatabaseOperations(this);
                 Metrics = new MetricsCountersManager();
                 Patcher = new DocumentPatcher(this);
                 TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
@@ -122,6 +125,7 @@ namespace Raven.Server.Documents
                     configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
                 ConfigurationStorage = new ConfigurationStorage(this);
                 NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, _databaseShutdown.Token);
+                Operations = new Operations.Operations(Name, ConfigurationStorage.OperationsStorage, NotificationCenter, Changes);
                 DatabaseInfoCache = serverStore?.DatabaseInfoCache;
                 RachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
                 CatastrophicFailureNotification = new CatastrophicFailureNotification(e =>
@@ -163,6 +167,7 @@ namespace Raven.Server.Documents
         public DocumentsStorage DocumentsStorage { get; private set; }
 
         public ExpiredDocumentsCleaner ExpiredDocumentsCleaner { get; private set; }
+
         public PeriodicBackupRunner PeriodicBackupRunner { get; private set; }
 
         public DocumentTombstoneCleaner DocumentTombstoneCleaner { get; private set; }
@@ -175,7 +180,7 @@ namespace Raven.Server.Documents
 
         public NotificationCenter.NotificationCenter NotificationCenter { get; private set; }
 
-        public DatabaseOperations Operations { get; private set; }
+        public Operations.Operations Operations { get; private set; }
 
         public HugeDocuments HugeDocuments { get; }
 
@@ -195,25 +200,28 @@ namespace Raven.Server.Documents
 
         public DateTime StartTime { get; }
 
-        public void Initialize()
+        public void Initialize(bool generateNewDatabaseId = false, bool skipLoadingDatabaseRecord = false)
         {
             try
             {
                 NotificationCenter.Initialize(this);
 
-                DocumentsStorage.Initialize();
+                DocumentsStorage.Initialize(generateNewDatabaseId);
                 TxMerger.Start();
                 ConfigurationStorage.Initialize();
 
-                DatabaseRecord record;
+                if (skipLoadingDatabaseRecord)
+                    return;
+
                 long index;
+                DatabaseRecord record;
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
-                    record = _serverStore.Cluster.ReadDatabase(context, Name,out index);
+                    record = _serverStore.Cluster.ReadDatabase(context, Name, out index);
 
                 if (record == null)
                     DatabaseDoesNotExistException.Throw(Name);
-                
+
                 _indexStoreTask = IndexStore.InitializeAsync(record, index);
                 _transformerStoreTask = TransformerStore.InitializeAsync(record);
 
@@ -222,6 +230,7 @@ namespace Raven.Server.Documents
 
                 EtlLoader.Initialize(record);
                 Patcher.Initialize(record);
+
 
                 DocumentTombstoneCleaner.Start();
 
@@ -252,7 +261,7 @@ namespace Raven.Server.Documents
                 Dispose();
                 throw;
             }
-        }
+    }
 
         public DatabaseUsage DatabaseInUse(bool skipUsagesCount)
         {
@@ -559,7 +568,55 @@ namespace Raven.Server.Documents
 
         public void FullBackupTo(string backupPath)
         {
-            BackupMethods.Full.ToFile(GetAllStoragesEnvironmentInformation(), backupPath);
+            using (var file = new FileStream(backupPath, FileMode.Create))
+            using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var database = _serverStore.Cluster.ReadDatabase(context, Name);
+                Debug.Assert(database != null);
+
+                var zipArchiveEntry = package.CreateEntry(RestoreSettings.FileName, CompressionLevel.Optimal);
+                using (var zipStream = zipArchiveEntry.Open())
+                using (var writer = new BlittableJsonTextWriter(context, zipStream))
+                {
+                    writer.WriteStartObject();
+
+                    // save the database record
+                    writer.WritePropertyName(nameof(RestoreSettings.DatabaseRecord));
+                    var databaseRecordBlittable = EntityToBlittable.ConvertEntityToBlittable(database, DocumentConventions.Default, context);
+                    context.Write(writer, databaseRecordBlittable);
+
+                    // save the database values (subscriptions, periodic backups statuses, etl states...)
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(RestoreSettings.DatabaseValues));
+                    writer.WriteStartObject();
+
+                    var first = true;
+                    foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, 
+                        Helpers.ClusterStateMachineValuesPrefix(Name)))
+                    {
+                        if (first)
+                        {
+                            writer.WriteComma();
+                            first = false;
+                        }
+
+                        writer.WriteStartObject();
+                        writer.WritePropertyName(keyValue.Key.ToString());
+                        context.Write(writer, keyValue.Value);
+                        writer.WriteEndObject();
+                    }
+                    writer.WriteEndObject();
+                    // end dictionary
+
+                    writer.WriteEndObject();
+                }                
+
+                BackupMethods.Full.ToFile(GetAllStoragesEnvironmentInformation(), package);
+
+                file.Flush(true); // make sure that we fully flushed to disk
+            }
         }
 
         public void IncrementalBackupTo(string backupPath)

@@ -116,14 +116,30 @@ namespace Raven.Server.Documents.PeriodicBackup
                 lastIncrementalBackup, configuration, skipErrorLog: skipErrorLog);
 
             if (nextFullBackup == null && nextIncrementalBackup == null)
+            {
+                var message = "Couldn't schedule next backup " +
+                              $"full backup frequency: {configuration.FullBackupFrequency}, " +
+                              $"incremental backup frequency: {configuration.IncrementalBackupFrequency}";
+                if (string.IsNullOrWhiteSpace(configuration.Name) == false)
+                    message += $", backup name: {configuration.Name}";
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info(message);
+
+                _database.NotificationCenter.Add(AlertRaised.Create("Couldn't schedule next backup",
+                    message,
+                    AlertType.PeriodicBackup,
+                    NotificationSeverity.Warning));
+
                 return null;
+            }
 
             Debug.Assert(configuration.TaskId != 0);
 
             var isFullBackup = IsFullBackup(backupStatus, configuration, nextFullBackup, nextIncrementalBackup);
             var nextBackupDateTime = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup);
             TimeSpan nextBackupTimeSpan;
-            if (isFullBackup && backupStatus.LastFullBackup == null)
+            if (isFullBackup)
             {
                 // it's a full backup and there was no previous backup
                 nextBackupTimeSpan = TimeSpan.Zero;
@@ -403,12 +419,15 @@ namespace Raven.Server.Documents.PeriodicBackup
         }
 
         private SmugglerResult CreateBackup(string backupFilePath,
-            long? startDocsEtag, DocumentsOperationContext context)
+            long? startDocumentEtag, DocumentsOperationContext context)
         {
+            // the last etag is already included in the last backup
+            startDocumentEtag = startDocumentEtag == null ? 0 : ++startDocumentEtag;
+
             SmugglerResult result;
             using (var file = File.Open(backupFilePath, FileMode.CreateNew))
             {
-                var smugglerSource = new DatabaseSource(_database, startDocsEtag ?? 0);
+                var smugglerSource = new DatabaseSource(_database, startDocumentEtag.Value);
                 var smugglerDestination = new StreamDestination(file, context, smugglerSource);
                 var smuggler = new DatabaseSmuggler(
                     smugglerSource,
@@ -782,47 +801,41 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (_disposed)
                 return;
 
-            lock (this)
+            if (databaseRecord.PeriodicBackups == null)
             {
-                if (_disposed)
-                    return;
-
-                if (databaseRecord.PeriodicBackups == null)
+                foreach (var periodicBackup in _periodicBackups)
                 {
-                    foreach (var periodicBackup in _periodicBackups)
-                    {
-                        periodicBackup.Value.DisableFutureBackups();
+                    periodicBackup.Value.DisableFutureBackups();
 
-                        TryAddInactiveRunningPeriodicBackups(periodicBackup.Value.RunningTask);
-                    }
-                    return;
+                    TryAddInactiveRunningPeriodicBackups(periodicBackup.Value.RunningTask);
                 }
+                return;
+            }
 
-                var allBackupTaskIds = new List<long>();
-                foreach (var periodicBackupConfiguration in databaseRecord.PeriodicBackups)
-                {
-                    var newBackupTaskId = periodicBackupConfiguration.TaskId;
-                    allBackupTaskIds.Add(newBackupTaskId);
+            var allBackupTaskIds = new List<long>();
+            foreach (var periodicBackupConfiguration in databaseRecord.PeriodicBackups)
+            {
+                var newBackupTaskId = periodicBackupConfiguration.TaskId;
+                allBackupTaskIds.Add(newBackupTaskId);
 
-                    var taskState = GetTaskStatus(databaseRecord, periodicBackupConfiguration);
+                var taskState = GetTaskStatus(databaseRecord, periodicBackupConfiguration);
 
-                    UpdatePeriodicBackups(newBackupTaskId, periodicBackupConfiguration, taskState);
-                }
+                UpdatePeriodicBackups(newBackupTaskId, periodicBackupConfiguration, taskState);
+            }
 
-                RemoveInactiveCompletedTasks();
+            RemoveInactiveCompletedTasks();
 
-                var deletedBackupTaskIds = _periodicBackups.Keys.Except(allBackupTaskIds).ToList();
-                foreach (var deletedBackupId in deletedBackupTaskIds)
-                {
-                    PeriodicBackup deletedBackup;
-                    if (_periodicBackups.TryRemove(deletedBackupId, out deletedBackup) == false)
-                        continue;
+            var deletedBackupTaskIds = _periodicBackups.Keys.Except(allBackupTaskIds).ToList();
+            foreach (var deletedBackupId in deletedBackupTaskIds)
+            {
+                PeriodicBackup deletedBackup;
+                if (_periodicBackups.TryRemove(deletedBackupId, out deletedBackup) == false)
+                    continue;
 
-                    // stopping any future backups
-                    // currently running backups will continue to run
-                    deletedBackup.DisableFutureBackups();
-                    TryAddInactiveRunningPeriodicBackups(deletedBackup.RunningTask);
-                }
+                // stopping any future backups
+                // currently running backups will continue to run
+                deletedBackup.DisableFutureBackups();
+                TryAddInactiveRunningPeriodicBackups(deletedBackup.RunningTask);
             }
         }
 

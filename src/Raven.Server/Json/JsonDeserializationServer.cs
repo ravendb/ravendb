@@ -16,6 +16,7 @@ using Raven.Server.Commercial;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Studio;
 using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.ServerWide.Maintenance;
@@ -80,5 +81,7 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, CustomIndexPaths> CustomIndexPaths = GenerateJsonDeserializationRoutine<CustomIndexPaths>();
 
         public static readonly Func<BlittableJsonReaderObject, ApiKeyDefinition> ApiKeyDefinition = GenerateJsonDeserializationRoutine<ApiKeyDefinition>();
+
+        public static readonly Func<BlittableJsonReaderObject, RestoreSettings> RestoreSettings = GenerateJsonDeserializationRoutine<RestoreSettings>();
     }
 }

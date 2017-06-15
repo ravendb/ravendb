@@ -4,7 +4,6 @@ using System.Text.RegularExpressions;
 
 namespace Raven.Client.Server
 {
-
     //TODO: kill this class
     public static class MultiDatabase
     {

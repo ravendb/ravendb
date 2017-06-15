@@ -146,7 +146,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DocumentChange));
             scripter.AddType(typeof(IndexChange));
             scripter.AddType(typeof(TransformerChange));
-            scripter.AddType(typeof(DatabaseOperations.Operation));
+            scripter.AddType(typeof(Operations.Operation));
             scripter.AddType(typeof(NewVersionAvailableDetails));
             scripter.AddType(typeof(MessageDetails));
             scripter.AddType(typeof(ExceptionDetails));

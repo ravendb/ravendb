@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Conventions;
+﻿using System.Collections.Generic;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Server;
 using Sparrow.Json;
@@ -10,6 +11,7 @@ namespace Raven.Server.ServerWide.Commands
     {
         public string Name;
         public DatabaseRecord Record;
+        public Dictionary<string, object> DatabaseValues;
         public bool Encrypted;
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)
@@ -20,7 +22,8 @@ namespace Raven.Server.ServerWide.Commands
                 [nameof(Name)] = Name,
                 [nameof(Record)] = EntityToBlittable.ConvertEntityToBlittable(Record, DocumentConventions.Default, context),
                 [nameof(RaftCommandIndex)] = RaftCommandIndex,
-                [nameof(Encrypted)] = Encrypted
+                [nameof(Encrypted)] = Encrypted,
+                [nameof(DatabaseValues)] = EntityToBlittable.ConvertEntityToBlittable(DatabaseValues, DocumentConventions.Default, context)
             };
         }
     }
