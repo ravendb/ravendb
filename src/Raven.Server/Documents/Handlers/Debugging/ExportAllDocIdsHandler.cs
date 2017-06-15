@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Extensions;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
@@ -12,32 +13,20 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/databases/*/debug/documents/export-all-ids", "GET")]
         public Task ExportAllDocIds()
         {
-            var lastFlush = 0;
-            var path = GetStringQueryString("path", required: true);
+            var fileName = $"ids-for-{Uri.EscapeDataString(Database.Name)}-{Database.Time.GetUtcNow().GetDefaultRavenFormat(isUtc: true)}.txt";
+            HttpContext.Response.Headers["Content-Disposition"] = $"attachment; filename={fileName}";
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var fileStream = new FileStream(path, FileMode.Create))
+            using (var writer = new StreamWriter(ResponseBodyStream(), Encoding.UTF8, 4096))
             using (context.OpenReadTransaction())
             {
                 foreach (var id in context.DocumentDatabase.DocumentsStorage.GetAllIds(context))
-                {
-                    var pos = WriteLine(fileStream, $"{id}{Environment.NewLine}");
-                    if (lastFlush - pos > 4096)
-                    {
-                        fileStream.Flush();
-                        lastFlush = pos;
-                    }
-                }
-                fileStream.Flush();
+                    writer.Write($"{id}{Environment.NewLine}");
+
+                writer.Flush();
             }
+
             return Task.CompletedTask;
         }
-
-        private static int WriteLine(FileStream fileStream, string str)
-        {
-            var bytes = Encoding.UTF8.GetBytes(str);
-            fileStream.Write(bytes, 0, bytes.Length);
-            return bytes.Length;
-        }
     }
-} 
+}
