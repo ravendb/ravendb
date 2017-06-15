@@ -51,35 +51,20 @@ class ongoingTaskReplicationModel extends ongoingTask {
 
         this.destinationDB.extend({
             required: true,
-            validation: [
-                {
-                    validator: (val: string) => generalUtils.validateDatabaseName(val),
-                    message: "Please enter a valid database name"
-                }]
-        });
+            validDatabaseName: true,
+            validDatabasePrefix: true,
+            validDatabasePostfix: true,
+            validDatabaseCharacters: true
+    });
 
         this.destinationURL.extend({
             required: true,
-            validation: [
-                {
-                    validator: (val: string) => generalUtils.validateUrl(val),  
-                    message: "Url format expected: 'http(s)://hostName:portNumber'"
-                }]
+            validUrl: true
         });
 
         this.apiKey.extend({
             required: false,
-            validation: [
-                {
-                    validator: (val: string) => {
-                        if (val) {
-                            return generalUtils.validateApiKey(val);
-                        } else {
-                            return true;
-                        }
-                    },  
-                    message: "Please enter a valid Api Key format"
-                }]
+            validApiKey: true
         });
 
         this.validationGroup = ko.validatedObservable({

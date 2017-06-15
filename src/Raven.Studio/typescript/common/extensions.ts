@@ -18,6 +18,53 @@ class extensions {
 
     private static configureValidation() {
 
+        //Validate that url is in the following format: http(s)://hostName:portNumber (e.g. http://localhost:8081)
+        (ko.validation.rules as any)['validUrl'] = {
+            validator: (url: string) => {
+                const urlRegex = /^(https?:\/\/)([a-zA-Z\.-]+)\:([0-9]{1,5})$/;
+                return (urlRegex.test(url));
+            },
+            message: "Url format expected: 'http(s)://hostName:portNumber'"
+        };  
+
+        // Validate that the Api Key is the following format: xxxxx/xxxxx (e.g. abCD123/efGh456)
+        (ko.validation.rules as any)['validApiKey'] = {
+            validator: (apiKey: string) => {
+                if (apiKey) {
+                    const apiKeyRegex = /^([\da-z]+)\/([\da-z]+)$/;
+                    return (apiKeyRegex.test(apiKey));
+                }
+                return true;
+            },
+            message: "Api Key format expected: 2 strings separated by a slash, i.e. xxxxx/xxxxx"
+        };
+     
+        (ko.validation.rules as any)['validDatabaseCharacters'] = {
+            validator: (databaseName: string) => {
+                const forbiddenChars = /^[^\\/:\*\?"<>\|]*$/; // forbidden characters \ / : * ? " < > |
+                return (forbiddenChars.test(databaseName));
+            },
+            message: `The database name can't contain any of the following characters: \\ / : * ? " < > |`
+        };
+
+        (ko.validation.rules as any)['validDatabaseName'] = {
+            validator: (databaseName: string, test: string) => {
+                const regex = /^(nul|null|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
+                return (!regex.test(databaseName));
+            },
+            message: `The name is forbidden for use!`
+        };
+
+        (ko.validation.rules as any)['validDatabasePrefix'] = {
+            validator: (databaseName: string) => !databaseName.startsWith("."),
+            message: `The database name can't start with a dot!`
+        };
+
+        (ko.validation.rules as any)['validDatabasePostfix'] = {
+            validator: (databaseName: string) => !databaseName.endsWith("."),
+            message: `The database name can't end with a dot!`
+        };
+
         (ko.validation.rules as any)['base64'] = {
             validator: (val: string) => {
                 const base64regex = /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;

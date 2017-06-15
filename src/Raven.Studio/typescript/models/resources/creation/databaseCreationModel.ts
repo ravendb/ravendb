@@ -114,8 +114,6 @@ class databaseCreationModel {
     }
 
     setupValidation(databaseDoesntExist: (name: string) => boolean, maxReplicationFactor: number) {
-        const rg1 = /^[^\\/:\*\?"<>\|]*$/; // forbidden characters \ / : * ? " < > |
-        const rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
 
         this.setupPathValidation(this.path.dataPath, "Data");
         this.setupPathValidation(this.path.tempPath, "Temp");
@@ -138,23 +136,15 @@ class databaseCreationModel {
         this.name.extend({
             required: true,
             maxLength: 230,
+            validDatabaseName: true,
+            validDatabasePrefix: true,
+            validDatabasePostfix: true,
+            validDatabaseCharacters: true,
+
             validation: [
                 {
                     validator: databaseDoesntExist,
                     message: "Database already exists"
-                }, {
-                    validator: (val: string) => rg1.test(val),
-                    message: `The database name can't contain any of the following characters: \\ / : * ? " < > |`,
-                }, {
-                    validator: (val: string) => !val.startsWith("."),
-                    message: `The database name can't start with a dot!`
-                }, {
-                    validator: (val: string) => !val.endsWith("."),
-                    message: `The database name can't end with a dot!`
-                }, {
-                    validator: (val: string) => !rg3.test(val),
-                    message: `The name {0} is forbidden for use!`,
-                    params: this.name
                 }]
         });
 
