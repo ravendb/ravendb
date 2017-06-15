@@ -87,7 +87,7 @@ namespace Raven.Server.Documents
             Slice.From(StorageEnvironment.LabelsContext, CollectionName.GetTablePrefix(CollectionTableType.Tombstones), ByteStringType.Immutable, out TombstonesPrefix);
             Slice.From(StorageEnvironment.LabelsContext, "DeletedEtags", ByteStringType.Immutable, out DeletedEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "LastReplicatedEtags", ByteStringType.Immutable, out LastReplicatedEtagsSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "ChangeVector", ByteStringType.Immutable, out ChangeVectorSlice);            
+            Slice.From(StorageEnvironment.LabelsContext, "ChangeVector", ByteStringType.Immutable, out ChangeVectorSlice);
             /*
             Collection schema is:
             full name
@@ -195,8 +195,9 @@ namespace Raven.Server.Documents
             if (_logger.IsInfoEnabled)
             {
                 _logger.Info
-                    ("Starting to open document storage for " + (_documentDatabase.Configuration.Core.RunInMemory ?
-                    "<memory>" : _documentDatabase.Configuration.Core.DataDirectory.FullPath));
+                ("Starting to open document storage for " + (_documentDatabase.Configuration.Core.RunInMemory
+                     ? "<memory>"
+                     : _documentDatabase.Configuration.Core.DataDirectory.FullPath));
             }
 
             var options = _documentDatabase.Configuration.Core.RunInMemory
@@ -211,7 +212,7 @@ namespace Raven.Server.Documents
                     _documentDatabase.Configuration.Storage.JournalsStoragePath?.FullPath,
                     _documentDatabase.IoChanges,
                     _documentDatabase.CatastrophicFailureNotification
-                    );
+                );
 
             options.OnNonDurableFileSystemError += _documentDatabase.HandleNonDurableFileSystemError;
 
@@ -381,7 +382,8 @@ namespace Raven.Server.Documents
             return (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * 2);
         }
 
-        public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId, int start, int take)
+        public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId,
+            int start, int take)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
@@ -551,7 +553,7 @@ namespace Raven.Server.Documents
                 var curEtag = TableValueToEtag((int)DocumentsTable.Etag, ref result.Reader);
                 var curChangeVector = GetChangeVectorEntriesFromTableValueReader(ref result.Reader, (int)DocumentsTable.ChangeVector);
 
-                yield return (curChangeVector,curEtag);
+                yield return (curChangeVector, curEtag);
             }
         }
 
@@ -597,14 +599,14 @@ namespace Raven.Server.Documents
             if (context.Transaction == null)
             {
                 DocumentPutAction.ThrowRequiresTransaction();
-                return default(DocumentOrTombstone);// never hit
+                return default(DocumentOrTombstone); // never hit
             }
 
             try
             {
                 var doc = Get(context, lowerId);
                 if (doc != null)
-                    return new DocumentOrTombstone { Document = doc };
+                    return new DocumentOrTombstone {Document = doc};
             }
             catch (DocumentConflictException)
             {
@@ -645,6 +647,17 @@ namespace Raven.Server.Documents
             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(doc);
 
             return doc;
+        }
+
+        public IEnumerable<LazyStringValue> GetAllIds(DocumentsOperationContext context)
+        {
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], 0, 0))
+            {
+                yield return TableValueToId(context, (int)DocumentsTable.Id, ref result.Reader);
+            }
         }
 
         public bool GetTableValueReaderForDocument(DocumentsOperationContext context, Slice lowerId, out TableValueReader tvr)
