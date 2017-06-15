@@ -1,3 +1,4 @@
+using System;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Server.Versioning
@@ -6,13 +7,18 @@ namespace Raven.Client.Server.Versioning
     {
         public long? MaxRevisions { get; set; }
 
+        public TimeSpan? MinimumTimeToKeep { get; set; }
+
         public bool Active { get; set; }
 
         public bool PurgeOnDelete { get; set; }
 
         protected bool Equals(VersioningConfigurationCollection other)
         {
-            return MaxRevisions == other.MaxRevisions && Active == other.Active && PurgeOnDelete == other.PurgeOnDelete;
+            return MaxRevisions == other.MaxRevisions && 
+                MinimumTimeToKeep == other.MinimumTimeToKeep && 
+                Active == other.Active && 
+                PurgeOnDelete == other.PurgeOnDelete;
         }
 
         public override bool Equals(object obj)
@@ -27,7 +33,8 @@ namespace Raven.Client.Server.Versioning
         {
             unchecked
             {
-                var hashCode = MaxRevisions.GetHashCode();
+                var hashCode = MaxRevisions?.GetHashCode() ?? 0;
+                hashCode = (hashCode * 397) ^ MinimumTimeToKeep?.GetHashCode() ?? 0;
                 hashCode = (hashCode * 397) ^ Active.GetHashCode();
                 hashCode = (hashCode * 397) ^ PurgeOnDelete.GetHashCode();
                 return hashCode;
@@ -40,6 +47,7 @@ namespace Raven.Client.Server.Versioning
             {
                 [nameof(Active)] = Active,
                 [nameof(MaxRevisions)] = MaxRevisions,
+                [nameof(MinimumTimeToKeep)] = MinimumTimeToKeep,
                 [nameof(PurgeOnDelete)] = PurgeOnDelete
             };
         }

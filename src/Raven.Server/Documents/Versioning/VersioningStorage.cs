@@ -286,13 +286,13 @@ namespace Raven.Server.Documents.Versioning
                 if (configuration == null)
                     configuration = GetVersioningConfiguration(collectionName);
 
-                DeleteOldRevisions(context, table, lowerId, configuration.MaxRevisions, nonPersistentFlags);
+                DeleteOldRevisions(context, table, lowerId, configuration, nonPersistentFlags);
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice lowerId, 
-            long? maxRevisions, NonPersistentDocumentFlags nonPersistentFlags)
+            VersioningConfigurationCollection configuration, NonPersistentDocumentFlags nonPersistentFlags)
         {
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
             {
@@ -300,29 +300,29 @@ namespace Raven.Server.Documents.Versioning
                 // because in case that MaxRevisions is 3 or lower we may get a revision document from replication
                 // which is old. But because we put it first, we make sure to clean this document, because of the order to the revisions.
                 var revisionsCount = IncrementCountOfRevisions(context, prefixSlice, 1);
-                DeleteOldRevisions(context, table, prefixSlice, maxRevisions, revisionsCount, nonPersistentFlags);
+                DeleteOldRevisions(context, table, prefixSlice, configuration, revisionsCount, nonPersistentFlags);
             }
         }
 
-        private void DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, long? maxRevisions, long revisionsCount, 
+        private void DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, VersioningConfigurationCollection configuration, long revisionsCount, 
             NonPersistentDocumentFlags nonPersistentFlags)
         {
             if ((nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) == NonPersistentDocumentFlags.FromSmuggler)
                 return;
 
-            if (maxRevisions.HasValue == false || maxRevisions.Value == int.MaxValue)
+            if (configuration.MaxRevisions.HasValue == false || configuration.MaxRevisions.Value == int.MaxValue)
                 return;
 
-            var numberOfRevisionsToDelete = revisionsCount - maxRevisions.Value;
+            var numberOfRevisionsToDelete = revisionsCount - configuration.MaxRevisions.Value;
             if (numberOfRevisionsToDelete <= 0)
                 return;
 
-            var deletedRevisionsCount = DeleteRevisions(context, table, prefixSlice, numberOfRevisionsToDelete);
+            var deletedRevisionsCount = DeleteRevisions(context, table, prefixSlice, numberOfRevisionsToDelete, configuration.MinimumTimeToKeep);
             Debug.Assert(numberOfRevisionsToDelete == deletedRevisionsCount);
             IncrementCountOfRevisions(context, prefixSlice, -deletedRevisionsCount);
         }
 
-        private long DeleteRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, long numberOfRevisionsToDelete)
+        private long DeleteRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, long numberOfRevisionsToDelete, TimeSpan? minimumTimeToKeep)
         {
             long maxEtagDeleted = 0;
 
@@ -331,11 +331,17 @@ namespace Raven.Server.Documents.Versioning
                 deleted =>
                 {
                     var revision = TableValueToRevision(context, ref deleted.Reader);
+
+                    if (minimumTimeToKeep.HasValue &&
+                        _database.Time.GetUtcNow() - revision.LastModified <= minimumTimeToKeep.Value)
+                        return false;
+
                     maxEtagDeleted = Math.Max(maxEtagDeleted, revision.Etag);
                     if ((revision.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
                     {
                         _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision);
                     }
+                    return true;
                 });
             _database.DocumentsStorage.EnsureLastEtagIsPersisted(context, maxEtagDeleted);
             return deletedRevisionsCount;
@@ -385,7 +391,7 @@ namespace Raven.Server.Documents.Versioning
             {
                 using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
                 {
-                    DeleteRevisions(context, table, prefixSlice, long.MaxValue);
+                    DeleteRevisions(context, table, prefixSlice, long.MaxValue, null);
                     DeleteCountOfRevisions(context, prefixSlice);
                 }
 
@@ -423,7 +429,7 @@ namespace Raven.Server.Documents.Versioning
                 }
             }
 
-            DeleteOldRevisions(context, table, lowerId, configuration.MaxRevisions, nonPersistentFlags);
+            DeleteOldRevisions(context, table, lowerId, configuration, nonPersistentFlags);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
