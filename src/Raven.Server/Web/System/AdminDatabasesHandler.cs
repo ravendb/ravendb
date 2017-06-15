@@ -656,7 +656,7 @@ namespace Raven.Server.Web.System
 
                 else
                 {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    throw new InvalidOperationException("'database' query string parmater not found, and 'server-script' query string is not found. Don't know what to apply this script on");
                 }
 
                 if (result != null)

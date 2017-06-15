@@ -344,9 +344,7 @@ namespace Raven.Server.Documents
             var config = CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase);
             if (config == null)
             {
-                var tcs = new TaskCompletionSource<DocumentDatabase>();
-                tcs.SetResult(null);
-                return tcs.Task;
+                return Task.FromResult<DocumentDatabase>(null);
             }
                 
 

@@ -67,16 +67,15 @@ namespace Raven.Server.Routing
             var databaseName = context.RouteMatch.GetCapture();
             var databasesLandlord = context.RavenServer.ServerStore.DatabasesLandlord;
             var database = databasesLandlord.TryGetOrCreateResourceStore(databaseName);
-
-            if (database == null)
-            {
-                ThrowDatabaseDoesNotExist(databaseName);
-                return Task.CompletedTask;// never hit
-            }
-
+           
             if (database.IsCompleted)
             {
                 context.Database = database.Result;
+                
+                if (context.Database == null)
+                    ThrowDatabaseDoesNotExist(databaseName);
+                
+
                 return context.Database.DatabaseShutdown.IsCancellationRequested == false
                     ? Task.CompletedTask
                     : UnlikelyWaitForDatabaseToUnload(context, context.Database, databasesLandlord, databaseName);
@@ -101,11 +100,13 @@ namespace Raven.Server.Routing
         {
             var time = databasesLandlord.DatabaseLoadTimeout;
             var result = await Task.WhenAny(database, Task.Delay(time));
-            if (result != database)
+            if (database.IsCompleted == false)
             {
                 ThrowDatabaseLoadTimeout(databaseName, databasesLandlord.DatabaseLoadTimeout);
             }
             context.Database = await database;
+            if (context.Database == null)
+                ThrowDatabaseDoesNotExist(databaseName);
         }
 
         private static void ThrowDatabaseUnloadTimeout(StringSegment databaseName, TimeSpan timeout)
