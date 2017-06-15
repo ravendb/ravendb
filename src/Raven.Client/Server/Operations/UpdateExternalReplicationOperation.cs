@@ -4,6 +4,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
+using Raven.Server.ServerWide.Commands;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -23,17 +24,17 @@ namespace Raven.Client.Server.Operations
 
         public RavenCommand<ModifyOngoingTaskResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new UpdateExternalReplicationCommand(conventions, context, _database, _newWatcher);
+            return new UpdateExternalReplication(conventions, context, _database, _newWatcher);
         }
 
-        private class UpdateExternalReplicationCommand : RavenCommand<ModifyOngoingTaskResult>
+        private class UpdateExternalReplication : RavenCommand<ModifyOngoingTaskResult>
         {
             private readonly JsonOperationContext _context;
             private readonly DocumentConventions _conventions;
             private readonly string _databaseName;
             private readonly ExternalReplication _newWatcher;
 
-            public UpdateExternalReplicationCommand(
+            public UpdateExternalReplication(
                 DocumentConventions conventions,
                 JsonOperationContext context,
                 string database,
@@ -58,7 +59,7 @@ namespace Raven.Client.Server.Operations
                     {
                         var json = new DynamicJsonValue
                         {
-                            [nameof(ExternalReplication)] = _newWatcher.ToJson(),
+                            [nameof(UpdateExternalReplicationCommand.Watcher)] = _newWatcher.ToJson(),
                         };
 
                         _context.Write(stream, _context.ReadObject(json, "update-replication"));

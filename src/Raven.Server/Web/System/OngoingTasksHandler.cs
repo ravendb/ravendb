@@ -13,6 +13,7 @@ using Raven.Client.Server.Operations;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -423,12 +424,12 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-update-replication");
-                if (updateJson.TryGet(nameof(ExternalReplication), out BlittableJsonReaderObject watcherBlittable) == false)
+                if (updateJson.TryGet(nameof(UpdateExternalReplicationCommand.Watcher), out BlittableJsonReaderObject watcherBlittable) == false)
                 {
-                    throw new InvalidDataException("DatabaseWatcher was not found.");
+                    throw new InvalidDataException($"{nameof(UpdateExternalReplicationCommand.Watcher)} was not found.");
                 }
                
-                var watcher = JsonDeserializationClient.DatabaseWatcher(watcherBlittable);
+                var watcher = JsonDeserializationClient.ExternalReplication(watcherBlittable);
                 var (index, _) = await ServerStore.UpdateExternalReplication(name, watcher);
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 

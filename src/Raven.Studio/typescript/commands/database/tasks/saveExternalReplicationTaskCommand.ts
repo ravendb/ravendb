@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class saveExternalReplicationTaskCommand extends commandBase {
    
-    private externalReplicationToSend: Raven.Client.Server.DatabaseWatcher;
+    private externalReplicationToSend: Raven.Client.Server.ExternalReplication;
 
     constructor(private db: database, private taskId: number, private replicationSettings: externalReplicationDataFromUI) {
         super();
@@ -16,7 +16,7 @@ class saveExternalReplicationTaskCommand extends commandBase {
             Url: replicationSettings.DestinationURL,
             // Other vals:
             TaskId: taskId
-        } as Raven.Client.Server.DatabaseWatcher;
+        } as Raven.Client.Server.ExternalReplication;
     }
  
     execute(): JQueryPromise<Raven.Client.Server.Operations.ModifyOngoingTaskResult> {
@@ -45,7 +45,7 @@ class saveExternalReplicationTaskCommand extends commandBase {
         const addRepTask = $.Deferred<Raven.Client.Server.Operations.ModifyOngoingTaskResult>();
 
         const payload = {          
-            DatabaseWatcher: this.externalReplicationToSend
+            Watcher: this.externalReplicationToSend
         };
 
         this.post(url, JSON.stringify(payload))
