@@ -33,6 +33,7 @@ namespace FastTests.Tasks
                 Database = databaseName
             }.Initialize())
             {
+                ModifyStore((DocumentStore)leaderStore);
                 await CreateDatabasesInCluster(clusterSize, databaseName, leaderStore);
                 using (var session = leaderStore.OpenSession())
                 {
@@ -77,6 +78,9 @@ namespace FastTests.Tasks
                 Database = databaseName
             }.Initialize())
             {
+                ModifyStore((DocumentStore)leaderStore);
+                ModifyStore((DocumentStore)followerA);
+                ModifyStore((DocumentStore)followerB);
                 await CreateDatabasesInCluster(clusterSize, databaseName, leaderStore);
 
                 var leaderInput = Task.Run(() =>
@@ -174,6 +178,9 @@ namespace FastTests.Tasks
                 Database = databaseName
             }.Initialize())
             {
+                ModifyStore((DocumentStore)leaderStore);
+                ModifyStore((DocumentStore)followerA);
+                ModifyStore((DocumentStore)followerB);
                 await CreateDatabasesInCluster(clusterSize, databaseName, leaderStore);
                 using (var session = leaderStore.OpenSession())
                 {
@@ -251,6 +258,9 @@ namespace FastTests.Tasks
                 Database = databaseName
             }.Initialize())
             {
+                ModifyStore((DocumentStore)leaderStore);
+                ModifyStore((DocumentStore)followerA);
+                ModifyStore((DocumentStore)followerB);
                 await CreateDatabasesInCluster(clusterSize, databaseName, leaderStore);
 
                 Parallel.For(0, 5, _ =>
@@ -328,6 +338,7 @@ namespace FastTests.Tasks
                 Database = databaseName
             }.Initialize())
             {
+                ModifyStore((DocumentStore)leaderStore);
                 await CreateDatabasesInCluster(clusterSize, databaseName, leaderStore);
                 using (var session = leaderStore.OpenSession())
                 {

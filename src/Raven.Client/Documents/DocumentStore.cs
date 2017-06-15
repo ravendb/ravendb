@@ -170,6 +170,7 @@ namespace Raven.Client.Documents
             return session;
         }
 
+        public Func<RequestExecutor, RequestExecutor> CustomizeRequestExecutor = null;
         public override RequestExecutor GetRequestExecutor(string database = null)
         {
             if (database == null)
@@ -182,8 +183,8 @@ namespace Raven.Client.Documents
             }
 
             lazy = Conventions.DisableTopologyUpdates == false 
-                ? new Lazy<RequestExecutor>(() => RequestExecutor.Create(Urls, database, ApiKey)) 
-                : new Lazy<RequestExecutor>(() => RequestExecutor.CreateForSingleNode(Urls[0], database, ApiKey));
+                ? new Lazy<RequestExecutor>(() => CustomizeRequestExecutor?.Invoke(RequestExecutor.Create(Urls, database, ApiKey))?? RequestExecutor.Create(Urls, database, ApiKey)) 
+                : new Lazy<RequestExecutor>(() => CustomizeRequestExecutor?.Invoke(RequestExecutor.CreateForSingleNode(Urls[0], database, ApiKey))?? RequestExecutor.CreateForSingleNode(Urls[0], database, ApiKey));
 
             lazy = _requestExecutors.GetOrAdd(database, lazy);
 
