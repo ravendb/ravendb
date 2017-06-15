@@ -138,10 +138,11 @@ namespace Sparrow.Json
                 this.ThrowAlreadyDisposed();
 #endif
 
-            if (other.Size != this.Size)
+            int size = this.Size;
+            if (other.Size != size)
                 return false;
 
-            return Memory.CompareInline(Buffer, other.Buffer, this.Size) == 0;
+            return Memory.CompareInline(Buffer, other.Buffer, size) == 0;
         }
 
         public int CompareTo(string other)
@@ -177,9 +178,9 @@ namespace Sparrow.Json
             if (this.IsDisposed)
                 this.ThrowAlreadyDisposed();
 #endif
-
-            var result = Memory.CompareInline(Buffer, other, Math.Min(Size, otherSize));
-            return result == 0 ? Size - otherSize : result;
+            int size = Size;
+            var result = Memory.CompareInline(Buffer, other, Math.Min(size, otherSize));
+            return result == 0 ? size - otherSize : result;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

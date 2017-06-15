@@ -152,7 +152,8 @@ namespace Voron.Data.BTrees
 
         private void HandleUncompressedNodes(DecompressedLeafPage decompressedPage, TreePage p, DecompressionUsage usage)
         {
-            for (var i = 0; i < p.NumberOfEntries; i++)
+            int numberOfEntries = p.NumberOfEntries;
+            for (var i = 0; i < numberOfEntries; i++)
             {
                 var uncompressedNode = p.GetNode(i);
 
