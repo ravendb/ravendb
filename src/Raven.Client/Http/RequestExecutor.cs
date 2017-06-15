@@ -9,6 +9,7 @@ using System.Net.Http;
 using System.Net.Security;
 using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
@@ -441,7 +442,7 @@ namespace Raven.Client.Http
             return request;
         }
 
-        public Func<string> TimeoutExceptionAdditionalInfoFunc;
+        public event Action<StringBuilder> AdditionalErrorInformation;
 
         private async Task<bool> HandleUnsuccessfulResponse<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, string url)
         {
@@ -484,7 +485,7 @@ namespace Raven.Client.Http
                     await HandleConflict(context, response).ConfigureAwait(false);
                     break;
                 default:
-                    await ExceptionDispatcher.Throw(context, response, TimeoutExceptionAdditionalInfoFunc).ConfigureAwait(false);
+                    await ExceptionDispatcher.Throw(context, response, AdditionalErrorInformation).ConfigureAwait(false);
                     break;
             }
             return false;

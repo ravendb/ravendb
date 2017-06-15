@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Exceptions.Compilation;
@@ -55,7 +56,7 @@ namespace Raven.Client.Exceptions
             return exception;
         }        
 
-        public static async Task Throw(JsonOperationContext context, HttpResponseMessage response, Func<string> timeoutExceptionAdditionalInfoFunc = null)
+        public static async Task Throw(JsonOperationContext context, HttpResponseMessage response, Action<StringBuilder> additionalErrorInfo = null)
         {
             if (response == null)
                 throw new ArgumentNullException(nameof(response));
@@ -79,10 +80,11 @@ namespace Raven.Client.Exceptions
                 try
                 {
                     string message;
-                    if (type == typeof(TimeoutException))
+                    if (additionalErrorInfo != null)
                     {
-                        var timeoutMessage = timeoutExceptionAdditionalInfoFunc?.Invoke();
-                        message = $"{schema.Error}{Environment.NewLine}{timeoutMessage}";
+                        var sb = new StringBuilder(schema.Error);
+                        additionalErrorInfo(sb);
+                        message = sb.ToString();
                     }
                     else
                     {

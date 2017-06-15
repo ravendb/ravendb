@@ -220,9 +220,9 @@ namespace FastTests
 
         protected virtual void ModifyStore(DocumentStore store)
         {
-            store.CustomizeRequestExecutor = re =>
+            store.CustomizeRequestExecutor += re =>
             {
-                re.TimeoutExceptionAdditionalInfoFunc = GetLastStatesFromAllServersOrderedByTime;
+                re.AdditionalErrorInformation += sb => sb.AppendLine().Append(GetLastStatesFromAllServersOrderedByTime());
                 return re;
             };
         }

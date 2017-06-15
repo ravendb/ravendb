@@ -176,8 +176,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             using (var clusterIdentityActions = _destination.Identities())
             {
-                var sourceIdentities = _source.GetIdentities();
-                foreach (var kvp in sourceIdentities)
+                foreach (var kvp in _source.GetIdentities())
                 {
                     _token.ThrowIfCancellationRequested();
                     result.Identities.ReadCount++;

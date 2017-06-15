@@ -170,7 +170,8 @@ namespace Raven.Client.Documents
             return session;
         }
 
-        public Func<RequestExecutor, RequestExecutor> CustomizeRequestExecutor = null;
+        public event Func<RequestExecutor, RequestExecutor> CustomizeRequestExecutor;
+        
         public override RequestExecutor GetRequestExecutor(string database = null)
         {
             if (database == null)
@@ -183,8 +184,22 @@ namespace Raven.Client.Documents
             }
 
             lazy = Conventions.DisableTopologyUpdates == false 
-                ? new Lazy<RequestExecutor>(() => CustomizeRequestExecutor?.Invoke(RequestExecutor.Create(Urls, database, ApiKey))?? RequestExecutor.Create(Urls, database, ApiKey)) 
-                : new Lazy<RequestExecutor>(() => CustomizeRequestExecutor?.Invoke(RequestExecutor.CreateForSingleNode(Urls[0], database, ApiKey))?? RequestExecutor.CreateForSingleNode(Urls[0], database, ApiKey));
+                ? new Lazy<RequestExecutor>(() =>
+                {
+                    var requestExecutor = RequestExecutor.Create(Urls, database, ApiKey);
+                    var onCustomizeRequestExecutor = CustomizeRequestExecutor;
+                    if (onCustomizeRequestExecutor == null)
+                        return requestExecutor;
+                    return onCustomizeRequestExecutor(requestExecutor);
+                }) 
+                : new Lazy<RequestExecutor>(() =>
+                {
+                    var forSingleNode = RequestExecutor.CreateForSingleNode(Urls[0], database, ApiKey);
+                    var onCustomizeRequestExecutor = CustomizeRequestExecutor;
+                    if (onCustomizeRequestExecutor == null)
+                        return forSingleNode;
+                    return onCustomizeRequestExecutor(forSingleNode);
+                });
 
             lazy = _requestExecutors.GetOrAdd(database, lazy);
 
