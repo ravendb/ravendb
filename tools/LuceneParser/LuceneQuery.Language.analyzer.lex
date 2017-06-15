@@ -44,13 +44,18 @@ DateTime {Digit}{4}-{Digit}{2}-{Digit}{2}T{Digit}{2}\:{Digit}{2}\:{Digit}{2}\.{D
 "AND"							{return (int)Token.AND;}
 "&&"							{return (int)Token.AND;}
 "NOT"							{return (int)Token.NOT;}
-"!"		 					    {return (int)Token.NOT;}
-"+"								{return (int)Token.PLUS;}
-"-"								{return (int)Token.MINUS;}
+"!"                             {return (int)Token.NOT;}
+"+"                             {return (int)Token.PLUS;}
+"-"                             {return (int)Token.MINUS;}
 "\""							{return (int)Token.QUOTE;}
-":"								{return (int)Token.COLON;}
-"("								{return (int)Token.OPEN_PAREN;}
-")"								{return (int)Token.CLOSE_PAREN;}
+":"                             {return (int)Token.COLON;}
+"="                             {return (int)Token.EQUAL;}
+">="                            {return (int)Token.GREATER_EQUAL;}
+">"                             {return (int)Token.GREATER;}
+"<="                            {return (int)Token.LESS_EQUAL;}
+"<"                             {return (int)Token.LESS;}
+"("							    {return (int)Token.OPEN_PAREN;}
+")"							    {return (int)Token.CLOSE_PAREN;}
 "*:*"							{return (int)Token.ALL_DOC;}
 "INTERSECT"						{return (int)Token.INTERSECT;}
 "NULL"							{ yylval.s = yytext; return (int)Token.NULL;}
