@@ -44,7 +44,7 @@ namespace Raven.Client.Server.ETL
 
         public static string GenerateItemName(string databaseName, string destinationName, string transformationName)
         {
-            return $"etl/{databaseName}/{destinationName.ToLowerInvariant()}/{transformationName.ToLowerInvariant()}";
+            return $"values/{databaseName}/etl/{destinationName.ToLowerInvariant()}/{transformationName.ToLowerInvariant()}";
         }
     }
 }

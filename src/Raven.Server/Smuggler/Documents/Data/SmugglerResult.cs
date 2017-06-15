@@ -10,7 +10,7 @@ namespace Raven.Server.Smuggler.Documents.Data
     public class SmugglerResult : SmugglerProgressBase, IOperationResult
     {
         private readonly List<string> _messages;
-        private readonly SmugglerProgress _progress;
+        protected SmugglerProgress _progress;
         private readonly Stopwatch _sw;
 
         public SmugglerResult()

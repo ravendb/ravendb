@@ -101,7 +101,7 @@ namespace Voron
 
         private readonly long[] _validPages;
 
-        public StorageEnvironment(StorageEnvironmentOptions options)
+        public StorageEnvironment(StorageEnvironmentOptions options, bool generateNewDatabaseId = false)
         {
             try
             {
@@ -132,7 +132,7 @@ namespace Voron
                 if (isNew)
                     CreateNewDatabase();
                 else // existing db, let us load it
-                    LoadExistingDatabase();
+                    LoadExistingDatabase(generateNewDatabaseId);
 
                 if (_options.ManualFlushing == false)
                     Task.Run(IdleFlushTimer);
@@ -249,7 +249,7 @@ namespace Voron
 
         public ScratchBufferPool ScratchBufferPool => _scratchBufferPool;
 
-        private unsafe void LoadExistingDatabase()
+        private unsafe void LoadExistingDatabase(bool generateNewDatabaseId)
         {
             var header = stackalloc TransactionHeader[1];
             bool hadIntegrityIssues = _journal.RecoverDatabase(header);
@@ -297,7 +297,14 @@ namespace Voron
                             VoronUnrecoverableErrorException.Raise(this,
                                 "The db id value in metadata tree wasn't 16 bytes in size, possible mismatch / corruption?");
 
-                        DbId = new Guid(buffer);
+                        var databseGuidId = generateNewDatabaseId == false ? new Guid(buffer) : Guid.NewGuid();
+                        DbId = databseGuidId;
+
+                        if (generateNewDatabaseId)
+                        {
+                            // save the new database id
+                            metadataTree.Add("db-id", DbId.ToByteArray());
+                        }
 
                         var schemaVersion = metadataTree.Read("schema-version");
                         if (schemaVersion == null)

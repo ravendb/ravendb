@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Handlers
             var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
 
             ExecuteCollectionOperation((runner, collectionName, options, onProgress, token) => Task.Run(async () => await runner.ExecuteDelete(collectionName, options, onProgress, token)),
-                context, returnContextToPool, DatabaseOperations.OperationType.DeleteByCollection);
+                context, returnContextToPool, Operations.Operations.OperationType.DeleteByCollection);
             return Task.CompletedTask;
 
         }
@@ -84,12 +84,12 @@ namespace Raven.Server.Documents.Handlers
             var patch = Documents.Patch.PatchRequest.Parse(reader);
 
             ExecuteCollectionOperation((runner, collectionName, options, onProgress, token) => Task.Run(async () => await runner.ExecutePatch(collectionName, options, patch, onProgress, token)),
-                context, returnContextToPool, DatabaseOperations.OperationType.UpdateByCollection);
+                context, returnContextToPool, Operations.Operations.OperationType.UpdateByCollection);
             return Task.CompletedTask;
 
         }
 
-        private void ExecuteCollectionOperation(Func<CollectionRunner, string, CollectionOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, DatabaseOperations.OperationType operationType)
+        private void ExecuteCollectionOperation(Func<CollectionRunner, string, CollectionOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, Operations.Operations.OperationType operationType)
         {
             var collectionName = GetStringQueryString("name");
 

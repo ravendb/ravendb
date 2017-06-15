@@ -8,6 +8,7 @@ using Raven.Client.Server.ETL;
 using Raven.Client.Server.Expiration;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Client.Server.Versioning;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Server
 {

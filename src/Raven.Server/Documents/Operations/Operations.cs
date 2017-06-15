@@ -19,17 +19,25 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Operations
 {
-    public class DatabaseOperations
+    public class Operations
     {
         private readonly Logger _logger;
-        private readonly DocumentDatabase _db;
         private readonly ConcurrentDictionary<long, Operation> _active = new ConcurrentDictionary<long, Operation>();
         private readonly ConcurrentDictionary<long, Operation> _completed = new ConcurrentDictionary<long, Operation>();
+        private readonly OperationsStorage _operationsStorage;
+        private readonly NotificationCenter.NotificationCenter _notificationCenter;
+        private readonly DocumentsChanges _changes;
 
-        public DatabaseOperations(DocumentDatabase db)
+        public Operations(string name,
+            OperationsStorage operationsStorage,
+            NotificationCenter.NotificationCenter notificationCenter,
+            DocumentsChanges changes)
         {
-            _db = db;
-            _logger = LoggingSource.Instance.GetLogger<DatabaseOperations>(db.Name);
+            _operationsStorage = operationsStorage;
+            _notificationCenter = notificationCenter;
+            _changes = changes;
+
+            _logger = LoggingSource.Instance.GetLogger<Operations>(name);
         }
 
         internal void CleanupOperations()
@@ -180,9 +188,9 @@ namespace Raven.Server.Documents.Operations
         {
             var operationChanged = OperationChanged.Create(change.OperationId, operation.Description, change.State, operation.Killable);
 
-            operation.NotifyCenter(operationChanged, x => _db.NotificationCenter.Add(x));
+            operation.NotifyCenter(operationChanged, x => _notificationCenter.Add(x));
 
-            _db.Changes.RaiseNotifications(change);
+            _changes?.RaiseNotifications(change);
         }
 
         public void KillRunningOperation(long id)
@@ -200,7 +208,7 @@ namespace Raven.Server.Documents.Operations
 
         public long GetNextOperationId()
         {
-            return _db.ConfigurationStorage.OperationsStorage.GetNextOperationId();
+            return _operationsStorage.GetNextOperationId();
         }
 
         public void Dispose(ExceptionAggregator exceptionAggregator)
@@ -360,7 +368,8 @@ namespace Raven.Server.Documents.Operations
             [Description("Bulk Insert")]
             BulkInsert,
 
-
+            [Description("Database Restore")]
+            DatabaseRestore,
         }
     }
 }

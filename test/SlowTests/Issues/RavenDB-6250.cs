@@ -24,26 +24,26 @@ namespace SlowTests.Issues
         [Fact]
         public void All_operations_has_details_providers()
         {
-            var alreadyHandledInStudio = new HashSet<DatabaseOperations.OperationType>
+            var alreadyHandledInStudio = new HashSet<Operations.OperationType>
             {
-                DatabaseOperations.OperationType.UpdateByIndex,
-                DatabaseOperations.OperationType.DeleteByIndex,
-                DatabaseOperations.OperationType.UpdateByCollection,
-                DatabaseOperations.OperationType.DeleteByCollection,
-                DatabaseOperations.OperationType.DatabaseExport,
-                DatabaseOperations.OperationType.DatabaseImport,
-                DatabaseOperations.OperationType.BulkInsert,
-                DatabaseOperations.OperationType.IndexCompact
+                Operations.OperationType.UpdateByIndex,
+                Operations.OperationType.DeleteByIndex,
+                Operations.OperationType.UpdateByCollection,
+                Operations.OperationType.DeleteByCollection,
+                Operations.OperationType.DatabaseExport,
+                Operations.OperationType.DatabaseImport,
+                Operations.OperationType.BulkInsert,
+                Operations.OperationType.IndexCompact
             };
 
-            var operationWithoutDetails = new HashSet<DatabaseOperations.OperationType>
+            var operationWithoutDetails = new HashSet<Operations.OperationType>
             {
                 // empty for now
             };
 
-            var allKnownTypes = Enum.GetNames(typeof(DatabaseOperations.OperationType)).ToHashSet();
+            var allKnownTypes = Enum.GetNames(typeof(Operations.OperationType)).ToHashSet();
 
-            var unionSet = new HashSet<DatabaseOperations.OperationType>(alreadyHandledInStudio);
+            var unionSet = new HashSet<Operations.OperationType>(alreadyHandledInStudio);
             unionSet.UnionWith(operationWithoutDetails);
 
             var list = allKnownTypes.Except(unionSet.Select(x => x.ToString())).ToList();

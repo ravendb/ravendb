@@ -31,6 +31,8 @@ namespace Raven.Client.Server.PeriodicBackup
 
         public LocalSettings LocalSettings { get; set; }
 
+        //public FtpSettings FtpSettings { get; set; }
+
         public S3Settings S3Settings { get; set; }
 
         public GlacierSettings GlacierSettings { get; set; }

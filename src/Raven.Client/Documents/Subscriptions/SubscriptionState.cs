@@ -56,12 +56,12 @@ namespace Raven.Client.Documents.Subscriptions
 
         public static string GenerateSubscriptionItemName(string databaseName, long subscriptionId)
         {
-            return $"subscriptions/{databaseName}/{subscriptionId}";
+            return $"{SubscriptionPrefix(databaseName)}{subscriptionId}";
         }
 
-        public static string GenerateSubscriptionPrefix(string databaseName)
+        public static string SubscriptionPrefix(string databaseName)
         {
-            return $"subscriptions/{databaseName}";
+            return $"{Helpers.ClusterStateMachineValuesPrefix(databaseName)}subscriptions/";
         }
     }
 }

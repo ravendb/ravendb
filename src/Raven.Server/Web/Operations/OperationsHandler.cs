@@ -50,7 +50,7 @@ namespace Raven.Server.Web.Operations
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                IEnumerable<DatabaseOperations.Operation> operations;
+                IEnumerable<Documents.Operations.Operations.Operation> operations;
                 if (id.HasValue == false)
                     operations = Database.Operations.GetAll();
                 else
@@ -62,7 +62,7 @@ namespace Raven.Server.Web.Operations
                         return Task.CompletedTask;
                     }
 
-                    operations = new List<DatabaseOperations.Operation> { operation };
+                    operations = new List<Documents.Operations.Operations.Operation> { operation };
                 }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

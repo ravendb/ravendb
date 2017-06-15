@@ -12,7 +12,7 @@ class operation extends abstractNotification {
     result = ko.observable<Raven.Client.Documents.Operations.IOperationResult>();
     status = ko.observable<Raven.Client.Documents.Operations.OperationStatus>();
     killable = ko.observable<boolean>();
-    taskType = ko.observable<Raven.Server.Documents.Operations.DatabaseOperations.OperationType>();
+    taskType = ko.observable<Raven.Server.Documents.Operations.Operations.OperationType>();
 
     startTime = ko.observable<moment.Moment>();
     endTime = ko.observable<moment.Moment>();

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Server;
@@ -40,45 +41,36 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         public static PutAutoIndexCommand Create(IndexDefinitionBase definition, string databaseName)
         {
+            var indexType = IndexType.None;
             var map = definition as AutoMapIndexDefinition;
             if (map != null)
-                return For(map, databaseName);
+                indexType = IndexType.AutoMap;
 
             var reduce = definition as AutoMapReduceIndexDefinition;
             if (reduce != null)
-                return For(reduce, databaseName);
+                indexType = IndexType.AutoMapReduce;
 
-            throw new NotSupportedException("Invalid definition type: " + definition.GetType());
+            if (indexType == IndexType.None)
+                throw new NotSupportedException("Invalid definition type: " + definition.GetType());
+
+            return new PutAutoIndexCommand(GetAutoIndexDefinition(definition, indexType), databaseName);
         }
 
-        private static PutAutoIndexCommand For(AutoMapIndexDefinition definition, string databaseName)
+        public static AutoIndexDefinition GetAutoIndexDefinition(IndexDefinitionBase definition, IndexType indexType)
         {
-            return new PutAutoIndexCommand(new AutoIndexDefinition
+            Debug.Assert(indexType == IndexType.AutoMap || indexType == IndexType.AutoMapReduce);
+
+            return new AutoIndexDefinition
             {
                 Collection = definition.Collections.First(),
                 Etag = 0,
                 MapFields = CreateFields(definition.MapFields),
-                GroupByFields = null,
+                GroupByFields = indexType == IndexType.AutoMap ? null : CreateFields(((AutoMapReduceIndexDefinition)definition).GroupByFields),
                 LockMode = definition.LockMode,
                 Priority = definition.Priority,
                 Name = definition.Name,
-                Type = IndexType.AutoMap
-            }, databaseName);
-        }
-
-        private static PutAutoIndexCommand For(AutoMapReduceIndexDefinition definition, string databaseName)
-        {
-            return new PutAutoIndexCommand(new AutoIndexDefinition
-            {
-                Collection = definition.Collections.First(),
-                Etag = 0,
-                MapFields = CreateFields(definition.MapFields),
-                GroupByFields = CreateFields(definition.GroupByFields),
-                LockMode = definition.LockMode,
-                Priority = definition.Priority,
-                Name = definition.Name,
-                Type = IndexType.AutoMapReduce
-            }, databaseName);
+                Type = indexType
+            };
         }
 
         private static Dictionary<string, AutoIndexDefinition.AutoIndexFieldOptions> CreateFields(Dictionary<string, IndexField> fields)

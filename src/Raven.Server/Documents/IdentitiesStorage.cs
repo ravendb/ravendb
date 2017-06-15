@@ -73,7 +73,7 @@ namespace Raven.Server.Documents
             {
                 if (table.VerifyKeyExists(finalIdSlice) == false)
                     return finalId;
-            }
+            }  
 
             /* We get here if the user inserted a document with a specified id.
             e.g. your identity is 100

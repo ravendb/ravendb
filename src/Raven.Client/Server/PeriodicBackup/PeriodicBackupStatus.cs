@@ -51,7 +51,7 @@ namespace Raven.Client.Server.PeriodicBackup
 
         public static string GenerateItemName(string databaseName, long taskId)
         {
-            return $"periodic-backups/{databaseName}/{taskId}";
+            return $"values/{databaseName}/periodic-backups/{taskId}";
         }
     }
 }
