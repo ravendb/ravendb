@@ -33,8 +33,54 @@ namespace Sparrow.Json
    
         private readonly FastDictionary<string, LazyStringValue, OrdinalStringStructComparer> _fieldNames = new FastDictionary<string, LazyStringValue, OrdinalStringStructComparer>(OrdinalStringStructComparer.Instance);
 
-        private readonly FastList<LazyStringValue> _allocateStringValues = new FastList<LazyStringValue>(256);
+        private struct PathCacheHolder
+        {
+            public PathCacheHolder(FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer> path, FastDictionary<int, object, NumericEqualityComparer> byIndex)
+            {
+                this.Path = path;
+                this.ByIndex = byIndex;
+            }
+            
+            public readonly FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer> Path;
+            public readonly FastDictionary<int, object, NumericEqualityComparer> ByIndex;
+        }
+
+        private int _numberOfAllocatedPathCaches = -1;
+        private readonly PathCacheHolder[] _allocatePathCaches = new PathCacheHolder[512];
+
         private int _numberOfAllocatedStringsValues;
+        private readonly FastList<LazyStringValue> _allocateStringValues = new FastList<LazyStringValue>(256);
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AcquirePathCache(out FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer> pathCache, out FastDictionary<int, object, NumericEqualityComparer> pathCacheByIndex)
+        {
+            // PERF: Avoids allocating gigabytes in FastDictionary instances on high traffic RW operations like indexing. 
+            if (_numberOfAllocatedPathCaches >= 0)
+            {
+                var cache = _allocatePathCaches[_numberOfAllocatedPathCaches--];
+                Debug.Assert(cache.Path != null);
+                Debug.Assert(cache.ByIndex != null);
+
+                pathCache = cache.Path;
+                pathCacheByIndex = cache.ByIndex;
+
+                return;
+            }
+
+            pathCache = new FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer>(default(StringSegmentEqualityStructComparer));
+            pathCacheByIndex = new FastDictionary<int, object, NumericEqualityComparer>(default(NumericEqualityComparer));
+        }
+
+        public void ReleasePathCache(FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer> pathCache, FastDictionary<int, object, NumericEqualityComparer> pathCacheByIndex)
+        {
+            if (_numberOfAllocatedPathCaches < _allocatePathCaches.Length - 1 && pathCache.Capacity < 256)
+            {
+                pathCache.Clear();
+                pathCacheByIndex.Clear();
+                
+                _allocatePathCaches[++_numberOfAllocatedPathCaches] = new PathCacheHolder(pathCache, pathCacheByIndex);
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe LazyStringValue AllocateStringValue(string str, byte* ptr, int size)
@@ -43,7 +89,7 @@ namespace Sparrow.Json
             {
                 var lazyStringValue = _allocateStringValues[_numberOfAllocatedStringsValues++];
                 Debug.Assert(lazyStringValue != null);
-                lazyStringValue.Renew(str,ptr, size);
+                lazyStringValue.Renew(str, ptr, size);
                 return lazyStringValue;
             }
 

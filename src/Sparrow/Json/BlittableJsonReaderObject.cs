@@ -428,17 +428,20 @@ namespace Sparrow.Json
         public bool TryGetMember(StringSegment name, out object result)
         {
             if (_mem == null)
-                ThrowObjectDisposed();
+                goto ThrowDisposed;
 
+            bool opResult = true;
+            
             // try get value from cache, works only with Blittable types, other objects are not stored for now
             if (_objectsPathCache != null && _objectsPathCache.TryGetValue(name, out result))
-                return true;
+                goto Return;
 
             var index = GetPropertyIndex(name);
             if (index == -1)
             {
                 result = null;
-                return false;
+                opResult = false;
+                goto Return;
             }
 
             var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
@@ -454,7 +457,11 @@ namespace Sparrow.Json
                 AddToCache(name, result, index);
             }
 
-            return true;
+            Return: return opResult;
+
+            ThrowDisposed: ThrowObjectDisposed();
+            result = null;
+            return false;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -462,8 +469,7 @@ namespace Sparrow.Json
         {
             if (_objectsPathCache == null)
             {
-                _objectsPathCache = new FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer>(default(StringSegmentEqualityStructComparer));
-                _objectsPathCacheByIndex = new FastDictionary<int, object, NumericEqualityComparer>(default(NumericEqualityComparer));
+                _context.AcquirePathCache(out _objectsPathCache, out _objectsPathCacheByIndex);
             }
             _objectsPathCache[name] = result;
             _objectsPathCacheByIndex[index] = result;
@@ -713,6 +719,8 @@ namespace Sparrow.Json
                     var disposable = property.Value as IDisposable;
                     disposable?.Dispose();
                 }
+
+                _context.ReleasePathCache(_objectsPathCache, _objectsPathCacheByIndex);
             }
 
             _buffer.Dispose();
