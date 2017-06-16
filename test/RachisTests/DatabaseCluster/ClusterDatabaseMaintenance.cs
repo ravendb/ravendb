@@ -73,14 +73,9 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(1, res.Topology.Members.Count);
                 Assert.Equal(1, res.Topology.Promotables.Count);
 
-<<<<<<< HEAD
                 await WaitForRaftIndexToBeAppliedInCluster(res.RaftCommandIndex, TimeSpan.FromSeconds(5));
-                await WaitForDocumentInClusterAsync<ReplicationBasicTests.User>(res.Topology, "users/1", u => u.Name == "Karmel",TimeSpan.FromSeconds(10));
-=======
-                await WaitForRaftIndexToBeAppliedInCluster(res.ETag, TimeSpan.FromSeconds(5));
-                await WaitForDocumentInClusterAsync<ReplicationBasicTests.User>(res.Topology, databaseName, "users/1", u => u.Name == "Karmel",TimeSpan.FromSeconds(10));
->>>>>>> 03b6f08de543b6af926cc143be9471ca81363a95
-                                
+                await WaitForDocumentInClusterAsync<ReplicationBasicTests.User>(res.Topology, databaseName, "users/1", u => u.Name == "Karmel", TimeSpan.FromSeconds(10));
+
                 var val = await WaitForValueAsync(async () => await GetPromotableCount(store, databaseName), 0);
                 Assert.Equal(0, val);
                 val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), 2);
