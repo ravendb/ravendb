@@ -215,11 +215,13 @@ namespace Raven.Server.Web.Studio
             {
                 case BlittableJsonToken.String:
                     var lazyString = (LazyStringValue)val;
-                    writer.WriteString(lazyString.Substring(0, StringLengthLimit));
+                    writer.WriteString(lazyString?.Substring(0, 
+                        Math.Min(lazyString.Length, StringLengthLimit)));
                     break;
                 case BlittableJsonToken.CompressedString:
                     var lazyCompressedString = (LazyCompressedStringValue)val;
-                    writer.WriteString(lazyCompressedString.Substring(0, StringLengthLimit));
+                    writer.WriteString(lazyCompressedString?.Substring(0, 
+                        Math.Min(lazyCompressedString.UncompressedSize, StringLengthLimit)));
                     break;
 
                 default:
