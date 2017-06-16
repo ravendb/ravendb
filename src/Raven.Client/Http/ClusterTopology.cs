@@ -136,11 +136,11 @@ namespace Raven.Client.Http
             }
         }
 
-        public readonly string LastNodeId;
-        public readonly string TopologyId;
-        public readonly string ApiKey;
-        public readonly Dictionary<string,string> Members;
-        public readonly Dictionary<string,string> Promotables;
-        public readonly Dictionary<string,string> Watchers;
+        public string LastNodeId { get; protected set; }
+        public string TopologyId { get; protected set; }
+        public string ApiKey { get; protected set; }
+        public Dictionary<string,string> Members { get; protected set; }
+        public Dictionary<string,string> Promotables { get; protected set; }
+        public Dictionary<string,string> Watchers { get; protected set; }
     }
 }

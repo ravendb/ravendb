@@ -21,7 +21,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public ChangeVectorEntry[] LastDocumentChangeVector;
 
-        public readonly Dictionary<string, ObservedIndexStatus> LastIndexStats = new Dictionary<string, ObservedIndexStatus>();
+        public Dictionary<string, ObservedIndexStatus> LastIndexStats = new Dictionary<string, ObservedIndexStatus>();
 
         public class ObservedIndexStatus
         {

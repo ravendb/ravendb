@@ -56,12 +56,18 @@ namespace Sparrow.Json
                 {
                     if (fieldInfo.IsStatic || fieldInfo.IsDefined(typeof(JsonIgnoreAttribute)))
                         continue;
+
+                    if (fieldInfo.IsPublic && fieldInfo.IsInitOnly)
+                        throw new InvalidOperationException($"Cannot create deserialization routine for '{type.FullName}' because '{fieldInfo.Name}' is readonly field");
+
                     propInit.Add(Expression.Bind(fieldInfo, GetValue(fieldInfo.Name, fieldInfo.FieldType, json, vars)));
                 }
+
                 foreach (var propertyInfo in typeof(T).GetProperties())
                 {
                     if (propertyInfo.CanWrite == false || propertyInfo.IsDefined(typeof(JsonIgnoreAttribute)))
                         continue;
+
                     propInit.Add(Expression.Bind(propertyInfo, GetValue(propertyInfo.Name, propertyInfo.PropertyType, json, vars)));
                 }
 

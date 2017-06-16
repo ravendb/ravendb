@@ -7,7 +7,7 @@ namespace Raven.Server.ServerWide.Commands
 {
     public class EditVersioningCommand : UpdateDatabaseCommand
     {
-        public readonly VersioningConfiguration Configuration;
+        public VersioningConfiguration Configuration { get; protected set; }
 
         public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
         {
