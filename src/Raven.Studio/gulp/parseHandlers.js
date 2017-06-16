@@ -64,7 +64,7 @@ function extractRavenActions(contents) {
         }
     }
     
-    var annotationRegexpWithSkipUsagesCount = /\[RavenAction\(\"([^"]+)\", \"([^"]+)\",(\s*)SkipUsagesCount(\s*)=(\s*)true\)]/g;
+    var annotationRegexpWithSkipUsagesCount = /\[RavenAction\(\"([^"]+)\", \"([^"]+)\",(\s*)(SkipUsagesCount|IsDebugInformationEndpoint)(\s*)=(\s*)true\)]/g;
     while ((match = annotationRegexpWithSkipUsagesCount.exec(contents))) {
         var url = match[1];
         if (url !== "/") {
