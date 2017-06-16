@@ -8,7 +8,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
 {
     public abstract class AddEtlCommand<T> : UpdateDatabaseCommand where T : EtlDestination
     {
-        public readonly EtlConfiguration<T> Configuration;
+        public EtlConfiguration<T> Configuration { get; protected set; }
 
         protected AddEtlCommand() : base(null)
         {
