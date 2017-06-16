@@ -23,7 +23,7 @@ namespace FastTests.Voron.Streams
         public void CanWriteAndRead(string tag, int size)
         {
             var buffer = new byte[size % 100000];
-            new Random().NextBytes(buffer);
+            new Random(size).NextBytes(buffer);
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("Files");
@@ -63,7 +63,7 @@ namespace FastTests.Voron.Streams
         public void CanCopyTo(int size)
         {
             var buffer = new byte[size % 100000];
-            new Random().NextBytes(buffer);
+            new Random(size).NextBytes(buffer);
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("Files");
@@ -104,7 +104,7 @@ namespace FastTests.Voron.Streams
         public void CanUpdate(string tag, int size)
         {
             var buffer = new byte[size % 100000];
-            new Random().NextBytes(buffer);
+            new Random(size).NextBytes(buffer);
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("Files");
@@ -153,7 +153,7 @@ namespace FastTests.Voron.Streams
         public void CanDelete(string tag, int size)
         {
             var buffer = new byte[size % 100000];
-            new Random().NextBytes(buffer);
+            new Random(size).NextBytes(buffer);
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("Files");
@@ -176,12 +176,13 @@ namespace FastTests.Voron.Streams
         }
 
         [Theory]
+        [InlineData("RavenDB", 1546581643)]
         [InlineDataWithRandomSeed(null)]
         [InlineDataWithRandomSeed("RavenDB")]
         public void TreeShouldReturnAllPagesOccupiedByStreams_RavenDB_5990(string tag, int size)
         {
             var buffer = new byte[size % 100000];
-            new Random().NextBytes(buffer);
+            new Random(size).NextBytes(buffer);
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("Files");
