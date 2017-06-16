@@ -124,7 +124,8 @@ namespace Sparrow.Json
 
         public string Substring(int startIndex, int length)
         {
-            return ToString().Substring(startIndex, length);
+            var str = ToString();
+            return str.Substring(startIndex, Math.Min(str.Length, length));
         }
     }
 }
