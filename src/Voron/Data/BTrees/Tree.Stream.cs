@@ -239,7 +239,7 @@ namespace Voron.Data.BTrees
 
         public int TouchStream(Slice key)
         {
-            var info = GetStreamInfo(key, writeable: true);
+            var info = GetStreamInfo(key, writable: true);
 
             if (info == null)
                 return 0;
@@ -247,7 +247,7 @@ namespace Voron.Data.BTrees
             return ++info->Version;
         }
 
-        public StreamInfo* GetStreamInfo(Slice key, bool writeable)
+        public StreamInfo* GetStreamInfo(Slice key, bool writable)
         {
             var tree = FixedTreeFor(key, ChunkDetails.SizeOf);
 
@@ -272,7 +272,7 @@ namespace Voron.Data.BTrees
 
             var page = _llt.GetPage(lastChunk.PageNumber);
 
-            if (writeable)
+            if (writable)
                 page = _llt.ModifyPage(page.PageNumber);
 
             return (StreamInfo*)(page.DataPointer + lastChunk.ChunkSize);
@@ -294,50 +294,69 @@ namespace Voron.Data.BTrees
         {
             int version = 0;
 
-            var info = GetStreamInfo(key, writeable: false);
+            var info = GetStreamInfo(key, writable: false);
 
             if (info != null)
                 version = info->Version;
 
             var llt = _tx.LowLevelTransaction;
 
-            foreach (var chunk in GetStreamChunks(GetStreamChunksTree(key)))
-            {
-                var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(chunk.ChunkSize);
-                for (int i = 0; i < numberOfPages; i++)
-                {
-                    llt.FreePage(chunk.PageNumber + i);
-                }
+            var streamPages = GetStreamPages(GetStreamChunksTree(key), info);
 
-                State.OverflowPages -= numberOfPages;
+            for (var i = 0; i < streamPages.Count; i++)
+            {
+                llt.FreePage(streamPages[i]);
             }
+
+            State.OverflowPages -= streamPages.Count;
 
             DeleteFixedTreeFor(key, ChunkDetails.SizeOf);
 
             return version;
         }
 
-        internal List<ChunkDetails> GetStreamChunks(FixedSizeTree chunksTree)
+        internal List<long> GetStreamPages(FixedSizeTree chunksTree, StreamInfo* info)
         {
-            var chunks = new List<ChunkDetails>();
+            var pages = new List<long>();
+
+            var chunkIndex = 0;
 
             using (var it = chunksTree.Iterate())
             {
                 if (it.Seek(0) == false)
-                    return chunks;
+                    return pages;
 
                 do
                 {
-                    chunks.Add(*((ChunkDetails*)it.CreateReaderForCurrent().Base));
+                    var chunk = (ChunkDetails*)it.CreateReaderForCurrent().Base;
+
+                    var size = chunk->ChunkSize;
+
+                    if (chunkIndex == chunksTree.NumberOfEntries - 1)
+                    {
+                        // stream info is put after the last chunk
+
+                        size += StreamInfo.SizeOf + info->TagSize;
+                    }
+
+                    var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(size);
+
+                    for (int i = 0; i < numberOfPages; i++)
+                    {
+                        pages.Add(chunk->PageNumber + i);
+                    }
+
+                    chunkIndex++;
+
                 } while (it.MoveNext());
 
-                return chunks;
+                return pages;
             }
         }
 
         public string GetStreamTag(Slice key)
         {
-            var info = GetStreamInfo(key, writeable: false);
+            var info = GetStreamInfo(key, writable: false);
 
             if (info == null || info->TagSize == 0)
                 return null;

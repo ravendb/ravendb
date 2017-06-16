@@ -210,7 +210,7 @@ namespace Voron.Debugging
                 long totalNumberOfAllocatedPages = 0;
                 do
                 {
-                    var info = *tree.GetStreamInfo(it.CurrentKey, writeable: false);
+                    var info = *tree.GetStreamInfo(it.CurrentKey, writable: false);
 
                     long numberOfAllocatedPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(info.TotalSize + info.TagSize + Tree.StreamInfo.SizeOf);
 
