@@ -1134,13 +1134,28 @@ namespace Voron.Data.BTrees
                                 {
                                     Debug.Assert(fixedSizeTree.ValueSize == ChunkDetails.SizeOf);
 
-                                    foreach (var chunk in GetStreamChunks(fixedSizeTree))
-                                    {
-                                        var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(chunk.ChunkSize);
+                                    var chunks = GetStreamChunks(fixedSizeTree);
 
-                                        for (int j = 0; j < numberOfPages; j++)
+                                    for (int chunkIndex = 0; chunkIndex < chunks.Count; chunkIndex++)
+                                    {
+                                        var chunk = chunks[chunkIndex];
+
+                                        var size = chunk.ChunkSize;
+
+                                        if (chunkIndex == chunks.Count - 1)
                                         {
-                                            results.Add(chunk.PageNumber + j);
+                                            // stream info is put after the last chunk
+
+                                            var streamInfo = GetStreamInfo(fixedSizeTree.Name, false);
+
+                                            size += StreamInfo.SizeOf + streamInfo->TagSize;
+                                        }
+
+                                        var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(size);
+
+                                        for (int overflow = 0; overflow < numberOfPages; overflow++)
+                                        {
+                                            results.Add(chunk.PageNumber + overflow);
                                         }
                                     }
                                 }
