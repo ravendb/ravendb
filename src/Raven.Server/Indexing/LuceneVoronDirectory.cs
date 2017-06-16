@@ -64,7 +64,7 @@ namespace Raven.Server.Indexing
             Slice str;
             using (Slice.From(state.Transaction.Allocator, name, out str))
             {
-                var info = filesTree.GetStreamInfo(str, writeable: false);
+                var info = filesTree.GetStreamInfo(str, writable: false);
                 if (info == null)
                     throw new FileNotFoundException(name);
                 return info->Version;
@@ -100,7 +100,7 @@ namespace Raven.Server.Indexing
             Slice str;
             using (Slice.From(state.Transaction.Allocator, name, out str))
             {
-                var info = filesTree.GetStreamInfo(str, writeable: false);
+                var info = filesTree.GetStreamInfo(str, writable: false);
                 if (info == null)
                     throw new FileNotFoundException(name);
                 return info->TotalSize;
