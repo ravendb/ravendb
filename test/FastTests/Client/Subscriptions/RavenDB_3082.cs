@@ -52,10 +52,7 @@ namespace FastTests.Client.Subscriptions
 
                 var subscriptionCreationParams = new SubscriptionCreationOptions<PersonWithAddress>()
                 {
-                    Criteria = new SubscriptionCriteria<PersonWithAddress>
-                    {
-                        Script = "return this.Name == 'James' && this.Address.ZipCode != 54321"
-                    }
+                    Criteria = new SubscriptionCriteria<PersonWithAddress>(p => p.Name == "James" && p.Address.ZipCode != 54321)
                 };
 
 
