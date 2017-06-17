@@ -96,7 +96,7 @@ namespace Raven.Server.Config.Categories
         public TimeSetting TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle { get; protected set; }
 
         [Description("EXPERT ONLY")]
-        [DefaultValue(16)]
+        [DefaultValue(512)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Raven/Indexing/MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory")]
         public int MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory { get; protected set; }
