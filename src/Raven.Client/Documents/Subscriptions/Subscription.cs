@@ -172,11 +172,8 @@ namespace Raven.Client.Documents.Subscriptions
                 CloseTcpClient(); // we disconnect immediately, freeing the subscription task
 
                 OnCompletedNotification();
-
-                if (_taskCompletionSource.Task.IsCanceled == false && _taskCompletionSource.Task.IsCompleted == false && _taskCompletionSource.Task.IsFaulted == false)
-                {
-                    _taskCompletionSource.TrySetResult(true);
-                }
+                
+                _taskCompletionSource.TrySetResult(true);
             }
             catch (Exception ex)
             {
