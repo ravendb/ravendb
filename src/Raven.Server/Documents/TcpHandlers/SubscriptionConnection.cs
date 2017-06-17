@@ -662,6 +662,12 @@ namespace Raven.Server.Documents.TcpHandlers
 
             if (patch == null)
                 return true;
+            
+            if (patch.FilterJavaScript == SubscriptionCreationOptions.DefaultVersioningScript)
+            {
+                transformResult = versioned;
+                return true;
+            }
             try
             {
                 var docToProccess = new Document
