@@ -59,7 +59,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/debug/storage/environment/report", "GET", IsDebugInformationEndpoint = true)]
+        //TODO: consider adding this to debug-info-package, need to think how to handle the parameters in a generic manner
+        [RavenAction("/databases/*/debug/storage/environment/report", "GET")]
         public Task EnvironmentReport()
         {
             var name = GetStringQueryString("name");
