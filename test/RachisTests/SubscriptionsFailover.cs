@@ -499,7 +499,7 @@ namespace RachisTests
                 var databaseRecord = someServer.ServerStore.Cluster.ReadDatabase(context, defaultDatabase);
                 var db = await someServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(defaultDatabase).ConfigureAwait(false);
                 var subscriptionState = db.SubscriptionStorage.GetSubscriptionFromServerStore(subscriptionId);
-                tag = databaseRecord.Topology.WhoseTaskIsIt(subscriptionState);
+                tag = databaseRecord.Topology.WhoseTaskIsIt(subscriptionState,Server.ServerStore.IsPassive());
             }
             Servers.FirstOrDefault(x => x.ServerStore.NodeTag == tag).Dispose();
         }

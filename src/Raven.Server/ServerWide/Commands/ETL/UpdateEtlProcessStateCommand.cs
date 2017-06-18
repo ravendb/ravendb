@@ -39,7 +39,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
             return EtlProcessState.GenerateItemName(DatabaseName, Destination, TransformationName);
         }
 
-        public override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
+        public override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
         {
             EtlProcessState state;
 

@@ -927,6 +927,11 @@ namespace Raven.Server.ServerWide
             return _engine.CurrentState == RachisConsensus.State.Leader;
         }
 
+        public bool IsPassive()
+        {
+            return _engine.CurrentState == RachisConsensus.State.Passive;
+        }
+
         public Task<(long Etag, object Result)> SendToLeaderAsync(CommandBase cmd)
         {
             return SendToLeaderAsyncInternal(cmd);

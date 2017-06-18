@@ -11,6 +11,7 @@ using Raven.Client.Server;
 using Raven.Client.Server.ETL.SQL;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.PeriodicBackup;
+using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -37,28 +38,38 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        public static OngoingTasksResult GetOngoingTasksFor(string dbName, ServerStore serverStore)
+        public static OngoingTasksResult GetOngoingTasksFor(string dbName, ServerStore store)
         {
             var ongoingTasksResult = new OngoingTasksResult();
-            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (store.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                context.OpenReadTransaction();
+                DatabaseRecord databaseRecord;
+                DatabaseTopology dbTopology;
+                ClusterTopology clusterTopology;
+                using (context.OpenReadTransaction())
+                {
+                    databaseRecord = store.Cluster.ReadDatabase(context, dbName);
+                
+                    if (databaseRecord == null)
+                    {
+                        return ongoingTasksResult;
+                    }
 
-                var databaseRecord = serverStore.Cluster.ReadDatabase(context, dbName);
-                var dbTopology = databaseRecord?.Topology;
-                var clusterTopology = serverStore.GetClusterTopology(context);
+                    dbTopology = databaseRecord.Topology;
+                    clusterTopology = store.GetClusterTopology(context);
+                }
 
                 foreach (var tasks in new []
                 {
-                    CollectExternalReplicationTasks(databaseRecord.ExternalReplication, dbTopology,clusterTopology),
-                    CollectEtlTasks(databaseRecord, dbTopology, clusterTopology),
-                    CollectBackupTasks(databaseRecord, dbTopology, clusterTopology)
+                    CollectExternalReplicationTasks(databaseRecord.ExternalReplication, dbTopology,clusterTopology, store),
+                    CollectEtlTasks(databaseRecord, dbTopology, clusterTopology, store),
+                    CollectBackupTasks(databaseRecord, dbTopology, clusterTopology, store)
                 })
                 {
                     ongoingTasksResult.OngoingTasksList.AddRange(tasks);
                 }
 
-                if (serverStore.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var database) && database.Status == TaskStatus.RanToCompletion)
+                if (store.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var database) && database.Status == TaskStatus.RanToCompletion)
                 {
                     ongoingTasksResult.SubscriptionsCount = (int)database.Result.SubscriptionStorage.GetAllSubscriptionsCount();
                 }
@@ -67,14 +78,14 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private static IEnumerable<OngoingTask> CollectExternalReplicationTasks(List<ExternalReplication> watchers, DatabaseTopology dbTopology, ClusterTopology clusterTopology)
+        private static IEnumerable<OngoingTask> CollectExternalReplicationTasks(List<ExternalReplication> watchers, DatabaseTopology dbTopology, ClusterTopology clusterTopology, ServerStore store)
         {
             if (dbTopology == null)
                 yield break;
 
             foreach (var watcher in watchers)
             {
-                var tag = dbTopology.WhoseTaskIsIt(watcher);
+                var tag = dbTopology.WhoseTaskIsIt(watcher, store.IsPassive());
 
                 yield return new OngoingTaskReplication
                 {
@@ -91,7 +102,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private static IEnumerable<OngoingTask> CollectBackupTasks(DatabaseRecord databaseRecord, DatabaseTopology dbTopology, ClusterTopology clusterTopology)
+        private static IEnumerable<OngoingTask> CollectBackupTasks(DatabaseRecord databaseRecord, DatabaseTopology dbTopology, ClusterTopology clusterTopology, ServerStore store)
         {
             if (dbTopology == null)
                 yield break;
@@ -101,7 +112,7 @@ namespace Raven.Server.Web.System
 
             foreach (var backupConfiguration in databaseRecord.PeriodicBackups)
             {
-                var tag = dbTopology.WhoseTaskIsIt(backupConfiguration);
+                var tag = dbTopology.WhoseTaskIsIt(backupConfiguration, store.IsPassive());
 
                 var backupDestinations = GetBackupDestinations(backupConfiguration);
 
@@ -137,7 +148,7 @@ namespace Raven.Server.Web.System
             return backupDestinations;
         }
 
-        private static IEnumerable<OngoingTask> CollectEtlTasks(DatabaseRecord databaseRecord, DatabaseTopology dbTopology, ClusterTopology clusterTopology)
+        private static IEnumerable<OngoingTask> CollectEtlTasks(DatabaseRecord databaseRecord, DatabaseTopology dbTopology, ClusterTopology clusterTopology, ServerStore store)
         {
             if (dbTopology == null)
                 yield break;
@@ -146,7 +157,7 @@ namespace Raven.Server.Web.System
             {
                 foreach (var ravenEtl in databaseRecord.RavenEtls)
                 {
-                    var tag = dbTopology.WhoseTaskIsIt(ravenEtl);
+                    var tag = dbTopology.WhoseTaskIsIt(ravenEtl, store.IsPassive());
 
                     var taskState = OngoingTaskState.Enabled;;
 
@@ -175,7 +186,7 @@ namespace Raven.Server.Web.System
             {
                 foreach (var sqlEtl in databaseRecord.SqlEtls)
                 {
-                    var tag = dbTopology.WhoseTaskIsIt(sqlEtl);
+                    var tag = dbTopology.WhoseTaskIsIt(sqlEtl, store.IsPassive());
 
                     var (database, server) =
                         SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlEtl.Destination.Connection.FactoryName,
@@ -240,7 +251,7 @@ namespace Raven.Server.Web.System
                                 break;
                             }                               
 
-                            tag = dbTopology.WhoseTaskIsIt(watcher);
+                            tag = dbTopology.WhoseTaskIsIt(watcher, ServerStore.IsPassive());
 
                             var replicationTaskInfo = new OngoingTaskReplication
                             {
@@ -268,7 +279,7 @@ namespace Raven.Server.Web.System
                                 break;
                             }
 
-                            tag = dbTopology?.WhoseTaskIsIt(backup);
+                            tag = dbTopology?.WhoseTaskIsIt(backup, ServerStore.IsPassive());
                             var backupDestinations = GetBackupDestinations(backup);
 
                             var backupTaskInfo = new OngoingTaskBackup
@@ -297,7 +308,7 @@ namespace Raven.Server.Web.System
                                 break;
                             }
 
-                            tag = dbTopology?.WhoseTaskIsIt(sqlEtl);
+                            tag = dbTopology?.WhoseTaskIsIt(sqlEtl, ServerStore.IsPassive());
                             var taskState = OngoingTaskState.Enabled;
 
                             if (sqlEtl.Disabled || sqlEtl.Transforms.All(x => x.Disabled))
@@ -334,7 +345,7 @@ namespace Raven.Server.Web.System
                                 break;
                             }
 
-                            tag = dbTopology?.WhoseTaskIsIt(ravenEtl);
+                            tag = dbTopology?.WhoseTaskIsIt(ravenEtl, ServerStore.IsPassive());
                             taskState = OngoingTaskState.Enabled;
 
                             if (ravenEtl.Disabled || ravenEtl.Transforms.All(x => x.Disabled))
@@ -437,7 +448,7 @@ namespace Raven.Server.Web.System
                 using (context.OpenReadTransaction())
                 {
                     var record = ServerStore.Cluster.ReadDatabase(context,name);
-                    responsibleNode = record.Topology.WhoseTaskIsIt(watcher);
+                    responsibleNode = record.Topology.WhoseTaskIsIt(watcher, ServerStore.IsPassive());
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;

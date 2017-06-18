@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -217,8 +218,10 @@ namespace FastTests.Server.Replication
             return await store.Admin.Server.SendAsync(op);
         }
 
-        public async Task SetupReplicationAsync(DocumentStore fromStore, params DocumentStore[] toStores)
+        public async Task<List<ModifyOngoingTaskResult>> SetupReplicationAsync(DocumentStore fromStore, params DocumentStore[] toStores)
         {
+            var tasks = new List<Task<ModifyOngoingTaskResult>>();
+            var resList = new List<ModifyOngoingTaskResult>();
             foreach (var store in toStores)
             {
                 var databaseWatcher = new ExternalReplication
@@ -227,8 +230,14 @@ namespace FastTests.Server.Replication
                     Url = store.Urls[0]
                 };
                 ModifyReplicationDestination(databaseWatcher);
-                await AddWatcherToReplicationTopology(fromStore, databaseWatcher);
+                tasks.Add(AddWatcherToReplicationTopology(fromStore, databaseWatcher));
             }
+            await Task.WhenAll(tasks);
+            foreach (var task in tasks)
+            {
+                resList.Add(await task);
+            }
+            return resList;
         }
 
         public static async Task SetScriptResolutionAsync(DocumentStore store, string script, string collection)

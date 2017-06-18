@@ -21,7 +21,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         }
 
         public override string GetItemId() => SubscriptionId;
-        public override BlittableJsonReaderObject GetUpdatedValue(long idnex, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
+        public override BlittableJsonReaderObject GetUpdatedValue(long idnex, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
         {
             if (existingValue == null)
             {
