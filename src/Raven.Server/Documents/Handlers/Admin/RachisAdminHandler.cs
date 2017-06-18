@@ -226,6 +226,13 @@ namespace Raven.Server.Documents.Handlers.Admin
             RedirectToLeader();
         }
 
+        [RavenAction("/admin/cluster/secede", "GET", "/admin/cluster/secede")]
+        public Task SecedeFromCluster()
+        {
+            ServerStore.SecedeFromCluster();
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/admin/cluster/reelect", "POST", "/admin/cluster/reelect")]
         public Task EnforceReelection()
         {

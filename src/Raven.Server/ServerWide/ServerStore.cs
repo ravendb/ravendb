@@ -941,6 +941,14 @@ namespace Raven.Server.ServerWide
             return ((now - maxLastWork).TotalMinutes > 5) || ((now - database.LastIdleTime).TotalMinutes > 10);
         }
 
+        public void SecedeFromCluster()
+        {
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            {
+                GenerateAuthenticationKeyPairs(ctx);
+            }
+            Engine.Bootstrap(NodeHttpServerUrl, AuthPublicKey);
+        }
 
         public Task<(long Etag, object Result)> WriteDatabaseRecordAsync(
             string databaseName, DatabaseRecord record, long? index,
