@@ -57,6 +57,12 @@ namespace Raven.Client.Http
             executor._firstTopologyUpdate = executor.FirstTopologyUpdate(urls);
             return executor;
         }
+        
+        
+        protected override async Task PerformHealthCheck(ServerNode serverNode, JsonOperationContext context)
+        {
+            await ExecuteAsync(serverNode, context, new GetTcpInfoCommand("health-check"), shouldRetry: false);
+        }
 
         public override async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout)
         {
@@ -114,8 +120,6 @@ namespace Raven.Client.Http
         {
             _clusterTopologySemaphore.Wait();
             base.Dispose();
-
-            _clusterTopologySemaphore.Dispose();
         }
 
         protected override bool TryLoadFromCache(string url, JsonOperationContext context)

@@ -13,6 +13,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http.OAuth;
@@ -35,7 +36,7 @@ namespace Raven.Client.Http
         //Monitor.TryEnter/Monitor.Exit won't work here because we need a mutex without thread affinity
         private readonly SemaphoreSlim _updateTopologySemaphore = new SemaphoreSlim(1, 1);
 
-        protected ConcurrentDictionary<int, Timer> _failedNodesTimers = new ConcurrentDictionary<int, Timer>();
+        protected ConcurrentDictionary<ServerNode, NodeStatus> _failedNodesTimers = new ConcurrentDictionary<ServerNode, NodeStatus>();
 
         private readonly string _apiKey;
         private readonly string _databaseName;
@@ -543,7 +544,7 @@ namespace Raven.Client.Http
 
             var nodeSelector = _nodeSelector;
 
-            _failedNodesTimers.TryAdd(nodeIndex, new Timer(CheckNodeStatusCallback, new NodeStatus(nodeIndex), 100, Timeout.Infinite));
+            SpawnHealthChecks(chosenNode, nodeIndex);
 
             nodeSelector?.OnFailedRequest(nodeIndex);
             var currentNode = nodeSelector?.GetCurrentNode();
@@ -556,39 +557,62 @@ namespace Raven.Client.Http
             return true;
         }
 
-        private void CheckNodeStatusCallback(object status)
+        private void SpawnHealthChecks(ServerNode chosenNode, int nodeIndex)
         {
-            var nodeStatus = (NodeStatus)status;
-            var serverNode = TopologyNodes[nodeStatus.nodeIndex];
+            var nodeStatus = new NodeStatus(this, nodeIndex, chosenNode);
+            if (_failedNodesTimers.TryAdd(chosenNode, nodeStatus))
+                nodeStatus.StartTimer();
+        }
 
-            var command = new GetTcpInfoCommand(serverNode.ClusterTag);
+        private async Task CheckNodeStatusCallback(NodeStatus nodeStatus)
+        {
+            var copy = TopologyNodes;
+            if (nodeStatus.NodeIndex >= copy.Count)
+                return; // topology index changed / removed
+            var serverNode = copy[nodeStatus.NodeIndex];
+            if (ReferenceEquals(serverNode, nodeStatus.Node) == false)
+                return; // topology changed, nothing to check
 
             try
             {
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
+                    NodeStatus status;
                     try
                     {
-                        AsyncHelpers.RunSync(() => ExecuteAsync(serverNode, context, command, shouldRetry: false));
+                        await PerformHealthCheck(serverNode, context);
                     }
                     catch (Exception e)
                     {
                         if (Logger.IsInfoEnabled)
                             Logger.Info($"{serverNode.ClusterTag} is still down", e);
 
-                        if (_failedNodesTimers.TryGetValue(nodeStatus.nodeIndex, out Timer timer))
-                            timer.Change(nodeStatus.GetNewTimerPeriod().Milliseconds, Timeout.Infinite);
+                        if (_failedNodesTimers.TryGetValue(nodeStatus.Node, out status))
+                            nodeStatus.UpdateTimer();
+
+                        return;// will wait for the next timer call
                     }
 
-                    if (nodeStatus.nodeIndex < _nodeSelector.GetCurrentNodeIndex())
-                        _nodeSelector.ChangeCurrentNodeIndex(nodeStatus.nodeIndex);
+                    if (_failedNodesTimers.TryRemove(nodeStatus.Node, out status))
+                    {
+                        status.Dispose();
+                    }
+                    _nodeSelector.RestoreNodeIndex(nodeStatus.NodeIndex);
                 }
             }
-            catch (OperationCanceledException e)
+            catch (Exception e)
             {
                 if (Logger.IsInfoEnabled)
-                    Logger.Info(e.Message, e);
+                    Logger.Info("Failed to check node topology, will ignore this node until next topology update", e);
             }
+        }
+
+        protected virtual async Task PerformHealthCheck(ServerNode serverNode, JsonOperationContext context)
+        {
+            await ExecuteAsync(serverNode, context, new GetStatisticsCommand
+            {
+                DebugTag = "failure=check"
+            }, shouldRetry: false);
         }
 
         private static async Task AddFailedResponseToCommand<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, HttpRequestException e)
@@ -695,7 +719,6 @@ namespace Raven.Client.Http
             ContextPool.Dispose();
             _updateCurrentTokenTimer?.Dispose();
             _updateTopologyTimer?.Dispose();
-            _updateTopologySemaphore.Dispose();
             DisposeAllFailedNodesTimers();
             // shared instance, cannot dispose!
             //_httpClient.Dispose();
@@ -731,24 +754,50 @@ namespace Raven.Client.Http
             return GlobalHttpClient.Value;
         }
 
-        public class NodeStatus
+        public class NodeStatus : IDisposable
         {
             private TimeSpan _timerPeriod;
-            public readonly int nodeIndex;
+            private readonly RequestExecutor _requestExecutor;
+            public readonly int NodeIndex;
+            public readonly ServerNode Node;
+            private Timer _timer;
 
-            public NodeStatus(int nodeIndex)
+            public NodeStatus(RequestExecutor requestExecutor, int nodeIndex, ServerNode node)
             {
-                this.nodeIndex = nodeIndex;
+                _requestExecutor = requestExecutor;
+                NodeIndex = nodeIndex;
+                Node = node;
                 _timerPeriod = TimeSpan.FromMilliseconds(100);
             }
 
-            public TimeSpan GetNewTimerPeriod()
+            private TimeSpan NextTimerPeriod()
             {
-                if (_timerPeriod == TimeSpan.FromSeconds(5))
+                if (_timerPeriod >= TimeSpan.FromSeconds(5))
                     return TimeSpan.FromSeconds(5);
 
                 _timerPeriod += TimeSpan.FromMilliseconds(100);
                 return _timerPeriod;
+            }
+
+            public void StartTimer()
+            {
+                _timer = new Timer(TimerCallback, null, _timerPeriod, Timeout.InfiniteTimeSpan);
+            }
+
+            private void TimerCallback(object state)
+            {
+                GC.KeepAlive(_requestExecutor.CheckNodeStatusCallback(this));
+            }
+
+            public void UpdateTimer()
+            {
+                Debug.Assert(_timer != null);
+                _timer.Change(NextTimerPeriod(), Timeout.InfiniteTimeSpan);
+            }
+
+            public void Dispose()
+            {
+                _timer?.Dispose();
             }
         }
 
@@ -809,9 +858,16 @@ namespace Raven.Client.Http
                 return Topology.Nodes[_currentNodeIndex];
             }
 
-            public void ChangeCurrentNodeIndex(int nodeIndex)
+            public void RestoreNodeIndex(int nodeIndex)
             {
-                Interlocked.Exchange(ref _currentNodeIndex, nodeIndex);
+                var currentNodeIndex = _currentNodeIndex;
+                while(currentNodeIndex > nodeIndex)
+                {
+                    var result = Interlocked.CompareExchange(ref _currentNodeIndex, nodeIndex, currentNodeIndex);
+                    if (result == currentNodeIndex)
+                        return;
+                    currentNodeIndex = result;
+                }
             }
         }
 
