@@ -8,9 +8,13 @@ namespace Raven.Client.Documents.Commands
 {
     public class GetStatisticsCommand : RavenCommand<DatabaseStatistics>
     {
+        public string DebugTag { get; set; }
+        
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/stats";
+            if (DebugTag != null)
+                url += "?" + DebugTag;
             return new HttpRequestMessage
             {
                 Method = HttpMethod.Get,
