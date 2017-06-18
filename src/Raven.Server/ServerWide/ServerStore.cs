@@ -398,19 +398,19 @@ namespace Raven.Server.ServerWide
             Task.Run(ClusterMaintenanceSetupTask, ServerShutdown);
         }
 
-        public byte[] BoxPublicKey, BoxSecretKey, AuthPublicKey, SignSecretKey;
+        public byte[] BoxPublicKey, BoxSecretKey, SignPublicKey, SignSecretKey;
 
         private void GenerateAuthenticationKeyPairs(TransactionOperationContext ctx)
         {
             BoxPublicKey = new byte[Sodium.crypto_box_publickeybytes()];
             BoxSecretKey = new byte[Sodium.crypto_box_secretkeybytes()];
-            AuthPublicKey = new byte[Sodium.crypto_sign_publickeybytes()];
+            SignPublicKey = new byte[Sodium.crypto_sign_publickeybytes()];
             SignSecretKey = new byte[Sodium.crypto_sign_secretkeybytes()];
             unsafe
             {
                 fixed (byte* boxPk = BoxPublicKey)
                 fixed (byte* boxSk = BoxSecretKey)
-                fixed (byte* signPk = AuthPublicKey)
+                fixed (byte* signPk = SignPublicKey)
                 fixed (byte* signSk = SignSecretKey)
                 {
                     if (Sodium.crypto_box_keypair(boxPk, boxSk) != 0)
@@ -422,10 +422,10 @@ namespace Raven.Server.ServerWide
 
             using (var tx = ctx.OpenWriteTransaction())
             {
-                PutSecretKey(ctx, "Box PK", BoxPublicKey, overwrite:true, cloneKey:true);
-                PutSecretKey(ctx, "Box SK", BoxSecretKey, overwrite: true, cloneKey: true);
-                PutSecretKey(ctx, "Sign PK", AuthPublicKey, overwrite: true, cloneKey: true);
-                PutSecretKey(ctx, "Sign SK", SignSecretKey, overwrite: true, cloneKey: true);
+                PutSecretKey(ctx, "Raven/Box/Public", BoxPublicKey, overwrite:true, cloneKey:true);
+                PutSecretKey(ctx, "Raven/Box/Private", BoxSecretKey, overwrite: true, cloneKey: true);
+                PutSecretKey(ctx, "Raven/Sign/Public", SignPublicKey, overwrite: true, cloneKey: true);
+                PutSecretKey(ctx, "Raven/Sign/Private", SignSecretKey, overwrite: true, cloneKey: true);
                 tx.Commit();
             }
         }
@@ -434,13 +434,13 @@ namespace Raven.Server.ServerWide
         {
             using (ctx.OpenReadTransaction())
             {
-                BoxPublicKey = GetSecretKey(ctx, "Box PK");
-                BoxSecretKey = GetSecretKey(ctx, "Box SK");
-                AuthPublicKey = GetSecretKey(ctx, "Sign PK");
-                SignSecretKey = GetSecretKey(ctx, "Sign SK");
+                BoxPublicKey = GetSecretKey(ctx, "Raven/Box/Public");
+                BoxSecretKey = GetSecretKey(ctx, "Raven/Box/Private");
+                SignPublicKey = GetSecretKey(ctx, "Raven/Sign/Public");
+                SignSecretKey = GetSecretKey(ctx, "Raven/Sign/Private");
             }
 
-            return BoxPublicKey != null && BoxSecretKey != null && AuthPublicKey != null && SignSecretKey != null;
+            return BoxPublicKey != null && BoxSecretKey != null && SignPublicKey != null && SignSecretKey != null;
         }
 
         private void OnStateChanged(object sender, RachisConsensus.StateTransition state)
@@ -947,7 +947,7 @@ namespace Raven.Server.ServerWide
             {
                 GenerateAuthenticationKeyPairs(ctx);
             }
-            Engine.Bootstrap(NodeHttpServerUrl, AuthPublicKey);
+            Engine.Bootstrap(NodeHttpServerUrl, SignPublicKey);
         }
 
         public Task<(long Etag, object Result)> WriteDatabaseRecordAsync(
@@ -979,7 +979,7 @@ namespace Raven.Server.ServerWide
         {
             if (_engine.CurrentState == RachisConsensus.State.Passive)
             {
-                _engine.Bootstrap(_ravenServer.ServerStore.NodeHttpServerUrl, AuthPublicKey);
+                _engine.Bootstrap(_ravenServer.ServerStore.NodeHttpServerUrl, SignPublicKey);
             }
         }
 

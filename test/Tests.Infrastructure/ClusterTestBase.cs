@@ -342,7 +342,7 @@ namespace Tests.Infrastructure
             {
                 var server = servers[i];
                 serversToPorts.Add(server, server.WebUrls[0]);
-                serversToPublicKeys.Add(server, server.ServerStore.AuthPublicKey);
+                serversToPublicKeys.Add(server, server.ServerStore.SignPublicKey);
                 if (i == leaderIndex)
                 {
                     server.ServerStore.EnsureNotPassive();
@@ -393,7 +393,7 @@ namespace Tests.Infrastructure
                 Servers.Add(server);
 
                 serversToPorts.Add(server, serverUrl);
-                serversToPublicKeys.Add(server, server.ServerStore.AuthPublicKey);
+                serversToPublicKeys.Add(server, server.ServerStore.SignPublicKey);
                 if (i == leaderIndex)
                 {
                     server.ServerStore.EnsureNotPassive();

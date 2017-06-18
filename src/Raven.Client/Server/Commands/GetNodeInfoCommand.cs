@@ -9,7 +9,7 @@ namespace Raven.Client.Server.Commands
     {
         public string NodeTag;
         public string TopologyId;
-        public string AuthPublicKey;
+        public string PublicKey;
     }
 
     class GetNodeInfoCommand : RavenCommand<NodeInfo>
