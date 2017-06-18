@@ -135,6 +135,7 @@ namespace Raven.Server.Rachis
 
                             var entries = new List<BlittableJsonReaderObject>();
                             var disposeRequested = false;
+                            DateTime timeFromLastSend;
                             while (_leader.Running && disposeRequested == false)
                             {
                                 disposeRequested = _dispose; // we give last loop before closing
@@ -183,6 +184,7 @@ namespace Raven.Server.Rachis
                                             ? "Append Entries"
                                             : "Heartbeat"
                                     );
+                                    timeFromLastSend = DateTime.UtcNow;
                                     if (_engine.Log.IsInfoEnabled && entries.Count > 0)
                                     {
                                         _engine.Log.Info($"FollowerAmbassador {_engine.Tag}:sending {entries.Count} entries to {_tag}"
@@ -218,7 +220,19 @@ namespace Raven.Server.Rachis
                                 }
                                 // either we have new entries to send, or we waited for long enough 
                                 // to send another heartbeat
-                                task.Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 3));
+                                var timeToShave = DateTime.UtcNow - timeFromLastSend;
+                                if (_engine.Log.IsInfoEnabled && timeToShave > TimeSpan.FromMilliseconds(50))
+                                {
+                                    _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: waited for {timeToShave.TotalMilliseconds}ms before i started to wait for next heartbeat.");
+                                }
+
+                                task.Wait(TimeSpan.FromMilliseconds(Math.Max(_engine.ElectionTimeout.TotalMilliseconds / 3 - timeToShave.TotalMilliseconds, 0)));
+
+                                var totalTimeWaited = DateTime.UtcNow - timeFromLastSend;
+                                if (_engine.Log.IsInfoEnabled && totalTimeWaited >= TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds))
+                                {
+                                    _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: waited for {totalTimeWaited.TotalMilliseconds}ms before sending next heartbeat.");
+                                }
                             }
                         }
                     }
