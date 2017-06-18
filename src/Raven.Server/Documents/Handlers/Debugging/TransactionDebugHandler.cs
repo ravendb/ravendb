@@ -22,7 +22,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/databases/*/debug/txinfo", "GET", IsDebugInformationEndpoint = true)]
         public Task TxInfo()
         {
-            
             var results = new List<TransactionInfo>();
 
             foreach (var env in Database.GetAllStoragesEnvironment())
@@ -39,7 +38,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                context.Write(writer, ToJson(results));
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["tx-info"] = ToJson(results)
+                });
             }
             return Task.CompletedTask;
         }

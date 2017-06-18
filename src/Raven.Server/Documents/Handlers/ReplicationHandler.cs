@@ -286,7 +286,8 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/replication/debug/outgoing-failures", "GET", IsDebugInformationEndpoint = true)]
+        [RavenAction("/databases/*/replication/debug/outgoing-failures", "GET", 
+            IsDebugInformationEndpoint = true)]
         public Task GetReplicationOugoingFailureStats()
         {
             DocumentsOperationContext context;
@@ -312,12 +313,16 @@ namespace Raven.Server.Documents.Handlers
                     });
                 }
 
-                context.Write(writer, data);
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["Stats"] = data
+                });
             }
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/replication/debug/incoming-last-activity-time", "GET", IsDebugInformationEndpoint = true)]
+        [RavenAction("/databases/*/replication/debug/incoming-last-activity-time", "GET", 
+            IsDebugInformationEndpoint = true)]
         public Task GetReplicationIncomingActivityTimes()
         {
             DocumentsOperationContext context;
@@ -340,7 +345,10 @@ namespace Raven.Server.Documents.Handlers
                     });
                 }
 
-                context.Write(writer, data);
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["Stats"] = data
+                });
             }
             return Task.CompletedTask;
         }
@@ -398,7 +406,10 @@ namespace Raven.Server.Documents.Handlers
                     });
                 }
 
-                context.Write(writer, data);
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["Queue-Info"] = data
+                });
             }
             return Task.CompletedTask;
         }
