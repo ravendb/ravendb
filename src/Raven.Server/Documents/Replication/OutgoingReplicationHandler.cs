@@ -551,6 +551,10 @@ namespace Raven.Server.Documents.Replication
         {
             replicationBatchReplyMessage.BlittableValidation();
             var replicationBatchReply = JsonDeserializationServer.ReplicationMessageReply(replicationBatchReplyMessage);
+
+            if (replicationBatchReply.MessageType == "Processing")
+                return null;
+
             if (allowNotify == false && replicationBatchReply.MessageType == "Notify")
                 return null;
 
