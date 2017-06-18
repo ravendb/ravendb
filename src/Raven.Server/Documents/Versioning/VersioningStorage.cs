@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Versioning
         private readonly DocumentDatabase _database;
         private readonly DocumentsStorage _documentsStorage;
         public VersioningConfiguration Configuration { get; private set; }
-        private readonly HashSet<string> _tableCreated = new HashSet<string>();
+        private readonly HashSet<string> _tableCreated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly Logger _logger;
 
         private enum Columns
