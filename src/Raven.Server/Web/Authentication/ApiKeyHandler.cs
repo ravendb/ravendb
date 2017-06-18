@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -12,6 +14,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.Web.Authentication
@@ -28,7 +31,7 @@ namespace Raven.Server.Web.Authentication
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("PublicKey");
-                writer.WriteString(Convert.ToBase64String(Server.PublicKey));
+                writer.WriteString(Convert.ToBase64String(ServerStore.BoxPublicKey));
                 writer.WriteEndObject();
                 writer.Flush();
                 return Task.CompletedTask;
@@ -40,8 +43,6 @@ namespace Raven.Server.Web.Authentication
         public unsafe Task OauthGetApiKey()
         {
             var apiKeyName = GetStringQueryString("apiKey");
-            string localSecret;
-            AccessToken accessToken;
             byte[] remoteCryptedSecret;
             byte[] clientPublicKey;
             byte[] serverKey;
@@ -62,6 +63,7 @@ namespace Raven.Server.Web.Authentication
                         GenerateError("Missing 'Secret' property", context, (int)HttpStatusCode.BadRequest);
                         return Task.CompletedTask;
                     }
+
                     string nonceString;
                     if (hashJson.TryGet("Nonce", out nonceString) == false)
                     {
@@ -88,9 +90,11 @@ namespace Raven.Server.Web.Authentication
                     serverKey = Convert.FromBase64String(serverKeyString);
                 }
 
+                string localSecret;
+                ArraySegment<byte> accessTokenBytes;
                 try
                 {
-                    accessToken = BuildAccessTokenAndGetApiKeySecret(apiKeyName, out localSecret);
+                    accessTokenBytes = BuildAccessTokenAndGetApiKeySecret(apiKeyName, out localSecret);
                 }
                 catch (AuthenticationException ex)
                 {
@@ -102,90 +106,80 @@ namespace Raven.Server.Web.Authentication
                     GenerateError(ex.Message, context, (int)HttpStatusCode.InternalServerError);
                     return Task.CompletedTask;
                 }
-            }
 
-            var localSecretAsBytes = Encoding.UTF8.GetBytes(localSecret);
-            var hashLen = Sodium.crypto_generichash_bytes_max();
-            var hashBuffer = new byte[hashLen];
 
-            fixed (byte* hash = hashBuffer)
-            fixed (byte* server_sk = Server.SecretKey)
-            fixed (byte* server_pk = Server.PublicKey)
-            fixed (byte* client_pk = clientPublicKey)
-            fixed (byte* m = remoteCryptedSecret)
-            fixed (byte* n = remoteNonce)
-            fixed (byte* serverKeyFromClient = serverKey)
-            fixed (byte* pLocalSecret = localSecretAsBytes)
-            {
-                if (Server.PublicKey.Length != serverKey.Length ||
-                    Sodium.sodium_memcmp(serverKeyFromClient, server_pk, (UIntPtr)Server.PublicKey.Length) != 0)
+                var localSecretAsBytes = Encoding.UTF8.GetBytes(localSecret);
+                var hashLen = Sodium.crypto_generichash_bytes_max();
+                var hashBuffer = new byte[hashLen];
+
+                fixed (byte* hash = hashBuffer)
+                fixed (byte* server_sk = ServerStore.BoxSecretKey)
+                fixed (byte* server_pk = ServerStore.BoxPublicKey)
+                fixed (byte* client_pk = clientPublicKey)
+                fixed (byte* m = remoteCryptedSecret)
+                fixed (byte* n = remoteNonce)
+                fixed (byte* serverKeyFromClient = serverKey)
+                fixed (byte* pLocalSecret = localSecretAsBytes)
                 {
-                    GenerateError("The server public key is not valid", context, (int)HttpStatusCode.ExpectationFailed);
-                    return Task.CompletedTask;
-                }
-
-                if (remoteCryptedSecret.Length != hashLen + Sodium.crypto_box_macbytes())
-                {
-                    GenerateError("Unable to authenticate api key. Invalid secret size", context, (int)HttpStatusCode.Forbidden);
-                    return Task.CompletedTask;
-                }
-
-                if (Sodium.crypto_box_open_easy(m, m, (ulong)remoteCryptedSecret.Length, n, client_pk, server_sk) != 0)
-                {
-                    GenerateError("Unable to authenticate api key. Cannot open box", context, (int)HttpStatusCode.Forbidden);
-                    return Task.CompletedTask;
-                }
-
-                if (Sodium.crypto_generichash(hash, (UIntPtr)hashBuffer.Length, pLocalSecret, (ulong)localSecretAsBytes.Length, client_pk, (UIntPtr)clientPublicKey.Length) != 0)
-                {
-                    GenerateError("Unable to authenticate api key. Cannot generate hash", context, (int)HttpStatusCode.Forbidden);
-                    return Task.CompletedTask;
-                }
-
-                if (Sodium.sodium_memcmp(hash, m, (UIntPtr)hashLen) != 0)
-                {
-                    GenerateError("Unable to authenticate api key. Cannot verify hash", context, (int)HttpStatusCode.Forbidden);
-                    return Task.CompletedTask;
-                }
-
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-
-                AccessToken old;
-                if (Server.AccessTokensByName.TryGetValue(accessToken.Name, out old))
-                {
-                    AccessToken value;
-                    Server.AccessTokensByName.TryRemove(old.Name, out value);
-                }
-
-                Server.AccessTokensById[accessToken.Token] = accessToken;
-                Server.AccessTokensByName[accessToken.Name] = accessToken;
-
-
-                var token = new byte[Encoding.UTF8.GetByteCount(accessToken.Token) + Sodium.crypto_box_macbytes()];
-                var tokenLen = Encoding.UTF8.GetBytes(accessToken.Token, 0, accessToken.Token.Length, token, 0);
-                fixed (byte* c = token)
-                {
-                    Sodium.randombytes_buf(n, (UIntPtr)remoteNonce.Length);
-                    if (Sodium.crypto_box_easy(c, c, (ulong)tokenLen, n, client_pk, server_sk) != 0)
+                    if (ServerStore.BoxPublicKey.Length != serverKey.Length ||
+                        Sodium.sodium_memcmp(serverKeyFromClient, server_pk, (UIntPtr)ServerStore.BoxPublicKey.Length) != 0)
                     {
-                        GenerateError("Unable to crypt token", context, (int)HttpStatusCode.Forbidden);
+                        GenerateError("The server public key is not valid", context, (int)HttpStatusCode.ExpectationFailed);
                         return Task.CompletedTask;
                     }
 
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    if (remoteCryptedSecret.Length != hashLen + Sodium.crypto_box_macbytes())
                     {
-                        writer.WriteStartObject();
-                        writer.WritePropertyName("Token");
-                        writer.WriteString(Convert.ToBase64String(token));
-                        writer.WriteComma();
-                        writer.WritePropertyName("Nonce");
-                        writer.WriteString(Convert.ToBase64String(remoteNonce));
-                        writer.WriteEndObject();
-                        writer.Flush();
+                        GenerateError("Unable to authenticate api key. Invalid secret size", context, (int)HttpStatusCode.Forbidden);
+                        return Task.CompletedTask;
+                    }
+
+                    if (Sodium.crypto_box_open_easy(m, m, (ulong)remoteCryptedSecret.Length, n, client_pk, server_sk) != 0)
+                    {
+                        GenerateError("Unable to authenticate api key. Cannot open box", context, (int)HttpStatusCode.Forbidden);
+                        return Task.CompletedTask;
+                    }
+
+                    if (Sodium.crypto_generichash(hash, (UIntPtr)hashBuffer.Length, pLocalSecret, (ulong)localSecretAsBytes.Length, client_pk,
+                            (UIntPtr)clientPublicKey.Length) != 0)
+                    {
+                        GenerateError("Unable to authenticate api key. Cannot generate hash", context, (int)HttpStatusCode.Forbidden);
+                        return Task.CompletedTask;
+                    }
+
+                    if (Sodium.sodium_memcmp(hash, m, (UIntPtr)hashLen) != 0)
+                    {
+                        GenerateError("Unable to authenticate api key. Cannot verify hash", context, (int)HttpStatusCode.Forbidden);
+                        return Task.CompletedTask;
+                    }
+
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+                    var token = new byte[accessTokenBytes.Count + Sodium.crypto_box_macbytes()];
+                    Buffer.BlockCopy(accessTokenBytes.Array, accessTokenBytes.Offset, token, 0, accessTokenBytes.Count);
+                    fixed (byte* c = token)
+                    {
+                        Sodium.randombytes_buf(n, (UIntPtr)remoteNonce.Length);
+                        if (Sodium.crypto_box_easy(c, c, (ulong)accessTokenBytes.Count, n, client_pk, server_sk) != 0)
+                        {
+                            GenerateError("Unable to crypt token", context, (int)HttpStatusCode.Forbidden);
+                            return Task.CompletedTask;
+                        }
+
+                        using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                        {
+                            writer.WriteStartObject();
+                            writer.WritePropertyName("Token");
+                            writer.WriteString(Convert.ToBase64String(token));
+                            writer.WriteComma();
+                            writer.WritePropertyName("Nonce");
+                            writer.WriteString(Convert.ToBase64String(remoteNonce));
+                            writer.WriteEndObject();
+                            writer.Flush();
+                        }
                     }
                 }
             }
-
             return Task.CompletedTask;
         }
 
@@ -203,67 +197,72 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
+        private readonly string _emptySignature = new string(' ',
+            Sparrow.Utils.Base64.CalculateAndValidateOutputLength(Sodium.crypto_sign_bytes()));
 
-        private AccessToken BuildAccessTokenAndGetApiKeySecret(string apiKeyName, out string secret)
+        private unsafe ArraySegment<byte> BuildAccessTokenAndGetApiKeySecret(string apiKeyName, out string secret)
         {
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
-                context.OpenReadTransaction();
-
-                var apiDoc = ServerStore.Cluster.Read(context, Constants.ApiKeys.Prefix + apiKeyName);
-
-                if (apiDoc == null)
+                using (context.OpenReadTransaction())
                 {
-                    throw new AuthenticationException($"Could not find api key: {apiKeyName}");
-                }
+                    var apiDoc = ServerStore.Cluster.Read(context, Constants.ApiKeys.Prefix + apiKeyName);
 
-                bool apiKeyDefinitionEnabled;
-                if (apiDoc.TryGet("Enabled", out apiKeyDefinitionEnabled) == false ||
-                    apiKeyDefinitionEnabled == false)
-                {
-                    throw new AuthenticationException($"The api key {apiKeyName} has been disabled");
-                }
-
-                if (apiDoc.TryGet("Secret", out secret) == false)
-                {
-                    throw new InvalidOperationException($"Missing 'Secret' property in api kye: {apiKeyName}");
-                }
-
-                var databases = new Dictionary<string, AccessModes>(StringComparer.OrdinalIgnoreCase);
-
-                BlittableJsonReaderObject accessMode;
-                if (apiDoc.TryGet("ResourcesAccessMode", out accessMode) == false)
-                {
-                    throw new InvalidOperationException($"Missing 'ResourcesAccessMode' property in api key: {apiKeyName}");
-                }
-                var prop = new BlittableJsonReaderObject.PropertyDetails();
-
-                for (var i = 0; i < accessMode.Count; i++)
-                {
-                    accessMode.GetPropertyByIndex(i, ref prop);
-
-                    string accessValue;
-                    if (accessMode.TryGet(prop.Name, out accessValue) == false)
+                    if (apiDoc == null)
                     {
-                        throw new InvalidOperationException($"Missing value of dbName -'{prop.Name}' property in api key: {apiKeyName}");
+                        throw new AuthenticationException($"Could not find api key: {apiKeyName}");
                     }
-                    AccessModes mode;
-                    if (Enum.TryParse(accessValue, out mode) == false)
+
+                    bool apiKeyDefinitionEnabled;
+                    if (apiDoc.TryGet("Enabled", out apiKeyDefinitionEnabled) == false ||
+                        apiKeyDefinitionEnabled == false)
                     {
-                        throw new InvalidOperationException(
-                            $"Invalid value of dbName -'{prop.Name}' property in api key: {apiKeyName}, cannot understand: {accessValue}");
+                        throw new AuthenticationException($"The api key {apiKeyName} has been disabled");
                     }
-                    databases[prop.Name] = mode;
+
+                    if (apiDoc.TryGet("Secret", out secret) == false)
+                    {
+                        throw new InvalidOperationException($"Missing 'Secret' property in api key: {apiKeyName}");
+                    }
+                }
+                var signature = new byte[Sodium.crypto_sign_bytes()];
+                var expires = DateTime.UtcNow.AddMinutes(30);
+
+                var ms = new MemoryStream();
+                using (var writer = new BlittableJsonTextWriter(context, ms))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Sig");
+                    writer.WriteString(_emptySignature); // placeholder for signature
+                    writer.WriteComma();
+                    writer.WritePropertyName("Name");
+                    writer.WriteString(apiKeyName);
+                    writer.WriteComma();
+                    writer.WritePropertyName("Node");
+                    writer.WriteString(ServerStore.NodeTag);
+                    writer.WriteComma();
+                    writer.WritePropertyName("Expires");
+                    writer.WriteString(expires.ToString("O", CultureInfo.InvariantCulture));
+                    writer.WriteEndObject();
+                    writer.Flush();
                 }
 
-                return new AccessToken
+                ms.TryGetBuffer(out var buffer);
+
+                fixed (byte* msg = buffer.Array)
+                fixed (byte* sig = signature)
+                fixed (byte* sk = ServerStore.SignSecretKey)
                 {
-                    Name = apiKeyName,
-                    Token = Guid.NewGuid().ToString(),
-                    AuthorizedDatabases = databases,
-                    Issued = Stopwatch.GetTimestamp()
-                };
+                    if (Sodium.crypto_sign_detached(sig, null, msg + buffer.Offset, (ulong)buffer.Count, sk) != 0)
+                        throw new AuthenticationException($"Unable to create and sign Access Token in node {ServerStore.NodeTag} for api key: {apiKeyName} ");
+
+                    // Copies the signature into the placeholder
+                    Sparrow.Utils.Base64.ConvertToBase64Array(msg + 8, sig, 0, signature.Length);
+
+                    ms.TryGetBuffer(out buffer);
+                    return buffer;
+                }
 
             }
         }

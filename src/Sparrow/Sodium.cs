@@ -275,14 +275,11 @@ namespace Sparrow
             return buffer;
         }
 
-        public static void crypto_box_keypair(byte* pk, byte* sk)
+        public static int crypto_box_keypair(byte* pk, byte* sk)
         {
-            if (Platform.PlatformDetails.RunningOnPosix)
-            {
-                Platform.Posix.PosixSodium.crypto_box_keypair(pk, sk);
-                return;
-            }
-            Platform.Win32.WinSodium.crypto_box_keypair(pk, sk);
+            return Platform.PlatformDetails.RunningOnPosix 
+                ? Platform.Posix.PosixSodium.crypto_box_keypair(pk, sk) 
+                : Platform.Win32.WinSodium.crypto_box_keypair(pk, sk);
         }
 
         public static int crypto_generichash(byte* @out, UIntPtr outlen, byte* @in,
@@ -373,6 +370,57 @@ namespace Sparrow
                 : Platform.Win32.WinSodium.crypto_box_open_easy(m, c, clen, n, pk, sk);
         }
 
+        public static int crypto_sign_detached(
+            byte* sig,
+            ulong* siglen,
+            byte* m,
+            ulong mlen,
+            byte* sk)
+        {
+            return Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_sign_detached(sig, siglen, m, mlen, sk)
+                : Platform.Win32.WinSodium.crypto_sign_detached(sig, siglen, m, mlen, sk);
+        }
+
+        public static int crypto_sign_verify_detached(
+            byte* sig,
+            byte* m,
+            ulong mlen,
+            byte* pk)
+        {
+            return Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_sign_verify_detached(sig, m, mlen, pk)
+                : Platform.Win32.WinSodium.crypto_sign_verify_detached(sig, m, mlen, pk);
+        }
+
+        public static int crypto_sign_bytes()
+        {
+            return (int)(Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_sign_bytes()
+                : Platform.Win32.WinSodium.crypto_sign_bytes());
+        }
+
+        public static int crypto_sign_keypair(byte* pk, byte* sk)
+        {
+            return Platform.PlatformDetails.RunningOnPosix 
+                ? Platform.Posix.PosixSodium.crypto_sign_keypair(pk, sk) 
+                : Platform.Win32.WinSodium.crypto_sign_keypair(pk, sk);
+        }
+
+        public static int crypto_sign_publickeybytes()
+        {
+            return (int)(Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_sign_publickeybytes()
+                : Platform.Win32.WinSodium.crypto_sign_publickeybytes());
+        }
+
+        public static int crypto_sign_secretkeybytes()
+        {
+            return (int)(Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_sign_secretkeybytes()
+                : Platform.Win32.WinSodium.crypto_sign_secretkeybytes());
+        }
+
         public static void ZeroMemory(byte* ptr, long size)
         {
             if (Platform.PlatformDetails.RunningOnPosix)
@@ -393,7 +441,7 @@ namespace Sparrow
             }
         }
 
-        public static void CopyMasterKey(out byte[] dst, byte[] src)
+        public static void CloneKey(out byte[] dst, byte[] src)
         {
             if (src == null)
             {

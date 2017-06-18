@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
@@ -18,6 +19,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -42,6 +44,8 @@ namespace Tests.Infrastructure
 
         protected int LongWaitTime = 15000; //under stress the thread pool may take time to schedule the task to complete the set of the TCS
 
+        protected byte[] DummyPublicKey = new byte[0]; // Only used in tests when there is no instance of a RavenServer (the server generates and stores the keys)
+
         protected async Task<RachisConsensus<CountingStateMachine>> CreateNetworkAndGetLeader(int nodeCount, [CallerMemberName] string caller = null)
         {
             var initialCount = RachisConsensuses.Count;
@@ -59,7 +63,7 @@ namespace Tests.Infrastructure
                     continue;
                 }
                 var follower = RachisConsensuses[i + initialCount];
-                await leader.AddToClusterAsync(follower.Url);
+                await leader.AddToClusterAsync(follower.Url, publicKey: DummyPublicKey); 
                 await follower.WaitForTopology(Leader.TopologyModification.Voter);
             }
             var currentState = RachisConsensuses[leaderIndex + initialCount].CurrentState;
@@ -139,7 +143,7 @@ namespace Tests.Infrastructure
             };
             if (bootstrap)
             {
-                rachis.Bootstrap(url);
+                rachis.Bootstrap(url, DummyPublicKey);
             }
 
             rachis.Url = url;

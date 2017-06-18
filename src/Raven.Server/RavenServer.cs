@@ -37,6 +37,8 @@ using Sparrow.Logging;
 using AccessModes = Raven.Client.Server.Operations.ApiKeys.AccessModes;
 using AccessToken = Raven.Server.Web.Authentication.AccessToken;
 using System.Reflection;
+using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server
 {
@@ -55,9 +57,7 @@ namespace Raven.Server
 
         public readonly RavenConfiguration Configuration;
 
-        public byte[] PublicKey, SecretKey;
-        public ConcurrentDictionary<string, AccessToken> AccessTokensById = new ConcurrentDictionary<string, AccessToken>();
-        public ConcurrentDictionary<string, AccessToken> AccessTokensByName = new ConcurrentDictionary<string, AccessToken>();
+        public ConcurrentDictionary<string, AccessToken> AccessTokenCache = new ConcurrentDictionary<string, AccessToken>();
 
         public Timer ServerMaintenanceTimer;
 
@@ -83,18 +83,8 @@ namespace Raven.Server
             ServerMaintenanceTimer = new Timer(ServerMaintenanceTimerByMinute, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
 
             _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("<TcpServer>");
-
-            PublicKey = new byte[Sodium.crypto_box_publickeybytes()];
-            SecretKey = new byte[Sodium.crypto_box_secretkeybytes()];
-
-            unsafe
-            {
-                fixed (byte* pubKey = PublicKey)
-                fixed (byte* secKey = SecretKey)
-                    Sodium.crypto_box_keypair(pubKey, secKey);
-            }
         }
-
+        
         public Task<TcpListenerStatus> GetTcpServerStatusAsync()
         {
             return _tcpListenerTask;
@@ -102,16 +92,12 @@ namespace Raven.Server
 
         private void ServerMaintenanceTimerByMinute(object state)
         {
-            foreach (var accessToken in AccessTokensById.Values)
+            foreach (var accessToken in AccessTokenCache.Values)
             {
                 if (accessToken.IsExpired == false)
                     continue;
 
-                AccessToken _;
-                if (AccessTokensById.TryRemove(accessToken.Token, out _))
-                {
-                    AccessTokensByName.TryRemove(accessToken.Name, out _);
-                }
+                AccessTokenCache.TryRemove(accessToken.Token, out var _);
             }
         }
 
@@ -582,22 +568,26 @@ namespace Raven.Server
                     ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.Success));
                     return true;
                 }
-
-                if (header.AuthorizationToken == null)
+                
+                var sigBase64Size = Sparrow.Utils.Base64.CalculateAndValidateOutputLength(Sodium.crypto_sign_bytes());
+                if (header.AuthorizationToken == null || header.AuthorizationToken.Length < sigBase64Size + 8 /* sig length + prefix */)
                 {
                     ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.AuthorizationTokenRequired));
+                    return false;
                 }
+
                 AccessToken accessToken;
-                if (AccessTokensById.TryGetValue(header.AuthorizationToken, out accessToken) == false)
+                if (!RequestRouter.TryGetAccessToken(this, header.AuthorizationToken, sigBase64Size, out accessToken))
                 {
+                    if (accessToken.IsExpired)
+                    {
+                        ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.ExpiredAuthorizationToken));
+                        return false;
+                    }
                     ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.BadAuthorizationToken));
                     return false;
                 }
-                if (accessToken.IsExpired)
-                {
-                    ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.ExpiredAuthorizationToken));
-                    return false;
-                }
+
                 AccessModes mode;
                 var hasValue =
                     accessToken.AuthorizedDatabases.TryGetValue(header.DatabaseName, out mode) ||

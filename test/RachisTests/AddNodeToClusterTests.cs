@@ -24,7 +24,8 @@ namespace RachisTests
             var raft2 = await CreateRaftClusterAndGetLeader(1);
             
             var url = raft2.WebUrls[0];
-            await raft1.ServerStore.AddNodeToClusterAsync(url);
+            var publicKey = raft2.ServerStore.AuthPublicKey;
+            await raft1.ServerStore.AddNodeToClusterAsync(url, publicKey);
             Assert.True(await WaitForValueAsync(() => raft1.ServerStore.GetClusterErrors().Count > 0,true));
         }
 
@@ -133,7 +134,7 @@ namespace RachisTests
 
             // rejoin the node
             var newLeader = Servers.Single(s => s.ServerStore.IsLeader());
-            Assert.True(await newLeader.ServerStore.AddNodeToClusterAsync(responsibleServer.WebUrls[0], watcherRes.ResponsibleNode).WaitAsync(fromSeconds));
+            Assert.True(await newLeader.ServerStore.AddNodeToClusterAsync(responsibleServer.WebUrls[0], responsibleServer.ServerStore.AuthPublicKey, watcherRes.ResponsibleNode).WaitAsync(fromSeconds));
             Assert.True(await responsibleServer.ServerStore.WaitForState(RachisConsensus.State.Follower).WaitAsync(fromSeconds));
 
             using (var session = responsibleStore.OpenSession())

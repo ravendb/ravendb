@@ -182,7 +182,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 using (var tx = ctx.OpenWriteTransaction())
                 {
-                    Server.ServerStore.PutSecretKey(ctx, name, key, false);
+                    Server.ServerStore.PutSecretKey(ctx, name, key);
                     tx.Commit();
                 }
             }

@@ -38,11 +38,7 @@ namespace Raven.Server.Web.Authentication
                 var apiKey = JsonDeserializationServer.ApiKeyDefinition(apiKeyJson);
                 await ServerStore.PutValueInClusterAsync(new PutApiKeyCommand(Constants.ApiKeys.Prefix + name, apiKey));
 
-                AccessToken value;
-                if (Server.AccessTokensByName.TryRemove(name, out value))
-                {
-                    Server.AccessTokensById.TryRemove(value.Token, out value);
-                }
+                Server.AccessTokenCache.Clear();
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
             }
@@ -58,11 +54,7 @@ namespace Raven.Server.Web.Authentication
             {
                 await ServerStore.DeleteValueInClusterAsync(Constants.ApiKeys.Prefix + name);
 
-                AccessToken value;
-                if (Server.AccessTokensByName.TryRemove(name, out value))
-                {
-                    Server.AccessTokensById.TryRemove(value.Token, out value);
-                }
+                Server.AccessTokenCache.Clear();
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             }

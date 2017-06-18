@@ -18,7 +18,7 @@ namespace RachisTests
             var followers = GetFollowers();
             DisconnectFromNode(leader);
             var newServer = SetupServer();
-            await leader.AddToClusterAsync(newServer.Url);
+            await leader.AddToClusterAsync(newServer.Url, publicKey: DummyPublicKey);
             await newServer.WaitForTopology(Leader.TopologyModification.Promotable);
             var newLeader = WaitForAnyToBecomeLeader(followers);
             Assert.NotNull(newLeader);
@@ -34,7 +34,7 @@ namespace RachisTests
         public async Task New_node_can_be_added_even_if_it_is_down()
         {
             var leader = await CreateNetworkAndGetLeader(3);
-            Assert.True(await leader.AddToClusterAsync("http://rachis.example.com:1337").WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)), "non existing node should be able to join the cluster");
+            Assert.True(await leader.AddToClusterAsync("http://rachis.example.com:1337", publicKey: DummyPublicKey).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)), "non existing node should be able to join the cluster");
             List<Task> waitingList = new List<Task>();
             foreach (var consensus in RachisConsensuses)
             {
@@ -54,8 +54,8 @@ namespace RachisTests
             DisconnectFromNode(node4);
             DisconnectFromNode(node5);
             var leader = await CreateNetworkAndGetLeader(3);
-            Assert.True(await leader.AddToClusterAsync(node4.Url).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)), "non existing node should be able to join the cluster");
-            Assert.True(await leader.AddToClusterAsync(node5.Url).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)), "non existing node should be able to join the cluster");
+            Assert.True(await leader.AddToClusterAsync(node4.Url, publicKey: DummyPublicKey).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)), "non existing node should be able to join the cluster");
+            Assert.True(await leader.AddToClusterAsync(node5.Url, publicKey: DummyPublicKey).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)), "non existing node should be able to join the cluster");
             var t = IssueCommandsAndWaitForCommit(leader, 3, "test", 1);
             Assert.True(await t.WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)), "Commands were not committed in time although there is a majority of active nodes in the cluster");
 
@@ -72,10 +72,10 @@ namespace RachisTests
         public async Task Adding_already_existing_node_should_throw()
         {
             var leader = await CreateNetworkAndGetLeader(3);
-            Assert.True(await leader.AddToClusterAsync("http://not-a-real-url.com").WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)),
+            Assert.True(await leader.AddToClusterAsync("http://not-a-real-url.com", publicKey:DummyPublicKey).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)),
                 "non existing node should be able to join the cluster");
             await Assert.ThrowsAsync<InvalidOperationException>(
-                () => leader.AddToClusterAsync("http://not-a-real-url.com"));
+                () => leader.AddToClusterAsync("http://not-a-real-url.com", publicKey: DummyPublicKey));
         }
 
 
@@ -118,7 +118,7 @@ namespace RachisTests
                     continue;
                 Assert.True(await node.WaitForTopology(Leader.TopologyModification.Remove, follower.Tag).WaitAsync(TimeSpan.FromMilliseconds(node.ElectionTimeout.TotalMilliseconds * 10)), "Node was not removed from topology in time");
             }
-            Assert.True(await leader.AddToClusterAsync(follower.Url,follower.Tag).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 5)));
+            Assert.True(await leader.AddToClusterAsync(follower.Url, DummyPublicKey, follower.Tag).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 5)));
             Assert.True(await follower.WaitForTopology(Leader.TopologyModification.Voter).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 5))); ;
 
             using (leader.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))

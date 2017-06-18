@@ -32,7 +32,7 @@ namespace Raven.Server.Documents
             options.ForceUsing32BitsPager = db.Configuration.Storage.ForceUsing32BitsPager;
             options.TimeToSyncAfterFlashInSeconds = db.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
             options.NumOfConcurrentSyncsPerPhysDrive = db.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
-            Sodium.CopyMasterKey(out options.MasterKey, db.MasterKey);
+            Sodium.CloneKey(out options.MasterKey, db.MasterKey);
 
             Environment = new StorageEnvironment(options);
             

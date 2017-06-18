@@ -336,11 +336,13 @@ namespace Tests.Infrastructure
             RavenServer leader = null;
             var numberOfNodes = servers.Length;
             var serversToPorts = new Dictionary<RavenServer, string>();
+            var serversToPublicKeys = new Dictionary<RavenServer, byte[]>();
             var leaderIndex = _random.Next(0, numberOfNodes);
             for (var i = 0; i < numberOfNodes; i++)
             {
                 var server = servers[i];
                 serversToPorts.Add(server, server.WebUrls[0]);
+                serversToPublicKeys.Add(server, server.ServerStore.AuthPublicKey);
                 if (i == leaderIndex)
                 {
                     server.ServerStore.EnsureNotPassive();
@@ -357,7 +359,7 @@ namespace Tests.Infrastructure
                 }
                 var follower = Servers[i];
                 // ReSharper disable once PossibleNullReferenceException
-                await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[follower]);
+                await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[follower], serversToPublicKeys[follower]);
                 await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
             }
             // ReSharper disable once PossibleNullReferenceException
@@ -371,6 +373,7 @@ namespace Tests.Infrastructure
             leaderIndex = leaderIndex ?? _random.Next(0, numberOfNodes);
             RavenServer leader = null;
             var serversToPorts = new Dictionary<RavenServer, string>();
+            var serversToPublicKeys = new Dictionary<RavenServer, byte[]>();
             for (var i = 0; i < numberOfNodes; i++)
             {
                 var serverUrl = UseFiddler($"http://127.0.0.1:{GetPort()}");
@@ -390,6 +393,7 @@ namespace Tests.Infrastructure
                 Servers.Add(server);
 
                 serversToPorts.Add(server, serverUrl);
+                serversToPublicKeys.Add(server, server.ServerStore.AuthPublicKey);
                 if (i == leaderIndex)
                 {
                     server.ServerStore.EnsureNotPassive();
@@ -404,7 +408,7 @@ namespace Tests.Infrastructure
                 }
                 var follower = Servers[i];
                 // ReSharper disable once PossibleNullReferenceException
-                await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[follower]);
+                await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[follower], serversToPublicKeys[follower]);
                 await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
             }
             // ReSharper disable once PossibleNullReferenceException

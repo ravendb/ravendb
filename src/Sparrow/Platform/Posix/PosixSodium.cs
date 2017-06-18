@@ -251,5 +251,34 @@ namespace Sparrow.Platform.Posix
             byte* n,
             byte* pk,
             byte* sk);
+
+        [DllImport(LIB_SODIUM)]
+        public static extern int crypto_sign_detached(
+            byte* sig,
+            ulong* siglen,
+            byte* m,
+            ulong mlen,
+            byte* sk);
+
+        [DllImport(LIB_SODIUM)]
+        public static extern int crypto_sign_verify_detached(
+            byte* sig,
+            byte* m,
+            ulong mlen,
+            byte* pk);
+
+        [DllImport(LIB_SODIUM)]
+        public static extern UIntPtr crypto_sign_publickeybytes();
+
+        [DllImport(LIB_SODIUM)]
+        public static extern UIntPtr crypto_sign_secretkeybytes();
+
+        [DllImport(LIB_SODIUM)]
+        public static extern UIntPtr crypto_sign_bytes();
+
+        [DllImport(LIB_SODIUM)]
+        public static extern int crypto_sign_keypair(
+            byte* pk,
+            byte* sk);
     }
 }
