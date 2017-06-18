@@ -8,7 +8,17 @@ namespace Raven.Client.Documents.Commands
 {
     public class GetStatisticsCommand : RavenCommand<DatabaseStatistics>
     {
-        public string DebugTag { get; set; }
+        public readonly string DebugTag;
+
+        public GetStatisticsCommand()
+        {
+            
+        }
+        
+        public GetStatisticsCommand(string debugTag)
+        {
+            DebugTag = debugTag;
+        }
         
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
