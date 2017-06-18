@@ -6,14 +6,14 @@ namespace Raven.Client.Http
 {
     public class ClusterTopology
     {
-        public ClusterTopology(string topologyId, string apiKey, Dictionary<string, string> members, Dictionary<string, string> promotables, Dictionary<string, string> watchers, Dictionary<string, string> authPublicKeys, string lastNodeId)
+        public ClusterTopology(string topologyId, string apiKey, Dictionary<string, string> members, Dictionary<string, string> promotables, Dictionary<string, string> watchers, Dictionary<string, string> publicKeys, string lastNodeId)
         {
             TopologyId = topologyId;
             ApiKey = apiKey;
             Members = members;
             Promotables = promotables;
             Watchers = watchers;
-            AuthPublicKeys = authPublicKeys;
+            PublicKeys = publicKeys;
             LastNodeId = lastNodeId;
         }
 
@@ -63,7 +63,7 @@ namespace Raven.Client.Http
                 [nameof(Members)] = DynamicJsonValue.Convert(Members),
                 [nameof(Promotables)] = DynamicJsonValue.Convert(Promotables),
                 [nameof(Watchers)] = DynamicJsonValue.Convert(Watchers),
-                [nameof(AuthPublicKeys)] = DynamicJsonValue.Convert(AuthPublicKeys),
+                [nameof(PublicKeys)] = DynamicJsonValue.Convert(PublicKeys),
                 [nameof(LastNodeId)] = LastNodeId
             };
         }
@@ -88,7 +88,7 @@ namespace Raven.Client.Http
 
         public byte[] GetPublicKeyFromTag(string tag)
         {
-            if (AuthPublicKeys.TryGetValue(tag, out string key))
+            if (PublicKeys.TryGetValue(tag, out string key))
                 return Convert.FromBase64String(key);
             return null;
         }
@@ -152,6 +152,6 @@ namespace Raven.Client.Http
         public Dictionary<string,string> Members { get; protected set; }
         public Dictionary<string,string> Promotables { get; protected set; }
         public Dictionary<string,string> Watchers { get; protected set; }
-        public Dictionary<string,string> AuthPublicKeys  { get; protected set; }
+        public Dictionary<string,string> PublicKeys  { get; protected set; }
     }
 }

@@ -1268,10 +1268,12 @@ namespace Raven.Server.Rachis
 
         public abstract Task<Stream> ConnectToPeer(string url, string apiKey, TransactionOperationContext context = null);
 
-        public void Bootstrap(string selfUrl, byte[] authPublicKey)
+        public void Bootstrap(string selfUrl, byte[] publicKey)
         {
             if (selfUrl == null)
                 throw new ArgumentNullException(nameof(selfUrl));
+            if (publicKey == null)
+                throw new ArgumentNullException(nameof(publicKey));
 
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var tx = ctx.OpenWriteTransaction())
@@ -1292,7 +1294,7 @@ namespace Raven.Server.Rachis
                     new Dictionary<string, string>(),
                     new Dictionary<string, string>
                     {
-                        [_tag] = Convert.ToBase64String(authPublicKey)
+                        [_tag] = Convert.ToBase64String(publicKey)
                     }, 
                     "A"
                 );
@@ -1322,7 +1324,7 @@ namespace Raven.Server.Rachis
                 throw new NotLeadingException("There is no leader, cannot accept commands. " + _lastStateChangeReason);
 
             Task task;
-            while (leader.TryModifyTopology(nodeTag, nodeUrl, modification, out task, publicKey, validateNotInTopology) == false)
+            while (leader.TryModifyTopology(nodeTag, nodeUrl, modification, publicKey, out task, validateNotInTopology) == false)
                 await task;
 
             await task;
