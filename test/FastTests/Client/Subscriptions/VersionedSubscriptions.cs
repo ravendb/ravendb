@@ -31,7 +31,7 @@ namespace FastTests.Client.Subscriptions
                         Default = new VersioningConfigurationCollection
                         {
                             Active = true,
-                            MaxRevisions = 5,
+                            MinimumRevisionsToKeep = 5,
                         },
                         Collections = new Dictionary<string, VersioningConfigurationCollection>
                         {
@@ -107,7 +107,7 @@ namespace FastTests.Client.Subscriptions
                         Default = new VersioningConfigurationCollection
                         {
                             Active = true,
-                            MaxRevisions = 5,
+                            MinimumRevisionsToKeep = 5,
                         },
                         Collections = new Dictionary<string, VersioningConfigurationCollection>
                         {
@@ -206,7 +206,7 @@ namespace FastTests.Client.Subscriptions
                         Default = new VersioningConfigurationCollection
                         {
                             Active = true,
-                            MaxRevisions = 5,
+                            MinimumRevisionsToKeep = 5,
                         },
                         Collections = new Dictionary<string, VersioningConfigurationCollection>
                         {
@@ -297,7 +297,7 @@ namespace FastTests.Client.Subscriptions
                         Default = new VersioningConfigurationCollection
                         {
                             Active = true,
-                            MaxRevisions = 5,
+                            MinimumRevisionsToKeep = 5,
                         },
                         Collections = new Dictionary<string, VersioningConfigurationCollection>
                         {

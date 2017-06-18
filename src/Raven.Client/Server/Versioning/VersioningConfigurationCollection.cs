@@ -5,9 +5,9 @@ namespace Raven.Client.Server.Versioning
 {
     public class VersioningConfigurationCollection
     {
-        public long? MaxRevisions { get; set; }
+        public long? MinimumRevisionsToKeep { get; set; }
 
-        public TimeSpan? MinimumTimeToKeep { get; set; }
+        public TimeSpan? MinimumRevisionAgeToKeep { get; set; }
 
         public bool Active { get; set; }
 
@@ -15,8 +15,8 @@ namespace Raven.Client.Server.Versioning
 
         protected bool Equals(VersioningConfigurationCollection other)
         {
-            return MaxRevisions == other.MaxRevisions && 
-                MinimumTimeToKeep == other.MinimumTimeToKeep && 
+            return MinimumRevisionsToKeep == other.MinimumRevisionsToKeep && 
+                MinimumRevisionAgeToKeep == other.MinimumRevisionAgeToKeep && 
                 Active == other.Active && 
                 PurgeOnDelete == other.PurgeOnDelete;
         }
@@ -33,8 +33,8 @@ namespace Raven.Client.Server.Versioning
         {
             unchecked
             {
-                var hashCode = MaxRevisions?.GetHashCode() ?? 0;
-                hashCode = (hashCode * 397) ^ MinimumTimeToKeep?.GetHashCode() ?? 0;
+                var hashCode = MinimumRevisionsToKeep?.GetHashCode() ?? 0;
+                hashCode = (hashCode * 397) ^ MinimumRevisionAgeToKeep?.GetHashCode() ?? 0;
                 hashCode = (hashCode * 397) ^ Active.GetHashCode();
                 hashCode = (hashCode * 397) ^ PurgeOnDelete.GetHashCode();
                 return hashCode;
@@ -46,8 +46,8 @@ namespace Raven.Client.Server.Versioning
             return new DynamicJsonValue
             {
                 [nameof(Active)] = Active,
-                [nameof(MaxRevisions)] = MaxRevisions,
-                [nameof(MinimumTimeToKeep)] = MinimumTimeToKeep,
+                [nameof(MinimumRevisionsToKeep)] = MinimumRevisionsToKeep,
+                [nameof(MinimumRevisionAgeToKeep)] = MinimumRevisionAgeToKeep,
                 [nameof(PurgeOnDelete)] = PurgeOnDelete
             };
         }
