@@ -223,8 +223,7 @@ namespace Raven.Server.Web
             if (floatAsString == null)
                 return null;
 
-            float result;
-            if (float.TryParse(floatAsString, out result) == false)
+            if (float.TryParse(floatAsString, out float result) == false)
                 ThrowInvalidFloat(name, result);
 
             return result;
@@ -254,7 +253,7 @@ namespace Raven.Server.Web
             throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified.");
         }
 
-        public static void ThrowRequiredPropertyNameInRequset(string name)
+        public static void ThrowRequiredPropertyNameInRequest(string name)
         {
             throw new ArgumentException($"Request should have a property name '{name}' which is mandatory.");
         }

@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var input = await context.ReadForMemoryAsync(RequestBodyStream(), "multi_get");
                 if (input.TryGet("Requests", out BlittableJsonReaderArray requests) == false)
-                    ThrowRequiredPropertyNameInRequset("Requests");
+                    ThrowRequiredPropertyNameInRequest("Requests");
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
