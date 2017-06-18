@@ -16,7 +16,7 @@ namespace FastTests.Server.Documents.Versioning
                 Default = new VersioningConfigurationCollection
                 {
                     Active = true,
-                    MaxRevisions = 5,
+                    MinimumRevisionsToKeep = 5,
                 },
                 Collections = new Dictionary<string, VersioningConfigurationCollection>
                 {
@@ -24,7 +24,7 @@ namespace FastTests.Server.Documents.Versioning
                     {
                         Active = true,
                         PurgeOnDelete = purgeOnDelete,
-                        MaxRevisions = maxRevisions
+                        MinimumRevisionsToKeep = maxRevisions
                     },
                     ["Comments"] = new VersioningConfigurationCollection
                     {

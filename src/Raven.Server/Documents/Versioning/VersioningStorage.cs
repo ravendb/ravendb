@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Versioning
         private readonly DocumentDatabase _database;
         private readonly DocumentsStorage _documentsStorage;
         public VersioningConfiguration Configuration { get; private set; }
-        private readonly HashSet<string> _tableCreated = new HashSet<string>();
+        private readonly HashSet<string> _tableCreated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly Logger _logger;
 
         private enum Columns
@@ -310,15 +310,16 @@ namespace Raven.Server.Documents.Versioning
             if ((nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) == NonPersistentDocumentFlags.FromSmuggler)
                 return;
 
-            if (configuration.MaxRevisions.HasValue == false || configuration.MaxRevisions.Value == int.MaxValue)
+            if (configuration.MinimumRevisionsToKeep.HasValue == false &&
+                configuration.MinimumRevisionAgeToKeep.HasValue == false)
                 return;
 
-            var numberOfRevisionsToDelete = revisionsCount - configuration.MaxRevisions.Value;
+            var numberOfRevisionsToDelete = revisionsCount - configuration.MinimumRevisionsToKeep ?? long.MaxValue;
             if (numberOfRevisionsToDelete <= 0)
                 return;
 
-            var deletedRevisionsCount = DeleteRevisions(context, table, prefixSlice, numberOfRevisionsToDelete, configuration.MinimumTimeToKeep);
-            Debug.Assert(numberOfRevisionsToDelete == deletedRevisionsCount);
+            var deletedRevisionsCount = DeleteRevisions(context, table, prefixSlice, numberOfRevisionsToDelete, configuration.MinimumRevisionAgeToKeep);
+            Debug.Assert(numberOfRevisionsToDelete >= deletedRevisionsCount);
             IncrementCountOfRevisions(context, prefixSlice, -deletedRevisionsCount);
         }
 
