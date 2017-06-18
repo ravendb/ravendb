@@ -1,26 +1,18 @@
+using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using Raven.Client.Server.Operations.ApiKeys;
 
 namespace Raven.Server.Web.Authentication
 {
     public class AccessToken
     {
-        public string Token { get; set; }
         public string Name { get; set; }
+        public string NodeTag { get; set; }
+        public string Token { get; set; }
+        public DateTime Expires { get; set; }
+
         public Dictionary<string, AccessModes> AuthorizedDatabases { get; set; }
-        public long Issued { get; set; }
-        public bool IsServerAdminAuthorized { get; set; }
 
-        public static readonly long MaxAge = Stopwatch.Frequency * 60 * 30;// 30 minutes
-
-        public bool IsExpired
-        {
-            get
-            {
-                var ticks = Stopwatch.GetTimestamp() - Issued;
-                return ticks > MaxAge;
-            }
-        }
+        public bool IsExpired => Expires.CompareTo(DateTime.UtcNow) <= 0;
     }
 }

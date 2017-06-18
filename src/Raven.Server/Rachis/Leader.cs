@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Authentication;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -663,7 +664,7 @@ namespace Raven.Server.Rachis
             Remove
         }
 
-        public bool TryModifyTopology(string nodeTag, string nodeUrl, TopologyModification modification, out Task task, bool validateNotInTopology = false)
+        public bool TryModifyTopology(string nodeTag, string nodeUrl, TopologyModification modification, out Task task, byte[] publicKey = null, bool validateNotInTopology = false)
         {
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction())
@@ -689,6 +690,8 @@ namespace Raven.Server.Rachis
                     nodeTag = GenerateNodeTag(clusterTopology);
                 }
 
+                var authPublicKeys = new Dictionary<string, string>(clusterTopology.AuthPublicKeys);
+                
                 var newVotes = new Dictionary<string, string>(clusterTopology.Members);
                 newVotes.Remove(nodeTag);
                 var newPromotables = new Dictionary<string, string>(clusterTopology.Promotables);
@@ -707,12 +710,14 @@ namespace Raven.Server.Rachis
                     case TopologyModification.Promotable:
                         Debug.Assert(nodeUrl != null);
                         newPromotables[nodeTag] = nodeUrl;
+                        authPublicKeys[nodeTag] = Convert.ToBase64String(publicKey);
                         break;
                     case TopologyModification.NonVoter:
                         Debug.Assert(nodeUrl != null);
                         newNonVotes[nodeTag] = nodeUrl;
                         break;
                     case TopologyModification.Remove:
+                        authPublicKeys.Remove(nodeTag);
                         if (clusterTopology.Contains(nodeTag) == false)
                         {
                             throw new InvalidOperationException($"Was requested to remove node={nodeTag} from the topology " +
@@ -724,11 +729,13 @@ namespace Raven.Server.Rachis
                 }
 
                 clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
-                      newVotes,
-                      newPromotables,
-                      newNonVotes,
-                      highestNodeId
-                  );
+                    newVotes,
+                    newPromotables,
+                    newNonVotes,
+                    authPublicKeys,
+                    highestNodeId
+
+                );
 
                 var topologyJson = _engine.SetTopology(context, clusterTopology);
 

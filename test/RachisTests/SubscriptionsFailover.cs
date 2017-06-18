@@ -333,14 +333,14 @@ namespace RachisTests
                     Default = new VersioningConfigurationCollection
                     {
                         Active = true,
-                        MaxRevisions = 10,
+                        MinimumRevisionsToKeep = 10,
                     },
                     Collections = new Dictionary<string, VersioningConfigurationCollection>
                     {
                         ["Users"] = new VersioningConfigurationCollection
                         {
                             Active = true,
-                            MaxRevisions = 10
+                            MinimumRevisionsToKeep = 10
                         }
                     }
                 };
