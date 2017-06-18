@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Versioning
             _logger = LoggingSource.Instance.GetLogger<VersioningStorage>(database.Name);
         }
 
-        private Table EnsureRevisionTableCreated(Transaction tx ,CollectionName collection)
+        private Table EnsureRevisionTableCreated(Transaction tx, CollectionName collection)
         {
             var tableName = collection.GetTableName(CollectionTableType.Revisions);
             if (_tableCreated.Add(collection.Name))
@@ -321,6 +321,32 @@ namespace Raven.Server.Documents.Versioning
             var deletedRevisionsCount = DeleteRevisions(context, table, prefixSlice, numberOfRevisionsToDelete, configuration.MinimumRevisionAgeToKeep);
             Debug.Assert(numberOfRevisionsToDelete >= deletedRevisionsCount);
             IncrementCountOfRevisions(context, prefixSlice, -deletedRevisionsCount);
+        }
+
+        public void DeleteRevisionsFor(DocumentsOperationContext context, string id)
+        {
+            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
+            {
+                var collectionName = GetCollectionFor(context, prefixSlice);
+                if (collectionName == null)
+                    return;
+
+                var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
+                DeleteRevisions(context, table, prefixSlice, long.MaxValue, null);
+                DeleteCountOfRevisions(context, prefixSlice);
+            }
+        }
+
+        private CollectionName GetCollectionFor(DocumentsOperationContext context, Slice prefixSlice)
+        {
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+            var tvr = table.SeekOneForwardFrom(DocsSchema.Indexes[IdAndEtagSlice], prefixSlice);
+            if (tvr == null)
+                return null;
+
+            var collection = DocumentsStorage.TableValueToId(context, (int)Columns.Collection, ref tvr.Reader);
+            return new CollectionName(collection);
         }
 
         private long DeleteRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, long numberOfRevisionsToDelete, TimeSpan? minimumTimeToKeep)

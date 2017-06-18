@@ -9,6 +9,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
@@ -397,6 +398,16 @@ namespace FastTests
                 {
                     Result = (TResult)(object)response;
                 }
+            }
+
+            public Task ExecuteAsync<TResult>(RavenCommand<TResult> command, CancellationToken cancellationToken = default(CancellationToken))
+            {
+                return RequestExecutor.ExecuteAsync(command, Context, cancellationToken);
+            }
+
+            public void Execute<TResult>(RavenCommand<TResult> command, CancellationToken cancellationToken = default(CancellationToken))
+            {
+                RequestExecutor.Execute(command, Context, cancellationToken);
             }
         }
     }

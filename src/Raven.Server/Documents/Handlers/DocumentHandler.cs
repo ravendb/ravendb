@@ -355,21 +355,14 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs", "DELETE", "/databases/{databaseName:string}/docs?id={documentId:string}")]
         public async Task Delete()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            {
-                var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
+            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
+            var etag = GetLongFromHeaders("If-Match");
 
-                var etag = GetLongFromHeaders("If-Match");
+            var cmd = new DeleteDocumentCommand(id, etag, Database, catchConcurrencyErrors: true);
+            await Database.TxMerger.Enqueue(cmd);
+            cmd.ExceptionDispatchInfo?.Throw();
 
-                var cmd = new DeleteDocumentCommand(id, etag, Database, catchConcurrencyErrors: true);
-
-                await Database.TxMerger.Enqueue(cmd);
-
-                cmd.ExceptionDispatchInfo?.Throw();
-
-                NoContentStatus();
-            }
+            NoContentStatus();
         }
 
         [RavenAction("/databases/*/docs", "PUT", "/databases/{databaseName:string}/docs?id={documentId:string}")]
@@ -423,8 +416,7 @@ namespace Raven.Server.Documents.Handlers
             var debugMode = GetBoolValueQueryString("debug", required: false) ?? isTest;
             var skipPatchIfEtagMismatch = GetBoolValueQueryString("skipPatchIfEtagMismatch", required: false) ?? false;
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var request = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
 
