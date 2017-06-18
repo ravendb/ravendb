@@ -919,7 +919,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (configuration.Disabled)
                 return TaskStatus.Disabled;
 
-            var whoseTaskIsIt = databaseRecord.Topology.WhoseTaskIsIt(configuration);
+            var whoseTaskIsIt = databaseRecord.Topology.WhoseTaskIsIt(configuration, _serverStore.IsPassive());
             if (whoseTaskIsIt == null)
                 return TaskStatus.Disabled;
 

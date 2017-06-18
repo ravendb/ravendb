@@ -18,7 +18,7 @@ namespace FastTests.Server.Replication
     public class ReplicationResolveConflictsOnConfigurationChange : ReplicationTestsBase
     {
 
-        public async Task GenerateConflicts(DocumentStore store1, DocumentStore store2, string id = "foo/bar")
+        public async Task<List<ModifyOngoingTaskResult>> GenerateConflicts(DocumentStore store1, DocumentStore store2, string id = "foo/bar")
         {
             using (var session = store1.OpenSession())
             {
@@ -36,11 +36,12 @@ namespace FastTests.Server.Replication
                 }, id);
                 session.SaveChanges();
             }
-            await SetupReplicationAsync(store1,store2);
-            await SetupReplicationAsync(store2,store1);
+            var list = await SetupReplicationAsync(store1,store2);
+            list.AddRange(await SetupReplicationAsync(store2,store1));
 
             Assert.Equal(2, WaitUntilHasConflict(store1, id).Results.Length);
             Assert.Equal(2, WaitUntilHasConflict(store2, id).Results.Length);
+            return list;
         }
 
         [Fact]
@@ -104,26 +105,15 @@ namespace FastTests.Server.Replication
             }
         }
 
-        private async Task RemoveReplicationFrom(DocumentStore store)
-        {
-            var tasks = OngoingTasksHandler.GetOngoingTasksFor(store.Database, Server.ServerStore);
-            foreach (var replication in tasks.OngoingTasksList.OfType<OngoingTaskReplication>())
-            {
-                await DeleteOngoingTask(store, replication.TaskId, OngoingTaskType.Replication);
-            }
-        }
-        
-
         [Fact]
         public async Task ResolveManyConflicts()
         {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await GenerateConflicts(store1, store2, "users/1");
-
-                await RemoveReplicationFrom(store1);
-                await RemoveReplicationFrom(store2);
+                var list = await GenerateConflicts(store1, store2, "users/1");
+                await DeleteOngoingTask(store1, list[0].TaskId, OngoingTaskType.Replication);
+                await DeleteOngoingTask(store2, list[1].TaskId, OngoingTaskType.Replication);
                 await GenerateConflicts(store1, store2, "users/2");
                 var storage1 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
                 await UpdateConflictResolver(store1, storage1.DbId.ToString());

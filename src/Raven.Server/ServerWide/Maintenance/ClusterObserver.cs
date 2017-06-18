@@ -212,8 +212,12 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 var url = clusterTopology.GetUrlFromTag(promotable);
                 var task = new PromotableTask(promotable,url, dbName);
-                var mentorNode = topology.WhoseTaskIsIt(task);
-
+                var mentorNode = topology.WhoseTaskIsIt(task,_server.IsPassive());
+                if (mentorNode == null)
+                {
+                    // We are in passive mode and were kicked out of the cluster.
+                    return false;
+                }
                 if (previousClusterStats.TryGetValue(mentorNode, out var mentorPrevClusterStats) == false ||
                     mentorPrevClusterStats.LastReport.TryGetValue(dbName, out var mentorPrevDbStats) == false)
                     continue;

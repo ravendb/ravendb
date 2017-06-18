@@ -31,7 +31,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             return "does/not/exists/" + Guid.NewGuid(); // missing value
         }
 
-        public override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
+        public override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
         {
             Debug.Assert(existingValue == null);
 

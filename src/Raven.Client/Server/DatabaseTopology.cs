@@ -12,30 +12,7 @@ namespace Raven.Client.Server
     {
         ulong GetTaskKey();
     }
-//
-//    public class DatabaseTopologyNode : ReplicationNode, IDatabaseTask, IComparable<DatabaseTopologyNode>
-//    {
-//        public string NodeTag;
-//
-//        public int CompareTo(DatabaseTopologyNode other)
-//        {
-//            return string.Compare(NodeTag, other.NodeTag, StringComparison.OrdinalIgnoreCase);
-//        }
-//
-//        public override DynamicJsonValue ToJson()
-//        {
-//            var djv = base.ToJson();
-//            djv[nameof(NodeTag)] = NodeTag;
-//            return djv;
-//        }
-//
-//        public ulong GetTaskKey()
-//        {
-//            var hashCode = CalculateStringHash(NodeTag);
-//            return (hashCode * 397) ^ CalculateStringHash(Database);
-//        }
-//    }
-//    
+
     public class LeaderStamp : IDynamicJson
     {
         public long Index = -1;
@@ -90,7 +67,6 @@ namespace Raven.Client.Server
 
     public class DatabaseTopology
     {
-        public bool PartOfCluster = false;
         public List<string> Members = new List<string>();
         public List<string> Promotables = new List<string>();
 
@@ -102,7 +78,7 @@ namespace Raven.Client.Server
                    Promotables.Contains(nodeTag);
         }
         
-        public List<ReplicationNode> GetDestinations(string nodeTag, string databaseName, ClusterTopology clusterTopology)
+        public List<ReplicationNode> GetDestinations(string nodeTag, string databaseName, ClusterTopology clusterTopology, bool isPassive)
         {
             var list = new List<string>();
             var destinations = new List<ReplicationNode>();
@@ -116,7 +92,7 @@ namespace Raven.Client.Server
             foreach (var promotable in Promotables)
             {
                 var url = clusterTopology.GetUrlFromTag(promotable);
-                if (WhoseTaskIsIt(new PromotableTask(promotable, url, databaseName)) == nodeTag)
+                if (WhoseTaskIsIt(new PromotableTask(promotable, url, databaseName), isPassive) == nodeTag)
                 {
                     list.Add(url);
                 }
@@ -199,9 +175,9 @@ namespace Raven.Client.Server
             Promotables.RemoveAll(p => p == delDbFromNode);
         }
 
-        public string WhoseTaskIsIt(IDatabaseTask task)
+        public string WhoseTaskIsIt(IDatabaseTask task, bool inPassiveState)
         {
-            if (PartOfCluster == false)
+            if (inPassiveState)
                 return null;
 
             var topology = new List<string>(Members);

@@ -203,7 +203,7 @@ namespace Raven.Server.ServerWide
 
                     try
                     {
-                        itemBlittable = updateCommand.GetUpdatedValue(index, record, context, itemBlittable);
+                        itemBlittable = updateCommand.GetUpdatedValue(index, record, context, itemBlittable, _parent.CurrentState == RachisConsensus.State.Passive);
 
                         // if returned null, means, there is nothing to update and we just wanted to delete the value
                         if (itemBlittable == null)
@@ -614,10 +614,9 @@ namespace Raven.Server.ServerWide
             var doc = Read(context, "db/" + name.ToLowerInvariant(), out etag);
             if (doc == null)
                 return null;
-            var rec = JsonDeserializationCluster.DatabaseRecord(doc);
-            rec.Topology.PartOfCluster = _parent.CurrentState != RachisConsensus.State.Passive;
-            return rec;
+            return JsonDeserializationCluster.DatabaseRecord(doc);
         }
+
         public BlittableJsonReaderObject Read<T>(TransactionOperationContext<T> context, string name)
             where T : RavenTransaction
         {

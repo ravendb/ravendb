@@ -190,7 +190,7 @@ namespace Raven.Server.Web.System
                         Url = url
                     };
                     var promotableTask = new PromotableTask(promotable,url,databaseName);
-                    nodesTopology.Promotables.Add(GetNodeId(node, topology.WhoseTaskIsIt(promotableTask)));
+                    nodesTopology.Promotables.Add(GetNodeId(node, topology.WhoseTaskIsIt(promotableTask,ServerStore.IsPassive())));
                 }
             }
 

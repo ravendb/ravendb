@@ -146,8 +146,8 @@ namespace RachisTests
                 session.SaveChanges();
                 Assert.True(await WaitForDocumentInClusterAsync<User>(serverNodes, "users/4", u => u.Name == "Karmel4", fromSeconds));
             }
-            Assert.True(WaitForDocument<User>(watcherStore, "users/4", u => u.Name == "Karmel4"));
 
+            Assert.True(WaitForDocument<User>(watcherStore, "users/4", u => u.Name == "Karmel4", 30_000));
 
             nodeInClusterStore.Dispose();
             leaderStore.Dispose();

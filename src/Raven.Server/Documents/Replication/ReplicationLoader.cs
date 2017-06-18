@@ -360,7 +360,7 @@ namespace Raven.Server.Documents.Replication
 
             lock (_locker)
             {
-                _internalDestinations = record.Topology.GetDestinations(_server.NodeTag, Database.Name, GetClusterTopology());
+                _internalDestinations = record.Topology.GetDestinations(_server.NodeTag, Database.Name, GetClusterTopology(),_server.IsPassive());
                 _externalDestinations = record.ExternalReplication;
                 
                 _destinations.AddRange(_internalDestinations);
@@ -419,7 +419,7 @@ namespace Raven.Server.Documents.Replication
             lock (_locker)
             {
                 instancesToDispose = new List<OutgoingReplicationHandler>();
-                if (newRecord == null || newRecord.Topology.PartOfCluster == false)
+                if (newRecord == null || _server.IsPassive())
                 {
                     DropOutgoingConnections(Destinations, ref instancesToDispose);
                     _destinations = null;
@@ -453,7 +453,7 @@ namespace Raven.Server.Documents.Replication
 
         private void HandleInternalReplication(DatabaseRecord newRecord, ref List<OutgoingReplicationHandler> instancesToDispose)
         {
-            var newInternalDestinations = newRecord.Topology?.GetDestinations(_server.NodeTag, Database.Name, GetClusterTopology());
+            var newInternalDestinations = newRecord.Topology?.GetDestinations(_server.NodeTag, Database.Name, GetClusterTopology(),_server.IsPassive());
             var internalConnections = DatabaseTopology.InternalReplicationChanges(_internalDestinations, newInternalDestinations);
 
             if (internalConnections.removeDestinations.Count > 0)

@@ -7,7 +7,7 @@ namespace Raven.Server.ServerWide.Commands
     public abstract class UpdateValueForDatabaseCommand : CommandBase
     {
         public abstract string GetItemId();
-        public abstract BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue);
+        public abstract BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive);
         public abstract void FillJson(DynamicJsonValue json);
         public string DatabaseName { get; set; }
 

@@ -209,7 +209,7 @@ namespace RachisTests.DatabaseCluster
 
                 await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
             }
-
+            
             var tasks = OngoingTasksHandler.GetOngoingTasksFor(databaseName, leader.ServerStore);
             Assert.Equal(1, tasks.OngoingTasksList.Count);
             var repTask = tasks.OngoingTasksList[0] as OngoingTaskReplication;

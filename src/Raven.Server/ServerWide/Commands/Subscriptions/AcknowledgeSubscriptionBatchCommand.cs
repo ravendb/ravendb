@@ -26,12 +26,12 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         public override string GetItemId() => SubscriptionId;
 
-        public override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
+        public override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
         {
             if (existingValue == null)
                 throw new InvalidOperationException($"Subscription with id {SubscriptionId} does not exist");
 
-            if (record.Topology.WhoseTaskIsIt(this) != NodeTag)
+            if (record.Topology.WhoseTaskIsIt(this, isPassive) != NodeTag)
                 throw new InvalidOperationException($"Can't update subscription with id {SubscriptionId} by node {NodeTag}, because it's not it's task to update this subscription");
 
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
