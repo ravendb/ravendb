@@ -288,18 +288,16 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/databases/*/studio/collections/docs", "DELETE")]
         public Task Delete()
         {
-            DocumentsOperationContext context;
-            var returnContextToPool = ContextPool.AllocateOperationContext(out context);
+            var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
 
             var excludeIds = new HashSet<LazyStringValue>();
 
             var reader = context.Read(RequestBodyStream(), "ExcludeIds");
-            BlittableJsonReaderArray idsBlittable;
-            if (reader.TryGet("ExcludeIds", out idsBlittable)) 
+            if (reader.TryGet("ExcludeIds", out BlittableJsonReaderArray ids)) 
             {
-                foreach (LazyStringValue item in idsBlittable)
+                foreach (LazyStringValue id in ids)
                 {
-                    excludeIds.Add(item);
+                    excludeIds.Add(id);
                 }
             }
 

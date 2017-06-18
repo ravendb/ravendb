@@ -756,6 +756,28 @@ namespace Voron.Data.Tables
             }
         }
 
+        public TableValueHolder SeekOneForwardFrom(TableSchema.SchemaIndexDef index, Slice value)
+        {
+            var tree = GetTree(index);
+            using (var it = tree.Iterate(false))
+            {
+                it.SetRequiredPrefix(value);
+
+                if (it.Seek(value) == false)
+                    return null;
+
+                do
+                {
+                    foreach (var result in GetSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator)))
+                    {
+                        return result;
+                    }
+                } while (it.MoveNext());
+            }
+
+            return null;
+        }
+
         public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.SchemaIndexDef index, Slice prefix, Slice last, int skip)
         {
             var tree = GetTree(index);
