@@ -182,10 +182,7 @@ namespace Raven.Client.Documents.BulkInsert
 
         public async Task StoreAsync(object entity, string id)
         {
-            if (id.EndsWith("/"))
-            {
-                throw new NotSupportedException("Document ids cannot end with '/', but was called with " + id);
-            }
+            VerifyValidId(id);
 
             if (_stream == null)
             {
@@ -226,6 +223,19 @@ namespace Raven.Client.Documents.BulkInsert
                     }
                     await ThrowOnUnavailableStream(id, e).ConfigureAwait(false);
                 }
+            }
+        }
+
+        private static void VerifyValidId(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new InvalidOperationException("Document id must have a non empty value");
+            }
+
+            if (id.EndsWith("/"))
+            {
+                throw new InvalidOperationException("Document ids cannot end with '/', but was called with " + id);
             }
         }
 
