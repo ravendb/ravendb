@@ -131,10 +131,7 @@ namespace Raven.Server.Routing
 
         private unsafe bool TryAuthorize(HttpContext context, RavenConfiguration configuration,
             DocumentDatabase database)
-        {
-            if (configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.Admin)
-                return true;
-
+        {            
             var authHeaderValues = context.Request.Headers["Raven-Authorization"];
             var token = authHeaderValues.Count == 0 ? null : authHeaderValues[0];
 
@@ -142,7 +139,9 @@ namespace Raven.Server.Routing
             {
                 token = context.Request.Cookies["Raven-Authorization"];
             }
-
+            if (configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.Admin
+                && token == null)
+                return true;
             var sigBase64Size = Sparrow.Utils.Base64.CalculateAndValidateOutputLength(Sodium.crypto_sign_bytes());
             if (token == null || token.Length < sigBase64Size + 8 /* sig length + prefix */)
             {
