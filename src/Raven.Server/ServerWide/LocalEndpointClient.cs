@@ -20,6 +20,9 @@ using Sparrow.Json;
 
 namespace Raven.Server.ServerWide
 {
+    /// <summary>
+    /// This class is useful for interacting with local endpoints without going through HTTP
+    /// </summary>
     public class LocalEndpointClient
     {
         private readonly RavenServer _server;
