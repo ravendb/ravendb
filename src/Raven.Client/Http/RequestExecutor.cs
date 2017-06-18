@@ -578,7 +578,7 @@ namespace Raven.Client.Http
 
         public async Task<string> GetAuthenticationToken(JsonOperationContext context, ServerNode node)
         {
-            return await _authenticator.GetAuthenticationTokenAsync(_apiKey, node.Url, context).ConfigureAwait(false);
+            return node.ClusterToken = await _authenticator.GetAuthenticationTokenAsync(_apiKey, node.Url, context).ConfigureAwait(false);          
         }
 
         private async Task HandleUnauthorized(ServerNode node, JsonOperationContext context, bool shouldThrow = true)

@@ -202,9 +202,9 @@ namespace Raven.Server.ServerWide
             return _engine.GetTopology(context);
         }
 
-        public async Task AddNodeToClusterAsync(string nodeUrl, string nodeTag = null, bool validateNotInTopology = true)
+        public async Task AddNodeToClusterAsync(string nodeUrl, byte[] publicKey, string nodeTag = null, bool validateNotInTopology = true)
         {
-            await _engine.AddToClusterAsync(nodeUrl, nodeTag, validateNotInTopology).WithCancellation(_shutdownNotification.Token);
+            await _engine.AddToClusterAsync(nodeUrl, publicKey, nodeTag, validateNotInTopology).WithCancellation(_shutdownNotification.Token);
         }
 
         public async Task RemoveFromClusterAsync(string nodeTag)
@@ -389,7 +389,58 @@ namespace Raven.Server.ServerWide
                 }
             }
 
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            {
+                if (TryLoadAuthenticationKeyPairs(ctx) == false)
+                    GenerateAuthenticationKeyPairs(ctx);
+            }
+
             Task.Run(ClusterMaintenanceSetupTask, ServerShutdown);
+        }
+
+        public byte[] BoxPublicKey, BoxSecretKey, AuthPublicKey, SignSecretKey;
+
+        private void GenerateAuthenticationKeyPairs(TransactionOperationContext ctx)
+        {
+            BoxPublicKey = new byte[Sodium.crypto_box_publickeybytes()];
+            BoxSecretKey = new byte[Sodium.crypto_box_secretkeybytes()];
+            AuthPublicKey = new byte[Sodium.crypto_sign_publickeybytes()];
+            SignSecretKey = new byte[Sodium.crypto_sign_secretkeybytes()];
+            unsafe
+            {
+                fixed (byte* boxPk = BoxPublicKey)
+                fixed (byte* boxSk = BoxSecretKey)
+                fixed (byte* signPk = AuthPublicKey)
+                fixed (byte* signSk = SignSecretKey)
+                {
+                    if (Sodium.crypto_box_keypair(boxPk, boxSk) != 0)
+                        throw new CryptographicException("Unable to generate crypto_box_keypair for authentication");
+                    if (Sodium.crypto_sign_keypair(signPk, signSk) != 0)
+                        throw new CryptographicException("Unable to generate crypto_sign_keypair for authentication");
+                }
+            }
+
+            using (var tx = ctx.OpenWriteTransaction())
+            {
+                PutSecretKey(ctx, "Box PK", BoxPublicKey, overwrite:true, cloneKey:true);
+                PutSecretKey(ctx, "Box SK", BoxSecretKey, overwrite: true, cloneKey: true);
+                PutSecretKey(ctx, "Sign PK", AuthPublicKey, overwrite: true, cloneKey: true);
+                PutSecretKey(ctx, "Sign SK", SignSecretKey, overwrite: true, cloneKey: true);
+                tx.Commit();
+            }
+        }
+
+        private bool TryLoadAuthenticationKeyPairs(TransactionOperationContext ctx)
+        {
+            using (ctx.OpenReadTransaction())
+            {
+                BoxPublicKey = GetSecretKey(ctx, "Box PK");
+                BoxSecretKey = GetSecretKey(ctx, "Box SK");
+                AuthPublicKey = GetSecretKey(ctx, "Sign PK");
+                SignSecretKey = GetSecretKey(ctx, "Sign SK");
+            }
+
+            return BoxPublicKey != null && BoxSecretKey != null && AuthPublicKey != null && SignSecretKey != null;
         }
 
         private void OnStateChanged(object sender, RachisConsensus.StateTransition state)
@@ -484,13 +535,21 @@ namespace Raven.Server.ServerWide
         public unsafe void PutSecretKey(
             TransactionOperationContext context,
             string name,
-            byte[] key,
-            bool overwrite = false /*Be careful with this one, overwriting a key might be disastrous*/)
+            byte[] secretKey,
+            bool overwrite = false, /* Be careful with this one, overwriting a key might be disastrous */
+            bool cloneKey = false)
         {
             Debug.Assert(context.Transaction != null);
-            if (key.Length != 256 / 8)
-                throw new ArgumentException($"Key size must be 256 bits, but was {key.Length * 8}", nameof(key));
+            if (secretKey.Length != 256 / 8 && secretKey.Length != 512 / 8)
+                throw new ArgumentException($"Key size must be 256 bits or 512 bits, but was {secretKey.Length * 8}", nameof(secretKey));
 
+            byte[] key;
+            if (cloneKey)
+                Sodium.CloneKey(out key, secretKey);
+            else
+                key = secretKey;
+            
+            
             byte[] existingKey;
             try
             {
@@ -912,7 +971,7 @@ namespace Raven.Server.ServerWide
         {
             if (_engine.CurrentState == RachisConsensus.State.Passive)
             {
-                _engine.Bootstrap(_ravenServer.ServerStore.NodeHttpServerUrl);
+                _engine.Bootstrap(_ravenServer.ServerStore.NodeHttpServerUrl, AuthPublicKey);
             }
         }
 

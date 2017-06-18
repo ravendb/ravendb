@@ -193,7 +193,7 @@ namespace Raven.Server.Documents.Indexes
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                 options.TimeToSyncAfterFlashInSeconds = documentDatabase.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
                 options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
-                Sodium.CopyMasterKey(out options.MasterKey, documentDatabase.MasterKey);
+                Sodium.CloneKey(out options.MasterKey, documentDatabase.MasterKey);
 
                 environment = new StorageEnvironment(options);
 
@@ -310,7 +310,7 @@ namespace Raven.Server.Documents.Indexes
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                 options.TimeToSyncAfterFlashInSeconds = documentDatabase.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
                 options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
-                Sodium.CopyMasterKey(out options.MasterKey, documentDatabase.MasterKey);
+                Sodium.CloneKey(out options.MasterKey, documentDatabase.MasterKey);
 
                 try
                 {
@@ -2330,7 +2330,7 @@ namespace Raven.Server.Documents.Indexes
                     srcOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
                     srcOptions.TimeToSyncAfterFlashInSeconds = DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
                     srcOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
-                    Sodium.CopyMasterKey(out srcOptions.MasterKey, DocumentDatabase.MasterKey);
+                    Sodium.CloneKey(out srcOptions.MasterKey, DocumentDatabase.MasterKey);
 
                     var wasRunning = _indexingThread != null;
 
@@ -2347,7 +2347,7 @@ namespace Raven.Server.Documents.Indexes
                         compactOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                         compactOptions.TimeToSyncAfterFlashInSeconds = DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
                         compactOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
-                        Sodium.CopyMasterKey(out srcOptions.MasterKey, DocumentDatabase.MasterKey);
+                        Sodium.CloneKey(out srcOptions.MasterKey, DocumentDatabase.MasterKey);
 
                         StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
                         {

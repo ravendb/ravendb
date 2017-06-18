@@ -24,6 +24,7 @@ using Voron.Data.Tables;
 using Voron.Impl;
 using Raven.Client.Http;
 using Raven.Client.Server;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 
 namespace Raven.Server.Rachis
@@ -585,6 +586,7 @@ namespace Raven.Server.Rachis
                 new Dictionary<string, string>(),
                 new Dictionary<string, string>(),
                 new Dictionary<string, string>(),
+                new Dictionary<string, string>(),
                 topology.LastNodeId
             );
             SetTopology(context, newTopology);
@@ -600,6 +602,7 @@ namespace Raven.Server.Rachis
                 return new ClusterTopology(
                     null,
                     null,
+                    new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
@@ -1265,7 +1268,7 @@ namespace Raven.Server.Rachis
 
         public abstract Task<Stream> ConnectToPeer(string url, string apiKey, TransactionOperationContext context = null);
 
-        public void Bootstrap(string selfUrl)
+        public void Bootstrap(string selfUrl, byte[] authPublicKey)
         {
             if (selfUrl == null)
                 throw new ArgumentNullException(nameof(selfUrl));
@@ -1287,6 +1290,10 @@ namespace Raven.Server.Rachis
                     },
                     new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
+                    new Dictionary<string, string>
+                    {
+                        [_tag] = Convert.ToBase64String(authPublicKey)
+                    }, 
                     "A"
                 );
 
@@ -1298,9 +1305,9 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public Task AddToClusterAsync(string url, string nodeTag = null, bool validateNotInTopology = true)
+        public Task AddToClusterAsync(string url, byte[] publicKey, string nodeTag = null, bool validateNotInTopology = true)
         {
-            return ModifyTopologyAsync(nodeTag, url, Leader.TopologyModification.Promotable, validateNotInTopology);
+            return ModifyTopologyAsync(nodeTag, url, Leader.TopologyModification.Promotable, publicKey, validateNotInTopology);
         }
 
         public Task RemoveFromClusterAsync(string nodeTag)
@@ -1308,14 +1315,14 @@ namespace Raven.Server.Rachis
             return ModifyTopologyAsync(nodeTag, null, Leader.TopologyModification.Remove);
         }
 
-        private async Task ModifyTopologyAsync(string nodeTag, string nodeUrl, Leader.TopologyModification modification, bool validateNotInTopology = false)
+        private async Task ModifyTopologyAsync(string nodeTag, string nodeUrl, Leader.TopologyModification modification, byte[] publicKey = null, bool validateNotInTopology = false)
         {
             var leader = _currentLeader;
             if (leader == null)
                 throw new NotLeadingException("There is no leader, cannot accept commands. " + _lastStateChangeReason);
 
             Task task;
-            while (leader.TryModifyTopology(nodeTag, nodeUrl, modification, out task, validateNotInTopology) == false)
+            while (leader.TryModifyTopology(nodeTag, nodeUrl, modification, out task, publicKey, validateNotInTopology) == false)
                 await task;
 
             await task;

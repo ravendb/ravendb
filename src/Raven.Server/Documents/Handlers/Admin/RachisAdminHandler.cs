@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Jint.Native;
@@ -67,6 +68,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     json[nameof(NodeInfo.NodeTag)] = ServerStore.NodeTag;
                     json[nameof(NodeInfo.TopologyId)] = ServerStore.GetClusterTopology(context).TopologyId;
+                    json[nameof(NodeInfo.AuthPublicKey)] = Convert.ToBase64String(ServerStore.AuthPublicKey);
                 }
                 context.Write(writer, json);
                 writer.Flush();
@@ -89,6 +91,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     var tag = ServerStore.NodeTag ?? "A";
                     var serverUrl = ServerStore.NodeHttpServerUrl;
+                    var authPublicKey = ServerStore.AuthPublicKey;
 
                     topology = new ClusterTopology(
                         "dummy",
@@ -99,6 +102,10 @@ namespace Raven.Server.Documents.Handlers.Admin
                         },
                         new Dictionary<string, string>(),
                         new Dictionary<string, string>(),
+                        new Dictionary<string, string>
+                        {
+                            [tag] = Convert.ToBase64String(authPublicKey)
+                        },
                         tag
                     );
                     nodeTag = tag;
@@ -196,7 +203,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                         var nodeTag = nodeInfo.NodeTag == "?" 
                             ? null : nodeInfo.NodeTag;
-                        await ServerStore.AddNodeToClusterAsync(serverUrl, nodeTag, validateNotInTopology:false);
+                        await ServerStore.AddNodeToClusterAsync(serverUrl, Convert.FromBase64String(nodeInfo.AuthPublicKey), nodeTag, validateNotInTopology:false);
                         NoContentStatus();
                         return;
                     }
