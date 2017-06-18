@@ -37,12 +37,12 @@ namespace Raven.Client.Http
                     {
                         Etag = -1,
                         Nodes = new List<ServerNode>
-                    {
-                        new ServerNode
                         {
-                            Url = url
+                            new ServerNode
+                            {
+                                Url = url
+                            }
                         }
-                    }
                     }),
                     TopologyEtag = -2,
                     _withoutTopology = true
@@ -81,7 +81,7 @@ namespace Raven.Client.Http
 
                     var results = command.Result;
 
-                    _nodeSelector = new NodeSelector(new Topology
+                    var newTopology = new Topology
                     {
                         Nodes = new List<ServerNode>(
                             from member in results.Topology.Members
@@ -90,8 +90,17 @@ namespace Raven.Client.Http
                                 Url = member.Value,
                                 ClusterTag = member.Key
                             }
-                            )
-                    });
+                        )
+                    };
+                    if (_nodeSelector == null)
+                    {
+                        _nodeSelector = new NodeSelector(newTopology);
+                    }
+                    else if (_nodeSelector.OnUpdateTopology(newTopology))
+                    {
+                        DisposeAllFailedNodesTimers();
+                    }
+
                 }
             }
             finally
@@ -100,8 +109,15 @@ namespace Raven.Client.Http
             }
             return true;
         }
-        
-        
+
+        public override void Dispose()
+        {
+            _clusterTopologySemaphore.Wait();
+            base.Dispose();
+
+            _clusterTopologySemaphore.Dispose();
+        }
+
         protected override bool TryLoadFromCache(string url, JsonOperationContext context)
         {
             var serverHash = ServerHash.GetServerHash(url);
@@ -119,7 +135,7 @@ namespace Raven.Client.Http
                         Url = member.Value,
                         ClusterTag = member.Key
                     }
-                    )
+                )
             });
             return true;
         }

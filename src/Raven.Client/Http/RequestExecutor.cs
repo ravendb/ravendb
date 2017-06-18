@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -34,10 +35,12 @@ namespace Raven.Client.Http
         //Monitor.TryEnter/Monitor.Exit won't work here because we need a mutex without thread affinity
         private readonly SemaphoreSlim _updateTopologySemaphore = new SemaphoreSlim(1, 1);
 
+        protected ConcurrentDictionary<int, Timer> _failedNodesTimers = new ConcurrentDictionary<int, Timer>();
+
         private readonly string _apiKey;
         private readonly string _databaseName;
 
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecutor>("Client");
+        protected static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecutor>("Client");
         private DateTime _lastReturnedResponse;
 
         public readonly JsonContextPool ContextPool;
@@ -64,7 +67,7 @@ namespace Raven.Client.Http
         private TimeSpan? _defaultTimeout;
 
         //note: the condition for non empty nodes is precaution, should never happen..
-        public string Url => _nodeSelector?.CurrentNode?.Url;
+        public string Url => _nodeSelector?.GetCurrentNode()?.Url;
 
         public long TopologyEtag;
 
@@ -95,8 +98,6 @@ namespace Raven.Client.Http
         }
 
         public string ApiKey => _apiKey;
-
-        internal int CurrentNodeIndex { get; set; }
 
         public static RequestExecutor Create(string[] urls, string databaseName, string apiKey)
         {
@@ -153,7 +154,12 @@ namespace Raven.Client.Http
 
                     TopologyLocalCache.TrySavingTopologyToLocalCache(serverHash, command.Result, context);
 
-                    _nodeSelector = new NodeSelector(command.Result);
+                    if (_nodeSelector == null)
+                        _nodeSelector = new NodeSelector(command.Result);
+
+                    else if (_nodeSelector.OnUpdateTopology(command.Result))
+                        DisposeAllFailedNodesTimers();
+
                     TopologyEtag = _nodeSelector.Topology.Etag;
                 }
             }
@@ -162,6 +168,18 @@ namespace Raven.Client.Http
                 _updateTopologySemaphore.Release();
             }
             return true;
+        }
+
+        protected void DisposeAllFailedNodesTimers()
+        {
+            var oldFailedNodesTimers = _failedNodesTimers;
+            _failedNodesTimers.Clear();
+
+            foreach (var failedNodesTimers in oldFailedNodesTimers)
+            {
+                failedNodesTimers.Value.Dispose();
+            }
+
         }
 
         public void Execute<TResult>(RavenCommand<TResult> command, JsonOperationContext context, CancellationToken token = default(CancellationToken))
@@ -173,9 +191,10 @@ namespace Raven.Client.Http
         {
             var topologyUpdate = _firstTopologyUpdate;
 
+
             if (topologyUpdate != null && topologyUpdate.Status == TaskStatus.RanToCompletion || _withoutTopology)
             {
-                await ExecuteAsync(_nodeSelector.CurrentNode, context, command, token).ConfigureAwait(false);
+                await ExecuteAsync(_nodeSelector.GetCurrentNode(), context, command, token).ConfigureAwait(false);
                 return;
             }
             await UnlikelyExecuteAsync(command, context, token, topologyUpdate).ConfigureAwait(false);
@@ -210,7 +229,7 @@ namespace Raven.Client.Http
                 throw;
             }
 
-            await ExecuteAsync(_nodeSelector.CurrentNode, context, command, token).ConfigureAwait(false);
+            await ExecuteAsync(_nodeSelector.GetCurrentNode(), context, command, token).ConfigureAwait(false);
         }
 
         private void UpdateTopologyCallback(object _)
@@ -219,7 +238,7 @@ namespace Raven.Client.Http
             if (time - _lastReturnedResponse <= TimeSpan.FromMinutes(5))
                 return;
 
-            var serverNode = _nodeSelector.CurrentNode;
+            var serverNode = _nodeSelector.GetCurrentNode();
             GC.KeepAlive(Task.Run(async () =>
             {
                 try
@@ -242,11 +261,11 @@ namespace Raven.Client.Http
                 try
                 {
                     await UpdateTopologyAsync(new ServerNode
-                    {
-                        Url = url,
-                        Database = _databaseName,
-                    }, Timeout.Infinite)
-                    .ConfigureAwait(false);
+                        {
+                            Url = url,
+                            Database = _databaseName,
+                        }, Timeout.Infinite)
+                        .ConfigureAwait(false);
 
                     IntializeUpdateTopologyTimer();
                     return;
@@ -311,6 +330,9 @@ namespace Raven.Client.Http
         public async Task ExecuteAsync<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, CancellationToken token = default(CancellationToken), bool shouldRetry = true)
         {
             var request = CreateRequest(chosenNode, command, out string url);
+
+            var nodeIndex = _nodeSelector?.GetCurrentNodeIndex() ?? 0;
+
             using (var cachedItem = GetFromCache(context, command, request, url, out long cachedEtag, out BlittableJsonReaderObject cachedValue))
             {
                 if (cachedEtag != 0)
@@ -362,7 +384,7 @@ namespace Raven.Client.Http
                     sp.Stop();
                     if (shouldRetry == false)
                         throw;
-                    if (await HandleServerDown(chosenNode, context, command, request, response, e).ConfigureAwait(false) == false)
+                    if (await HandleServerDown(chosenNode, nodeIndex, context, command, request, response, e).ConfigureAwait(false) == false)
                         throw new AllTopologyNodesDownException("Tried to send request to all configured nodes in the topology, all of them seem to be down or not responding.", _nodeSelector.Topology, e);
 
                     return;
@@ -383,7 +405,7 @@ namespace Raven.Client.Http
                 }
                 if (response.IsSuccessStatusCode == false)
                 {
-                    if (await HandleUnsuccessfulResponse(chosenNode, context, command, request, response, url).ConfigureAwait(false) == false)
+                    if (await HandleUnsuccessfulResponse(chosenNode, nodeIndex, context, command, request, response, url).ConfigureAwait(false) == false)
                     {
                         if (command.FailedNodes.Count == 0) //precaution, should never happen at this point
                             throw new InvalidOperationException("Received unsuccessful response and couldn't recover from it. Also, no record of exceptions per failed nodes. This is weird and should not happen.");
@@ -444,7 +466,7 @@ namespace Raven.Client.Http
 
         public event Action<StringBuilder> AdditionalErrorInformation;
 
-        private async Task<bool> HandleUnsuccessfulResponse<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, string url)
+        private async Task<bool> HandleUnsuccessfulResponse<TResult>(ServerNode chosenNode, int nodeIndex, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, string url)
         {
             switch (response.StatusCode)
             {
@@ -465,7 +487,7 @@ namespace Raven.Client.Http
 
 
 #if DEBUG && FIDDLER
-                // Make sure to avoid a cross DNS security issue, when running with Fiddler
+// Make sure to avoid a cross DNS security issue, when running with Fiddler
                 if (string.IsNullOrEmpty(oauthSource) == false)
                     oauthSource = oauthSource.Replace("localhost:", "localhost.fiddler:");
 #endif
@@ -479,7 +501,7 @@ namespace Raven.Client.Http
                 case HttpStatusCode.RequestTimeout:
                 case HttpStatusCode.BadGateway:
                 case HttpStatusCode.ServiceUnavailable:
-                    await HandleServerDown(chosenNode, context, command, request, response, null).ConfigureAwait(false);
+                    await HandleServerDown(chosenNode, nodeIndex, context, command, request, response, null).ConfigureAwait(false);
                     break;
                 case HttpStatusCode.Conflict:
                     await HandleConflict(context, response).ConfigureAwait(false);
@@ -512,24 +534,61 @@ namespace Raven.Client.Http
             return serverStream;
         }
 
-        private async Task<bool> HandleServerDown<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, HttpRequestException e)
+        private async Task<bool> HandleServerDown<TResult>(ServerNode chosenNode, int nodeIndex, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, HttpRequestException e)
         {
             if (command.FailedNodes == null)
                 command.FailedNodes = new Dictionary<ServerNode, ExceptionDispatcher.ExceptionSchema>();
 
-            chosenNode.IsFailed = true;
             await AddFailedResponseToCommand(chosenNode, context, command, request, response, e).ConfigureAwait(false);
 
             var nodeSelector = _nodeSelector;
 
-            nodeSelector?.OnFailedRequest();
+            _failedNodesTimers.TryAdd(nodeIndex, new Timer(CheckNodeStatusCallback, new NodeStatus(nodeIndex), 100, Timeout.Infinite));
 
-            if (nodeSelector == null || command.FailedNodes.ContainsKey(nodeSelector.CurrentNode))
+            nodeSelector?.OnFailedRequest(nodeIndex);
+            var currentNode = nodeSelector?.GetCurrentNode();
+
+            if (nodeSelector == null || command.FailedNodes.ContainsKey(currentNode))
                 return false; //we tried all the nodes...nothing left to do
 
-            await ExecuteAsync(_nodeSelector.CurrentNode, context, command).ConfigureAwait(false);
+            await ExecuteAsync(currentNode, context, command).ConfigureAwait(false);
 
             return true;
+        }
+
+        private void CheckNodeStatusCallback(object status)
+        {
+            var nodeStatus = (NodeStatus)status;
+            var serverNode = TopologyNodes[nodeStatus.nodeIndex];
+
+            var command = new GetTcpInfoCommand(serverNode.ClusterTag);
+
+            try
+            {
+                using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    try
+                    {
+                        AsyncHelpers.RunSync(() => ExecuteAsync(serverNode, context, command, shouldRetry: false));
+                    }
+                    catch (Exception e)
+                    {
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"{serverNode.ClusterTag} is still down", e);
+
+                        if (_failedNodesTimers.TryGetValue(nodeStatus.nodeIndex, out Timer timer))
+                            timer.Change(nodeStatus.GetNewTimerPeriod().Milliseconds, Timeout.Infinite);
+                    }
+
+                    if (nodeStatus.nodeIndex < _nodeSelector.GetCurrentNodeIndex())
+                        _nodeSelector.ChangeCurrentNodeIndex(nodeStatus.nodeIndex);
+                }
+            }
+            catch (OperationCanceledException e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info(e.Message, e);
+            }
         }
 
         private static async Task AddFailedResponseToCommand<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, HttpRequestException e)
@@ -622,7 +681,7 @@ namespace Raven.Client.Http
         protected Task _firstTopologyUpdate;
         protected string[] _lastKnownUrls;
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             if (_disposed)
                 return;
@@ -637,6 +696,7 @@ namespace Raven.Client.Http
             _updateCurrentTokenTimer?.Dispose();
             _updateTopologyTimer?.Dispose();
             _updateTopologySemaphore.Dispose();
+            DisposeAllFailedNodesTimers();
             // shared instance, cannot dispose!
             //_httpClient.Dispose();
         }
@@ -671,6 +731,27 @@ namespace Raven.Client.Http
             return GlobalHttpClient.Value;
         }
 
+        public class NodeStatus
+        {
+            private TimeSpan _timerPeriod;
+            public readonly int nodeIndex;
+
+            public NodeStatus(int nodeIndex)
+            {
+                this.nodeIndex = nodeIndex;
+                _timerPeriod = TimeSpan.FromMilliseconds(100);
+            }
+
+            public TimeSpan GetNewTimerPeriod()
+            {
+                if (_timerPeriod == TimeSpan.FromSeconds(5))
+                    return TimeSpan.FromSeconds(5);
+
+                _timerPeriod += TimeSpan.FromMilliseconds(100);
+                return _timerPeriod;
+            }
+        }
+
         public class NodeSelector
         {
             private Topology _topology;
@@ -684,17 +765,18 @@ namespace Raven.Client.Http
                 _topology = topology;
             }
 
-            public ServerNode CurrentNode => _topology.Nodes.Count > 0 ? _topology.Nodes[_currentNodeIndex] : null;
+            public int GetCurrentNodeIndex()
+            {
+                return _currentNodeIndex;
+            }
 
-            public void OnFailedRequest()
+            public void OnFailedRequest(int nodeIndex)
             {
                 if (Topology.Nodes.Count == 0)
                     ThrowEmptyTopology();
 
-                if (_currentNodeIndex < 0) //precaution, should never happen
-                    _currentNodeIndex = 0;
-
-                _currentNodeIndex = _currentNodeIndex < Topology.Nodes.Count - 1 ? _currentNodeIndex + 1 : 0;
+                var nextNodeIndex = nodeIndex < Topology.Nodes.Count - 1 ? nodeIndex + 1 : 0;
+                Interlocked.CompareExchange(ref _currentNodeIndex, nextNodeIndex, nodeIndex);
             }
 
             public bool OnUpdateTopology(Topology topology, bool forceUpdate = false)
@@ -710,7 +792,7 @@ namespace Raven.Client.Http
 
                     if (forceUpdate == false)
                     {
-                        _currentNodeIndex = 0;
+                        Interlocked.Exchange(ref _currentNodeIndex, 0);
                     }
 
                     var changed = Interlocked.CompareExchange(ref _topology, topology, oldTopology);
@@ -719,6 +801,18 @@ namespace Raven.Client.Http
                     oldTopology = changed;
                 } while (true);
             }
+
+            public ServerNode GetCurrentNode()
+            {
+                if (Topology.Nodes.Count == 0)
+                    ThrowEmptyTopology();
+                return Topology.Nodes[_currentNodeIndex];
+            }
+
+            public void ChangeCurrentNodeIndex(int nodeIndex)
+            {
+                Interlocked.Exchange(ref _currentNodeIndex, nodeIndex);
+            }
         }
 
         public async Task<ServerNode> GetCurrentNode()
@@ -726,7 +820,7 @@ namespace Raven.Client.Http
             if (_firstTopologyUpdate.Status != TaskStatus.RanToCompletion)
                 await _firstTopologyUpdate.ConfigureAwait(false);
 
-            return _nodeSelector.CurrentNode;
+            return _nodeSelector.GetCurrentNode();
         }
     }
 }
