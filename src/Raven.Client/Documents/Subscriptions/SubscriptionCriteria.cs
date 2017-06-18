@@ -25,13 +25,43 @@ namespace Raven.Client.Documents.Subscriptions
 
     public class SubscriptionCriteria<T>
     {
+        private class SubscriptionCriteriaConvertor : JavascriptConversionExtension
+        {
+            public ParameterExpression Parameter;
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                var node = context.Node as MemberExpression;
+                if (node == null )
+                    return;
+
+                context.PreventDefault();
+                var javascriptWriter = context.GetWriter();
+
+                using (javascriptWriter.Operation(node))
+                {
+                    if (node.Expression == Parameter)
+                    {
+                        javascriptWriter.Write("this.");
+                        javascriptWriter.Write(node.Member.Name);
+                        return;
+                    }
+
+                    context.Visitor.Visit(node.Expression as MemberExpression);
+                    javascriptWriter.Write(".");
+                    javascriptWriter.Write(node.Member.Name);
+                }
+            }
+        }
+
+
         public SubscriptionCriteria(Expression<Func<T, bool>> predicate)
         {
-            Script =
-                "var " + predicate.Parameters[0].Name + " = this;" +
-                Environment.NewLine +
-                "return " + predicate.CompileToJavascript(
-                 new JavascriptCompilationOptions(JsCompilationFlags.BodyOnly)) + ";";
+            var script = predicate.CompileToJavascript(
+                new JavascriptCompilationOptions(
+                    JsCompilationFlags.BodyOnly, 
+                    new SubscriptionCriteriaConvertor { Parameter = predicate.Parameters[0] }));
+            Script = $"return {script};";
         }
         
         public SubscriptionCriteria()
