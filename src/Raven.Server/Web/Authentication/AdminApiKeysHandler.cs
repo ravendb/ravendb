@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server.Operations.ApiKeys;
+using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -16,7 +17,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.Authentication
 {
-    public class AdminApiKeysHandler : RequestHandler
+    public class AdminApiKeysHandler : AdminRequestHandler
     {
         [RavenAction("/admin/api-keys", "PUT", "/admin/api-keys?name={api-key-name:string}")]
         public async Task Put()
@@ -36,8 +37,8 @@ namespace Raven.Server.Web.Authentication
                 }
 
                 var apiKey = JsonDeserializationServer.ApiKeyDefinition(apiKeyJson);
-                await ServerStore.PutValueInClusterAsync(new PutApiKeyCommand(Constants.ApiKeys.Prefix + name, apiKey));
-
+                var res = await ServerStore.PutValueInClusterAsync(new PutApiKeyCommand(Constants.ApiKeys.Prefix + name, apiKey));
+                await ServerStore.Cluster.WaitForIndexNotification(res.Etag);
                 Server.AccessTokenCache.Clear();
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -52,8 +53,8 @@ namespace Raven.Server.Web.Authentication
             TransactionOperationContext ctx;
             using (ServerStore.ContextPool.AllocateOperationContext(out ctx))
             {
-                await ServerStore.DeleteValueInClusterAsync(Constants.ApiKeys.Prefix + name);
-
+                var res = await ServerStore.DeleteValueInClusterAsync(Constants.ApiKeys.Prefix + name);
+                await ServerStore.Cluster.WaitForIndexNotification(res.Etag);
                 Server.AccessTokenCache.Clear();
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;

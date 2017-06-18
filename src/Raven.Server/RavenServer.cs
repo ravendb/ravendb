@@ -563,7 +563,8 @@ namespace Raven.Server
         {
             using (var writer = new BlittableJsonTextWriter(context, stream))
             {
-                if (configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.Admin)
+                if (configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.Admin
+                    && header.AuthorizationToken == null)
                 {
                     ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.Success));
                     return true;
@@ -577,7 +578,7 @@ namespace Raven.Server
                 }
 
                 AccessToken accessToken;
-                if (!RequestRouter.TryGetAccessToken(this, header.AuthorizationToken, sigBase64Size, out accessToken))
+                if (RequestRouter.TryGetAccessToken(this, header.AuthorizationToken, sigBase64Size, out accessToken) == false)
                 {
                     if (accessToken.IsExpired)
                     {
