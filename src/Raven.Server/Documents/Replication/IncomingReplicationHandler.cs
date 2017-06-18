@@ -13,6 +13,7 @@ using Sparrow;
 using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Extensions;
@@ -410,6 +411,7 @@ namespace Raven.Server.Documents.Replication
 
             var sw = Stopwatch.StartNew();
             var writeBuffer = documentsContext.GetStream();
+            Task task = null;
             try
             {
                 using (var networkStats = stats.For(ReplicationOperation.Incoming.Network))
@@ -433,13 +435,21 @@ namespace Raven.Server.Documents.Replication
                 using (stats.For(ReplicationOperation.Incoming.Storage))
                 {
                     var replicationCommand = new MergedDocumentReplicationCommand(this, buffer, totalSize, lastEtag);
-                    var task = _database.TxMerger.Enqueue(replicationCommand);
-                    if (task.Wait(_database.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan) == false)
+                    task = _database.TxMerger.Enqueue(replicationCommand);
+
+                    using (var writer = new BlittableJsonTextWriter(documentsContext, _connectionOptions.Stream))
+                    using (var msg = documentsContext.ReadObject(new DynamicJsonValue
                     {
-                        var message = $"Could not commit replication batch with size {totalSize/1024:#,#}kb after {_database.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan}, aborting";
-                        if (_log.IsInfoEnabled)
-                            _log.Info(message);
-                        throw new TimeoutException(message);
+                        [nameof(ReplicationMessageReply.MessageType)] = "Processing"
+                    }, "heartbeat message"))
+                    {
+                        while (task.Wait(Math.Min(3000, (int)(_database.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds * 2 / 3))) == false)
+                        {
+                            // send heartbeats while batch is processed in TxMerger. We wait until merger finishes with this command without timeouts
+                            documentsContext.Write(writer, msg);
+                            writer.Flush();
+                        }
+                        task = null;
                     }
                 }
 
@@ -457,6 +467,17 @@ namespace Raven.Server.Documents.Replication
             }
             finally
             {
+                // before we dispose the buffer we must ensure it is not being processed in TxMerger, so we wait for it
+                try
+                {
+                    task?.Wait();
+                }
+                catch (Exception)
+                {
+                    // ignore this failure, if this failed, we are already
+                    // in a bad state and likely in the process of shutting 
+                    // down
+                }
                 writeBuffer.Dispose();
             }
         }
