@@ -185,7 +185,7 @@ namespace Raven.Server.Documents.Queries.Faceted
             {
                 var input = await context.ReadForMemoryAsync(stream, "facets");
                 if (input.TryGet("Facets", out BlittableJsonReaderArray array) == false)
-                    RequestHandler.ThrowRequiredPropertyNameInRequset("Facets");
+                    RequestHandler.ThrowRequiredPropertyNameInRequest("Facets");
                 return ParseFromJson(array);
             }
         }

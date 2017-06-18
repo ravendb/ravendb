@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var docs = await context.ReadForMemoryAsync(RequestBodyStream(), "docs");
                 if (docs.TryGet("Ids", out BlittableJsonReaderArray array) == false)
-                    ThrowRequiredPropertyNameInRequset("Ids");
+                    ThrowRequiredPropertyNameInRequest("Ids");
 
                 var ids = new string[array.Length];
                 for (int i = 0; i < array.Length; i++)

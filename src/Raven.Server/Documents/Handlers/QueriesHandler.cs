@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     var input = await context.ReadForMemoryAsync(RequestBodyStream(), "facets");
                     if (input.TryGet("Facets", out BlittableJsonReaderArray array) == false)
-                        ThrowRequiredPropertyNameInRequset("Facets");
+                        ThrowRequiredPropertyNameInRequest("Facets");
                     facets = FacetedQueryParser.ParseFromJson(array);
                 }
                 else if (HttpContext.Request.Method == HttpMethod.Get.Method)
