@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Server;
@@ -16,6 +15,7 @@ using Raven.Client.Server.Expiration;
 using Raven.Server.Background;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron;
@@ -185,25 +185,21 @@ namespace Raven.Server.Documents.Expiration
         public unsafe void Put(DocumentsOperationContext context,
             Slice lowerId, BlittableJsonReaderObject document)
         {
-            string expirationDate;
-            BlittableJsonReaderObject metadata;
-            if (document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
-                metadata.TryGet(Constants.Documents.Expiration.ExpirationDate, out expirationDate) == false)
+            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
+                metadata.TryGet(Constants.Documents.Expiration.ExpirationDate, out string expirationDate) == false)
                 return;
 
-            DateTime date;
-            if (DateTime.TryParseExact(expirationDate, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out date) == false)
+            if (DateTime.TryParseExact(expirationDate, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime date) == false)
                 throw new InvalidOperationException($"The expiration date format is not valid: '{expirationDate}'. Use the following format: {_database.Time.GetUtcNow().ToString("O")}");
 
             // We explicitly enable adding documents that have already been expired, we have to, because if the time lag is short, it is possible
             // that we add a document that expire in 1 second, but by the time we process it, it already expired. The user did nothing wrong here
             // and we'll use the normal cleanup routine to clean things up later.
 
-            var ticksBigEndian = IPAddress.HostToNetworkOrder(date.Ticks);
+            var ticksBigEndian = Bits.SwapBytes(date.Ticks);
 
             var tree = context.Transaction.InnerTransaction.CreateTree(DocumentsByExpiration);
-            Slice ticksSlice;
-            using (Slice.External(context.Allocator, (byte*) &ticksBigEndian, sizeof(long), out ticksSlice))
+            using (Slice.External(context.Allocator, (byte*)&ticksBigEndian, sizeof(long), out Slice ticksSlice))
                 tree.MultiAdd(ticksSlice, lowerId);
         }
 

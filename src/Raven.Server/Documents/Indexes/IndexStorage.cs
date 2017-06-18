@@ -196,7 +196,7 @@ namespace Raven.Server.Documents.Indexes
                     var error = new IndexingError();
 
                     var ptr = tvr.Result.Reader.Read(0, out size);
-                    error.Timestamp = new DateTime(IPAddress.NetworkToHostOrder(*(long*)ptr), DateTimeKind.Utc);
+                    error.Timestamp = new DateTime(Bits.SwapBytes(*(long*)ptr), DateTimeKind.Utc);
 
                     ptr = tvr.Result.Reader.Read(1, out size);
                     if(size != 0)
@@ -228,8 +228,7 @@ namespace Raven.Server.Documents.Indexes
 
         public unsafe DateTime? ReadLastIndexingErrorTime()
         {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
             {
                 var table = tx.InnerTransaction.OpenTable(_errorsSchema, "Errors");
@@ -241,7 +240,7 @@ namespace Raven.Server.Documents.Indexes
 
                     var ptr = it.CurrentKey.Content.Ptr;
 
-                    return new DateTime(IPAddress.NetworkToHostOrder(*(long*)ptr), DateTimeKind.Utc);
+                    return new DateTime(Bits.SwapBytes(*(long*)ptr), DateTimeKind.Utc);
                 }
             }
         }
