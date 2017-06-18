@@ -137,9 +137,6 @@ class databaseCreationModel {
             required: true,
             maxLength: 230,
             validDatabaseName: true,
-            validDatabasePrefix: true,
-            validDatabasePostfix: true,
-            validDatabaseCharacters: true,
 
             validation: [
                 {

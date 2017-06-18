@@ -16,12 +16,39 @@ class extensions {
         // Go to extensionInterfaces.ts and add the function signature there.
     }
 
+
+    private static validateDatabaseName(databaseName: string): string {
+        if (!databaseName) {
+            return null;
+        }
+
+        const regex1 = /^[^\\/:\*\?"<>\|]*$/; // forbidden characters \ / : * ? " < > |
+        if (!regex1.test(databaseName)) {
+            return `The database name can't contain any of the following characters: \\ / : * ? " < > |`;
+        }
+
+        const regex2 = /^(nul|null|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
+        if (regex2.test(databaseName)) {
+            return "`The name is forbidden for use!";
+        }
+
+        if (databaseName.startsWith(".")) {
+            return "The database name can't start with a dot!";
+        }
+
+        if (databaseName.endsWith(".")) {
+            return "The database name can't end with a dot!";
+        }
+
+        return null;
+    }
+
     private static configureValidation() {
 
         //Validate that url is in the following format: http(s)://hostName:portNumber (e.g. http://localhost:8081)
         (ko.validation.rules as any)['validUrl'] = {
             validator: (url: string) => {
-                const urlRegex = /^(https?:\/\/)([a-zA-Z\.-]+)\:([0-9]{1,5})$/;
+                const urlRegex = /^(https?:\/\/)([^\s]+)\:([0-9]{1,5})$/; // allow any char, exclude white space
                 return (urlRegex.test(url));
             },
             message: "Url format expected: 'http(s)://hostName:portNumber'"
@@ -38,31 +65,12 @@ class extensions {
             },
             message: "Api Key format expected: 2 strings separated by a slash, i.e. xxxxx/xxxxx"
         };
-     
-        (ko.validation.rules as any)['validDatabaseCharacters'] = {
-            validator: (databaseName: string) => {
-                const forbiddenChars = /^[^\\/:\*\?"<>\|]*$/; // forbidden characters \ / : * ? " < > |
-                return (forbiddenChars.test(databaseName));
-            },
-            message: `The database name can't contain any of the following characters: \\ / : * ? " < > |`
-        };
 
         (ko.validation.rules as any)['validDatabaseName'] = {
-            validator: (databaseName: string, test: string) => {
-                const regex = /^(nul|null|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
-                return (!regex.test(databaseName));
-            },
-            message: `The name is forbidden for use!`
-        };
-
-        (ko.validation.rules as any)['validDatabasePrefix'] = {
-            validator: (databaseName: string) => !databaseName.startsWith("."),
-            message: `The database name can't start with a dot!`
-        };
-
-        (ko.validation.rules as any)['validDatabasePostfix'] = {
-            validator: (databaseName: string) => !databaseName.endsWith("."),
-            message: `The database name can't end with a dot!`
+            validator: (val: string) => !extensions.validateDatabaseName(val),
+            message: (params: any, databaseName: KnockoutObservable<string>) => {
+                return extensions.validateDatabaseName(databaseName());
+            }
         };
 
         (ko.validation.rules as any)['base64'] = {
