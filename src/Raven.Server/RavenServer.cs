@@ -290,9 +290,7 @@ namespace Raven.Server
 
         private async Task<IPAddress[]> GetTcpListenAddresses(string host)
         {
-            IPAddress ipAddress;
-
-            if (IPAddress.TryParse(host, out ipAddress))
+            if (IPAddress.TryParse(host, out IPAddress ipAddress))
                 return new[] { ipAddress };
 
             switch (host)

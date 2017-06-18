@@ -765,9 +765,7 @@ namespace Raven.Server.Documents
             if (result == null)
                 return 0;
 
-            int size;
-            var ptr = result.Reader.Read((int)DocumentsTable.Etag, out size);
-            return IPAddress.NetworkToHostOrder(*(long*)ptr);
+            return TableValueToEtag((int)DocumentsTable.Etag, ref result.Reader);
         }
 
         public long GetLastTombstoneEtag(DocumentsOperationContext context, string collection)
