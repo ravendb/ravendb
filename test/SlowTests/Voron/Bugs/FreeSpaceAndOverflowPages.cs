@@ -4,13 +4,12 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using Xunit;
 using Voron;
-using Voron.Data;
+using Xunit;
 
-namespace FastTests.Voron.Bugs
+namespace SlowTests.Voron.Bugs
 {
-    public class FreeSpaceAndOverflowPages : StorageTest
+    public class FreeSpaceAndOverflowPages : FastTests.Voron.StorageTest
     {
         protected override void Configure(StorageEnvironmentOptions options)
         {

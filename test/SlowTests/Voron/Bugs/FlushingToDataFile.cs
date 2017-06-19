@@ -9,14 +9,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Sparrow;
-using Xunit;
 using Voron;
 using Voron.Global;
 using Voron.Impl;
+using Xunit;
 
-namespace FastTests.Voron.Bugs
+namespace SlowTests.Voron.Bugs
 {
-    public class FlushingToDataFile : StorageTest
+    public class FlushingToDataFile : FastTests.Voron.StorageTest
     {
         protected override void Configure(StorageEnvironmentOptions options)
         {

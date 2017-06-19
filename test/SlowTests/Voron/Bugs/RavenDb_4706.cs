@@ -1,11 +1,11 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Basic.Entities;
+using FastTests;
 using Raven.Client.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace FastTests.Voron.Bugs
+namespace SlowTests.Voron.Bugs
 {
     public class RavenDb_4706 : RavenTestBase
     {

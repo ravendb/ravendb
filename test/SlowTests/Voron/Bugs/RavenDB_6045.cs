@@ -2,9 +2,9 @@
 using Voron.Global;
 using Xunit;
 
-namespace FastTests.Voron.Bugs
+namespace SlowTests.Voron.Bugs
 {
-    public class RavenDB_6045 : StorageTest
+    public class RavenDB_6045 : FastTests.Voron.StorageTest
     {
         [Fact]
         public unsafe void Overflows_overlapping_bug()

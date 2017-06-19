@@ -5,12 +5,12 @@
 // -----------------------------------------------------------------------
 
 using System.IO;
-using Xunit;
 using Voron;
+using Xunit;
 
-namespace FastTests.Voron.Bugs
+namespace SlowTests.Voron.Bugs
 {
-    public class AccessViolationWithIteratorUsage : StorageTest
+    public class AccessViolationWithIteratorUsage : FastTests.Voron.StorageTest
     {
         protected override void Configure(StorageEnvironmentOptions options)
         {

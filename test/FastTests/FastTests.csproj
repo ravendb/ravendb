@@ -21,7 +21,6 @@
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Voron\Bugs\Data\*.txt" />
     <EmbeddedResource Include="Blittable\BlittableJsonWriterTests\Jsons\*.json" />
   </ItemGroup>
   <ItemGroup>

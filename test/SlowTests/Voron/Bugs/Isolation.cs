@@ -1,12 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.IO;
-using Xunit;
 using Voron;
-using Voron.Data;
+using Xunit;
 
-namespace FastTests.Voron.Bugs
+namespace SlowTests.Voron.Bugs
 {
-    public class Isolation : StorageTest
+    public class Isolation : FastTests.Voron.StorageTest
     {
         [Fact]
         public void MultiTreeIteratorShouldBeIsolated1()

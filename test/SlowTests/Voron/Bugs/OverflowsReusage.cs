@@ -1,11 +1,10 @@
 ﻿using System;
 using Voron;
-using Voron.Data;
 using Xunit;
 
-namespace FastTests.Voron.Bugs
+namespace SlowTests.Voron.Bugs
 {
-    public class OverflowsReusage : StorageTest
+    public class OverflowsReusage : FastTests.Voron.StorageTest
     {
         protected override void Configure(StorageEnvironmentOptions options)
         {

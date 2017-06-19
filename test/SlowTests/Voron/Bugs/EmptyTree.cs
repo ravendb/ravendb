@@ -1,10 +1,10 @@
 using System.IO;
-using Xunit;
 using Voron;
+using Xunit;
 
-namespace FastTests.Voron.Bugs
+namespace SlowTests.Voron.Bugs
 {
-    public class EmptyTree : StorageTest
+    public class EmptyTree : FastTests.Voron.StorageTest
     {
         [Fact]
         public void ShouldBeEmpty()

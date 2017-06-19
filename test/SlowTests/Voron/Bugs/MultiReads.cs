@@ -4,12 +4,12 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using Xunit;
 using Voron;
+using Xunit;
 
-namespace FastTests.Voron.Bugs
+namespace SlowTests.Voron.Bugs
 {
-    public class MultiReads : StorageTest
+    public class MultiReads : FastTests.Voron.StorageTest
     {
         [Fact]
         public void MultiReadShouldKeepItemOrder()

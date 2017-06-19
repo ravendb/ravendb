@@ -2,9 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-using Voron;
 
-namespace FastTests.Voron.Bugs
+namespace SlowTests.Voron.Bugs
 {
     public class TestDataUtil
     {

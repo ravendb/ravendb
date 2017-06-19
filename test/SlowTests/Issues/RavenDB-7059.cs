@@ -13,7 +13,7 @@ using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;
 
-namespace FastTests.Tasks
+namespace SlowTests.Issues
 {
     public class RavenDB_7059 : ClusterTestBase
     {
