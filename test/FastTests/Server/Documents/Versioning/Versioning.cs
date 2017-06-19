@@ -17,6 +17,7 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
@@ -421,6 +422,52 @@ namespace FastTests.Server.Documents.Versioning
                 statistics = store.Admin.Send(new GetStatisticsOperation());
                 Assert.Equal(useSession ? 1 : 0, statistics.CountOfDocuments);
                 Assert.Equal(0, statistics.CountOfRevisionDocuments);
+            }
+        }
+
+        [Fact]
+        public async Task DeleteRevisionsBeforeOperationsMethod()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database, false);
+
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddDays(-1);
+
+                for (var i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User {Name = "Fitzchak " + i});
+                        await session.SaveChangesAsync();
+                    }
+                }
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddDays(1);
+                for (var i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "Fitzchak " + (i + 100) });
+                        await session.SaveChangesAsync();
+                    }
+                }
+                database.Time.UtcDateTime = () => DateTime.UtcNow;
+
+                var statistics = store.Admin.Send(new GetStatisticsOperation());
+                Assert.Equal(21, statistics.CountOfDocuments);
+                Assert.Equal(20, statistics.CountOfRevisionDocuments);
+
+                using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    database.DocumentsStorage.VersioningStorage.DeleteRevisionsBefore(context, "Users", DateTime.UtcNow);
+                    tx.Commit();
+                }
+
+                statistics = store.Admin.Send(new GetStatisticsOperation());
+                Assert.Equal(21, statistics.CountOfDocuments);
+                Assert.Equal(10, statistics.CountOfRevisionDocuments);
             }
         }
 

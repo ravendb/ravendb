@@ -192,20 +192,17 @@ namespace Raven.Server.Documents
                 Id = DocumentsStorage.TableValueToId(context, (int)ConflictsTable.Id, ref tvr),
                 ChangeVector = DocumentsStorage.GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)ConflictsTable.ChangeVector),
                 Etag = DocumentsStorage.TableValueToEtag((int)ConflictsTable.Etag, ref tvr),
-                Collection = DocumentsStorage.TableValueToString(context, (int)ConflictsTable.Collection, ref tvr)
+                Collection = DocumentsStorage.TableValueToString(context, (int)ConflictsTable.Collection, ref tvr),
+                LastModified = DocumentsStorage.TableValueToDateTime((int)ConflictsTable.LastModified, ref tvr)
             };
 
-
-            int size;
-            var read = tvr.Read((int)ConflictsTable.Data, out size);
+            var read = tvr.Read((int)ConflictsTable.Data, out int size);
             if (size > 0)
             {
                 //otherwise this is a tombstone conflict and should be treated as such
                 result.Doc = new BlittableJsonReaderObject(read, size, context);
                 DocumentsStorage.DebugDisposeReaderAfterTransaction(context.Transaction, result.Doc);
             }
-
-            result.LastModified = new DateTime(*(long*)tvr.Read((int)ConflictsTable.LastModified, out size));
 
             return result;
         }

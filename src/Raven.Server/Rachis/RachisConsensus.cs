@@ -84,14 +84,13 @@ namespace Raven.Server.Rachis
             var entries = new List<BlittableJsonReaderObject>();
             var reveredNextIndex = Bits.SwapBytes(first);
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
-            Slice key;
-            using (Slice.External(context.Allocator, (byte*)&reveredNextIndex, sizeof(long), out key))
+            using (Slice.External(context.Allocator, (byte*)&reveredNextIndex, sizeof(long), out Slice key))
             {
                 foreach (var value in table.SeekByPrimaryKey(key, 0))
                 {
                     var entry = FollowerAmbassador.BuildRachisEntryToSend(context, value);
                     entries.Add(entry);
-                    if(entries.Count >= max)
+                    if (entries.Count >= max)
                         break;
                 }
             }

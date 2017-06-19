@@ -9,7 +9,7 @@ namespace FastTests.Server.Documents.Versioning
 {
     public class VersioningHelper
     {
-        public static async Task<long> SetupVersioning(Raven.Server.ServerWide.ServerStore serverStore, string database, bool purgeOnDelete = true, long maxRevisions = 123)
+        public static async Task<long> SetupVersioning(Raven.Server.ServerWide.ServerStore serverStore, string database, bool purgeOnDelete = true, long minimumRevisionsToKeep = 123)
         {
             var versioningDoc = new VersioningConfiguration
             {
@@ -24,7 +24,7 @@ namespace FastTests.Server.Documents.Versioning
                     {
                         Active = true,
                         PurgeOnDelete = purgeOnDelete,
-                        MinimumRevisionsToKeep = maxRevisions
+                        MinimumRevisionsToKeep = minimumRevisionsToKeep
                     },
                     ["Comments"] = new VersioningConfigurationCollection
                     {
