@@ -47,9 +47,6 @@ namespace Raven.Server.Documents.Patch
         {
             var jintEngine = GetEngine(script, ServerExeceutionStr);
 
-            jintEngine.Global.Delete("SecedeFromCluster", false);
-            jintEngine.SetValue("SecedeFromCluster", (Action)(() => _server.ServerStore.SecedeFromCluster()));
-
             var jsVal = jintEngine.Invoke("ExecuteAdminScript", _server);
 
             return ConvertResultsToJson(jsVal);

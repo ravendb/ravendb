@@ -947,7 +947,7 @@ namespace Raven.Server.ServerWide
             {
                 GenerateAuthenticationKeyPairs(ctx);
             }
-            Engine.Bootstrap(NodeHttpServerUrl, SignPublicKey);
+            Engine.Bootstrap(NodeHttpServerUrl, SignPublicKey, forNewCluster:true);
         }
 
         public Task<(long Etag, object Result)> WriteDatabaseRecordAsync(
