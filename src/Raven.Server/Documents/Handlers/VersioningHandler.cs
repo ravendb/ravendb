@@ -140,8 +140,8 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/revisions/zombied", "GET", "/databases/*/revisions/zombied?etag={long.MaxValue}&pageSize=25")]
-        public Task GetZombiedRevisions()
+        [RavenAction("/databases/*/revisions/zombies", "GET", "/databases/*/revisions/zombies?etag={long.MaxValue}&pageSize=25")]
+        public Task GetZombies()
         {
             var versioningStorage = Database.DocumentsStorage.VersioningStorage;
             if (versioningStorage.Configuration == null)
@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Handlers
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
-            using (versioningStorage.GetZombiedRevisionsEtag(context, etag, out Slice zombiedKey, out long actualEtag))
+            using (versioningStorage.GetLatestZombieEtag(context, etag, out Slice zombieKey, out long actualEtag))
             {
                 if (GetLongFromHeaders("If-None-Match") == actualEtag)
                 {
@@ -168,13 +168,13 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteStartObject();
 
                     writer.WritePropertyName("Results");
-                    var revisions = versioningStorage.GetZombiedRevisions(context, zombiedKey, pageSize);
+                    var revisions = versioningStorage.GetZombies(context, zombieKey, pageSize);
                     writer.WriteDocuments(context, revisions, false, out count);
 
                     writer.WriteEndObject();
                 }
 
-                AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetZombiedRevisions), count, pageSize);
+                AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetZombies), count, pageSize);
             }
 
             return Task.CompletedTask;
