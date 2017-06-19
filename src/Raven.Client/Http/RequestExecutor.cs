@@ -580,7 +580,7 @@ namespace Raven.Client.Http
                     NodeStatus status;
                     try
                     {
-                        await PerformHealthCheck(serverNode, context);
+                        await PerformHealthCheck(serverNode, context).ConfigureAwait(false);
                     }
                     catch (Exception e)
                     {
@@ -609,7 +609,7 @@ namespace Raven.Client.Http
 
         protected virtual async Task PerformHealthCheck(ServerNode serverNode, JsonOperationContext context)
         {
-            await ExecuteAsync(serverNode, context, new GetStatisticsCommand(debugTag: "failure=check"), shouldRetry: false);
+            await ExecuteAsync(serverNode, context, new GetStatisticsCommand(debugTag: "failure=check"), shouldRetry: false).ConfigureAwait(false);
         }
 
         private static async Task AddFailedResponseToCommand<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, HttpRequestException e)
