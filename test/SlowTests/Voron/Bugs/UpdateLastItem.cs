@@ -1,10 +1,9 @@
-﻿using Xunit;
-using Voron;
-using Voron.Data.BTrees;
+﻿using Voron.Data.BTrees;
+using Xunit;
 
-namespace FastTests.Voron.Bugs
+namespace SlowTests.Voron.Bugs
 {
-    public unsafe class UpdateLastItem : StorageTest
+    public unsafe class UpdateLastItem : FastTests.Voron.StorageTest
     {
         [Fact]
         public void ShouldWork()

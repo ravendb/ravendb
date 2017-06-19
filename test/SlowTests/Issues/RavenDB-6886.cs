@@ -1,16 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
-using Sparrow.Logging;
 using Tests.Infrastructure;
 using Xunit;
 
-namespace FastTests.Tasks
+namespace SlowTests.Issues
 {
     // ReSharper disable once InconsistentNaming
     public class RavenDB_6886 : ClusterTestBase

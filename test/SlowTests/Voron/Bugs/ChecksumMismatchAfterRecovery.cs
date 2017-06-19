@@ -6,12 +6,12 @@
 
 using System;
 using System.IO;
-using Xunit;
 using Voron;
+using Xunit;
 
-namespace FastTests.Voron.Bugs
+namespace SlowTests.Voron.Bugs
 {
-    public class ChecksumMismatchAfterRecovery : StorageTest
+    public class ChecksumMismatchAfterRecovery : FastTests.Voron.StorageTest
     {
         [Fact]
         public void ShouldNotThrowChecksumMismatch()

@@ -2,9 +2,9 @@
 using Voron.Impl;
 using Xunit;
 
-namespace FastTests.Voron.Bugs
+namespace SlowTests.Voron.Bugs
 {
-    public class RavenDB_6748 : StorageTest
+    public class RavenDB_6748 : FastTests.Voron.StorageTest
     {
         protected override void Configure(StorageEnvironmentOptions options)
         {

@@ -5,12 +5,12 @@
 // -----------------------------------------------------------------------
 
 using System.IO;
-using Xunit;
 using Voron;
+using Xunit;
 
-namespace FastTests.Voron.Bugs
+namespace SlowTests.Voron.Bugs
 {
-    public class PageAllocation : StorageTest
+    public class PageAllocation : FastTests.Voron.StorageTest
     {
         /// <summary>
         /// http://issues.hibernatingrhinos.com/issue/RavenDB-1707
