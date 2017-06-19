@@ -78,6 +78,7 @@
     <PackageReference Include="System.ServiceModel.Primitives" Version="4.3.0" />
     <PackageReference Include="System.Text.Encoding.Extensions" Version="4.3.0" />
     <PackageReference Include="System.Threading" Version="4.3.0" />
+    <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.3.0" />
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
     <PackageReference Include="System.Threading.ThreadPool" Version="4.3.0" />
     <PackageReference Include="System.Threading.Timer" Version="4.3.0" />
@@ -86,10 +87,5 @@
   <ItemGroup>
     <Folder Include="Server\ETL\SQL" />
     <Folder Include="Server\Operations\ETL" />
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="System.Threading.Tasks.Extensions, Version=4.1.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51">
-      <HintPath>..\..\..\..\Users\ayende\.nuget\packages\system.threading.tasks.extensions\4.3.0\lib\netstandard1.0\System.Threading.Tasks.Extensions.dll</HintPath>
-    </Reference>
   </ItemGroup>
 </Project>
