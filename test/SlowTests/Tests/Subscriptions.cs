@@ -28,8 +28,8 @@ namespace SlowTests.Tests
                     ChangeVector = lastChangeVector
                 };
 
-                var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCreationParams);
-                using (var subscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
+                var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
+                using (var subscription = store.Subscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
                 {
 
                     var bc = new BlockingCollection<Thing>();

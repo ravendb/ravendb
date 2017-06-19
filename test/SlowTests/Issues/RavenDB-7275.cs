@@ -47,7 +47,7 @@ namespace SlowTests.Issues
 
                     Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
 
-                    Assert.Throws<AuthorizationException>(() => AsyncHelpers.RunSync(() => store.AsyncSubscriptions.CreateAsync(
+                    Assert.Throws<AuthorizationException>(() => AsyncHelpers.RunSync(() => store.Subscriptions.CreateAsync(
                         new SubscriptionCreationOptions<User>())));
                 }
             }
@@ -72,9 +72,9 @@ namespace SlowTests.Issues
 
                     Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
 
-                    var subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
+                    var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
 
-                    var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
+                    var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
                     {
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(200)
                     });
@@ -104,7 +104,7 @@ namespace SlowTests.Issues
                     Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
                     _apiKey.ResourcesAccessMode[store.Database] = accessMode;
 
-                    var subscriptionId = await store.AsyncSubscriptions.CreateAsync(
+                    var subscriptionId = await store.Subscriptions.CreateAsync(
                         new SubscriptionCreationOptions<User>());
 
                     store.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
@@ -113,7 +113,7 @@ namespace SlowTests.Issues
 
                     Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
 
-                    var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
+                    var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
                     {
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(200)
                     });
@@ -136,7 +136,7 @@ namespace SlowTests.Issues
                     Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
                     _apiKey.ResourcesAccessMode[store.Database] = accessMode;
 
-                    var subscriptionId = await store.AsyncSubscriptions.CreateAsync(
+                    var subscriptionId = await store.Subscriptions.CreateAsync(
                         new SubscriptionCreationOptions<User>());
 
                     store.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
@@ -145,7 +145,7 @@ namespace SlowTests.Issues
 
                     Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
 
-                    var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
+                    var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
                     {
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(200)
                     });

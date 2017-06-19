@@ -41,11 +41,11 @@ namespace FastTests.Client.Subscriptions
                         ChangeVector = user2ChangeVector
                     };
 
-                    var id = await store.AsyncSubscriptions.CreateAsync(subscriptionCreationParams);
+                    var id = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
 
                     var users = new List<dynamic>();
 
-                    using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(id)))
+                    using (var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id)))
                     {
 
                         var docs = new BlockingCollection<dynamic>();
@@ -123,11 +123,11 @@ namespace FastTests.Client.Subscriptions
                         Criteria = new SubscriptionCriteria<User>(),
                         ChangeVector = user2ChangeVector
                     };
-                    var id = await store.AsyncSubscriptions.CreateAsync(subscriptionCreationParams);
+                    var id = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
 
                     var users = new List<User>();
 
-                    using (var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(id)))
+                    using (var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(id)))
                     {
 
                         var docs = new BlockingCollection<User>();
@@ -208,11 +208,11 @@ namespace FastTests.Client.Subscriptions
                         Criteria = new SubscriptionCriteria("Users"),
                         ChangeVector = user2ChangeVector
                     };
-                    subscriptionId = await store.AsyncSubscriptions.CreateAsync(subscriptionCreationParams);
+                    subscriptionId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
 
                     var users = new List<dynamic>();
                     
-                    using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(subscriptionId)))
+                    using (var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(subscriptionId)))
                     {
                         var docs = new BlockingCollection<dynamic>();
                         var keys = new BlockingCollection<string>();
@@ -266,7 +266,7 @@ namespace FastTests.Client.Subscriptions
 
                 Assert.True(Task.WaitAll(new[] {subscriptionReleasedAwaiter}, 250));
                 
-                using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(subscriptionId)))
+                using (var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(subscriptionId)))
                 {
                     var docs = new BlockingCollection<dynamic>();
                     GC.KeepAlive(subscription.Run(x =>

@@ -22,7 +22,7 @@ namespace FastTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
 
-                var subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCreationOptions<Versioned<User>>());
+                var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Versioned<User>>());
 
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
@@ -101,7 +101,7 @@ namespace FastTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
 
-                var subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCreationOptions<Versioned<User>>());
+                var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Versioned<User>>());
 
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
@@ -190,7 +190,7 @@ namespace FastTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
 
-                var subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCreationOptions<User>
+                var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>
                 {
                     Criteria = new SubscriptionCriteria<User>
                     {
@@ -282,7 +282,7 @@ namespace FastTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
 
-                var subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCreationOptions<User>
+                var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>
                 {
                     Criteria = new SubscriptionCriteria<User>
                     {

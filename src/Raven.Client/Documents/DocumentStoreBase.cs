@@ -25,7 +25,6 @@ namespace Raven.Client.Documents
         protected DocumentStoreBase()
         {
 
-            AsyncSubscriptions = new AsyncDocumentSubscriptions(this);
             Subscriptions = new DocumentSubscriptions(this);
         }
 
@@ -154,7 +153,6 @@ namespace Raven.Client.Documents
 
         public abstract BulkInsertOperation BulkInsert(string database = null);
 
-        public IAsyncReliableSubscriptions AsyncSubscriptions { get; }
         public IReliableSubscriptions Subscriptions { get; }
 
         protected void EnsureNotClosed()

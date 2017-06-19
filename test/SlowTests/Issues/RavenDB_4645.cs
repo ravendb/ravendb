@@ -52,7 +52,7 @@ namespace SlowTests.Issues
 
                 // all documents were fetched - time to delete subscription
 
-                store.Subscriptions.Delete(id);
+                store.Subscriptions.DeleteAsync(id).Wait();
 
                 // verify if we don't get new items
 

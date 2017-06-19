@@ -112,7 +112,7 @@ namespace RachisTests
                 var usersCount = new List<User>();
                 var reachedMaxDocCountMre = new AsyncManualResetEvent();
 
-                var subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCreationOptions<User>() { });
+                var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>() { });
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -123,7 +123,7 @@ namespace RachisTests
                     await session.SaveChangesAsync();
                 }
 
-                var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
+                var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
 
                 subscription.AfterAcknowledgment += b => { reachedMaxDocCountMre.Set(); return Task.CompletedTask; };
                 
@@ -224,9 +224,9 @@ namespace RachisTests
 
 
 
-                var subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCreationOptions<Versioned<User>>()).ConfigureAwait(false);
+                var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Versioned<User>>()).ConfigureAwait(false);
 
-                var subscription = store.AsyncSubscriptions.Open<Versioned<User>>(new SubscriptionConnectionOptions(subscriptionId)
+                var subscription = store.Subscriptions.Open<Versioned<User>>(new SubscriptionConnectionOptions(subscriptionId)
                 {
                     MaxDocsPerBatch = 1,
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(100)
@@ -436,10 +436,10 @@ namespace RachisTests
             {
                 MaxId = 0
             };
-            var subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCreationOptions<User>()).ConfigureAwait(false);
+            var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>()).ConfigureAwait(false);
             var subscriptionEtag = long.Parse(subscriptionId.Substring(subscriptionId.LastIndexOf("/", StringComparison.OrdinalIgnoreCase) + 1));
 
-            var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
+            var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
             {
                 TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
                 MaxDocsPerBatch = batchSize

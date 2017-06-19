@@ -16,14 +16,24 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Subscriptions
 {
-    public class AsyncDocumentSubscriptions : IAsyncReliableSubscriptions
+    public class DocumentSubscriptions : IReliableSubscriptions
     {
         private readonly IDocumentStore _store;
         private readonly ConcurrentSet<IAsyncDisposable> _subscriptions = new ConcurrentSet<IAsyncDisposable>();
 
-        public AsyncDocumentSubscriptions(IDocumentStore store)
+        public DocumentSubscriptions(IDocumentStore store)
         {
             _store = store;
+        }
+
+        public string Create(SubscriptionCreationOptions criteria, string database = null)
+        {
+            return AsyncHelpers.RunSync(() => CreateAsync(criteria, database));
+        }
+
+        public string Create<T>(SubscriptionCreationOptions<T> criteria, string database = null)
+        {
+            return AsyncHelpers.RunSync(() => CreateAsync(criteria, database));
         }
 
         public Task<string> CreateAsync<T>(SubscriptionCreationOptions<T> subscriptionCreationOptions, string database = null)

@@ -126,7 +126,7 @@ namespace FastTests.Client.Subscriptions
 
 
 
-                store.Subscriptions.Delete(subscriptionId);
+                store.Subscriptions.DeleteAsync(subscriptionId).Wait();
                 beforeAckMre.Set();
 
                 Assert.Throws(typeof(AggregateException), () => subscriptionLifetimeTask.Wait(_reasonableWaitTime));
@@ -192,7 +192,7 @@ namespace FastTests.Client.Subscriptions
                     session.SaveChanges();
                 }
 
-                var innerException = Assert.Throws<AggregateException>(()=> task .Wait()).InnerException.InnerException;
+                var innerException = Assert.Throws<AggregateException>(()=> task .Wait()).InnerException;
                 Assert.IsType<InvalidCastException>(innerException);
             }
         }

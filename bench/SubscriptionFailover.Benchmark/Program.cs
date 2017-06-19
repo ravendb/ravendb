@@ -57,10 +57,10 @@ namespace SubscriptionFailover.Benchmark
 
         public async Task RunsSubscriptionSimple(DocumentStore store)
         {
-            var subscriptionId = await store.AsyncSubscriptions.CreateAsync<User>(
+            var subscriptionId = await store.Subscriptions.CreateAsync<User>(
                 new SubscriptionCreationOptions<User>());
 
-            var subscripiton = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
+            var subscripiton = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
             {
                 MaxDocsPerBatch = 1024
             });
@@ -155,10 +155,10 @@ namespace SubscriptionFailover.Benchmark
                 Database = defaultDatabase
             }.Initialize())
             {
-                var subscriptionId = await store.AsyncSubscriptions.CreateAsync<User>(
+                var subscriptionId = await store.Subscriptions.CreateAsync<User>(
                     new SubscriptionCreationOptions<User>());
 
-                var subscripiton = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
+                var subscripiton = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
                 {
                     MaxDocsPerBatch = 1024
                 });

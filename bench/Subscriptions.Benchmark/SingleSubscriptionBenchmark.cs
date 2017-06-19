@@ -63,11 +63,11 @@ namespace Subscriptions.Benchmark
                     {
                         Criteria = new SubscriptionCriteria(_collectionName)
                     };
-                    _subscriptionId = await _store.AsyncSubscriptions.CreateAsync(subscriptionCreationParams).ConfigureAwait(false);
+                    _subscriptionId = await _store.Subscriptions.CreateAsync(subscriptionCreationParams).ConfigureAwait(false);
                 }
 
 
-                using (var subscription = _store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(_subscriptionId)
+                using (var subscription = _store.Subscriptions.Open(new SubscriptionConnectionOptions(_subscriptionId)
                 {
                     Strategy = SubscriptionOpeningStrategy.WaitForFree
                 }))

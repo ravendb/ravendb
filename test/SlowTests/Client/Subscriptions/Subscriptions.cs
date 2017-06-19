@@ -29,10 +29,10 @@ namespace SlowTests.Client.Subscriptions
                     Criteria = new SubscriptionCriteria("Things"),
                     ChangeVector = lastChangeVector
                 };
-                var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCreationParams);
+                var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
 
                 using (
-                    var acceptedSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
+                    var acceptedSubscription = store.Subscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
                 {
                     var acceptedSusbscriptionList = new BlockingCollection<Thing>();
                     var takingOverSubscriptionList = new BlockingCollection<Thing>();
@@ -69,7 +69,7 @@ namespace SlowTests.Client.Subscriptions
                     Assert.False(acceptedSusbscriptionList.TryTake(out thing));
 
                     // open second subscription
-                    using (var takingOverSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)
+                    using (var takingOverSubscription = store.Subscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)
                     {
                         Strategy = SubscriptionOpeningStrategy.TakeOver
                     }))

@@ -10,8 +10,20 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Documents.Subscriptions
 {
-    public interface IAsyncReliableSubscriptions : IDisposable
+    public interface IReliableSubscriptions : IDisposable
     {
+        /// <summary>
+        /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription criteria for a given type.
+        /// </summary>
+        /// <returns>Created subscription identifier.</returns>
+        string Create<T>(SubscriptionCreationOptions<T> criteria, string database = null);
+
+        /// <summary>
+        /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription criteria.
+        /// </summary>
+        /// <returns>Created subscription identifier.</returns>
+        string Create(SubscriptionCreationOptions criteria, string database = null);
+
         /// <summary>
         /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription criteria for a given type.
         /// </summary>
