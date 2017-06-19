@@ -92,10 +92,14 @@ namespace Raven.Server.Documents
                         ThrowInvalidCollectionNameChange(id, oldCollectionName, collectionName);
 
                     var oldFlags = *(DocumentFlags*)oldValue.Read((int)DocumentsStorage.DocumentsTable.Flags, out int size);
-                    if ((oldFlags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments ||
-                        (nonPersistentFlags & NonPersistentDocumentFlags.ResolvedAttachmentConflict) == NonPersistentDocumentFlags.ResolvedAttachmentConflict)
+
+                    if ((nonPersistentFlags & NonPersistentDocumentFlags.ByAttachmentUpdate) != NonPersistentDocumentFlags.ByAttachmentUpdate)
                     {
-                        flags |= DocumentFlags.HasAttachments;
+                        if ((oldFlags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments ||
+                            (nonPersistentFlags & NonPersistentDocumentFlags.ResolvedAttachmentConflict) == NonPersistentDocumentFlags.ResolvedAttachmentConflict)
+                        {
+                            flags |= DocumentFlags.HasAttachments;
+                        }
                     }
                 }
 

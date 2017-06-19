@@ -379,6 +379,17 @@ namespace SlowTests.Client.Attachments
 
                 store1.Operations.Send(new DeleteAttachmentOperation("users/1", "big-file"));
                 AssertDelete(store1, store2, "big-file", 0);
+
+                for (int i = 1; i <= 3; i++)
+                {
+                    using (var session = store2.OpenSession())
+                    {
+                        var user = session.Load<User>("users/" + i);
+                        var metadata = session.Advanced.GetMetadataFor(user);
+                        Assert.False(metadata.ContainsKey(Constants.Documents.Metadata.Flags));
+                        Assert.False(metadata.ContainsKey(Constants.Documents.Metadata.Attachments));
+                    }
+                }
             }
         }
 
