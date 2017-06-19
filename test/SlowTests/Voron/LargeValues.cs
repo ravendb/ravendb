@@ -12,7 +12,7 @@ namespace SlowTests.Voron
         [Fact]
         public void ShouldProperlyRecover()
         {
-            var sequentialLargeIds = TestDataUtil.ReadData("non-leaf-page-seq-id-large-values-2.txt");
+            var sequentialLargeIds = TestDataUtil.ReadData("SlowTests.Data.non-leaf-page-seq-id-large-values-2.txt");
 
             var enumerator = sequentialLargeIds.GetEnumerator();
 

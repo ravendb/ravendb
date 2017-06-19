@@ -11,7 +11,7 @@ namespace SlowTests.Utils
         public static IDictionary<long, byte[]> ReadData(string fileName)
         { 
             var assembly = typeof(TestDataUtil).GetTypeInfo().Assembly;
-            using (var fs = assembly.GetManifestResourceStream("SlowTests.Data." + fileName))
+            using (var fs = assembly.GetManifestResourceStream(fileName))
             using (var reader = new StreamReader(fs))
             {
                 string line;
