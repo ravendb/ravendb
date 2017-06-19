@@ -14,10 +14,8 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Exceptions.Versioning;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
-using Raven.Client.Json;
-using Raven.Client.Json.Converters;
 using Raven.Server.Documents;
-using Raven.Server.ServerWide.Context;
+using Raven.Server.Documents.Patch;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
@@ -425,8 +423,10 @@ namespace FastTests.Server.Documents.Versioning
             }
         }
 
-        [Fact]
-        public async Task DeleteRevisionsBeforeOperationsMethod()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task DeleteRevisionsBeforeFromConsole(bool useConsole)
         {
             using (var store = GetDocumentStore())
             {
@@ -448,7 +448,7 @@ namespace FastTests.Server.Documents.Versioning
                 {
                     using (var session = store.OpenAsyncSession())
                     {
-                        await session.StoreAsync(new User { Name = "Fitzchak " + (i + 100) });
+                        await session.StoreAsync(new User {Name = "Fitzchak " + (i + 100)});
                         await session.SaveChangesAsync();
                     }
                 }
@@ -458,11 +458,16 @@ namespace FastTests.Server.Documents.Versioning
                 Assert.Equal(21, statistics.CountOfDocuments);
                 Assert.Equal(20, statistics.CountOfRevisionDocuments);
 
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
-                using (var tx = context.OpenWriteTransaction())
+                if (useConsole)
                 {
-                    database.DocumentsStorage.VersioningStorage.DeleteRevisionsBefore(context, "Users", DateTime.UtcNow);
-                    tx.Commit();
+                    new AdminJsConsole(database).ApplyScript(new AdminJsScript
+                    {
+                        Script = "database.DocumentsStorage.VersioningStorage.Operations.DeleteRevisionsBefore('Users', new Date());"
+                    });
+                }
+                else
+                {
+                    database.DocumentsStorage.VersioningStorage.Operations.DeleteRevisionsBefore("Users", DateTime.UtcNow);
                 }
 
                 statistics = store.Admin.Send(new GetStatisticsOperation());

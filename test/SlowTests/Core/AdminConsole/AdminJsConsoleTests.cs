@@ -12,7 +12,7 @@ namespace SlowTests.Core.AdminConsole
         {
             using (var store = GetDocumentStore())
             {
-                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var database = await GetDocumentDatabaseInstanceFor(store);
                 
                 var result = new AdminJsConsole(database).ApplyScript(new AdminJsScript
                 {
@@ -37,7 +37,7 @@ namespace SlowTests.Core.AdminConsole
         {
             using (var store = GetDocumentStore())
             {
-                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var database = await GetDocumentDatabaseInstanceFor(store);
                 var configuration = database.Configuration;
 
                 Assert.True(configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened);
