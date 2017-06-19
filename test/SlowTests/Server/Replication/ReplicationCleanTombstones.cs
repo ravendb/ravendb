@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using FastTests.Server.Basic.Entities;
+﻿using System.Threading.Tasks;
+using FastTests.Server.Replication;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace FastTests.Server.Replication
+namespace SlowTests.Server.Replication
 {
     public class ReplicationCleanTombstones : ReplicationTestsBase
     {

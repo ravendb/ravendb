@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -9,7 +8,7 @@ using Raven.Client.Server.Operations;
 using Tests.Infrastructure;
 using Xunit;
 
-namespace FastTests.Server.Replication
+namespace SlowTests.Server.Replication
 {
     public class DisableDatabasePropagationInRaftCluster : ClusterTestBase
     {

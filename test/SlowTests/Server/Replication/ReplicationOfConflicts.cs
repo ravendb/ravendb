@@ -1,14 +1,11 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Raven.Client.Documents.Commands;
+﻿using System.Threading.Tasks;
+using FastTests;
+using FastTests.Server.Replication;
 using Raven.Client.Documents.Exceptions;
-using Raven.Client.Documents.Linq;
 using Raven.Server.ServerWide.Context;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace FastTests.Server.Replication
+namespace SlowTests.Server.Replication
 {
     public class ReplicationOfConflicts : ReplicationBasicTests
     {

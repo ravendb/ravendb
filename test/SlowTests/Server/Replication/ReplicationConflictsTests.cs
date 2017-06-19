@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Server.Replication;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -11,11 +12,10 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.NotificationCenter;
-using Raven.Server.Utils;
 using Xunit;
 using Constants = Raven.Client.Constants;
 
-namespace FastTests.Server.Replication
+namespace SlowTests.Server.Replication
 {
     public class ReplicationConflictsTests : ReplicationTestsBase
     {
