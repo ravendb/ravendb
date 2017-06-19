@@ -71,11 +71,11 @@ namespace SubscriptionFailover.Benchmark
 
             
 
-            subscripiton.AfterAcknowledgment += () =>
+            subscripiton.AfterAcknowledgment += b =>
             {
-                Console.WriteLine($"{ subscriptionId}: {counter}");
                 if (counter == DocsAmount)
                     tcs.SetResult(true);
+                return Task.CompletedTask;
             };
 
             GC.KeepAlive(subscripiton.Run(x =>
@@ -168,11 +168,11 @@ namespace SubscriptionFailover.Benchmark
                 log = new List<(string, DateTime)>();
 
                
-                subscripiton.AfterAcknowledgment += () =>
+                subscripiton.AfterAcknowledgment += b =>
                 {
-                    Console.WriteLine($"{ subscriptionId}: {counter}");
                     if (counter == 1 * DocsAmount)
                         tcs.SetResult(true);
+                    return Task.CompletedTask;
                 };
 
                GC.KeepAlive(subscripiton.Run(x =>

@@ -70,7 +70,7 @@ namespace Raven.Client.Documents.Subscriptions
             if (options == null)
                 throw new InvalidOperationException("Cannot open a subscription if options are null");
 
-            var subscription = new Subscription<T>(options, _store, _store.Conventions, database);
+            var subscription = new Subscription<T>(options, _store, database);
             subscription.OnDisposed  += (sender) => _subscriptions.TryRemove(sender);
             _subscriptions.Add(subscription);
 

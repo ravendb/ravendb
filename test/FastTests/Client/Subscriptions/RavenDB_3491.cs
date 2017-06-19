@@ -52,13 +52,15 @@ namespace FastTests.Client.Subscriptions
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
 
-                        GC.KeepAlive(subscription.Run(x =>
+                        GC.KeepAlive(subscription.Run(u =>
                         {
-                            keys.Add(x.Id);
-                            ages.Add(x.Age);
-                            docs.Add((x));
+                            foreach (var x in u.Items)
+                            {
+                                keys.Add(x.Result.Id);
+                                ages.Add(x.Result.Age);
+                                docs.Add((x.Result));
+                            }
                         }));
-
 
                         dynamic doc;
                         Assert.True(docs.TryTake(out doc, _waitForDocTimeout));
@@ -132,11 +134,14 @@ namespace FastTests.Client.Subscriptions
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
 
-                        GC.KeepAlive(subscription.Run(x =>
+                        GC.KeepAlive(subscription.Run(u =>
                         {
-                            keys.Add(x.Id);
-                            ages.Add(x.Age);
-                            docs.Add((x));
+                            foreach (var x in u.Items)
+                            {
+                                keys.Add(x.Result.Id);
+                                ages.Add(x.Result.Age);
+                                docs.Add((x.Result));
+                            }
                         }));
 
 
@@ -214,11 +219,14 @@ namespace FastTests.Client.Subscriptions
                         var ages = new BlockingCollection<int>();
 
 
-                        GC.KeepAlive(subscription.Run(x =>
+                        GC.KeepAlive(subscription.Run(u =>
                         {
-                            keys.Add(x.Id);
-                            ages.Add(x.Age);
-                            docs.Add((x));
+                            foreach (var x in u.Items)
+                            {
+                                keys.Add(x.Result.Id);
+                                ages.Add(x.Result.Age);
+                                docs.Add((x.Result));
+                            }
                         }));
 
                         var db = await GetDatabase(store.Database);

@@ -40,16 +40,20 @@ namespace SlowTests.Client.Subscriptions
                                         var batchProccessedByFirstSubscription = new AsyncManualResetEvent();
 
                     acceptedSubscription.AfterAcknowledgment +=
-                        () =>
+                        b =>
                         {
                             if (Interlocked.Read(ref counter) == 5)
                                 batchProccessedByFirstSubscription.Set();
+                            return Task.CompletedTask;
                         };
 
                     GC.KeepAlive(acceptedSubscription.Run(x =>
                     {
                         Interlocked.Increment(ref counter);
-                        acceptedSusbscriptionList.Add(x);
+                         foreach (var item in x.Items)
+                        {
+                            acceptedSusbscriptionList.Add(item.Result);
+                        }
                     }));
 
                     Thing thing;
@@ -70,7 +74,13 @@ namespace SlowTests.Client.Subscriptions
                         Strategy = SubscriptionOpeningStrategy.TakeOver
                     }))
                     {
-                        GC.KeepAlive(takingOverSubscription.Run(x => takingOverSubscriptionList.Add(x)));
+                        GC.KeepAlive(takingOverSubscription.Run(x =>
+                        {
+                            foreach (var item in x.Items)
+                            {
+                                takingOverSubscriptionList.Add(item.Result);
+                            }
+                        }));
 
                         await CreateDocuments(store, 5);
 

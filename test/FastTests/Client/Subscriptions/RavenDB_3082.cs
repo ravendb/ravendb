@@ -65,7 +65,13 @@ namespace FastTests.Client.Subscriptions
                 {
                     var users = new BlockingCollection<PersonWithAddress>();
 
-                    GC.KeepAlive(subscription.Run(address => users.Add(address)));
+                    GC.KeepAlive(subscription.Run(address =>
+                    {
+                        foreach (var item in address.Items)
+                        {
+                            users.Add(item.Result);
+                        }
+                    }));
 
                     PersonWithAddress userToTake;
                     for (var i = 0; i < 5; i++)

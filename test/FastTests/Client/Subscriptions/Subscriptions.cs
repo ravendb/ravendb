@@ -52,7 +52,13 @@ namespace FastTests.Client.Subscriptions
                 using (var subscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
                 {
                     var list = new BlockingCollection<Thing>();
-                    GC.KeepAlive(subscription.Run(u => list.Add(u)));
+                    GC.KeepAlive(subscription.Run(u =>
+                    {
+                        foreach (var item in u.Items)
+                        {
+                            list.Add(item.Result);
+                        }
+                    }));
                     Thing thing;
                     for (var i = 0; i < 5; i++)
                     {
@@ -86,8 +92,14 @@ namespace FastTests.Client.Subscriptions
                     }))
                 {
                     var acceptedSubscriptionList = new BlockingCollection<Thing>();
-                    
-                    GC.KeepAlive(acceptedSubscription.Run(u => acceptedSubscriptionList.Add(u)));
+
+                    GC.KeepAlive(acceptedSubscription.Run(u =>
+                    {
+                        foreach (var item in u.Items)
+                        {
+                            acceptedSubscriptionList.Add(item.Result);
+                        }
+                    }));
 
 
                     Thing thing;
@@ -148,12 +160,15 @@ namespace FastTests.Client.Subscriptions
                     var waitingSubscriptionList = new BlockingCollection<Thing>();
 
                     var ackSentAmre = new AsyncManualResetEvent();
-                    acceptedSubscription.AfterAcknowledgment += () => ackSentAmre.Set();
+                    acceptedSubscription.AfterAcknowledgment += b => { ackSentAmre.Set(); return Task.CompletedTask; };
 
 
                     GC.KeepAlive(acceptedSubscription.Run(x=>
                     {
-                        acceptedSusbscriptionList.Add(x);
+                        foreach (var item in x.Items)
+                        {
+                            acceptedSusbscriptionList.Add(item.Result);
+                        }
                         Thread.Sleep(20);
                     }));
 
@@ -178,7 +193,13 @@ namespace FastTests.Client.Subscriptions
                             }))
                     {
 
-                        GC.KeepAlive(waitingSubscription.Run(x =>   waitingSubscriptionList.Add(x)));
+                        GC.KeepAlive(waitingSubscription.Run(x =>
+                        {
+                            foreach (var item in x.Items)
+                            {
+                                waitingSubscriptionList.Add(item.Result);
+                            }
+                        }));
 
                         Assert.True(await ackSentAmre.WaitAsync(TimeSpan.FromSeconds(50)));
 
@@ -226,16 +247,20 @@ namespace FastTests.Client.Subscriptions
                     var batchProccessedByFirstSubscription = new AsyncManualResetEvent();
 
                     acceptedSubscription.AfterAcknowledgment +=
-                        () =>
+                        b =>
                         {
                             if (Interlocked.Read(ref counter) == 5)
                                 batchProccessedByFirstSubscription.Set();
+                            return Task.CompletedTask;
                         };
 
                     GC.KeepAlive(acceptedSubscription.Run(x =>
                     {
-                        Interlocked.Increment(ref counter);
-                        acceptedSusbscriptionList.Add(x);
+                        foreach (var item in x.Items)
+                        {
+                            Interlocked.Increment(ref counter);
+                            acceptedSusbscriptionList.Add(item.Result);
+                        }
                     }));
 
 
@@ -259,7 +284,13 @@ namespace FastTests.Client.Subscriptions
                         Strategy = SubscriptionOpeningStrategy.TakeOver
                     }))
                     {
-                        GC.KeepAlive(takingOverSubscription.Run(x => takingOverSubscriptionList.Add(x)));
+                        GC.KeepAlive(takingOverSubscription.Run(x =>
+                        {
+                            foreach (var item in x.Items)
+                            {
+                                takingOverSubscriptionList.Add(item.Result);
+                            }
+                        }));
 
                         await CreateDocuments(store, 5);
 

@@ -12,7 +12,6 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Replication.Messages;
@@ -21,6 +20,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Client.Json;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server.Commands;
 using Raven.Client.Server.Tcp;
@@ -32,47 +32,144 @@ using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Subscriptions
 {
-    public delegate void BeforeBatch();
+    public class SubscriptionBatch<T> 
+    {
+        public struct Item
+        {
+            public string Id { get; internal set; }
+            public long Etag { get; internal set; }
+            public T Result { get; internal set; }
+            public BlittableJsonReaderObject RawResult { get; internal set; }
+            public BlittableJsonReaderObject RawMetadata { get; internal set; }
+            
+            private IMetadataDictionary _metadata;
+            public IMetadataDictionary Metadata => _metadata ?? (_metadata = new MetadataAsDictionary(RawMetadata));
+        }
 
-    public delegate void AfterBatch(int documentsProcessed);
+        public int NumberOfItemsInBatch;
 
-    public delegate void BeforeAcknowledgment();
+        private readonly RequestExecutor _requestExecutor;
+        private readonly IDocumentStore _store;
+        private readonly string _dbName;
+        private readonly Logger _logger;
+        private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
 
-    public delegate void AfterAcknowledgment();
+        public List<Item> Items { get; } = new List<Item>();
+        
+        public IDocumentSession OpenSession()
+        {
+            return _store.OpenSession(new SessionOptions
+            {
+                Database = _dbName,
+                RequestExecuter = _requestExecutor
+            });
+        }
+        
+        public IAsyncDocumentSession OpenAsyncSession()
+        {
+            return _store.OpenAsyncSession(new SessionOptions
+            {
+                Database = _dbName,
+                RequestExecuter = _requestExecutor
+            });
+        }
 
+        public SubscriptionBatch(RequestExecutor requestExecutor, IDocumentStore store, string dbName, Logger logger)
+        {
+            _requestExecutor = requestExecutor;
+            _store = store;
+            _dbName = dbName;
+            _logger = logger;
+
+            _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(store.Conventions,
+                entity => throw new InvalidOperationException("Shouldn't be generating new ids here"));
+        }
+
+
+        internal ChangeVectorEntry[] Initialize(List<SubscriptionConnectionServerMessage> batch)
+        {
+            Items.Capacity = Math.Max(Items.Capacity, batch.Count);
+            Items.Clear();
+            ChangeVectorEntry[] lastReceivedChangeVector = null;
+
+            foreach (var item in batch)
+            {
+                
+                BlittableJsonReaderObject metadata;
+                var curDoc = item.Data;
+                
+                if (curDoc.TryGet(Constants.Documents.Metadata.Key, out metadata) == false)
+                    ThrowRequired("@metadata field");
+                if (metadata.TryGet(Constants.Documents.Metadata.Id, out string id) == false)
+                    ThrowRequired("@id field");
+                if (metadata.TryGet(Constants.Documents.Metadata.Etag, out long etag) == false)
+                    ThrowRequired("@etag field");
+                if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out BlittableJsonReaderArray changeVectorAsObject) == false || 
+                    changeVectorAsObject == null)
+                    ThrowRequired("@change-vector field");
+                else
+                    lastReceivedChangeVector = changeVectorAsObject.ToVector();
+                
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info($"Got {id} (change vector: [{string.Join(",", lastReceivedChangeVector.Select(x => $"{x.DbId.ToString()}:{x.Etag}"))}], size {curDoc.Size}");
+                }
+
+                
+                T instance;
+
+                if (typeof(T) == typeof(BlittableJsonReaderObject))
+                {
+                    instance = (T)(object)curDoc;
+                }
+                else
+                {
+                    instance = (T)EntityToBlittable.ConvertToEntity(typeof(T), id, curDoc, _store.Conventions);
+                }
+
+                if (string.IsNullOrEmpty(id) == false)
+                    _generateEntityIdOnTheClient.TrySetIdentity(instance, id);
+
+                Items.Add(new Item
+                {
+                    Etag = etag,
+                    Id = id,
+                    RawResult = curDoc,
+                    RawMetadata = metadata,
+                    Result = instance,
+                });
+            }
+            return lastReceivedChangeVector;
+        }
+        
+        private static void ThrowRequired(string name)
+        {
+            throw new InvalidOperationException("Document must have a " + name);
+        }
+    }
+    
     public class Subscription<T> : IAsyncDisposable, IDisposable where T : class
     {
+        public delegate Task AfterAcknowledgmentAction(SubscriptionBatch<T> batch);
+        
         private readonly Logger _logger;
         private readonly IDocumentStore _store;
-        private readonly DocumentConventions _conventions;
         private readonly string _dbName;
         private readonly CancellationTokenSource _processingCts = new CancellationTokenSource();
-        private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
         private readonly SubscriptionConnectionOptions _options;
-        private (Func<T, Task> Async, Action<T> Sync) _subscriber;
+        private (Func<SubscriptionBatch<T>, Task> Async, Action<SubscriptionBatch<T>> Sync) _subscriber;
         private TcpClient _tcpClient;
         private bool _disposed;
         private Task _subscriptionTask;
         private Stream _stream;
 
         /// <summary>
-        /// Called before received batch starts to be processed by subscribers
+        /// allows the user to define stuff that happens after the confirm was received from the server (this way we know we won't
+        /// get those documents again)
         /// </summary>
-        public event BeforeBatch BeforeBatch = delegate { };
+        public event AfterAcknowledgmentAction  AfterAcknowledgment;
 
-        /// <summary>
-        /// Called after received batch finished being processed by subscribers
-        /// </summary>
-        public event AfterBatch AfterBatch = delegate { };
-
-        /// <summary>
-        /// Called before subscription progress is being stored to the DB
-        /// </summary>
-        public event BeforeAcknowledgment BeforeAcknowledgment = delegate { };
-
-
-        internal Subscription(SubscriptionConnectionOptions options, IDocumentStore documentStore,
-            DocumentConventions conventions, string dbName)
+        internal Subscription(SubscriptionConnectionOptions options, IDocumentStore documentStore, string dbName)
         {
             _options = options;
             _logger = LoggingSource.Instance.GetLogger<Subscription<T>>(dbName);
@@ -81,11 +178,8 @@ namespace Raven.Client.Documents.Subscriptions
                     "SubscriptionConnectionOptions must specify the SubscriptionId, but was set to zero.",
                     nameof(options));
             _store = documentStore;
-            _conventions = conventions;
             _dbName = dbName ?? documentStore.Database;
 
-            _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions,
-                entity => throw new InvalidOperationException("Shouldn't be generating new ids here"));
         }
 
         public string SubscriptionId => _options.SubscriptionId;
@@ -144,20 +238,14 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        /// <summary>
-        /// allows the user to define stuff that happens after the confirm was received from the server (this way we know we won't
-        /// get those documents again)
-        /// </summary>
-        public event AfterAcknowledgment AfterAcknowledgment = delegate { };
-
-        public Task Run(Action<T> processDocuments)
+        public Task Run(Action<SubscriptionBatch<T>> processDocuments)
         {
             if (processDocuments == null) throw new ArgumentNullException(nameof(processDocuments));
             _subscriber = (null, processDocuments);
             return Run();
         }
 
-        public Task Run(Func<T, Task> processDocuments)
+        public Task Run(Func<SubscriptionBatch<T>, Task> processDocuments)
         {
             if (processDocuments == null) throw new ArgumentNullException(nameof(processDocuments));
             _subscriber = (processDocuments, null);
@@ -174,6 +262,7 @@ namespace Raven.Client.Documents.Subscriptions
         }
 
         private ServerNode _redirectNode;
+        private RequestExecutor _subscriptionLocalRequestExecuter;
 
         public string CurrentNodeTag => _redirectNode?.ClusterTag;
 
@@ -182,9 +271,9 @@ namespace Raven.Client.Documents.Subscriptions
             var command = new GetTcpInfoCommand("Subscription/" + _dbName);
 
             JsonOperationContext context;
-            var requestExecutor = _store.GetRequestExecutor(_dbName);
-
-            using (requestExecutor.ContextPool.AllocateOperationContext(out context))
+             var requestExecutor = _store.GetRequestExecutor(_dbName);
+      
+                 using (requestExecutor.ContextPool.AllocateOperationContext(out context))
             {
                 if (_redirectNode != null)
                 {
@@ -248,6 +337,9 @@ namespace Raven.Client.Documents.Subscriptions
                 await _stream.WriteAsync(options, 0, options.Length).ConfigureAwait(false);
 
                 await _stream.FlushAsync().ConfigureAwait(false);
+
+                _subscriptionLocalRequestExecuter?.Dispose();
+                _subscriptionLocalRequestExecuter = RequestExecutor.CreateForSingleNode(command.RequestedNode.Url, _dbName, requestExecutor.ApiKey);
                 return _stream;
             }
         }
@@ -316,12 +408,13 @@ namespace Raven.Client.Documents.Subscriptions
                             return;
 
                         Task notifiedSubscriber = Task.CompletedTask;
-
+                        
+                        var batch = new SubscriptionBatch<T>(_subscriptionLocalRequestExecuter, _store, _dbName, _logger);
+                        
                         while (_processingCts.IsCancellationRequested == false)
                         {
-                            BeforeBatch();
                             // start the read from the server
-                            var readFromServer = ReadSingleSubscriptionBatchFromServer(contextPool, tcpStreamCopy, buffer);
+                            var readFromServer = ReadSingleSubscriptionBatchFromServer(contextPool, tcpStreamCopy, buffer, batch);
                             try
                             {
                                 // and then wait for the subscriber to complete
@@ -333,7 +426,7 @@ namespace Raven.Client.Documents.Subscriptions
                                 try
                                 {
                                     CloseTcpClient();
-                                    using ((await readFromServer).returnContext)
+                                    using ((await readFromServer).ReturnContext)
                                     {
                                         
                                     }
@@ -346,17 +439,37 @@ namespace Raven.Client.Documents.Subscriptions
                             }
                             var incomingBatch = await readFromServer.ConfigureAwait(false);
 
+                            _processingCts.Token.ThrowIfCancellationRequested();
+
+                            var lastReceivedChangeVector = batch.Initialize(incomingBatch.Messages);
+                            
+                            
                             notifiedSubscriber = Task.Run(async () =>
                             {
-                                ChangeVectorEntry[] lastReceivedChangeVector = null;
                                 // ReSharper disable once AccessToDisposedClosure
-                                using (incomingBatch.returnContext)
+                                using (incomingBatch.ReturnContext)
                                 {
-                                    foreach (var curDoc in incomingBatch.messages)
+                                    try
                                     {
-                                        lastReceivedChangeVector = await NotifySubscribers(curDoc.Data);
+                                        if (_subscriber.Async != null)
+                                            await _subscriber.Async(batch);
+                                        else
+                                            _subscriber.Sync(batch);
                                     }
+                                    catch (Exception ex)
+                                    {
+                                        if (_logger.IsInfoEnabled)
+                                        {
+                                            _logger.Info(
+                                                $"Subscription #{_options.SubscriptionId}. Subscriber threw an exception on document batch", ex);
+                                        }
+
+                                        if (_options.IgnoreSubscriberErrors == false)
+                                            throw;
+                                    }
+
                                 }
+                             
                                 try
                                 {
                                     if (tcpStreamCopy != null) //possibly prevent ObjectDisposedException
@@ -380,7 +493,7 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        private async Task<(List<SubscriptionConnectionServerMessage> messages, IDisposable returnContext)> ReadSingleSubscriptionBatchFromServer(JsonContextPool contextPool, Stream tcpStream, JsonOperationContext.ManagedPinnedBuffer buffer)
+        private async Task<(List<SubscriptionConnectionServerMessage> Messages, IDisposable ReturnContext)> ReadSingleSubscriptionBatchFromServer(JsonContextPool contextPool, Stream tcpStream, JsonOperationContext.ManagedPinnedBuffer buffer, SubscriptionBatch<T> batch)
         {
             JsonOperationContext context;
             var incomingBatch = new List<SubscriptionConnectionServerMessage>();
@@ -401,9 +514,11 @@ namespace Raven.Client.Documents.Subscriptions
                         endOfBatch = true;
                         break;
                     case SubscriptionConnectionServerMessage.MessageType.Confirm:
-                        AfterAcknowledgment();
-                        AfterBatch(incomingBatch.Count);
+                        var onAfterAcknowledgment = AfterAcknowledgment;
+                        if (onAfterAcknowledgment != null)
+                            await onAfterAcknowledgment(batch);
                         incomingBatch.Clear();
+                        batch.Items.Clear();
                         break;
                     case SubscriptionConnectionServerMessage.MessageType.ConnectionStatus:
                         AssertConnectionState(receivedMessage);
@@ -454,80 +569,9 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        private async ValueTask<ChangeVectorEntry[]> NotifySubscribers(BlittableJsonReaderObject curDoc)
-        {
-            BlittableJsonReaderObject metadata;
-            ChangeVectorEntry[] lastReceivedChangeVector = null;
-
-            if (curDoc.TryGet(Constants.Documents.Metadata.Key, out metadata) == false)
-                ThrowMetadataRequired();
-            if (metadata.TryGet(Constants.Documents.Metadata.Id, out string id) == false)
-                ThrowIdRequired();
-            if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out BlittableJsonReaderArray changeVectorAsObject) == false || changeVectorAsObject == null)
-                ThrowChangeVectorRequired();
-            else
-                lastReceivedChangeVector = changeVectorAsObject.ToVector();
-
-            if (_logger.IsInfoEnabled)
-            {
-                _logger.Info($"Got {id} (change vector: [{string.Join(",", lastReceivedChangeVector.Select(x => $"{x.DbId.ToString()}:{x.Etag}"))}] on subscription {_options.SubscriptionId}, size {curDoc.Size}");
-            }
-
-            T instance;
-
-            if (typeof(T) == typeof(BlittableJsonReaderObject))
-            {
-                instance = (T)(object)curDoc;
-            }
-            else
-            {
-                instance = (T)EntityToBlittable.ConvertToEntity(typeof(T), id, curDoc, _conventions);
-            }
-
-            if (string.IsNullOrEmpty(id) == false)
-                _generateEntityIdOnTheClient.TrySetIdentity(instance, id);
-            _processingCts.Token.ThrowIfCancellationRequested();
-            try
-            {
-                if (_subscriber.Async != null)
-                    await _subscriber.Async(instance);
-                else
-                    _subscriber.Sync(instance);
-            }
-            catch (Exception ex)
-            {
-                if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info(
-                        $"Subscription #{_options.SubscriptionId}. Subscriber threw an exception on document {id}", ex);
-                }
-
-                if (_options.IgnoreSubscriberErrors == false)
-                    throw new InvalidOperationException("Failed to process " + id, ex);
-            }
-
-            return lastReceivedChangeVector;
-        }
-
-        private static void ThrowChangeVectorRequired()
-        {
-            throw new InvalidOperationException("Document must have a ChangeVector");
-        }
-
-        private static void ThrowIdRequired()
-        {
-            throw new InvalidOperationException("Document must have an id");
-        }
-
-        private static void ThrowMetadataRequired()
-        {
-            throw new InvalidOperationException("Document must have a metadata");
-        }
-
+    
         private void SendAck(ChangeVectorEntry[] lastReceivedChangeVector, Stream networkStream)
         {
-            BeforeAcknowledgment();
-
             var ack = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(new SubscriptionConnectionClientMessage
             {
                 ChangeVector = lastReceivedChangeVector,

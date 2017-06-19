@@ -34,11 +34,14 @@ namespace SlowTests.Tests
 
                     var bc = new BlockingCollection<Thing>();
 
-                    
+
                     GC.KeepAlive(subscription.Run(x =>
+                    {
+                        foreach (var item in x.Items)
                         {
-                            bc.Add(x);
-                        }));
+                            bc.Add(item.Result);
+                        }
+                    }));
 
                     Thing thing;
                     for (var i = 0; i < 5; i++)

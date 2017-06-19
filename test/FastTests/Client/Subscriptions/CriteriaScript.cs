@@ -47,7 +47,10 @@ namespace FastTests.Client.Subscriptions
                     var list = new BlockingCollection<Thing>();
                     GC.KeepAlive(subscription.Run(x =>
                     {
-                        list.Add(x);
+                        foreach (var item in x.Items)
+                        {
+                            list.Add(item.Result);
+                        }
                     }));
 
                     Thing thing;
@@ -110,7 +113,10 @@ namespace FastTests.Client.Subscriptions
                         
                         GC.KeepAlive(subscription.Run(x =>
                         {
-                            list.Add(context.ReadObject(x, "test"));
+                            foreach (var item in x.Items)
+                            {
+                                list.Add(context.ReadObject(item.Result, "test"));
+                            }
                         }));
 
                         BlittableJsonReaderObject thing;

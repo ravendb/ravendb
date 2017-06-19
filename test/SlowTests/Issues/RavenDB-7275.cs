@@ -81,7 +81,7 @@ namespace SlowTests.Issues
                     var mre = new AsyncManualResetEvent();
                     
 
-                    subscription.AfterAcknowledgment += mre.Set;
+                    subscription.AfterAcknowledgment += b => { mre.Set(); return Task.CompletedTask; };
 
                     GC.KeepAlive(subscription.Run(x => { }));
 
@@ -150,8 +150,8 @@ namespace SlowTests.Issues
                     });
 
                     var mre = new AsyncManualResetEvent();
-                    
-                    subscription.AfterAcknowledgment += mre.Set;
+
+                    subscription.AfterAcknowledgment += b => { mre.Set(); return Task.CompletedTask; };
 
                     GC.KeepAlive(subscription.Run(x => { }));
 

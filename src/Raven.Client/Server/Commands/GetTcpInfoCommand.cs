@@ -35,7 +35,6 @@ namespace Raven.Client.Server.Commands
 
         public ServerNode RequestedNode { get; private set; }
 
-
         public override bool IsReadRequest => true;   
     }
 }

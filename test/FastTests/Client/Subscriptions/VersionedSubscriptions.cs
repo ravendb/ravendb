@@ -80,9 +80,13 @@ namespace FastTests.Client.Subscriptions
                     var names = new HashSet<string>();
                     GC.KeepAlive(sub.Run(x =>
                     {
-                        names.Add(x.Current?.Name + x.Previous?.Name);
-                        if (names.Count == 100)
-                            mre.Set();
+                        foreach (var item in x.Items)
+                        {
+                            names.Add(item.Result.Current?.Name + item.Result.Previous?.Name);
+
+                            if (names.Count == 100)
+                                mre.Set();
+                        }
                     }));
 
                     Assert.True(await mre.WaitAsync(_reasonableWaitTime));
@@ -152,16 +156,20 @@ namespace FastTests.Client.Subscriptions
                     var mre = new AsyncManualResetEvent();
                     var names = new HashSet<string>();
                     var maxAge = -1;
-                    GC.KeepAlive(sub.Run(x =>
+                    GC.KeepAlive(sub.Run(a =>
                     {
-                        if (x.Current.Age  > maxAge && x.Current.Age > (x.Previous?.Age ?? -1))
+                        foreach (var item in a.Items)
                         {
+                            var x = item.Result;
+                            if (x.Current.Age > maxAge && x.Current.Age > (x.Previous?.Age ?? -1))
+                            {
+                                names.Add(x.Current?.Name + x.Previous?.Name);
+                                maxAge = x.Current.Age;
+                            }
                             names.Add(x.Current?.Name + x.Previous?.Name);
-                            maxAge = x.Current.Age;
+                            if (names.Count == 10)
+                                mre.Set();
                         }
-                        names.Add(x.Current?.Name + x.Previous?.Name);
-                        if (names.Count == 10)
-                            mre.Set();
                     }));
 
                     Assert.True(await mre.WaitAsync(_reasonableWaitTime));
@@ -254,9 +262,12 @@ namespace FastTests.Client.Subscriptions
                     var names = new HashSet<string>();
                     GC.KeepAlive(sub.Run(x =>
                     {
-                        names.Add(x.Id + x.Age);
-                        if (names.Count == 90)
-                            mre.Set();
+                        foreach (var item in x.Items)
+                        {
+                            names.Add(item.Result.Id + item.Result.Age);
+                            if (names.Count == 90)
+                                mre.Set();
+                        }
                     }));
 
                     Assert.True(await mre.WaitAsync(_reasonableWaitTime));
@@ -345,14 +356,17 @@ namespace FastTests.Client.Subscriptions
                     var maxAge = -1;
                     GC.KeepAlive(sub.Run(x =>
                     {
-                        if (x.Age > maxAge )
+                        foreach (var item in x.Items)
                         {
-                            names.Add(x.Id + x.Age);
-                            maxAge = x.Age;
+                            if (item.Result.Age > maxAge)
+                            {
+                                names.Add(item.Result.Id + item.Result.Age);
+                                maxAge = item.Result.Age;
+                            }
+
+                            if (names.Count == 9)
+                                mre.Set();
                         }
-                        
-                        if (names.Count == 9)
-                            mre.Set();
                     }));
 
                     Assert.True(await mre.WaitAsync(_reasonableWaitTime));

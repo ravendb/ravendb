@@ -163,7 +163,7 @@ namespace Raven.Client.Documents
 
             var sessionId = Guid.NewGuid();
             var databaseName = options.Database ?? Database;
-            var requestExecutor = GetRequestExecutor(databaseName);
+            var requestExecutor = options.RequestExecuter ?? GetRequestExecutor(databaseName);
             var session = new DocumentSession(databaseName, this, sessionId, requestExecutor);
             RegisterEvents(session);
             // AfterSessionCreated(session);
@@ -335,7 +335,7 @@ namespace Raven.Client.Documents
 
             var sessionId = Guid.NewGuid();
             var databaseName = options.Database ?? Database;
-            var requestExecutor = GetRequestExecutor(databaseName);
+            var requestExecutor = options.RequestExecuter ?? GetRequestExecutor(databaseName);
             var session = new AsyncDocumentSession(databaseName, this, requestExecutor, sessionId);
             //AfterSessionCreated(session);
             return session;

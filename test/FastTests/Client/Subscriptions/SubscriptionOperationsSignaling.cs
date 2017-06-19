@@ -6,6 +6,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using System.Threading.Tasks;
 
 namespace FastTests.Client.Subscriptions
 {
@@ -28,7 +29,13 @@ namespace FastTests.Client.Subscriptions
 
                 var users = new BlockingCollection<User>();
 
-                var subscirptionLifetimeTask = subscription.Run(u => users.Add(u));
+                var subscirptionLifetimeTask = subscription.Run(u =>
+                {
+                    foreach (var item in u.Items)
+                    {
+                        users.Add(item.Result);
+                    }
+                });
 
                 using (var session = store.OpenSession())
                 {
@@ -51,7 +58,13 @@ namespace FastTests.Client.Subscriptions
                     try
                     {
                         Thread.Sleep(300);
-                        GC.KeepAlive(concurrentSubscription.Run(u => users.Add(u)));
+                        GC.KeepAlive(concurrentSubscription.Run(u =>
+                        {
+                            foreach (var item in u.Items)
+                            {
+                                users.Add(item.Result);
+                            }
+                        }));
                     }
                     catch (Exception e)
                     {
@@ -94,8 +107,14 @@ namespace FastTests.Client.Subscriptions
 
                 var beforeAckMre = new ManualResetEvent(false);
                 var users = new BlockingCollection<User>();
-                subscription.BeforeAcknowledgment += () => beforeAckMre.WaitOne();
-                var subscriptionLifetimeTask = subscription.Run(u => users.Add(u));
+                subscription.AfterAcknowledgment += b => { beforeAckMre.WaitOne(); return Task.CompletedTask; };
+                var subscriptionLifetimeTask = subscription.Run(u =>
+                {
+                    foreach (var item in u.Items)
+                    {
+                        users.Add(item.Result);
+                    }
+                });
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User());
@@ -130,7 +149,13 @@ namespace FastTests.Client.Subscriptions
                 var subscriptionId = store.Subscriptions.Create(subscriptionCreationParams);
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
                 var users = new BlockingCollection<User>();
-                var subscriptionLifetimeTask = subscription.Run(u => users.Add(u));
+                var subscriptionLifetimeTask = subscription.Run(u =>
+                {
+                    foreach (var item in u.Items)
+                    {
+                        users.Add(item.Result);
+                    }
+                });
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User());

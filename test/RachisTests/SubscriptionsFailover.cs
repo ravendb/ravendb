@@ -125,7 +125,7 @@ namespace RachisTests
 
                 var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
 
-                subscription.AfterAcknowledgment += () => reachedMaxDocCountMre.Set();
+                subscription.AfterAcknowledgment += b => { reachedMaxDocCountMre.Set(); return Task.CompletedTask; };
                 
                 GC.KeepAlive(subscription.Run(x => { }));
 
@@ -237,10 +237,9 @@ namespace RachisTests
                 var versionsCount = 0;
                 var expectedVersionsCount = 0;
 
-                subscription.AfterAcknowledgment += () =>
+                subscription.AfterAcknowledgment += async b =>
                 {
                     AsyncHelpers.RunSync(continueMre.WaitAsync);
-
 
                     try
                     {
@@ -260,40 +259,44 @@ namespace RachisTests
                     }
                 };
 
-                var task = subscription.Run(x =>
+                var task = subscription.Run(b =>
                 {
-                    try
+                    foreach (var item in b.Items)
                     {
-
-                        if (x == null)
+                        var x = item.Result;
+                        try
                         {
 
-                        }
-                        else if (x.Previous == null)
-                        {
-
-                            docsCount++;
-                            versionsCount++;
-                        }
-                        else if (x.Current == null)
-                        {
-
-                        }
-                        else
-                        {
-
-                            if (x.Current.Age > x.Previous.Age)
+                            if (x == null)
                             {
+
+                            }
+                            else if (x.Previous == null)
+                            {
+
+                                docsCount++;
                                 versionsCount++;
                             }
+                            else if (x.Current == null)
+                            {
+
+                            }
+                            else
+                            {
+
+                                if (x.Current.Age > x.Previous.Age)
+                                {
+                                    versionsCount++;
+                                }
+                            }
+
+                            if (docsCount == nodesAmount && versionsCount == Math.Pow(nodesAmount, 2))
+                                reachedMaxDocCountMre.Set();
                         }
+                        catch (Exception)
+                        {
 
-                        if (docsCount == nodesAmount && versionsCount == Math.Pow(nodesAmount, 2))
-                            reachedMaxDocCountMre.Set();
-                    }
-                    catch (Exception)
-                    {
-
+                        }
                     }
                 });
 
@@ -450,25 +453,29 @@ namespace RachisTests
                 await server.ServerStore.Cluster.WaitForIndexNotification(subscriptionEtag).ConfigureAwait(false);
             }
 
-            var task = subscription.Run(x =>
+            var task = subscription.Run(a =>
             {
-                try
+                foreach (var item in a.Items)
                 {
-                    int curId = 0;
-                    var afterSlash = x.Id.Substring(x.Id.LastIndexOf("/", StringComparison.OrdinalIgnoreCase) + 1);
-                    curId = int.Parse(afterSlash.Substring(0, afterSlash.Length - 2));
-                    Assert.True(curId >= proggress.MaxId);// todo: change back to '>'
-                    usersCount.Add(x);
-                    proggress.MaxId = curId;
+                    var x = item.Result;
+                    try
+                    {
+                        int curId = 0;
+                        var afterSlash = x.Id.Substring(x.Id.LastIndexOf("/", StringComparison.OrdinalIgnoreCase) + 1);
+                        curId = int.Parse(afterSlash.Substring(0, afterSlash.Length - 2));
+                        Assert.True(curId >= proggress.MaxId);// todo: change back to '>'
+                        usersCount.Add(x);
+                        proggress.MaxId = curId;
 
-                }
-                catch (Exception)
-                {
+                    }
+                    catch (Exception)
+                    {
 
 
+                    }
                 }
             });
-            subscription.AfterAcknowledgment += () =>
+            subscription.AfterAcknowledgment += async b =>
             {
 
                 try
@@ -483,7 +490,7 @@ namespace RachisTests
 
 
                 }
-
+                
             };
             await task.ConfigureAwait(false);
             return subscription;
