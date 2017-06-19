@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System.IO;
+using SlowTests.Utils;
 using Voron;
 using Xunit;
 
@@ -20,7 +21,7 @@ namespace SlowTests.Voron.Bugs
         [Fact]
         public void ShouldProperlyMovePositionForNextPageAllocationInScratchBufferPool()
         {
-            var sequentialLargeIds = TestDataUtil.ReadData("non-leaf-page-seq-id-large-values.txt");
+            var sequentialLargeIds = TestDataUtil.ReadData("SlowTests.Voron.Bugs.Data.non-leaf-page-seq-id-large-values.txt");
 
             var enumerator = sequentialLargeIds.GetEnumerator();
 
