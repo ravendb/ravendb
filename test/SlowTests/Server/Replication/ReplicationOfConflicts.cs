@@ -3,11 +3,12 @@ using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Exceptions;
 using Raven.Server.ServerWide.Context;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Server.Replication
 {
-    public class ReplicationOfConflicts : ReplicationBasicTests
+    public class ReplicationOfConflicts : ReplicationTestsBase
     {
         [Fact]
         public async Task ReplicateAConflictThenResolveIt()

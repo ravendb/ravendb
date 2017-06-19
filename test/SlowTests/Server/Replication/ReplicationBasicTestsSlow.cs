@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Server.Replication
@@ -34,7 +35,7 @@ namespace SlowTests.Server.Replication
                 await SetupReplicationAsync(store2, store1);
                 using (var session = store1.OpenSession())
                 {
-                    session.Store(new ReplicationBasicTests.User
+                    session.Store(new User
                     {
                         Name = "John Dow",
                         Age = 30
@@ -43,7 +44,7 @@ namespace SlowTests.Server.Replication
                 }
                 using (var session = store2.OpenSession())
                 {
-                    session.Store(new ReplicationBasicTests.User
+                    session.Store(new User
                     {
                         Name = "Jane Dow",
                         Age = 31
@@ -52,24 +53,24 @@ namespace SlowTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                var replicated1 = WaitForDocumentToReplicate<ReplicationBasicTests.User>(store1, "users/1", 10000);
+                var replicated1 = WaitForDocumentToReplicate<User>(store1, "users/1", 10000);
 
                 Assert.NotNull(replicated1);
                 Assert.Equal("John Dow", replicated1.Name);
                 Assert.Equal(30, replicated1.Age);
 
-                var replicated2 = WaitForDocumentToReplicate<ReplicationBasicTests.User>(store1, "users/2", 10000);
+                var replicated2 = WaitForDocumentToReplicate<User>(store1, "users/2", 10000);
                 Assert.NotNull(replicated2);
                 Assert.Equal("Jane Dow", replicated2.Name);
                 Assert.Equal(31, replicated2.Age);
 
-                replicated1 = WaitForDocumentToReplicate<ReplicationBasicTests.User>(store2, "users/1", 10000);
+                replicated1 = WaitForDocumentToReplicate<User>(store2, "users/1", 10000);
 
                 Assert.NotNull(replicated1);
                 Assert.Equal("John Dow", replicated1.Name);
                 Assert.Equal(30, replicated1.Age);
 
-                replicated2 = WaitForDocumentToReplicate<ReplicationBasicTests.User>(store2, "users/2", 10000);
+                replicated2 = WaitForDocumentToReplicate<User>(store2, "users/2", 10000);
                 Assert.NotNull(replicated2);
                 Assert.Equal("Jane Dow", replicated2.Name);
                 Assert.Equal(31, replicated2.Age);

@@ -14,7 +14,7 @@ namespace RachisTests
     // ReSharper disable once InconsistentNaming
     public class RavenDB_6602 : ClusterTestBase
     {
-        public class User
+        private class User
         {
             public string Name { get; set; }
         }

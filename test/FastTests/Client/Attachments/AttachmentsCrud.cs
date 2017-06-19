@@ -7,6 +7,7 @@ using Xunit;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Server.Documents;
+using Raven.Tests.Core.Utils.Entities;
 
 namespace FastTests.Client.Attachments
 {
@@ -451,17 +452,17 @@ namespace FastTests.Client.Attachments
 
                 await store.Operations.SendAsync(new PatchOperation("users/1", null, new PatchRequest
                 {
-                    Script = "this.Country = newUser.Country;",
+                    Script = "this.LastName = newUser.LastName;",
                     Values =
                     {
-                        {"newUser", new {Country = "Israel"}}
+                        {"newUser", new {LastName = "Israel"}}
                     }
                 }));
 
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
-                    Assert.Equal("Israel", user.Country);
+                    Assert.Equal("Israel", user.LastName);
 
                     var metadata = session.Advanced.GetMetadataFor(user);
                     Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
@@ -493,7 +494,7 @@ namespace FastTests.Client.Attachments
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
-                    user.Country = "Israel";
+                    user.LastName = "Israel";
                     session.SaveChanges();
                 }
             }
@@ -517,7 +518,7 @@ namespace FastTests.Client.Attachments
 
                     session.Advanced.Evict(user);
                     user = session.Load<User>("users/1");
-                    user.Country = "Israel";
+                    user.LastName = "Israel";
                     session.SaveChanges();
                 }
             }
@@ -540,7 +541,7 @@ namespace FastTests.Client.Attachments
                     }
 
                     user = session.Load<User>("users/1");
-                    user.Country = "Israel";
+                    user.LastName = "Israel";
                     session.SaveChanges();
                 }
             }
@@ -562,7 +563,7 @@ namespace FastTests.Client.Attachments
                         store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/png"));
                     }
 
-                    user.Country = "Israel";
+                    user.LastName = "Israel";
                     session.SaveChanges();
                 }
             }

@@ -6,11 +6,12 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Http;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace RachisTests
 {
-    public class DisableNodeOnClusterTest : ReplicationBasicTests
+    public class DisableNodeOnClusterTest : ReplicationTestsBase
     {
         [Fact]
         public async Task BackToFirstNodeAfterRevive()

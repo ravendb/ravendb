@@ -19,7 +19,7 @@ namespace SlowTests.Issues
     {
         private readonly string _fileName = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.ravendump");
 
-        public class User
+        private class User
         {
             public string Id { get; set; }
             public string Name { get; set; }

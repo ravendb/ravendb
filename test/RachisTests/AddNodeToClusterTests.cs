@@ -9,13 +9,14 @@ using Raven.Client.Http;
 using Raven.Client.Server;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
+using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
 
 namespace RachisTests
 {
-    public class AddNodeToClusterTests : ReplicationBasicTests
+    public class AddNodeToClusterTests : ReplicationTestsBase
     {
         [Fact]
         public async Task FailOnAddingNonPassiveNode()

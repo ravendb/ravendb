@@ -1,7 +1,10 @@
-﻿using Raven.Client.Documents.Operations;
+﻿using FastTests;
+using FastTests.Client.Attachments;
+using Raven.Client.Documents.Operations;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace FastTests.Client.Attachments
+namespace SlowTests.Client.Attachments
 {
     public class AttachmentsBigFiles : RavenTestBase
     {
