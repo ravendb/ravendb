@@ -1,6 +1,6 @@
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
-import getCustomFunctionsCommand = require("commands/database/documents/getCustomFunctionsCommand");
+import deleteRevisionsForDocumentsCommand = require("commands/database/documents/deleteRevisionsForDocumentsCommand");
 import getZombiesCommand = require("commands/database/documents/getZombiesCommand");
 
 import document = require("models/database/documents/document");
@@ -9,6 +9,7 @@ import eventsCollector = require("common/eventsCollector");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
+import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import evaluationContextHelper = require("common/helpers/evaluationContextHelper");
@@ -17,10 +18,14 @@ class zombies extends viewModelBase {
 
     dirtyResult = ko.observable<boolean>(false);
     dataChanged: KnockoutComputed<boolean>;
+    selectedItemsCount: KnockoutComputed<number>;
+    deleteEnabled: KnockoutComputed<boolean>;
+
+    spinners = {
+        delete: ko.observable<boolean>(false)
+    }
 
     private zombiesNextEtag = undefined as number;
-
-    private customFunctionsContext: object;
 
     private gridController = ko.observable<virtualGridController<document>>();
     private columnPreview = new columnPreviewPlugin<document>();
@@ -35,17 +40,20 @@ class zombies extends viewModelBase {
         this.dataChanged = ko.pureComputed(() => {
             return this.dirtyResult();
         });
-    }
+        this.deleteEnabled = ko.pureComputed(() => {
+            const deleteInProgress = this.spinners.delete();
+            const selectedDocsCount = this.selectedItemsCount();
 
-    activate(args: any) {
-        super.activate(args);
-        //TODO: this.updateHelpLink("G8CDCP");
-
-        return new getCustomFunctionsCommand(this.activeDatabase())
-            .execute()
-            .done(functions => {
-                this.customFunctionsContext = evaluationContextHelper.createContext(functions.functions);
-            });
+            return !deleteInProgress && selectedDocsCount > 0;
+        });
+        this.selectedItemsCount = ko.pureComputed(() => {
+            let selectedDocsCount = 0;
+            const controll = this.gridController();
+            if (controll) {
+                selectedDocsCount = controll.selection().count;
+            }
+            return selectedDocsCount;
+        });
     }
 
     refresh() {
@@ -83,9 +91,9 @@ class zombies extends viewModelBase {
         const grid = this.gridController();
 
         grid.headerVisible(true);
-        grid.withEvaluationContext(this.customFunctionsContext);
 
         grid.init((s, _) => this.fetchZombies(s), () => [
+            new checkedColumn(false),
             new hyperlinkColumn<document>(grid, x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.activeDatabase()), "Id", "300px"),
             new textColumn<document>(grid, x => x.__metadata.etag(), "ETag", "200px"),
             new textColumn<document>(grid, x => x.__metadata.lastModified(), "Deletion date", "300px")
@@ -103,6 +111,25 @@ class zombies extends viewModelBase {
                 }
             }
         });
+    }
+
+    deleteSelected() {
+        const selectedIds = this.gridController().getSelectedItems().map(x => x.getId());
+
+        this.confirmationMessage("Are you sure?", "Do you have to delete selected zombies and its revisions?", ["Cancel", "Yes, delete"])
+            .done(result => {
+                if (result.can) {
+
+                    this.spinners.delete(true);
+
+                    new deleteRevisionsForDocumentsCommand(selectedIds, this.activeDatabase())
+                        .execute()
+                        .always(() => {
+                            this.spinners.delete(false);
+                            this.gridController().reset(false);
+                        });
+                }
+            });
     }
 
 

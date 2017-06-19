@@ -648,7 +648,8 @@ class virtualGrid<T> {
     }
 
     private getSelectedItems(): T[] {
-        if (this.inIncludeSelectionMode) {
+        const selection = this.selection();
+        if (selection.mode === "inclusive") {
             return this.selection().included;
         } else {
             const excluded = this.selection().excluded;
