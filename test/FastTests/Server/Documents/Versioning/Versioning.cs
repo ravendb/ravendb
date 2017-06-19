@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Exceptions.Versioning;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
@@ -412,8 +413,7 @@ namespace FastTests.Server.Documents.Versioning
                     Assert.Equal("Fitzchak", users[3].Name);
                 }
 
-                var command = new DeleteRevisionsCommand(id, "users/not/exists");
-                await store.Commands().ExecuteAsync(command);
+                await store.Admin.SendAsync(new DeleteRevisionsOperation(id, "users/not/exists"));
 
                 statistics = store.Admin.Send(new GetStatisticsOperation());
                 Assert.Equal(useSession ? 1 : 0, statistics.CountOfDocuments);
@@ -421,44 +421,48 @@ namespace FastTests.Server.Documents.Versioning
             }
         }
 
-        public class DeleteRevisionsCommand : RavenCommand<BlittableArrayResult>
+        public class DeleteRevisionsOperation : IAdminOperation
         {
             private readonly string[] _ids;
 
-            public DeleteRevisionsCommand(params string[] ids)
+            public DeleteRevisionsOperation(params string[] ids)
             {
                 _ids = ids;
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
             {
-                var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/revisions?");
+                return new DeleteRevisionsCommand(_ids);
+            }
 
-                foreach (var id in _ids)
+            private class DeleteRevisionsCommand : RavenCommand
+            {
+                private readonly string[] _ids;
+
+                public DeleteRevisionsCommand(params string[] ids)
                 {
-                    sb.Append("&id=");
-                    sb.Append(id);
+                    _ids = ids;
                 }
 
-                url = sb.ToString();
-
-                return new HttpRequestMessage
+                public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
                 {
-                    Method = HttpMethod.Delete,
-                };
+                    var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/admin/revisions?");
+
+                    foreach (var id in _ids)
+                    {
+                        sb.Append("&id=");
+                        sb.Append(id);
+                    }
+
+                    url = sb.ToString();
+
+                    return new HttpRequestMessage
+                    {
+                        Method = HttpMethod.Delete,
+                    };
+                }
             }
-
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-            {
-                if (response == null)
-                    throw new InvalidOperationException("Got null response from the server after doing a batch, something is very wrong. Probably a garbled response.");
-
-                Result = JsonDeserializationClient.BlittableArrayResult(response);
-            }
-
-            public override bool IsReadRequest => false;
         }
-
 
         private class Comment
         {
