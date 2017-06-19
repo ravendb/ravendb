@@ -545,7 +545,7 @@ namespace Raven.Server.ServerWide
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
         {
-            return slice.Content.Equals(Items.Content);
+            return slice.Content.Match(Items.Content);
         }
 
         public override void Initialize(RachisConsensus parent, TransactionOperationContext context)
