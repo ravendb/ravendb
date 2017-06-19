@@ -1,7 +1,7 @@
-﻿using FastTests.Server.Documents.Queries.Dynamic.MapReduce;
-using Raven.Client;
+﻿using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Queries;
@@ -10,8 +10,17 @@ using Xunit;
 
 namespace SlowTests.Server.Documents.Queries
 {
-    public class MatchingAutoMapRediceIndexesForDynamicQueriesSlow : MatchingAutoMapReduceIndexesForDynamicQueries
+    public class MatchingAutoMapReduceIndexesForDynamicQueriesSlow : RavenLowLevelTestBase
     {
+        private readonly DocumentDatabase _documentDatabase;
+        protected readonly DynamicQueryToIndexMatcher _sut;
+
+        public MatchingAutoMapReduceIndexesForDynamicQueriesSlow()
+        {
+            _documentDatabase = CreateDocumentDatabase();
+
+            _sut = new DynamicQueryToIndexMatcher(_documentDatabase.IndexStore);
+        }
 
         [Fact]
         public void Failure_if_matching_index_has_lot_of_errors()
@@ -65,6 +74,28 @@ namespace SlowTests.Server.Documents.Queries
             var result = _sut.Match(dynamicQuery);
 
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
+        }
+
+        protected void add_index(IndexDefinitionBase definition)
+        {
+            AsyncHelpers.RunSync(() => _documentDatabase.IndexStore.CreateIndex(definition));
+        }
+
+        protected Index get_index(string name)
+        {
+            return _documentDatabase.IndexStore.GetIndex(name);
+        }
+
+        public override void Dispose()
+        {
+            try
+            {
+                _documentDatabase.Dispose();
+            }
+            finally
+            {
+                base.Dispose();
+            }
         }
     }
 }
