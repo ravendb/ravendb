@@ -12,7 +12,6 @@ namespace FastTests.Client.Subscriptions
     {
         [Theory]
         [InlineData(false)]
-        [InlineData(true)]
         public async Task BasicCriteriaTest(bool useSsl)
         {
             if (useSsl)
@@ -60,7 +59,6 @@ namespace FastTests.Client.Subscriptions
 
         [Theory]
         [InlineData(false)]
-        [InlineData(true)]
         public async Task CriteriaScriptWithTransformation(bool useSsl)
         {
             if (useSsl)
@@ -100,7 +98,7 @@ namespace FastTests.Client.Subscriptions
                     },
                     ChangeVector = lastChangeVector
                 };
-                
+
                 var subsId = subscriptionManager.Create(subscriptionCreationParams);
                 using (var subscription = subscriptionManager.Open<BlittableJsonReaderObject>(new SubscriptionConnectionOptions(subsId)))
                 {
