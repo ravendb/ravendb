@@ -29,7 +29,17 @@ class collectionsTracker {
             .execute()
             .done(stats => this.collectionsLoaded(stats, db));
 
+        this.configureVersioning(db.hasVersioningConfiguration(), db);
+
         return this.loadStatsTask;
+    }
+
+    configureVersioning(hasVersioning: boolean, db: database) {
+        if (hasVersioning) {
+            this.zombies(new collection(collection.zombiesCollectionName, db));
+        } else {
+            this.zombies(null);
+        }
     }
 
     private collectionsLoaded(collectionsStats: collectionsStats, db: database) {
@@ -39,8 +49,6 @@ class collectionsTracker {
         //TODO: starred
         const allDocsCollection = collection.createAllDocumentsCollection(db, collectionsStats.numberOfDocuments());
         this.collections([allDocsCollection].concat(collections));
-
-        this.zombies(new collection(collection.zombiesCollectionName, db));
     }
 
     onDatabaseStatsChanged(notification: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged, db: database) {

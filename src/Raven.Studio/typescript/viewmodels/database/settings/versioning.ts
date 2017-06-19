@@ -112,7 +112,10 @@ class versioning extends viewModelBase {
                     messagePublisher.reportSuccess(`Versioning has been ${versioningStatus}.`);
                     
                 })
-                .always(() => this.spinners.save(false));
+                .always(() => {
+                    this.spinners.save(false);
+                    collectionsTracker.default.configureVersioning(!disableVersioning, this.activeDatabase());
+                });
         }
     }
 
