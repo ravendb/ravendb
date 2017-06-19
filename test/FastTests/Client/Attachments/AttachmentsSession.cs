@@ -5,6 +5,7 @@ using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Client.Attachments

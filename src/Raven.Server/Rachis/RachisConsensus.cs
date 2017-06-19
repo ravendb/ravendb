@@ -84,14 +84,13 @@ namespace Raven.Server.Rachis
             var entries = new List<BlittableJsonReaderObject>();
             var reveredNextIndex = Bits.SwapBytes(first);
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
-            Slice key;
-            using (Slice.External(context.Allocator, (byte*)&reveredNextIndex, sizeof(long), out key))
+            using (Slice.External(context.Allocator, (byte*)&reveredNextIndex, sizeof(long), out Slice key))
             {
                 foreach (var value in table.SeekByPrimaryKey(key, 0))
                 {
                     var entry = FollowerAmbassador.BuildRachisEntryToSend(context, value);
                     entries.Add(entry);
-                    if(entries.Count >= max)
+                    if (entries.Count >= max)
                         break;
                 }
             }
@@ -1268,7 +1267,7 @@ namespace Raven.Server.Rachis
 
         public abstract Task<Stream> ConnectToPeer(string url, string apiKey, TransactionOperationContext context = null);
 
-        public void Bootstrap(string selfUrl, byte[] publicKey)
+        public void Bootstrap(string selfUrl, byte[] publicKey, bool forNewCluster = false)
         {
             if (selfUrl == null)
                 throw new ArgumentNullException(nameof(selfUrl));
@@ -1278,10 +1277,13 @@ namespace Raven.Server.Rachis
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var tx = ctx.OpenWriteTransaction())
             {
-                if (CurrentState != State.Passive)
+                if (CurrentState != State.Passive && forNewCluster == false)
                     return;
 
-                UpdateNodeTag(ctx, "A");
+                if (forNewCluster == false)
+                {
+                    UpdateNodeTag(ctx, "A");
+                }
 
                 var topology = new ClusterTopology(
                     Guid.NewGuid().ToString(),

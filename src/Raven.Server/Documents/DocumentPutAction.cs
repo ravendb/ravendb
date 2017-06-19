@@ -92,10 +92,14 @@ namespace Raven.Server.Documents
                         ThrowInvalidCollectionNameChange(id, oldCollectionName, collectionName);
 
                     var oldFlags = *(DocumentFlags*)oldValue.Read((int)DocumentsStorage.DocumentsTable.Flags, out int size);
-                    if ((oldFlags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments ||
-                        (nonPersistentFlags & NonPersistentDocumentFlags.ResolvedAttachmentConflict) == NonPersistentDocumentFlags.ResolvedAttachmentConflict)
+
+                    if ((nonPersistentFlags & NonPersistentDocumentFlags.ByAttachmentUpdate) != NonPersistentDocumentFlags.ByAttachmentUpdate)
                     {
-                        flags |= DocumentFlags.HasAttachments;
+                        if ((oldFlags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments ||
+                            (nonPersistentFlags & NonPersistentDocumentFlags.ResolvedAttachmentConflict) == NonPersistentDocumentFlags.ResolvedAttachmentConflict)
+                        {
+                            flags |= DocumentFlags.HasAttachments;
+                        }
                     }
                 }
 
@@ -124,7 +128,7 @@ namespace Raven.Server.Documents
                         (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
                     {
                         if (_documentDatabase.DocumentsStorage.VersioningStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document,
-                            ref flags, out VersioningConfigurationCollection configuration))
+                            ref flags, out VersioningCollectionConfiguration configuration))
                         {
                             _documentDatabase.DocumentsStorage.VersioningStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration);
                         }

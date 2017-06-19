@@ -9,28 +9,28 @@ namespace FastTests.Server.Documents.Versioning
 {
     public class VersioningHelper
     {
-        public static async Task<long> SetupVersioning(Raven.Server.ServerWide.ServerStore serverStore, string database, bool purgeOnDelete = true, long maxRevisions = 123)
+        public static async Task<long> SetupVersioning(Raven.Server.ServerWide.ServerStore serverStore, string database, bool purgeOnDelete = true, long minimumRevisionsToKeep = 123)
         {
             var versioningDoc = new VersioningConfiguration
             {
-                Default = new VersioningConfigurationCollection
+                Default = new VersioningCollectionConfiguration
                 {
                     Active = true,
                     MinimumRevisionsToKeep = 5,
                 },
-                Collections = new Dictionary<string, VersioningConfigurationCollection>
+                Collections = new Dictionary<string, VersioningCollectionConfiguration>
                 {
-                    ["Users"] = new VersioningConfigurationCollection
+                    ["Users"] = new VersioningCollectionConfiguration
                     {
                         Active = true,
                         PurgeOnDelete = purgeOnDelete,
-                        MinimumRevisionsToKeep = maxRevisions
+                        MinimumRevisionsToKeep = minimumRevisionsToKeep
                     },
-                    ["Comments"] = new VersioningConfigurationCollection
+                    ["Comments"] = new VersioningCollectionConfiguration
                     {
                         Active = false,
                     },
-                    ["Products"] = new VersioningConfigurationCollection
+                    ["Products"] = new VersioningCollectionConfiguration
                     {
 
                         Active = false,

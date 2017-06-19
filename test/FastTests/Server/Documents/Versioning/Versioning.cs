@@ -10,12 +10,13 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Exceptions.Versioning;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
-using Raven.Client.Json;
-using Raven.Client.Json.Converters;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Patch;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
@@ -362,16 +363,19 @@ namespace FastTests.Server.Documents.Versioning
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public async Task GetZombiedRevisions(bool useSession)
+        public async Task GetZombies(bool useSession)
         {
             using (var store = GetDocumentStore())
             {
                 await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database, false);
 
+                var zombies = await store.Commands().GetZombiesAsync(long.MaxValue);
+                Assert.Equal(0, zombies.Count);
+
                 var id = "users/1";
                 if (useSession)
                 {
-                    var user = new User { Name = "Fitzchak" };
+                    var user = new User {Name = "Fitzchak"};
                     for (var i = 0; i < 2; i++)
                     {
                         using (var session = store.OpenAsyncSession())
@@ -389,9 +393,9 @@ namespace FastTests.Server.Documents.Versioning
                 }
                 else
                 {
-                    await store.Commands().PutAsync(id, null, new User { Name = "Fitzchak" });
+                    await store.Commands().PutAsync(id, null, new User {Name = "Fitzchak"});
                     await store.Commands().DeleteAsync(id, null);
-                    await store.Commands().PutAsync(id, null, new User { Name = "Fitzchak" });
+                    await store.Commands().PutAsync(id, null, new User {Name = "Fitzchak"});
                     await store.Commands().DeleteAsync(id, null);
                 }
 
@@ -399,8 +403,8 @@ namespace FastTests.Server.Documents.Versioning
                 Assert.Equal(useSession ? 1 : 0, statistics.CountOfDocuments);
                 Assert.Equal(4, statistics.CountOfRevisionDocuments);
 
-                var zombiedRevisions = await store.Commands().GetZombiedRevisionsAsync(long.MaxValue);
-                Assert.Equal(1, zombiedRevisions.Count);
+                zombies = await store.Commands().GetZombiesAsync(long.MaxValue);
+                Assert.Equal(1, zombies.Count);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -412,8 +416,15 @@ namespace FastTests.Server.Documents.Versioning
                     Assert.Equal("Fitzchak", users[3].Name);
                 }
 
-                var command = new DeleteRevisionsCommand(id, "users/not/exists");
-                await store.Commands().ExecuteAsync(command);
+                // Can get metadata only
+                dynamic revisions = await store.Commands().GetRevisionsForAsync(id, metadataOnly: true);
+                Assert.Equal(4, revisions.Count);
+                Assert.Equal(DocumentFlags.DeleteRevision.ToString(), revisions[0][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
+                Assert.Equal((DocumentFlags.Versioned | DocumentFlags.Revision).ToString(), revisions[1][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
+                Assert.Equal(DocumentFlags.DeleteRevision.ToString(), revisions[2][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
+                Assert.Equal((DocumentFlags.Versioned | DocumentFlags.Revision).ToString(), revisions[3][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
+
+                await store.Admin.SendAsync(new DeleteRevisionsOperation(id, "users/not/exists"));
 
                 statistics = store.Admin.Send(new GetStatisticsOperation());
                 Assert.Equal(useSession ? 1 : 0, statistics.CountOfDocuments);
@@ -421,44 +432,101 @@ namespace FastTests.Server.Documents.Versioning
             }
         }
 
-        public class DeleteRevisionsCommand : RavenCommand<BlittableArrayResult>
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task DeleteRevisionsBeforeFromConsole(bool useConsole)
+        {
+            using (var store = GetDocumentStore())
+            {
+                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database, false);
+
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddDays(-1);
+
+                for (var i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User {Name = "Fitzchak " + i});
+                        await session.SaveChangesAsync();
+                    }
+                }
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddDays(1);
+                for (var i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User {Name = "Fitzchak " + (i + 100)});
+                        await session.SaveChangesAsync();
+                    }
+                }
+                database.Time.UtcDateTime = () => DateTime.UtcNow;
+
+                var statistics = store.Admin.Send(new GetStatisticsOperation());
+                Assert.Equal(21, statistics.CountOfDocuments);
+                Assert.Equal(20, statistics.CountOfRevisionDocuments);
+
+                if (useConsole)
+                {
+                    new AdminJsConsole(database).ApplyScript(new AdminJsScript
+                    {
+                        Script = "database.DocumentsStorage.VersioningStorage.Operations.DeleteRevisionsBefore('Users', new Date());"
+                    });
+                }
+                else
+                {
+                    database.DocumentsStorage.VersioningStorage.Operations.DeleteRevisionsBefore("Users", DateTime.UtcNow);
+                }
+
+                statistics = store.Admin.Send(new GetStatisticsOperation());
+                Assert.Equal(21, statistics.CountOfDocuments);
+                Assert.Equal(10, statistics.CountOfRevisionDocuments);
+            }
+        }
+
+        public class DeleteRevisionsOperation : IAdminOperation
         {
             private readonly string[] _ids;
 
-            public DeleteRevisionsCommand(params string[] ids)
+            public DeleteRevisionsOperation(params string[] ids)
             {
                 _ids = ids;
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
             {
-                var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/revisions?");
+                return new DeleteRevisionsCommand(_ids);
+            }
 
-                foreach (var id in _ids)
+            private class DeleteRevisionsCommand : RavenCommand
+            {
+                private readonly string[] _ids;
+
+                public DeleteRevisionsCommand(params string[] ids)
                 {
-                    sb.Append("&id=");
-                    sb.Append(id);
+                    _ids = ids;
                 }
 
-                url = sb.ToString();
-
-                return new HttpRequestMessage
+                public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
                 {
-                    Method = HttpMethod.Delete,
-                };
+                    var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/admin/revisions?");
+
+                    foreach (var id in _ids)
+                    {
+                        sb.Append("&id=");
+                        sb.Append(id);
+                    }
+
+                    url = sb.ToString();
+
+                    return new HttpRequestMessage
+                    {
+                        Method = HttpMethod.Delete,
+                    };
+                }
             }
-
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-            {
-                if (response == null)
-                    throw new InvalidOperationException("Got null response from the server after doing a batch, something is very wrong. Probably a garbled response.");
-
-                Result = JsonDeserializationClient.BlittableArrayResult(response);
-            }
-
-            public override bool IsReadRequest => false;
         }
-
 
         private class Comment
         {

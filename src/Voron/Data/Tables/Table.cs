@@ -819,7 +819,8 @@ namespace Voron.Data.Tables
         public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.SchemaIndexDef index, Slice prefix, Slice last)
         {
             var tree = GetTree(index);
-            if (tree.State.NumberOfEntries == 0)
+            if (tree == null ||
+                tree.State.NumberOfEntries == 0)
                 yield break;
 
             using (var it = tree.Iterate(false))
@@ -955,6 +956,36 @@ namespace Voron.Data.Tables
                 while (it.MoveNext());
             }
         }
+
+        public void DeleteByPrimaryKey(Slice value, Func<TableValueHolder, bool> beforeDelete = null)
+        {
+            var pk = _schema.Key;
+            var tree = GetTree(pk);
+            TableValueHolder tableValueHolder = null;
+            while (true)
+            {
+                using (var it = tree.Iterate(false))
+                {
+                    if (it.Seek(value) == false)
+                        return;
+
+                    var id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
+
+                    if (beforeDelete != null)
+                    {
+                        var ptr = DirectRead(id, out int size);
+                        if (tableValueHolder == null)
+                            tableValueHolder = new TableValueHolder();
+                        tableValueHolder.Reader = new TableValueReader(id, ptr, size);
+                        if (beforeDelete(tableValueHolder) == false)
+                            return;
+                    }
+
+                    Delete(id);
+                }
+            }
+        }
+
 
         public bool SeekOnePrimaryKey(Slice slice, out TableValueReader reader)
         {

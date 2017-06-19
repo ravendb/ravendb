@@ -5,6 +5,7 @@ using FastTests.Client.Attachments;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.Server.Operations;
+using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Server.Documents.Notifications;
 using Sparrow;
 using Xunit;

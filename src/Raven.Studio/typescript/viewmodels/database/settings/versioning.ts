@@ -69,7 +69,7 @@ class versioning extends viewModelBase {
     toDto(): Raven.Client.Server.Versioning.VersioningConfiguration {
         const collectionVersioning = this.versionings();
 
-        const collectionsDto = {} as { [key: string]: Raven.Client.Server.Versioning.VersioningConfigurationCollection; }
+        const collectionsDto = {} as { [key: string]: Raven.Client.Server.Versioning.VersioningCollectionConfiguration; }
 
         collectionVersioning.forEach(config => {
             collectionsDto[config.collection()] = config.toDto();
@@ -112,7 +112,10 @@ class versioning extends viewModelBase {
                     messagePublisher.reportSuccess(`Versioning has been ${versioningStatus}.`);
                     
                 })
-                .always(() => this.spinners.save(false));
+                .always(() => {
+                    this.spinners.save(false);
+                    collectionsTracker.default.configureVersioning(!disableVersioning, this.activeDatabase());
+                });
         }
     }
 

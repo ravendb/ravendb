@@ -10,6 +10,7 @@ using Raven.Client.Server.Operations;
 using Raven.Client.Server.Operations.ApiKeys;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Web.System;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace RachisTests.DatabaseCluster

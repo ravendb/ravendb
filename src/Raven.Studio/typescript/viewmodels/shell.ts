@@ -218,6 +218,10 @@ class shell extends viewModelBase {
         return appUrl.forDocuments(coll.name, this.activeDatabase());
     }
 
+    urlForZombies() {
+        return appUrl.forZombies(this.activeDatabase());
+    }
+
     /*
     static fetchStudioConfig() {
         var hotSpareTask = new getHotSpareInformation().execute();

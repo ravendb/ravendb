@@ -7,7 +7,6 @@
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Exceptions.Versioning;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -141,19 +140,19 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/revisions/zombied", "GET", "/databases/*/revisions/zombied?etag={long.MaxValue}&pageSize=25")]
-        public Task GetZombiedRevisions()
+        [RavenAction("/databases/*/revisions/zombies", "GET", "/databases/*/revisions/zombies?etag={long.MaxValue}&pageSize=25")]
+        public Task GetZombies()
         {
             var versioningStorage = Database.DocumentsStorage.VersioningStorage;
             if (versioningStorage.Configuration == null)
                 throw new VersioningDisabledException();
 
-            var etag = GetLongQueryString("etag");
+            var etag = GetLongQueryString("etag", false) ?? long.MaxValue;
             var pageSize = GetPageSize();
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
-            using (versioningStorage.GetZombiedRevisionsEtag(context, etag, out Slice zombiedKey, out long actualEtag))
+            using (versioningStorage.GetLatestZombieEtag(context, etag, out Slice zombieKey, out long actualEtag))
             {
                 if (GetLongFromHeaders("If-None-Match") == actualEtag)
                 {
@@ -169,51 +168,16 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteStartObject();
 
                     writer.WritePropertyName("Results");
-                    var revisions = versioningStorage.GetZombiedRevisions(context, zombiedKey, pageSize);
+                    var revisions = versioningStorage.GetZombies(context, zombieKey, pageSize);
                     writer.WriteDocuments(context, revisions, false, out count);
 
                     writer.WriteEndObject();
                 }
 
-                AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetZombiedRevisions), count, pageSize);
+                AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetZombies), count, pageSize);
             }
 
             return Task.CompletedTask;
-        }
-
-        [RavenAction("/databases/*/revisions", "DELETE", "/databases/*/revisions?id={documentId:string|multiple}")]
-        public async Task DeleteRevisionsFor()
-        {
-            var versioningStorage = Database.DocumentsStorage.VersioningStorage;
-            if (versioningStorage.Configuration == null)
-                throw new VersioningDisabledException();
-
-            var ids = GetStringValuesQueryString("id");
-
-            var cmd = new DeleteRevisionsCommand(ids, Database);
-            await Database.TxMerger.Enqueue(cmd);
-            NoContentStatus();
-        }
-
-        private class DeleteRevisionsCommand : TransactionOperationsMerger.MergedTransactionCommand
-        {
-            private readonly StringValues _ids;
-            private readonly DocumentDatabase _database;
-
-            public DeleteRevisionsCommand(StringValues ids, DocumentDatabase database)
-            {
-                _ids = ids;
-                _database = database;
-            }
-
-            public override int Execute(DocumentsOperationContext context)
-            {
-                foreach (var id in _ids)
-                {
-                    _database.DocumentsStorage.VersioningStorage.DeleteRevisionsFor(context, id);
-                }
-                return 1;
-            }
         }
     }
 }

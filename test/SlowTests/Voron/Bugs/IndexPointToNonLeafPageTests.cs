@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System.IO;
-using FastTests.Voron.Bugs;
+using SlowTests.Utils;
 using Voron;
 using Xunit;
 

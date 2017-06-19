@@ -831,16 +831,13 @@ namespace Raven.Server.Documents
                 StorageId = tvr.Id,
                 LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr),
                 Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr),
-                Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr)
+                Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr),
+                Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context),
+                ChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)DocumentsTable.ChangeVector),
+                LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr),
+                Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr),
+                TransactionMarker = *(short*)tvr.Read((int)DocumentsTable.TransactionMarker, out size)
             };
-
-            int size;
-            result.Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out size), size, context);
-            result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)DocumentsTable.ChangeVector);
-            result.LastModified = new DateTime(*(long*)tvr.Read((int)DocumentsTable.LastModified, out size));
-            result.Flags = *(DocumentFlags*)tvr.Read((int)DocumentsTable.Flags, out size);
-
-            result.TransactionMarker = *(short*)tvr.Read((int)DocumentsTable.TransactionMarker, out size);
 
             return result;
         }
@@ -875,9 +872,9 @@ namespace Raven.Server.Documents
             if (result.Type == DocumentTombstone.TombstoneType.Document)
             {
                 result.Collection = TableValueToString(context, (int)TombstoneTable.Collection, ref tvr);
-                result.Flags = *(DocumentFlags*)tvr.Read((int)TombstoneTable.Flags, out size);
+                result.Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
                 result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)TombstoneTable.ChangeVector);
-                result.LastModified = new DateTime(*(long*)tvr.Read((int)TombstoneTable.LastModified, out size));
+                result.LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr);
             }
 
             return result;
@@ -977,7 +974,7 @@ namespace Raven.Server.Documents
 
                 var ptr = table.DirectRead(doc.StorageId, out int size);
                 var tvr = new TableValueReader(ptr, size);
-                var flags = *(DocumentFlags*)tvr.Read((int)DocumentsTable.Flags, out size);
+                var flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr);
 
                 long etag;
                 using (TableValueToSlice(context, (int)DocumentsTable.LowerId, ref tvr, out Slice tombstone))
@@ -1462,8 +1459,7 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long TableValueToEtag(int index, ref TableValueReader tvr)
         {
-            int size;
-            var ptr = tvr.Read(index, out size);
+            var ptr = tvr.Read(index, out _);
             var etag = Bits.SwapBytes(*(long*)ptr);
             return etag;
         }
@@ -1471,7 +1467,13 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static DocumentFlags TableValueToFlags(int index, ref TableValueReader tvr)
         {
-            return *(DocumentFlags*)tvr.Read(index, out int size);
+            return *(DocumentFlags*)tvr.Read(index, out _);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static DateTime TableValueToDateTime(int index, ref TableValueReader tvr)
+        {
+            return new DateTime(*(long*)tvr.Read(index, out _));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

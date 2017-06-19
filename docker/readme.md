@@ -40,6 +40,10 @@ Above mentioned Powershell scripts are simplifying usage of our images allowing 
 
 - `-RemoveOnExit` - removes container when the main process exits
 
+- `-PublicServerUrl` - set the url under which server is available to the outside world (e.g. http://4.live-test.ravendb.net:80)
+
+- `-PublicTcpServerUrl` - set the url under which server is available to the outside world (e.g. tcp://4.live-test.ravendb.net:38888)
+
 NOTE: Script will attempt to create Docker volume, if does not exist for data persistence.
 
 NOTE 2: Due to Windows containers limitations entire directory holding the settings file (passed via `-ConfigPath`) is going to be visible within the container.

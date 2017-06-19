@@ -11,6 +11,9 @@ class collectionsTracker {
     loadStatsTask: JQueryPromise<collectionsStats>;
 
     collections = ko.observableArray<collection>();
+
+    zombies = ko.observable<collection>();
+
     private db: database;
 
     private events = {
@@ -26,7 +29,17 @@ class collectionsTracker {
             .execute()
             .done(stats => this.collectionsLoaded(stats, db));
 
+        this.configureVersioning(db.hasVersioningConfiguration(), db);
+
         return this.loadStatsTask;
+    }
+
+    configureVersioning(hasVersioning: boolean, db: database) {
+        if (hasVersioning) {
+            this.zombies(new collection(collection.zombiesCollectionName, db));
+        } else {
+            this.zombies(null);
+        }
     }
 
     private collectionsLoaded(collectionsStats: collectionsStats, db: database) {
@@ -68,6 +81,10 @@ class collectionsTracker {
         return this.collections()
             .filter(x => !x.isAllDocuments && !x.isSystemDocuments)
             .map(x => x.name);
+    }
+
+    getZombiesCollection() {
+        return this.zombies();
     }
 
     getAllDocumentsCollection() {

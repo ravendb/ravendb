@@ -3,7 +3,6 @@ using Jint;
 using Jint.Native;
 using Raven.Client.Documents.Exceptions.Patching;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 
@@ -31,12 +30,12 @@ namespace Raven.Server.Documents.Patch
         {
         }
 
-        private const string ExececutionStr = @"function ExecuteAdminScript(databaseInner){{ return (function(database){{ {0} }}).apply(this, [databaseInner]); }};";
-        private const string ServerExeceutionStr = @"function ExecuteAdminScript(serverInner){{ return (function(server){{ {0} }}).apply(this, [serverInner]); }};";
+        private const string ExecutionStr = "function ExecuteAdminScript(databaseInner){{ return (function(database){{ {0} }}).apply(this, [databaseInner]); }};";
+        private const string ServerExecutionStr = "function ExecuteAdminScript(serverInner){{ return (function(server){{ {0} }}).apply(this, [serverInner]); }};";
 
         public DynamicJsonValue ApplyScript(AdminJsScript script)
         {
-            var jintEngine = GetEngine(script, ExececutionStr);
+            var jintEngine = GetEngine(script, ExecutionStr);
 
             var jsVal = jintEngine.Invoke("ExecuteAdminScript", Database);
 
@@ -45,10 +44,7 @@ namespace Raven.Server.Documents.Patch
 
         public DynamicJsonValue ApplyServerScript(AdminJsScript script)
         {
-            var jintEngine = GetEngine(script, ServerExeceutionStr);
-
-            jintEngine.Global.Delete("SecedeFromCluster", false);
-            jintEngine.SetValue("SecedeFromCluster", (Action)(() => _server.ServerStore.SecedeFromCluster()));
+            var jintEngine = GetEngine(script, ServerExecutionStr);
 
             var jsVal = jintEngine.Invoke("ExecuteAdminScript", _server);
 

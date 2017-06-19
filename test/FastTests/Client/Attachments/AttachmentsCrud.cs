@@ -7,6 +7,7 @@ using Xunit;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Server.Documents;
+using Raven.Tests.Core.Utils.Entities;
 
 namespace FastTests.Client.Attachments
 {
@@ -399,6 +400,17 @@ namespace FastTests.Client.Attachments
 
                 store.Operations.Send(new DeleteAttachmentOperation("users/1", "big-file"));
                 AssertAttachmentCount(store, 0, 0, 3);
+
+                for (int i = 1; i <= 3; i++)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var user = session.Load<User>("users/" + i);
+                        var metadata = session.Advanced.GetMetadataFor(user);
+                        Assert.False(metadata.ContainsKey(Constants.Documents.Metadata.Flags));
+                        Assert.False(metadata.ContainsKey(Constants.Documents.Metadata.Attachments));
+                    }
+                }
             }
         }
 
@@ -451,17 +463,17 @@ namespace FastTests.Client.Attachments
 
                 await store.Operations.SendAsync(new PatchOperation("users/1", null, new PatchRequest
                 {
-                    Script = "this.Country = newUser.Country;",
+                    Script = "this.LastName = newUser.LastName;",
                     Values =
                     {
-                        {"newUser", new {Country = "Israel"}}
+                        {"newUser", new {LastName = "Yitzchaki"}}
                     }
                 }));
 
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
-                    Assert.Equal("Israel", user.Country);
+                    Assert.Equal("Yitzchaki", user.LastName);
 
                     var metadata = session.Advanced.GetMetadataFor(user);
                     Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
@@ -493,7 +505,7 @@ namespace FastTests.Client.Attachments
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
-                    user.Country = "Israel";
+                    user.LastName = "Yitzchaki";
                     session.SaveChanges();
                 }
             }
@@ -517,7 +529,7 @@ namespace FastTests.Client.Attachments
 
                     session.Advanced.Evict(user);
                     user = session.Load<User>("users/1");
-                    user.Country = "Israel";
+                    user.LastName = "Yitzchaki";
                     session.SaveChanges();
                 }
             }
@@ -540,7 +552,7 @@ namespace FastTests.Client.Attachments
                     }
 
                     user = session.Load<User>("users/1");
-                    user.Country = "Israel";
+                    user.LastName = "Yitzchaki";
                     session.SaveChanges();
                 }
             }
@@ -562,7 +574,7 @@ namespace FastTests.Client.Attachments
                         store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/png"));
                     }
 
-                    user.Country = "Israel";
+                    user.LastName = "Yitzchaki";
                     session.SaveChanges();
                 }
             }

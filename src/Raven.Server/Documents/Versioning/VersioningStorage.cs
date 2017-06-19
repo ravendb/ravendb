@@ -8,7 +8,6 @@ using Raven.Client.Server;
 using Raven.Client.Server.Versioning;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -34,6 +33,7 @@ namespace Raven.Server.Documents.Versioning
         private readonly DocumentDatabase _database;
         private readonly DocumentsStorage _documentsStorage;
         public VersioningConfiguration Configuration { get; private set; }
+        public readonly VersioningOperations Operations;
         private readonly HashSet<string> _tableCreated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly Logger _logger;
 
@@ -49,18 +49,19 @@ namespace Raven.Server.Documents.Versioning
             Id = 4,
             Document = 5,
             Flags = 6,
-            Etag2 = 7, // Needed to get the zombied revisions with a consistent order
+            Etag2 = 7, // Needed to get the zombies with a consistent order
             LastModified = 8,
             Collection = 9,
         }
 
-        private readonly VersioningConfigurationCollection _emptyConfiguration = new VersioningConfigurationCollection();
+        private readonly VersioningCollectionConfiguration _emptyConfiguration = new VersioningCollectionConfiguration();
 
         public VersioningStorage(DocumentDatabase database)
         {
             _database = database;
             _documentsStorage = _database.DocumentsStorage;
             _logger = LoggingSource.Instance.GetLogger<VersioningStorage>(database.Name);
+            Operations = new VersioningOperations(_database);
         }
 
         private Table EnsureRevisionTableCreated(Transaction tx, CollectionName collection)
@@ -174,10 +175,10 @@ namespace Raven.Server.Documents.Versioning
             return _emptyConfiguration.Active;
         }
 
-        private VersioningConfigurationCollection GetVersioningConfiguration(CollectionName collectionName)
+        private VersioningCollectionConfiguration GetVersioningConfiguration(CollectionName collectionName)
         {
             if (Configuration.Collections != null && 
-                Configuration.Collections.TryGetValue(collectionName.Name, out VersioningConfigurationCollection configuration))
+                Configuration.Collections.TryGetValue(collectionName.Name, out VersioningCollectionConfiguration configuration))
             {
                 return configuration;
             }
@@ -192,7 +193,7 @@ namespace Raven.Server.Documents.Versioning
 
         public bool ShouldVersionDocument(CollectionName collectionName, NonPersistentDocumentFlags nonPersistentFlags, 
             BlittableJsonReaderObject existingDocument, BlittableJsonReaderObject document, ref DocumentFlags documentFlags, 
-            out VersioningConfigurationCollection configuration)
+            out VersioningCollectionConfiguration configuration)
         {
             configuration = GetVersioningConfiguration(collectionName);
             if (configuration.Active == false)
@@ -226,7 +227,7 @@ namespace Raven.Server.Documents.Versioning
 
         public void Put(DocumentsOperationContext context, string id, BlittableJsonReaderObject document,
             DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, ChangeVectorEntry[] changeVector, long lastModifiedTicks,
-            VersioningConfigurationCollection configuration = null)
+            VersioningCollectionConfiguration configuration = null)
         {
             Debug.Assert(changeVector != null, "Change vector must be set");
 
@@ -292,19 +293,19 @@ namespace Raven.Server.Documents.Versioning
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice lowerId, 
-            VersioningConfigurationCollection configuration, NonPersistentDocumentFlags nonPersistentFlags)
+            VersioningCollectionConfiguration configuration, NonPersistentDocumentFlags nonPersistentFlags)
         {
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
             {
                 // We delete the old revisions after we put the current one, 
-                // because in case that MaxRevisions is 3 or lower we may get a revision document from replication
+                // because in case that MinimumRevisionsToKeep is 3 or lower we may get a revision document from replication
                 // which is old. But because we put it first, we make sure to clean this document, because of the order to the revisions.
                 var revisionsCount = IncrementCountOfRevisions(context, prefixSlice, 1);
                 DeleteOldRevisions(context, table, prefixSlice, configuration, revisionsCount, nonPersistentFlags);
             }
         }
 
-        private void DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, VersioningConfigurationCollection configuration, long revisionsCount, 
+        private void DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, VersioningCollectionConfiguration configuration, long revisionsCount, 
             NonPersistentDocumentFlags nonPersistentFlags)
         {
             if ((nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) == NonPersistentDocumentFlags.FromSmuggler)
@@ -330,12 +331,35 @@ namespace Raven.Server.Documents.Versioning
             {
                 var collectionName = GetCollectionFor(context, prefixSlice);
                 if (collectionName == null)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Tried to delete all revisions for '{id}' but no revisions found.");
                     return;
+                }
 
                 var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
                 DeleteRevisions(context, table, prefixSlice, long.MaxValue, null);
                 DeleteCountOfRevisions(context, prefixSlice);
             }
+        }
+
+        public void DeleteRevisionsBefore(DocumentsOperationContext context, string collection, DateTime time)
+        {
+            var collectionName = new CollectionName(collection);
+            var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
+            table.DeleteByPrimaryKey(Slices.BeforeAllKeys, deleted =>
+            {
+                var lastModified = DocumentsStorage.TableValueToDateTime((int)Columns.LastModified, ref deleted.Reader);
+                if (lastModified >= time)
+                    return false;
+
+                using (DocumentsStorage.TableValueToSlice(context, (int)Columns.LowerId, ref deleted.Reader, out Slice lowerId))
+                using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
+                {
+                    IncrementCountOfRevisions(context, prefixSlice, -1);
+                }
+                return true;
+            });
         }
 
         private CollectionName GetCollectionFor(DocumentsOperationContext context, Slice prefixSlice)
@@ -523,13 +547,13 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
-        public ByteStringContext<ByteStringMemoryCache>.InternalScope GetZombiedRevisionsEtag(DocumentsOperationContext context, long startEtag, 
-            out Slice zombiedKey, out long latestEtag)
+        public ByteStringContext<ByteStringMemoryCache>.InternalScope GetLatestZombieEtag(DocumentsOperationContext context, long startEtag, 
+            out Slice zombieKey, out long latestEtag)
         {
-            var dispose = GetZombiedRevisionKey(context, startEtag, out zombiedKey);
-            foreach (var zombiedRevision in GetZombiedRevisions(context, zombiedKey, 1))
+            var dispose = GetZombieKey(context, startEtag, out zombieKey);
+            foreach (var zombie in GetZombies(context, zombieKey, 1))
             {
-                latestEtag = zombiedRevision.Etag;
+                latestEtag = zombie.Etag;
                 return dispose;
             }
 
@@ -537,10 +561,10 @@ namespace Raven.Server.Documents.Versioning
             return dispose;
         }
 
-        public IEnumerable<Document> GetZombiedRevisions(DocumentsOperationContext context, Slice zombiedKey, int take)
+        public IEnumerable<Document> GetZombies(DocumentsOperationContext context, Slice zombieKey, int take)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
-            foreach (var tvr in table.SeekBackwardFrom(DocsSchema.Indexes[FlagsAndEtagSlice], DeleteRevisionSlice, zombiedKey))
+            foreach (var tvr in table.SeekBackwardFrom(DocsSchema.Indexes[FlagsAndEtagSlice], DeleteRevisionSlice, zombieKey))
             {
                 if (take-- <= 0)
                     yield break;
@@ -548,7 +572,7 @@ namespace Raven.Server.Documents.Versioning
                 var etag = DocumentsStorage.TableValueToEtag((int)Columns.Etag, ref tvr.Result.Reader);
                 using (DocumentsStorage.TableValueToSlice(context, (int)Columns.LowerId, ref tvr.Result.Reader, out Slice lowerId))
                 {
-                    if (IsZombiedRevision(context, table, lowerId, etag) == false)
+                    if (IsZombie(context, table, lowerId, etag) == false)
                         continue;
                 }
 
@@ -556,7 +580,7 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
-        private bool IsZombiedRevision(DocumentsOperationContext context, Table table, Slice lowerId, long zombiedEtag)
+        private bool IsZombie(DocumentsOperationContext context, Table table, Slice lowerId, long zombieEtag)
         {
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
             using (GetLastKey(context, lowerId, out Slice lastKey))
@@ -570,23 +594,23 @@ namespace Raven.Server.Documents.Versioning
 
                 var etag = DocumentsStorage.TableValueToEtag((int)Columns.Etag, ref tvr.Reader);
                 var flags = DocumentsStorage.TableValueToFlags((int)Columns.Flags, ref tvr.Reader);
-                Debug.Assert(zombiedEtag <= etag, "Zombied etag candidate cannot meet a bigger etag.");
-                return flags == DocumentFlags.DeleteRevision && zombiedEtag >= etag;
+                Debug.Assert(zombieEtag <= etag, "Zombie etag candidate cannot meet a bigger etag.");
+                return flags == DocumentFlags.DeleteRevision && zombieEtag >= etag;
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ByteStringContext<ByteStringMemoryCache>.InternalScope GetZombiedRevisionKey(DocumentsOperationContext context, long etag, out Slice zombiedKey)
+        private ByteStringContext<ByteStringMemoryCache>.InternalScope GetZombieKey(DocumentsOperationContext context, long etag, out Slice zombieKey)
         {
             var scope = context.Allocator.Allocate(sizeof(DocumentFlags) + sizeof(long), out ByteString keyMem);
 
-            var zombiedRevision = DocumentFlags.DeleteRevision;
-            Memory.Copy(keyMem.Ptr, (byte*)&zombiedRevision, sizeof(DocumentFlags));
+            var zombieRevision = DocumentFlags.DeleteRevision;
+            Memory.Copy(keyMem.Ptr, (byte*)&zombieRevision, sizeof(DocumentFlags));
 
             var swapBytesEtag = Bits.SwapBytes(etag);
             Memory.Copy(keyMem.Ptr + sizeof(DocumentFlags), (byte*)&swapBytesEtag, sizeof(long));
 
-            zombiedKey = new Slice(SliceOptions.Key, keyMem);
+            zombieKey = new Slice(SliceOptions.Key, keyMem);
             return scope;
         }
 
@@ -642,14 +666,14 @@ namespace Raven.Server.Documents.Versioning
                 LowerId = DocumentsStorage.TableValueToString(context, (int)Columns.LowerId, ref tvr),
                 Id = DocumentsStorage.TableValueToId(context, (int)Columns.Id, ref tvr),
                 Etag = DocumentsStorage.TableValueToEtag((int)Columns.Etag, ref tvr),
-                Collection = DocumentsStorage.TableValueToId(context, (int)Columns.Collection, ref tvr)
+                Collection = DocumentsStorage.TableValueToId(context, (int)Columns.Collection, ref tvr),
+                LastModified = DocumentsStorage.TableValueToDateTime((int)Columns.LastModified, ref tvr),
+                Flags = DocumentsStorage.TableValueToFlags((int)Columns.Flags, ref tvr)
             };
 
             var ptr = tvr.Read((int)Columns.Document, out int size);
             if (size > 0)
                 result.Data = new BlittableJsonReaderObject(ptr, size, context);
-
-            result.LastModified = new DateTime(*(long*)tvr.Read((int)Columns.LastModified, out size));
 
             ptr = tvr.Read((int)Columns.ChangeVector, out size);
             var changeVectorCount = size / sizeof(ChangeVectorEntry);
@@ -659,8 +683,6 @@ namespace Raven.Server.Documents.Versioning
                 result.ChangeVector[i] = ((ChangeVectorEntry*)ptr)[i];
             }
 
-            result.Flags = *(DocumentFlags*)tvr.Read((int)Columns.Flags, out size);
-
             return result;
         }
 
@@ -668,6 +690,6 @@ namespace Raven.Server.Documents.Versioning
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
             return table.GetNumberOfEntriesFor(DocsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice]);
-        }
+        }        
     }
 }

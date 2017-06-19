@@ -3,6 +3,7 @@ using System.IO;
 using FastTests;
 using FastTests.Client.Attachments;
 using Microsoft.AspNetCore.Http.Features;
+using SlowTests.Client.Attachments;
 using Tests.Infrastructure;
 using Xunit;
 

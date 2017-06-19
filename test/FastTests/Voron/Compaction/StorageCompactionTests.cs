@@ -268,7 +268,7 @@ namespace FastTests.Voron.Compaction
             };
             foreach (var line in lines)
             {
-                Assert.Contains(line, lines);
+                Assert.Contains(line, progressReport);
             }
         }
 

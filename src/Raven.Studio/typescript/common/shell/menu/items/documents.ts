@@ -15,6 +15,15 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.documents
         }),
 
+        new leafMenuItem({
+            title: "List of zombies documents",
+            nav: false,
+            route: "databases/documents/zombies",
+            moduleId: "viewmodels/database/documents/zombies",
+            css: 'icon-zombie',
+            dynamicHash: appUrls.zombies
+        }),
+
         new collectionMenuItem(),
 
 /* TODO:
