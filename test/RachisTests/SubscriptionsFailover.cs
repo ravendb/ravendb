@@ -126,8 +126,8 @@ namespace RachisTests
                 var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
 
                 subscription.AfterAcknowledgment += () => reachedMaxDocCountMre.Set();
-                subscription.Subscribe(x => { });
-                await subscription.StartAsync();
+                
+                GC.KeepAlive(subscription.Run(x => { }));
 
                 await reachedMaxDocCountMre.WaitAsync();
 
@@ -260,7 +260,7 @@ namespace RachisTests
                     }
                 };
 
-                subscription.Subscribe(x =>
+                var task = subscription.Run(x =>
                 {
                     try
                     {
@@ -299,7 +299,7 @@ namespace RachisTests
 
                 expectedVersionsCount = nodesAmount + 2;
                 continueMre.Set();
-                Assert.True(await subscription.StartAsync().WaitAsync(_reasonableWaitTime).ConfigureAwait(false));
+                Assert.True(await task.WaitAsync(_reasonableWaitTime).ConfigureAwait(false));
 
 
 
@@ -450,7 +450,7 @@ namespace RachisTests
                 await server.ServerStore.Cluster.WaitForIndexNotification(subscriptionEtag).ConfigureAwait(false);
             }
 
-            subscription.Subscribe(x =>
+            var task = subscription.Run(x =>
             {
                 try
                 {
@@ -485,7 +485,7 @@ namespace RachisTests
                 }
 
             };
-            await subscription.StartAsync().ConfigureAwait(false);
+            await task.ConfigureAwait(false);
             return subscription;
         }
 

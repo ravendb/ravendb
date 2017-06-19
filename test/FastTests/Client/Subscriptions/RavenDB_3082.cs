@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
@@ -64,8 +65,7 @@ namespace FastTests.Client.Subscriptions
                 {
                     var users = new BlockingCollection<PersonWithAddress>();
 
-                    subscription.Subscribe(users.Add);
-                    await subscription.StartAsync();
+                    GC.KeepAlive(subscription.Run(address => users.Add(address)));
 
                     PersonWithAddress userToTake;
                     for (var i = 0; i < 5; i++)

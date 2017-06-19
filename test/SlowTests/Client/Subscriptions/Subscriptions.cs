@@ -37,13 +37,7 @@ namespace SlowTests.Client.Subscriptions
                     var acceptedSusbscriptionList = new BlockingCollection<Thing>();
                     var takingOverSubscriptionList = new BlockingCollection<Thing>();
                     long counter = 0;
-                    acceptedSubscription.Subscribe(x =>
-                    {
-                        Interlocked.Increment(ref counter);
-                        acceptedSusbscriptionList.Add(x);
-                    });
-
-                    var batchProccessedByFirstSubscription = new AsyncManualResetEvent();
+                                        var batchProccessedByFirstSubscription = new AsyncManualResetEvent();
 
                     acceptedSubscription.AfterAcknowledgment +=
                         () =>
@@ -52,7 +46,11 @@ namespace SlowTests.Client.Subscriptions
                                 batchProccessedByFirstSubscription.Set();
                         };
 
-                    await acceptedSubscription.StartAsync();
+                    GC.KeepAlive(acceptedSubscription.Run(x =>
+                    {
+                        Interlocked.Increment(ref counter);
+                        acceptedSusbscriptionList.Add(x);
+                    }));
 
                     Thing thing;
 
@@ -72,8 +70,7 @@ namespace SlowTests.Client.Subscriptions
                         Strategy = SubscriptionOpeningStrategy.TakeOver
                     }))
                     {
-                        takingOverSubscription.Subscribe(x => takingOverSubscriptionList.Add(x));
-                        await takingOverSubscription.StartAsync();
+                        GC.KeepAlive(takingOverSubscription.Run(x => takingOverSubscriptionList.Add(x)));
 
                         await CreateDocuments(store, 5);
 

@@ -46,8 +46,7 @@ namespace SlowTests.Issues
 
                 var docs = new List<dynamic>();
 
-                subscription.Subscribe(docs.Add);
-                subscription.Start();
+                GC.KeepAlive(subscription.Run(o => docs.Add(o)));
 
                 Assert.True(SpinWait.SpinUntil(() => docs.Count == 10, TimeSpan.FromSeconds(60)));
 

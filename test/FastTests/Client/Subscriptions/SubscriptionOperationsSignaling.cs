@@ -28,8 +28,7 @@ namespace FastTests.Client.Subscriptions
 
                 var users = new BlockingCollection<User>();
 
-                subscription.Subscribe(users.Add);
-                subscription.Start();
+                var subscirptionLifetimeTask = subscription.Run(u => users.Add(u));
 
                 using (var session = store.OpenSession())
                 {
@@ -52,8 +51,7 @@ namespace FastTests.Client.Subscriptions
                     try
                     {
                         Thread.Sleep(300);
-                        concurrentSubscription.Subscribe(users.Add);
-                        concurrentSubscription.Start();
+                        GC.KeepAlive(concurrentSubscription.Run(u => users.Add(u)));
                     }
                     catch (Exception e)
                     {
@@ -65,11 +63,11 @@ namespace FastTests.Client.Subscriptions
                 {
                     thread.Start();
 
-                    Assert.Throws(typeof(AggregateException), () => subscription.SubscriptionLifetimeTask.Wait(_reasonableWaitTime));
+                    Assert.Throws(typeof(AggregateException), () => subscirptionLifetimeTask.Wait(_reasonableWaitTime));
 
-                    Assert.True(subscription.SubscriptionLifetimeTask.IsFaulted);
+                    Assert.True(subscirptionLifetimeTask .IsFaulted);
 
-                    Assert.Equal(typeof(SubscriptionInUseException), subscription.SubscriptionLifetimeTask.Exception.InnerException.GetType());
+                    Assert.Equal(typeof(SubscriptionInUseException), subscirptionLifetimeTask.Exception.InnerException.GetType());
                 }
                 finally
                 {
@@ -81,50 +79,6 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
-        public void SubscriptionInterruptionEventIsFiredWhenSubscriptionIsOvertaken()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var subscriptionCreationParams = new SubscriptionCreationOptions<User>
-                {
-                    Criteria = new SubscriptionCriteria<User>()
-                };
-                var subscriptionId = store.Subscriptions.Create(subscriptionCreationParams);
-                var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
-                var users = new BlockingCollection<User>();
-
-                var mre = new ManualResetEvent(false);
-                subscription.SubscriptionConnectionInterrupted += (exception, reconnect) =>
-                {
-                    if (exception is SubscriptionInUseException && reconnect == false)
-                        mre.Set();
-                };
-
-
-                subscription.Subscribe(users.Add);
-                subscription.Start();
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User());
-                    session.SaveChanges();
-                }
-
-                User User;
-                Assert.True(users.TryTake(out User, _reasonableWaitTime));
-
-                var concurrentSubscription = store.Subscriptions.Open<User>(
-                    new SubscriptionConnectionOptions(subscriptionId)
-                    {
-                        Strategy = SubscriptionOpeningStrategy.TakeOver
-                    });
-
-                concurrentSubscription.Subscribe(users.Add);
-                concurrentSubscription.Start();
-                Assert.True(mre.WaitOne(_reasonableWaitTime));
-            }
-        }
 
         [Fact]
         public void WaitOnSubscriptionTaskWhenSubscriptionIsDeleted()
@@ -140,17 +94,15 @@ namespace FastTests.Client.Subscriptions
 
                 var beforeAckMre = new ManualResetEvent(false);
                 var users = new BlockingCollection<User>();
-                subscription.Subscribe(users.Add);
                 subscription.BeforeAcknowledgment += () => beforeAckMre.WaitOne();
-                subscription.Start();
+                var subscriptionLifetimeTask = subscription.Run(u => users.Add(u));
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User());
                     session.SaveChanges();
                 }
 
-                User User;
-                Assert.True(users.TryTake(out User, _reasonableWaitTime));
+                Assert.True(users.TryTake(out var _, _reasonableWaitTime));
 
 
 
@@ -158,71 +110,11 @@ namespace FastTests.Client.Subscriptions
                 store.Subscriptions.Delete(subscriptionId);
                 beforeAckMre.Set();
 
-                Assert.Throws(typeof(AggregateException), () => subscription.SubscriptionLifetimeTask.Wait(_reasonableWaitTime));
+                Assert.Throws(typeof(AggregateException), () => subscriptionLifetimeTask.Wait(_reasonableWaitTime));
 
-                Assert.True(subscription.SubscriptionLifetimeTask.IsFaulted);
+                Assert.True(subscriptionLifetimeTask.IsFaulted);
 
-                Assert.Equal(typeof(SubscriptionDoesNotExistException), subscription.SubscriptionLifetimeTask.Exception.InnerException.GetType());
-            }
-        }
-
-        [Fact]
-        public void SubscriptionInterruptionEventIsFiredWhenSubscriptionIsDeleted()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var subscriptionCriteria = new SubscriptionCreationOptions<User>
-                {
-                    Criteria = new SubscriptionCriteria<User>()
-                };
-                var subscriptionId = store.Subscriptions.Create(subscriptionCriteria);
-                var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
-                var users = new BlockingCollection<User>();
-
-                var mre = new ManualResetEvent(false);
-                subscription.SubscriptionConnectionInterrupted += (exception, reconnect) =>
-                {
-                    if (exception is SubscriptionDoesNotExistException && reconnect == false)
-                        mre.Set();
-                };
-                subscription.Subscribe(users.Add);
-                subscription.Start();
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User());
-                    session.SaveChanges();
-                }
-
-                User User;
-                Assert.True(users.TryTake(out User, _reasonableWaitTime));
-
-                Exception threadException = null;
-                var thread = new Thread(() =>
-                {
-                    try
-                    {
-                        Thread.Sleep(400);
-                        store.Subscriptions.Delete(subscriptionId);
-                    }
-                    catch (Exception e)
-                    {
-                        threadException = e;
-                    }
-                });
-
-                try
-                {
-                    thread.Start();
-                    Assert.True(mre.WaitOne(_reasonableWaitTime));
-                }
-                finally
-                {
-                    thread.Join();
-                }
-
-                if (threadException != null)
-                    throw threadException;
+                Assert.Equal(typeof(SubscriptionDoesNotExistException), subscriptionLifetimeTask.Exception.InnerException.GetType());
             }
         }
 
@@ -238,8 +130,7 @@ namespace FastTests.Client.Subscriptions
                 var subscriptionId = store.Subscriptions.Create(subscriptionCreationParams);
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
                 var users = new BlockingCollection<User>();
-                subscription.Subscribe(users.Add);
-                subscription.Start();
+                var subscriptionLifetimeTask = subscription.Run(u => users.Add(u));
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User());
@@ -250,9 +141,9 @@ namespace FastTests.Client.Subscriptions
                 Assert.True(users.TryTake(out user, _reasonableWaitTime));
 
                 subscription.Dispose();
-                subscription.SubscriptionLifetimeTask.Wait(_reasonableWaitTime);
+                subscriptionLifetimeTask.Wait(_reasonableWaitTime);
 
-                Assert.True(subscription.SubscriptionLifetimeTask.IsCompleted);
+                Assert.True(subscriptionLifetimeTask.IsCompleted);
 
 
 
@@ -265,29 +156,19 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionId = store.Subscriptions.Create(new SubscriptionCreationOptions<User>
-                {
-                });
+                var subscriptionId = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
-                var exceptions = new BlockingCollection<Exception>();
 
-                subscription.Subscribe(_ => throw new InvalidCastException(), exceptions.Add);
+                var task = subscription.Run(_ => throw new InvalidCastException());
 
-                subscription.Start();
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User());
                     session.SaveChanges();
                 }
 
-                Exception exception;
-                Assert.True(exceptions.TryTake(out exception, _reasonableWaitTime));
-
-                Assert.Throws(typeof(AggregateException), () => subscription.SubscriptionLifetimeTask.Wait(_reasonableWaitTime));
-
-                Assert.True(subscription.SubscriptionLifetimeTask.IsFaulted);
-
-                Assert.Equal(typeof(InvalidCastException), subscription.SubscriptionLifetimeTask.Exception.InnerException.GetType());
+                var innerException = Assert.Throws<AggregateException>(()=> task .Wait()).InnerException.InnerException;
+                Assert.IsType<InvalidCastException>(innerException);
             }
         }
     }

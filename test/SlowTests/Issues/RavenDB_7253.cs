@@ -27,17 +27,16 @@ namespace SlowTests.Issues
                 });
 
                 var mre = new AsyncManualResetEvent();
-                subscription.Subscribe(x => { });
 
                 subscription.AfterAcknowledgment += mre.Set;
 
-                await subscription.StartAsync();
+                var task = subscription.Run(user => { });
 
                 await mre.WaitAsync(TimeSpan.FromSeconds(20));
 
                 await store.Admin.Server.SendAsync(new DeleteDatabaseOperation(store.Database, hardDelete: true));
 
-                Assert.True(await subscription.SubscriptionLifetimeTask.WaitWithTimeout(TimeSpan.FromSeconds(20)));
+                Assert.True(await task.WaitWithTimeout(TimeSpan.FromSeconds(20)));
             }
         }
     }

@@ -69,10 +69,7 @@ namespace SubscriptionFailover.Benchmark
 
 
 
-            subscripiton.Subscribe(x =>
-            {
-                Interlocked.Increment(ref counter);
-            });
+            
 
             subscripiton.AfterAcknowledgment += () =>
             {
@@ -81,7 +78,10 @@ namespace SubscriptionFailover.Benchmark
                     tcs.SetResult(true);
             };
 
-            await subscripiton.StartAsync();
+            GC.KeepAlive(subscripiton.Run(x =>
+            {
+                Interlocked.Increment(ref counter);
+            }));
 
             await tcs.Task;
         }
@@ -167,11 +167,7 @@ namespace SubscriptionFailover.Benchmark
 
                 log = new List<(string, DateTime)>();
 
-                subscripiton.Subscribe(x =>
-                {
-                    Interlocked.Increment(ref counter);
-                });
-
+               
                 subscripiton.AfterAcknowledgment += () =>
                 {
                     Console.WriteLine($"{ subscriptionId}: {counter}");
@@ -179,17 +175,10 @@ namespace SubscriptionFailover.Benchmark
                         tcs.SetResult(true);
                 };
 
-                subscripiton.SubscriptionConnectionInterrupted += (Exception ex, bool willReconnect) =>
-                {
-                    log.Add(("Interrupted", DateTime.Now));
-                };
-
-                subscripiton.ConnectionEstablished += () =>
-                {
-                    log.Add(("Established", DateTime.Now));
-                };
-
-                await subscripiton.StartAsync();
+               GC.KeepAlive(subscripiton.Run(x =>
+               {
+                   Interlocked.Increment(ref counter);
+               }));
 
                 await tcs.Task;
             }

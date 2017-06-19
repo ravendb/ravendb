@@ -7,51 +7,6 @@ using Raven.Client.Documents.Subscriptions;
 
 namespace Subscriptions.Benchmark
 {
-    public class CounterObserver : IObserver<object>
-    {
-        public int MaxCount { get; private set; }
-        public int CurCount { get; private set; }
-
-        public readonly TaskCompletionSource<bool> Tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        public CounterObserver(int maxCount)
-        {
-            MaxCount = maxCount;
-            CurCount = 0;
-        }
-        public void OnCompleted()
-        {
-            if (Tcs.Task.IsCompleted)
-                return;
-            if (CurCount != MaxCount)
-            {
-                Task.Run(() => Tcs.SetResult(false));
-
-            }
-            else
-            {
-                Task.Run(() => Tcs.SetResult(true));
-            }
-        }
-
-        public void OnError(Exception error)
-        {
-            //if (string.Compare(error.Message, "Stream was not writable.", StringComparison.Ordinal)!= 0)
-            Console.WriteLine(error);
-        }
-
-        public void OnNext(object value)
-        {
-            if (Tcs.Task.IsCompleted)
-                return;
-            CurCount++;
-
-            if (CurCount == MaxCount)
-                Tcs.SetResult(true);
-
-        }
-    }
-
     public class RunResult
     {
         public int DocsRequested { get; set; }
@@ -117,17 +72,24 @@ namespace Subscriptions.Benchmark
                     Strategy = SubscriptionOpeningStrategy.WaitForFree
                 }))
                 {
-                    var observer = new CounterObserver(_batchSize);
+                    var tcs = new TaskCompletionSource<object>();
                     var sp = Stopwatch.StartNew();
-                    subscription.Subscribe(observer);
-                    await subscription.StartAsync().ConfigureAwait(false);
+                    int count = 0;
+                    var task = subscription.Run(o =>
+                    {
+                        if (count++ >= _batchSize)
+                            tcs.TrySetResult(null);
+                    });;
 
-                    await observer.Tcs.Task.ConfigureAwait(false);
+                    await tcs.Task.ConfigureAwait(false);
 
                     await subscription.DisposeAsync().ConfigureAwait(false);
+
+                    await task;
+                    
                     return new RunResult
                     {
-                        DocsProccessed = observer.CurCount,
+                        DocsProccessed = count,
                         DocsRequested = _batchSize,
                         ElapsedMs = sp.ElapsedMilliseconds
                     };

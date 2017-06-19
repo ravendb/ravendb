@@ -78,13 +78,12 @@ namespace FastTests.Client.Subscriptions
                 {
                     var mre = new AsyncManualResetEvent();
                     var names = new HashSet<string>();
-                    sub.Subscribe(x =>
+                    GC.KeepAlive(sub.Run(x =>
                     {
                         names.Add(x.Current?.Name + x.Previous?.Name);
                         if (names.Count == 100)
                             mre.Set();
-                    });
-                    sub.Start();
+                    }));
 
                     Assert.True(await mre.WaitAsync(_reasonableWaitTime));
 
@@ -153,7 +152,7 @@ namespace FastTests.Client.Subscriptions
                     var mre = new AsyncManualResetEvent();
                     var names = new HashSet<string>();
                     var maxAge = -1;
-                    sub.Subscribe(x =>
+                    GC.KeepAlive(sub.Run(x =>
                     {
                         if (x.Current.Age  > maxAge && x.Current.Age > (x.Previous?.Age ?? -1))
                         {
@@ -163,8 +162,7 @@ namespace FastTests.Client.Subscriptions
                         names.Add(x.Current?.Name + x.Previous?.Name);
                         if (names.Count == 10)
                             mre.Set();
-                    });
-                    sub.Start();
+                    }));
 
                     Assert.True(await mre.WaitAsync(_reasonableWaitTime));
 
@@ -254,13 +252,12 @@ namespace FastTests.Client.Subscriptions
                 {
                     var mre = new AsyncManualResetEvent();
                     var names = new HashSet<string>();
-                    sub.Subscribe(x =>
+                    GC.KeepAlive(sub.Run(x =>
                     {
                         names.Add(x.Id + x.Age);
                         if (names.Count == 90)
                             mre.Set();
-                    });
-                    sub.Start();
+                    }));
 
                     Assert.True(await mre.WaitAsync(_reasonableWaitTime));
 
@@ -346,7 +343,7 @@ namespace FastTests.Client.Subscriptions
                     var mre = new AsyncManualResetEvent();
                     var names = new HashSet<string>();
                     var maxAge = -1;
-                    sub.Subscribe(x =>
+                    GC.KeepAlive(sub.Run(x =>
                     {
                         if (x.Age > maxAge )
                         {
@@ -356,8 +353,7 @@ namespace FastTests.Client.Subscriptions
                         
                         if (names.Count == 9)
                             mre.Set();
-                    });
-                    sub.Start();
+                    }));
 
                     Assert.True(await mre.WaitAsync(_reasonableWaitTime));
 

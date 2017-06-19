@@ -52,12 +52,7 @@ namespace FastTests.Client.Subscriptions
                 using (var subscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
                 {
                     var list = new BlockingCollection<Thing>();
-                    subscription.Subscribe<Thing>(x =>
-                    {
-                        list.Add(x);
-                    });
-                    await subscription.StartAsync();
-
+                    GC.KeepAlive(subscription.Run(u => list.Add(u)));
                     Thing thing;
                     for (var i = 0; i < 5; i++)
                     {
@@ -91,8 +86,9 @@ namespace FastTests.Client.Subscriptions
                     }))
                 {
                     var acceptedSubscriptionList = new BlockingCollection<Thing>();
-                    acceptedSubscription.Subscribe(x => { acceptedSubscriptionList.Add(x); });
-                    await acceptedSubscription.StartAsync();
+                    
+                    GC.KeepAlive(acceptedSubscription.Run(u => acceptedSubscriptionList.Add(u)));
+
 
                     Thing thing;
 
@@ -111,14 +107,12 @@ namespace FastTests.Client.Subscriptions
                             TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(2000)
                         }))
                     {
-                        rejectedSubscription.Subscribe(thing1 => { });
-
                         // sometime not throwing (on linux) when written like this:
                         // await Assert.ThrowsAsync<SubscriptionInUseException>(async () => await rejectedSubscription.StartAsync());
                         // so we put this in a try block
                         try
                         {
-                            await rejectedSubscription.StartAsync();
+                            await rejectedSubscription.Run(_ => { });
                             Assert.False(true, "Exepcted a throw here");
                         }
                         catch (SubscriptionInUseException)
@@ -156,13 +150,12 @@ namespace FastTests.Client.Subscriptions
                     var ackSentAmre = new AsyncManualResetEvent();
                     acceptedSubscription.AfterAcknowledgment += () => ackSentAmre.Set();
 
-                    acceptedSubscription.Subscribe(x =>
+
+                    GC.KeepAlive(acceptedSubscription.Run(x=>
                     {
                         acceptedSusbscriptionList.Add(x);
                         Thread.Sleep(20);
-                    });
-
-                    await acceptedSubscription.StartAsync();
+                    }));
 
                     // wait until we know that connection was established
 
@@ -185,12 +178,7 @@ namespace FastTests.Client.Subscriptions
                             }))
                     {
 
-                        waitingSubscription.Subscribe(x =>
-                        {
-                            waitingSubscriptionList.Add(x);
-                        });
-
-                        var startAsync = waitingSubscription.StartAsync();
+                        GC.KeepAlive(waitingSubscription.Run(x =>   waitingSubscriptionList.Add(x)));
 
                         Assert.True(await ackSentAmre.WaitAsync(TimeSpan.FromSeconds(50)));
 
@@ -234,12 +222,7 @@ namespace FastTests.Client.Subscriptions
                     var acceptedSusbscriptionList = new BlockingCollection<Thing>();
                     var takingOverSubscriptionList = new BlockingCollection<Thing>();
                     long counter = 0;
-                    acceptedSubscription.Subscribe(x =>
-                    {
-                        Interlocked.Increment(ref counter);
-                        acceptedSusbscriptionList.Add(x);
-                    });
-
+                    
                     var batchProccessedByFirstSubscription = new AsyncManualResetEvent();
 
                     acceptedSubscription.AfterAcknowledgment +=
@@ -249,7 +232,12 @@ namespace FastTests.Client.Subscriptions
                                 batchProccessedByFirstSubscription.Set();
                         };
 
-                    await acceptedSubscription.StartAsync();
+                    GC.KeepAlive(acceptedSubscription.Run(x =>
+                    {
+                        Interlocked.Increment(ref counter);
+                        acceptedSusbscriptionList.Add(x);
+                    }));
+
 
                     Thing thing;
 
@@ -271,8 +259,7 @@ namespace FastTests.Client.Subscriptions
                         Strategy = SubscriptionOpeningStrategy.TakeOver
                     }))
                     {
-                        takingOverSubscription.Subscribe(x => takingOverSubscriptionList.Add(x));
-                        await takingOverSubscription.StartAsync();
+                        GC.KeepAlive(takingOverSubscription.Run(x => takingOverSubscriptionList.Add(x)));
 
                         await CreateDocuments(store, 5);
 

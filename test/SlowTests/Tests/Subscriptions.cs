@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
@@ -33,12 +34,11 @@ namespace SlowTests.Tests
 
                     var bc = new BlockingCollection<Thing>();
 
-                    subscription.Subscribe(x =>
-                    {
-                        bc.Add(x);
-                    });
-
-                    await subscription.StartAsync();
+                    
+                    GC.KeepAlive(subscription.Run(x =>
+                        {
+                            bc.Add(x);
+                        }));
 
                     Thing thing;
                     for (var i = 0; i < 5; i++)

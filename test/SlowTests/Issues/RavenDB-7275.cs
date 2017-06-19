@@ -79,11 +79,11 @@ namespace SlowTests.Issues
                     });
 
                     var mre = new AsyncManualResetEvent();
-                    subscription.Subscribe(x => { });
+                    
 
                     subscription.AfterAcknowledgment += mre.Set;
 
-                    await subscription.StartAsync();
+                    GC.KeepAlive(subscription.Run(x => { }));
 
                     await mre.WaitAsync(TimeSpan.FromSeconds(20));
                 }
@@ -116,8 +116,8 @@ namespace SlowTests.Issues
                     {
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(200)
                     });
-                    subscription.Subscribe(x => { });
-                    Assert.Throws<AuthorizationException>(() => AsyncHelpers.RunSync(() => subscription.StartAsync()));
+                    
+                    Assert.Throws<AuthorizationException>(() => AsyncHelpers.RunSync(() => subscription.Run(user => {})));
                 }
             }
         }
@@ -150,11 +150,10 @@ namespace SlowTests.Issues
                     });
 
                     var mre = new AsyncManualResetEvent();
-                    subscription.Subscribe(x => { });
-
+                    
                     subscription.AfterAcknowledgment += mre.Set;
 
-                    await subscription.StartAsync();
+                    GC.KeepAlive(subscription.Run(x => { }));
 
                     await mre.WaitAsync(TimeSpan.FromSeconds(20));
                 }

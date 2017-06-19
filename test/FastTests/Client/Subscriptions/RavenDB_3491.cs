@@ -52,12 +52,12 @@ namespace FastTests.Client.Subscriptions
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
 
-                        subscription.Subscribe(x => keys.Add(x.Id));
-                        subscription.Subscribe(x => ages.Add(x.Age));
-
-                        subscription.Subscribe(docs.Add);
-
-                        await subscription.StartAsync();
+                        GC.KeepAlive(subscription.Run(x =>
+                        {
+                            keys.Add(x.Id);
+                            ages.Add(x.Age);
+                            docs.Add((x));
+                        }));
 
 
                         dynamic doc;
@@ -132,12 +132,13 @@ namespace FastTests.Client.Subscriptions
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
 
-                        subscription.Subscribe(x => keys.Add(x.Id));
-                        subscription.Subscribe(x => ages.Add(x.Age));
+                        GC.KeepAlive(subscription.Run(x =>
+                        {
+                            keys.Add(x.Id);
+                            ages.Add(x.Age);
+                            docs.Add((x));
+                        }));
 
-                        subscription.Subscribe(docs.Add);
-
-                        await subscription.StartAsync();
 
                         User doc;
                         Assert.True(docs.TryTake(out doc, _waitForDocTimeout));
@@ -212,21 +213,16 @@ namespace FastTests.Client.Subscriptions
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
 
-                        
-                            
-                        subscription.Subscribe(x => keys.Add(x.Id));
-                        subscription.Subscribe(x => ages.Add(x.Age));
 
-                        subscription.Subscribe(docs.Add);
-
-                        await subscription.StartAsync();
-
-
-                        var db = await this.GetDatabase(store.Database);
-                        using (this.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        GC.KeepAlive(subscription.Run(x =>
                         {
-                            subscriptionReleasedAwaiter = db.SubscriptionStorage.GetSubscriptionConnectionInUseAwaiter(subscriptionId);
-                        }
+                            keys.Add(x.Id);
+                            ages.Add(x.Age);
+                            docs.Add((x));
+                        }));
+
+                        var db = await GetDatabase(store.Database);
+                        subscriptionReleasedAwaiter = db.SubscriptionStorage.GetSubscriptionConnectionInUseAwaiter(subscriptionId);
 
                         dynamic doc;
                         Assert.True(docs.TryTake(out doc, _waitForDocTimeout));
@@ -265,10 +261,10 @@ namespace FastTests.Client.Subscriptions
                 using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(subscriptionId)))
                 {
                     var docs = new BlockingCollection<dynamic>();
-
-                    subscription.Subscribe(o => docs.Add(o));
-
-                    await subscription.StartAsync();
+                    GC.KeepAlive(subscription.Run(x =>
+                    {
+                        docs.Add((x));
+                    }));
 
                     dynamic item;
                     var tryTake = docs.TryTake(out item, TimeSpan.FromMilliseconds(250));

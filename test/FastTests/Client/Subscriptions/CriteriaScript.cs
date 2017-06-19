@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Subscriptions;
@@ -44,11 +45,10 @@ namespace FastTests.Client.Subscriptions
                 using (var subscription = subscriptionManager.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
                 {
                     var list = new BlockingCollection<Thing>();
-                    subscription.Subscribe(x =>
+                    GC.KeepAlive(subscription.Run(x =>
                     {
                         list.Add(x);
-                    });
-                    await subscription.StartAsync();
+                    }));
 
                     Thing thing;
                     Assert.True(list.TryTake(out thing, 5000));
@@ -107,20 +107,20 @@ namespace FastTests.Client.Subscriptions
                     using (store.GetRequestExecutor().ContextPool.AllocateOperationContext(out JsonOperationContext context))
                     {
                         var list = new BlockingCollection<BlittableJsonReaderObject>();
-                        subscription.Subscribe(x =>
+                        
+                        GC.KeepAlive(subscription.Run(x =>
                         {
                             list.Add(context.ReadObject(x, "test"));
-                        });
-                        await subscription.StartAsync();
+                        }));
 
                         BlittableJsonReaderObject thing;
 
-                        Assert.True(list.TryTake(out thing, 5000)); // change this back to 5000
+                        Assert.True(list.TryTake(out thing, 5000)); 
                         dynamic dynamicThing = new DynamicBlittableJson(thing);
                         Assert.Equal("ThingNo4", dynamicThing.Name);
 
 
-                        Assert.True(list.TryTake(out thing, 5000)); // change this back to 5000
+                        Assert.True(list.TryTake(out thing, 5000)); 
                         dynamicThing = new DynamicBlittableJson(thing);
                         Assert.Equal("foo", dynamicThing.Name);
                         Assert.Equal("ThingNo4", dynamicThing.OtherDoc.Name);
