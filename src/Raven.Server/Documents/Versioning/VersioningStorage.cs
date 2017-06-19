@@ -330,7 +330,11 @@ namespace Raven.Server.Documents.Versioning
             {
                 var collectionName = GetCollectionFor(context, prefixSlice);
                 if (collectionName == null)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Tried to delete all revisions for '{id}' but no revisions found.");
                     return;
+                }
 
                 var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
                 DeleteRevisions(context, table, prefixSlice, long.MaxValue, null);
