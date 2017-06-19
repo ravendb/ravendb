@@ -7,7 +7,7 @@ namespace SlowTests.MailingList
 {
     public class linmouhong2 : RavenTestBase
     {
-        public class Product
+        private class Product
         {
             public string Id { get; set; }
 
@@ -18,14 +18,14 @@ namespace SlowTests.MailingList
             public CategoryReference Category { get; set; }
         }
 
-        public class CategoryReference
+        private class CategoryReference
         {
             public int Id { get; set; }
 
             public string Name { get; set; }
         }
 
-        public class ProductIndex : AbstractIndexCreationTask<Product>
+        private class ProductIndex : AbstractIndexCreationTask<Product>
         {
             public ProductIndex()
             {

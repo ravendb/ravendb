@@ -3,18 +3,21 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Server.Documents.Versioning;
 using FastTests.Server.Replication;
-using Raven.Client.Documents.Operations;
-using Xunit;
+using Orders;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents;
+using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Xunit;
 
-namespace FastTests.Client.Attachments
+namespace SlowTests.Client.Attachments
 {
     public class AttachmentsReplication : ReplicationTestsBase
     {

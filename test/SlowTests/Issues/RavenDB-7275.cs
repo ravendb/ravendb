@@ -7,6 +7,7 @@ using Raven.Client.Exceptions.Security;
 using Raven.Client.Server.Operations.ApiKeys;
 using Raven.Client.Util;
 using Raven.Server.Config.Attributes;
+using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Server.Documents.Notifications;
 using Sparrow;
 using Xunit;

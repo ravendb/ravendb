@@ -5,6 +5,7 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace RachisTests.DatabaseCluster
@@ -65,7 +66,7 @@ namespace RachisTests.DatabaseCluster
                 {
                     using (var session = dbStore.OpenAsyncSession())
                     {
-                        await session.StoreAsync(new ReplicationBasicTests.User { Name = "Karmel" }, "users/1");
+                        await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
                         await session.SaveChangesAsync();
                     }
                 }
@@ -74,7 +75,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(1, res.Topology.Promotables.Count);
 
                 await WaitForRaftIndexToBeAppliedInCluster(res.RaftCommandIndex, TimeSpan.FromSeconds(5));
-                await WaitForDocumentInClusterAsync<ReplicationBasicTests.User>(res.Topology, databaseName, "users/1", u => u.Name == "Karmel", TimeSpan.FromSeconds(10));
+                await WaitForDocumentInClusterAsync<User>(res.Topology, databaseName, "users/1", u => u.Name == "Karmel", TimeSpan.FromSeconds(10));
 
                 var val = await WaitForValueAsync(async () => await GetPromotableCount(store, databaseName), 0);
                 Assert.Equal(0, val);

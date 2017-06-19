@@ -9,12 +9,11 @@ namespace FastTests.Server.Replication
     {
         public readonly string DbName = "TestDB" + Guid.NewGuid();
 
-        public class User
+        private class User
         {
             public string Name { get; set; }
             public int Age { get; set; }
         }
-
      
         [Fact]
         public async Task Master_slave_replication_from_etag_zero_should_work()
