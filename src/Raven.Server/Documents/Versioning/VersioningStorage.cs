@@ -8,7 +8,6 @@ using Raven.Client.Server;
 using Raven.Client.Server.Versioning;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -34,6 +33,7 @@ namespace Raven.Server.Documents.Versioning
         private readonly DocumentDatabase _database;
         private readonly DocumentsStorage _documentsStorage;
         public VersioningConfiguration Configuration { get; private set; }
+        public readonly VersioningOperations Operations;
         private readonly HashSet<string> _tableCreated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly Logger _logger;
 
@@ -61,6 +61,7 @@ namespace Raven.Server.Documents.Versioning
             _database = database;
             _documentsStorage = _database.DocumentsStorage;
             _logger = LoggingSource.Instance.GetLogger<VersioningStorage>(database.Name);
+            Operations = new VersioningOperations(_database);
         }
 
         private Table EnsureRevisionTableCreated(Transaction tx, CollectionName collection)
@@ -689,6 +690,6 @@ namespace Raven.Server.Documents.Versioning
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
             return table.GetNumberOfEntriesFor(DocsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice]);
-        }
+        }        
     }
 }
