@@ -22,7 +22,7 @@ class getZombiesCommand extends commandBase {
                 resultEtag: this.extractEtag(xhr)
             } as pagedResult<document>;
         };
-        const url = endpoints.databases.versioning.revisionsZombied + this.urlEncodeArgs(args);
+        const url = endpoints.databases.versioning.revisionsZombies + this.urlEncodeArgs(args);
         return this.query(url, null, this.database, resultsSelector);
     }
 

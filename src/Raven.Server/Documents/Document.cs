@@ -52,7 +52,7 @@ namespace Raven.Server.Documents
             if (Data == null)
             {
                 Debug.Assert(context != null);
-                Data = context.ReadObject(new DynamicJsonValue(), "ZombiedRevision");
+                Data = context.ReadObject(new DynamicJsonValue(), "Zombies");
                 Data.Modifications = new DynamicJsonValue(Data)
                 {
                     [Constants.Documents.Metadata.Key] = mutatedMetadata = new DynamicJsonValue()

@@ -8,12 +8,12 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class GetZombiedRevisionsCommand : RavenCommand<BlittableArrayResult>
+    public class GetZombiesCommand : RavenCommand<BlittableArrayResult>
     {
         private readonly long _etag;
         private readonly int? _pageSize;
 
-        public GetZombiedRevisionsCommand(long etag, int? pageSize)
+        public GetZombiesCommand(long etag, int? pageSize)
         {
             _etag = etag;
             _pageSize = pageSize;
@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Commands
             var pathBuilder = new StringBuilder(node.Url);
             pathBuilder.Append("/databases/")
                 .Append(node.Database)
-                .Append("/revisions/zombied?&etag=")
+                .Append("/revisions/zombies?&etag=")
                 .Append(_etag);
 
             if (_pageSize.HasValue)
