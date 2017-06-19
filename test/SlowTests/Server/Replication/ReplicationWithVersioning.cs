@@ -1,11 +1,13 @@
 ﻿using System.Threading.Tasks;
+using FastTests;
 using FastTests.Server.Documents.Versioning;
+using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace FastTests.Server.Replication
+namespace SlowTests.Server.Replication
 {
     public class ReplicationWithVersioning : ReplicationTestsBase
     {

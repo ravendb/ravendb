@@ -1,0 +1,3 @@
+﻿namespace SlowTests.Server.Replication
+{
+}

@@ -4,17 +4,17 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
+using FastTests.Server.Replication;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
 
-namespace FastTests.Server.Replication
+namespace SlowTests.Server.Replication
 {
     public class DocumentReplication : ReplicationTestsBase
     {

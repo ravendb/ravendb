@@ -1,19 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using FastTests.Server.Basic.Entities;
+using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Server;
-using Raven.Client.Server.Commands;
 using Raven.Client.Server.Operations;
-using Raven.Server.Web.System;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace FastTests.Server.Replication
+namespace SlowTests.Server.Replication
 {
     public class ReplicationResolveConflictsOnConfigurationChange : ReplicationTestsBase
     {

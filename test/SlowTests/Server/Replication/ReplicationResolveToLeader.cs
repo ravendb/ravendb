@@ -1,13 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace FastTests.Server.Replication
+namespace SlowTests.Server.Replication
 {
     public class ReplicationResolveToDatabase : ReplicationTestsBase, IDocumentTombstoneAware
     {

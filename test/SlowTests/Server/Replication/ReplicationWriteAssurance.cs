@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
+using FastTests.Server.Replication;
 using Xunit;
 
-namespace FastTests.Server.Replication
+namespace SlowTests.Server.Replication
 {
     public class ReplicationWriteAssurance : ReplicationTestsBase
     {
