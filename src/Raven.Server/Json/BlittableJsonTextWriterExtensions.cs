@@ -1129,10 +1129,9 @@ namespace Raven.Server.Json
             if (_buffers == null)
                 _buffers = new BlittableJsonReaderObject.PropertiesInsertionBuffer();
 
-
             writer.WriteStartObject();
-            BlittableJsonReaderObject metadata;
-            document.Data.TryGet(Constants.Documents.Metadata.Key, out metadata);
+            BlittableJsonReaderObject metadata = null;
+            document.Data?.TryGet(Constants.Documents.Metadata.Key, out metadata);
             WriteMetadata(writer, document, metadata);
 
             writer.WriteEndObject();

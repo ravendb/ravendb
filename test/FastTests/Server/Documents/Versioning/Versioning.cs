@@ -15,6 +15,7 @@ using Raven.Client.Documents.Exceptions.Versioning;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -374,7 +375,7 @@ namespace FastTests.Server.Documents.Versioning
                 var id = "users/1";
                 if (useSession)
                 {
-                    var user = new User { Name = "Fitzchak" };
+                    var user = new User {Name = "Fitzchak"};
                     for (var i = 0; i < 2; i++)
                     {
                         using (var session = store.OpenAsyncSession())
@@ -392,9 +393,9 @@ namespace FastTests.Server.Documents.Versioning
                 }
                 else
                 {
-                    await store.Commands().PutAsync(id, null, new User { Name = "Fitzchak" });
+                    await store.Commands().PutAsync(id, null, new User {Name = "Fitzchak"});
                     await store.Commands().DeleteAsync(id, null);
-                    await store.Commands().PutAsync(id, null, new User { Name = "Fitzchak" });
+                    await store.Commands().PutAsync(id, null, new User {Name = "Fitzchak"});
                     await store.Commands().DeleteAsync(id, null);
                 }
 
@@ -414,6 +415,14 @@ namespace FastTests.Server.Documents.Versioning
                     Assert.Equal(null, users[2].Name);
                     Assert.Equal("Fitzchak", users[3].Name);
                 }
+
+                // Can get metadata only
+                dynamic revisions = await store.Commands().GetRevisionsForAsync(id, metadataOnly: true);
+                Assert.Equal(4, revisions.Count);
+                Assert.Equal(DocumentFlags.DeleteRevision.ToString(), revisions[0][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
+                Assert.Equal((DocumentFlags.Versioned | DocumentFlags.Revision).ToString(), revisions[1][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
+                Assert.Equal(DocumentFlags.DeleteRevision.ToString(), revisions[2][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
+                Assert.Equal((DocumentFlags.Versioned | DocumentFlags.Revision).ToString(), revisions[3][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
 
                 await store.Admin.SendAsync(new DeleteRevisionsOperation(id, "users/not/exists"));
 

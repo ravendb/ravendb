@@ -181,12 +181,12 @@ namespace FastTests
                 return AsyncHelpers.RunSync(() => GetRevisionsForAsync(id, start, pageSize));
             }
 
-            public async Task<DynamicArray> GetRevisionsForAsync(string id, int? start = null, int? pageSize = null)
+            public async Task<DynamicArray> GetRevisionsForAsync(string id, int? start = null, int? pageSize = null, bool metadataOnly = false)
             {
                 if (id == null)
                     throw new ArgumentNullException(nameof(id));
 
-                var command = new GetRevisionsCommand(id, start, pageSize);
+                var command = new GetRevisionsCommand(id, start, pageSize, metadataOnly);
                 await RequestExecutor.ExecuteAsync(command, Context);
                 return new DynamicArray(command.Result.Results);
             }
