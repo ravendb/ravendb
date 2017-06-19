@@ -466,14 +466,14 @@ namespace FastTests.Client.Attachments
                     Script = "this.LastName = newUser.LastName;",
                     Values =
                     {
-                        {"newUser", new {LastName = "Israel"}}
+                        {"newUser", new {LastName = "Yitzchaki"}}
                     }
                 }));
 
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
-                    Assert.Equal("Israel", user.LastName);
+                    Assert.Equal("Yitzchaki", user.LastName);
 
                     var metadata = session.Advanced.GetMetadataFor(user);
                     Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
@@ -505,7 +505,7 @@ namespace FastTests.Client.Attachments
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
-                    user.LastName = "Israel";
+                    user.LastName = "Yitzchaki";
                     session.SaveChanges();
                 }
             }
@@ -529,7 +529,7 @@ namespace FastTests.Client.Attachments
 
                     session.Advanced.Evict(user);
                     user = session.Load<User>("users/1");
-                    user.LastName = "Israel";
+                    user.LastName = "Yitzchaki";
                     session.SaveChanges();
                 }
             }
@@ -552,7 +552,7 @@ namespace FastTests.Client.Attachments
                     }
 
                     user = session.Load<User>("users/1");
-                    user.LastName = "Israel";
+                    user.LastName = "Yitzchaki";
                     session.SaveChanges();
                 }
             }
@@ -574,7 +574,7 @@ namespace FastTests.Client.Attachments
                         store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/png"));
                     }
 
-                    user.LastName = "Israel";
+                    user.LastName = "Yitzchaki";
                     session.SaveChanges();
                 }
             }
