@@ -5,7 +5,8 @@ class versioningEntry {
     static readonly DefaultConfiguration = "DefaultConfiguration";
 
     active = ko.observable<boolean>();
-    maxRevisions = ko.observable<number>();
+    minimumRevisionsToKeep = ko.observable<number>();
+    minimumRevisionAgeToKeep = ko.observable<string>();
     purgeOnDelete = ko.observable<boolean>();
     collection = ko.observable<string>();
 
@@ -13,12 +14,14 @@ class versioningEntry {
 
     validationGroup: KnockoutValidationGroup = ko.validatedObservable({
         collection: this.collection,
-        maxRevisions: this.maxRevisions
+        minimumRevisionsToKeep: this.minimumRevisionsToKeep,
+        minimumRevisionAgeToKeep: this.minimumRevisionAgeToKeep,
     });
 
     constructor(collection: string, dto: Raven.Client.Server.Versioning.VersioningConfigurationCollection) {
         this.collection(collection);
-        this.maxRevisions(dto.MaxRevisions);
+        this.minimumRevisionsToKeep(dto.MinimumRevisionsToKeep);
+        this.minimumRevisionAgeToKeep(dto.MinimumRevisionAgeToKeep);
         this.active(dto.Active);
         this.purgeOnDelete(dto.PurgeOnDelete);
         this.isDefault = ko.pureComputed<boolean>(() => this.collection() === versioningEntry.DefaultConfiguration);
@@ -31,15 +34,19 @@ class versioningEntry {
             required: true
         });
 
-        this.maxRevisions.extend({
+        this.minimumRevisionsToKeep.extend({
             min: 0
         });
+
+        //TODO: this.minimumRevisionAgeToKeep.extend({
+        //});
     }
 
     toDto(): Raven.Client.Server.Versioning.VersioningConfigurationCollection {
         return {
             Active: this.active(),
-            MaxRevisions: this.maxRevisions(),
+            MinimumRevisionsToKeep: this.minimumRevisionsToKeep(),
+            MinimumRevisionAgeToKeep: this.minimumRevisionAgeToKeep(),
             PurgeOnDelete: this.purgeOnDelete()
         };
     }
@@ -48,7 +55,8 @@ class versioningEntry {
         return new versioningEntry("",
         {
             Active: true,
-            MaxRevisions: 5,
+            MinimumRevisionsToKeep: 5,
+            MinimumRevisionAgeToKeep: null,
             PurgeOnDelete: false
         });
     }
