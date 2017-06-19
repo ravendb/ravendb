@@ -5,6 +5,7 @@ import getDocumentsPreviewCommand = require("commands/database/documents/getDocu
 class collection {
     static readonly allDocumentsCollectionName = "All Documents";
     static readonly systemDocumentsCollectionName = "@system";
+    static readonly zombiesCollectionName = "Zombies";
 
     documentCount: KnockoutObservable<number> = ko.observable(0);
     name: string;

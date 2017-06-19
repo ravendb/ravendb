@@ -36,8 +36,14 @@
                         </div>
                         <div class="versioning-revisions">
                             <div class="input-group">
-                                <span class="input-group-addon">Max revisions</span>
-                                <input type="number" class="form-control" placeholder="0" data-bind="enable: versioningEnabled, numericValue: defaultVersioning().maxRevisions, valueUpdate: 'afterkeydown'">
+                                <span class="input-group-addon">Minimum revisions to keep</span>
+                                <input type="number" class="form-control" placeholder="0" data-bind="enable: versioningEnabled, numericValue: defaultVersioning().minimumRevisionsToKeep, valueUpdate: 'afterkeydown'">
+                            </div>
+                        </div>
+                        <div class="versioning-revisions-age">
+                            <div class="input-group">
+                                <span class="input-group-addon">Minimum revisions age to keep</span>
+                                <input type="text" class="form-control" placeholder="00:00:00" data-bind="enable: versioningEnabled, textInput: defaultVersioning().minimumRevisionAgeToKeep">
                             </div>
                         </div>
                     </div>
@@ -78,8 +84,8 @@
                             </div>
                             <div class="versioning-revisions">
                                 <div class="input-group">
-                                    <span class="input-group-addon">Max revisions</span>
-                                    <input type="number" class="form-control" placeholder="0" data-bind="numericValue: maxRevisions, valueUpdate: 'afterkeyup', enable: !isDefault()">
+                                    <span class="input-group-addon">Minimum revisions to keep</span>
+                                    <input type="number" class="form-control" placeholder="0" data-bind="numericValue: minimumRevisionsToKeep, valueUpdate: 'afterkeyup', enable: !isDefault()">
                                 </div>
                             </div>
                             <div class="flex-separator"></div>

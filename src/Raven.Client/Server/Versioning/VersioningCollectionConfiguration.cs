@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Server.Versioning
 {
-    public class VersioningConfigurationCollection
+    public class VersioningCollectionConfiguration
     {
         public long? MinimumRevisionsToKeep { get; set; }
 
@@ -13,7 +13,7 @@ namespace Raven.Client.Server.Versioning
 
         public bool PurgeOnDelete { get; set; }
 
-        protected bool Equals(VersioningConfigurationCollection other)
+        protected bool Equals(VersioningCollectionConfiguration other)
         {
             return MinimumRevisionsToKeep == other.MinimumRevisionsToKeep && 
                 MinimumRevisionAgeToKeep == other.MinimumRevisionAgeToKeep && 
@@ -26,7 +26,7 @@ namespace Raven.Client.Server.Versioning
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != GetType()) return false;
-            return Equals((VersioningConfigurationCollection)obj);
+            return Equals((VersioningCollectionConfiguration)obj);
         }
 
         public override int GetHashCode()

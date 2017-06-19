@@ -18,7 +18,7 @@ class versioningEntry {
         minimumRevisionAgeToKeep: this.minimumRevisionAgeToKeep,
     });
 
-    constructor(collection: string, dto: Raven.Client.Server.Versioning.VersioningConfigurationCollection) {
+    constructor(collection: string, dto: Raven.Client.Server.Versioning.VersioningCollectionConfiguration) {
         this.collection(collection);
         this.minimumRevisionsToKeep(dto.MinimumRevisionsToKeep);
         this.minimumRevisionAgeToKeep(dto.MinimumRevisionAgeToKeep);
@@ -42,7 +42,7 @@ class versioningEntry {
         //});
     }
 
-    toDto(): Raven.Client.Server.Versioning.VersioningConfigurationCollection {
+    toDto(): Raven.Client.Server.Versioning.VersioningCollectionConfiguration {
         return {
             Active: this.active(),
             MinimumRevisionsToKeep: this.minimumRevisionsToKeep(),
@@ -55,7 +55,7 @@ class versioningEntry {
         return new versioningEntry("",
         {
             Active: true,
-            MinimumRevisionsToKeep: 5,
+            MinimumRevisionsToKeep: null,
             MinimumRevisionAgeToKeep: null,
             PurgeOnDelete: false
         });

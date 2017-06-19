@@ -132,6 +132,14 @@
         <!-- /ko -->
     </li>
     <li>
+        <!-- ko with: $root.collectionsTracker.getZombiesCollection() -->
+        <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForZombies() }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
+            <i class="icon-info"></i>
+            <span>Zombies</span>
+        </a>
+        <!-- /ko -->
+    </li>
+    <li>
         <!-- ko with: $root.collectionsTracker.getSystemDocumentsCollection() -->
         <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data) }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
             <i class="icon-system"></i> <span>System</span>

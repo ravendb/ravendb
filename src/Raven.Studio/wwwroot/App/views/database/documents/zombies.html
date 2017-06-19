@@ -1,0 +1,23 @@
+<div class="documents content-margin">
+    <div class="flex-window stretch">
+        <div class="flex-window-scroll">
+            <div class="has-error results-error" data-bind="visible: dataChanged()">
+                <div class="help-block">
+                    <i class="icon-danger"></i><span>Data has changed. Your results may contain duplicates or non-current entries. <a href="#" data-bind="click: refresh">Refresh.</a></span>
+                </div>
+            </div>
+            <div class="scroll-stretch">
+                <div class="panel-body">
+                    <virtual-grid class="resizable documents-grid" params="controller: gridController, emptyTemplate: 'empty-collection-template'"></virtual-grid>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/html" id="empty-collection-template">
+    No zombies for now. 
+</script>
+<div class="tooltip json-preview" style="opacity: 0">
+    <pre><code></code></pre>
+</div>

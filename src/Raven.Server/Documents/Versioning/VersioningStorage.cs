@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Versioning
             Collection = 9,
         }
 
-        private readonly VersioningConfigurationCollection _emptyConfiguration = new VersioningConfigurationCollection();
+        private readonly VersioningCollectionConfiguration _emptyConfiguration = new VersioningCollectionConfiguration();
 
         public VersioningStorage(DocumentDatabase database)
         {
@@ -174,10 +174,10 @@ namespace Raven.Server.Documents.Versioning
             return _emptyConfiguration.Active;
         }
 
-        private VersioningConfigurationCollection GetVersioningConfiguration(CollectionName collectionName)
+        private VersioningCollectionConfiguration GetVersioningConfiguration(CollectionName collectionName)
         {
             if (Configuration.Collections != null && 
-                Configuration.Collections.TryGetValue(collectionName.Name, out VersioningConfigurationCollection configuration))
+                Configuration.Collections.TryGetValue(collectionName.Name, out VersioningCollectionConfiguration configuration))
             {
                 return configuration;
             }
@@ -192,7 +192,7 @@ namespace Raven.Server.Documents.Versioning
 
         public bool ShouldVersionDocument(CollectionName collectionName, NonPersistentDocumentFlags nonPersistentFlags, 
             BlittableJsonReaderObject existingDocument, BlittableJsonReaderObject document, ref DocumentFlags documentFlags, 
-            out VersioningConfigurationCollection configuration)
+            out VersioningCollectionConfiguration configuration)
         {
             configuration = GetVersioningConfiguration(collectionName);
             if (configuration.Active == false)
@@ -226,7 +226,7 @@ namespace Raven.Server.Documents.Versioning
 
         public void Put(DocumentsOperationContext context, string id, BlittableJsonReaderObject document,
             DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, ChangeVectorEntry[] changeVector, long lastModifiedTicks,
-            VersioningConfigurationCollection configuration = null)
+            VersioningCollectionConfiguration configuration = null)
         {
             Debug.Assert(changeVector != null, "Change vector must be set");
 
@@ -292,7 +292,7 @@ namespace Raven.Server.Documents.Versioning
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice lowerId, 
-            VersioningConfigurationCollection configuration, NonPersistentDocumentFlags nonPersistentFlags)
+            VersioningCollectionConfiguration configuration, NonPersistentDocumentFlags nonPersistentFlags)
         {
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
             {
@@ -304,7 +304,7 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
-        private void DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, VersioningConfigurationCollection configuration, long revisionsCount, 
+        private void DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, VersioningCollectionConfiguration configuration, long revisionsCount, 
             NonPersistentDocumentFlags nonPersistentFlags)
         {
             if ((nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) == NonPersistentDocumentFlags.FromSmuggler)
