@@ -215,7 +215,7 @@ namespace FastTests.Server.Replication
                     {
                         etag = db.DocumentsStorage.GetLastDocumentEtag(ctx, "@system");
                     }
-                    await Task.Delay(200); // twice the minial heartbeat
+                    await Task.Delay(200); // twice the minimal heartbeat
                     using (ctx.OpenReadTransaction())
                     {
                         Assert.Equal(etag, db.DocumentsStorage.GetLastDocumentEtag(ctx, "@system"));

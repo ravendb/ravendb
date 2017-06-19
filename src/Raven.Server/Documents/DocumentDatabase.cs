@@ -146,7 +146,7 @@ namespace Raven.Server.Documents
 
         public DatabaseInfoCache DatabaseInfoCache { get; set; }
 
-        public SystemTime Time = new SystemTime();
+        public readonly SystemTime Time = new SystemTime();
 
         public DocumentPatcher Patcher { get; private set; }
 

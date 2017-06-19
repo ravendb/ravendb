@@ -138,8 +138,7 @@ namespace Voron.Data.BTrees
                 currentValue = *(long*)read.Reader.Base;
 
             var value = currentValue + delta;
-            byte* ptr;
-            using (DirectAdd(key, sizeof(long), out ptr))
+            using (DirectAdd(key, sizeof(long), out byte* ptr))
                 *(long*)ptr = value;
 
             return value;
@@ -158,8 +157,7 @@ namespace Voron.Data.BTrees
                     return false;
             }
 
-            byte* ptr;
-            using (DirectAdd(key, sizeof(long), out ptr))
+            using (DirectAdd(key, sizeof(long), out byte* ptr))
                 *(long*)ptr = value;
 
             return true;
@@ -171,8 +169,7 @@ namespace Voron.Data.BTrees
 
             var length = (int)value.Length;
 
-            byte* ptr;
-            using (DirectAdd(key, length, out ptr))
+            using (DirectAdd(key, length, out byte* ptr))
                 CopyStreamToPointer(_llt, value, ptr);
         }
 
@@ -200,9 +197,8 @@ namespace Voron.Data.BTrees
             if (value == null)
                 ThrowNullReferenceException();
             Debug.Assert(value != null);
-            
-            byte* ptr;
-            using (DirectAdd(key, value.Length, out ptr))
+
+            using (DirectAdd(key, value.Length, out byte* ptr))
             {
                 fixed (byte* src = value)
                 {
@@ -215,16 +211,14 @@ namespace Voron.Data.BTrees
         {
             if (!value.HasValue)
                 ThrowNullReferenceException();
-            
-            byte* ptr;
-            using (DirectAdd(key, value.Size, out ptr))
+
+            using (DirectAdd(key, value.Size, out byte* ptr))
                 value.CopyTo(ptr);
         }
 
         private static void CopyStreamToPointer(LowLevelTransaction tx, Stream value, byte* pos)
         {
-            TemporaryPage tmp;
-            using (tx.Environment.GetTemporaryPage(tx, out tmp))
+            using (tx.Environment.GetTemporaryPage(tx, out TemporaryPage tmp))
             {
                 var tempPageBuffer = tmp.TempPageBuffer;
                 var tempPagePointer = tmp.TempPagePointer;

@@ -297,7 +297,7 @@ namespace Raven.Server.Documents.Versioning
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
             {
                 // We delete the old revisions after we put the current one, 
-                // because in case that MaxRevisions is 3 or lower we may get a revision document from replication
+                // because in case that MinimumRevisionsToKeep is 3 or lower we may get a revision document from replication
                 // which is old. But because we put it first, we make sure to clean this document, because of the order to the revisions.
                 var revisionsCount = IncrementCountOfRevisions(context, prefixSlice, 1);
                 DeleteOldRevisions(context, table, prefixSlice, configuration, revisionsCount, nonPersistentFlags);
@@ -340,6 +340,25 @@ namespace Raven.Server.Documents.Versioning
                 DeleteRevisions(context, table, prefixSlice, long.MaxValue, null);
                 DeleteCountOfRevisions(context, prefixSlice);
             }
+        }
+
+        public void DeleteRevisionsBefore(DocumentsOperationContext context, string collection, DateTime time)
+        {
+            var collectionName = new CollectionName(collection);
+            var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
+            table.DeleteByPrimaryKey(Slices.BeforeAllKeys, deleted =>
+            {
+                var lastModified = DocumentsStorage.TableValueToDateTime((int)Columns.LastModified, ref deleted.Reader);
+                if (lastModified >= time)
+                    return false;
+
+                using (DocumentsStorage.TableValueToSlice(context, (int)Columns.LowerId, ref deleted.Reader, out Slice lowerId))
+                using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
+                {
+                    IncrementCountOfRevisions(context, prefixSlice, -1);
+                }
+                return true;
+            });
         }
 
         private CollectionName GetCollectionFor(DocumentsOperationContext context, Slice prefixSlice)
@@ -646,14 +665,14 @@ namespace Raven.Server.Documents.Versioning
                 LowerId = DocumentsStorage.TableValueToString(context, (int)Columns.LowerId, ref tvr),
                 Id = DocumentsStorage.TableValueToId(context, (int)Columns.Id, ref tvr),
                 Etag = DocumentsStorage.TableValueToEtag((int)Columns.Etag, ref tvr),
-                Collection = DocumentsStorage.TableValueToId(context, (int)Columns.Collection, ref tvr)
+                Collection = DocumentsStorage.TableValueToId(context, (int)Columns.Collection, ref tvr),
+                LastModified = DocumentsStorage.TableValueToDateTime((int)Columns.LastModified, ref tvr),
+                Flags = DocumentsStorage.TableValueToFlags((int)Columns.Flags, ref tvr)
             };
 
             var ptr = tvr.Read((int)Columns.Document, out int size);
             if (size > 0)
                 result.Data = new BlittableJsonReaderObject(ptr, size, context);
-
-            result.LastModified = new DateTime(*(long*)tvr.Read((int)Columns.LastModified, out size));
 
             ptr = tvr.Read((int)Columns.ChangeVector, out size);
             var changeVectorCount = size / sizeof(ChangeVectorEntry);
@@ -662,8 +681,6 @@ namespace Raven.Server.Documents.Versioning
             {
                 result.ChangeVector[i] = ((ChangeVectorEntry*)ptr)[i];
             }
-
-            result.Flags = *(DocumentFlags*)tvr.Read((int)Columns.Flags, out size);
 
             return result;
         }

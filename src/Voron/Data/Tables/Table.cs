@@ -957,6 +957,36 @@ namespace Voron.Data.Tables
             }
         }
 
+        public void DeleteByPrimaryKey(Slice value, Func<TableValueHolder, bool> beforeDelete = null)
+        {
+            var pk = _schema.Key;
+            var tree = GetTree(pk);
+            TableValueHolder tableValueHolder = null;
+            while (true)
+            {
+                using (var it = tree.Iterate(false))
+                {
+                    if (it.Seek(value) == false)
+                        return;
+
+                    var id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
+
+                    if (beforeDelete != null)
+                    {
+                        var ptr = DirectRead(id, out int size);
+                        if (tableValueHolder == null)
+                            tableValueHolder = new TableValueHolder();
+                        tableValueHolder.Reader = new TableValueReader(id, ptr, size);
+                        if (beforeDelete(tableValueHolder) == false)
+                            return;
+                    }
+
+                    Delete(id);
+                }
+            }
+        }
+
+
         public bool SeekOnePrimaryKey(Slice slice, out TableValueReader reader)
         {
             Debug.Assert(slice.Options != SliceOptions.Key, "Should be called with only AfterAllKeys or BeforeAllKeys");
