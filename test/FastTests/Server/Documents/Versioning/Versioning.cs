@@ -369,6 +369,9 @@ namespace FastTests.Server.Documents.Versioning
             {
                 await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database, false);
 
+                var zombiedRevisions = await store.Commands().GetZombiedRevisionsAsync(long.MaxValue);
+                Assert.Equal(0, zombiedRevisions.Count);
+
                 var id = "users/1";
                 if (useSession)
                 {
@@ -400,7 +403,7 @@ namespace FastTests.Server.Documents.Versioning
                 Assert.Equal(useSession ? 1 : 0, statistics.CountOfDocuments);
                 Assert.Equal(4, statistics.CountOfRevisionDocuments);
 
-                var zombiedRevisions = await store.Commands().GetZombiedRevisionsAsync(long.MaxValue);
+                zombiedRevisions = await store.Commands().GetZombiedRevisionsAsync(long.MaxValue);
                 Assert.Equal(1, zombiedRevisions.Count);
 
                 using (var session = store.OpenAsyncSession())
