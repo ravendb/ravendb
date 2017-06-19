@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System.IO;
+using SlowTests.Utils;
 using Voron;
 using Xunit;
 
