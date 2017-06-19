@@ -1268,7 +1268,7 @@ namespace Raven.Server.Rachis
 
         public abstract Task<Stream> ConnectToPeer(string url, string apiKey, TransactionOperationContext context = null);
 
-        public void Bootstrap(string selfUrl, byte[] publicKey)
+        public void Bootstrap(string selfUrl, byte[] publicKey, bool forNewCluster = false)
         {
             if (selfUrl == null)
                 throw new ArgumentNullException(nameof(selfUrl));
@@ -1278,10 +1278,13 @@ namespace Raven.Server.Rachis
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var tx = ctx.OpenWriteTransaction())
             {
-                if (CurrentState != State.Passive)
+                if (CurrentState != State.Passive && forNewCluster == false)
                     return;
 
-                UpdateNodeTag(ctx, "A");
+                if (forNewCluster == false)
+                {
+                    UpdateNodeTag(ctx, "A");
+                }
 
                 var topology = new ClusterTopology(
                     Guid.NewGuid().ToString(),
