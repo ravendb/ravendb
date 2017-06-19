@@ -11,6 +11,9 @@ class collectionsTracker {
     loadStatsTask: JQueryPromise<collectionsStats>;
 
     collections = ko.observableArray<collection>();
+
+    zombies = ko.observable<collection>();
+
     private db: database;
 
     private events = {
@@ -36,6 +39,8 @@ class collectionsTracker {
         //TODO: starred
         const allDocsCollection = collection.createAllDocumentsCollection(db, collectionsStats.numberOfDocuments());
         this.collections([allDocsCollection].concat(collections));
+
+        this.zombies(new collection(collection.zombiesCollectionName, db));
     }
 
     onDatabaseStatsChanged(notification: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged, db: database) {
@@ -68,6 +73,10 @@ class collectionsTracker {
         return this.collections()
             .filter(x => !x.isAllDocuments && !x.isSystemDocuments)
             .map(x => x.name);
+    }
+
+    getZombiesCollection() {
+        return this.zombies();
     }
 
     getAllDocumentsCollection() {

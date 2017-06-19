@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Handlers
             if (versioningStorage.Configuration == null)
                 throw new VersioningDisabledException();
 
-            var etag = GetLongQueryString("etag");
+            var etag = GetLongQueryString("etag", false) ?? long.MaxValue;
             var pageSize = GetPageSize();
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

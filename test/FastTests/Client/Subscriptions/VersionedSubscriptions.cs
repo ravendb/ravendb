@@ -28,18 +28,18 @@ namespace FastTests.Client.Subscriptions
                 {
                     var versioningDoc = new VersioningConfiguration
                     {
-                        Default = new VersioningConfigurationCollection
+                        Default = new VersioningCollectionConfiguration
                         {
                             Active = true,
                             MinimumRevisionsToKeep = 5,
                         },
-                        Collections = new Dictionary<string, VersioningConfigurationCollection>
+                        Collections = new Dictionary<string, VersioningCollectionConfiguration>
                         {
-                            ["Users"] = new VersioningConfigurationCollection
+                            ["Users"] = new VersioningCollectionConfiguration
                             {
                                 Active = true
                             },
-                            ["Dons"] = new VersioningConfigurationCollection
+                            ["Dons"] = new VersioningCollectionConfiguration
                             {
                                 Active = true,
                             }
@@ -104,18 +104,18 @@ namespace FastTests.Client.Subscriptions
                 {
                     var versioningDoc = new VersioningConfiguration
                     {
-                        Default = new VersioningConfigurationCollection
+                        Default = new VersioningCollectionConfiguration
                         {
                             Active = true,
                             MinimumRevisionsToKeep = 5,
                         },
-                        Collections = new Dictionary<string, VersioningConfigurationCollection>
+                        Collections = new Dictionary<string, VersioningCollectionConfiguration>
                         {
-                            ["Users"] = new VersioningConfigurationCollection
+                            ["Users"] = new VersioningCollectionConfiguration
                             {
                                 Active = true
                             },
-                            ["Dons"] = new VersioningConfigurationCollection
+                            ["Dons"] = new VersioningCollectionConfiguration
                             {
                                 Active = true,
                             }
@@ -203,18 +203,18 @@ namespace FastTests.Client.Subscriptions
                 {
                     var versioningDoc = new VersioningConfiguration
                     {
-                        Default = new VersioningConfigurationCollection
+                        Default = new VersioningCollectionConfiguration
                         {
                             Active = true,
                             MinimumRevisionsToKeep = 5,
                         },
-                        Collections = new Dictionary<string, VersioningConfigurationCollection>
+                        Collections = new Dictionary<string, VersioningCollectionConfiguration>
                         {
-                            ["Users"] = new VersioningConfigurationCollection
+                            ["Users"] = new VersioningCollectionConfiguration
                             {
                                 Active = true
                             },
-                            ["Dons"] = new VersioningConfigurationCollection
+                            ["Dons"] = new VersioningCollectionConfiguration
                             {
                                 Active = true,
                             }
@@ -294,18 +294,18 @@ namespace FastTests.Client.Subscriptions
                 {
                     var versioningDoc = new VersioningConfiguration
                     {
-                        Default = new VersioningConfigurationCollection
+                        Default = new VersioningCollectionConfiguration
                         {
                             Active = true,
                             MinimumRevisionsToKeep = 5,
                         },
-                        Collections = new Dictionary<string, VersioningConfigurationCollection>
+                        Collections = new Dictionary<string, VersioningCollectionConfiguration>
                         {
-                            ["Users"] = new VersioningConfigurationCollection
+                            ["Users"] = new VersioningCollectionConfiguration
                             {
                                 Active = true
                             },
-                            ["Dons"] = new VersioningConfigurationCollection
+                            ["Dons"] = new VersioningCollectionConfiguration
                             {
                                 Active = true,
                             }

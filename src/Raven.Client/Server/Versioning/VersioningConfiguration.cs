@@ -10,9 +10,9 @@ namespace Raven.Client.Server.Versioning
 {
     public class VersioningConfiguration
     {
-        public VersioningConfigurationCollection Default { get; set; }
+        public VersioningCollectionConfiguration Default { get; set; }
 
-        public Dictionary<string, VersioningConfigurationCollection> Collections { get; set; }
+        public Dictionary<string, VersioningCollectionConfiguration> Collections { get; set; }
 
         public bool Equals(VersioningConfiguration other)
         {
@@ -22,7 +22,7 @@ namespace Raven.Client.Server.Versioning
                 return false;
             foreach (var keyValue in Collections)
             {
-                VersioningConfigurationCollection val;
+                VersioningCollectionConfiguration val;
                 if (other.Collections.TryGetValue(keyValue.Key, out val) == false)
                     return false;
                 if (keyValue.Value.Equals(val) == false)

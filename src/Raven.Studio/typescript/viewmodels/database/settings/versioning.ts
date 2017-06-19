@@ -69,7 +69,7 @@ class versioning extends viewModelBase {
     toDto(): Raven.Client.Server.Versioning.VersioningConfiguration {
         const collectionVersioning = this.versionings();
 
-        const collectionsDto = {} as { [key: string]: Raven.Client.Server.Versioning.VersioningConfigurationCollection; }
+        const collectionsDto = {} as { [key: string]: Raven.Client.Server.Versioning.VersioningCollectionConfiguration; }
 
         collectionVersioning.forEach(config => {
             collectionsDto[config.collection()] = config.toDto();

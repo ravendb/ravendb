@@ -124,7 +124,7 @@ namespace Raven.Server.Documents
                         (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
                     {
                         if (_documentDatabase.DocumentsStorage.VersioningStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document,
-                            ref flags, out VersioningConfigurationCollection configuration))
+                            ref flags, out VersioningCollectionConfiguration configuration))
                         {
                             _documentDatabase.DocumentsStorage.VersioningStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration);
                         }

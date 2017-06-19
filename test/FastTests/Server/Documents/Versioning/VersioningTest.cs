@@ -13,24 +13,24 @@ namespace FastTests.Server.Documents.Versioning
         {
             var versioningDoc = new VersioningConfiguration
             {
-                Default = new VersioningConfigurationCollection
+                Default = new VersioningCollectionConfiguration
                 {
                     Active = true,
                     MinimumRevisionsToKeep = 5,
                 },
-                Collections = new Dictionary<string, VersioningConfigurationCollection>
+                Collections = new Dictionary<string, VersioningCollectionConfiguration>
                 {
-                    ["Users"] = new VersioningConfigurationCollection
+                    ["Users"] = new VersioningCollectionConfiguration
                     {
                         Active = true,
                         PurgeOnDelete = purgeOnDelete,
                         MinimumRevisionsToKeep = minimumRevisionsToKeep
                     },
-                    ["Comments"] = new VersioningConfigurationCollection
+                    ["Comments"] = new VersioningCollectionConfiguration
                     {
                         Active = false,
                     },
-                    ["Products"] = new VersioningConfigurationCollection
+                    ["Products"] = new VersioningCollectionConfiguration
                     {
 
                         Active = false,
