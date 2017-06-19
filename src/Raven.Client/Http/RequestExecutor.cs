@@ -607,9 +607,9 @@ namespace Raven.Client.Http
             }
         }
 
-        protected virtual async Task PerformHealthCheck(ServerNode serverNode, JsonOperationContext context)
+        protected virtual Task PerformHealthCheck(ServerNode serverNode, JsonOperationContext context)
         {
-            await ExecuteAsync(serverNode, context, new GetStatisticsCommand(debugTag: "failure=check"), shouldRetry: false).ConfigureAwait(false);
+            return ExecuteAsync(serverNode, context, new GetStatisticsCommand(debugTag: "failure=check"), shouldRetry: false);
         }
 
         private static async Task AddFailedResponseToCommand<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, HttpRequestException e)

@@ -59,9 +59,9 @@ namespace Raven.Client.Http
         }
         
         
-        protected override async Task PerformHealthCheck(ServerNode serverNode, JsonOperationContext context)
+        protected override Task PerformHealthCheck(ServerNode serverNode, JsonOperationContext context)
         {
-            await ExecuteAsync(serverNode, context, new GetTcpInfoCommand("health-check"), shouldRetry: false).ConfigureAwait(false);
+            return ExecuteAsync(serverNode, context, new GetTcpInfoCommand("health-check"), shouldRetry: false);
         }
 
         public override async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout)
