@@ -4,7 +4,7 @@ using Raven.Client.Documents.Exceptions;
 using Raven.Client.Exceptions;
 using Xunit;
 
-namespace FastTests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_6415 : ReplicationTestsBase
     {

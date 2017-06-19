@@ -1,10 +1,9 @@
 ﻿using System.IO;
 using System.Text;
-using Newtonsoft.Json.Serialization;
 using Sparrow.Json;
 using Xunit;
 
-namespace FastTests.Issues
+namespace FastTests.Blittable
 {
     public class BlittableParsing : NoDisposalNeeded
     {

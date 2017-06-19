@@ -1,6 +1,7 @@
-﻿using Xunit;
+﻿using FastTests;
+using Xunit;
 
-namespace FastTests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_5418 : RavenTestBase
     {

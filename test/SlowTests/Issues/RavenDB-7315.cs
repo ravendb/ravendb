@@ -1,9 +1,10 @@
 ﻿using System.Linq;
+using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Xunit;
 
-namespace FastTests.Issues
+namespace SlowTests.Issues
 {
     public class MyEntity
     {

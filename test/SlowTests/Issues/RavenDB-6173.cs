@@ -1,12 +1,9 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
-using Raven.Client;
-using Raven.Client.Documents.Replication;
 using Xunit;
 
-namespace FastTests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_6173 : ReplicationTestsBase
     {

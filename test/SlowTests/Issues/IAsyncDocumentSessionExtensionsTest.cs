@@ -1,7 +1,8 @@
 ﻿using System.Threading.Tasks;
+using FastTests;
 using Xunit;
 
-namespace FastTests.Issues
+namespace SlowTests.Issues
 {
     public class IAsyncDocumentSessionExtensionsTest : RavenTestBase
     {

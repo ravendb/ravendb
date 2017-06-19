@@ -1,11 +1,12 @@
 ﻿using System.Linq;
+using FastTests;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Sparrow.Json;
 using Xunit;
 
-namespace FastTests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_5297 : RavenTestBase
     {
