@@ -89,12 +89,12 @@
             <pre id="docEditor" class="form-control absolute-fill" 
                  data-bind="aceEditor: { code: documentText, fontSize:'16px', lang: 'ace/mode/json', readOnly: inReadOnlyMode() }, attr: { disabled: isBusy }, validationElement: documentText, visible: !isDeleteRevision()"></pre>
             <div class="absolute-fill" data-bind="visible: isDeleteRevision()">
-                <div class="absolute-center padding bg-info">
-                    <i class="icon-info icon-xl"></i>
+                <div class="absolute-center padding bg-info text-center">
+                    <i class="icon-trash icon-xl"></i>
 
                     This document has been removed on<span data-bind="text: metadata().lastModifiedFullDate"></span>.
                     <br />
-                    Go to <a href="#" data-bind="click: _.partial(connectedDocuments.activateRevisions, true)" class="text-warning">REVISIONS</a> to see entire document history.
+                    Go to <a href="#" data-bind="click: _.partial(connectedDocuments.activateRevisions, true)">REVISIONS</a> to see entire document history.
                 </div>
 
             </div>
