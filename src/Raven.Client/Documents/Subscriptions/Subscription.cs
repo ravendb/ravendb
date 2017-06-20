@@ -61,7 +61,7 @@ namespace Raven.Client.Documents.Subscriptions
             return _store.OpenSession(new SessionOptions
             {
                 Database = _dbName,
-                RequestExecuter = _requestExecutor
+                RequestExecutor = _requestExecutor
             });
         }
         
@@ -70,7 +70,7 @@ namespace Raven.Client.Documents.Subscriptions
             return _store.OpenAsyncSession(new SessionOptions
             {
                 Database = _dbName,
-                RequestExecuter = _requestExecutor
+                RequestExecutor = _requestExecutor
             });
         }
 

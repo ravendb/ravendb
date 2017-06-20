@@ -5,6 +5,6 @@ namespace Raven.Client.Documents.Session
     public class SessionOptions
     {
         public string Database { get; set; }
-        public RequestExecutor RequestExecuter { get; set; }
+        public RequestExecutor RequestExecutor { get; set; }
     }
 }
