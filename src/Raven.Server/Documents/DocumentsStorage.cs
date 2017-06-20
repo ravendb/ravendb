@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Net;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Client.Documents.Changes;
@@ -389,9 +388,8 @@ namespace Raven.Server.Documents
 
             var isStartAfter = string.IsNullOrWhiteSpace(startAfterId) == false;
 
-            Slice prefixSlice;
             var startAfterSlice = Slices.Empty;
-            using (DocumentIdWorker.GetSliceFromId(context, idPrefix, out prefixSlice))
+            using (DocumentIdWorker.GetSliceFromId(context, idPrefix, out Slice prefixSlice))
             using (isStartAfter ? (IDisposable)DocumentIdWorker.GetSliceFromId(context, startAfterId, out startAfterSlice) : null)
             {
                 foreach (var result in table.SeekByPrimaryKeyPrefix(prefixSlice, startAfterSlice, 0))
@@ -844,8 +842,7 @@ namespace Raven.Server.Documents
 
         public static ChangeVectorEntry[] GetChangeVectorEntriesFromTableValueReader(ref TableValueReader tvr, int index)
         {
-            int size;
-            var pChangeVector = (ChangeVectorEntry*)tvr.Read(index, out size);
+            var pChangeVector = (ChangeVectorEntry*)tvr.Read(index, out int size);
             var changeVector = new ChangeVectorEntry[size / sizeof(ChangeVectorEntry)];
             for (int i = 0; i < changeVector.Length; i++)
             {
@@ -1044,17 +1041,16 @@ namespace Raven.Server.Documents
             }
         }
 
-        // Note: Make sure to call this with a seprator, to you won't delete "users/11" for "users/1"
+        // Note: Make sure to call this with a separator, to you won't delete "users/11" for "users/1"
         public List<DeleteOperationResult> DeleteDocumentsStartingWith(DocumentsOperationContext context, string prefix)
         {
             var deleteResults = new List<DeleteOperationResult>();
 
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
-            Slice prefixSlice;
-            using (DocumentIdWorker.GetSliceFromId(context, prefix, out prefixSlice))
+            using (DocumentIdWorker.GetSliceFromId(context, prefix, out Slice prefixSlice))
             {
-                bool hasMore = true;
+                var hasMore = true;
                 while (hasMore)
                 {
                     hasMore = false;

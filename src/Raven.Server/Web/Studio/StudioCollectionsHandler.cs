@@ -40,8 +40,7 @@ namespace Raven.Server.Web.Studio
             var bindings = GetStringValuesQueryString("binding", required: false);
             var fullBindings = GetStringValuesQueryString("fullBinding", required: false);
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
                 Document[] documents;
@@ -50,7 +49,6 @@ namespace Raven.Server.Web.Studio
                 long etag;
                 HashSet<string> propertiesPreviewToSend;
                 HashSet<string> fullPropertiesToSend = new HashSet<string>(fullBindings);
-                ;
 
                 // compute etag only - maybe we can respond with NotModified?
                 if (string.IsNullOrEmpty(collection))
