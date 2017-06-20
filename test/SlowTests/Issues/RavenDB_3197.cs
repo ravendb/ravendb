@@ -45,8 +45,7 @@ exports.c = function(v) { throw 'oops'; }
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
 
-                DocumentsOperationContext context;
-                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
                     var e = Assert.Throws<JavaScriptException>(() =>
