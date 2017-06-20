@@ -13,5 +13,7 @@ namespace Raven.Client.Server.PeriodicBackup
         public string IndexingStoragePath { get; set; }
 
         public string TempPath { get; set; }
+
+        public string EncryptionKey { get; set; }
     }
 }

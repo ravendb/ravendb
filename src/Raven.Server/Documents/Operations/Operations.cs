@@ -94,8 +94,12 @@ namespace Raven.Server.Documents.Operations
             return null;
         }
 
-        public Task<IOperationResult> AddOperation(string description, OperationType operationType, Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory,
-            long id, OperationCancelToken token = null)
+        public Task<IOperationResult> AddOperation(
+            string description, 
+            OperationType operationType, 
+            Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory,
+            long id, 
+            OperationCancelToken token = null)
         {
 
             var operationState = new OperationState

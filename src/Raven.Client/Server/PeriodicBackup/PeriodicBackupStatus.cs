@@ -17,11 +17,11 @@ namespace Raven.Client.Server.PeriodicBackup
 
         public LocalBackup LocalBackup { get; set; }
 
-        public UploadToS3 UploadToS3 { get; set; }
+        public UploadToS3 UploadToS3;
 
-        public UploadToGlacier UploadToGlacier { get; set; }
+        public UploadToGlacier UploadToGlacier;
 
-        public UploadToAzure UploadToAzure { get; set; }
+        public UploadToAzure UploadToAzure;
 
         public long? LastEtag { get; set; }
 

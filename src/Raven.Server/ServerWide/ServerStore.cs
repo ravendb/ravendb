@@ -532,6 +532,32 @@ namespace Raven.Server.ServerWide
 
         }
 
+        public unsafe void PutSecretKey(string base64, string name, bool overwrite)
+        {
+            var key = Convert.FromBase64String(base64);
+            if (key.Length != 256 / 8)
+                throw new InvalidOperationException($"The size of the key must be 256 bits, but was {key.Length * 8} bits.");
+
+            fixed (char* pBase64 = base64)
+            fixed (byte* pKey = key)
+            {
+                try
+                {
+                    using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (var tx = ctx.OpenWriteTransaction())
+                    {
+                        PutSecretKey(ctx, name, key, overwrite);
+                        tx.Commit();
+                    }
+                }
+                finally
+                {
+                    Sodium.ZeroMemory((byte*)pBase64, base64.Length * sizeof(char));
+                    Sodium.ZeroMemory(pKey, key.Length);
+                }
+            }
+        }
+
         public unsafe void PutSecretKey(
             TransactionOperationContext context,
             string name,
@@ -952,7 +978,7 @@ namespace Raven.Server.ServerWide
 
         public Task<(long Etag, object Result)> WriteDatabaseRecordAsync(
             string databaseName, DatabaseRecord record, long? index,
-            Dictionary<string, object> databaseValues = null)
+            Dictionary<string, object> databaseValues = null, bool isRestore = false)
         {
             if (databaseValues == null)
                 databaseValues = new Dictionary<string, object>();
@@ -960,8 +986,8 @@ namespace Raven.Server.ServerWide
             Debug.Assert(record.Topology != null);
             record.Topology.Stamp = new LeaderStamp
             {
-                    Term = _engine.CurrentTerm,
-                    LeadersTicks = _engine.CurrentLeader?.LeaderShipDuration ?? 0
+                Term = _engine.CurrentTerm,
+                LeadersTicks = _engine.CurrentLeader?.LeaderShipDuration ?? 0
             };
 
             var addDatabaseCommand = new AddDatabaseCommand
@@ -969,7 +995,8 @@ namespace Raven.Server.ServerWide
                 Name = databaseName,
                 RaftCommandIndex = index,
                 Record = record,
-                DatabaseValues = databaseValues
+                DatabaseValues = databaseValues,
+                IsRestore = isRestore
             };
 
             return SendToLeaderAsync(addDatabaseCommand);
