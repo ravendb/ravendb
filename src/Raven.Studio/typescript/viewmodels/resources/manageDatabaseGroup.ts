@@ -5,6 +5,7 @@ import databaseInfo = require("models/resources/info/databaseInfo");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import addNodeToDatabaseGroupCommand = require("commands/database/dbGroup/addNodeToDatabaseGroupCommand");
 import databaseGroupNode = require("models/resources/info/databaseGroupNode");
+import deleteDatabaseFromNodeCommand = require("commands/resources/deleteDatabaseFromNodeCommand");
 
 class manageDatabaseGroup extends viewModelBase {
 
@@ -86,13 +87,18 @@ class manageDatabaseGroup extends viewModelBase {
     }
 
     deleteNodeFromGroup(node: databaseGroupNode, hardDelete: boolean) {
-        //TODO: implemenent me!
-        console.log("deleting: " + node.tag());
-
-        //TODO: refresh after deletion - auto update this in the future 
+        const db = this.activeDatabase();
+        const nodeTag = node.tag();
+        this.confirmationMessage("Are you sure", "Do you want to delete database '" + this.activeDatabase().name + "' from node: " + node.tag() + "?", ["Cancel", "Yes, delete"])
+            .done(result => {
+                if (result.can) {
+                    new deleteDatabaseFromNodeCommand(db, [nodeTag], hardDelete)
+                        .execute()
+                        .done(() => this.refresh());
+                }
+            });
     }
 
-    
 }
 
 export = manageDatabaseGroup;
