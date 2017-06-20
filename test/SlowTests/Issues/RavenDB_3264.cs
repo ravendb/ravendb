@@ -36,8 +36,7 @@ namespace SlowTests.Issues
                     Script = script
                 };
 
-                DocumentsOperationContext context;
-                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
                     var document = new Document
                     {

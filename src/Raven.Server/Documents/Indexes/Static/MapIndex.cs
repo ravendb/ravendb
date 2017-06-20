@@ -106,10 +106,8 @@ namespace Raven.Server.Documents.Indexes.Static
             if (_isSideBySide == false)
                 return false;
 
-            DocumentsOperationContext databaseContext;
-            TransactionOperationContext indexContext;
-            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
-            using (_contextPool.AllocateOperationContext(out indexContext))
+            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext databaseContext))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
             {
                 using (indexContext.OpenReadTransaction())
                 using (databaseContext.OpenReadTransaction())

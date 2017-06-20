@@ -417,8 +417,7 @@ namespace FastTests.Server.NotificationCenter
                     var notification = await actions.TryDequeueAsync(TimeSpan.FromMilliseconds(5000));
                     Assert.True(notification.Item1);
 
-                    DocumentsOperationContext context;
-                    using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                    using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (var doc = context.ReadObject(new DynamicJsonValue
                     {
                         ["Foo"] = "Bar",

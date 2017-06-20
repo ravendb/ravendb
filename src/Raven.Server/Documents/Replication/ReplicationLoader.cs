@@ -195,10 +195,8 @@ namespace Raven.Server.Documents.Replication
 
             try
             {
-                DocumentsOperationContext documentsOperationContext;
-                TransactionOperationContext configurationContext;
-                using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsOperationContext))
-                using (Database.ConfigurationStorage.ContextPool.AllocateOperationContext(out configurationContext))
+                using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsOperationContext))
+                using (Database.ConfigurationStorage.ContextPool.AllocateOperationContext(out TransactionOperationContext configurationContext))
                 using (var writer = new BlittableJsonTextWriter(documentsOperationContext, tcpConnectionOptions.Stream))
                 using (documentsOperationContext.OpenReadTransaction())
                 using (var configTx = configurationContext.OpenReadTransaction())

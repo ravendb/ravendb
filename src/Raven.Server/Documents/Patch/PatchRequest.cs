@@ -49,8 +49,7 @@ namespace Raven.Server.Documents.Patch
             if (input.TryGet("Script", out patch.Script) == false)
                 throw new InvalidDataException("Missing 'Script' property on 'Patch'");
 
-            BlittableJsonReaderObject values;
-            if (input.TryGet("Values", out values))
+            if (input.TryGet("Values", out BlittableJsonReaderObject values))
                 patch.Values = values;
 
             return patch;
