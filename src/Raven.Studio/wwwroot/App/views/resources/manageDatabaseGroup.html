@@ -60,17 +60,16 @@
                                         <li><a href="#">Promote node immediately</a></li>
                                     </ul>
                                 </div>-->
-                                <!--TODO 
                                 <div class="dropdown dropdown-right">
                                     <button class="btn btn-danger dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                                         <i class="icon-disconnected"></i> <span>Delete from group</span>
                                         <span class="caret"></span>
                                     </button>
                                     <ul class="dropdown-menu">
-                                        <li><a href="#"><i class="icon-trash"></i> <span>Soft Delete</span>&nbsp;&nbsp;<small>(stop replication and keep database files on the node)</small></a></li>
-                                        <li><a href="#"><i class="icon-alerts text-danger"></i> <span class="text-danger">Hard Delete</span>&nbsp;&nbsp;<small>(stop replication and remove database files on the node)</small></a></li>
+                                        <li><a href="#" data-bind="click: _.partial($parent.deleteNodeFromGroup, $data, false)"><i class="icon-trash"></i> <span>Soft Delete</span>&nbsp;&nbsp;<small>(stop replication and keep database files on the node)</small></a></li>
+                                        <li><a href="#" data-bind="click: _.partial($parent.deleteNodeFromGroup, $data, true)"><i class="icon-alerts text-danger"></i> <span class="text-danger">Hard Delete</span>&nbsp;&nbsp;<small>(stop replication and remove database files on the node)</small></a></li>
                                     </ul>
-                                </div>-->
+                                </div>
                             </div>
                         </div>
                     </div>

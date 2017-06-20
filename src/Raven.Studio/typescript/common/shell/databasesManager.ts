@@ -203,30 +203,39 @@ class databasesManager {
     }
 
     private onDatabaseUpdateReceivedViaChangesApi(event: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) {
-        let db = this.getDatabaseByName(event.DatabaseName);
+        const db = this.getDatabaseByName(event.DatabaseName);
         if (event.ChangeType === "Delete" && db) {
-            
-            this.onDatabaseDeleted(db);
-
-        } else if (event.ChangeType === "Put") {
-            new getDatabaseCommand(event.DatabaseName)
-                .execute()
-                .done((rsInfo: Raven.Client.Server.Operations.DatabaseInfo) => {
-
-                    if (rsInfo.Disabled) {
-                        changesContext.default.disconnectIfCurrent(db, "DatabaseDisabled");
-                    }
-
-                    const updatedDatabase = this.updateDatabase(rsInfo, name => this.getDatabaseByName(name));
-
-                    const toActivate = this.databaseToActivate();
-
-                    if (updatedDatabase.relevant() && toActivate && toActivate === event.DatabaseName) {
-                        this.activate(updatedDatabase);
-                        this.databaseToActivate(null);
+            // fetch latest database info since we don't know at this point if database was removed from current node
+            this.updateDatabaseInfo(db, event.DatabaseName)
+                .fail((xhr: JQueryXHR) => {
+                    if (xhr.status === 404) {
+                        this.onDatabaseDeleted(db);
                     }
                 });
+
+        } else if (event.ChangeType === "Put") {
+            this.updateDatabaseInfo(db, event.DatabaseName);
         }
+    }
+
+    private updateDatabaseInfo(db: database, databaseName: string): JQueryPromise<Raven.Client.Server.Operations.DatabaseInfo> {
+        return new getDatabaseCommand(databaseName)
+            .execute()
+            .done((rsInfo: Raven.Client.Server.Operations.DatabaseInfo) => {
+
+                if (rsInfo.Disabled) {
+                    changesContext.default.disconnectIfCurrent(db, "DatabaseDisabled");
+                }
+
+                const updatedDatabase = this.updateDatabase(rsInfo, name => this.getDatabaseByName(name));
+
+                const toActivate = this.databaseToActivate();
+
+                if (updatedDatabase.relevant() && toActivate && toActivate === databaseName) {
+                    this.activate(updatedDatabase);
+                    this.databaseToActivate(null);
+                }
+            });
     }
 
     private onDatabaseDeleted(db: database) {
