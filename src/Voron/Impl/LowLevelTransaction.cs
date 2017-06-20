@@ -246,6 +246,8 @@ namespace Voron.Impl
                 _pagerStates.Add(scratchPagerState);
             }
 
+            _pageLocator = transactionPersistentContext.AllocatePageLocator(this);
+
             if (flags != TransactionFlags.ReadWrite)
             {
                 // for read transactions, we need to keep the pager state frozen
@@ -254,7 +256,6 @@ namespace Voron.Impl
 
                 _state = env.State.Clone();
 
-                _pageLocator = transactionPersistentContext.AllocatePageLocator(this);
                 InitializeRoots();
 
                 JournalSnapshots = _journal.GetSnapshots();
@@ -281,8 +282,6 @@ namespace Voron.Impl
             _pagesToFreeOnCommit = new Stack<long>();
 
             _state = env.State.Clone();
-
-            _pageLocator = transactionPersistentContext.AllocatePageLocator(this);
             InitializeRoots();
             InitTransactionHeader();
         }
@@ -688,6 +687,8 @@ namespace Voron.Impl
 
             _disposed = true;
 
+            PersistentContext.FreePageLocator(_pageLocator);
+
             _env.TransactionCompleted(this);
 
             foreach (var pagerState in _pagerStates)
@@ -707,8 +708,6 @@ namespace Voron.Impl
 
             if (_disposeAllocator)
                 _allocator.Dispose();
-
-
 
             OnDispose?.Invoke(this);
         }
@@ -950,9 +949,6 @@ namespace Voron.Impl
                         journalFile.Release();
                     }
                 }
-
-                // Releasing the page locator is the last thing we do. 
-                PersistentContext.FreePageLocator(_pageLocator);
             }
             catch (Exception e)
             {
