@@ -39,66 +39,24 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly ServerStore _serverStore;
         private readonly RestoreBackupConfiguraion _restoreConfiguration;
         private readonly JsonOperationContext _context;
-        private Func<bool, DatabaseTopology> _assignNodesToDatabase;
+        private readonly string _nodeTag;
         private readonly CancellationToken _cancellationToken;
         private List<string> _filesToRestore;
-        
+        private bool _hasEncryptionKey;
+
         public RestoreBackupTask(ServerStore serverStore, 
             RestoreBackupConfiguraion restoreConfiguration, 
             JsonOperationContext context, 
-            Func<bool, DatabaseTopology> assignNodesToDatabase, 
+            string nodeTag, 
             CancellationToken cancellationToken)
         {
             _serverStore = serverStore;
             _restoreConfiguration = restoreConfiguration;
             _context = context;
-            _assignNodesToDatabase = assignNodesToDatabase;
+            _nodeTag = nodeTag;
             _cancellationToken = cancellationToken;
 
-            if (string.IsNullOrWhiteSpace(_restoreConfiguration.BackupLocation))
-                throw new ArgumentException("Backup location can't be null or empty");
-
-            if (Directory.Exists(_restoreConfiguration.BackupLocation) == false)
-                throw new ArgumentException("Backup location doesn't exist");
-
-            var hasRestoreDataDirectory = string.IsNullOrWhiteSpace(_restoreConfiguration.DataDirectory) == false;
-            if (hasRestoreDataDirectory &&
-                HasFilesOrDirectories(_restoreConfiguration.DataDirectory))
-                throw new ArgumentException("New data directory must be empty of any files or folders");
-
-            if (hasRestoreDataDirectory == false)
-                _restoreConfiguration.DataDirectory = GetDataDirectory();
-
-            var hasJournalStoragePath = string.IsNullOrWhiteSpace(_restoreConfiguration.JournalsStoragePath) == false;
-            if (hasJournalStoragePath &&
-                HasFilesOrDirectories(_restoreConfiguration.JournalsStoragePath))
-                throw new ArgumentException("Journals directory must be empty of any files or folders");
-
-            if (hasJournalStoragePath == false)
-                _restoreConfiguration.JournalsStoragePath = _restoreConfiguration.DataDirectory;
-
-            if (string.IsNullOrWhiteSpace(_restoreConfiguration.IndexingStoragePath) == false &&
-                HasFilesOrDirectories(_restoreConfiguration.IndexingStoragePath))
-                throw new ArgumentException("Indexes directory must be empty of any files or folders");
-
-            _filesToRestore = GetFilesForRestore(_restoreConfiguration.BackupLocation);
-            if (_filesToRestore.Count == 0)
-                throw new ArgumentException("No files to restore from the backup location");
-        }
-
-        private string GetDataDirectory()
-        {
-            var dataDirectory =
-                RavenConfiguration.GetDataDirectoryPath(
-                    _serverStore.Configuration.Core,
-                    _restoreConfiguration.DatabaseName,
-                    ResourceType.Database);
-
-            var i = 0;
-            while (HasFilesOrDirectories(dataDirectory))
-                dataDirectory += $"-{++i}";
-
-            return dataDirectory;
+            ValidateArguments();
         }
 
         public async Task<IOperationResult> Execute(Action<IOperationProgress> onProgress)
@@ -124,29 +82,47 @@ namespace Raven.Server.Documents.PeriodicBackup
                     restoreSettings = SnapshotRestore(firstFile, 
                         _restoreConfiguration.DataDirectory, 
                         _restoreConfiguration.JournalsStoragePath, 
-                        onProgress, restoreResult);
+                        onProgress, 
+                        restoreResult);
                     snapshotRestore = true;
                     // removing the snapshot from the list of files
                     _filesToRestore.RemoveAt(0);
                 }
 
+                var databaseName = _restoreConfiguration.DatabaseName;
                 if (restoreSettings == null)
                 {
                     restoreSettings = new RestoreSettings
                     {
-                        DatabaseRecord = new DatabaseRecord(_restoreConfiguration.DatabaseName)
+                        DatabaseRecord = new DatabaseRecord(databaseName)
+                        {
+                            // we only have a smuggler restore
+                            // use the encryption key to encrypt the database
+                            Encrypted = _hasEncryptionKey
+                        }
                     };
+
+                    DatabaseHelper.Validate(databaseName, restoreSettings.DatabaseRecord);
                 }
 
-                if (restoreSettings.DatabaseRecord.Settings == null)
-                    restoreSettings.DatabaseRecord.Settings = new Dictionary<string, string>();
+                var databaseRecord = restoreSettings.DatabaseRecord;
 
-                restoreSettings.DatabaseRecord.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false";
-                restoreSettings.DatabaseRecord.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = _restoreConfiguration.DataDirectory;
-                restoreSettings.DatabaseRecord.Settings[RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)] = _restoreConfiguration.JournalsStoragePath;
+                if (databaseRecord.Settings == null)
+                    databaseRecord.Settings = new Dictionary<string, string>();
 
-                using (var database = new DocumentDatabase(_restoreConfiguration.DatabaseName,
-                    new RavenConfiguration(_restoreConfiguration.DatabaseName, ResourceType.Database)
+                databaseRecord.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false";
+                databaseRecord.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = _restoreConfiguration.DataDirectory;
+                databaseRecord.Settings[RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)] = _restoreConfiguration.JournalsStoragePath;
+
+                if (_hasEncryptionKey)
+                {
+                    // save the encryption key so we'll be able to access the database
+                    _serverStore.PutSecretKey(_restoreConfiguration.EncryptionKey, 
+                        databaseName, overwrite: false);
+                }
+
+                using (var database = new DocumentDatabase(databaseName,
+                    new RavenConfiguration(databaseName, ResourceType.Database)
                     {
                         Core =
                         {
@@ -160,16 +136,19 @@ namespace Raven.Server.Documents.PeriodicBackup
                     }, _serverStore))
                 {
                     // smuggler needs an existing document database to operate
-                    database.Initialize(generateNewDatabaseId: snapshotRestore, skipLoadingDatabaseRecord: true);
-                    SmugglerResotre(_restoreConfiguration.BackupLocation, database, restoreSettings.DatabaseRecord, onProgress, restoreResult);
+                    var options = InitializeOptions.SkipLoadingDatabaseRecord;
+                    if (snapshotRestore)
+                        options |= InitializeOptions.GenerateNewDatabaseId;
+                    database.Initialize(options);
+                    SmugglerRestore(_restoreConfiguration.BackupLocation, database, databaseRecord, onProgress, restoreResult);
                 }
 
-                DatabaseHelper.Validate(_restoreConfiguration.DatabaseName, restoreSettings.DatabaseRecord);
-
-                restoreSettings.DatabaseRecord.Topology = _assignNodesToDatabase(restoreSettings.DatabaseRecord.Encrypted);
+                databaseRecord.Topology = new DatabaseTopology();
+                // restoring to the current node
+                databaseRecord.Topology.Members.Add(_nodeTag);
 
                 var (newEtag, _) = await _serverStore.WriteDatabaseRecordAsync(
-                    _restoreConfiguration.DatabaseName, restoreSettings.DatabaseRecord, null, restoreSettings.DatabaseValues);
+                    databaseName, databaseRecord, null, restoreSettings.DatabaseValues, isRestore:  true);
                 await _serverStore.Cluster.WaitForIndexNotification(newEtag);
 
                 return restoreResult;
@@ -181,8 +160,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
             catch (Exception e)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info("Failed to restore database", e);
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Failed to restore database", e);
 
                 var alert = AlertRaised.Create(
                     "Failed to restore database",
@@ -196,6 +175,66 @@ namespace Raven.Server.Documents.PeriodicBackup
                 IOExtensions.DeleteDirectory(_restoreConfiguration.DataDirectory);
                 throw;
             }
+        }
+
+        private void ValidateArguments()
+        {
+            if (string.IsNullOrWhiteSpace(_restoreConfiguration.BackupLocation))
+                throw new ArgumentException("Backup location can't be null or empty");
+
+            if (Directory.Exists(_restoreConfiguration.BackupLocation) == false)
+                throw new ArgumentException($"Backup location doesn't exist, path: {_restoreConfiguration.BackupLocation}");
+
+            var hasRestoreDataDirectory = string.IsNullOrWhiteSpace(_restoreConfiguration.DataDirectory) == false;
+            if (hasRestoreDataDirectory &&
+                HasFilesOrDirectories(_restoreConfiguration.DataDirectory))
+                throw new ArgumentException("New data directory must be empty of any files or folders, " +
+                                            $"path: {_restoreConfiguration.DataDirectory}");
+
+            if (hasRestoreDataDirectory == false)
+                _restoreConfiguration.DataDirectory = GetDataDirectory();
+
+            var hasJournalStoragePath = string.IsNullOrWhiteSpace(_restoreConfiguration.JournalsStoragePath) == false;
+            if (hasJournalStoragePath &&
+                HasFilesOrDirectories(_restoreConfiguration.JournalsStoragePath))
+                throw new ArgumentException("Journals directory must be empty of any files or folders, " +
+                                            $"path: {_restoreConfiguration.JournalsStoragePath}");
+
+            if (hasJournalStoragePath == false)
+                _restoreConfiguration.JournalsStoragePath = _restoreConfiguration.DataDirectory;
+
+            if (string.IsNullOrWhiteSpace(_restoreConfiguration.IndexingStoragePath) == false &&
+                HasFilesOrDirectories(_restoreConfiguration.IndexingStoragePath))
+                throw new ArgumentException("Indexes directory must be empty of any files or folders, " +
+                                            $"path: {_restoreConfiguration.IndexingStoragePath}");
+
+            _filesToRestore = GetFilesForRestore(_restoreConfiguration.BackupLocation);
+            if (_filesToRestore.Count == 0)
+                throw new ArgumentException("No files to restore from the backup location, " +
+                                            $"path: {_restoreConfiguration.BackupLocation}");
+
+            _hasEncryptionKey = string.IsNullOrWhiteSpace(_restoreConfiguration.EncryptionKey) == false;
+            if (_hasEncryptionKey)
+            {
+                var key = Convert.FromBase64String(_restoreConfiguration.EncryptionKey);
+                if (key.Length != 256 / 8)
+                    throw new InvalidOperationException($"The size of the encryption key must be 256 bits, but was {key.Length * 8} bits.");
+            }
+        }
+
+        private string GetDataDirectory()
+        {
+            var dataDirectory =
+                RavenConfiguration.GetDataDirectoryPath(
+                    _serverStore.Configuration.Core,
+                    _restoreConfiguration.DatabaseName,
+                    ResourceType.Database);
+
+            var i = 0;
+            while (HasFilesOrDirectories(dataDirectory))
+                dataDirectory += $"-{++i}";
+
+            return dataDirectory;
         }
 
         private static List<string> GetFilesForRestore(string backupLocation)
@@ -212,7 +251,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 .ToList();
         }
 
-        private void SmugglerResotre(
+        private void SmugglerRestore(
             string backupDirectory, 
             DocumentDatabase database, 
             DatabaseRecord databaseRecord,
@@ -231,13 +270,13 @@ namespace Raven.Server.Documents.PeriodicBackup
                         Constants.Documents.PeriodicBackup.IncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
                         Constants.Documents.PeriodicBackup.FullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
                 })
+                .OrderBy(x => x)
                 .ToList();
 
             if (_filesToRestore.Count == 0)
                 return;
 
-            // we do have a smuggler backup and will restore the 
-            // indexes, transformers and identities from the last backup
+            // we do have at least one smuggler backup
             databaseRecord.AutoIndexes = new Dictionary<string, AutoIndexDefinition>();
             databaseRecord.Indexes = new Dictionary<string, IndexDefinition>();
             databaseRecord.Transformers = new Dictionary<string, TransformerDefinition>();
@@ -246,7 +285,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             // restore the smuggler backup
             var options = new DatabaseSmugglerOptions();
 
-            // we import the identities, indexes and transformers from the last file only, 
+            // we import the indexes, transformers and identities from the last file only, 
             // as the previous files can hold indexes, transformers and identities which were deleted and shouldn't be imported
             var oldOperateOnTypes = options.OperateOnTypes;
             options.OperateOnTypes = options.OperateOnTypes &
@@ -336,10 +375,20 @@ namespace Raven.Server.Documents.PeriodicBackup
                 settingsKey: RestoreSettings.FileName,
                 onSettings: settingsStream =>
                 {
+                    //TODO: decrypt this file using the _restoreConfiguration.EncryptionKey
+                    //http://issues.hibernatingrhinos.com/issue/RavenDB-7546
+
                     var json = _context.Read(settingsStream, "read database settings for restore");
                     restoreSettings = JsonDeserializationServer.RestoreSettings(json);
 
                     restoreSettings.DatabaseRecord.DatabaseName = _restoreConfiguration.DatabaseName;
+                    DatabaseHelper.Validate(_restoreConfiguration.DatabaseName, restoreSettings.DatabaseRecord);
+
+                    if (restoreSettings.DatabaseRecord.Encrypted && _hasEncryptionKey == false)
+                        throw new ArgumentException("Database snapshot is encrypted but the encryption key is missing!");
+
+                    if (restoreSettings.DatabaseRecord.Encrypted == false && _hasEncryptionKey)
+                        throw new ArgumentException("Cannot encrypt a non encrypted snapshot backup during restore!");
                 },
                 onProgress: message =>
                 {
@@ -348,6 +397,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                     onProgress.Invoke(restoreResult.Progress);
                 },
                 cancellationToken: _cancellationToken);
+
+            if (restoreSettings == null)
+                throw new InvalidDataException("Cannot restore the snapshot without the settings file!");
 
             return restoreSettings;
         }

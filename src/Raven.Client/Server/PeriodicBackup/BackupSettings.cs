@@ -37,22 +37,6 @@ namespace Raven.Client.Server.PeriodicBackup
         }
     }
 
-    /*public class FtpSettings : BackupSettings
-    {
-        public string Url { get; set; }
-
-        public int Port { get; set; }
-
-        public string UserName { get; set; }
-
-        public string Password { get; set; }
-
-        public override bool HasSettings()
-        {
-            return Port != 0 && string.IsNullOrWhiteSpace(Url) == false;
-        }
-    }*/
-
     public abstract class AmazonSettings : BackupSettings
     {
         public string AwsAccessKey { get; set; }

@@ -30,6 +30,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
@@ -46,6 +47,7 @@ namespace Raven.Server.ServerWide
         private static readonly TableSchema ItemsSchema;
         private static readonly Slice EtagIndexName;
         private static readonly Slice Items;
+        private static readonly ConcurrentSet<string> OngoingDatabaseRestores = new ConcurrentSet<string>();
 
         static ClusterStateMachine()
         {
@@ -338,6 +340,13 @@ namespace Raven.Server.ServerWide
                                 new ConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " has etag " + actualEtag + " but was expecting " + addDatabaseCommand.RaftCommandIndex));
                             return;
                         }
+                    }
+
+                    if (OngoingDatabaseRestores.Contains(addDatabaseCommand.Name) && addDatabaseCommand.IsRestore == false)
+                    {
+                        NotifyLeaderAboutError(index, leader,
+                            new ConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " is being restored"));
+                        return;
                     }
 
                     UpdateValue(index, items, valueNameLowered, valueName, databaseRecordAsJson);
@@ -753,6 +762,16 @@ namespace Raven.Server.ServerWide
                         onDatabaseChanged.Invoke(this, (db, lastIncludedIndex, "SnapshotInstalled"));
                 }, null);
             }
+        }
+
+        public bool TryRegisterDatabaseRestore(string databaseName)
+        {
+            return OngoingDatabaseRestores.TryAdd(databaseName);
+        }
+
+        public void UnRegisterDatabaseRestore(string databaseName)
+        {
+            OngoingDatabaseRestores.TryRemove(databaseName);
         }
     }
 

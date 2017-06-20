@@ -68,29 +68,14 @@ namespace Raven.Server.Documents.Handlers
             using (var reader = new StreamReader(HttpContext.Request.Body))
             {
                 var base64 = reader.ReadToEnd();
-                var key = Convert.FromBase64String(base64);
 
-                fixed (char* pBase64 = base64)
-                fixed (byte* pKey = key)
+                try
                 {
-                    try
-                    {
-                        if (key.Length != 256 / 8)
-                            throw new InvalidOperationException($"The size of the key must be 256 bits, but was {key.Length * 8} bits.");
-
-                        using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                        using (var tx = ctx.OpenWriteTransaction())
-                        {
-                            Server.ServerStore.PutSecretKey(ctx, name, key, overwrite);
-                            tx.Commit();
-                        }
-                    }
-                    finally
-                    {
-                        Sodium.ZeroMemory((byte*)pBase64, base64.Length * sizeof(char));
-                        Sodium.ZeroMemory(pKey, key.Length);
-                        _zeroInternalBuffer(reader);
-                    }
+                    ServerStore.PutSecretKey(base64, name, overwrite);
+                }
+                finally
+                {
+                    _zeroInternalBuffer(reader);
                 }
 
             }

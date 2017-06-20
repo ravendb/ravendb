@@ -11,7 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client;
+using NCrontab.Advanced;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
@@ -31,6 +31,7 @@ using Raven.Client.Server.PeriodicBackup;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Sparrow;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Web.System
 {
@@ -177,7 +178,8 @@ namespace Raven.Server.Web.System
 
         public bool NotUsingHttps(string url)
         {
-            return url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false;        }
+            return url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false;
+        }
 
         [RavenAction("/admin/databases", "PUT", "/admin/databases/{databaseName:string}")]
         public async Task Put()
@@ -304,12 +306,30 @@ namespace Raven.Server.Web.System
         {
             await DatabaseConfigurations(ServerStore.ModifyPeriodicBackup,
                 "update-periodic-backup",
+                beforeSetupConfiguration: readerObject =>
+                {
+                    readerObject.TryGet(
+                        nameof(PeriodicBackupConfiguration.FullBackupFrequency), 
+                        out string fullBackupFrequency);
+                    readerObject.TryGet(
+                        nameof(PeriodicBackupConfiguration.IncrementalBackupFrequency), 
+                        out string incrementalBackupFrequency);
+
+                    if (CrontabSchedule.TryParse(fullBackupFrequency) == null &&
+                        CrontabSchedule.TryParse(incrementalBackupFrequency) == null)
+                    {
+                        throw new ArgumentException("Couldn't parse the cron expressions for both full and incremental backups. " +
+                                                    $"full backup cron expression: {fullBackupFrequency}, " +
+                                                    $"incremental backup cron expression: {incrementalBackupFrequency}");
+                    }
+                },
                 fillJson: (json, readerObject, index) =>
                 {
-                    readerObject.TryGet("TaskId", out long taskId);
+                    var taskIdName = nameof(PeriodicBackupConfiguration.TaskId);
+                    readerObject.TryGet(taskIdName, out long taskId);
                     if (taskId == 0)
                         taskId = index;
-                    json[nameof(PeriodicBackupConfiguration.TaskId)] = taskId;
+                    json[taskIdName] = taskId;
                 });
         }
 
@@ -342,17 +362,17 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/database-restore", "POST", "/admin/database-restore")]
         public async Task RestoreDatabase()
         {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            //using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            // we don't dispose this as operation is async
+            TransactionOperationContext context;
+            var returnContextToPool = ServerStore.ContextPool.AllocateOperationContext(out context);
+
+            string databaseName = null;
+            try
             {
-                context.OpenReadTransaction();
-
-                var operationId = GetLongQueryString("operationId", required: false);
-
                 var restoreConfiguration = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore");
                 var restoreConfigurationJson = JsonDeserializationCluster.RestoreBackupConfiguraionConfiguration(restoreConfiguration);
 
-                var databaseName = restoreConfigurationJson.DatabaseName;
+                databaseName = restoreConfigurationJson.DatabaseName;
                 if (string.IsNullOrWhiteSpace(databaseName))
                     throw new ArgumentException("Database name can't be null or empty");
 
@@ -360,51 +380,96 @@ namespace Raven.Server.Web.System
                 if (ResourceNameValidator.IsValidResourceName(databaseName, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
                     throw new BadRequestException(errorMessage);
 
-                if (ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(new StringSegment(databaseName), out _))
-                    throw new ArgumentException($"Cannot restore data to an existing database named {databaseName}");
-
-                // TODO: prevent the creation of a database with the same name during restore
-
-                using (var token = new OperationCancelToken(ServerStore.ServerShutdown))
+                using (context.OpenReadTransaction())
                 {
-                    var restoreBackupTask = new RestoreBackupTask(
-                        ServerStore, 
-                        restoreConfigurationJson, 
-                        context, 
-                        isEncrypted => AssignNodesToDatabase(context, 1, restoreConfigurationJson.DatabaseName, isEncrypted, out _), 
-                        token.Token);
+                    if (ServerStore.Cluster.ReadDatabase(context, databaseName) != null)
+                        throw new ArgumentException($"Cannot restore data to an existing database named {databaseName}");
 
-                    if (operationId.HasValue)
-                    {
-                        try
-                        {
-                            await
-                                ServerStore.Operations.AddOperation(
-                                    "Restoring database: " + databaseName,
-                                    Documents.Operations.Operations.OperationType.DatabaseRestore,
-                                    taskFactory: onProgress => Task.Run(async() => await restoreBackupTask.Execute(onProgress), token.Token), id: operationId.Value, token: token);
-                        }
-                        catch (Exception)
-                        {
-                            HttpContext.Abort();
-                        }
+                    var clusterTopology = ServerStore.GetClusterTopology(context);
 
-                    }
-                    else
+                    if (string.IsNullOrWhiteSpace(restoreConfigurationJson.EncryptionKey) == false)
                     {
-                        var result = (RestoreResult)await restoreBackupTask.Execute(null);
-                        using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                        {
-                            context.Write(writer, result.ToJson());
-                        }
+                        var key = Convert.FromBase64String(restoreConfigurationJson.EncryptionKey);
+                        if (key.Length != 256 / 8)
+                            throw new InvalidOperationException($"The size of the key must be 256 bits, but was {key.Length * 8} bits.");
+
+                        if (NotUsingHttps(clusterTopology.GetUrlFromTag(ServerStore.NodeTag)))
+                            throw new InvalidOperationException("Cannot restore an encrypted database to a node which doesn't support SSL!");
                     }
                 }
+
+                if (ServerStore.Cluster.TryRegisterDatabaseRestore(databaseName) == false)
+                    throw new ArgumentException($"Restore is already in progress for database named {databaseName}");
+
+                var operationId = ServerStore.Operations.GetNextOperationId();
+                var token = new OperationCancelToken(ServerStore.ServerShutdown);
+                var restoreBackupTask = new RestoreBackupTask(
+                    ServerStore,
+                    restoreConfigurationJson,
+                    context,
+                    ServerStore.NodeTag,
+                    token.Token);
+
+                var task = ServerStore.Operations.AddOperation(
+                    "Restoring database: " + databaseName,
+                    Documents.Operations.Operations.OperationType.DatabaseRestore,
+                    taskFactory: onProgress => Task.Run(async () => await restoreBackupTask.Execute(onProgress), token.Token),
+                    id: operationId, token: token);
+
+#pragma warning disable 4014
+                task.ContinueWith(_ =>
+#pragma warning restore 4014
+                {
+                    using (returnContextToPool)
+                    using (token)
+                    {
+                        ServerStore.Cluster.UnRegisterDatabaseRestore(databaseName);
+                    }
+                });
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteOperationId(context, operationId);
+                }
             }
+            catch (Exception)
+            {
+                if (databaseName != null)
+                    ServerStore.Cluster.UnRegisterDatabaseRestore(databaseName);
+
+                returnContextToPool.Dispose();
+                throw;
+            }
+        }
+
+        [RavenAction("/admin/operations/state", "GET")]
+        public Task State()
+        {
+            var id = GetLongQueryString("id");
+            // ReSharper disable once PossibleInvalidOperationException
+            var state = ServerStore.Operations.GetOperation(id)?.State;
+
+            if (state == null)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                return Task.CompletedTask;
+            }
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, state.ToJson());
+                }
+            }
+
+            return Task.CompletedTask;
         }
 
         private async Task DatabaseConfigurations(Func<TransactionOperationContext, string,
             BlittableJsonReaderObject, Task<(long, object)>> setupConfigurationFunc,
             string debug,
+            Action<BlittableJsonReaderObject> beforeSetupConfiguration = null,
             Action<DynamicJsonValue, BlittableJsonReaderObject, long> fillJson = null)
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -417,6 +482,8 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
                 var configurationJson = await context.ReadForMemoryAsync(RequestBodyStream(), debug);
+                beforeSetupConfiguration?.Invoke(configurationJson);
+
                 var (index, _) = await setupConfigurationFunc(context, name, configurationJson);
                 DatabaseRecord dbRecord;
                 using (context.OpenReadTransaction())

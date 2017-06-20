@@ -277,7 +277,11 @@ namespace Raven.Server.Documents.Handlers
             var task = Database.Operations.AddOperation(indexName, operationType, onProgress =>
                     operation(queryRunner, indexName, query, options, onProgress, token), operationId, token);
 
-            task.ContinueWith(_ => returnContextToPool.Dispose());
+            task.ContinueWith(_ =>
+            {
+                using (returnContextToPool)
+                    token.Dispose();
+            });
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {

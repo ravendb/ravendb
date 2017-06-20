@@ -64,8 +64,6 @@ namespace Raven.Client.Server.Operations
 
     public class RestoreBackupOperationResult
     {
-        public string DataDirectory { get; set; }
-
-        public string JournalsStoragePath { get; set; }
+        public long OperationId { get; set; }
     }
 }

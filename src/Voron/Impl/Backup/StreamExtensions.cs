@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Threading;
 
 namespace Voron.Impl.Backup
@@ -7,14 +8,19 @@ namespace Voron.Impl.Backup
     {
         private const int DefaultBufferSize = 81920;
 
+        [ThreadStatic]
+        private static byte[] _readBuffer;
+
         public static void CopyTo(this Stream source, Stream destination, CancellationToken cancellationToken)
         {
-            var buffer = new byte[DefaultBufferSize];
+            if (_readBuffer == null)
+                _readBuffer = new byte[DefaultBufferSize];
+
             int count;
-            while ((count = source.Read(buffer, 0, buffer.Length)) != 0)
+            while ((count = source.Read(_readBuffer, 0, _readBuffer.Length)) != 0)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                destination.Write(buffer, 0, count);
+                destination.Write(_readBuffer, 0, count);
             }
         }
     }
