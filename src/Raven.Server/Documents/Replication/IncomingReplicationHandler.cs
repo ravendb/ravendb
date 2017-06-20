@@ -37,7 +37,6 @@ namespace Raven.Server.Documents.Replication
         public event Action<IncomingReplicationHandler> DocumentsReceived;
 
         public long LastDocumentEtag;
-
         public long LastHeartbeatTicks;
 
         private readonly ConcurrentQueue<IncomingReplicationStatsAggregator> _lastReplicationStats = new ConcurrentQueue<IncomingReplicationStatsAggregator>();
@@ -680,11 +679,11 @@ namespace Raven.Server.Documents.Replication
                         item.Id = Encoding.UTF8.GetString(ReadExactly(keySize), keySize);
 
                         var documentSize = item.DocumentSize = *(int*)ReadExactly(sizeof(int));
-                        if (documentSize > 0)
+                        if (documentSize != -1) //if -1, then this is a tombstone
                         {
                             ReadExactly(documentSize, ref writeBuffer);
                         }
-                        else // tombstone or deleteRevision
+                        else
                         {
                             // read the collection
                             var collectionSize = *(int*)ReadExactly(sizeof(int));
@@ -856,8 +855,7 @@ namespace Raven.Server.Documents.Replication
 
                                     // no need to load document data for tombstones
                                     // document size == -1 --> doc is a tombstone
-                                    // document size == -2 --> doc is deleteRevision
-                                    if (item.DocumentSize > 0)
+                                    if (item.DocumentSize >= 0)
                                     {
                                         if (item.Position + item.DocumentSize > _totalSize)
                                             throw new ArgumentOutOfRangeException($"Reading past the size of buffer! TotalSize {_totalSize} " +
@@ -892,7 +890,7 @@ namespace Raven.Server.Documents.Replication
                                                 _incoming._log.Operations("Versioning storage is disabled but the node got a versioned document from replication.");
                                             continue;
                                         }
-                                        database.DocumentsStorage.VersioningStorage.Delete(context, item.Collection, item.Id, _changeVector,
+                                        database.DocumentsStorage.VersioningStorage.Delete(context, item.Id, document, _changeVector,
                                             item.LastModifiedTicks, NonPersistentDocumentFlags.FromReplication);
                                         continue;
                                     }

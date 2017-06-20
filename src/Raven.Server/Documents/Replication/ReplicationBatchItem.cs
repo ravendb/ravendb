@@ -52,7 +52,6 @@ namespace Raven.Server.Documents.Replication
                 Flags = doc.Flags,
                 TransactionMarker = doc.TransactionMarker,
                 LastModifiedTicks = doc.LastModified.Ticks,
-                Collection = doc.Collection,
             };
         }
 

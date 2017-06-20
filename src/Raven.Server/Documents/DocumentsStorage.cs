@@ -984,7 +984,7 @@ namespace Raven.Server.Documents
                 if (collectionName.IsSystem == false &&
                     _documentDatabase.DocumentsStorage.VersioningStorage.Configuration != null)
                 {
-                    _documentDatabase.DocumentsStorage.VersioningStorage.Delete(context, collectionName, id, lowerId, changeVector, modifiedTicks, doc.NonPersistentFlags);
+                    _documentDatabase.DocumentsStorage.VersioningStorage.Delete(context, id, lowerId, collectionName, changeVector, modifiedTicks, doc.NonPersistentFlags);
                 }
                 table.Delete(doc.StorageId);
 
