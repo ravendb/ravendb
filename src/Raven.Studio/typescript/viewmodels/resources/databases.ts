@@ -78,7 +78,7 @@ class databases extends viewModelBase {
         // we can't use createNotifications here, as it is called after *database changes API* is connected, but user
         // can enter this view and never select database
 
-        this.addNotification(this.changesContext.serverNotifications().watchAllDatabaseChanges((e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) => this.fetchDatabase(e)));
+        this.addNotification(this.changesContext.serverNotifications().watchAllDatabaseChanges((e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) => this.onDatabaseChange(e)));
         this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.fetchDatabases()));
 
         return this.fetchDatabases();
@@ -96,7 +96,7 @@ class databases extends viewModelBase {
             .done(info => this.databases(new databasesInfo(info)));
     }
 
-    private fetchDatabase(e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) {
+    private onDatabaseChange(e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) {
         switch (e.ChangeType) {
             case "Load":
             case "Put":
@@ -104,16 +104,24 @@ class databases extends viewModelBase {
                 break;
 
             case "Delete":
-                const db = this.databases().sortedDatabases().find(rs => rs.name === e.DatabaseName);
-                if (db) {
-                    this.removeDatabase(db);
-                }
+                // since we don't know if database was removed from current node, let's fetch databaseInfo first
+                this.updateDatabaseInfo(e.DatabaseName)
+                    .fail((xhr: JQueryXHR) => {
+                        if (xhr.status === 404) {
+                            // database was removed from all nodes
+
+                            const db = this.databases().sortedDatabases().find(rs => rs.name === e.DatabaseName);
+                            if (db) {
+                                this.removeDatabase(db);
+                            }
+                        }
+                    });
                 break;
         }
     }
 
     private updateDatabaseInfo(databaseName: string) {
-        new getDatabaseCommand(databaseName)
+        return new getDatabaseCommand(databaseName)
             .execute()
             .done((result: Raven.Client.Server.Operations.DatabaseInfo) => {
                 this.databases().updateDatabase(result);

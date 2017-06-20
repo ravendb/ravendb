@@ -38,6 +38,14 @@ class viewHelpers {
 
         return [$pageHostRoot.innerWidth(), $pageHostRoot.innerHeight()];
     }
+
+    static animate(selector: JQuery, classToApply: string) {
+        selector.addClass(classToApply);
+
+        selector.one('animationend webkitAnimationEnd oanimationend MSAnimationEnd', () => {
+            selector.removeClass(classToApply);
+        });
+    }
 }
 
 export = viewHelpers;

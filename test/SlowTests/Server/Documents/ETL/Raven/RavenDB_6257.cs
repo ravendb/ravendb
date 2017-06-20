@@ -47,15 +47,14 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 var etlProcess = db.EtlLoader.Processes[0];
 
-                DocumentsOperationContext context;
-                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     var tombstones = db.DocumentsStorage.GetTombstonesFrom(context, 0, 0, int.MaxValue).ToList();
 
                     var tombstoneEtags = etlProcess.GetLastProcessedDocumentTombstonesPerCollection();
 
-                    Assert.Equal(tombstones.First(x => x.Collection.CompareTo("Users") == 0).Etag, tombstoneEtags["Users"]); 
+                    Assert.Equal(tombstones.First(x => x.Collection.CompareTo("Users") == 0).Etag, tombstoneEtags["Users"]);
                 }
             }
         }

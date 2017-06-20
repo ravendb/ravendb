@@ -12,12 +12,11 @@ namespace SlowTests.Issues
         {
             using (var database = CreateDocumentDatabase())
             {
-                DocumentsOperationContext context;
-                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (var doc = context.ReadObject(new DynamicJsonValue
                 {
                     ["Foo"] = "Bar"
-                },"RavenDB-5570 Test"))
+                }, "RavenDB-5570 Test"))
                 {
                     //do PUT, but do not commit the transaction
                     using (context.OpenWriteTransaction())

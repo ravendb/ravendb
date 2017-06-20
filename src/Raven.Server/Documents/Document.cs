@@ -20,7 +20,6 @@ namespace Raven.Server.Documents
         public long Etag;
         public LazyStringValue Id;
         public LazyStringValue LowerId;
-        public LazyStringValue Collection;
         public long StorageId;
         public BlittableJsonReaderObject Data;
         public float? IndexScore;
@@ -48,17 +47,7 @@ namespace Raven.Server.Documents
 
             _metadataEnsured = true;
             DynamicJsonValue mutatedMetadata;
-
-            if (Data == null)
-            {
-                Debug.Assert(context != null);
-                Data = context.ReadObject(new DynamicJsonValue(), "Zombies");
-                Data.Modifications = new DynamicJsonValue(Data)
-                {
-                    [Constants.Documents.Metadata.Key] = mutatedMetadata = new DynamicJsonValue()
-                };
-            }
-            else if (Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
+            if (Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
             {
                 if (metadata.Modifications == null)
                     metadata.Modifications = new DynamicJsonValue(metadata);
@@ -81,8 +70,6 @@ namespace Raven.Server.Documents
                 mutatedMetadata[Constants.Documents.Metadata.Flags] = Flags.ToString();
             if (IndexScore.HasValue)
                 mutatedMetadata[Constants.Documents.Metadata.IndexScore] = IndexScore;
-            if (Collection != null) // Currently in use only for delete revision. See RavenDB-7420.
-                mutatedMetadata[Constants.Documents.Metadata.Collection] = Collection;
 
             _hash = null;
         }

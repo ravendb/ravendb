@@ -8,6 +8,7 @@ import saveDocumentCommand = require("commands/database/documents/saveDocumentCo
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import resolveMergeCommand = require("commands/database/studio/resolveMergeCommand");
 import getDocumentsFromCollectionCommand = require("commands/database/documents/getDocumentsFromCollectionCommand");
+import getZombieDocumentMetadataCommand = require("commands/database/documents/getZombieDocumentMetadataCommand");
 import generateClassCommand = require("commands/database/documents/generateClassCommand");
 import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
@@ -42,6 +43,7 @@ class editDocument extends viewModelBase {
     latestRevisionUrl: KnockoutComputed<string>;
     attachmentsCount: KnockoutComputed<number>;
     rawJsonUrl: KnockoutComputed<string>;
+    isDeleteRevision: KnockoutComputed<boolean>;
 
     isCreatingNewDocument = ko.observable(false);
     collectionForNewDocument = ko.observable<string>();
@@ -70,7 +72,7 @@ class editDocument extends viewModelBase {
 
     private changeNotification: changeSubscription;
 
-    connectedDocuments = new connectedDocuments(this.document, this.activeDatabase, (docId) => this.loadDocument(docId, true), this.isCreatingNewDocument, this.inReadOnlyMode);
+    connectedDocuments = new connectedDocuments(this.document, this.activeDatabase, (docId) => this.loadDocument(docId), this.isCreatingNewDocument, this.inReadOnlyMode);
 
     isSaveEnabled: KnockoutComputed<boolean>;
     documentSize: KnockoutComputed<string>;
@@ -87,7 +89,9 @@ class editDocument extends viewModelBase {
     canActivate(args: any) {
         super.canActivate(args);
 
-        if (args && args.id && args.revision) {
+        if (args && args.zombie && args.id) {
+            return this.activateByZombie(args.id);
+        } else if (args && args.id && args.revision) {
             return this.activateByRevision(args.id, args.revision);
         } else if (args && args.id) {
             return this.activateById(args.id);
@@ -138,13 +142,23 @@ class editDocument extends viewModelBase {
 
     private activateById(id: string) {
         const canActivateResult = $.Deferred<canActivateResultDto>();
-        this.loadDocument(id, false)
+        this.loadDocument(id)
             .done(() => {
                 canActivateResult.resolve({ can: true });
             })
             .fail(() => {
                 canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocumentsCollectionName, this.activeDatabase()) });
             });
+        return canActivateResult;
+    }
+
+    private activateByZombie(id: string) {
+        const canActivateResult = $.Deferred<canActivateResultDto>();
+
+        this.loadZombie(id)
+            .done(() => canActivateResult.resolve({ can: true }))
+            .fail(() => canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocumentsCollectionName, this.activeDatabase()) }));
+            
         return canActivateResult;
     }
 
@@ -237,6 +251,15 @@ class editDocument extends viewModelBase {
             return isRevision ? 
                 appUrl.forDocumentRevisionRawData(activeDb, revisionEtag) :
                 appUrl.forDocumentRawData(activeDb, docId);
+        });
+
+        this.isDeleteRevision = ko.pureComputed(() => {
+            const doc = this.document();
+            if (doc) {
+                return doc.__metadata.hasFlag("DeleteRevision");
+            } else {
+                return false;
+            }
         });
 
         this.document.subscribe(doc => {
@@ -579,10 +602,13 @@ class editDocument extends viewModelBase {
         return JSON.stringify(obj, null, prettifySpacing);
     }
 
-    loadDocument(id: string, redirectToDocumentsOnNotFound: boolean): JQueryPromise<document> {
+    private loadDocument(id: string): JQueryPromise<document> {
         this.isBusy(true);
 
-        return new getDocumentWithMetadataCommand(id, this.activeDatabase())
+        const db = this.activeDatabase();
+        const loadTask = $.Deferred<document>();
+
+        new getDocumentWithMetadataCommand(id, db)
             .execute()
             .done((doc: document) => {
                 this.document(doc);
@@ -593,16 +619,52 @@ class editDocument extends viewModelBase {
                 if (this.autoCollapseMode()) {
                     this.foldAll();
                 }
+
+                loadTask.resolve(doc);
+                this.isBusy(false);
+
+            })
+            .fail((xhr: JQueryXHR) => {
+                // if versioning is enabled try to load zombie
+                if (xhr.status === 404 && db.hasVersioningConfiguration()) {
+                    this.loadZombie(id)
+                        .done(doc => loadTask.resolve(doc))
+                        .fail(() => loadTask.reject())
+                        .always(() => this.isBusy(false));
+                } else {
+                    this.dirtyFlag().reset();
+                    messagePublisher.reportError("Could not find document: " + id);
+                    router.navigate(appUrl.forDocuments(null, this.activeDatabase()));
+                    this.isBusy(false);
+                }
+            });
+
+        return loadTask;
+    }
+
+    private loadZombie(id: string): JQueryPromise<document> {
+        return new getZombieDocumentMetadataCommand(id, this.activeDatabase())
+            .execute()
+            .done((doc: document) => {
+                this.document(doc);
+                this.displayDocumentChange(false);
+
+                this.inReadOnlyMode(true);
+
+                this.dirtyFlag().reset();
+                if (this.autoCollapseMode()) {
+                    this.foldAll();
+                }
             })
             .fail(() => {
                 this.dirtyFlag().reset();
-                messagePublisher.reportError("Could not find document: " + id);
+
+                messagePublisher.reportError("Could not find zombie document: " + id);
                 router.navigate(appUrl.forDocuments(null, this.activeDatabase()));
-            })
-            .always(() => this.isBusy(false));
+            });
     }
 
-    loadRevision(etag: number) : JQueryPromise<document> {
+    private loadRevision(etag: number) : JQueryPromise<document> {
         this.isBusy(true);
 
         return new getDocumentAtRevisionCommand(etag, this.activeDatabase())
@@ -631,7 +693,7 @@ class editDocument extends viewModelBase {
             .done(() => {
                 const docId = this.editedDocId();
                 this.userSpecifiedId("");
-                    this.loadDocument(docId, true)
+                    this.loadDocument(docId)
                         .done(() => {
                             this.connectedDocuments.gridController().reset(true);
                         });

@@ -611,8 +611,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
 
                 var database = GetDatabase(store.Database).Result;
 
-                DocumentsOperationContext context;
-                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     for (int i = 0; i < 2; i++)

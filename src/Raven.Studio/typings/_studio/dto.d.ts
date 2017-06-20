@@ -68,7 +68,7 @@ interface documentMetadataDto {
 }
 
 interface updateDatabaseConfigurationsResult {
-    ETag: number;
+    RaftCommandIndex: number;
 }
 interface changeVectorDto {
     DbId: string;

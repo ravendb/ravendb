@@ -550,9 +550,8 @@ namespace Raven.Server.Documents.Handlers
             var field = GetQueryStringValueAndAssertIfSingleAndNotEmpty("field");
             var fromValue = GetStringQueryString("fromValue", required: false);
 
-            DocumentsOperationContext context;
             using (var token = CreateTimeLimitedOperationToken())
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var existingResultEtag = GetLongFromHeaders("If-None-Match");

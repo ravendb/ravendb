@@ -9,6 +9,7 @@ using System.Runtime.Loader;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Http;
 using Raven.Server;
 using Raven.Server.Config;
@@ -19,15 +20,21 @@ using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Utils;
 using Tests.Infrastructure;
+using Xunit;
 
 namespace FastTests
 {
-    public abstract class TestBase : LinuxRaceConditionWorkAround, IDisposable
+    public abstract class TestBase : LinuxRaceConditionWorkAround, IDisposable, IAsyncLifetime
     {
-        public const string ServerName = "Raven.Tests.Core.Server";
+        private const string XunitConfigurationFile = "xunit.runner.json";
+
+        private const string ServerName = "Raven.Tests.Core.Server";
 
         private static readonly ConcurrentSet<string> GlobalPathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        private static readonly SemaphoreSlim ConcurrentTests;
 
         private readonly ConcurrentSet<string> _localPathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -37,7 +44,7 @@ namespace FastTests
         {
             return _globalServer == server;
         }
-        
+
         private RavenServer _localServer;
 
         protected List<RavenServer> Servers = new List<RavenServer>();
@@ -66,6 +73,23 @@ namespace FastTests
                 Console.WriteLine(sb.ToString());
             };
 #endif
+
+            var maxNumberOfConcurrentTests = Math.Max(ProcessorInfo.ProcessorCount / 2, 2);
+
+            var fileInfo = new FileInfo(XunitConfigurationFile);
+            if (fileInfo.Exists)
+            {
+                using (var file = File.OpenRead(XunitConfigurationFile))
+                using (var sr = new StreamReader(file))
+                {
+                    var json = JObject.Parse(sr.ReadToEnd());
+                    if (json.TryGetValue("maxParallelThreads", out JToken token))
+                        maxNumberOfConcurrentTests = token.Value<int>();
+                }
+            }
+
+            Console.WriteLine("Max number of concurrent tests is: " + maxNumberOfConcurrentTests);
+            ConcurrentTests = new SemaphoreSlim(maxNumberOfConcurrentTests, maxNumberOfConcurrentTests);
         }
 
         public void DoNotReuseServer(IDictionary<string, string> customSettings = null)
@@ -116,12 +140,12 @@ namespace FastTests
                     return _localServer;
                 }
 
-                if (_globalServer  != null)
+                if (_globalServer != null)
                 {
-                    if(_globalServer.Disposed)
+                    if (_globalServer.Disposed)
                         throw new ObjectDisposedException("Someone disposed the global server!");
-                    _localServer = _globalServer ;
-                    
+                    _localServer = _globalServer;
+
                     Servers.Add(_localServer);
                     return _localServer;
                 }
@@ -223,7 +247,7 @@ namespace FastTests
 
             for (var i = 0; i < urls.Length; i++)
             {
-                urls[i] = urls[i].Replace("127.0.0.1", "localhost.fiddler");   
+                urls[i] = urls[i].Replace("127.0.0.1", "localhost.fiddler");
             }
             return urls;
         }
@@ -264,6 +288,8 @@ namespace FastTests
         {
             GC.SuppressFinalize(this);
 
+            ConcurrentTests.Release();
+
             var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
 
             Dispose(exceptionAggregator);
@@ -280,6 +306,16 @@ namespace FastTests
             RavenTestHelper.DeletePaths(_localPathsToDelete, exceptionAggregator);
 
             exceptionAggregator.ThrowIfNeeded();
+        }
+
+        public Task InitializeAsync()
+        {
+            return ConcurrentTests.WaitAsync();
+        }
+
+        public Task DisposeAsync()
+        {
+            return Task.CompletedTask;
         }
     }
 }

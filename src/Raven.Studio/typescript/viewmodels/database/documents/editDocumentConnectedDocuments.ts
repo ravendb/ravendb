@@ -32,6 +32,12 @@ interface attachmentItem {
     size: number;
 }
 
+interface connectedDocumentItem {
+    id: string;
+    href: string;
+    deletedRevision: boolean;
+}
+
 class connectedDocuments {
 
     // static field to remember current tab between navigation
@@ -61,7 +67,7 @@ class connectedDocuments {
     isUploaderActive: KnockoutComputed<boolean>;
     showUploadNotAvailable: KnockoutComputed<boolean>;
 
-    gridController = ko.observable<virtualGridController<connectedDocument | attachmentItem>>();
+    gridController = ko.observable<virtualGridController<connectedDocumentItem | attachmentItem>>();
     uploader: editDocumentUploader;
 
     revisionsEnabled = ko.pureComputed(() => {
@@ -70,7 +76,7 @@ class connectedDocuments {
         if (!doc) {
             return false;
         }
-        return doc.__metadata.hasFlag("Versioned");
+        return doc.__metadata.hasFlag("Versioned") || doc.__metadata.hasFlag("DeleteRevision");
     });
 
     constructor(document: KnockoutObservable<document>,
@@ -110,7 +116,10 @@ class connectedDocuments {
 
     private initColumns() {
         this.docsColumns = [
-            new hyperlinkColumn<connectedDocument>(this.gridController() as virtualGridController<any>, x => x.id, x => x.href, "", "100%")
+            new hyperlinkColumn<connectedDocumentItem>(this.gridController() as virtualGridController<any>, x => x.id, x => x.href, "", "100%",
+                {
+                    extraClass: item => item.deletedRevision ? "deleted-revision" : ""
+                })
         ];
 
         this.attachmentsColumns = [
@@ -156,10 +165,10 @@ class connectedDocuments {
         this.gridResetSubscription.dispose();
     }
 
-    private fetchCurrentTabItems(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument | attachmentItem>> {
+    private fetchCurrentTabItems(skip: number, take: number): JQueryPromise<pagedResult<connectedDocumentItem | attachmentItem>> {
         const doc = this.document();
         if (!doc) {
-            return connectedDocuments.emptyDocResult<connectedDocument | attachmentItem>();
+            return connectedDocuments.emptyDocResult<connectedDocumentItem | attachmentItem>();
         }
 
         switch (connectedDocuments.currentTab()) {
@@ -171,12 +180,12 @@ class connectedDocuments {
                 return this.fetchRecentDocs(skip, take);
             case "revisions":
                 return this.fetchRevisionDocs(skip, take);
-            default: return connectedDocuments.emptyDocResult<connectedDocument | attachmentItem>();
+            default: return connectedDocuments.emptyDocResult<connectedDocumentItem | attachmentItem>();
         }
     }
 
-    fetchRelatedDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument>> {
-        const deferred = $.Deferred<pagedResult<connectedDocument>>();
+    fetchRelatedDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocumentItem>> {
+        const deferred = $.Deferred<pagedResult<connectedDocumentItem>>();
         const search = this.searchInput().toLocaleLowerCase();
 
         let relatedDocumentsCandidates: string[] = documentHelpers.findRelatedDocumentsCandidates(this.document());
@@ -188,7 +197,7 @@ class connectedDocuments {
         const docIDsVerifyCommand = new verifyDocumentsIDsCommand(relatedDocumentsCandidates, this.db());
         docIDsVerifyCommand.execute()
             .done((verifiedIDs: string[]) => {
-                const connectedDocs: connectedDocument[] = verifiedIDs.map(id => this.docIdToConnectedDoc(id));
+                const connectedDocs: connectedDocumentItem[] = verifiedIDs.map(id => this.docIdToConnectedDoc(id));
                 deferred.resolve({
                     items: connectedDocs,
                     totalResultCount: connectedDocs.length
@@ -221,21 +230,21 @@ class connectedDocuments {
         });
     }
 
-    fetchRecentDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument>> {
+    fetchRecentDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocumentItem>> {
         const doc = this.document();
 
         const recentDocs = this.recentDocuments.getTopRecentDocuments(this.db(), doc.getId());
-        return $.Deferred<pagedResult<connectedDocument>>().resolve({
-            items: recentDocs,
-            totalResultCount: recentDocs.length
+        return $.Deferred<pagedResult<connectedDocumentItem>>().resolve({
+            items: recentDocs.map(x => ({ id: x.id, href: x.href, deletedRevision: false })),
+            totalResultCount: recentDocs.length,
         }).promise();
     }
 
-    fetchRevisionDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument>> {
+    fetchRevisionDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocumentItem>> {
         const doc = this.document();
 
-        if (!doc.__metadata.hasFlag("Versioned")) {
-            return connectedDocuments.emptyDocResult<connectedDocument>();
+        if (!doc.__metadata.hasFlag("Versioned") && !doc.__metadata.hasFlag("DeleteRevision")) {
+            return connectedDocuments.emptyDocResult<connectedDocumentItem>();
         }
 
         const fetchTask = $.Deferred<pagedResult<connectedDocument>>();
@@ -248,7 +257,7 @@ class connectedDocuments {
                     totalResultCount: result.totalResultCount
                 });
 
-                if (doc.__metadata.hasFlag("Revision")) {
+                if (doc.__metadata.hasFlag("Revision") || doc.__metadata.hasFlag("DeleteRevision")) {
                     const etag = doc.__metadata.etag();
                     const resultIdx = result.items.findIndex(x => x.__metadata.etag() === etag);
                     if (resultIdx >= 0) {
@@ -262,10 +271,11 @@ class connectedDocuments {
         return fetchTask.promise();
     }
 
-    private revisionToConnectedDocument(doc: document): connectedDocument {
+    private revisionToConnectedDocument(doc: document): connectedDocumentItem {
         return {
             href: appUrl.forViewDocumentAtRevision(doc.getId(), doc.__metadata.etag(), this.db()),
-            id: doc.__metadata.lastModified()
+            id: doc.__metadata.lastModified(),
+            deletedRevision: doc.__metadata.hasFlag("DeleteRevision")
         };
     }
 
@@ -342,7 +352,10 @@ class connectedDocuments {
         connectedDocuments.currentTab("recent");
     }
 
-    activateRevisions() {
+    activateRevisions(blink: boolean) {
+        if (blink) {
+            viewHelpers.animate($("#revisions_pane"), "bouncein-style");
+        }
         connectedDocuments.currentTab("revisions");
     }
 
@@ -372,7 +385,7 @@ class connectedDocuments {
             this.recentDocuments.appendRecentDocument(this.db(), this.document().getId());
             this.currentDocumentIsStarred(starredDocumentsStorage.isStarred(this.db(), this.document().getId()));
 
-            if (connectedDocuments.currentTab() === "revisions" && !document.__metadata.hasFlag("Versioned")) {
+            if (connectedDocuments.currentTab() === "revisions" && (!document.__metadata.hasFlag("Versioned") && !document.__metadata.hasFlag("DeleteRevision"))) {
                 // this will also reset grid
                 connectedDocuments.currentTab("attachments");
             } else {
@@ -389,17 +402,19 @@ class connectedDocuments {
         }
     }
 
-    private documentToConnectedDoc(doc: document): connectedDocument {
+    private documentToConnectedDoc(doc: document): connectedDocumentItem {
         return {
             id: doc.getId(),
-            href: appUrl.forEditDoc(doc.getId(), this.db())
+            href: appUrl.forEditDoc(doc.getId(), this.db()),
+            deletedRevision: doc.__metadata.hasFlag("DeleteRevision")
         };
     }
 
-    private docIdToConnectedDoc(docId: string): connectedDocument {
+    private docIdToConnectedDoc(docId: string): connectedDocumentItem {
         return {
             id: docId,
-            href: appUrl.forEditDoc(docId, this.db())
+            href: appUrl.forEditDoc(docId, this.db()),
+            deletedRevision: false
         }
     }
 }

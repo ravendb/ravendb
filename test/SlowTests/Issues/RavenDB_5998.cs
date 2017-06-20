@@ -21,9 +21,8 @@ namespace SlowTests.Issues
             {
                 Assert.NotNull(stream);
 
-                DocumentsOperationContext context;
                 using (var database = CreateDocumentDatabase())
-                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
                     var source = new StreamSource(stream, context, database);
                     var destination = new DatabaseDestination(database);

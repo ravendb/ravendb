@@ -22,7 +22,6 @@ namespace SlowTests.Server.Replication
             {
                 await VersioningHelper.SetupVersioning(Server.ServerStore, master.Database);
                 await VersioningHelper.SetupVersioning(Server.ServerStore, slave.Database);
-
                 await SetupReplicationAsync(master, slave);
 
                 using (var session = master.OpenAsyncSession())
