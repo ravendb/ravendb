@@ -5,6 +5,8 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.Server.Operations;
@@ -351,7 +353,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     DatabaseName = databaseName
                 };
                 var restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
-                store.Admin.Server.Send(restoreBackupTask);
+                var restoreResult = store.Admin.Server.Send(restoreBackupTask);
+                var stateRequest = new GetOperationStateOperation(restoreResult.OperationId, isServerStoreOperation: true);
+
+                SpinWait.SpinUntil(() =>
+                {
+                    var state = store.Admin.Server.Send(stateRequest);
+                    return state.Status == OperationStatus.Completed;
+                }, TimeSpan.FromMinutes(2));
 
                 using (var session = store.OpenAsyncSession(databaseName))
                 {
@@ -408,14 +417,22 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }, TimeSpan.FromMinutes(2));
 
                 // restore the database with a different name
-                const string restoredDatabaseName = "retored_database";
+                const string restoredDatabaseName = "restored_database_snapshot";
                 var restoreConfiguration = new RestoreBackupConfiguraion
                 {
                     BackupLocation = Directory.GetDirectories(_backupPath).First(),
                     DatabaseName = restoredDatabaseName
                 };
                 var restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
-                store.Admin.Server.Send(restoreBackupTask);
+                var restoreResult = store.Admin.Server.Send(restoreBackupTask);
+                var stateRequest = new GetOperationStateOperation(restoreResult.OperationId, isServerStoreOperation: true);
+                store.Admin.Server.Send(stateRequest);
+
+                SpinWait.SpinUntil(() =>
+                {
+                    var state = store.Admin.Server.Send(stateRequest);
+                    return state.Status == OperationStatus.Completed;
+                }, TimeSpan.FromMinutes(2));
 
                 using (var session = store.OpenAsyncSession(restoredDatabaseName))
                 {

@@ -16,7 +16,6 @@ using Raven.Server.Config;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
@@ -101,6 +100,7 @@ namespace Raven.Server.Documents
                     var databaseRecord = _serverStore.Cluster.ReadDatabase(ctx, Name);
                     if (databaseRecord != null)
                     {
+                        // can happen when we are in the process of restoring a database
                         if (databaseRecord.Encrypted && MasterKey == null)
                             throw new InvalidOperationException($"Attempt to create encrypted db {Name} without supplying the secret key");
                         if (databaseRecord.Encrypted == false && MasterKey != null)
@@ -200,17 +200,17 @@ namespace Raven.Server.Documents
 
         public DateTime StartTime { get; }
 
-        public void Initialize(bool generateNewDatabaseId = false, bool skipLoadingDatabaseRecord = false)
+        public void Initialize(InitializeOptions options = InitializeOptions.None)
         {
             try
             {
                 NotificationCenter.Initialize(this);
 
-                DocumentsStorage.Initialize(generateNewDatabaseId);
+                DocumentsStorage.Initialize((options & InitializeOptions.GenerateNewDatabaseId) == InitializeOptions.GenerateNewDatabaseId);
                 TxMerger.Start();
                 ConfigurationStorage.Initialize();
 
-                if (skipLoadingDatabaseRecord)
+                if ((options & InitializeOptions.SkipLoadingDatabaseRecord) == InitializeOptions.SkipLoadingDatabaseRecord)
                     return;
 
                 long index;
@@ -580,6 +580,9 @@ namespace Raven.Server.Documents
                 using (var zipStream = zipArchiveEntry.Open())
                 using (var writer = new BlittableJsonTextWriter(context, zipStream))
                 {
+                    //TODO: encrypt this file using the MasterKey
+                    //http://issues.hibernatingrhinos.com/issue/RavenDB-7546
+
                     writer.WriteStartObject();
 
                     // save the database record
@@ -608,7 +611,7 @@ namespace Raven.Server.Documents
                         writer.WriteEndObject();
                     }
                     writer.WriteEndObject();
-                    // end dictionary
+                    // end of dictionary
 
                     writer.WriteEndObject();
                 }                

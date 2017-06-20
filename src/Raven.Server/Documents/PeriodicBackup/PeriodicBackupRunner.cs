@@ -123,10 +123,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (string.IsNullOrWhiteSpace(configuration.Name) == false)
                     message += $", backup name: {configuration.Name}";
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info(message);
-
-                _database.NotificationCenter.Add(AlertRaised.Create("Couldn't schedule next backup",
+                _database.NotificationCenter.Add(AlertRaised.Create("Couldn't schedule next backup, this shouldn't happen",
                     message,
                     AlertType.PeriodicBackup,
                     NotificationSeverity.Warning));
@@ -485,76 +482,62 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             var tasks = new List<Task>();
 
-            if (CanBackupUsing(configuration.S3Settings))
-            {
-                tasks.Add(Task.Run(async () =>
+            CreateUploadTaskIfNeeded(configuration.S3Settings, tasks, isFullBackup,
+                async settings =>
                 {
-                    if (backupStatus.UploadToS3 == null)
-                        backupStatus.UploadToS3 = new UploadToS3();
+                    var archiveDescription = GetArchiveDescription(isFullBackup, configuration.BackupType);
+                    await UploadToS3(settings, backupPath, fileName, archiveDescription);
+                },
+                ref backupStatus.UploadToS3);
 
-                    var exception = new Reference<Exception>();
-                    using (backupStatus.UploadToS3.UpdateStats(isFullBackup, exception))
-                    {
-                        try
-                        {
-                            await UploadToS3(configuration.S3Settings, backupPath, fileName, isFullBackup, configuration.BackupType);
-                        }
-                        catch (Exception e)
-                        {
-                            exception.Value = e;
-                            throw;
-                        }
-                    }
-                }));
-            }
+            CreateUploadTaskIfNeeded(configuration.GlacierSettings, tasks, isFullBackup,
+                async settings => await UploadToGlacier(settings, backupPath, fileName),
+                ref backupStatus.UploadToGlacier);
 
-            if (CanBackupUsing(configuration.GlacierSettings))
-            {
-                tasks.Add(Task.Run(async () =>
+            CreateUploadTaskIfNeeded(configuration.AzureSettings, tasks, isFullBackup,
+                async settings =>
                 {
-                    if (backupStatus.UploadToGlacier == null)
-                        backupStatus.UploadToGlacier = new UploadToGlacier();
-
-                    var exception = new Reference<Exception>();
-                    using (backupStatus.UploadToGlacier.UpdateStats(isFullBackup, exception))
-                    {
-                        try
-                        {
-                            await UploadToGlacier(configuration.GlacierSettings, backupPath, fileName);
-                        }
-                        catch (Exception e)
-                        {
-                            exception.Value = e;
-                            throw;
-                        }
-                    }
-                }));
-            }
-
-            if (CanBackupUsing(configuration.AzureSettings))
-            {
-                tasks.Add(Task.Run(async () =>
-                {
-                    if (backupStatus.UploadToAzure == null)
-                        backupStatus.UploadToAzure = new UploadToAzure();
-
-                    var exception = new Reference<Exception>();
-                    using (backupStatus.UploadToAzure.UpdateStats(isFullBackup, exception))
-                    {
-                        try
-                        {
-                            await UploadToAzure(configuration.AzureSettings, backupPath, fileName, isFullBackup, configuration.BackupType);
-                        }
-                        catch (Exception e)
-                        {
-                            exception.Value = e;
-                            throw;
-                        }
-                    }
-                }));
-            }
+                    var archiveDescription = GetArchiveDescription(isFullBackup, configuration.BackupType);
+                    await UploadToAzure(settings, backupPath, fileName, archiveDescription);
+                },
+                ref backupStatus.UploadToAzure);
 
             await Task.WhenAll(tasks);
+        }
+
+        private static void CreateUploadTaskIfNeeded<S, T>(
+            S settings,
+            List<Task> tasks,
+            bool isFullBackup,
+            Func<S, Task> uploadToServer,
+            ref T uploadStatus)
+            where S : BackupSettings
+            where T: BackupStatus
+        {
+            if (CanBackupUsing(settings) == false)
+                return;
+
+            if (uploadStatus == null)
+                uploadStatus = (T)Activator.CreateInstance(typeof(T));
+
+            var localUploadStatus = uploadStatus;
+
+            tasks.Add(Task.Run(async () =>
+            {
+                var exception = new Reference<Exception>();
+                using (localUploadStatus.UpdateStats(isFullBackup, exception))
+                {
+                    try
+                    {
+                        await uploadToServer(settings);
+                    }
+                    catch (Exception e)
+                    {
+                        exception.Value = e;
+                        throw;
+                    }
+                }
+            }));
         }
 
         private static bool CanBackupUsing(BackupSettings settings)
@@ -564,7 +547,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                    settings.HasSettings();
         }
 
-        private async Task UploadToS3(S3Settings settings, string backupPath, string fileName, bool isFullBackup, BackupType backupType)
+        private async Task UploadToS3(S3Settings settings, string backupPath, string fileName, string archiveDescription)
         {
             using (var client = new RavenAwsS3Client(settings.AwsAccessKey, settings.AwsSecretKey, settings.AwsRegionName ?? RavenAwsClient.DefaultRegion))
             using (var fileStream = File.OpenRead(backupPath))
@@ -572,7 +555,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 var key = CombinePathAndKey(settings.RemoteFolderName, fileName);
                 await client.PutObject(settings.BucketName, key, fileStream, new Dictionary<string, string>
                 {
-                    {"Description", GetArchiveDescription(isFullBackup, backupType)}
+                    {"Description", archiveDescription}
                 }, 60 * 60);
 
                 if (_logger.IsInfoEnabled)
@@ -592,7 +575,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private async Task UploadToAzure(AzureSettings settings, string backupPath, string fileName, bool isFullBackup, BackupType backupType)
+        private async Task UploadToAzure(AzureSettings settings, string backupPath, string fileName, string archiveDecription)
         {
             using (var client = new RavenAzureClient(settings.StorageAccount, settings.StorageKey, settings.StorageContainer))
             {
@@ -602,7 +585,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     var key = CombinePathAndKey(settings.RemoteFolderName, fileName);
                     await client.PutBlob(key, fileStream, new Dictionary<string, string>
                     {
-                        {"Description", GetArchiveDescription(isFullBackup, backupType)}
+                        {"Description", archiveDecription}
                     });
 
                     if (_logger.IsInfoEnabled)
@@ -644,7 +627,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private DateTime? GetNextBackupOccurrence(string backupFrequency,
             DateTime now, PeriodicBackupConfiguration configuration, bool skipErrorLog)
         {
-            if (backupFrequency == null)
+            if (string.IsNullOrWhiteSpace(backupFrequency))
                 return null;
 
             try

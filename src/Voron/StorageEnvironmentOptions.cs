@@ -32,6 +32,7 @@ namespace Voron
 
         public IoMetrics IoMetrics { get; set; }
 
+        public bool GenerateNewDatabaseId { get; set; }
 
         public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
         public event EventHandler<NonDurabilitySupportEventArgs> OnNonDurableFileSystemError;

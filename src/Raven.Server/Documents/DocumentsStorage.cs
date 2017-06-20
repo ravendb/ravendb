@@ -215,6 +215,7 @@ namespace Raven.Server.Documents
 
             options.OnNonDurableFileSystemError += _documentDatabase.HandleNonDurableFileSystemError;
 
+            options.GenerateNewDatabaseId = generateNewDatabaseId;
             options.ForceUsing32BitsPager = _documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
             options.TimeToSyncAfterFlashInSeconds = _documentDatabase.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
             options.NumOfConcurrentSyncsPerPhysDrive = _documentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
@@ -222,7 +223,7 @@ namespace Raven.Server.Documents
 
             try
             {
-                Initialize(options, generateNewDatabaseId);
+                Initialize(options);
             }
             catch (Exception)
             {
@@ -231,12 +232,12 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void Initialize(StorageEnvironmentOptions options, bool generateNewDatabaseId = false)
+        public void Initialize(StorageEnvironmentOptions options)
         {
             options.SchemaVersion = 6;
             try
             {
-                Environment = new StorageEnvironment(options, generateNewDatabaseId);
+                Environment = new StorageEnvironment(options);
                 ContextPool = new DocumentsContextPool(_documentDatabase);
 
                 using (var tx = Environment.WriteTransaction())

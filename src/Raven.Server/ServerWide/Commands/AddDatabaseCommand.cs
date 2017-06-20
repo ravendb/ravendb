@@ -13,6 +13,7 @@ namespace Raven.Server.ServerWide.Commands
         public DatabaseRecord Record;
         public Dictionary<string, object> DatabaseValues;
         public bool Encrypted;
+        public bool IsRestore;
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
@@ -23,7 +24,8 @@ namespace Raven.Server.ServerWide.Commands
                 [nameof(Record)] = EntityToBlittable.ConvertEntityToBlittable(Record, DocumentConventions.Default, context),
                 [nameof(RaftCommandIndex)] = RaftCommandIndex,
                 [nameof(Encrypted)] = Encrypted,
-                [nameof(DatabaseValues)] = EntityToBlittable.ConvertEntityToBlittable(DatabaseValues, DocumentConventions.Default, context)
+                [nameof(DatabaseValues)] = EntityToBlittable.ConvertEntityToBlittable(DatabaseValues, DocumentConventions.Default, context),
+                [nameof(IsRestore)] = IsRestore
             };
         }
     }
