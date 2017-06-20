@@ -354,7 +354,7 @@ class connectedDocuments {
 
     activateRevisions(blink: boolean) {
         if (blink) {
-            viewHelpers.animate($("#revisions_pane"), "bouncein-style");
+            viewHelpers.animate($("#revisions_pane"), "blink-style");
         }
         connectedDocuments.currentTab("revisions");
     }

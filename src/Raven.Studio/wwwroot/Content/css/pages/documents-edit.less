@@ -133,6 +133,13 @@
 
 .virtual-row {
     .deleted-revision {
-        text-decoration: line-through !important;
+        a {
+            color: @gray-light;
+
+            &:after {
+                .icon-style;
+                content: @zombie;
+            }
+        }
     }
 }
