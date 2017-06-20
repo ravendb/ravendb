@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Raven.Client;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Server;
 using Raven.Client.Server.Versioning;
@@ -11,6 +12,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron;
@@ -51,7 +53,6 @@ namespace Raven.Server.Documents.Versioning
             Flags = 6,
             Etag2 = 7, // Needed to get the zombies with a consistent order
             LastModified = 8,
-            Collection = 9,
         }
 
         private readonly VersioningCollectionConfiguration _emptyConfiguration = new VersioningCollectionConfiguration();
@@ -236,7 +237,6 @@ namespace Raven.Server.Documents.Versioning
             var collectionName = _database.DocumentsStorage.ExtractCollectionName(context, id, document);
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
-            using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
             {
                 var notFromSmuggler = (nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) != NonPersistentDocumentFlags.FromSmuggler;
 
@@ -276,7 +276,6 @@ namespace Raven.Server.Documents.Versioning
                         tbv.Add((int)flags);
                         tbv.Add(newEtagSwapBytes);
                         tbv.Add(lastModifiedTicks);
-                        tbv.Add(collectionSlice);
                         var isNew = table.Set(tbv);
                         if (isNew == false)
                             // It might be just an update from replication as we call this twice, both for the doc delete and for deleteRevision.
@@ -369,8 +368,10 @@ namespace Raven.Server.Documents.Versioning
             if (tvr == null)
                 return null;
 
-            var collection = DocumentsStorage.TableValueToId(context, (int)Columns.Collection, ref tvr.Reader);
-            return new CollectionName(collection);
+            var ptr = tvr.Reader.Read((int)Columns.Document, out int size);
+            var data = new BlittableJsonReaderObject(ptr, size, context);
+
+            return _documentsStorage.ExtractCollectionName(context, null, data);
         }
 
         private long DeleteRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, long numberOfRevisionsToDelete, TimeSpan? minimumTimeToKeep)
@@ -410,28 +411,39 @@ namespace Raven.Server.Documents.Versioning
             numbers.Delete(prefixedLowerId);
         }
 
-        public void Delete(DocumentsOperationContext context, CollectionName collectionName, string id, Slice lowerId, ChangeVectorEntry[] changeVector,
+        public void Delete(DocumentsOperationContext context, string id, Slice lowerId, CollectionName collectionName, ChangeVectorEntry[] changeVector,
             long lastModifiedTicks, NonPersistentDocumentFlags nonPersistentFlags)
         {
             using (DocumentIdWorker.GetStringPreserveCase(context, id, out Slice idPtr))
             {
-                Delete(context, collectionName, lowerId, idPtr, changeVector, lastModifiedTicks, nonPersistentFlags);
+                var deleteRevisionDocument = context.ReadObject(new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    {
+                        [Constants.Documents.Metadata.Collection] = collectionName.Name
+                    }
+                }, "Zombies");
+                Delete(context, lowerId, idPtr, collectionName, deleteRevisionDocument, changeVector, lastModifiedTicks, nonPersistentFlags);
             }
         }
 
-        public void Delete(DocumentsOperationContext context, string collectionName, string id, ChangeVectorEntry[] changeVector,
+        public void Delete(DocumentsOperationContext context, string id, BlittableJsonReaderObject deleteRevisionDocument, ChangeVectorEntry[] changeVector,
             long lastModifiedTicks, NonPersistentDocumentFlags nonPersistentFlags)
         {
+            BlittableJsonReaderObject.AssertNoModifications(deleteRevisionDocument, id, assertChildren: true);
+
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
-                var collection = _documentsStorage.ExtractCollectionName(context, collectionName);
-                Delete(context, collection, lowerId, idPtr, changeVector, lastModifiedTicks, nonPersistentFlags);
+                var collectionName = _documentsStorage.ExtractCollectionName(context, id, deleteRevisionDocument);
+                Delete(context, lowerId, idPtr, collectionName, deleteRevisionDocument, changeVector, lastModifiedTicks, nonPersistentFlags);
             }
         }
 
-        public void Delete(DocumentsOperationContext context, CollectionName collectionName, Slice lowerId, Slice id, ChangeVectorEntry[] changeVector, 
+        private void Delete(DocumentsOperationContext context, Slice lowerId, Slice id, CollectionName collectionName, BlittableJsonReaderObject deleteRevisionDocument, ChangeVectorEntry[] changeVector, 
             long lastModifiedTicks, NonPersistentDocumentFlags nonPersistentFlags)
         {
+            Debug.Assert(changeVector != null, "Change vector must be set");
+
             var configuration = GetVersioningConfiguration(collectionName);
             if (configuration.Active == false)
                 return;
@@ -457,26 +469,21 @@ namespace Raven.Server.Documents.Versioning
                 var changeVectorPtr = (byte*)pChangeVector;
                 var changeVectorSize = sizeof(ChangeVectorEntry) * changeVector.Length;
 
-                using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
+                using (table.Allocate(out TableValueBuilder tbv))
                 {
-                    using (table.Allocate(out TableValueBuilder tbv))
-                    {
-                        tbv.Add(changeVectorPtr, changeVectorSize);
-                        tbv.Add(lowerId);
-                        tbv.Add(SpecialChars.RecordSeparator);
-                        tbv.Add(newEtagSwapBytes);
-                        tbv.Add(id);
-                        tbv.Add(null, 0);
-                        tbv.Add((int)DocumentFlags.DeleteRevision);
-                        tbv.Add(newEtagSwapBytes);
-                        tbv.Add(lastModifiedTicks);
-                        tbv.Add(collectionSlice);
-                        var isNew = table.Set(tbv);
-                        if (isNew == false)
-                            // It might be just an update from replication as we call this twice, both for the doc delete and for deleteRevision.
-                            return;
-
-                    }
+                    tbv.Add(changeVectorPtr, changeVectorSize);
+                    tbv.Add(lowerId);
+                    tbv.Add(SpecialChars.RecordSeparator);
+                    tbv.Add(newEtagSwapBytes);
+                    tbv.Add(id);
+                    tbv.Add(deleteRevisionDocument.BasePointer, deleteRevisionDocument.Size);
+                    tbv.Add((int)DocumentFlags.DeleteRevision);
+                    tbv.Add(newEtagSwapBytes);
+                    tbv.Add(lastModifiedTicks);
+                    var isNew = table.Set(tbv);
+                    if (isNew == false)
+                        // It might be just an update from replication as we call this twice, both for the doc delete and for deleteRevision.
+                        return;
                 }
             }
 
@@ -666,14 +673,12 @@ namespace Raven.Server.Documents.Versioning
                 LowerId = DocumentsStorage.TableValueToString(context, (int)Columns.LowerId, ref tvr),
                 Id = DocumentsStorage.TableValueToId(context, (int)Columns.Id, ref tvr),
                 Etag = DocumentsStorage.TableValueToEtag((int)Columns.Etag, ref tvr),
-                Collection = DocumentsStorage.TableValueToId(context, (int)Columns.Collection, ref tvr),
                 LastModified = DocumentsStorage.TableValueToDateTime((int)Columns.LastModified, ref tvr),
                 Flags = DocumentsStorage.TableValueToFlags((int)Columns.Flags, ref tvr)
             };
 
             var ptr = tvr.Read((int)Columns.Document, out int size);
-            if (size > 0)
-                result.Data = new BlittableJsonReaderObject(ptr, size, context);
+            result.Data = new BlittableJsonReaderObject(ptr, size, context);
 
             ptr = tvr.Read((int)Columns.ChangeVector, out size);
             var changeVectorCount = size / sizeof(ChangeVectorEntry);
