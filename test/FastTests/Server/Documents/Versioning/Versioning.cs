@@ -15,7 +15,6 @@ using Raven.Client.Documents.Exceptions.Versioning;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
