@@ -11,7 +11,7 @@ namespace Raven.Client.Documents.Exceptions.Subscriptions
 {
     public class SubscriptionClosedException : SubscriptionException
     {
-        public static HttpStatusCode RelevantHttpStatusCode = HttpStatusCode.Unused;
+        public static HttpStatusCode RelevantHttpStatusCode = HttpStatusCode.ResetContent;
 
         public SubscriptionClosedException()
             : base(RelevantHttpStatusCode)

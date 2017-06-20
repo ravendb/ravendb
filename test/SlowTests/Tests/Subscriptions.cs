@@ -28,7 +28,7 @@ namespace SlowTests.Tests
                     ChangeVector = lastChangeVector
                 };
 
-                var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
+                var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams).ConfigureAwait(false);
                 using (var subscription = store.Subscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
                 {
 

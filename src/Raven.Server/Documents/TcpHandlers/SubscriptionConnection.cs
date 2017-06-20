@@ -203,6 +203,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     {
                         [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
                         [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.NotFound),
+                        [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
                         [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
                     });
                 }
@@ -212,6 +213,17 @@ namespace Raven.Server.Documents.TcpHandlers
                     {
                         [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
                         [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Closed),
+                        [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
+                        [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
+                    });
+                }
+                else if (ex is SubscriptionInvalidStateException)
+                {
+                    await connection.WriteJsonAsync(new DynamicJsonValue
+                    {
+                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
+                        [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Invalid),
+                        [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
                         [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
                     });
                 }
@@ -221,6 +233,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     {
                         [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
                         [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.InUse),
+                        [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
                         [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
                     });
                 }
@@ -234,6 +247,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     {
                         [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
                         [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Redirect),
+                        [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
                         [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue()
                         {
                             [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)] = subscriptionDoesNotBelongException.AppropriateNode
@@ -246,6 +260,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     {
                         [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Error),
                         [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.None),
+                        [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
                         [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
                     });
                 }
@@ -477,7 +492,7 @@ namespace Raven.Server.Documents.TcpHandlers
             if (subscription.Criteria.IsVersioned)
             {
                 if (db.DocumentsStorage.VersioningStorage == null || db.DocumentsStorage.VersioningStorage.IsVersioned(subscription.Criteria.Collection) == false)
-                    throw new SubscriptionClosedException("Cannot use a version subscription, database does not support versioning"); // todo: improve exception handling
+                    throw new SubscriptionInvalidStateException($"Cannot use a versioned subscription, database {db.Name} does not have versioning setup"); 
 
                 return GetVerionTuplesToSend(docsContext, subscription, startEtag, patch, db.DocumentsStorage.VersioningStorage);
             }

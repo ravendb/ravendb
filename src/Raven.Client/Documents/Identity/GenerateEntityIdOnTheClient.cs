@@ -142,6 +142,9 @@ namespace Raven.Client.Documents.Identity
             }
             catch (RuntimeBinderException)
             {
+                // it is fine if the document doesn't
+                // contain this property or if we can't set 
+                // it. We can live without it. 
             }
         }
 

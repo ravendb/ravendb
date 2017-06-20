@@ -17,13 +17,14 @@ namespace Raven.Client.Documents.Subscriptions
         OpenIfFree,
         /// <summary>
         /// The connecting client will successfully open a subscription even if there is another active subscription's consumer.
-        /// If the new client takes over the subscription then the existing one will get rejected. 
-        /// The subscription will always be processed by the last connected client.
+        /// If the new client takes over an existing client then the existing one will get a SubscriptionInUseException.
+        ///  
+        /// The subscription will always be held by the last connected client.
         /// </summary>
         TakeOver,
         /// <summary>
-        /// If the client currently cannot open the subscription because it is used by another client then it will subscribe Changes API to be notified about subscription status changes.
-        /// Every time SubscriptionReleased notification arrives, it will repeat an attempt to open the subscription. After it succeeds in opening, it will process docs as usual.
+        /// If the client currently cannot open the subscription because it is used by another client but it will wait for that client
+        /// to complete and keep attempting to gain the subscription
         /// </summary>
         WaitForFree
     }

@@ -364,13 +364,17 @@ namespace Raven.Client.Documents.Subscriptions
                         $"Subscription With Id {_options.SubscriptionId} cannot be opened, because it's in use and the connection strategy is {_options.Strategy}");
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Closed:
                     throw new SubscriptionClosedException(
-                        $"Subscription With Id {_options.SubscriptionId} cannot be opened, because it was closed");
+                        $"Subscription With Id {_options.SubscriptionId} cannot be opened, because it was closed.  " + connectionStatus.Exception);
+                case SubscriptionConnectionServerMessage.ConnectionStatus.Invalid:
+                    throw new SubscriptionInvalidStateException(
+                        $"Subscription With Id {_options.SubscriptionId} cannot be opened, because it is in invalid state. " + connectionStatus.Exception);
                 case SubscriptionConnectionServerMessage.ConnectionStatus.NotFound:
                     throw new SubscriptionDoesNotExistException(
-                        $"Subscription With Id {_options.SubscriptionId} cannot be opened, because it does not exist");
+                        $"Subscription With Id {_options.SubscriptionId} cannot be opened, because it does not exist. " + connectionStatus.Exception);
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Redirect:
                     throw new SubscriptionDoesNotBelongToNodeException(
-                        $"Subscription With Id {_options.SubscriptionId} cannot be proccessed by current node, it will be redirected to {connectionStatus.Data[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)]}")
+                        $"Subscription With Id {_options.SubscriptionId} cannot be proccessed by current node, it will be redirected to {connectionStatus.Data[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)]}"
+                        )
                     {
                         AppropriateNode = connectionStatus.Data[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)].ToString()
                     };
@@ -426,7 +430,7 @@ namespace Raven.Client.Documents.Subscriptions
                                 try
                                 {
                                     CloseTcpClient();
-                                    using ((await readFromServer).ReturnContext)
+                                    using ((await readFromServer.ConfigureAwait(false)).ReturnContext)
                                     {
                                         
                                     }
@@ -452,7 +456,7 @@ namespace Raven.Client.Documents.Subscriptions
                                     try
                                     {
                                         if (_subscriber.Async != null)
-                                            await _subscriber.Async(batch);
+                                            await _subscriber.Async(batch).ConfigureAwait(false);
                                         else
                                             _subscriber.Sync(batch);
                                     }
@@ -489,7 +493,9 @@ namespace Raven.Client.Documents.Subscriptions
             }
             catch (OperationCanceledException)
             {
-
+                // this is thrown when shutting down, it
+                // isn't an error, so we don't need to treat
+                // it as such
             }
         }
 
@@ -516,7 +522,7 @@ namespace Raven.Client.Documents.Subscriptions
                     case SubscriptionConnectionServerMessage.MessageType.Confirm:
                         var onAfterAcknowledgment = AfterAcknowledgment;
                         if (onAfterAcknowledgment != null)
-                            await onAfterAcknowledgment(batch);
+                            await onAfterAcknowledgment(batch).ConfigureAwait(false);
                         incomingBatch.Clear();
                         batch.Items.Clear();
                         break;
@@ -638,6 +644,7 @@ namespace Raven.Client.Documents.Subscriptions
                 case SubscriptionInUseException _:
                 case SubscriptionDoesNotExistException _:
                 case SubscriptionClosedException _:
+                case SubscriptionInvalidStateException _:
                 case DatabaseDoesNotExistException _:
                 case AuthorizationException _:
                     _processingCts.Cancel();

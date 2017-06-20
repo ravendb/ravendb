@@ -248,6 +248,8 @@ namespace Raven.Client.Documents.Conventions
                 }
                 catch (RuntimeBinderException)
                 {
+                    // if we can't find it, we'll just assume the the propery
+                    // isn't there
                 }
             }
 
