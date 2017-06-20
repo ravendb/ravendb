@@ -261,6 +261,10 @@ a {
 }
 
 .control-label {
+    @media (min-width: @screen-sm) {
+        text-align: right;
+    }
+
     .labelNote {
         margin-top: -3px;
         line-height: 12px;
@@ -279,14 +283,14 @@ a {
 }
 
 .flex-row {
-    @media (min-width: @screen-sm) {
-        display: flex;
-        flex-wrap: wrap;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
 
-        .flex-bottom {
-            align-self: flex-end;
-        }
+    .flex-bottom {
+        align-self: flex-end;
     }
+
 
     hr.hr-vertical {
         @media (min-width: @screen-sm) {
