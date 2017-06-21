@@ -275,6 +275,7 @@ a {
 
 .control-label {
     @media (min-width: @screen-sm) {
+        margin-top:5px;
         text-align: right;
     }
 
@@ -298,7 +299,6 @@ a {
 .flex-row {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
 
     .flex-bottom {
         align-self: flex-end;
@@ -1290,6 +1290,11 @@ pre {
 
     .panel {
         background-color: @gray-dark;
+    }
+
+    .virtual-grid {
+        padding: 0;
+        background-color: transparent;
     }
 
     .panel-heading {
