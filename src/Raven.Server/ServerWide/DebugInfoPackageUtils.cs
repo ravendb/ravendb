@@ -23,7 +23,7 @@ namespace Raven.Server.ServerWide
                        .Replace("debug/",string.Empty) //if debug/ left in the middle, remove it as well
                        .Replace("/", ".");
             return !string.IsNullOrWhiteSpace(prefix) ? 
-                $"{prefix}{Path.DirectorySeparatorChar}{path}.json" :
+                Path.Combine(prefix,$"{path}.json") :
                 $"{path}.json";
         }
     }

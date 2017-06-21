@@ -8,6 +8,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Server;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
@@ -519,7 +520,7 @@ namespace Raven.Server.Documents
             if (databaseRecord.Topology.RelevantFor(_serverStore.NodeTag) == false &&
                 databaseIsBeenDeleted == false)
                 // TODO: need to handle this properly, need to redirect to somewhere it is on
-                throw new InvalidOperationException(databaseName + " is not relevant for " + _serverStore.NodeTag);
+                throw new DatabaseNotRelevantException(databaseName + " is not relevant for " + _serverStore.NodeTag);
             return CreateConfiguration(databaseName, databaseRecord);
         }
 

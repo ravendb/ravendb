@@ -14,6 +14,7 @@ using Raven.Client.Server.Tcp;
 using Raven.Client.Server.Versioning;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
+using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Studio;
@@ -28,6 +29,9 @@ namespace Raven.Server.Json
 {
     internal class JsonDeserializationServer : JsonDeserializationBase
     {
+        public static readonly Func<BlittableJsonReaderObject, ServerWideDebugInfoPackageHandler.NodeDebugInfoRequestHeader> NodeDebugInfoRequestHeader =
+            GenerateJsonDeserializationRoutine<ServerWideDebugInfoPackageHandler.NodeDebugInfoRequestHeader>();
+
         public static readonly Func<BlittableJsonReaderObject, DatabaseStatusReport> DatabaseStatusReport =
             GenerateJsonDeserializationRoutine<DatabaseStatusReport>();
 
