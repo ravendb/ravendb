@@ -29,6 +29,7 @@ function LayoutRegularPackage ( $packageDir, $projectDir, $outDirs, $spec ) {
     CopyLicenseFile $packageDir
     CopyAckFile $packageDir
     CopyStartScript $spec $packageDir
+    CopyTools $packageDir $outDirs
     CreatePackageServerLayout $projectDir $($outDirs.Server) $packageDir $spec
 }
 
@@ -38,6 +39,7 @@ function LayoutRaspberryPiPackage ( $packageDir, $projectDir, $outDirs, $spec ) 
     CopyAckFile $packageDir
     CopyRaspberryPiScripts $projectDir $packageDir
     IncludeDotnetForRaspberryPi $packageDir $outDirs
+    CopyTools $packageDir $outDirs
     CreatePackageServerLayout $projectDir $($outDirs.Server) $packageDir $spec
     WrapContentsInDir $packageDir "RavenDB.4.0"
 }
@@ -72,6 +74,14 @@ function IncludeDotnetForRaspberryPi( $packageDir, $outDirs ) {
     foreach ($dll in $dllsToCopy) {
         $srcPath = [io.path]::combine($dotnetPath, "shared", "Microsoft.NETCore.App", $NETCORE_ARM_VERSION, $dll)
         $dstPath = [System.IO.Path]::Combine("$($outDirs.Server)", $dll)
+        write-host "Copy $srcPath -> $dstPath"
+        Copy-Item $srcPath -Destination $dstPath    
+    }
+
+    write-host "Copy dotnet $NETCORE_ARM_VERSION DLLs to $($outDirs.Rvn)"
+    foreach ($dll in $dllsToCopy) {
+        $srcPath = [io.path]::combine($dotnetPath, "shared", "Microsoft.NETCore.App", $NETCORE_ARM_VERSION, $dll)
+        $dstPath = [System.IO.Path]::Combine("$($outDirs.Rvn)", $dll)
         write-host "Copy $srcPath -> $dstPath"
         Copy-Item $srcPath -Destination $dstPath    
     }
@@ -113,8 +123,14 @@ function CopyDaemonScripts ( $projectDir, $packageDir ) {
     Foreach ($scriptName in $scriptsList) {
         $scriptPath = Join-Path $scriptsDir -ChildPath $scriptName
         Copy-Item "$scriptPath" -Destination "$packageDir"
-        CheckLastExitCode
     }
+}
+
+function CopyTools ( $packageDir, $outDirs ) {
+    write-host "Copy tools files..."
+    $toolsDir = [io.path]::combine($packageDir, "Tools")
+    New-Item -ItemType Directory -Path $toolsDir
+    Copy-Item -Recurse "$($outDirs.Rvn)" -Destination "$toolsDir"
 }
 
 function CreatePackageServerLayout ( $projectDir, $serverOutDir, $packageDir, $spec ) {
