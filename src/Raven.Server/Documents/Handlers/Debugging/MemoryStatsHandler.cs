@@ -45,8 +45,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var fileMappingSizesByDir = new Dictionary<string, long>();
             foreach (var mapping in NativeMemory.FileMapping)
             {
-
                 var dir = Path.GetDirectoryName(mapping.Key);
+
                 Dictionary<string, ConcurrentDictionary<IntPtr, long>> value;
                 if (fileMappingByDir.TryGetValue(dir, out value) == false)
                 {
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
             }
 
-            var prefixLength = LongestCommonPrefixLen(new List<string>(fileMappingSizesByDir.Keys));
+            var prefixLength = LongestCommonPrefixLength(new List<string>(fileMappingSizesByDir.Keys));
 
             var fileMappings = new DynamicJsonArray();
             foreach (var sizes in fileMappingSizesByDir.OrderByDescending(x => x.Value))
@@ -181,24 +181,48 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        public static int LongestCommonPrefixLen(List<string> strings)
+        public static int LongestCommonPrefixLength(List<string> strings)
         {
             if (strings.Count == 0)
                 return 0;
 
-            for (int prefixLen = 0; prefixLen < strings[0].Length; prefixLen++)
+            strings = strings
+                .OrderBy(x => x.Length)
+                .ToList();
+
+            var maxLength = strings.Last().Length;
+            var shortestString = strings.First();
+
+            var prefixLength = 0;
+            foreach (var s in strings)
             {
-                char c = strings[0][prefixLen];
-                for (int i = 1; i < strings.Count; i++)
+                if (s == shortestString)
+                    continue;
+
+                if (shortestString[prefixLength] != s[prefixLength])
+                    prefixLength = 0;
+
+                for (var i = prefixLength; i < shortestString.Length; i++)
                 {
-                    if (prefixLen >= strings[i].Length || strings[i][prefixLen] != c)
+                    var shortChar = shortestString[i];
+                    var c = s[i];
+
+                    if (shortChar != c)
                     {
-                        // Mismatch found
-                        return prefixLen;
+                        if (prefixLength == maxLength)
+                            return 0;
+
+                        return prefixLength;
                     }
+
+                    prefixLength = i;
                 }
             }
-            return strings[0].Length;
+
+            if (prefixLength == maxLength)
+                return 0;
+
+            return prefixLength;
         }
     }
 }
