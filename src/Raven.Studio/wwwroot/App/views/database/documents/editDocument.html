@@ -94,7 +94,7 @@
 
                     This document has been removed on<span data-bind="text: metadata().lastModifiedFullDate"></span>.
                     <br />
-                    Go to <a href="#" data-bind="click: _.partial(connectedDocuments.activateRevisions, true)">REVISIONS</a> to see entire document history.
+                    Go to <a href="#" class="text-revisions" data-bind="click: _.partial(connectedDocuments.activateRevisions, true)">REVISIONS</a> to see entire document history.
                 </div>
 
             </div>
@@ -158,7 +158,7 @@
                 </div>
             </div>
             <div class="bg-warning padding padding-xs text-center" data-bind="visible: showUploadNotAvailable">
-                <small><i class="icon-info text-info"></i> <span>File editing is not available in revisions.</span></small>
+                <small><i class="icon-info"></i> <span>File editing is not available in revisions.</span></small>
             </div>
             <div class="flex-window-head" data-bind="visible: isUploaderActive, template: { name: 'uploader-template' }">
             </div>

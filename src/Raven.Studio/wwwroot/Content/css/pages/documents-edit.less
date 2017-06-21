@@ -89,34 +89,34 @@
 
     .btn-tabs {
         .doc-related {
-            color: #9466d5;
+            color: @color-related;
 
             .badge {
-                background-color: #9466d5;
+                background-color: @color-related;
             }
         }
 
         .doc-attachments {
-            color: #50b068;
+            color: @color-attachments;
 
             .badge {
-                background-color: #50b068;
+                background-color: @color-attachments;
             }
         }
 
         .doc-recent {
-            color: #198fd1;
+            color: @color-recent;
 
             .badge {
-                background-color: #198fd1;
+                background-color: @color-recent;
             }
         }
 
         .doc-revisions {
-            color: #cfa125;
+            color: @color-revisions;
 
             .badge {
-                background-color: #cfa125;
+                background-color: @color-revisions;
             }
         }
     }
@@ -134,11 +134,16 @@
 .virtual-row {
     .deleted-revision {
         a {
-            color: @gray-light;
+            color: lighten(desaturate(@link-color,60%),5%);
+
+            &:hover {
+                color: lighten(desaturate(@link-hover-color,60%),5%);
+            }
 
             &:after {
+                margin-left: 5px;
                 .icon-style;
-                content: @zombie;
+                content: @trash;
             }
         }
     }

@@ -12,6 +12,22 @@
 @import "column-selector.less";
 @import "feedback.less";
 
+@brand-database-color: #ad1457;
+@color-revisions: #cfa125;
+@color-recent: #198fd1;
+@color-attachments: #50b068;
+@color-related: #9466d5;
+@link-color: #e33572;
+@link-hover-color: #ff6565;
+
+.text-revisions {
+    color: @color-revisions !important;
+}
+
+a.text-revisions:hover {
+    color: lighten(@color-revisions,10%) !important;
+}
+
 /*
     Available animations (add "classname;" inside your class)
     .bouncein-style
@@ -20,12 +36,9 @@
     .topexpand-style (used in expandable search)
     .fadein-style
 */
-
 @import "testing-elements.less";
 /* do not include in final build */
 /* LOCAL VARIABLES AND KEYFRAMES*/
-
-@brand-database-color: #ad1457;
 
 .shadow-style {
     box-shadow: 0 10px 20px 2px rgba(0, 0, 0, 0.45);
