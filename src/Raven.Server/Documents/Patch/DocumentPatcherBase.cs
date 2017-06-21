@@ -17,7 +17,7 @@ using Sparrow.Logging;
 using JavaScriptException = Raven.Client.Documents.Exceptions.Patching.JavaScriptException;
 
 namespace Raven.Server.Documents.Patch
-{
+{    
     public abstract class DocumentPatcherBase
     {
         private const int MaxRecursionDepth = 128;
@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Patch
                 for (int i = 0; i < patch.Values.Count; i++)
                 {
                     patch.Values.GetPropertyByIndex(i, ref prop);
-                    jintEngine.SetValue(prop.Name, scope.ToJsValue(jintEngine, prop.Value, prop.Token));
+                    jintEngine.SetValue(prop.Name, scope.ToJsValue(jintEngine, prop));
                 }
             }
 

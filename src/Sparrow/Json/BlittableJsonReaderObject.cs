@@ -78,7 +78,7 @@ namespace Sparrow.Json
             // analyze main object type and it's offset and propertyIds flags
             _currentOffsetSize = ProcessTokenOffsetFlags(currentType);
             _currentPropertyIdSize = ProcessTokenPropertyFlags(currentType);
-        }
+        }        
 
         private static void ThrowOnZeroSize(int size)
         {

@@ -12,6 +12,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using System.Linq;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -63,27 +64,7 @@ namespace Raven.Server.Documents.Patch
             _context = context;
 
             return this;
-        }
-
-        public JsValue ToJsArray(Engine engine, BlittableJsonReaderArray json, string propertyKey)
-        {
-            var result = engine.Array.Construct(Arguments.Empty);
-            for (var i = 0; i < json.Length; i++)
-            {
-                var value = json.GetValueTokenTupleByIndex(i);
-                var index = i.ToString();
-                var jsVal = ToJsValue(engine, value.Item1, value.Item2, propertyKey + "[" + index + "]");
-                result.FastAddProperty(index, jsVal, true, true, true);
-            }
-            result.FastSetProperty("length", new PropertyDescriptor
-            {
-                Value = new JsValue(json.Length),
-                Configurable = true,
-                Enumerable = true,
-                Writable = true,
-            });
-            return result;
-        }
+        }      
 
         public ObjectInstance ToJsObject(Engine engine, Document document)
         {
@@ -127,49 +108,8 @@ namespace Raven.Server.Documents.Patch
 
         private ObjectInstance ToJsObject(Engine engine, BlittableJsonReaderObject json, string propertyName = null)
         {
-            var jsObject = engine.Object.Construct(Arguments.Empty);
-            var prop = new BlittableJsonReaderObject.PropertyDetails();
-
-            for (int i = 0; i < json.Count; i++)
-            {
-                json.GetPropertyByIndex(i, ref prop);
-                var name = prop.Name.ToString();
-                var propertyKey = CreatePropertyKey(name, propertyName);
-                var value = prop.Value;
-                JsValue jsValue = ToJsValue(engine, value, prop.Token, propertyKey);
-                _propertiesByValue[propertyKey] = new KeyValuePair<object, JsValue>(value, jsValue);
-                jsObject.FastAddProperty(name, jsValue, true, true, true);
-            }
-            return jsObject;
-        }
-
-        public JsValue ToJsValue(Engine engine, object value, BlittableJsonToken token, string propertyKey = null)
-        {
-            switch (token & BlittableJsonReaderBase.TypesMask)
-            {
-                case BlittableJsonToken.Null:
-                    return JsValue.Null;
-                case BlittableJsonToken.Boolean:
-                    return new JsValue((bool)value);
-
-                case BlittableJsonToken.Integer:
-                    return new JsValue((long)value);
-                case BlittableJsonToken.Float:
-                    return new JsValue((double)(LazyDoubleValue)value);
-                case BlittableJsonToken.String:
-                    return new JsValue(((LazyStringValue)value).ToString());
-                case BlittableJsonToken.CompressedString:
-                    return new JsValue(((LazyCompressedStringValue)value).ToString());
-
-                case BlittableJsonToken.StartObject:
-                    return ToJsObject(engine, (BlittableJsonReaderObject)value, propertyKey);
-                case BlittableJsonToken.StartArray:
-                    return ToJsArray(engine, (BlittableJsonReaderArray)value, propertyKey);
-
-                default:
-                    throw new ArgumentOutOfRangeException(token.ToString());
-            }
-        }
+            return new BlittableObjectInstance(engine, json);            
+        }       
 
         private static string CreatePropertyKey(string key, string property)
         {
@@ -179,7 +119,7 @@ namespace Raven.Server.Documents.Patch
             return property + "." + key;
         }
 
-        public void ToBlittableJsonReaderObject(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, ObjectInstance jsObject, string propertyKey = null,
+        private void ToBlittableJsonReaderObject(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, ObjectInstance jsObject, string propertyKey = null,
             bool recursiveCall = false)
         {
             if (jsObject.Class == "Function")
@@ -196,26 +136,96 @@ namespace Raven.Server.Documents.Patch
         public void WriteRawObjectPropertiesToBlittable(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, ObjectInstance jsObject, string propertyKey = null,
             bool recursiveCall = false)
         {
-            foreach (var property in jsObject.GetOwnProperties())
+            var blittableObjectInstance = jsObject as BlittableObjectInstance;
+
+            if (blittableObjectInstance != null)
             {
-                if (ShouldFilterProperty(property.Key))
-                    continue;
+                foreach (var propertyIndex in blittableObjectInstance.Blittable.GetPropertiesByInsertionOrder())
+                {
+                    var prop = new BlittableJsonReaderObject.PropertyDetails();
 
-                var value = property.Value.Value;
-                if (value == null)
-                    continue;
+                    blittableObjectInstance.Blittable.GetPropertyByIndex(propertyIndex, ref prop, false);
+                    var finalValue = prop.Value;
 
-                if (value.IsRegExp())
-                    continue;
+                    writer.WritePropertyName(prop.Name);
+                    if (blittableObjectInstance.Modifications != null && blittableObjectInstance.Modifications.TryGetValue(prop.Name, out var modification))
+                    {
+                        blittableObjectInstance.Modifications.Remove(prop.Name);
+                        if (modification.isDeleted)
+                            continue;
+                        finalValue = modification.value;
+                        WriteJsonValue(prop.Name, modification.value);
+                    }
+                    else
+                    {
+                        writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);                        
+                    }                    
+                }
 
-                var recursive = jsObject == value;
-                writer.WritePropertyName(property.Key);
+                foreach (var modificationKvp in blittableObjectInstance.Modifications?? Enumerable.Empty<KeyValuePair<string, (bool isDeleted, JsValue value)>>())
+                {
+                    if (modificationKvp.Value.isDeleted)
+                        continue;
+
+                    writer.WritePropertyName(modificationKvp.Key);
+                    WriteJsonValue(modificationKvp.Key, modificationKvp.Value.value);                    
+                }
+            }
+            else
+            {
+                foreach (var property in jsObject.GetOwnProperties())
+                {
+                    if (ShouldFilterProperty(property.Key))
+                        continue;
+
+                    var value = property.Value.Value;
+                    if (value == null)
+                        continue;
+
+                    if (value.IsRegExp())
+                        continue;
+
+                    writer.WritePropertyName(property.Key);
+                    WriteJsonValue(property.Key, value);                    
+                }
+            }
+
+            void WriteJsonValue(string name, JsValue value)
+            {
+                bool recursive = jsObject == value;                
                 if (recursiveCall && recursive)
                     writer.WriteValueNull();
                 else
                 {
-                    ToBlittableJsonReaderValue(writer, value, CreatePropertyKey(property.Key, propertyKey), recursive);
+                    ToBlittableJsonReaderValue(writer, value, CreatePropertyKey(name, propertyKey), recursive);
                 }
+            }
+        }
+
+        internal JsValue ToJsValue(Engine jintEngine, BlittableJsonReaderObject.PropertyDetails propertyDetails)
+        {
+            switch (propertyDetails.Token & BlittableJsonReaderBase.TypesMask)
+            {
+                case BlittableJsonToken.Null:
+                    return JsValue.Null;
+                case BlittableJsonToken.Boolean:
+                    return new JsValue((bool)propertyDetails.Value);
+
+                case BlittableJsonToken.Integer:
+                    return new JsValue((long)propertyDetails.Value);
+                case BlittableJsonToken.Float:
+                    return new JsValue((double)(LazyDoubleValue)propertyDetails.Value);
+                case BlittableJsonToken.String:
+                    return new JsValue(((LazyStringValue)propertyDetails.Value).ToString());
+                case BlittableJsonToken.CompressedString:
+                    return new JsValue(((LazyCompressedStringValue)propertyDetails.Value).ToString());
+                case BlittableJsonToken.StartObject:
+                    return new BlittableObjectInstance(jintEngine, (BlittableJsonReaderObject)propertyDetails.Value);
+                case BlittableJsonToken.StartArray:
+                    //return new BlittableObjectArrayInstance(jintEngine, (BlittableJsonReaderArray)propertyDetails.Value);
+                    return BlittableObjectInstance.CreateArrayInstanceBasedOnBlittableArray(jintEngine, propertyDetails.Value as BlittableJsonReaderArray);
+                default:
+                    throw new ArgumentOutOfRangeException(propertyDetails.Token.ToString());
             }
         }
 
@@ -230,7 +240,7 @@ namespace Raven.Server.Documents.Patch
                    property == Constants.Documents.Metadata.IndexScore ||
                    property == Constants.Documents.Metadata.ChangeVector ||
                    property == Constants.Documents.Metadata.Flags;
-        }
+        }        
 
         private void ToBlittableJsonReaderValue(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, JsValue v, string propertyKey, bool recursiveCall)
         {
@@ -352,28 +362,83 @@ namespace Raven.Server.Documents.Patch
             }
 
             var obj = new DynamicJsonValue();
-            foreach (var property in jsObject.GetOwnProperties())
+
+            // todo: maybe treat modifications here?
+
+            BlittableObjectInstance blittableObjectInstance = null;
+
+            blittableObjectInstance = jsObject as BlittableObjectInstance;
+
+            if (blittableObjectInstance != null)
             {
-                if (ShouldFilterProperty(property.Key))
-                    continue;
+                foreach (var propertyIndex in blittableObjectInstance.Blittable.GetPropertiesByInsertionOrder())
+                {
+                    var prop = new BlittableJsonReaderObject.PropertyDetails();
 
-                var value = property.Value.Value;
-                if (value == null)
-                    continue;
+                    blittableObjectInstance.Blittable.GetPropertyByIndex(propertyIndex, ref prop, false);
 
-                if (value.IsRegExp())
-                    continue;
+                    if (blittableObjectInstance.Modifications != null && blittableObjectInstance.Modifications.TryGetValue(prop.Name, out var modification))
+                    {
+                        blittableObjectInstance.Modifications.Remove(prop.Name);
+                        if (modification.isDeleted)
+                            continue;
 
-                var recursive = jsObject == value;
-                if (recursiveCall && recursive)
-                    obj[property.Key] = null;
-                else
-                    obj[property.Key] = ToBlittableValue(value, CreatePropertyKey(property.Key, propertyKey), recursive);
+                        obj[prop.Name] = ToBlittableValue(modification.value, CreatePropertyKey(prop.Name, propertyKey), jsObject == modification.value);
+                    }
+                    else
+                    {
+                        obj[prop.Name] = prop.Value;
+                    }
+                }                               
+                
+                foreach (var modificationKvp in blittableObjectInstance.Modifications??Enumerable.Empty<KeyValuePair<string,(bool isDeleted, JsValue value)>>())
+                {
+                    var recursive = jsObject == modificationKvp.Value.value;
+                    if (recursiveCall && recursive)
+                        obj[modificationKvp.Key] = null;
+                    else
+                        obj[modificationKvp.Key] = ToBlittableValue(modificationKvp.Value.value, CreatePropertyKey(modificationKvp.Key, propertyKey), jsObject == modificationKvp.Value.value);
+                }
             }
+            else
+            {
+                foreach (var property in jsObject.GetOwnProperties())
+                {
+                    if (ShouldFilterProperty(property.Key))
+                        continue;
+
+                    var value = property.Value.Value;
+                    if (value == null)
+                        continue;
+
+                    if (value.IsRegExp())
+                        continue;
+
+                    var recursive = jsObject == value;
+                    if (recursiveCall && recursive)
+                        obj[property.Key] = null;
+                    else
+                    {
+                        var propertyIndexInBlittable = blittableObjectInstance?.Blittable.GetPropertyIndex(property.Key) ?? -1;
+
+                        if (propertyIndexInBlittable < 0)
+                        {
+                            obj[property.Key] = ToBlittableValue(value, CreatePropertyKey(property.Key, propertyKey), recursive);
+                        }
+                        else
+                        {
+                            var prop = new BlittableJsonReaderObject.PropertyDetails();
+                            blittableObjectInstance.Blittable.GetPropertyByIndex(propertyIndexInBlittable, ref prop, true);
+                            obj[property.Key] = ToBlittableValue(value, CreatePropertyKey(property.Key, propertyKey), recursive, prop.Token, prop.Value);
+                        }
+                    }
+                }
+            }
+
             return obj;
         }
 
-        private object ToBlittableValue(JsValue v, string propertyKey, bool recursiveCall)
+        public object ToBlittableValue(JsValue v, string propertyKey, bool recursiveCall, BlittableJsonToken? token = null, object originalValue = null)
         {
             if (v.IsBoolean())
                 return v.AsBoolean();
@@ -396,25 +461,21 @@ namespace Raven.Server.Documents.Patch
             {
                 var num = v.AsNumber();
 
-                KeyValuePair<object, JsValue> property;
-                if (_propertiesByValue.TryGetValue(propertyKey, out property))
+                if (originalValue != null && token != null && token.HasValue && (
+                    (token.Value & BlittableJsonToken.Float) == BlittableJsonToken.Float ||
+                    (token.Value & BlittableJsonToken.Integer) == BlittableJsonToken.Integer))
                 {
-                    var originalValue = property.Key;
+                    // If the current value is exactly as the original value, we can return the original value before we made the JS conversion, 
+                    // which will convert a Int64 to jsFloat.
 
-                    if (originalValue is float || originalValue is int || originalValue is LazyDoubleValue)
-                    {
-                        // If the current value is exactly as the original value, we can return the original value before we made the JS conversion, 
-                        // which will convert a Int64 to jsFloat.
-                        var jsValue = property.Value;
-                        if (jsValue.IsNumber() && Math.Abs(num - jsValue.AsNumber()) < double.Epsilon)
-                            return originalValue;
+                    if (Math.Abs(num - Convert.ToDouble(originalValue)) < double.Epsilon)
+                        return originalValue;
 
-                        //We might have change the type of num from Integer to long in the script by design 
-                        //Making sure the number isn't a real float before returning it as integer
-                        if (originalValue is int && (Math.Abs(num - Math.Floor(num)) <= double.Epsilon || Math.Abs(num - Math.Ceiling(num)) <= double.Epsilon))
-                            return (long)num;
-                        return num; //float
-                    }
+                    //We might have change the type of num from Integer to long in the script by design 
+                    //Making sure the number isn't a real float before returning it as integer
+                    if (originalValue is int && (Math.Abs(num - Math.Floor(num)) <= double.Epsilon || Math.Abs(num - Math.Ceiling(num)) <= double.Epsilon))
+                        return (long)num;
+                    return num; //float
                 }
 
                 // If we don't have the type, assume that if the number ending with ".0" it actually an integer.
@@ -425,6 +486,7 @@ namespace Raven.Server.Documents.Patch
             }
             if (v.IsNull() || v.IsUndefined())
                 return null;
+
             if (v.IsArray())
             {
                 var jsArray = v.AsArray();
@@ -439,7 +501,9 @@ namespace Raven.Server.Documents.Patch
                     if (jsInstance == null)
                         continue;
 
-                    var ravenJToken = ToBlittableValue(jsInstance, propertyKey + "[" + property.Key + "]", recursiveCall);
+                    object ravenJToken = null;                   
+                    ravenJToken = ToBlittableValue(jsInstance, propertyKey + "[" + property.Key + "]", recursiveCall);                   
+
                     if (ravenJToken == null)
                         continue;
 
@@ -454,7 +518,7 @@ namespace Raven.Server.Documents.Patch
             }
             if (v.IsObject())
             {
-                return ToBlittable(v.AsObject(), propertyKey, recursiveCall);
+                return ToBlittable(v.AsObject(),propertyKey,recursiveCall);
             }
             if (v.IsRegExp())
                 return null;
