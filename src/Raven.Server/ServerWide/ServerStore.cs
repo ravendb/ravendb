@@ -849,7 +849,7 @@ namespace Raven.Server.ServerWide
                         DatabasesLandlord,
                         _env,
                         ContextPool,
-                        ByteStringMemoryCache.CleanupTimer
+                        ByteStringMemoryCache.Cleaner
                     };
 
                     var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {nameof(ServerStore)}.");

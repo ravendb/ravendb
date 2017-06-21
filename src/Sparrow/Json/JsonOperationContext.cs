@@ -5,12 +5,13 @@ using System.IO;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Collections;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
+using Sparrow.Utils;
+
 #if VALIDATE
 using Sparrow.Platform;
 #endif
@@ -20,7 +21,7 @@ namespace Sparrow.Json
     /// <summary>
     /// Single threaded for contexts
     /// </summary>
-    public class JsonOperationContext : IDisposable
+    public class JsonOperationContext : PooledItem
     {
         private int _generation;
         private const int InitialStreamSize = 4096;
@@ -169,9 +170,7 @@ namespace Sparrow.Json
         private Stack<ManagedPinnedBuffer> _managedBuffers;
 
         public CachedProperties CachedProperties;
-
-        internal DateTime InPoolSince;
-        internal int InUse;
+        
         private readonly JsonParserState _jsonParserState;
         private readonly ObjectJsonParser _objectJsonParser;
         private readonly BlittableJsonDocumentBuilder _documentBuilder;
@@ -293,7 +292,7 @@ namespace Sparrow.Json
             return new UnmanagedWriteBuffer(this, bufferMemory);
         }
 
-        public virtual void Dispose()
+        public override void Dispose()
         {
             if (_disposed)
                 return;

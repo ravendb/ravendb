@@ -13,18 +13,16 @@ namespace Sparrow.Json
         /// Indexing thread will adjust their contexts to their needs, and request processing threads will tend to
         /// average to the same overall type of contexts
         /// </summary>
-        private readonly ThreadLocal<StackHeader> _contextPool;
-        private readonly Timer _timer;
+        private readonly ThreadLocal<ContextStack> _contextPool;
+        private readonly NativeMemoryCleaner<ContextStack, T> _nativeMemoryCleaner;
         private bool _disposed;
         protected LowMemoryFlag LowMemoryFlag = new LowMemoryFlag();
 
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
-        private class StackHeader : IDisposable
+        private class ContextStack : StackHeader<T>, IDisposable
         {
-            public StackNode Head;
-
-            ~StackHeader()
+            ~ContextStack()
             {
                 Dispose();
             }
@@ -47,77 +45,11 @@ namespace Sparrow.Json
             }
         }
 
-        private class StackNode
-        {
-            public T Value;
-            public StackNode Next;
-        }
-
         protected JsonContextPoolBase()
         {
-            _contextPool = new ThreadLocal<StackHeader>(() => new StackHeader(), trackAllValues: true);
-            _timer = new Timer(CleanNativeMemoryTimer, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+            _contextPool = new ThreadLocal<ContextStack>(() => new ContextStack(), trackAllValues: true);
+            _nativeMemoryCleaner = new NativeMemoryCleaner<ContextStack, T>(_contextPool, LowMemoryFlag, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
             LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
-        }
-
-        private void CleanNativeMemoryTimer(object state)
-        {
-            if (_disposed)
-                return;
-
-            var lockTaken = false;
-            try
-            {
-                Monitor.TryEnter(this, ref lockTaken);
-                if (lockTaken == false)
-                    return;
-
-                if (_disposed)
-                    return;
-
-                var now = DateTime.UtcNow;
-                foreach (var header in _contextPool.Values)
-                {
-                    var current = header.Head;
-                    while (current != null)
-                    {
-                        var ctx = current.Value;
-                        var parent = current;
-                        current = current.Next;
-
-                        if (ctx == null)
-                            continue;
-
-                        if (LowMemoryFlag.LowMemoryState == 0)
-                        {
-                            var timeInPool = now - ctx.InPoolSince;
-                            if (timeInPool < TimeSpan.FromMinutes(1))
-                                continue;
-                        } // else dispose context on low mem stress
-
-                        // it is too old, we can dispose it, but need to protect from races
-                        // if the owner thread will just pick it up
-
-                        if (Interlocked.CompareExchange(ref ctx.InUse, 1, 0) != 0)
-                            continue;
-
-                        try
-                        {
-                            ctx.Dispose();
-                        }
-                        catch (ObjectDisposedException)
-                        {
-                            // this is expected, if we were disposed as well
-                        }
-                        parent.Value = null;
-                    }
-                }
-            }
-            finally
-            {
-                if (lockTaken)
-                    Monitor.Exit(this);
-            }
         }
 
         public IDisposable AllocateOperationContext(out JsonOperationContext context)
@@ -170,7 +102,7 @@ namespace Sparrow.Json
             };
         }
 
-        private bool TryReuseExistingContextFrom(StackHeader stack, out T context, out IDisposable disposable)
+        private bool TryReuseExistingContextFrom(ContextStack stack, out T context, out IDisposable disposable)
         {
             while (true)
             {
@@ -218,7 +150,7 @@ namespace Sparrow.Json
 
         private void Push(T context)
         {
-            StackHeader threadHeader;
+            ContextStack threadHeader;
             try
             {
                 threadHeader = _contextPool.Value;
@@ -231,7 +163,7 @@ namespace Sparrow.Json
             while (true)
             {
                 var current = threadHeader.Head;
-                var newHead = new StackNode { Value = context, Next = current };
+                var newHead = new StackNode<T> { Value = context, Next = current };
                 if (Interlocked.CompareExchange(ref threadHeader.Head, newHead, current) == current)
                     return;
             }
@@ -247,7 +179,7 @@ namespace Sparrow.Json
                     return;
                 _cts.Cancel();
                 _disposed = true;
-                _timer.Dispose();
+                _nativeMemoryCleaner.Dispose();
                 foreach (var stack in _contextPool.Values)
                 {
                     stack.Dispose();
@@ -260,7 +192,7 @@ namespace Sparrow.Json
         {
             if (Interlocked.CompareExchange(ref LowMemoryFlag.LowMemoryState, 1, 0) != 0)
                 return;
-            CleanNativeMemoryTimer(null);
+            _nativeMemoryCleaner.CleanNativeMemory(null);
         }
 
         public void LowMemoryOver()
