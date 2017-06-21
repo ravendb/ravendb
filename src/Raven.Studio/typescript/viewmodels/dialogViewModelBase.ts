@@ -98,6 +98,12 @@ abstract class dialogViewModelBase {
         }
     }
 
+    protected setupDisableReasons(container: string) {
+        $('.has-disable-reason').tooltip({
+            container: container
+        });
+    }
+
 }
 
 export = dialogViewModelBase;

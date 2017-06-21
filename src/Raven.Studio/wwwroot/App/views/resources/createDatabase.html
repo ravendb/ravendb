@@ -105,7 +105,7 @@
         <div class="form-group">
             <div class="input-group" data-bind="css: {'has-warning' : $root.showReplicationFactorWarning}, validationElement: replicationFactor">
                 <span class="input-group-addon">Replication factor</span>
-                <input type="number" data-bind="numericInput: replicationFactor, disable: $root.disableReplicationFactorInput" class="form-control">
+                <input type="number" min="0" data-bind="numericInput: replicationFactor, disable: $root.disableReplicationFactorInput" class="form-control">
                 <div class="help-block" data-bind="visible: $root.showReplicationFactorWarning">With replication factor set to 1 data won't be replicated.</div>
             </div>
         </div>
@@ -123,10 +123,8 @@
                 <input type="checkbox" id="toggle_all_in_cluster" class="styled" data-bind="checkboxTriple: $root.selectionState, event: { change: $root.toggleSelectAll }">
                 <label for="toggle_all_in_cluster"><i class="icon-cluster"></i><span>All cluster nodes</span></label>
             </div>
-
-
             <div data-bind="foreach: $root.clusterNodes">
-                <div class="checkbox checkbox-info">
+                <div class="checkbox checkbox-info" data-bind="validationOptions: { errorsAsTitle: false, insertMessages: false }">
                     <input class="styled" type="checkbox" data-bind="attr: { id: 'cluster_node_' + $index() }, checked: $parent.nodes, checkedValue: $data">
                     <label data-bind="attr: { for: 'cluster_node_' + $index() }">
                         <i class="icon-cluster-node"></i><span data-bind="text: tag()"></span> &nbsp; <small data-bind="text: serverUrl()"></small>
@@ -134,8 +132,9 @@
                 </div>
             </div>
         </div>
-
-        
+        <div data-bind="validationElement: nodes">
+            <div class="help-block" data-bind="validationMessage: nodes"></div>
+        </div>  
     </div>
 </script>
 
@@ -156,27 +155,37 @@
         </div>
     </div>
 
-
     <p>QR Code:</p>
     <div class="text-center">
         <div id="encryption_qrcode">
-
         </div>
     </div>
+       
+    <div class="text-center" id="SavingKeyData">
+        <span  class="has-disable-reason" data-bind="attr: { 'data-original-title': disableSavingKeyData() ? 'Validate database name & key !' : '' }">
+            <button type="button" class="btn btn-default btn-sm" data-bind="click: copyEncryptionKeyToClipboard, attr: { disabled: disableSavingKeyData }">
+                <i class="icon-copy"></i> <span>Copy to clipboard</span>
+            </button>            
+        </span>
+        
+        <span class="has-disable-reason" data-bind="attr: { 'data-original-title': disableSavingKeyData() ? 'Validate database name & key !' : '' }">
+            <button type="button" class="btn btn-default btn-sm" data-bind="click: downloadEncryptionKey, attr: { disabled: disableSavingKeyData }">
+                <i class="icon-export"></i> <span>Download encryption key</span>
+            </button>
+        </span>
 
-
-    <div class="text-center">
-        <button type="button" class="btn btn-default btn-sm" data-bind="click: copyEncryptionKeyToClipboard"><i class="icon-copy"></i> <span>Copy to clipboard</span></button>
-        <button type="button" class="btn btn-default btn-sm" data-bind="click: downloadEncryptionKey"><i class="icon-export"></i> <span>Download encryption key</span></button>
-        <button type="button" class="btn btn-default btn-sm" data-bind="click: printEncryptionKey"><i class="icon-print"></i><span>Print encryption key</span></button>
-    </div>
-
+        <span class="has-disable-reason" data-bind="attr: { 'data-original-title': disableSavingKeyData() ? 'Validate database name & key !' : '' }">
+            <button type="button" class="btn btn-default btn-sm" data-bind="click: printEncryptionKey, attr: { disabled: disableSavingKeyData() }">
+                <i class="icon-print"></i><span>Print encryption key</span>
+            </button>
+        </span>
+    </div>   
 
     <div class="row">
         <div class="col-sm-12">
             <div class="checkbox" data-bind="validationOptions: { insertMessages: false }">
                 <input class="styled" type="checkbox" id="saved_key_confirm" data-bind="checked: databaseModel.encryption.confirmation">
-                <label for="saved_key_confirm">I saved the encryption key.</label>
+                <label for="saved_key_confirm">I have saved the encryption key.</label>
             </div>
 
             <div data-bind="validationElement: databaseModel.encryption.confirmation">
@@ -187,7 +196,9 @@
     <div class="row">
         <div class="col-sm-12">
             <p class="bg-info padding padding-sm small">
-                <i class="icon-warning"></i> Save this key in a safe place. If you lose this key you could lose access to your data.
+                <i class="icon-warning"></i> 
+                Save this key in a safe place as it will Not be available again!<br/>
+                If you lose this key you could lose access to your data.
             </p>
         </div>
     </div>

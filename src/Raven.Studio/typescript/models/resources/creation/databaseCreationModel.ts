@@ -32,7 +32,8 @@ class databaseCreationModel {
     }
 
     replicationValidationGroup = ko.validatedObservable({
-        replicationFactor: this.replication.replicationFactor
+        replicationFactor: this.replication.replicationFactor,
+        nodes: this.replication.nodes
     });
 
     path = {
@@ -62,6 +63,13 @@ class databaseCreationModel {
     globalValidationGroup = ko.validatedObservable({
         name: this.name
     });
+
+    // validation group to know if we can download/print/copy to clipboard the key
+    saveKeyValidationGroup = ko.validatedObservable({
+        name: this.name,
+        key: this.encryption.key
+    });
+
 
     constructor() {
         const encryptionConfig = this.getEncryptionConfigSection();
@@ -119,12 +127,19 @@ class databaseCreationModel {
         this.setupPathValidation(this.path.tempPath, "Temp");
         this.setupPathValidation(this.path.journalsPath, "Journals");
 
+        this.replication.nodes.extend({
+            validation: [{
+                validator: (val: Array<clusterNode>) => !this.replication.manualMode() || this.replication.replicationFactor() > 0,
+                message: `Please select at least one node.`
+            }]
+        });
+
         this.replication.replicationFactor.extend({
             required: true,
             validation: [
                 {
-                    validator: (val: number) => val >= 1,
-                    message: `Replication factor must be at least 1`
+                    validator: (val: number) => val >= 1 || this.replication.manualMode(),
+                    message: `Replication factor must be at least 1.`
                 },
                 {
                     validator: (val: number) => val <= maxReplicationFactor,
@@ -156,7 +171,7 @@ class databaseCreationModel {
             validation: [
                 {
                     validator: (v: boolean) => v,
-                    message: "Please confirm you saved encryption key"
+                    message: "Please confirm that you have saved the encryption key"
                 }
             ]
         });
