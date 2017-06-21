@@ -204,28 +204,28 @@ namespace SlowTests.Server.Replication
             using (var store2 = GetDocumentStore())
             {
 
-                using (var sessoin = store1.OpenSession())
+                using (var session = store1.OpenSession())
                 {
-                    sessoin.Store(new User { Name = "foo" }, "foo/bar");
-                    sessoin.SaveChanges();
+                    session.Store(new User { Name = "foo" }, "foo/bar");
+                    session.SaveChanges();
                 }
 
-                using (var sessoin = store2.OpenSession())
+                using (var session = store2.OpenSession())
                 {
-                    sessoin.Store(new User { Name = "bar" }, "foo/bar");
-                    sessoin.SaveChanges();
+                    session.Store(new User { Name = "bar" }, "foo/bar");
+                    session.SaveChanges();
                 }
 
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);
 
-                Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Results.Length);
-                Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
+                Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Length);
+                Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Length);
 
-                using (var sessoin = store1.OpenSession())
+                using (var session = store1.OpenSession())
                 {
-                    sessoin.Delete("foo/bar");
-                    sessoin.SaveChanges();
+                    session.Delete("foo/bar");
+                    session.SaveChanges();
                 }
 
                 Assert.Equal(1, WaitUntilHasTombstones(store1).Count);

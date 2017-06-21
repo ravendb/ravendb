@@ -1,8 +1,7 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Exceptions;
-using Raven.Client.Exceptions;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -117,8 +116,8 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var conflicts = GetConflicts(storeA, "users/1");
-                Assert.Equal(0,conflicts.Results.Length);
+                var conflicts = storeA.Commands().GetConflictsFor("users/1");
+                Assert.Equal(0,conflicts.Length);
             }
         }
 

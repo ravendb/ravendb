@@ -894,14 +894,16 @@ namespace SlowTests.Client.Attachments
                 await SetupReplicationAsync(store2, store1);
 
                 var conflicts = WaitUntilHasConflict(store1, "users/1");
-                Assert.Equal(2, conflicts.Results.Length);
-                AssertConflict(conflicts.Results[0], "a1", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "a1/png", 3);
-                AssertConflict(conflicts.Results[1], "a1", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "a2/jpeg", 3);
+                Assert.Equal(2, conflicts.Length);
+                AssertConflict(conflicts[0], "a1", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "a1/png", 3);
+                AssertConflict(conflicts[1], "a1", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "a2/jpeg", 3);
 
                 conflicts = WaitUntilHasConflict(store2, "users/1");
-                Assert.Equal(2, conflicts.Results.Length);
-                AssertConflict(conflicts.Results[0], "a1", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "a1/png", 3);
-                AssertConflict(conflicts.Results[1], "a1", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "a2/jpeg", 3);
+                Assert.Equal(2, conflicts.Length);
+                AssertConflict(conflicts[0], "a1", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "a1/png", 3);
+                AssertConflict(conflicts[1], "a1", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "a2/jpeg", 3);
+
+                WaitForUserToContinueTheTest(store1);
             }
         }
 
@@ -942,14 +944,14 @@ namespace SlowTests.Client.Attachments
                 var hash2 = "Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=";
 
                 var conflicts = WaitUntilHasConflict(store1, "users/1");
-                Assert.Equal(2, conflicts.Results.Length);
-                AssertConflict(conflicts.Results[0], "a1", hash1, "a1/png", 3);
-                AssertConflict(conflicts.Results[1], "a1", hash2, "a1/png", 5);
+                Assert.Equal(2, conflicts.Length);
+                AssertConflict(conflicts[0], "a1", hash1, "a1/png", 3);
+                AssertConflict(conflicts[1], "a1", hash2, "a1/png", 5);
 
                 conflicts = WaitUntilHasConflict(store2, "users/1");
-                Assert.Equal(2, conflicts.Results.Length);
-                AssertConflict(conflicts.Results[0], "a1", hash1, "a1/png", 3);
-                AssertConflict(conflicts.Results[1], "a1", hash2, "a1/png", 5);
+                Assert.Equal(2, conflicts.Length);
+                AssertConflict(conflicts[0], "a1", hash1, "a1/png", 3);
+                AssertConflict(conflicts[1], "a1", hash2, "a1/png", 5);
             }
         }
 

@@ -46,41 +46,24 @@ namespace FastTests.Server.Replication
             }
         }
 
-        protected GetConflictsResult GetConflicts(IDocumentStore store, string docId)
+        protected GetConflictsResult.Conflict[] WaitUntilHasConflict(IDocumentStore store, string docId, int count = 2)
         {
-            using (var commands = store.Commands())
-            {
-                var command = new GetReplicationConflictsCommand(docId);
-
-                commands.RequestExecutor.Execute(command, commands.Context);
-
-                return command.Result;
-            }
-        }
-
-        protected GetConflictsResult WaitUntilHasConflict(IDocumentStore store, string docId, int count = 2)
-        {
-            int timeout = 5000;
-
+            var timeout = 5000;
             if (Debugger.IsAttached)
                 timeout *= 100;
-            GetConflictsResult conflicts;
             var sw = Stopwatch.StartNew();
             do
             {
-                conflicts = GetConflicts(store, docId);
-
-                if (conflicts.Results.Length >= count)
-                    break;
+                var conflicts = store.Commands().GetConflictsFor(docId);
+                if (conflicts.Length >= count)
+                    return conflicts;
 
                 if (sw.ElapsedMilliseconds > timeout)
                 {
-                    throw new XunitException($"Timed out while waiting for conflicts on {docId} we have {conflicts.Results.Length} conflicts " +
+                    throw new XunitException($"Timed out while waiting for conflicts on {docId} we have {conflicts.Length} conflicts " +
                                              $"on database {store.Database}");
                 }
             } while (true);
-
-            return conflicts;
         }
 
         protected bool WaitForDocumentDeletion(DocumentStore store,
@@ -357,39 +340,6 @@ namespace FastTests.Server.Replication
                 }
 
                 Result = result;
-            }
-        }
-
-        private class GetReplicationConflictsCommand : RavenCommand<GetConflictsResult>
-        {
-            private readonly string _id;
-
-            public GetReplicationConflictsCommand(string id)
-            {
-                if (id == null)
-                    throw new ArgumentNullException(nameof(id));
-
-                _id = id;
-            }
-
-            public override bool IsReadRequest => true;
-
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
-            {
-                url = $"{node.Url}/databases/{node.Database}/replication/conflicts?docId={_id}";
-
-                return new HttpRequestMessage
-                {
-                    Method = HttpMethod.Get
-                };
-            }
-
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-            {
-                if (response == null)
-                    ThrowInvalidResponse();
-
-                Result = JsonDeserializationClient.GetConflictsResult(response);
             }
         }
     }

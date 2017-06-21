@@ -5,8 +5,6 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    //not sure if this should be done for multiple doc IDs
-    //for now it will work for single conflicted document id
     public class GetConflictsCommand : RavenCommand<GetConflictsResult>
     {
         private readonly string _id;
@@ -28,6 +26,8 @@ namespace Raven.Client.Documents.Commands
 
         public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
         {
+            if (response == null)
+                ThrowInvalidResponse();
             Result = JsonDeserializationClient.GetConflictsResult(response);
         }
     }

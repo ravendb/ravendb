@@ -34,8 +34,8 @@ namespace SlowTests.Server.Replication
             var list = await SetupReplicationAsync(store1,store2);
             list.AddRange(await SetupReplicationAsync(store2,store1));
 
-            Assert.Equal(2, WaitUntilHasConflict(store1, id).Results.Length);
-            Assert.Equal(2, WaitUntilHasConflict(store2, id).Results.Length);
+            Assert.Equal(2, WaitUntilHasConflict(store1, id).Length);
+            Assert.Equal(2, WaitUntilHasConflict(store2, id).Length);
             return list;
         }
 

@@ -28,7 +28,7 @@ namespace SlowTests.Server.Replication
                 }
                 await SetupReplicationAsync(store1, store2);
                
-                Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
+                Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Length);
 
                 var documentDatabase = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database).Result;
 
@@ -68,9 +68,9 @@ namespace SlowTests.Server.Replication
                 await SetupReplicationAsync(store1, store2, store3);
                 await SetupReplicationAsync(store2, store1);
 
-                Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Results.Length);
-                Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
-                Assert.Equal(3, WaitUntilHasConflict(store3, "foo/bar", 3).Results.Length);
+                Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Length);
+                Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Length);
+                Assert.Equal(3, WaitUntilHasConflict(store3, "foo/bar", 3).Length);
 
                 // store2 <--> store1 <--> store3*               
                 var documentDatabase = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store3.Database).Result;
@@ -125,8 +125,8 @@ namespace SlowTests.Server.Replication
                     session.SaveChanges();
                 }
                 // store2 <-- store1 --> store3
-                Assert.Equal(2, WaitUntilHasConflict(store3, "foo/bar").Results.Length);
-                Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
+                Assert.Equal(2, WaitUntilHasConflict(store3, "foo/bar").Length);
+                Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Length);
 
                 // store2* <--> store1 --> store3
                 var documentDatabase = await GetDocumentDatabaseInstanceFor(store2);
@@ -201,7 +201,7 @@ namespace SlowTests.Server.Replication
                     session.Store(new User {Name = "NewOren"}, "foo/bar");
                     session.SaveChanges();
                 }
-                Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
+                Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Length);
             }
         }       
 
@@ -231,8 +231,8 @@ namespace SlowTests.Server.Replication
                 await SetupReplicationAsync(store1,store2);
                 await SetupReplicationAsync(store2,store1);
 
-                Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Results.Length);
-                Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
+                Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Length);
+                Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Length);
                 
                 using (var session = store2.OpenSession())
                 {
