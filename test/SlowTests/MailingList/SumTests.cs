@@ -82,16 +82,13 @@ namespace SlowTests.MailingList
             }
         }
 
-        private readonly string _vacancyId;
+        private string _vacancyId;
 
-        private readonly IDocumentStore _store;
-
-        public SumTests()
+        private void CreateData(IDocumentStore store)
         {
-            _store = GetDocumentStore();
-            new Vacancies_ApplicationCount().Execute(_store);
-            new Vacancies_ApplicationCountTransformer().Execute(_store);
-            using (var session = _store.OpenSession())
+            new Vacancies_ApplicationCount().Execute(store);
+            new Vacancies_ApplicationCountTransformer().Execute(store);
+            using (var session = store.OpenSession())
             {
                 var vacancy = new Vacancy { Position = "Developer Guy" };
                 session.Store(vacancy);
@@ -111,30 +108,40 @@ namespace SlowTests.MailingList
         [Fact]
         public void Can_get_application_counts_by_vacancy_id()
         {
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                var results = session.Query<Vacancies_ApplicationCount.ReduceResult, Vacancies_ApplicationCount>()
-                    .TransformWith<Vacancies_ApplicationCountTransformer, Vacancies_ApplicationCount.ReduceResult>()
-                    .Customize(x => x.WaitForNonStaleResults())
-                    .ToList();
-                Assert.Equal(results.First().Id, _vacancyId);
-                Assert.Equal(results.First().ApplicationCount, 2);
+                CreateData(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<Vacancies_ApplicationCount.ReduceResult, Vacancies_ApplicationCount>()
+                        .TransformWith<Vacancies_ApplicationCountTransformer, Vacancies_ApplicationCount.ReduceResult>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .ToList();
+                    Assert.Equal(results.First().Id, _vacancyId);
+                    Assert.Equal(results.First().ApplicationCount, 2);
+                }
             }
         }
 
         [Fact]
         public void Can_get_application_counts_by_state()
         {
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                var results = session.Query<Vacancies_ApplicationCount.ReduceResult, Vacancies_ApplicationCount>()
-                    .TransformWith<Vacancies_ApplicationCountTransformer, Vacancies_ApplicationCount.ReduceResult>()
-                    .Customize(x => x.WaitForNonStaleResults())
-                    .Where(x => x.State == "Approved")
-                    .ToList();
+                CreateData(store);
 
-                Assert.Equal(results.First().Id, _vacancyId);
-                Assert.Equal(results.First().ApplicationCount, 1);
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<Vacancies_ApplicationCount.ReduceResult, Vacancies_ApplicationCount>()
+                        .TransformWith<Vacancies_ApplicationCountTransformer, Vacancies_ApplicationCount.ReduceResult>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Where(x => x.State == "Approved")
+                        .ToList();
+
+                    Assert.Equal(results.First().Id, _vacancyId);
+                    Assert.Equal(results.First().ApplicationCount, 1);
+                }
             }
         }
     }

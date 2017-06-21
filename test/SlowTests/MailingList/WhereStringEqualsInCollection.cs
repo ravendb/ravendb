@@ -9,11 +9,8 @@ namespace SlowTests.MailingList
 {
     public class WhereStringEqualsInCollection : RavenTestBase
     {
-        private readonly DocumentStore store;
-
-        public WhereStringEqualsInCollection()
+        private void CreateData(IDocumentStore store)
         {
-            store = GetDocumentStore();
             using (var session = store.OpenSession())
             {
                 session.Store(new MyEntity { StringData = "Entity with collection", StringCollection = new List<string> { "CollectionItem1", "CollectionItem2" } });
@@ -24,45 +21,54 @@ namespace SlowTests.MailingList
         [Fact]
         public void AnyInCollectionEqualsConstant_ShouldWork()
         {
-            using (var session = store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                var count = session.Query<MyEntity>()
-                                   .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
-                                   .Count(o => o.StringCollection.Any(s => s.Equals("CollectionItem1")));
+                CreateData(store);
 
-                Assert.Equal(1, count);
+                using (var session = store.OpenSession())
+                {
+                    var count = session.Query<MyEntity>()
+                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Count(o => o.StringCollection.Any(s => s.Equals("CollectionItem1")));
+
+                    Assert.Equal(1, count);
+                }
             }
         }
 
         [Fact]
         public void AnyInCollectionEqualsConstant_IgnoreCase_ShouldWork()
         {
-            using (var session = store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                var count = session.Query<MyEntity>()
-                                   .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
-                                   .Count(o => o.StringCollection.Any(s => s.Equals("CollectionItem1", StringComparison.OrdinalIgnoreCase)));
+                CreateData(store);
 
-                Assert.Equal(1, count);
+                using (var session = store.OpenSession())
+                {
+                    var count = session.Query<MyEntity>()
+                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Count(o => o.StringCollection.Any(s => s.Equals("CollectionItem1", StringComparison.OrdinalIgnoreCase)));
+
+                    Assert.Equal(1, count);
+                }
             }
         }
 
         [Fact]
         public void AnyInCollectionEqualsConstant_CaseSensitive_ShouldWork()
         {
-            using (var session = store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                Assert.Throws<NotSupportedException>(() => session.Query<MyEntity>()
-                                                                  .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
-                                                                  .Count(o => o.StringCollection.Any(s => s.Equals("CollectionItem1", StringComparison.Ordinal))));
+                CreateData(store);
 
+                using (var session = store.OpenSession())
+                {
+                    Assert.Throws<NotSupportedException>(() => session.Query<MyEntity>()
+                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Count(o => o.StringCollection.Any(s => s.Equals("CollectionItem1", StringComparison.Ordinal))));
+
+                }
             }
-        }
-
-        public override void Dispose()
-        {
-            store.Dispose();
-            base.Dispose();
         }
 
         private class MyEntity

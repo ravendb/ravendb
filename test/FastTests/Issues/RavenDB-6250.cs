@@ -7,13 +7,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using FastTests;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Operations;
 using Raven.Server.NotificationCenter.Notifications;
 using Xunit;
 
-namespace SlowTests.Issues
+namespace FastTests.Issues
 {
 
     /**
@@ -48,7 +47,7 @@ namespace SlowTests.Issues
 
             var list = allKnownTypes.Except(unionSet.Select(x => x.ToString())).ToList();
 
-            Assert.True(list.Count == 0, "Probably unhandled details for operations: " + string.Join(", ", list) + 
+            Assert.True(list.Count == 0, "Probably unhandled details for operations: " + string.Join(", ", list) +
                 ". If those was already handled in notification center please add given type to 'alreadyHandledInStudio' set. " +
                                          "If operation doesn't provide details, please add this to 'operationWithoutDetails' set.");
         }

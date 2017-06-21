@@ -19,13 +19,9 @@ namespace SlowTests.MailingList
         private static readonly string One = Guid.Parse("00000000-0000-0000-0000-000000000001").ToString();
         private static readonly string Two = Guid.Parse("00000000-0000-0000-0000-000000000002").ToString();
 
-        private IDocumentStore DocumentStore { get; }
-
-        public NoTracking()
+        private static void CreateData(IDocumentStore store)
         {
-            DocumentStore = GetDocumentStore();
-
-            using (var session = DocumentStore.OpenSession())
+            using (var session = store.OpenSession())
             {
                 var a = new A { Id = One };
                 var b = new B { Id = Two };
@@ -37,66 +33,74 @@ namespace SlowTests.MailingList
             }
         }
 
-        public override void Dispose()
-        {
-            DocumentStore.Dispose();
-            base.Dispose();
-
-        }
-
         [Fact]
         public void Can_load_entities()
         {
-            using (var session = DocumentStore.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                Assert.NotNull(session.Load<A>(One));
-                Assert.NotNull(session.Load<B>(Two));
-            };
+                CreateData(store);
+
+                using (var session = store.OpenSession())
+                {
+                    Assert.NotNull(session.Load<A>(One));
+                    Assert.NotNull(session.Load<B>(Two));
+                }
+            }
         }
 
         [Fact]
         public void Can_load_entities_with_NoTracking()
         {
-            using (var session = DocumentStore.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                var result = session.Query<A>()
-                    .Customize(c => c.NoTracking())
-                    .Include<A, B>(a => a.Bs);
+                CreateData(store);
 
-                foreach (var res in result)
+                using (var session = store.OpenSession())
                 {
-                    var bs = session.Load<B>(res.Bs);
+                    var result = session.Query<A>()
+                        .Customize(c => c.NoTracking())
+                        .Include<A, B>(a => a.Bs);
 
-                    Assert.Equal(bs.Count, 1);
-                    // Fails
-                    Assert.NotNull(bs.FirstOrDefault());
+                    foreach (var res in result)
+                    {
+                        var bs = session.Load<B>(res.Bs);
+
+                        Assert.Equal(bs.Count, 1);
+                        // Fails
+                        Assert.NotNull(bs.FirstOrDefault());
+                    }
+
+                    // Doesn't work either, B is null
+                    Assert.NotNull(session.Load<A>(One));
+                    Assert.NotNull(session.Load<B>(Two));
                 }
-
-                // Doesn't work either, B is null
-                Assert.NotNull(session.Load<A>(One));
-                Assert.NotNull(session.Load<B>(Two));
             }
         }
 
         [Fact]
         public void Can_load_entities_without_NoTrackin()
         {
-            using (var session = DocumentStore.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                var result = session.Query<A>()
-                    .Include<A, B>(a => a.Bs);
+                CreateData(store);
 
-                foreach (var res in result)
+                using (var session = store.OpenSession())
                 {
-                    var bs = session.Load<B>(res.Bs);
+                    var result = session.Query<A>()
+                        .Include<A, B>(a => a.Bs);
 
-                    Assert.Equal(bs.Count, 1);
-                    // Fails
-                    Assert.NotNull(bs.FirstOrDefault());
+                    foreach (var res in result)
+                    {
+                        var bs = session.Load<B>(res.Bs);
+
+                        Assert.Equal(bs.Count, 1);
+                        // Fails
+                        Assert.NotNull(bs.FirstOrDefault());
+                    }
+
+                    Assert.NotNull(session.Load<A>(One));
+                    Assert.NotNull(session.Load<B>(Two));
                 }
-
-                Assert.NotNull(session.Load<A>(One));
-                Assert.NotNull(session.Load<B>(Two));
             }
         }
 

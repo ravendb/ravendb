@@ -17,8 +17,6 @@ namespace SlowTests.MailingList
 {
     public class VacancyCampaignsTests : RavenTestBase
     {
-        private DocumentStore Store;
-
         public class Vacancy
         {
             public string Id { get; set; }
@@ -75,26 +73,25 @@ namespace SlowTests.MailingList
             {
 
                 TransformResults = results => from result in results
-                                                       let vacancy = LoadDocument<Vacancy>(result.Id)
-                                                       let campaign = vacancy.Campaigns.FirstOrDefault(c => c.Id.ToString() == result.CampaignId.ToString())
-                                                       select new
-                                                       {
-                                                           Id = result.Id,
-                                                           Category = vacancy.Category,
-                                                           CampaignId = result.CampaignId,
-                                                           Title = campaign.Title,
-                                                           Active = campaign.Active
-                                                       };
+                                              let vacancy = LoadDocument<Vacancy>(result.Id)
+                                              let campaign = vacancy.Campaigns.FirstOrDefault(c => c.Id.ToString() == result.CampaignId.ToString())
+                                              select new
+                                              {
+                                                  Id = result.Id,
+                                                  Category = vacancy.Category,
+                                                  CampaignId = result.CampaignId,
+                                                  Title = campaign.Title,
+                                                  Active = campaign.Active
+                                              };
             }
         }
 
-        public VacancyCampaignsTests()
+        private static void CreateData(IDocumentStore store)
         {
-            Store = GetDocumentStore();
-            new VacancyCampaignsIndex().Execute(Store);
-            new VacancyCampaignsTransformer().Execute(Store);
+            new VacancyCampaignsIndex().Execute(store);
+            new VacancyCampaignsTransformer().Execute(store);
 
-            using (var session = Store.OpenSession())
+            using (var session = store.OpenSession())
             {
                 var v1 = new Vacancy { Category = "Industrial" };
                 v1.Campaigns.Add(new Campaign { Id = 1, Title = "Industrial Campaign 1", Active = false });
@@ -109,25 +106,23 @@ namespace SlowTests.MailingList
             }
         }
 
-        public override void Dispose()
-        {
-            Store.Dispose();
-            base.Dispose();
-        }
-
         [Fact]
         public void Can_query_active_campaigns()
         {
-            using (var session = Store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                var results = session.Query<VacancyCampaignsIndex.ReduceResult, VacancyCampaignsIndex>()
-                    .Customize(x => x.WaitForNonStaleResults())
-                    .Where(x => x.Active)
-                    .ProjectFromIndexFieldsInto<VacancyCampaignsIndex.ReduceResult>()
-                    .ToList();
-                Assert.Equal(2, results.Count());
-            }
+                CreateData(store);
 
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<VacancyCampaignsIndex.ReduceResult, VacancyCampaignsIndex>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Where(x => x.Active)
+                        .ProjectFromIndexFieldsInto<VacancyCampaignsIndex.ReduceResult>()
+                        .ToList();
+                    Assert.Equal(2, results.Count());
+                }
+            }
         }
     }
 }

@@ -55,13 +55,6 @@ namespace FastTests.Client.MoreLikeThis
             }
         }
 
-        private readonly DocumentStore _store;
-
-        public MoreLikeThisTests()
-        {
-            _store = GetDocumentStore();
-        }
-
         private static string GetLorem(int numWords)
         {
             const string theLorem = "Morbi nec purus eu libero interdum laoreet Nam metus quam posuere in elementum eget egestas eget justo Aenean orci ligula ullamcorper nec convallis non placerat nec lectus Quisque convallis porta suscipit Aliquam sollicitudin ligula sit amet libero cursus egestas Maecenas nec mauris neque at faucibus justo Fusce ut orci neque Nunc sodales pulvinar lobortis Praesent dui tellus fermentum sed faucibus nec faucibus non nibh Vestibulum adipiscing porta purus ut varius mi pulvinar eu Nam sagittis sodales hendrerit Vestibulum et tincidunt urna Fusce lacinia nisl at luctus lobortis lacus quam rhoncus risus a posuere nulla lorem at nisi Sed non erat nisl Cras in augue velit a mattis ante Etiam lorem dui elementum eget facilisis vitae viverra sit amet tortor Suspendisse potenti Nunc egestas accumsan justo viverra viverra Sed faucibus ullamcorper mauris ut pharetra ligula ornare eget Donec suscipit luctus rhoncus Pellentesque eget justo ac nunc tempus consequat Nullam fringilla egestas leo Praesent condimentum laoreet magna vitae luctus sem cursus sed Mauris massa purus suscipit ac malesuada a accumsan non neque Proin et libero vitae quam ultricies rhoncus Praesent urna neque molestie et suscipit vestibulum iaculis ac nulla Integer porta nulla vel leo ullamcorper eu rhoncus dui semper Donec dictum dui";
@@ -95,567 +88,621 @@ namespace FastTests.Client.MoreLikeThis
 
         public void TransformersShouldWorkWithMoreLikeThis1()
         {
-            string id;
-
-            new Transformer1().Execute(_store);
-
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                new DataIndex(true, false).Execute(_store);
+                string id;
 
-                var list = GetDataList();
-                list.ForEach(session.Store);
-                session.SaveChanges();
+                new Transformer1().Execute(store);
 
-                id = session.Advanced.GetDocumentId(list.First());
-                WaitForIndexing(_store);
-            }
-
-            using (var session = _store.OpenSession())
-            {
-                var list = session.Advanced.MoreLikeThis<Transformer1, Transformer1.Result, DataIndex>(new MoreLikeThisQuery()
+                using (var session = store.OpenSession())
                 {
-                    DocumentId = id,
-                    Fields = new[] { "Body" }
-                });
+                    new DataIndex(true, false).Execute(store);
 
-                Assert.NotEmpty(list);
-                foreach (var result in list)
+                    var list = GetDataList();
+                    list.ForEach(session.Store);
+                    session.SaveChanges();
+
+                    id = session.Advanced.GetDocumentId(list.First());
+                    WaitForIndexing(store);
+                }
+
+                using (var session = store.OpenSession())
                 {
-                    Assert.NotEmpty(result.TransformedBody);
-                    Assert.True(result.TransformedBody.EndsWith("123"));
+                    var list = session.Advanced.MoreLikeThis<Transformer1, Transformer1.Result, DataIndex>(new MoreLikeThisQuery()
+                    {
+                        DocumentId = id,
+                        Fields = new[] { "Body" }
+                    });
+
+                    Assert.NotEmpty(list);
+                    foreach (var result in list)
+                    {
+                        Assert.NotEmpty(result.TransformedBody);
+                        Assert.True(result.TransformedBody.EndsWith("123"));
+                    }
                 }
             }
         }
 
         public void TransformersShouldWorkWithMoreLikeThis2()
         {
-            string id, personId;
-
-            new Transformer2().Execute(_store);
-
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                new DataIndex(true, false).Execute(_store);
+                string id, personId;
 
-                var person = new Person { Name = "Name1" };
-                session.Store(person);
-                personId = person.Id;
+                new Transformer2().Execute(store);
 
-                var list = GetDataList();
-                list.ForEach(x =>
+                using (var session = store.OpenSession())
                 {
-                    x.PersonId = personId;
-                    session.Store(x);
-                });
+                    new DataIndex(true, false).Execute(store);
 
-                session.SaveChanges();
+                    var person = new Person { Name = "Name1" };
+                    session.Store(person);
+                    personId = person.Id;
 
-                id = session.Advanced.GetDocumentId(list.First());
-                WaitForIndexing(_store);
-            }
+                    var list = GetDataList();
+                    list.ForEach(x =>
+                    {
+                        x.PersonId = personId;
+                        session.Store(x);
+                    });
 
-            using (var session = _store.OpenSession())
-            {
-                var list = session.Advanced.MoreLikeThis<Transformer2, Transformer2.Result, DataIndex>(new MoreLikeThisQuery()
-                {
-                    DocumentId = id,
-                    Fields = new[] { "Body" }
-                });
+                    session.SaveChanges();
 
-                Assert.NotEmpty(list);
-                foreach (var result in list)
-                {
-                    Assert.NotEmpty(result.TransformedBody);
-                    Assert.True(result.TransformedBody.EndsWith("321"));
-                    Assert.Equal("Name1", result.Name);
+                    id = session.Advanced.GetDocumentId(list.First());
+                    WaitForIndexing(store);
                 }
 
-                var numberOfRequests = session.Advanced.NumberOfRequests;
-                var person = session.Load<Person>("people/1-A");
-                Assert.NotNull(person);
-                Assert.Equal("Name1", person.Name);
-                Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
+                using (var session = store.OpenSession())
+                {
+                    var list = session.Advanced.MoreLikeThis<Transformer2, Transformer2.Result, DataIndex>(new MoreLikeThisQuery()
+                    {
+                        DocumentId = id,
+                        Fields = new[] { "Body" }
+                    });
+
+                    Assert.NotEmpty(list);
+                    foreach (var result in list)
+                    {
+                        Assert.NotEmpty(result.TransformedBody);
+                        Assert.True(result.TransformedBody.EndsWith("321"));
+                        Assert.Equal("Name1", result.Name);
+                    }
+
+                    var numberOfRequests = session.Advanced.NumberOfRequests;
+                    var person = session.Load<Person>("people/1-A");
+                    Assert.NotNull(person);
+                    Assert.Equal("Name1", person.Name);
+                    Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
+                }
             }
         }
 
         public void IncludesShouldWorkWithMoreLikeThis()
         {
-            string id;
-
-            new Transformer2().Execute(_store);
-
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                new DataIndex(true, false).Execute(_store);
+                string id;
 
-                session.Store(new { Name = "Name1" }, "test");
+                new Transformer2().Execute(store);
 
-                var list = GetDataList();
-                list.ForEach(session.Store);
-                session.SaveChanges();
-
-                id = session.Advanced.GetDocumentId(list.First());
-                WaitForIndexing(_store);
-            }
-
-            using (var session = _store.OpenSession())
-            {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery()
+                using (var session = store.OpenSession())
                 {
-                    DocumentId = id,
-                    Fields = new[] { "Body" },
-                    Includes = new[] { "Body" }
-                });
+                    new DataIndex(true, false).Execute(store);
 
-                Assert.NotEmpty(list);
+                    session.Store(new { Name = "Name1" }, "test");
 
-                var numberOfRequests = session.Advanced.NumberOfRequests;
-                var person = session.Load<dynamic>("test");
-                Assert.NotNull(person);
-                Assert.Equal("Name1", person.Name);
-                Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
+                    var list = GetDataList();
+                    list.ForEach(session.Store);
+                    session.SaveChanges();
+
+                    id = session.Advanced.GetDocumentId(list.First());
+                    WaitForIndexing(store);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery()
+                    {
+                        DocumentId = id,
+                        Fields = new[] { "Body" },
+                        Includes = new[] { "Body" }
+                    });
+
+                    Assert.NotEmpty(list);
+
+                    var numberOfRequests = session.Advanced.NumberOfRequests;
+                    var person = session.Load<dynamic>("test");
+                    Assert.NotNull(person);
+                    Assert.Equal("Name1", person.Name);
+                    Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
+                }
             }
         }
 
         [Fact]
         public void CanGetResultsUsingTermVectors()
         {
-            string id;
-
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                new DataIndex(true, false).Execute(_store);
+                string id;
 
-                var list = GetDataList();
-                list.ForEach(session.Store);
-                session.SaveChanges();
+                using (var session = store.OpenSession())
+                {
+                    new DataIndex(true, false).Execute(store);
 
-                id = session.Advanced.GetDocumentId(list.First());
-                WaitForIndexing(_store);
+                    var list = GetDataList();
+                    list.ForEach(session.Store);
+                    session.SaveChanges();
+
+                    id = session.Advanced.GetDocumentId(list.First());
+                    WaitForIndexing(store);
+                }
+
+                AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(store, id);
             }
-
-            AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(id);
         }
 
         [Fact]
         public async Task CanGetResultsUsingTermVectorsAsync()
         {
-            string id;
-
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                new DataIndex(true, false).Execute(_store);
+                string id;
 
-                var list = GetDataList();
-                list.ForEach(session.Store);
-                session.SaveChanges();
+                using (var session = store.OpenSession())
+                {
+                    new DataIndex(true, false).Execute(store);
 
-                id = session.Advanced.GetDocumentId(list.First());
-                WaitForIndexing(_store);
+                    var list = GetDataList();
+                    list.ForEach(session.Store);
+                    session.SaveChanges();
+
+                    id = session.Advanced.GetDocumentId(list.First());
+                    WaitForIndexing(store);
+                }
+
+                await AssetMoreLikeThisHasMatchesForAsync<Data, DataIndex>(store, id);
             }
-
-            await AssetMoreLikeThisHasMatchesForAsync<Data, DataIndex>(id);
         }
 
         [Fact]
         public void CanGetResultsUsingStorage()
         {
-            string id;
-
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                new DataIndex(false, true).Execute(_store);
+                string id;
 
-                var list = GetDataList();
-                list.ForEach(session.Store);
-                session.SaveChanges();
+                using (var session = store.OpenSession())
+                {
+                    new DataIndex(false, true).Execute(store);
 
-                id = session.Advanced.GetDocumentId(list.First());
-                WaitForIndexing(_store);
+                    var list = GetDataList();
+                    list.ForEach(session.Store);
+                    session.SaveChanges();
+
+                    id = session.Advanced.GetDocumentId(list.First());
+                    WaitForIndexing(store);
+                }
+
+                AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(store, id);
             }
-
-            AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(id);
         }
 
         [Fact]
         public void CanGetResultsUsingTermVectorsAndStorage()
         {
-            string id;
-
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                new DataIndex(true, true).Execute(_store);
+                string id;
 
-                var list = GetDataList();
-                list.ForEach(session.Store);
-                session.SaveChanges();
+                using (var session = store.OpenSession())
+                {
+                    new DataIndex(true, true).Execute(store);
 
-                id = session.Advanced.GetDocumentId(list.First());
-                WaitForIndexing(_store);
+                    var list = GetDataList();
+                    list.ForEach(session.Store);
+                    session.SaveChanges();
+
+                    id = session.Advanced.GetDocumentId(list.First());
+                    WaitForIndexing(store);
+                }
+
+                AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(store, id);
             }
-
-            AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(id);
         }
 
         [Fact]
         public void CanCompareDocumentsWithIntegerIdentifiers()
         {
-            string id;
-
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                new OtherDataIndex().Execute(_store);
+                string id;
 
-                var dataQueriedFor = new DataWithIntegerId { Id = "123", Body = "This is a test. Isn't it great? I hope I pass my test!" };
-
-                var list = new List<DataWithIntegerId>
+                using (var session = store.OpenSession())
                 {
-                    dataQueriedFor,
-                    new DataWithIntegerId {Id = "234", Body = "I have a test tomorrow. I hate having a test"},
-                    new DataWithIntegerId {Id = "3456", Body = "Cake is great."},
-                    new DataWithIntegerId {Id = "3457", Body = "This document has the word test only once"},
-                    new DataWithIntegerId {Id = "3458", Body = "test"},
-                    new DataWithIntegerId {Id = "3459", Body = "test"},
-                };
-                list.ForEach(session.Store);
-                session.SaveChanges();
+                    new OtherDataIndex().Execute(store);
 
-                id = session.Advanced.GetDocumentId(dataQueriedFor);
+                    var dataQueriedFor = new DataWithIntegerId { Id = "123", Body = "This is a test. Isn't it great? I hope I pass my test!" };
 
-                WaitForIndexing(_store);
+                    var list = new List<DataWithIntegerId>
+                    {
+                        dataQueriedFor,
+                        new DataWithIntegerId {Id = "234", Body = "I have a test tomorrow. I hate having a test"},
+                        new DataWithIntegerId {Id = "3456", Body = "Cake is great."},
+                        new DataWithIntegerId {Id = "3457", Body = "This document has the word test only once"},
+                        new DataWithIntegerId {Id = "3458", Body = "test"},
+                        new DataWithIntegerId {Id = "3459", Body = "test"},
+                    };
+                    list.ForEach(session.Store);
+                    session.SaveChanges();
+
+                    id = session.Advanced.GetDocumentId(dataQueriedFor);
+
+                    WaitForIndexing(store);
+                }
+
+                AssetMoreLikeThisHasMatchesFor<DataWithIntegerId, OtherDataIndex>(store, id);
+
+                id = id.ToLower();
+                AssetMoreLikeThisHasMatchesFor<DataWithIntegerId, OtherDataIndex>(store, id);
             }
-
-            AssetMoreLikeThisHasMatchesFor<DataWithIntegerId, OtherDataIndex>(id);
-
-            id = id.ToLower();
-            AssetMoreLikeThisHasMatchesFor<DataWithIntegerId, OtherDataIndex>(id);
         }
 
         [Fact]
         public void CanGetResultsWhenIndexHasSlashInIt()
         {
-            const string key = "datas/1-A";
-
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                new DataIndex().Execute(_store);
+                const string key = "datas/1-A";
 
-                var list = GetDataList();
-                list.ForEach(session.Store);
-                session.SaveChanges();
-                WaitForIndexing(_store);
+                using (var session = store.OpenSession())
+                {
+                    new DataIndex().Execute(store);
+
+                    var list = GetDataList();
+                    list.ForEach(session.Store);
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+                }
+
+                AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(store, key);
             }
-
-            AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(key);
         }
 
         [Fact]
         public void Query_On_Document_That_Does_Not_Have_High_Enough_Word_Frequency()
         {
-            const string key = "datas/4-A";
-
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                new DataIndex().Execute(_store);
+                const string key = "datas/4-A";
 
-                var list = GetDataList();
-                list.ForEach(session.Store);
-                session.SaveChanges();
-                WaitForIndexing(_store);
-            }
-
-            using (var session = _store.OpenSession())
-            {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery()
+                using (var session = store.OpenSession())
                 {
-                    DocumentId = key,
-                    Fields = new[] { "Body" }
-                });
-                WaitForIndexing(_store);
+                    new DataIndex().Execute(store);
 
-                Assert.Empty(list);
+                    var list = GetDataList();
+                    list.ForEach(session.Store);
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery()
+                    {
+                        DocumentId = key,
+                        Fields = new[] { "Body" }
+                    });
+                    WaitForIndexing(store);
+
+                    Assert.Empty(list);
+                }
             }
         }
 
         [Fact]
         public void Test_With_Lots_Of_Random_Data()
         {
-            var key = "datas/1-A";
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                new DataIndex().Execute(_store);
-
-                for (var i = 0; i < 100; i++)
+                var key = "datas/1-A";
+                using (var session = store.OpenSession())
                 {
-                    var data = new Data { Body = GetLorem(200) };
-                    session.Store(data);
+                    new DataIndex().Execute(store);
+
+                    for (var i = 0; i < 100; i++)
+                    {
+                        var data = new Data { Body = GetLorem(200) };
+                        session.Store(data);
+                    }
+                    session.SaveChanges();
+
+                    WaitForIndexing(store);
                 }
-                session.SaveChanges();
 
-                WaitForIndexing(_store);
+                AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(store, key);
             }
-
-            AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(key);
         }
 
         [Fact]
         public void Do_Not_Pass_FieldNames()
         {
-            var key = "datas/1-A";
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                new DataIndex().Execute(_store);
-
-                for (var i = 0; i < 10; i++)
+                var key = "datas/1-A";
+                using (var session = store.OpenSession())
                 {
-                    var data = new Data { Body = "Body" + i, WhitespaceAnalyzerField = "test test" };
-                    session.Store(data);
+                    new DataIndex().Execute(store);
+
+                    for (var i = 0; i < 10; i++)
+                    {
+                        var data = new Data { Body = "Body" + i, WhitespaceAnalyzerField = "test test" };
+                        session.Store(data);
+                    }
+                    session.SaveChanges();
+
+                    WaitForIndexing(store);
                 }
-                session.SaveChanges();
 
-                WaitForIndexing(_store);
-            }
+                using (var session = store.OpenSession())
+                {
+                    var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
 
-            using (var session = _store.OpenSession())
-            {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
-
-                Assert.NotEmpty(list);
+                    Assert.NotEmpty(list);
+                }
             }
         }
 
         [Fact]
         public void Each_Field_Should_Use_Correct_Analyzer()
         {
-            var key = "datas/1-A";
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                new DataIndex().Execute(_store);
-
-                for (var i = 0; i < 10; i++)
+                var key = "datas/1-A";
+                using (var session = store.OpenSession())
                 {
-                    var data = new Data { WhitespaceAnalyzerField = "bob@hotmail.com hotmail" };
-                    session.Store(data);
+                    new DataIndex().Execute(store);
+
+                    for (var i = 0; i < 10; i++)
+                    {
+                        var data = new Data { WhitespaceAnalyzerField = "bob@hotmail.com hotmail" };
+                        session.Store(data);
+                    }
+                    session.SaveChanges();
+
+                    WaitForIndexing(store);
                 }
-                session.SaveChanges();
 
-                WaitForIndexing(_store);
-            }
-
-            using (var session = _store.OpenSession())
-            {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
-
-                Assert.Empty(list);
-            }
-
-            key = "datas/11-A";
-            using (var session = _store.OpenSession())
-            {
-                new DataIndex().Execute(_store);
-
-                for (var i = 0; i < 10; i++)
+                using (var session = store.OpenSession())
                 {
-                    var data = new Data { WhitespaceAnalyzerField = "bob@hotmail.com bob@hotmail.com" };
-                    session.Store(data);
+                    var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
+
+                    Assert.Empty(list);
                 }
-                session.SaveChanges();
 
-                WaitForIndexing(_store);
-            }
+                key = "datas/11-A";
+                using (var session = store.OpenSession())
+                {
+                    new DataIndex().Execute(store);
 
-            using (var session = _store.OpenSession())
-            {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
+                    for (var i = 0; i < 10; i++)
+                    {
+                        var data = new Data { WhitespaceAnalyzerField = "bob@hotmail.com bob@hotmail.com" };
+                        session.Store(data);
+                    }
+                    session.SaveChanges();
 
-                Assert.NotEmpty(list);
+                    WaitForIndexing(store);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
+
+                    Assert.NotEmpty(list);
+                }
             }
         }
 
         [Fact]
         public void Can_Use_Min_Doc_Freq_Param()
         {
-            const string key = "datas/1-A";
-
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                new DataIndex().Execute(_store);
+                const string key = "datas/1-A";
 
-                var list = new List<Data>
+                using (var session = store.OpenSession())
                 {
-                    new Data {Body = "This is a test. Isn't it great? I hope I pass my test!"},
-                    new Data {Body = "I have a test tomorrow. I hate having a test"},
-                    new Data {Body = "Cake is great."},
-                    new Data {Body = "This document has the word test only once"}
-                };
-                list.ForEach(session.Store);
+                    new DataIndex().Execute(store);
 
-                session.SaveChanges();
+                    var list = new List<Data>
+                    {
+                        new Data {Body = "This is a test. Isn't it great? I hope I pass my test!"},
+                        new Data {Body = "I have a test tomorrow. I hate having a test"},
+                        new Data {Body = "Cake is great."},
+                        new Data {Body = "This document has the word test only once"}
+                    };
+                    list.ForEach(session.Store);
 
-                WaitForIndexing(_store);
-            }
+                    session.SaveChanges();
 
-            using (var session = _store.OpenSession())
-            {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery()
+                    WaitForIndexing(store);
+                }
+
+                using (var session = store.OpenSession())
                 {
-                    DocumentId = key,
-                    Fields = new[] { "Body" },
-                    MinimumDocumentFrequency = 2
-                });
+                    var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery()
+                    {
+                        DocumentId = key,
+                        Fields = new[] { "Body" },
+                        MinimumDocumentFrequency = 2
+                    });
 
-                Assert.NotEmpty(list);
+                    Assert.NotEmpty(list);
+                }
             }
         }
 
         [Fact]
         public void Can_Use_Boost_Param()
         {
-            const string key = "datas/1-A";
-
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                new DataIndex().Execute(_store);
+                const string key = "datas/1-A";
 
-                var list = new List<Data>
+                using (var session = store.OpenSession())
                 {
-                    new Data {Body = "This is a test. it is a great test. I hope I pass my great test!"},
-                    new Data {Body = "Cake is great."},
-                    new Data {Body = "I have a test tomorrow."}
-                };
-                list.ForEach(session.Store);
+                    new DataIndex().Execute(store);
 
-                session.SaveChanges();
-
-                WaitForIndexing(_store);
-            }
-
-            using (var session = _store.OpenSession())
-            {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(
-                    new MoreLikeThisQuery()
+                    var list = new List<Data>
                     {
-                        DocumentId = key,
-                        Fields = new[] { "Body" },
-                        MinimumWordLength = 3,
-                        MinimumDocumentFrequency = 1,
-                        Boost = true
-                    });
+                        new Data {Body = "This is a test. it is a great test. I hope I pass my great test!"},
+                        new Data {Body = "Cake is great."},
+                        new Data {Body = "I have a test tomorrow."}
+                    };
+                    list.ForEach(session.Store);
 
-                Assert.NotEqual(0, list.Count());
-                Assert.Equal("I have a test tomorrow.", list[0].Body);
+                    session.SaveChanges();
+
+                    WaitForIndexing(store);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var list = session.Advanced.MoreLikeThis<Data, DataIndex>(
+                        new MoreLikeThisQuery()
+                        {
+                            DocumentId = key,
+                            Fields = new[] { "Body" },
+                            MinimumWordLength = 3,
+                            MinimumDocumentFrequency = 1,
+                            Boost = true
+                        });
+
+                    Assert.NotEqual(0, list.Count());
+                    Assert.Equal("I have a test tomorrow.", list[0].Body);
+                }
             }
         }
 
         [Fact]
         public void Can_Use_Stop_Words()
         {
-            const string key = "datas/1-A";
-
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                new DataIndex().Execute(_store);
+                const string key = "datas/1-A";
 
-                var list = new List<Data>
+                using (var session = store.OpenSession())
                 {
-                    new Data {Body = "This is a test. Isn't it great? I hope I pass my test!"},
-                    new Data {Body = "I should not hit this document. I hope"},
-                    new Data {Body = "Cake is great."},
-                    new Data {Body = "This document has the word test only once"},
-                    new Data {Body = "test"},
-                    new Data {Body = "test"},
-                    new Data {Body = "test"},
-                    new Data {Body = "test"}
-                };
-                list.ForEach(session.Store);
+                    new DataIndex().Execute(store);
 
-                session.Store(new StopWordsSetup { Id = "Config/Stopwords", StopWords = new List<string> { "I", "A", "Be" } });
+                    var list = new List<Data>
+                    {
+                        new Data {Body = "This is a test. Isn't it great? I hope I pass my test!"},
+                        new Data {Body = "I should not hit this document. I hope"},
+                        new Data {Body = "Cake is great."},
+                        new Data {Body = "This document has the word test only once"},
+                        new Data {Body = "test"},
+                        new Data {Body = "test"},
+                        new Data {Body = "test"},
+                        new Data {Body = "test"}
+                    };
+                    list.ForEach(session.Store);
 
-                session.SaveChanges();
+                    session.Store(new StopWordsSetup { Id = "Config/Stopwords", StopWords = new List<string> { "I", "A", "Be" } });
 
-                WaitForIndexing(_store);
-            }
+                    session.SaveChanges();
 
-            using (var session = _store.OpenSession())
-            {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery()
+                    WaitForIndexing(store);
+                }
+
+                using (var session = store.OpenSession())
                 {
-                    DocumentId = key,
-                    StopWordsDocumentId = "Config/Stopwords",
-                    MinimumDocumentFrequency = 1
-                });
+                    var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery()
+                    {
+                        DocumentId = key,
+                        StopWordsDocumentId = "Config/Stopwords",
+                        MinimumDocumentFrequency = 1
+                    });
 
-                Assert.Equal(5, list.Count());
+                    Assert.Equal(5, list.Count());
+                }
             }
         }
 
         [Fact(Skip = "RavenDB-6092 Support artificial documents on MoreLikeThisQuery")]
         public void CanMakeDynamicDocumentQueries()
         {
-            new DataIndex().Execute(_store);
-
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                var list = GetDataList();
-                list.ForEach(session.Store);
+                new DataIndex().Execute(store);
 
-                session.SaveChanges();
-            }
+                using (var session = store.OpenSession())
+                {
+                    var list = GetDataList();
+                    list.ForEach(session.Store);
 
-            WaitForIndexing(_store);
+                    session.SaveChanges();
+                }
 
-            using (var session = _store.OpenSession())
-            {
-                /*var list = session.Advanced.MoreLikeThis<Data, DataIndex>(
-                    new MoreLikeThisQuery
-                    {
-                        Document = "{ \"Body\": \"A test\" }",
-                        Fields = new[] { "Body" },
-                        MinimumTermFrequency = 1,
-                        MinimumDocumentFrequency = 1
-                    });
+                WaitForIndexing(store);
 
-                Assert.Equal(7, list.Count());*/
+                using (var session = store.OpenSession())
+                {
+                    /*var list = session.Advanced.MoreLikeThis<Data, DataIndex>(
+                        new MoreLikeThisQuery
+                        {
+                            Document = "{ \"Body\": \"A test\" }",
+                            Fields = new[] { "Body" },
+                            MinimumTermFrequency = 1,
+                            MinimumDocumentFrequency = 1
+                        });
+    
+                    Assert.Equal(7, list.Count());*/
+                }
             }
         }
 
         [Fact(Skip = "RavenDB-6092 Support artificial documents on MoreLikeThisQuery")]
         public void CanMakeDynamicDocumentQueriesWithComplexProperties()
         {
-            new ComplexDataIndex().Execute(_store);
-
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                session.Store(new ComplexData
+                new ComplexDataIndex().Execute(store);
+
+                using (var session = store.OpenSession())
                 {
-                    Property = new ComplexProperty
+                    session.Store(new ComplexData
                     {
-                        Body = "test"
-                    }
-                });
-                session.SaveChanges();
-            }
-
-            WaitForIndexing(_store);
-
-            using (var session = _store.OpenSession())
-            {
-                /*var list = session.Advanced.MoreLikeThis<ComplexData, ComplexDataIndex>(
-                    new MoreLikeThisQuery
-                    {
-                        Document = "{ \"Property\": { \"Body\": \"test\" } }",
-                        MinimumTermFrequency = 1,
-                        MinimumDocumentFrequency = 1
+                        Property = new ComplexProperty
+                        {
+                            Body = "test"
+                        }
                     });
+                    session.SaveChanges();
+                }
 
-                Assert.Equal(1, list.Count());*/
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    /*var list = session.Advanced.MoreLikeThis<ComplexData, ComplexDataIndex>(
+                        new MoreLikeThisQuery
+                        {
+                            Document = "{ \"Property\": { \"Body\": \"test\" } }",
+                            MinimumTermFrequency = 1,
+                            MinimumDocumentFrequency = 1
+                        });
+    
+                    Assert.Equal(1, list.Count());*/
+                }
             }
         }
 
-        private void AssetMoreLikeThisHasMatchesFor<T, TIndex>(string documentKey) where TIndex : AbstractIndexCreationTask, new()
+        private void AssetMoreLikeThisHasMatchesFor<T, TIndex>(IDocumentStore store, string documentKey) where TIndex : AbstractIndexCreationTask, new()
         {
-            using (var session = _store.OpenSession())
+            using (var session = store.OpenSession())
             {
                 var list = session.Advanced.MoreLikeThis<T, TIndex>(new MoreLikeThisQuery()
                 {
@@ -667,9 +714,9 @@ namespace FastTests.Client.MoreLikeThis
             }
         }
 
-        private async Task AssetMoreLikeThisHasMatchesForAsync<T, TIndex>(string documentKey) where TIndex : AbstractIndexCreationTask, new()
+        private async Task AssetMoreLikeThisHasMatchesForAsync<T, TIndex>(IDocumentStore store, string documentKey) where TIndex : AbstractIndexCreationTask, new()
         {
-            using (var session = _store.OpenAsyncSession())
+            using (var session = store.OpenAsyncSession())
             {
                 var list = await session.Advanced.MoreLikeThisAsync<T, TIndex>(new MoreLikeThisQuery()
                 {
@@ -681,37 +728,7 @@ namespace FastTests.Client.MoreLikeThis
             }
         }
 
-        private void InsertData()
-        {
-            using (var session = _store.OpenSession())
-            {
-                new DataIndex().Execute(_store);
-
-                var list = new List<Data>
-                {
-                    new Data {Body = "This is a test. Isn't it great?"},
-                    new Data {Body = "I have a test tomorrow. I hate having a test"},
-                    new Data {Body = "Cake is great."},
-                    new Data {Body = "test"},
-                    new Data {Body = "test"},
-                    new Data {Body = "test"},
-                    new Data {Body = "test"},
-                    new Data {Body = "test"}
-                };
-
-                foreach (var data in list)
-                {
-                    session.Store(data);
-                }
-
-                session.SaveChanges();
-
-                //Ensure non stale index
-                var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).SingleOrDefault(x => x.Id == list[0].Id);
-            }
-        }
-
-        public class Data
+        private class Data
         {
             public string Id { get; set; }
             public string Body { get; set; }
@@ -719,24 +736,24 @@ namespace FastTests.Client.MoreLikeThis
             public string PersonId { get; set; }
         }
 
-        public class DataWithIntegerId
+        private class DataWithIntegerId
         {
             public string Id;
             public string Body { get; set; }
         }
 
-        public class ComplexData
+        private class ComplexData
         {
             public string Id { get; set; }
             public ComplexProperty Property { get; set; }
         }
 
-        public class ComplexProperty
+        private class ComplexProperty
         {
             public string Body { get; set; }
         }
 
-        public class DataIndex : AbstractIndexCreationTask<Data>
+        private class DataIndex : AbstractIndexCreationTask<Data>
         {
             public DataIndex() : this(true, false)
             {
@@ -789,7 +806,7 @@ namespace FastTests.Client.MoreLikeThis
             }
         }
 
-        public class OtherDataIndex : AbstractIndexCreationTask<DataWithIntegerId>
+        private class OtherDataIndex : AbstractIndexCreationTask<DataWithIntegerId>
         {
             public OtherDataIndex()
             {
@@ -814,7 +831,7 @@ namespace FastTests.Client.MoreLikeThis
             }
         }
 
-        public class ComplexDataIndex : AbstractIndexCreationTask<ComplexData>
+        private class ComplexDataIndex : AbstractIndexCreationTask<ComplexData>
         {
             public ComplexDataIndex()
             {

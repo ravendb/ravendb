@@ -11,13 +11,9 @@ namespace SlowTests.MailingList
 {
     public class WhereInQueryTests : RavenTestBase
     {
-        private readonly DocumentStore documentStore;
-
-        public WhereInQueryTests()
+        private void CreateData(IDocumentStore store)
         {
-            documentStore = GetDocumentStore();
-
-            using (IDocumentSession session = documentStore.OpenSession())
+            using (IDocumentSession session = store.OpenSession())
             {
                 session.Store(new TestDocument
                 {
@@ -40,48 +36,52 @@ namespace SlowTests.MailingList
                 session.SaveChanges();
             }
 
-            new TestIndex().Execute(documentStore);
-        }
-
-        public override void Dispose()
-        {
-            documentStore.Dispose();
-            base.Dispose();
+            new TestIndex().Execute(store);
         }
 
         [Fact]
         public void Query_should_return_2_results()
         {
-            using (IDocumentSession session = documentStore.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                List<TestDocument> results = session
-                    .Advanced
-                    .DocumentQuery<TestDocument, TestIndex>()
-                    .WhereEquals("FirstName", "FirstName1")
-                    .OrElse()
-                    .WhereEquals("LastName", "LastName2")
-                    .WaitForNonStaleResults()
-                    .ToList();
+                CreateData(store);
 
-                Assert.Equal(2, results.Count);
+                using (IDocumentSession session = store.OpenSession())
+                {
+                    List<TestDocument> results = session
+                        .Advanced
+                        .DocumentQuery<TestDocument, TestIndex>()
+                        .WhereEquals("FirstName", "FirstName1")
+                        .OrElse()
+                        .WhereEquals("LastName", "LastName2")
+                        .WaitForNonStaleResults()
+                        .ToList();
+
+                    Assert.Equal(2, results.Count);
+                }
             }
         }
 
         [Fact]
         public void Query_using_WhereIn_should_return_2_results()
         {
-            using (IDocumentSession session = documentStore.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                List<TestDocument> results = session
-                    .Advanced
-                    .DocumentQuery<TestDocument, TestIndex>()
-                    .WhereIn("FirstName", new[] { "FirstName1" })
-                    .OrElse()
-                    .WhereIn("LastName", new[] { "LastName2" })
-                    .WaitForNonStaleResults()
-                    .ToList();
+                CreateData(store);
 
-                Assert.Equal(2, results.Count);
+                using (IDocumentSession session = store.OpenSession())
+                {
+                    List<TestDocument> results = session
+                        .Advanced
+                        .DocumentQuery<TestDocument, TestIndex>()
+                        .WhereIn("FirstName", new[] { "FirstName1" })
+                        .OrElse()
+                        .WhereIn("LastName", new[] { "LastName2" })
+                        .WaitForNonStaleResults()
+                        .ToList();
+
+                    Assert.Equal(2, results.Count);
+                }
             }
         }
 

@@ -11,13 +11,9 @@ namespace SlowTests.MailingList
 {
     public class IdComesBackLowerCase : RavenTestBase
     {
-        private readonly IDocumentStore _store;
-
-        public IdComesBackLowerCase()
+        private static void CreateData(IDocumentStore store)
         {
-            _store = GetDocumentStore();
-
-            new Product_AvailableForSale3().Execute(_store);
+            new Product_AvailableForSale3().Execute(store);
 
             var product1 = new Product("MyName1", "MyBrand1");
             product1.Id = "Products/100";
@@ -27,7 +23,7 @@ namespace SlowTests.MailingList
 
             var facetSetup = new FacetSetup { Id = "facets/ProductFacets", Facets = new List<Facet> { new Facet { Name = "Brand" } } };
 
-            using (var docSession = _store.OpenSession())
+            using (var docSession = store.OpenSession())
             {
                 foreach (var productDoc in docSession.Query<Product>().Customize(x => x.WaitForNonStaleResults()))
                 {
@@ -41,7 +37,7 @@ namespace SlowTests.MailingList
                 docSession.SaveChanges();
             }
 
-            using (var session = _store.OpenSession())
+            using (var session = store.OpenSession())
             {
                 var check = session.Query<Product>().ToList();
                 Assert.Equal(check.Count, 2);
@@ -51,29 +47,39 @@ namespace SlowTests.MailingList
         [Fact]
         public void ShouldReturnMatchingProductWithGivenIdWhenSelectingAllFields()
         {
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                var products = session.Advanced.DocumentQuery<Product, Product_AvailableForSale3>()
-                    .WaitForNonStaleResults()
-                    .SelectFields<Product>()
-                    .UsingDefaultField("Any")
-                    .Where("MyName1").ToList();
+                CreateData(store);
 
-                Assert.Equal("Products/100", products.First().Id);
+                using (var session = store.OpenSession())
+                {
+                    var products = session.Advanced.DocumentQuery<Product, Product_AvailableForSale3>()
+                        .WaitForNonStaleResults()
+                        .SelectFields<Product>()
+                        .UsingDefaultField("Any")
+                        .Where("MyName1").ToList();
+
+                    Assert.Equal("Products/100", products.First().Id);
+                }
             }
         }
 
         [Fact]
         public void ShouldReturnMatchingProductWithGivenId()
         {
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                var products = session.Advanced.DocumentQuery<Product, Product_AvailableForSale3>()
-                    .WaitForNonStaleResults()
-                    .UsingDefaultField("Any")
-                    .Where("MyName1").ToList();
+                CreateData(store);
 
-                Assert.Equal("Products/100", products.First().Id);
+                using (var session = store.OpenSession())
+                {
+                    var products = session.Advanced.DocumentQuery<Product, Product_AvailableForSale3>()
+                        .WaitForNonStaleResults()
+                        .UsingDefaultField("Any")
+                        .Where("MyName1").ToList();
+
+                    Assert.Equal("Products/100", products.First().Id);
+                }
             }
         }
 
