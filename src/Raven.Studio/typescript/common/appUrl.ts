@@ -496,7 +496,7 @@ class appUrl {
     static forConflicts(db: database | databaseInfo, documentId?: string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const docIdUrlPart = documentId ? "&id=" + encodeURIComponent(documentId) : "";
-        return "#databases/replicationEtl/conflicts?" + databasePart + docIdUrlPart;
+        return "#databases/documents/conflicts?" + databasePart + docIdUrlPart;
     }
 
     static forPatch(db: database | databaseInfo, hashOfRecentPatch?: number): string {

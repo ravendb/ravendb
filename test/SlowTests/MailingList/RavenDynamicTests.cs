@@ -30,15 +30,11 @@ namespace SlowTests.MailingList
 
         public class WhenUsingIdCopy : RavenTestBase
         {
-            private readonly DocumentStore _store;
-
-            public WhenUsingIdCopy()
+            private void CreateData(IDocumentStore store)
             {
-                _store = GetDocumentStore();
+                new Person_IdCopy_Index().Execute(store);
 
-                new Person_IdCopy_Index().Execute(_store);
-
-                using (var session = _store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(Sally);
                     session.Store(new Person { Name = "bob", UserId = Guid.NewGuid() });
@@ -48,27 +44,26 @@ namespace SlowTests.MailingList
                 }
             }
 
-            public override void Dispose()
-            {
-                _store.Dispose();
-                base.Dispose();
-            }
-
             [Fact]
             public void It_should_be_stored_in_index()
             {
-                using (var session = _store.OpenSession())
+                using (var store = GetDocumentStore())
                 {
-                    //WaitForUserToContinueTheTest(store);
+                    CreateData(store);
 
-                    var results2 = session.Advanced.DocumentQuery<Person, Person_IdCopy_Index>()
-                                          .WaitForNonStaleResultsAsOfNow()
-                                          .SelectFields<PersonIndexItem>()
-                                          .ToArray();
+                    using (var session = store.OpenSession())
+                    {
+                        //WaitForUserToContinueTheTest(store);
 
-                    var s = results2.Single(x => x.Id.Contains("sally"));
+                        var results2 = session.Advanced.DocumentQuery<Person, Person_IdCopy_Index>()
+                            .WaitForNonStaleResultsAsOfNow()
+                            .SelectFields<PersonIndexItem>()
+                            .ToArray();
 
-                    Assert.Equal(Sally.Family["Dad"].Id, s.Family_Dad_Id);
+                        var s = results2.Single(x => x.Id.Contains("sally"));
+
+                        Assert.Equal(Sally.Family["Dad"].Id, s.Family_Dad_Id);
+                    }
                 }
             }
 
@@ -76,18 +71,23 @@ namespace SlowTests.MailingList
             [Fact]
             public void It_should_be_stored_be_able_to_be_searched()
             {
-                using (var session = _store.OpenSession())
+                using (var store = GetDocumentStore())
                 {
-                    //WaitForUserToContinueTheTest(store);
+                    CreateData(store);
 
-                    var results = session.Advanced.DocumentQuery<Person, Person_IdCopy_Index>()
-                                         .WaitForNonStaleResultsAsOfNow()
-                                         .WhereEquals("Family_Dad_Id", "people/Dad")
-                                         .ToArray();
+                    using (var session = store.OpenSession())
+                    {
+                        //WaitForUserToContinueTheTest(store);
+
+                        var results = session.Advanced.DocumentQuery<Person, Person_IdCopy_Index>()
+                            .WaitForNonStaleResultsAsOfNow()
+                            .WhereEquals("Family_Dad_Id", "people/Dad")
+                            .ToArray();
 
 
-                    Assert.Equal(1, results.Count());
-                    Assert.Equal(Sally.Name, results.Single().Name);
+                        Assert.Equal(1, results.Count());
+                        Assert.Equal(Sally.Name, results.Single().Name);
+                    }
                 }
             }
 
@@ -109,15 +109,11 @@ namespace SlowTests.MailingList
 
         public class When_using_Id : RavenTestBase
         {
-            private readonly DocumentStore _store;
-
-            public When_using_Id()
+            private static void CreateData(IDocumentStore store)
             {
-                _store = GetDocumentStore();
+                new Person_Id_Index().Execute(store);
 
-                new Person_Id_Index().Execute(_store);
-
-                using (var session = _store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(Sally);
                     session.Store(new Person { Name = "bob", UserId = Guid.NewGuid() });
@@ -127,27 +123,26 @@ namespace SlowTests.MailingList
                 }
             }
 
-            public override void Dispose()
-            {
-                _store.Dispose();
-                base.Dispose();
-            }
-
             [Fact]
             public void It_should_be_stored_in_index()
             {
-                using (var session = _store.OpenSession())
+                using (var store = GetDocumentStore())
                 {
-                    //WaitForUserToContinueTheTest(store);
+                    CreateData(store);
 
-                    var results2 = session.Advanced.DocumentQuery<Person, Person_Id_Index>()
-                                          .WaitForNonStaleResultsAsOfNow()
-                                          .SelectFields<PersonIndexItem>()
-                                          .ToArray();
+                    using (var session = store.OpenSession())
+                    {
+                        //WaitForUserToContinueTheTest(store);
 
-                    var s = results2.Single(x => x.Id.Contains("sally"));
+                        var results2 = session.Advanced.DocumentQuery<Person, Person_Id_Index>()
+                            .WaitForNonStaleResultsAsOfNow()
+                            .SelectFields<PersonIndexItem>()
+                            .ToArray();
 
-                    Assert.Equal(Sally.Family["Dad"].Id, s.Family_Dad_Id);
+                        var s = results2.Single(x => x.Id.Contains("sally"));
+
+                        Assert.Equal(Sally.Family["Dad"].Id, s.Family_Dad_Id);
+                    }
                 }
             }
 
@@ -155,18 +150,23 @@ namespace SlowTests.MailingList
             [Fact]
             public void It_should_be_stored_be_able_to_be_searched()
             {
-                using (var session = _store.OpenSession())
+                using (var store = GetDocumentStore())
                 {
-                    //WaitForUserToContinueTheTest(store);
+                    CreateData(store);
 
-                    var results = session.Advanced.DocumentQuery<Person, Person_Id_Index>()
-                                         .WaitForNonStaleResultsAsOfNow()
-                                         .WhereEquals("Family_Dad_Id", "people/Dad")
-                                         .ToArray();
+                    using (var session = store.OpenSession())
+                    {
+                        //WaitForUserToContinueTheTest(store);
+
+                        var results = session.Advanced.DocumentQuery<Person, Person_Id_Index>()
+                            .WaitForNonStaleResultsAsOfNow()
+                            .WhereEquals("Family_Dad_Id", "people/Dad")
+                            .ToArray();
 
 
-                    Assert.Equal(1, results.Count());
-                    Assert.Equal(Sally.Name, results.Single().Name);
+                        Assert.Equal(1, results.Count());
+                        Assert.Equal(Sally.Name, results.Single().Name);
+                    }
                 }
             }
 

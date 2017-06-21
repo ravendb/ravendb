@@ -240,7 +240,6 @@ namespace FastTests.Server.Documents.Versioning
             }
         }
 
-        [Fact(Skip = "RavenDB-7543")]
         public Task ReplicateExpiredAndDeletedRevisions(/*bool useSession*/)
         {
             // TODO

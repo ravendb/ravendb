@@ -6,6 +6,11 @@ import getIndexesStatsCommand = require("commands/database/index/getIndexesStats
 import getIndexMapReduceTreeCommand = require("commands/database/index/getIndexMapReduceTreeCommand");
 import getIndexDebugSourceDocumentsCommand = require("commands/database/index/getIndexDebugSourceDocumentsCommand");
 
+type autoCompleteItem = {
+    label: string;
+    alreadyAdded: boolean;
+}
+
 class visualizer extends viewModelBase {
 
     static readonly noIndexSelected = "Select an index";
@@ -26,7 +31,7 @@ class visualizer extends viewModelBase {
         documentId: ko.observable(""),
         hasFocusDocumentId: ko.observable<boolean>(false),
         documentIds: ko.observableArray<string>(),
-        documentIdsSearchResults: ko.observableArray<string>()
+        documentIdsSearchResults: ko.observableArray<autoCompleteItem>()
     }
 
     private trees = [] as Raven.Server.Documents.Indexes.Debugging.ReduceTree[];
@@ -95,6 +100,7 @@ class visualizer extends viewModelBase {
 
     addCurrentDocumentId() {
         this.addDocumentId(this.documents.documentId());
+        this.selectDocumentId("");
     }
 
     private addDocumentId(documentId: string) {
@@ -233,11 +239,16 @@ class visualizer extends viewModelBase {
     private fetchDocumentIdSearchResults(query: string) {
         this.spinners.addDocument(true);
 
+        const currentDocumentIds = this.documents.documentIds();
+
         new getIndexDebugSourceDocumentsCommand(this.activeDatabase(), this.currentIndex(), query, 0, 10)
             .execute()
             .done(result => {
                 if (this.documents.documentId() === query) {
-                    this.documents.documentIdsSearchResults(result.Results);
+                    this.documents.documentIdsSearchResults(result.Results.map(x => ({
+                        label: x,
+                        alreadyAdded: _.includes(currentDocumentIds, x)
+                    })));
                 }
             })
             .always(() => this.spinners.addDocument(false));

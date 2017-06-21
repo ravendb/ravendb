@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
@@ -11,23 +10,19 @@ namespace SlowTests.Bugs
 {
     public class DanTurner : RavenTestBase
     {
-        private readonly IDocumentStore _store;
+        private Person _john;
+        private Car _patrol;
+        private Car _focus;
 
-        private readonly Person _john;
-        private readonly Car _patrol;
-        private readonly Car _focus;
+        private Person _mary;
+        private Car _falcon;
+        private Car _astra;
 
-        private readonly Person _mary;
-        private readonly Car _falcon;
-        private readonly Car _astra;
-
-        public DanTurner()
+        private void CreateData(IDocumentStore store)
         {
-            _store = GetDocumentStore();
+            new DriversIndex().Execute(store);
 
-            new DriversIndex().Execute(_store);
-
-            using (var session = _store.OpenSession())
+            using (var session = store.OpenSession())
             {
                 _patrol = new Car("AAA-000", "Nissan", "Patrol");
                 _focus = new Car("BBB-111", "Ford", "Focus");
@@ -52,13 +47,47 @@ namespace SlowTests.Bugs
         [Fact]
         public void CanEnumerateQueryOnDriversIndex()
         {
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                var results = session
-                    .Query<Person, DriversIndex>()
-                    .Customize(c => c.WaitForNonStaleResults())
-                    .ProjectFromIndexFieldsInto<Driver>()
-                    .ToList();
+                CreateData(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session
+                        .Query<Person, DriversIndex>()
+                        .Customize(c => c.WaitForNonStaleResults())
+                        .ProjectFromIndexFieldsInto<Driver>()
+                        .ToList();
+
+                    Assert.Equal(4, results.Count);
+
+                    Assert.True(ContainsSingleMatch(results, _john, _patrol));
+                    Assert.True(ContainsSingleMatch(results, _john, _focus));
+                    Assert.True(ContainsSingleMatch(results, _mary, _falcon));
+                    Assert.True(ContainsSingleMatch(results, _mary, _astra));
+                }
+            }
+        }
+
+        [Fact]
+        public void CanEnumerateDummiedMapResult()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateData(store);
+
+                var persons = new[] {_john, _mary};
+                var results = (
+                    from person in persons
+                    from car in person.Cars
+                    select new Driver()
+                    {
+                        PersonId = person.Id,
+                        PersonName = person.Name,
+                        CarRegistration = car.Registration,
+                        CarMake = car.Make
+                    }
+                ).ToList();
 
                 Assert.Equal(4, results.Count);
 
@@ -70,40 +99,21 @@ namespace SlowTests.Bugs
         }
 
         [Fact]
-        public void CanEnumerateDummiedMapResult()
-        {
-            var persons = new[] { _john, _mary };
-            var results = (
-                from person in persons
-                from car in person.Cars
-                select new Driver()
-                {
-                    PersonId = person.Id,
-                    PersonName = person.Name,
-                    CarRegistration = car.Registration,
-                    CarMake = car.Make
-                }
-            ).ToList();
-
-            Assert.Equal(4, results.Count);
-
-            Assert.True(ContainsSingleMatch(results, _john, _patrol));
-            Assert.True(ContainsSingleMatch(results, _john, _focus));
-            Assert.True(ContainsSingleMatch(results, _mary, _falcon));
-            Assert.True(ContainsSingleMatch(results, _mary, _astra));
-        }
-
-        [Fact]
         public void CanCountByQueryOnDriversIndex()
         {
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                var results = session
-                    .Query<Driver, DriversIndex>()
-                    .Customize(c => c.WaitForNonStaleResults())
-                    .Select(x => new { x.PersonId, x.PersonName, x.CarRegistration, x.CarMake });
+                CreateData(store);
 
-                Assert.Equal(4, results.Count());
+                using (var session = store.OpenSession())
+                {
+                    var results = session
+                        .Query<Driver, DriversIndex>()
+                        .Customize(c => c.WaitForNonStaleResults())
+                        .Select(x => new {x.PersonId, x.PersonName, x.CarRegistration, x.CarMake});
+
+                    Assert.Equal(4, results.Count());
+                }
             }
         }
 
