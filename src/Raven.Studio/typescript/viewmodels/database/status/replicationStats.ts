@@ -115,29 +115,37 @@ class hitTest {
         }
     }
 
+    onMouseDown() {
+        this.cursor(graphHelper.prefixStyle("grabbing"));
+    }
+
+    onMouseUp() {
+        this.cursor(graphHelper.prefixStyle("grab"));
+    }
+
     onMouseMove() {
         const clickLocation = d3.mouse(this.container.node());
         const items = this.findItems(clickLocation[0], clickLocation[1]);
 
         const overToggleReplication = items.filter(x => x.actionType === "toggleReplication").length > 0;
-        this.cursor(overToggleReplication ? "pointer" : "auto");
-
+        
         const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as Raven.Client.Documents.Replication.ReplicationPerformanceOperation)[0];
         if (currentItem) {
             this.handleTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);
-        }
-        else {
+            this.cursor("auto");
+        } else {
             const currentItem = items.filter(x => x.actionType === "closedTrackItem").map(x => x.arg as ReplicationPerformanceBaseWithCache)[0];
             if (currentItem) {
                 this.handleClosedTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);
-            }
-            else {
+                this.cursor("auto");
+            } else {
                 const currentGapItem = items.filter(x => x.actionType === "gapItem").map(x => x.arg as timeGapInfo)[0];
                 if (currentGapItem) {
                     this.handleGapTooltip(currentGapItem, clickLocation[0], clickLocation[1]);
-                }
-                else {
+                    this.cursor("auto");
+                } else {
                     this.removeTooltip();
+                    this.cursor(overToggleReplication ? "pointer" : graphHelper.prefixStyle("grab"));
                 }
             }
         }
@@ -393,17 +401,17 @@ class replicationStats extends viewModelBase {
         selection.on("click", () => this.hitTest.onClick());
 
         selection
-            .on("mousedown.tip", () => selection.on("mousemove.tip", null))
-            .on("mouseup.tip", () => selection.on("mousemove.tip", onMove));
-
-        selection
-            .on("mousedown.live", () => {
+            .on("mousedown.hit", () => {
+                this.hitTest.onMouseDown();
+                selection.on("mousemove.tip", null);
                 if (this.liveViewClient()) {
                     this.liveViewClient().pauseUpdates();
                 }
             });
         selection
-            .on("mouseup.live", () => {
+            .on("mouseup.hit", () => {
+                this.hitTest.onMouseUp();
+                selection.on("mousemove.tip", onMove);
                 if (this.liveViewClient()) {
                     this.liveViewClient().resumeUpdates();
                 }
@@ -687,7 +695,7 @@ class replicationStats extends viewModelBase {
 
         const availableHeightForTracks = this.totalHeight - replicationStats.brushSectionHeight;
 
-        const extraBottomMargin = 100;
+        const extraBottomMargin = 10;
 
         this.maxYOffset = Math.max(offset + extraBottomMargin - availableHeightForTracks, 0);
     }
@@ -823,6 +831,13 @@ class replicationStats extends viewModelBase {
                 this.drawTracks(context, xScale, visibleTimeFrame);
                 this.drawReplicationTracksNames(context);
                 this.drawGaps(context, xScale);
+
+                graphHelper.drawScroll(context,
+                    { left: this.totalWidth, top: replicationStats.axisHeight },
+                    this.currentYOffset,
+                    this.totalHeight - replicationStats.brushSectionHeight - replicationStats.axisHeight,
+                    this.maxYOffset ? this.maxYOffset + this.totalHeight - replicationStats.brushSectionHeight - replicationStats.axisHeight : 0);
+
             } finally {
                 context.restore();
             }
