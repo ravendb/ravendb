@@ -848,7 +848,8 @@ namespace Raven.Server.ServerWide
                         LicenseManager,
                         DatabasesLandlord,
                         _env,
-                        ContextPool
+                        ContextPool,
+                        ByteStringMemoryCache.CleanupTimer
                     };
 
                     var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {nameof(ServerStore)}.");

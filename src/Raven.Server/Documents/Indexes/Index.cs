@@ -955,7 +955,7 @@ namespace Raven.Server.Documents.Indexes
 
             DocumentDatabase.DocumentsStorage.ContextPool.Clean();
             _contextPool.Clean();
-            ByteStringMemoryCache.Clean();
+            ByteStringMemoryCache.CleanForCurrentThread();
             IndexPersistence.Clean();
             _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
 
