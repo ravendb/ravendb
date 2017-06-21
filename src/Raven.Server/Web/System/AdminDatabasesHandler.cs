@@ -366,13 +366,12 @@ namespace Raven.Server.Web.System
             TransactionOperationContext context;
             var returnContextToPool = ServerStore.ContextPool.AllocateOperationContext(out context);
 
-            string databaseName = null;
             try
             {
                 var restoreConfiguration = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore");
                 var restoreConfigurationJson = JsonDeserializationCluster.RestoreBackupConfiguraionConfiguration(restoreConfiguration);
 
-                databaseName = restoreConfigurationJson.DatabaseName;
+                var databaseName = restoreConfigurationJson.DatabaseName;
                 if (string.IsNullOrWhiteSpace(databaseName))
                     throw new ArgumentException("Database name can't be null or empty");
 
@@ -398,9 +397,6 @@ namespace Raven.Server.Web.System
                     }
                 }
 
-                if (ServerStore.Cluster.TryRegisterDatabaseRestore(databaseName) == false)
-                    throw new ArgumentException($"Restore is already in progress for database named {databaseName}");
-
                 var operationId = ServerStore.Operations.GetNextOperationId();
                 var token = new OperationCancelToken(ServerStore.ServerShutdown);
                 var restoreBackupTask = new RestoreBackupTask(
@@ -421,10 +417,7 @@ namespace Raven.Server.Web.System
 #pragma warning restore 4014
                 {
                     using (returnContextToPool)
-                    using (token)
-                    {
-                        ServerStore.Cluster.UnRegisterDatabaseRestore(databaseName);
-                    }
+                    using (token){ }
                 });
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -434,9 +427,6 @@ namespace Raven.Server.Web.System
             }
             catch (Exception)
             {
-                if (databaseName != null)
-                    ServerStore.Cluster.UnRegisterDatabaseRestore(databaseName);
-
                 returnContextToPool.Dispose();
                 throw;
             }
