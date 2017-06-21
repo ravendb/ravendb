@@ -378,11 +378,14 @@ namespace Sparrow
         public byte* Segment;
         public readonly int Size;
         private readonly NativeMemory.ThreadStats _thread;
+        public int InUse;
+        public DateTime InPoolSince;
 
         public UnmanagedGlobalSegment(int size)
         {
             Size = size;
             Segment = NativeMemory.AllocateMemory(size, out _thread);
+            InUse = 1;
             LowMemoryNotification.NotifyAllocationPending();
         }
 
@@ -430,48 +433,56 @@ namespace Sparrow
         }
     }
 
-    public struct ByteStringMemoryCache : IByteStringAllocator
+    public struct ByteStringMemoryCache : IByteStringAllocator, ILowMemoryHandler
     {
-        //TODO: policy for reducing this when they are not needed
-        [ThreadStatic]
-        private static Stack<UnmanagedGlobalSegment> _threadLocal;
+        private static readonly object TimerLocker = new object();
+        private static readonly ThreadLocal<SegmentsStack> SegmentsPool;
+        private static readonly LowMemoryFlag LowMemoryFlag;
 
-        public static void Clean()
+        public static readonly Timer CleanupTimer;
+
+        static ByteStringMemoryCache()
         {
-            if (_threadLocal == null)
-                return; // nothing to do;
-
-            while (_threadLocal.Count > 0)
-            {
-                _threadLocal.Pop().Dispose();
-            }
+            SegmentsPool = new ThreadLocal<SegmentsStack>(() => new SegmentsStack(), trackAllValues: true);
+            CleanupTimer = new Timer(ByteStringContext.Allocator.CleanNativeMemoryTimer, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+            LowMemoryFlag = new LowMemoryFlag();
+            LowMemoryNotification.Instance.RegisterLowMemoryHandler(ByteStringContext.Allocator);
         }
 
         [ThreadStatic]
         private static int _minSize;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Stack<UnmanagedGlobalSegment> GetThreadLocalCollection()
-        {
-            return _threadLocal ?? (_threadLocal = new Stack<UnmanagedGlobalSegment>());
-        }
 
         public UnmanagedGlobalSegment Allocate(int size)
         {
             if (_minSize < size)
                 _minSize = size;
 
-            var local = GetThreadLocalCollection();
-            while (local.Count > 0)
+            var stack = SegmentsPool.Value;
+
+            while (true)
             {
-                var memorySegment = local.Pop();
-                if (memorySegment.Size >= size)
+                var current = stack.Head;
+                if (current == null)
+                    break;
+
+                if (Interlocked.CompareExchange(ref stack.Head, current.Next, current) != current)
+                    continue;
+
+                var segment = current.Value;
+                if (segment == null)
+                    continue;
+
+                if (segment.Size >= size)
                 {
-                    return memorySegment;
+                    if (Interlocked.CompareExchange(ref segment.InUse, 1, 0) != 0)
+                        continue;
+
+                    return segment;
                 }
+
                 // not big enough, so we'll discard it and create a bigger instance
                 // it will go into the pool afterward and be available for future use
-                memorySegment.Dispose();
+                segment.Dispose();
             }
 
             // have to allocate it directly
@@ -489,13 +500,110 @@ namespace Sparrow
                 return;
             }
 
-            var local = GetThreadLocalCollection();
-            local.Push(memory);
+            Interlocked.Exchange(ref memory.InUse, 0);
+            memory.InPoolSince = DateTime.UtcNow;
+
+            var stack = SegmentsPool.Value;
+
+            while (true)
+            {
+                var current = stack.Head;
+                var newHead = new StackNode { Value = memory, Next = current };
+                if (Interlocked.CompareExchange(ref stack.Head, newHead, current) == current)
+                    return;
+            }
         }
 
         private static void ThrowInvalidMemorySegment()
         {
             throw new InvalidOperationException("Attempt to return a memory segment that has already been disposed");
+        }
+
+        public static void CleanForCurrentThread()
+        {
+            if (SegmentsPool.IsValueCreated == false)
+                return; // nothing to do
+
+            var stack = SegmentsPool.Value;
+
+            var current = Interlocked.Exchange(ref stack.Head, null);
+            while (current != null)
+            {
+                current.Value?.Dispose();
+                current = current.Next;
+            }
+        }
+
+        public void LowMemory()
+        {
+            if (Interlocked.CompareExchange(ref LowMemoryFlag.LowMemoryState, 1, 0) != 0)
+                return;
+
+            CleanNativeMemoryTimer(null);
+        }
+
+        public void LowMemoryOver()
+        {
+            Interlocked.CompareExchange(ref LowMemoryFlag.LowMemoryState, 0, 1);
+        }
+
+        private void CleanNativeMemoryTimer(object state)
+        {
+            var lockTaken = false;
+            try
+            {
+                Monitor.TryEnter(TimerLocker, ref lockTaken);
+                if (lockTaken == false)
+                    return;
+                
+                var now = DateTime.UtcNow;
+                foreach (var header in SegmentsPool.Values)
+                {
+                    var current = header.Head;
+                    while (current != null)
+                    {
+                        var segment = current.Value;
+                        var parent = current;
+                        current = current.Next;
+
+                        if (segment == null)
+                            continue;
+
+                        if (LowMemoryFlag.LowMemoryState == 0)
+                        {
+                            var timeInPool = now - segment.InPoolSince;
+                            if (timeInPool < TimeSpan.FromMinutes(1))
+                                continue;
+                        } // else dispose context on low mem stress
+
+                        // it is too old, we can dispose it, but need to protect from races
+                        // if the owner thread will just pick it up
+
+                        if (Interlocked.CompareExchange(ref segment.InUse, 1, 0) != 0)
+                            continue;
+
+                        segment.Dispose();
+
+                        parent.Value = null;
+                    }
+                }
+            }
+            finally
+            {
+                if (lockTaken)
+                    Monitor.Exit(TimerLocker);
+            }
+        }
+
+        private class SegmentsStack
+        {
+            public StackNode Head;
+        }
+
+        private class StackNode
+        {
+            public UnmanagedGlobalSegment Value;
+            public StackNode Next;
         }
     }
 
