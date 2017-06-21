@@ -153,7 +153,7 @@ body {
     .slidein-style;
 }
 
-.flex-vertical, .flex-horizontal {
+.flex-vertical, .flex-horizontal, .flex-row {
     .flex-noshrink {
         flex-shrink: 0;
     }
@@ -758,6 +758,7 @@ body {
 .content-container {
     position: relative;
     display: flex;
+    flex-direction: column;
     width: 100%;
     overflow-y: auto;
     -webkit-transition: left @menu-transition-ease;
