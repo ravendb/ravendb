@@ -358,8 +358,18 @@ namespace Raven.Server.Documents.ETL
 
         public void Run()
         {
-            while (CancellationToken.IsCancellationRequested == false)
+            while (true)
             {
+                try
+                {
+                    if (CancellationToken.IsCancellationRequested)
+                        return;
+                }
+                catch (ObjectDisposedException)
+                {
+                    return;
+                }
+
                 try
                 {
                     _waitForChanges.Reset();
