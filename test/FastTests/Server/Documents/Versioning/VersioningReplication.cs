@@ -241,9 +241,10 @@ namespace FastTests.Server.Documents.Versioning
         }
 
         [Fact(Skip = "RavenDB-7543")]
-        public async Task ReplicateExpiredAndDeletedRevisions(/*bool useSession*/)
+        public Task ReplicateExpiredAndDeletedRevisions(/*bool useSession*/)
         {
             // TODO
+            return Task.CompletedTask;
         }
 
         private class User

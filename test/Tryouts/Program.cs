@@ -20,16 +20,16 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new FastTests.Client.Subscriptions.Subscriptions())
+                using (var a = new FastTests.Server.Documents.Transformers.BasicTransformers())
                 {
                     try
                     {
-                        a.SubscriptionSimpleTakeOverStrategy().Wait();
+                        a.WillLoadAsFaulty().Wait();
                     }
                     catch (Exception e)
                     {
                         Console.WriteLine(e);
-
+                        return;
                     }
                 }
             }

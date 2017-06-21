@@ -74,6 +74,7 @@ namespace FastTests.Server.Documents.Transformers
                     Name = "Transformer1"
                 }));
 
+                long etag;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
                     context.OpenReadTransaction();
@@ -81,11 +82,11 @@ namespace FastTests.Server.Documents.Transformers
                     var databaseRecord = Server.ServerStore.Cluster.ReadDatabase(context, store.Database);
                     databaseRecord.Transformers["Transformer1"].TransformResults = "yellow world";
 
-                    var (etag, _) = await Server.ServerStore.WriteDatabaseRecordAsync(store.Database, databaseRecord, null);
-                    await Server.ServerStore.Cluster.WaitForIndexNotification(etag);
+                    etag = (await Server.ServerStore.WriteDatabaseRecordAsync(store.Database, databaseRecord, null)).Etag;
                 }
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
+                await database.RachisLogIndexNotifications.WaitForIndexNotification(etag);
 
                 var transformers = database
                     .TransformerStore
