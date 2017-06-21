@@ -305,7 +305,6 @@ namespace Raven.Server.Smuggler.Documents
                             var endIndex = id.IndexOf(PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase);
                             var newId = id.Substring(0, endIndex);
 
-                            // ReSharper disable once PossibleNullReferenceException
                             _database.DocumentsStorage.VersioningStorage.Put(context, newId, document.Data, document.Flags, document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
                             continue;
                         }

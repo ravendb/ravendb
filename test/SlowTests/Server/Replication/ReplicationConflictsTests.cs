@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Indexes;
@@ -225,7 +226,7 @@ namespace SlowTests.Server.Replication
                 await SetupReplicationAsync(store1, store2);
 
                 var conflicts = WaitUntilHasConflict(store2, "foo/bar");
-                Assert.Equal(2, conflicts.Results.Length);
+                Assert.Equal(2, conflicts.Length);
             }
         }
 
@@ -257,8 +258,8 @@ namespace SlowTests.Server.Replication
 
                 await SetupReplicationAsync(store1, store2);
 
-                Assert.Equal(2, WaitUntilHasConflict(store2, "users/3").Results.Length);
-                Assert.Equal(2, WaitUntilHasConflict(store2, "users/2").Results.Length);
+                Assert.Equal(2, WaitUntilHasConflict(store2, "users/3").Length);
+                Assert.Equal(2, WaitUntilHasConflict(store2, "users/2").Length);
                 // conflict between two tombstones, resolved automaticlly to tombstone.
                 var tombstones = WaitUntilHasTombstones(store2);
                 Assert.Equal("users/1", tombstones.Single());
@@ -464,7 +465,7 @@ namespace SlowTests.Server.Replication
                 await SetupReplicationAsync(store1, store3);
                 await SetupReplicationAsync(store2, store3);
 
-                Assert.Equal(3, WaitUntilHasConflict(store3, "foo/bar", 3).Results.Length);
+                Assert.Equal(3, WaitUntilHasConflict(store3, "foo/bar", 3).Length);
             }
         }
 
@@ -489,7 +490,7 @@ namespace SlowTests.Server.Replication
 
                 await SetupReplicationAsync(store1, store2);
 
-                Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
+                Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Length);
             }
         }
 
@@ -556,7 +557,7 @@ namespace SlowTests.Server.Replication
 
                 await SetReplicationConflictResolutionAsync(store2, StraightforwardConflictResolution.ResolveToLatest);
 
-                var count = WaitForValue(() => GetConflicts(store2, "foo/bar").Results.Length, 0);
+                var count = WaitForValue(() => store2.Commands().GetConflictsFor("foo/bar").Length, 0);
                 Assert.Equal(count, 0);
 
                 var newCollection = WaitForValue(() =>
@@ -603,7 +604,7 @@ namespace SlowTests.Server.Replication
                     s2.SaveChanges();
                 }
 
-                var count = WaitForValue(() => GetConflicts(store2, "foo/bar").Results.Length, 0);
+                var count = WaitForValue(() => store2.Commands().GetConflictsFor("foo/bar").Length, 0);
                 Assert.Equal(count, 0);
 
                 New_User2 newDoc = null;

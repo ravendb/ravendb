@@ -151,7 +151,13 @@ namespace FastTests
             {
                 var getConflictsCommand = new GetConflictsCommand(id);
                 RequestExecutor.Execute(getConflictsCommand, Context);
+                return getConflictsCommand.Result.Results;
+            }
 
+            public async Task<GetConflictsResult.Conflict[]> GetConflictsForAsync(string id)
+            {
+                var getConflictsCommand = new GetConflictsCommand(id);
+                await RequestExecutor.ExecuteAsync(getConflictsCommand, Context);
                 return getConflictsCommand.Result.Results;
             }
 

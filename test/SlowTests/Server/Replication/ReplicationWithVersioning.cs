@@ -94,8 +94,8 @@ namespace SlowTests.Server.Replication
             {
                 await GenerateConflict(storeA, storeB);
 
-                Assert.Equal(2, WaitUntilHasConflict(storeA, "foo/bar").Results.Length);
-                Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar").Results.Length);
+                Assert.Equal(2, WaitUntilHasConflict(storeA, "foo/bar").Length);
+                Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar").Length);
 
                 Assert.Equal(2, WaitForValue(() => storeA.Commands().GetRevisionsFor("foo/bar").Count, 2));
                 Assert.Equal(2, WaitForValue(() => storeB.Commands().GetRevisionsFor("foo/bar").Count, 2));
@@ -110,8 +110,8 @@ namespace SlowTests.Server.Replication
             {
                 await GenerateConflict(storeA, storeB);
 
-                Assert.Equal(2, WaitUntilHasConflict(storeA, "foo/bar").Results.Length);
-                Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar").Results.Length);
+                Assert.Equal(2, WaitUntilHasConflict(storeA, "foo/bar").Length);
+                Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar").Length);
 
                 Assert.Equal(2, WaitForValue(() => storeA.Commands().GetRevisionsFor("foo/bar").Count, 2));
                 Assert.Equal(2, WaitForValue(() => storeB.Commands().GetRevisionsFor("foo/bar").Count, 2));
