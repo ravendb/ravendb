@@ -11,7 +11,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Server;
@@ -91,6 +90,9 @@ namespace FastTests
         {
             try
             {
+                if (caller != null && caller.Contains(".ctor"))
+                    throw new InvalidOperationException($"Usage of '{nameof(GetDocumentStore)}' without explicit '{nameof(caller)}' parameter is forbidden from inside constructor.");
+
                 lock (_getDocumentStoreSync)
                 {
                     defaultServer = defaultServer ?? Server;

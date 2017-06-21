@@ -34,7 +34,8 @@ namespace FastTests
 
         private static readonly ConcurrentSet<string> GlobalPathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        private static readonly SemaphoreSlim ConcurrentTests;
+        private static readonly SemaphoreSlim ConcurrentTestsSemaphore;
+        private volatile bool _concurrentTestsSemaphoreTaken;
 
         private readonly ConcurrentSet<string> _localPathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -89,7 +90,7 @@ namespace FastTests
             }
 
             Console.WriteLine("Max number of concurrent tests is: " + maxNumberOfConcurrentTests);
-            ConcurrentTests = new SemaphoreSlim(maxNumberOfConcurrentTests, maxNumberOfConcurrentTests);
+            ConcurrentTestsSemaphore = new SemaphoreSlim(maxNumberOfConcurrentTests, maxNumberOfConcurrentTests);
         }
 
         public void DoNotReuseServer(IDictionary<string, string> customSettings = null)
@@ -288,7 +289,11 @@ namespace FastTests
         {
             GC.SuppressFinalize(this);
 
-            ConcurrentTests.Release();
+            if (_concurrentTestsSemaphoreTaken)
+            {
+                ConcurrentTestsSemaphore.Release();
+                _concurrentTestsSemaphoreTaken = false;
+            }
 
             var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
 
@@ -310,7 +315,8 @@ namespace FastTests
 
         public Task InitializeAsync()
         {
-            return ConcurrentTests.WaitAsync();
+            return ConcurrentTestsSemaphore.WaitAsync()
+                .ContinueWith(x => _concurrentTestsSemaphoreTaken = true);
         }
 
         public Task DisposeAsync()

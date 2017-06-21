@@ -14,14 +14,10 @@ namespace SlowTests.Issues
     {
         public class IsInTriggersSyncFromAsync : RavenTestBase
         {
-            private readonly DocumentStore _store;
-
-            public IsInTriggersSyncFromAsync()
+            private void CreateData(IDocumentStore store)
             {
-                _store = GetDocumentStore();
-
-                new Index().Execute(_store);
-                using (var session = _store.OpenSession())
+                new Index().Execute(store);
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Entity
                     {
@@ -39,47 +35,62 @@ namespace SlowTests.Issues
             [Fact]
             public async Task IsInTriggersSyncFromAsyncException()
             {
-                using (var session = _store.OpenAsyncSession())
+                using (var store = GetDocumentStore())
                 {
-                    var queryToken = "ABC";
-                    try
+                    CreateData(store);
+
+                    using (var session = store.OpenAsyncSession())
                     {
-                        var entity = await session.Query<Entity, Index>()
-                            .Customize(q => q.WaitForNonStaleResults())
-                            .Where(e => e.Id == "solo" && queryToken.In((e.Tokens)))
-                            .FirstOrDefaultAsync();
-                    }
-                    catch (Exception e)
-                    {
-                        Assert.NotNull(e);
+                        var queryToken = "ABC";
+                        try
+                        {
+                            var entity = await session.Query<Entity, Index>()
+                                .Customize(q => q.WaitForNonStaleResults())
+                                .Where(e => e.Id == "solo" && queryToken.In((e.Tokens)))
+                                .FirstOrDefaultAsync();
+                        }
+                        catch (Exception e)
+                        {
+                            Assert.NotNull(e);
+                        }
                     }
                 }
             }
             [Fact]
             public async Task IsInTriggersSyncFromAsyncWorks()
             {
-                using (var session = _store.OpenAsyncSession())
+                using (var store = GetDocumentStore())
                 {
-                    var queryToken = "ABC";
-                    var entity = await session.Query<Entity, Index>()
-                        .Customize(q => q.WaitForNonStaleResults())
-                        .Where(e => e.Id == "solo" && e.Tokens.Contains(queryToken))
-                        .FirstOrDefaultAsync();
-                    Assert.NotNull(entity);
-                    Assert.Equal("solo", entity.Id);
+                    CreateData(store);
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var queryToken = "ABC";
+                        var entity = await session.Query<Entity, Index>()
+                            .Customize(q => q.WaitForNonStaleResults())
+                            .Where(e => e.Id == "solo" && e.Tokens.Contains(queryToken))
+                            .FirstOrDefaultAsync();
+                        Assert.NotNull(entity);
+                        Assert.Equal("solo", entity.Id);
+                    }
                 }
             }
             [Fact]
             public async Task WithoutIsInItWorks()
             {
-                using (var session = _store.OpenAsyncSession())
+                using (var store = GetDocumentStore())
                 {
-                    var entity = await session.Query<Entity, Index>()
-                        .Customize(q => q.WaitForNonStaleResults())
-                        .Where(e => e.Id == "solo")
-                        .FirstOrDefaultAsync();
-                    Assert.NotNull(entity);
-                    Assert.Equal("solo", entity.Id);
+                    CreateData(store);
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var entity = await session.Query<Entity, Index>()
+                            .Customize(q => q.WaitForNonStaleResults())
+                            .Where(e => e.Id == "solo")
+                            .FirstOrDefaultAsync();
+                        Assert.NotNull(entity);
+                        Assert.Equal("solo", entity.Id);
+                    }
                 }
             }
 

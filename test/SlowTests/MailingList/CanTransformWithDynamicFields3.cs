@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Newtonsoft.Json.Linq;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Transformers;
@@ -13,19 +12,14 @@ namespace SlowTests.MailingList
 {
     public class CanTransformWithDynamicFields : RavenTestBase
     {
-        private readonly IDocumentStore _store;
-
-        public CanTransformWithDynamicFields()
+        private static void CreateData(IDocumentStore store)
         {
-            _store = GetDocumentStore();
-
-            // SetUp
-            using (var session = _store.OpenSession())
+            using (var session = store.OpenSession())
             {
                 session.Store(new BaseEntity
                 {
                     Id = "entity/1",
-                    SupportedLanguages = new List<string> { "en", "pt" }
+                    SupportedLanguages = new List<string> {"en", "pt"}
                 });
                 session.Store(new Entity
                 {
@@ -169,49 +163,59 @@ namespace SlowTests.MailingList
         [Fact]
         public void WillMapPropertiesOnMapIndexes()
         {
-            new TranslatedEntities_Map().Execute(_store);
-            new GlobalizationTransformer().Execute(_store);
-
-            WaitForIndexing(_store);
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                var results = session.Advanced.DocumentQuery<BaseEntityResult, TranslatedEntities_Map>()
-                    .SetTransformer(typeof(GlobalizationTransformer).Name)
-                    .SetTransformerParameters(new Dictionary<string, object>
+                CreateData(store);
+
+                new TranslatedEntities_Map().Execute(store);
+                new GlobalizationTransformer().Execute(store);
+
+                WaitForIndexing(store);
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.DocumentQuery<BaseEntityResult, TranslatedEntities_Map>()
+                        .SetTransformer(typeof(GlobalizationTransformer).Name)
+                        .SetTransformerParameters(new Dictionary<string, object>
                         {
                             {GlobalizationTransformer.GlobalizationQueryListenerKey, "pt"}
                         })
-                    .ToList();
+                        .ToList();
 
-                Assert.Equal(1, results.Count);
-                Assert.Equal("entity/1", results.First().Id);
-                Assert.Equal("Ole mundo", results.First().Title);
-                TestHelper.AssertNoIndexErrors(_store);
+                    Assert.Equal(1, results.Count);
+                    Assert.Equal("entity/1", results.First().Id);
+                    Assert.Equal("Ole mundo", results.First().Title);
+                    TestHelper.AssertNoIndexErrors(store);
+                }
             }
         }
 
         [Fact]
         public void WillMapPropertiesOnMapReduceIndexes()
         {
-            new TranslatedEntities_MapReduce().Execute(_store);
-            new GlobalizationTransformer().Execute(_store);
-
-            WaitForIndexing(_store);
-
-            using (var session = _store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                var results = session.Advanced.DocumentQuery<BaseEntityResult, TranslatedEntities_MapReduce>()
-                    .SetTransformer(typeof(GlobalizationTransformer).Name)
-                    .SetTransformerParameters(new Dictionary<string, object>
+                CreateData(store);
+
+                new TranslatedEntities_MapReduce().Execute(store);
+                new GlobalizationTransformer().Execute(store);
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.DocumentQuery<BaseEntityResult, TranslatedEntities_MapReduce>()
+                        .SetTransformer(typeof(GlobalizationTransformer).Name)
+                        .SetTransformerParameters(new Dictionary<string, object>
                         {
                             {GlobalizationTransformer.GlobalizationQueryListenerKey, "pt"}
                         })
-                    .ToList();
+                        .ToList();
 
-                Assert.Equal(1, results.Count);
-                Assert.Equal("entity/1", results.First().Id);
-                Assert.Equal("Ole mundo", results.First().Title);
-                TestHelper.AssertNoIndexErrors(_store);
+                    Assert.Equal(1, results.Count);
+                    Assert.Equal("entity/1", results.First().Id);
+                    Assert.Equal("Ole mundo", results.First().Title);
+                    TestHelper.AssertNoIndexErrors(store);
+                }
             }
         }
     }

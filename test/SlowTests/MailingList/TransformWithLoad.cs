@@ -11,11 +11,8 @@ namespace SlowTests.MailingList
 {
     public class TransformWithLoad : RavenTestBase
     {
-        private IDocumentStore store;
-
-        public TransformWithLoad()
+        private void CreateData(IDocumentStore store)
         {
-            store = GetDocumentStore();
             new ContactTransformer().Execute(store);
             new Contact_ByName().Execute(store);
 
@@ -53,21 +50,26 @@ namespace SlowTests.MailingList
         [Fact]
         public void Should_get_id_when_transformer_loads_document()
         {
-            using (var session = store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                // Act
-                var contactListViewModel = session.Query<Contact, Contact_ByName>().TransformWith<ContactTransformer, ContactDto>().ToList();
+                CreateData(store);
 
-                // Assert
-                foreach (var detail in contactListViewModel.SelectMany(c => c.ContactDetails))
+                using (var session = store.OpenSession())
                 {
-                    Assert.NotNull(detail.Id);
-                }
+                    // Act
+                    var contactListViewModel = session.Query<Contact, Contact_ByName>().TransformWith<ContactTransformer, ContactDto>().ToList();
 
-                var contactViewModel = session.Load<ContactTransformer, ContactDto>("contacts/1");
-                foreach (var detail in contactViewModel.ContactDetails)
-                {
-                    Assert.NotNull(detail.Id);
+                    // Assert
+                    foreach (var detail in contactListViewModel.SelectMany(c => c.ContactDetails))
+                    {
+                        Assert.NotNull(detail.Id);
+                    }
+
+                    var contactViewModel = session.Load<ContactTransformer, ContactDto>("contacts/1");
+                    foreach (var detail in contactViewModel.ContactDetails)
+                    {
+                        Assert.NotNull(detail.Id);
+                    }
                 }
             }
         }
@@ -75,13 +77,17 @@ namespace SlowTests.MailingList
         [Fact]
         public void LazyLoadById()
         {
-            using (var session = store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                var contactViewModel = session.Advanced.Lazily.Load<ContactTransformer, ContactDto>("contacts/1");
-                var contactDto = contactViewModel.Value;
-                foreach (var detail in contactDto.ContactDetails)
+                CreateData(store);
+                using (var session = store.OpenSession())
                 {
-                    Assert.NotNull(detail.Id);
+                    var contactViewModel = session.Advanced.Lazily.Load<ContactTransformer, ContactDto>("contacts/1");
+                    var contactDto = contactViewModel.Value;
+                    foreach (var detail in contactDto.ContactDetails)
+                    {
+                        Assert.NotNull(detail.Id);
+                    }
                 }
             }
         }
@@ -89,38 +95,50 @@ namespace SlowTests.MailingList
         [Fact]
         public void EagerLoadById()
         {
-            using (var session = store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                var contactDto = session.Load<ContactTransformer, ContactDto>("contacts/1");
-                foreach (var detail in contactDto.ContactDetails)
+                CreateData(store);
+                using (var session = store.OpenSession())
                 {
-                    Assert.NotNull(detail.Id);
+                    var contactDto = session.Load<ContactTransformer, ContactDto>("contacts/1");
+                    foreach (var detail in contactDto.ContactDetails)
+                    {
+                        Assert.NotNull(detail.Id);
+                    }
                 }
             }
         }
         [Fact]
         public void WithMetadata()
         {
-            using (var session = store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                var c = session.Load<ContactTransformer, ContactDto>("contacts/1");
-                Assert.Equal("hello", c.MetaVal);
+                CreateData(store);
+                using (var session = store.OpenSession())
+                {
+                    var c = session.Load<ContactTransformer, ContactDto>("contacts/1");
+                    Assert.Equal("hello", c.MetaVal);
+                }
             }
         }
 
         [Fact]
         public void LazyLoadByIds()
         {
-            using (var session = store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                var result = session.Advanced.Lazily.Load<ContactTransformer, ContactDto>(new [] { "contacts/1", "contacts/2" }).Value;
-                Assert.Equal(2, result.Count);
-                Assert.NotNull(result["contacts/1"]);
-                Assert.Null(result["contacts/2"]);
-
-                foreach (var detail in result["contacts/1"].ContactDetails)
+                CreateData(store);
+                using (var session = store.OpenSession())
                 {
-                    Assert.NotNull(detail.Id);
+                    var result = session.Advanced.Lazily.Load<ContactTransformer, ContactDto>(new[] { "contacts/1", "contacts/2" }).Value;
+                    Assert.Equal(2, result.Count);
+                    Assert.NotNull(result["contacts/1"]);
+                    Assert.Null(result["contacts/2"]);
+
+                    foreach (var detail in result["contacts/1"].ContactDetails)
+                    {
+                        Assert.NotNull(detail.Id);
+                    }
                 }
             }
         }
@@ -128,16 +146,20 @@ namespace SlowTests.MailingList
         [Fact]
         public void LoadByIds()
         {
-            using (var session = store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                var result = session.Load<ContactTransformer, ContactDto>(new [] { "contacts/1", "contacts/2" });
-                Assert.Equal(2, result.Count);
-                Assert.NotNull(result["contacts/1"]);
-                Assert.Null(result["contacts/2"]);
-
-                foreach (var detail in result["contacts/1"].ContactDetails)
+                CreateData(store);
+                using (var session = store.OpenSession())
                 {
-                    Assert.NotNull(detail.Id);
+                    var result = session.Load<ContactTransformer, ContactDto>(new[] { "contacts/1", "contacts/2" });
+                    Assert.Equal(2, result.Count);
+                    Assert.NotNull(result["contacts/1"]);
+                    Assert.Null(result["contacts/2"]);
+
+                    foreach (var detail in result["contacts/1"].ContactDetails)
+                    {
+                        Assert.NotNull(detail.Id);
+                    }
                 }
             }
         }
@@ -145,12 +167,16 @@ namespace SlowTests.MailingList
         [Fact]
         public void PlainLoadByIds()
         {
-            using (var session = store.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                var result = session.Load<Contact>(new [] { "contacts/1", "contacts/2" });
-                Assert.Equal(2, result.Count);
-                Assert.NotNull(result["contacts/1"]);
-                Assert.Null(result["contacts/2"]);
+                CreateData(store);
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Load<Contact>(new[] {"contacts/1", "contacts/2"});
+                    Assert.Equal(2, result.Count);
+                    Assert.NotNull(result["contacts/1"]);
+                    Assert.Null(result["contacts/2"]);
+                }
             }
         }
 
