@@ -12,7 +12,6 @@ import getSettingsMenuItem = require("common/shell/menu/items/settings");
 import getTasksMenuItem = require("common/shell/menu/items/tasks");
 import getTransformersMenuItems = require("common/shell/menu/items/transformers");
 import getIndexesMenuItem = require("common/shell/menu/items/indexes");
-import getReplicationMenuItem = require("common/shell/menu/items/replication");
 import getDocumentsMenuItem = require("common/shell/menu/items/documents");
 
 export = generateMenuItems;
@@ -55,7 +54,6 @@ function generateActiveDatabaseMenuItems() {
         getDocumentsMenuItem(appUrls),
         getIndexesMenuItem(appUrls),
         ...transformersItems,
-        getReplicationMenuItem(appUrls),
         getTasksMenuItem(appUrls),
         getSettingsMenuItem(appUrls),
         getStatsMenuItem(appUrls),
