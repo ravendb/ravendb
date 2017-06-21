@@ -17,13 +17,22 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            Expression<Func<Versioned<User>, bool>> a = b => b.Previous.Name != b.Current.Name;
-            Console.WriteLine(a.CompileToJavascript());
+            for (int i = 0; i < 100; i++)
+            {
+                Console.WriteLine(i);
+                using (var a = new FastTests.Client.Subscriptions.Subscriptions())
+                {
+                    try
+                    {
+                        a.SubscriptionSimpleTakeOverStrategy().Wait();
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
 
-            //using (var a  = new FastTests.Client.Subscriptions.SubscriptionOperationsSignaling())
-            //{
-            //    a.WaitOnSubscriptionStopDueToSubscriberError();
-            //}
+                    }
+                }
+            }
         }
     }
 }

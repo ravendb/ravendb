@@ -288,7 +288,8 @@ namespace FastTests
         {
             GC.SuppressFinalize(this);
 
-            ConcurrentTests.Release();
+            if (_initializeAsyncCalled)
+                ConcurrentTests.Release();
 
             var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
 
@@ -308,8 +309,10 @@ namespace FastTests
             exceptionAggregator.ThrowIfNeeded();
         }
 
+        private bool _initializeAsyncCalled;
         public Task InitializeAsync()
         {
+            _initializeAsyncCalled = true;
             return ConcurrentTests.WaitAsync();
         }
 

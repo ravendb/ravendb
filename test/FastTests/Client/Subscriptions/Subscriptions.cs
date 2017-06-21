@@ -254,14 +254,14 @@ namespace FastTests.Client.Subscriptions
                             return Task.CompletedTask;
                         };
 
-                    GC.KeepAlive(acceptedSubscription.Run(x =>
+                    var firstRun = acceptedSubscription.Run(x =>
                     {
                         foreach (var item in x.Items)
                         {
                             Interlocked.Increment(ref counter);
                             acceptedSusbscriptionList.Add(item.Result);
                         }
-                    }));
+                    });
 
 
                     Thing thing;
@@ -291,6 +291,9 @@ namespace FastTests.Client.Subscriptions
                                 takingOverSubscriptionList.Add(item.Result);
                             }
                         }));
+
+                        Assert.ThrowsAsync<SubscriptionInUseException>(() => firstRun).Wait();
+
 
                         await CreateDocuments(store, 5);
 
