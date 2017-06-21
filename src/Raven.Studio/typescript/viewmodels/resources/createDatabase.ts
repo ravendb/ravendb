@@ -77,7 +77,7 @@ class createDatabase extends dialogViewModelBase {
     compositionComplete() {
         super.compositionComplete();
         this.syncQrCode();
-        this.setupDisableReasons("#SavingKeyData");
+        this.setupDisableReasons("#savingKeyData");
 
         this.databaseModel.encryption.key.subscribe(() => {
             this.syncQrCode();
