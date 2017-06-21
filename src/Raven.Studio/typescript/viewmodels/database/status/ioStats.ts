@@ -113,28 +113,37 @@ class hitTest {
         }
     }
 
+    onMouseDown() {
+        this.cursor(graphHelper.prefixStyle("grabbing"));
+    }
+
+    onMouseUp() {
+        this.cursor(graphHelper.prefixStyle("grab"));
+    }
+
     onMouseMove() {
         const clickLocation = d3.mouse(this.container.node());
         const items = this.findItems(clickLocation[0], clickLocation[1]);
 
         const overToggleIndexes = items.filter(x => x.actionType === "toggleIndexes").length > 0;
-        this.cursor(overToggleIndexes ? "pointer" : "auto");
+        this.cursor(overToggleIndexes ? "pointer" : "auto"); //TODO: move it!
 
         const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as Raven.Server.Documents.Handlers.IOMetricsRecentStats)[0];
         if (currentItem) {
             this.handleTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);
-        }
-        else {
+            this.cursor("auto");
+        } else {
             const currentItem = items.filter(x => x.actionType === "closedTrackItem").map(x => x.arg as Raven.Server.Documents.Handlers.IOMetricsRecentStats)[0];
             if (currentItem) {
                 this.handleClosedTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);
-            }
-            else {
+                this.cursor("auto");
+            } else {
                 const currentGapItem = items.filter(x => x.actionType === "gapItem").map(x => x.arg as timeGapInfo)[0];
                 if (currentGapItem) {
                     this.handleGapTooltip(currentGapItem, clickLocation[0], clickLocation[1]);
-                }
-                else {
+                    this.cursor("auto");
+                } else {
+                    this.cursor(overToggleIndexes ? "pointer" : graphHelper.prefixStyle("grab"));
                     this.removeTooltip();
                 }
             }           
@@ -471,17 +480,17 @@ class ioStats extends viewModelBase {
         selection.on("click", () => this.hitTest.onClick());
 
         selection
-            .on("mousedown.tip", () => selection.on("mousemove.tip", null))
-            .on("mouseup.tip", () => selection.on("mousemove.tip", onMove));
-
-        selection
-            .on("mousedown.live", () => {
+            .on("mousedown.hit", () => {
+                this.hitTest.onMouseDown();
+                selection.on("mousemove.tip", null);
                 if (this.liveViewClient()) {
                     this.liveViewClient().pauseUpdates();
                 }
             });
         selection
-            .on("mouseup.live", () => {
+            .on("mouseup.hit", () => {
+                this.hitTest.onMouseUp();
+                selection.on("mousemove.tip", onMove);
                 if (this.liveViewClient()) {
                     this.liveViewClient().resumeUpdates();
                 }
@@ -818,22 +827,21 @@ class ioStats extends viewModelBase {
         let offset = ioStats.axisHeight;
 
         if (this.isIndexesExpanded()) {
-            offset += ioStats.openedTrackHeight * this.data.Environments.length + ioStats.closedTrackHeight;
-        }
-        else {
-            offset += ioStats.openedTrackHeight * 4; // * 4 because I have 4 tracks: Data|Indexes|Subscriptions|Configurations
+            offset += (ioStats.openedTrackHeight + ioStats.trackMargin) * this.data.Environments.length + ioStats.closedTrackHeight + ioStats.trackMargin;
+        } else {
+            offset += (ioStats.openedTrackHeight + ioStats.trackMargin) * (this.data.Environments.filter(x => x.Type !== "Index").length + 1);
         }        
 
-        const extraBottomMargin = 100;
-        const availableHeightForTracks = this.totalHeight - ioStats.brushSectionHeight;        
+        const extraBottomMargin = 10;
+        const availableHeightForTracks = this.totalHeight - ioStats.brushSectionHeight;
 
         this.maxYOffset = Math.max(offset + extraBottomMargin - availableHeightForTracks, 0);
     }
 
     private findTrackNamesWithoutCommonPrefix(): string[] {
-        const result = new Set<string>();              
+        const result = new Set<string>();
 
-        this.data.Environments.forEach(track => {                  
+        this.data.Environments.forEach(track => {
             const trackName = track.Path.substring(this.commonPathsPrefix.length);           
             result.add(trackName);
         });
@@ -1048,6 +1056,12 @@ class ioStats extends viewModelBase {
             
             // 5. Draw gaps   
             this.drawGaps(context, xScale);
+
+            graphHelper.drawScroll(context,
+                { left: this.totalWidth, top: ioStats.axisHeight },
+                this.currentYOffset,
+                this.totalHeight - ioStats.brushSectionHeight - ioStats.axisHeight,
+                this.maxYOffset ? this.maxYOffset + this.totalHeight - ioStats.brushSectionHeight - ioStats.axisHeight : 0);
         }
         finally {
             context.restore();
@@ -1065,7 +1079,7 @@ class ioStats extends viewModelBase {
         // 2. Join the overlapping array durations
         joinedDurations.push(durationsInfo[0]);
 
-        for (let i = 1; i < durationsInfo.length; i++) {            
+        for (let i = 1; i < durationsInfo.length; i++) {
             const currentStart = durationsInfo[i][0];
             const currentEnd = durationsInfo[i][1];
 
@@ -1083,7 +1097,7 @@ class ioStats extends viewModelBase {
         return joinedDurations;
     }
 
-    private filtered(envPath: string): boolean {             
+    private filtered(envPath: string): boolean {
         return _.includes(this.filteredIndexesTracksNames(), envPath.substring(this.commonPathsPrefix.length + 1 + ioStats.indexesString.length));
     }
 
@@ -1116,7 +1130,7 @@ class ioStats extends viewModelBase {
         let xTextStart = 5;
         let rectWidth: number;
         let addedWidth = 8;
-        let drawArrow = false;       
+        let drawArrow = false;
         let skipDrawing = false;
 
         const isIndexTrack = trackName.startsWith(ioStats.indexesString);
@@ -1176,7 +1190,7 @@ class ioStats extends viewModelBase {
             const gapX = Math.floor(range[i]) + 0.5;
          
             context.moveTo(gapX, ioStats.axisHeight);
-            context.lineTo(gapX, this.totalHeight);          
+            context.lineTo(gapX, this.totalHeight);
 
             // Can't use xScale.invert here because there are Duplicate Values in xScale.range,
             // Using direct array access to xScale.domain instead
@@ -1232,13 +1246,13 @@ class ioStats extends viewModelBase {
         $input.val(null);
     }
 
-    private dataImported(result: string) {              
+    private dataImported(result: string) {
         this.cancelLiveView();
 
         try {
             const importedData: Raven.Server.Documents.Handlers.IOMetricsResponse = JSON.parse(result); 
 
-            // Check if data is an IOStats json data..                                  
+            // Check if data is an IOStats json data..
             if (!importedData.hasOwnProperty('Environments')) {
                 messagePublisher.reportError("Invalid IO Stats file format", undefined, undefined);
             }
@@ -1249,7 +1263,7 @@ class ioStats extends viewModelBase {
                 this.data = importedData;
                 this.fillCache();     
                 this.prepareTimeData();
-                this.initViewData();                
+                this.initViewData();
                 this.setLegendScales();
                 this.draw(true);
                 this.isImport(true);
