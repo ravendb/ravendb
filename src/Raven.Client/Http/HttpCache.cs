@@ -70,7 +70,13 @@ namespace Raven.Client.Http
 
             ~HttpCacheItem()
             {
-                Release();
+                try
+                {
+                    Release();
+                }
+                catch (ObjectDisposedException)
+                {
+                }
             }
 
         }

@@ -251,7 +251,13 @@ namespace Sparrow.Json
 
         ~ArenaMemoryAllocator()
         {
-            Dispose();
+            try
+            {
+                Dispose();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
         }
 
         public override string ToString()
