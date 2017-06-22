@@ -100,13 +100,12 @@ namespace Raven.Server
 
                             if (CommandLineSwitches.PrintServerId)
                                 Console.WriteLine($"Server ID is {server.ServerStore.GetServerId()}.");
-
+                            
                             if (CommandLineSwitches.LaunchBrowser)
-                                BrowserHelper.OpenStudioInBrowser(server);
+                                BrowserHelper.OpenStudioInBrowser(server.ServerStore.NodeHttpServerUrl);
 
-                            Console.WriteLine($"Listening on: {string.Join(", ", server.WebUrls)}");
+                            Console.WriteLine($"Server available on: {server.ServerStore.NodeHttpServerUrl}");
 
-                            var serverWebUrl = server.WebUrls[0];
                             server.GetTcpServerStatusAsync()
                                 .ContinueWith(tcp =>
                                 {
@@ -116,7 +115,7 @@ namespace Raven.Server
                                     }
                                     else
                                     {
-                                        Console.Error.WriteLine($"Tcp listen failure (see {serverWebUrl}/info/tcp for details) {tcp.Exception.Message}");
+                                        Console.Error.WriteLine($"Tcp listen failure (see {server.ServerStore.NodeHttpServerUrl}/info/tcp for details) {tcp.Exception.Message}");
                                     }
                                 });
                             Console.WriteLine("Server started, listening to requests...");

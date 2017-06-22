@@ -11,11 +11,10 @@ namespace Raven.Server.Utils
 {
     public static class BrowserHelper
     {
-        public static void OpenStudioInBrowser(RavenServer server)
+        public static void OpenStudioInBrowser(string url)
         {
             try
             {
-                var url = server.ServerStore.NodeHttpServerUrl;
                 if (PlatformDetails.RunningOnPosix == false)
                 {
                     Process.Start(new ProcessStartInfo("cmd", $"/c start {url}"));

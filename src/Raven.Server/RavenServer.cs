@@ -245,7 +245,8 @@ namespace Raven.Server
                             port = uri.Port;
                     }
                 }
-
+                bool successfullyBoundToAtLeastOne = false;
+                var errors = new List<Exception>();
                 foreach (var ipAddress in await GetTcpListenAddresses(host))
                 {
                     if (_logger.IsInfoEnabled)
@@ -260,15 +261,29 @@ namespace Raven.Server
                     }
                     catch (Exception ex)
                     {
-                        throw new IOException("Unable to start tcp listener on " + ipAddress + " on port " + port, ex);
+                        var msg = "Unable to start tcp listener on " + ipAddress + " on port " + port;
+                        errors.Add(new IOException(msg, ex));
+                        if (_logger.IsOperationsEnabled)
+                            _logger.Operations(msg, ex);
+                        continue;
                     }
+                    successfullyBoundToAtLeastOne = true;
                     var listenerLocalEndpoint = (IPEndPoint)listener.LocalEndpoint;
                     status.Port = listenerLocalEndpoint.Port;
-
+                    // when binding to multiple interfaces and the port is 0, use
+                    // the same port across all interfaces
+                    port = listenerLocalEndpoint.Port;
                     for (int i = 0; i < 4; i++)
                     {
                         ListenToNewTcpConnection(listener);
                     }
+                }
+
+                if(successfullyBoundToAtLeastOne == false)
+                {
+                    if (errors.Count == 1)
+                        throw errors[0];
+                    throw new AggregateException(errors);
                 }
                 return status;
             }

@@ -1225,9 +1225,10 @@ namespace Raven.Server.ServerWide
                 if (_nodeHttpServerUrl != null)
                     return _nodeHttpServerUrl;
 
-                var webUrls = _ravenServer.WebUrls;
-                Debug.Assert(webUrls != null && webUrls.Length > 0);
-                return _nodeHttpServerUrl = Configuration.Core.GetNodeHttpServerUrl(webUrls[0]);
+                Debug.Assert(_ravenServer.WebUrls != null && _ravenServer.WebUrls.Length > 0);
+                return _nodeHttpServerUrl = Configuration.Core.GetNodeHttpServerUrl(
+                    Configuration.Core.PublicServerUrl?.UriValue ?? _ravenServer.WebUrls[0]
+                    );
             }
         }
 
