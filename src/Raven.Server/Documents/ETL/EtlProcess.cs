@@ -6,8 +6,8 @@ using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions.Patching;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Json.Converters;
+using Raven.Client.Server;
 using Raven.Client.Server.ETL;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Stats;
@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.ETL
 
         public EtlMetricsCountersManager Metrics { get; protected set; }
 
-        public abstract string Name { get; }
+        public string Name { get; protected set; }
 
         public abstract void Start();
 
@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.ETL
         public abstract Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection();
     }
 
-    public abstract class EtlProcess<TExtracted, TTransformed, TDestination> : EtlProcess where TExtracted : ExtractedItem where TDestination : EtlDestination
+    public abstract class EtlProcess<TExtracted, TTransformed, TConfiguration, TConnectionString> : EtlProcess where TExtracted : ExtractedItem where TConfiguration : EtlConfiguration<TConnectionString> where TConnectionString : ConnectionString
     {
         private readonly ManualResetEventSlim _waitForChanges = new ManualResetEventSlim();
         private readonly CancellationTokenSource _cts;
@@ -69,14 +69,15 @@ namespace Raven.Server.Documents.ETL
         private readonly ServerStore _serverStore;
         protected TimeSpan? FallbackTime;
 
-        public readonly TDestination Destination;
+        public readonly TConfiguration Configuration;
 
-        protected EtlProcess(Transformation transformation, TDestination destination, DocumentDatabase database, ServerStore serverStore, string tag)
+        protected EtlProcess(Transformation transformation, TConfiguration configuration, DocumentDatabase database, ServerStore serverStore, string tag)
         {
             Transformation = transformation;
-            Destination = destination;
+            Configuration = configuration;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(database.DatabaseShutdown);
             Tag = tag;
+            Name = $"{Configuration.Name}/{Transformation.Name}";
             Logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
             Database = database;
             _serverStore = serverStore;
@@ -87,8 +88,6 @@ namespace Raven.Server.Documents.ETL
         }
 
         protected CancellationToken CancellationToken => _cts.Token;
-
-        public override string Name => Transformation.Name;
 
         protected abstract IEnumerator<TExtracted> ConvertDocsEnumerator(IEnumerator<Document> docs, string collection);
 
@@ -438,7 +437,7 @@ namespace Raven.Server.Documents.ETL
 
                     if (didWork)
                     {
-                        var command = new UpdateEtlProcessStateCommand(Database.Name, Destination.Name, Transformation.Name, Statistics.LastProcessedEtag,
+                        var command = new UpdateEtlProcessStateCommand(Database.Name, Configuration.Name, Transformation.Name, Statistics.LastProcessedEtag,
                             ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector),
                             _serverStore.NodeTag);
 
@@ -529,7 +528,7 @@ namespace Raven.Server.Documents.ETL
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var stateBlittable = _serverStore.Cluster.Read(context, EtlProcessState.GenerateItemName(Database.Name, Destination.Name, Name));
+                var stateBlittable = _serverStore.Cluster.Read(context, EtlProcessState.GenerateItemName(Database.Name, Configuration.Name, Transformation.Name));
 
                 if (stateBlittable != null)
                 {

@@ -5,16 +5,16 @@ using Raven.Client.Server.ETL.SQL;
 
 namespace Raven.Client.Server.ETL
 {
-    public class SqlDestination : EtlDestination
+    public class SqlEtlConfiguration : EtlConfiguration<SqlConnectionString>
     {
         private string _name;
 
-        public SqlDestination()
+        public SqlEtlConfiguration()
         {
             SqlTables = new List<SqlEtlTable>();
         }
 
-        public SqlEtlConnection Connection { get; set; }
+        public string FactoryName { get; set; }
 
         public bool ParameterizeDeletes { get; set; } = true;
 
@@ -26,13 +26,14 @@ namespace Raven.Client.Server.ETL
 
         public List<SqlEtlTable> SqlTables { get; set; }
 
-        public override bool Validate(ref List<string> errors)
-        {
-            if (string.IsNullOrEmpty(Connection.FactoryName))
-                errors.Add($"{nameof(Connection.FactoryName)} cannot be empty");
+        public override EtlType EtlType => EtlType.Sql;
 
-            if (string.IsNullOrEmpty(Connection.ConnectionString))
-                errors.Add($"{nameof(Connection.ConnectionString)} cannot be empty");
+        public override bool Validate(out List<string> errors)
+        {
+            base.Validate(out errors);
+
+            if (string.IsNullOrEmpty(FactoryName))
+                errors.Add($"{nameof(FactoryName)} cannot be empty");
 
             if (SqlTables.Count == 0)
                 errors.Add($"{nameof(SqlTables)} cannot be empty");
@@ -40,22 +41,19 @@ namespace Raven.Client.Server.ETL
             return errors.Count == 0;
         }
 
-        public override string Name
+        public override string GetDestination()
         {
-            get
-            {
-                if (_name != null)
-                    return _name;
+            if (_name != null)
+                return _name;
 
-                var (database, server) = SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(Connection.FactoryName, Connection.ConnectionString);
+            var (database, server) = SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(FactoryName, Connection.ConnectionString);
 
-                return _name = $"{database}@{server} [{string.Join(" ", SqlTables.Select(x => x.TableName))}]";
-            }
+            return _name = $"{database}@{server}";
         }
 
         public override bool UsingEncryptedCommunicationChannel()
         {
-            switch (SqlProviderParser.GetSupportedProvider(Connection.FactoryName))
+            switch (SqlProviderParser.GetSupportedProvider(FactoryName))
             {
                 case SqlProvider.SqlClient:
                     var encrypt = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] {"Encrypt"}, throwIfNotFound: false);
@@ -83,7 +81,7 @@ namespace Raven.Client.Server.ETL
 
                     return false;
                 default:
-                    throw new NotSupportedException($"Factory '{Connection.FactoryName}' is not supported");
+                    throw new NotSupportedException($"Factory '{FactoryName}' is not supported");
             }
         }
     }

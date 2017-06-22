@@ -9,7 +9,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
 {
     public class UpdateEtlProcessStateCommand : UpdateValueForDatabaseCommand
     {
-        public string Destination { get; set; }
+        public string ConfigurationName { get; set; }
 
         public string TransformationName { get; set; }
 
@@ -24,10 +24,10 @@ namespace Raven.Server.ServerWide.Commands.ETL
             // for deserialization
         }
 
-        public UpdateEtlProcessStateCommand(string databaseName, string destination, string transformationName, long lastProcessedEtag, ChangeVectorEntry[] changeVector,
+        public UpdateEtlProcessStateCommand(string databaseName, string configurationName, string transformationName, long lastProcessedEtag, ChangeVectorEntry[] changeVector,
             string nodeTag) : base(databaseName)
         {
-            Destination = destination;
+            ConfigurationName = configurationName;
             TransformationName = transformationName;
             LastProcessedEtag = lastProcessedEtag;
             ChangeVector = changeVector;
@@ -36,7 +36,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public override string GetItemId()
         {
-            return EtlProcessState.GenerateItemName(DatabaseName, Destination, TransformationName);
+            return EtlProcessState.GenerateItemName(DatabaseName, ConfigurationName, TransformationName);
         }
 
         public override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
@@ -49,7 +49,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
             {
                 state = new EtlProcessState
                 {
-                    Destination = Destination,
+                    ConfigurationName = ConfigurationName,
                     TransformationName = TransformationName
                 };
             }
@@ -63,7 +63,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public override void FillJson(DynamicJsonValue json)
         {
-            json[nameof(Destination)] = Destination;
+            json[nameof(ConfigurationName)] = ConfigurationName;
             json[nameof(TransformationName)] = TransformationName;
             json[nameof(LastProcessedEtag)] = LastProcessedEtag;
             json[nameof(NodeTag)] = NodeTag;

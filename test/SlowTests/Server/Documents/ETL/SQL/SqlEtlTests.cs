@@ -19,6 +19,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Extensions;
 using Raven.Client.Server.ETL;
+using Raven.Client.Server.Operations.ConnectionStrings;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
@@ -609,6 +610,12 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                     await session.SaveChangesAsync();
                 }
 
+                store.Admin.Server.Send(new AddConnectionStringOperation<SqlConnectionString>(new SqlConnectionString()
+                {
+                    Name = "simulate",
+                    ConnectionString = GetConnectionString(store),
+                }, store.Database));
+
                 var database = GetDatabase(store.Database).Result;
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -620,20 +627,15 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                         {
                             PerformRolledBackTransaction = i % 2 != 0,
                             DocumentId = "orders/1-A",
-                            Configuration = new EtlConfiguration<SqlDestination>()
+                            Configuration = new SqlEtlConfiguration()
                             {
-                                Destination = new SqlDestination
+                                Name = "simulate",
+                                ConnectionStringName = "simulate",
+                                FactoryName = "System.Data.SqlClient",
+                                SqlTables =
                                 {
-                                    Connection = new SqlEtlConnection
-                                    {
-                                        ConnectionString = GetConnectionString(store),
-                                        FactoryName = "System.Data.SqlClient",
-                                    },
-                                    SqlTables =
-                                    {
-                                        new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
-                                        new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId"},
-                                    }
+                                    new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
+                                    new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId"},
                                 },
                                 Transforms =
                                 {
@@ -645,7 +647,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                                     }
                                 }
                             }
-                        }, database, context);
+                        }, database, database.ServerStore, context);
 
                         Assert.Null(result.LastAlert);
                         Assert.Equal(2, result.Summary.Count);
@@ -755,19 +757,14 @@ CREATE TABLE [dbo].[Attachments]
 
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
 
-                AddEtl(store, new EtlConfiguration<SqlDestination>
+                AddEtl(store, new SqlEtlConfiguration()
                 {
-                    Destination = new SqlDestination
+                    Name = "LoadingMultipleAttachments",
+                    FactoryName = "System.Data.SqlClient",
+                    ConnectionStringName = "test",
+                    SqlTables =
                     {
-                        Connection = new SqlEtlConnection()
-                        {
-                            FactoryName = "System.Data.SqlClient",
-                            ConnectionString = GetConnectionString(store)
-                        },
-                        SqlTables =
-                        {
-                            new SqlEtlTable {TableName = "Attachments", DocumentIdColumn = "UserId", InsertOnlyMode = false},
-                        },
+                        new SqlEtlTable {TableName = "Attachments", DocumentIdColumn = "UserId", InsertOnlyMode = false},
                     },
                     Transforms =
                     {
@@ -792,6 +789,10 @@ for (var i = 0; i < attachments.length; i++)
 "
                         }
                     }
+                }, new SqlConnectionString
+                {
+                    Name = "test",
+                    ConnectionString =  GetConnectionString(store)
                 });
 
                 etlDone.Wait(TimeSpan.FromMinutes(5));
@@ -955,20 +956,17 @@ loadToOrders(orderData);
 
         protected static void SetupSqlEtl(DocumentStore store, string script, bool insertOnly = false, List<string> collections = null)
         {
-            AddEtl(store, new EtlConfiguration<SqlDestination>
+            var connectionStringName = $"{store.Database}@{store.Urls.First()} to SQL DB";
+
+            AddEtl(store, new SqlEtlConfiguration()
             {
-                Destination = new SqlDestination
+                Name = connectionStringName,
+                ConnectionStringName = connectionStringName,
+                FactoryName = "System.Data.SqlClient",
+                SqlTables =
                 {
-                    Connection = new SqlEtlConnection()
-                    {
-                        FactoryName = "System.Data.SqlClient",
-                        ConnectionString = GetConnectionString(store)
-                    },
-                    SqlTables =
-                    {
-                        new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id", InsertOnlyMode = insertOnly},
-                        new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId", InsertOnlyMode = insertOnly},
-                    },
+                    new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id", InsertOnlyMode = insertOnly},
+                    new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId", InsertOnlyMode = insertOnly},
                 },
                 Transforms =
                 {
@@ -979,6 +977,10 @@ loadToOrders(orderData);
                         Script = script
                     }
                 }
+            }, new SqlConnectionString
+            {
+                Name = connectionStringName,
+                ConnectionString = GetConnectionString(store)
             });
         }
 

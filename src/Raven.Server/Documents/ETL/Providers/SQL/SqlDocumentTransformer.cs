@@ -19,11 +19,11 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         private const string AttachmentMarker = "$attachment/";
 
         private readonly Transformation _transformation;
-        private readonly SqlDestination _config;
+        private readonly SqlEtlConfiguration _config;
         private readonly PatchRequest _patchRequest;
         private readonly Dictionary<string, SqlTableWithRecords> _tables;
 
-        public SqlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, SqlDestination config)
+        public SqlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, SqlEtlConfiguration config)
             : base(database, context)
         {
             _transformation = transformation;

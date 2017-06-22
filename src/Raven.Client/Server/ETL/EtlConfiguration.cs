@@ -1,14 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
 using Sparrow;
+using Sparrow.Json;
 
 namespace Raven.Client.Server.ETL
 {
-    public class EtlConfiguration<T> : IDatabaseTask where T : EtlDestination
+    public abstract class EtlConfiguration<T> : IDatabaseTask where T : ConnectionString
     {
+        private bool _initialized;
         private long? _id;
 
-        public T Destination { get; set; }
+        public string Name { get; set; }
+
+        public abstract string GetDestination();
+
+        public string ConnectionStringName { get; set; }
+
+        [JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        internal T Connection { get; set; }
+
+        public void Initialize(T connectionString)
+        {
+            Connection = connectionString;
+            _initialized = true;
+        }
 
         public List<Transformation> Transforms { get; set; } = new List<Transformation>();
 
@@ -16,9 +32,18 @@ namespace Raven.Client.Server.ETL
         
         public virtual bool Validate(out List<string> errors)
         {
+            if (_initialized == false)
+                throw new InvalidOperationException("ETL configuration must be initialized");
+
             errors = new List<string>();
 
-            Destination.Validate(ref errors);
+            if (string.IsNullOrEmpty(Name))
+                errors.Add($"{nameof(Name)} of ETL configuration cannot be empty");
+
+            if (string.IsNullOrEmpty(ConnectionStringName))
+                errors.Add($"{nameof(ConnectionStringName)} cannot be empty");
+
+            Connection.Validate(ref errors);
 
             var uniqueNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -33,13 +58,21 @@ namespace Raven.Client.Server.ETL
             return errors.Count == 0;
         }
 
-        public long Id => _id ?? (_id = (long)Hashing.XXHash64.Calculate(Destination.Name.ToLowerInvariant(), Encodings.Utf8)).Value;
+        // TODO arek
+        public long Id => _id ?? (_id = (long)Hashing.XXHash64.Calculate(Name.ToLowerInvariant(), Encodings.Utf8)).Value;
 
-        public EtlType EtlType => Destination is RavenDestination ? EtlType.Raven : EtlType.Sql;
+        public abstract EtlType EtlType { get; }
+
+        public abstract bool UsingEncryptedCommunicationChannel();
 
         public ulong GetTaskKey()
         {
             return (ulong)Id;
+        }
+
+        public override string ToString()
+        {
+            return Name;
         }
     }
 }

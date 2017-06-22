@@ -20,6 +20,7 @@ using Raven.Client.Server.Tcp;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
@@ -145,6 +146,8 @@ namespace Raven.Server.ServerWide
                 case nameof(UpdateRavenEtlCommand):
                 case nameof(UpdateSqlEtlCommand):
                 case nameof(DeleteOngoingTaskCommand):
+                case nameof(AddRavenConnectionString):
+                case nameof(AddSqlConnectionString):
                     UpdateDatabase(context, type, cmd, index, leader);
                     break;
                 case nameof(UpdatePeriodicBackupStatusCommand):
