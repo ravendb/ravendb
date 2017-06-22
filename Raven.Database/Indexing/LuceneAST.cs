@@ -689,6 +689,8 @@ This edge-case has a very slim chance of happening, but still we should not igno
         public override Query ToGroupFieldQuery(LuceneASTQueryConfiguration configuration)
         {
             var query = Node.ToQuery(configuration);
+            if (query == null)
+                return null;
             query.Boost = GetBoost();
             return query;
         }
