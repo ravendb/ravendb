@@ -165,7 +165,7 @@ namespace SlowTests.Tests.Bugs.TransformResults
             }
         }
 
-        [Fact(Skip = "RavenDB-5278")]
+        [Fact]
         public void write_then_read_answer_with_votes()
         {
             using (var documentStore = GetDocumentStore())
