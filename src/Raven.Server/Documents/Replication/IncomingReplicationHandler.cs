@@ -378,11 +378,10 @@ namespace Raven.Server.Documents.Replication
 
         private unsafe byte* ReadExactlyUnlikely(int size, int diff)
         {
-            for (int i = diff - 1; i >= 0; i--)
-            {
-                _connectionOptions.PinnedBuffer.Pointer[i] =
-                    _connectionOptions.PinnedBuffer.Pointer[_connectionOptions.PinnedBuffer.Used + i];
-            }
+            UnmanagedMemory.Move(
+                _connectionOptions.PinnedBuffer.Pointer,
+                _connectionOptions.PinnedBuffer.Pointer + _connectionOptions.PinnedBuffer.Used,
+                diff);
             _connectionOptions.PinnedBuffer.Valid = diff;
             _connectionOptions.PinnedBuffer.Used = 0;
             while (diff < size)
