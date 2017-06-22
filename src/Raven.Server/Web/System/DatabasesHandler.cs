@@ -131,6 +131,12 @@ namespace Raven.Server.Web.System
                     var dbId = Constants.Documents.Prefix + dbName;
                     using (var dbRecord = ServerStore.Cluster.Read(context, dbId, out long etag))
                     {
+                        if (dbRecord == null)
+                        {
+                            HttpContext.Response.Headers.Remove("Content-Type");
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                            return Task.CompletedTask;
+                        }
                         WriteDatabaseInfo(dbName, dbRecord, context, writer);
                     }
                         return Task.CompletedTask;
