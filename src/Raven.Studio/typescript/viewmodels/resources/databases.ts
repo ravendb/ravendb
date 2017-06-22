@@ -202,7 +202,7 @@ class databases extends viewModelBase {
     private static toExternalUrl(dbInfo: databaseInfo, url: string) {
         // we have to redirect to different node, let's find first member where selected database exists
         const firstMember = dbInfo.nodes().find(x => x.type() === "Member");
-        const serverUrl = firstMember.serverUrl();
+        const serverUrl = firstMember ? firstMember.serverUrl() : clusterTopologyManager.default.localNodeUrl();
         return appUrl.toExternalUrl(serverUrl, url);
     }
 
