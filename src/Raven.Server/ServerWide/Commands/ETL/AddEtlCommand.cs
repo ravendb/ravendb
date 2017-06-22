@@ -6,24 +6,24 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.ETL
 {
-    public abstract class AddEtlCommand<T> : UpdateDatabaseCommand where T : EtlDestination
+    public abstract class AddEtlCommand<T, TConnectionString> : UpdateDatabaseCommand where T : EtlConfiguration<TConnectionString> where TConnectionString : ConnectionString
     {
-        public EtlConfiguration<T> Configuration { get; protected set; }
+        public T Configuration { get; protected set; }
 
         protected AddEtlCommand() : base(null)
         {
             // for deserialization
         }
 
-        protected AddEtlCommand(EtlConfiguration<T> configuration, string databaseName) : base(databaseName)
+        protected AddEtlCommand(T configuration, string databaseName) : base(databaseName)
         {
             Configuration = configuration;
         }
 
-        protected void Add(ref List<EtlConfiguration<T>> etls, EtlConfiguration<T> configuration)
+        protected void Add(ref List<T> etls, T configuration)
         {
             if (etls == null)
-                etls = new List<EtlConfiguration<T>>();
+                etls = new List<T>();
 
             etls.Add(configuration);
         }
@@ -34,14 +34,14 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
     }
 
-    public class AddRavenEtlCommand : AddEtlCommand<RavenDestination>
+    public class AddRavenEtlCommand : AddEtlCommand<RavenEtlConfiguration, RavenConnectionString>
     {
         public AddRavenEtlCommand()
         {
             // for deserialization
         }
 
-        public AddRavenEtlCommand(EtlConfiguration<RavenDestination> configuration, string databaseName) : base(configuration, databaseName)
+        public AddRavenEtlCommand(RavenEtlConfiguration configuration, string databaseName) : base(configuration, databaseName)
         {
 
         }
@@ -53,14 +53,14 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
     }
 
-    public class AddSqlEtlCommand : AddEtlCommand<SqlDestination>
+    public class AddSqlEtlCommand : AddEtlCommand<SqlEtlConfiguration, SqlConnectionString>
     {
         public AddSqlEtlCommand()
         {
             // for deserialization
         }
 
-        public AddSqlEtlCommand(EtlConfiguration<SqlDestination> configuration, string databaseName) : base(configuration, databaseName)
+        public AddSqlEtlCommand(SqlEtlConfiguration configuration, string databaseName) : base(configuration, databaseName)
         {
 
         }

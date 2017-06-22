@@ -4,36 +4,35 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
-using Raven.Client.Server.ETL;
 using Sparrow.Json;
 
-namespace Raven.Client.Server.Operations.ETL
+namespace Raven.Client.Server.Operations.ConnectionStrings
 {
-    public class AddEtlOperation<T> : IServerOperation<AddEtlOperationResult> where T : ConnectionString
+    public class AddConnectionStringOperation<T> : IServerOperation<AddConnectionStringResult> where T : ConnectionString
     {
-        private readonly EtlConfiguration<T> _configuration;
+        private readonly T _connectionString;
         private readonly string _databaseName;
 
-        public AddEtlOperation(EtlConfiguration<T> configuration, string databaseName)
+        public AddConnectionStringOperation(T connectionString, string databaseName)
         {
-            _configuration = configuration;
+            _connectionString = connectionString;
             _databaseName = databaseName;
         }
 
-        public RavenCommand<AddEtlOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<AddConnectionStringResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new AddEtlCommand(_configuration, _databaseName, context);
+            return new AddConnectionStringCommand(_connectionString, _databaseName, context);
         }
 
-        public class AddEtlCommand : RavenCommand<AddEtlOperationResult>
+        public class AddConnectionStringCommand : RavenCommand<AddConnectionStringResult>
         {
-            private readonly EtlConfiguration<T> _configuration;
+            private readonly T _connectionString;
             private readonly string _databaseName;
             private readonly JsonOperationContext _context;
 
-            public AddEtlCommand(EtlConfiguration<T> configuration, string databaseName, JsonOperationContext context)
+            public AddConnectionStringCommand(T connectionString, string databaseName, JsonOperationContext context)
             {
-                _configuration = configuration;
+                _connectionString = connectionString;
                 _databaseName = databaseName;
                 _context = context;
             }
@@ -42,14 +41,14 @@ namespace Raven.Client.Server.Operations.ETL
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/etl/add?name={_databaseName}&type={_configuration.EtlType}";
+                url = $"{node.Url}/admin/connection-strings/add?name={_databaseName}";
 
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var config = EntityToBlittable.ConvertEntityToBlittable(_configuration, DocumentConventions.Default, _context);
+                        var config = EntityToBlittable.ConvertEntityToBlittable(_connectionString, DocumentConventions.Default, _context);
                         _context.Write(stream, config);
                     })
                 };
@@ -62,12 +61,12 @@ namespace Raven.Client.Server.Operations.ETL
                 if (response == null)
                     ThrowInvalidResponse();
 
-                Result = JsonDeserializationClient.AddEtlOperationResult(response);
+                Result = JsonDeserializationClient.AddConnectionStringResult(response);
             }
         }
     }
 
-    public class AddEtlOperationResult
+    public class AddConnectionStringResult
     {
         public long? ETag { get; set; }
     }

@@ -458,13 +458,10 @@ loadToOrders(orderData);
         [Fact]
         public void Can_put_space_after_loadTo_method_in_script()
         {
-            var config = new EtlConfiguration<RavenDestination>()
+            var config = new RavenEtlConfiguration
             {
-                Destination = new RavenDestination
-                {
-                    Url = "http://localhost:8080",
-                    Database = "Northwind",
-                },
+                Name = "test",
+                ConnectionStringName = "test",
                 Transforms =
                 {
                     new Transformation
@@ -475,6 +472,8 @@ loadToOrders(orderData);
                     }
                 }
             };
+
+            config.Initialize(new RavenConnectionString() { Database = "Foo", Url = "http://localhost:8080" });
 
             List<string> errors;
             config.Validate(out errors);
@@ -491,13 +490,10 @@ loadToOrders(orderData);
         [Fact]
         public void Error_if_script_does_not_contain_any_loadTo_method()
         {
-            var config = new EtlConfiguration<RavenDestination>()
+            var config = new RavenEtlConfiguration
             {
-                Destination = new RavenDestination
-                {
-                    Url = "http://localhost:8080",
-                    Database = "Northwind",
-                },
+                Name = "test",
+                ConnectionStringName = "test",
                 Transforms =
                 {
                     new Transformation
@@ -508,6 +504,8 @@ loadToOrders(orderData);
                     }
                 }
             };
+
+            config.Initialize(new RavenConnectionString() { Database = "Foo", Url = "http://localhost:8080"});
 
             List<string> errors;
             config.Validate(out errors);

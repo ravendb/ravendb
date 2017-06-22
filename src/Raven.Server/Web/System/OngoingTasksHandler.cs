@@ -176,8 +176,8 @@ namespace Raven.Server.Web.System
                             NodeTag = tag,
                             NodeUrl = clusterTopology.GetUrlFromTag(tag)
                         },
-                        DestinationUrl = ravenEtl.Destination.Url,
-                        DestinationDatabase = ravenEtl.Destination.Database,
+                        DestinationUrl = ravenEtl.Connection.Url,
+                        DestinationDatabase = ravenEtl.Connection.Database,
                     };
                 }
             }
@@ -189,8 +189,8 @@ namespace Raven.Server.Web.System
                     var tag = dbTopology.WhoseTaskIsIt(sqlEtl, store.IsPassive());
 
                     var (database, server) =
-                        SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlEtl.Destination.Connection.FactoryName,
-                            sqlEtl.Destination.Connection.ConnectionString);
+                        SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlEtl.FactoryName,
+                            sqlEtl.Connection.ConnectionString);
 
                     var taskState = OngoingTaskState.Enabled; 
 
@@ -317,8 +317,8 @@ namespace Raven.Server.Web.System
                                 taskState = OngoingTaskState.PartiallyEnabled;
 
                             var (database, server) =
-                                SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlEtl.Destination.Connection.FactoryName,
-                                    sqlEtl.Destination.Connection.ConnectionString);
+                                SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlEtl.FactoryName,
+                                    sqlEtl.Connection.ConnectionString);
 
                             var sqlTaskInfo = new OngoingSqlEtl
                             {
@@ -362,8 +362,8 @@ namespace Raven.Server.Web.System
                                     NodeTag = tag,
                                     NodeUrl = clusterTopology.GetUrlFromTag(tag)
                                 },
-                                DestinationUrl = ravenEtl.Destination.Url,
-                                DestinationDatabase = ravenEtl.Destination.Database
+                                DestinationUrl = ravenEtl.Connection.Url,
+                                DestinationDatabase = ravenEtl.Connection.Database
                             };
 
                             WriteResult(context, ravenTaskInfo);

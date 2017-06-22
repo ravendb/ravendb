@@ -16,6 +16,7 @@ using Raven.Client.Server;
 using Raven.Client.Server.Commands;
 using Raven.Client.Server.ETL;
 using Raven.Client.Server.Operations;
+using Raven.Client.Server.Operations.ConnectionStrings;
 using Raven.Client.Server.Operations.ETL;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Client.Server.Tcp;
@@ -136,5 +137,8 @@ namespace Raven.Client.Json.Converters
         internal static readonly Func<BlittableJsonReaderObject, UpdateEtlOperationResult> UpdateEtlOperationResult = GenerateJsonDeserializationRoutine<UpdateEtlOperationResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, EtlProcessState> EtlProcessState = GenerateJsonDeserializationRoutine<EtlProcessState>();
+
+        internal static readonly Func<BlittableJsonReaderObject, AddConnectionStringResult> AddConnectionStringResult = GenerateJsonDeserializationRoutine<AddConnectionStringResult>();
+
     }
 }

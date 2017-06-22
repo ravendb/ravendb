@@ -6,11 +6,11 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.ETL
 {
-    public abstract class UpdateEtlCommand<T> : UpdateDatabaseCommand where T : EtlDestination
+    public abstract class UpdateEtlCommand<T, TConnectionString> : UpdateDatabaseCommand where T : EtlConfiguration<TConnectionString> where TConnectionString : ConnectionString
     {
         public long TaskId { get; protected set; }
 
-        public EtlConfiguration<T> Configuration { get; protected set; }
+        public T Configuration { get; protected set; }
 
         public EtlType EtlType { get; protected set; }
 
@@ -19,7 +19,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
             // for deserialization
         }
 
-        protected UpdateEtlCommand(long taskId, EtlConfiguration<T> configuration, EtlType type, string databaseName) : base(databaseName)
+        protected UpdateEtlCommand(long taskId, T configuration, EtlType type, string databaseName) : base(databaseName)
         {
             TaskId = taskId;
             Configuration = configuration;
@@ -34,14 +34,14 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
     }
 
-    public class UpdateRavenEtlCommand : UpdateEtlCommand<RavenDestination>
+    public class UpdateRavenEtlCommand : UpdateEtlCommand<RavenEtlConfiguration, RavenConnectionString>
     {
         public UpdateRavenEtlCommand()
         {
             // for deserialization
         }
 
-        public UpdateRavenEtlCommand(long taskId, EtlConfiguration<RavenDestination> configuration, string databaseName) : base(taskId, configuration, EtlType.Raven, databaseName)
+        public UpdateRavenEtlCommand(long taskId, RavenEtlConfiguration configuration, string databaseName) : base(taskId, configuration, EtlType.Raven, databaseName)
         {
 
         }
@@ -55,14 +55,14 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
     }
 
-    public class UpdateSqlEtlCommand : UpdateEtlCommand<SqlDestination>
+    public class UpdateSqlEtlCommand : UpdateEtlCommand<SqlEtlConfiguration, SqlConnectionString>
     {
         public UpdateSqlEtlCommand()
         {
             // for deserialization
         }
 
-        public UpdateSqlEtlCommand(long taskId, EtlConfiguration<SqlDestination> configuration, string databaseName) : base(taskId, configuration, EtlType.Sql, databaseName)
+        public UpdateSqlEtlCommand(long taskId, SqlEtlConfiguration configuration, string databaseName) : base(taskId, configuration, EtlType.Sql, databaseName)
         {
 
         }
