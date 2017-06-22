@@ -858,16 +858,19 @@ namespace Raven.Bundles.Replication.Tasks
 
                     using (var scope = stats.StartRecording("Attachments"))
                     {
-                        switch (ReplicateAttachments(destination,
-                            destinationsReplicationInformationForSource,
-                            scope,
-                            out lastAttachmentEtag))
+                        if (destination.IsETL == false)
                         {
-                            case true:
-                                replicated = true;
-                                break;
-                            case false:
-                                return false;
+                            switch (ReplicateAttachments(destination,
+                                destinationsReplicationInformationForSource,
+                                scope,
+                                out lastAttachmentEtag))
+                            {
+                                case true:
+                                    replicated = true;
+                                    break;
+                                case false:
+                                    return false;
+                            }
                         }
                     }
 
