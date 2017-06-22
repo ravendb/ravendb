@@ -447,6 +447,31 @@ namespace FastTests.Client.Queries
             }
         }
 
+        [Fact]
+        public void CanSearchFullyAnalyzedTerm()
+        {
+            using (var store = GetDocumentStore())
+            {
+
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
+                {
+                    Maps = { "from doc in docs.Images select new { doc.Name }" },
+                    Fields = new Dictionary<string, IndexFieldOptions>
+                    {
+                        { "Name", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed } }
+                    },
+                    Name = "test"
+                }}));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Query<Image>("test")
+                        .Search(x => x.Name, "AND")
+                        .ToList();
+                }
+                //If this doesn't throw the test pass
+            }
+        }
 
         [Fact]
         public void Can_search_inner_words_with_extra_condition()
