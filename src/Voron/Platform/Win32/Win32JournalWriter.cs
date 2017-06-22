@@ -233,7 +233,13 @@ namespace Voron.Platform.Win32
 
         ~Win32FileJournalWriter()
         {
-            Dispose();
+            try
+            {
+                Dispose();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
 
 #if DEBUG
             Debug.WriteLine(

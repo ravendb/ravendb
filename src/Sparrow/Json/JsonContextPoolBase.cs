@@ -24,7 +24,13 @@ namespace Sparrow.Json
         {
             ~ContextStack()
             {
-                Dispose();
+                try
+                {
+                    Dispose();
+                }
+                catch (ObjectDisposedException)
+                {
+                }
             }
 
             public void Dispose()
