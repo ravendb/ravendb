@@ -32,7 +32,7 @@ namespace Raven.Server.Documents
         private static readonly Slice TombstonesSlice;
         private static readonly Slice CollectionsSlice;
         private static readonly Slice LastReplicatedEtagsSlice;
-        private static readonly Slice ChangeVectorSlice;
+        private static readonly Slice GlobalChangeVectorSlice;
         private static readonly Slice EtagsSlice;
         private static readonly Slice LastEtagSlice;
 
@@ -86,7 +86,7 @@ namespace Raven.Server.Documents
             Slice.From(StorageEnvironment.LabelsContext, CollectionName.GetTablePrefix(CollectionTableType.Tombstones), ByteStringType.Immutable, out TombstonesPrefix);
             Slice.From(StorageEnvironment.LabelsContext, "DeletedEtags", ByteStringType.Immutable, out DeletedEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "LastReplicatedEtags", ByteStringType.Immutable, out LastReplicatedEtagsSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "ChangeVector", ByteStringType.Immutable, out ChangeVectorSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "GlobalChangeVector", ByteStringType.Immutable, out GlobalChangeVectorSlice);
             /*
             Collection schema is:
             full name
@@ -248,7 +248,7 @@ namespace Raven.Server.Documents
 
                     tx.CreateTree(DocsSlice);
                     tx.CreateTree(LastReplicatedEtagsSlice);
-                    tx.CreateTree(ChangeVectorSlice);
+                    tx.CreateTree(GlobalChangeVectorSlice);
 
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
 
@@ -285,19 +285,19 @@ namespace Raven.Server.Documents
         {
             AssertTransaction(context);
 
-            var tree = context.Transaction.InnerTransaction.ReadTree(ChangeVectorSlice);
+            var tree = context.Transaction.InnerTransaction.ReadTree(GlobalChangeVectorSlice);
             return ChangeVectorUtils.ReadChangeVectorFrom(tree);
         }
 
         public void SetDatabaseChangeVector(DocumentsOperationContext context, Dictionary<Guid, long> changeVector)
         {
-            var tree = context.Transaction.InnerTransaction.ReadTree(ChangeVectorSlice);
+            var tree = context.Transaction.InnerTransaction.ReadTree(GlobalChangeVectorSlice);
             ChangeVectorUtils.WriteChangeVectorTo(context, changeVector, tree);
         }
 
         public void SetDatabaseChangeVector(DocumentsOperationContext context, ChangeVectorEntry[] changeVector)
         {
-            var tree = context.Transaction.InnerTransaction.ReadTree(ChangeVectorSlice);
+            var tree = context.Transaction.InnerTransaction.ReadTree(GlobalChangeVectorSlice);
             ChangeVectorUtils.WriteChangeVectorTo(context, changeVector, tree);
         }
 
