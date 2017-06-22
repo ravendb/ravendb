@@ -19,6 +19,7 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Errors;
+using Raven.Server.Documents.Indexes.IndexMerging;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -1225,6 +1226,20 @@ namespace Raven.Server.Documents.Indexes
             {
                 _indexAndTransformerLocker.Release();
             }
+        }
+
+        public IndexMergeResults ProposeIndexMergeSuggestions()
+        {
+            var dic = new Dictionary<string, IndexDefinition>();
+
+            foreach (var index in GetIndexes())
+            {
+                dic[index.Name] = index.GetIndexDefinition();
+            }
+
+            var indexMerger = new IndexMerger(dic);
+
+            return indexMerger.ProposeIndexMergeSuggestions();
         }
     }
 
