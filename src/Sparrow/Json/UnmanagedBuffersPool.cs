@@ -90,7 +90,13 @@ namespace Sparrow.Json
                     _log.Operations($"UnmanagedBuffersPool for {_debugTag} wasn't properly disposed");
             }
 
-            Dispose();
+            try
+            {
+                Dispose();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
         }
 
         public void Dispose()
