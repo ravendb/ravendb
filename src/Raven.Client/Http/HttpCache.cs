@@ -76,6 +76,7 @@ namespace Raven.Client.Http
                 }
                 catch (ObjectDisposedException)
                 {
+                    // nothing that can be done here
                 }
             }
 

@@ -38,7 +38,6 @@ namespace Sparrow.Utils
             int lengthmod3 = length % 3;
             int calcLength = offset + (length - lengthmod3);
             int j = 0;
-            int charcount = 0;
             //Convert three bytes at a time to base64 notation.  This will consume 4 chars.
             int i;
 

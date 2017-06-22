@@ -1010,6 +1010,7 @@ more responsive application.
             }
             catch (ObjectDisposedException)
             {
+                // nothing can be done here
             }
 
 #if DEBUG
