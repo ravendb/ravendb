@@ -160,8 +160,6 @@ class shell extends viewModelBase {
             }
         });
 
-        $(window).resize(() => this.activeDatabase.valueHasMutated());
-
         //TODO: should we await for api key here? 
         this.fetchClientBuildVersion();
         this.fetchServerBuildVersion();
