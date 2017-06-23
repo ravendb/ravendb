@@ -6,6 +6,7 @@ using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Server;
 using Raven.Client.Server.ETL;
 using Raven.Client.Server.Operations;
+using Raven.Client.Server.Operations.ConnectionStrings;
 using Raven.Client.Server.Operations.ETL;
 using Raven.Client.Server.PeriodicBackup;
 using Xunit;
@@ -22,8 +23,9 @@ namespace RachisTests.DatabaseCluster
             var leader = await CreateRaftClusterAndGetLeader(clusterSize);
             ModifyOngoingTaskResult addWatcherRes;
             UpdatePeriodicBackupOperationResult updateBackupResult;
-            EtlConfiguration<RavenDestination> etlConfiguration;
+            RavenEtlConfiguration etlConfiguration;
             ExternalReplication watcher;
+            RavenConnectionString ravenConnectionString;
 
             using (var store = new DocumentStore
             {
@@ -69,15 +71,18 @@ namespace RachisTests.DatabaseCluster
 
                 updateBackupResult = await store.Admin.Server.SendAsync(new UpdatePeriodicBackupOperation(backupConfig, store.Database));
 
-
-                etlConfiguration = new EtlConfiguration<RavenDestination>
+                ravenConnectionString = new RavenConnectionString()
                 {
-                    Destination =
-                        new RavenDestination
-                        {
-                            Url = "http://127.0.0.1:8080",
-                            Database = "Northwind",
-                        },
+                    Name = "cs",
+                    Url = "http://127.0.0.1:8080",
+                    Database = "Northwind",
+                };
+                store.Admin.Server.Send(new AddConnectionStringOperation<RavenConnectionString>(ravenConnectionString, store.Database));
+
+                etlConfiguration = new RavenEtlConfiguration()
+                {
+                    Name = "tesst",
+                    ConnectionStringName = "cs",
                     Transforms =
                     {
                         new Transformation()
@@ -87,7 +92,7 @@ namespace RachisTests.DatabaseCluster
                     }
                 };
 
-                store.Admin.Server.Send(new AddEtlOperation<RavenDestination>(etlConfiguration, store.Database));
+                store.Admin.Server.Send(new AddEtlOperation<RavenConnectionString>(etlConfiguration, store.Database));
             }
 
             using (var store = new DocumentStore
@@ -117,8 +122,8 @@ namespace RachisTests.DatabaseCluster
                 taskId = etlConfiguration.Id;
 
                 result = await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.RavenEtl);              
-                Assert.Equal(result?.DestinationDatabase, etlConfiguration.Destination.Database);
-                Assert.Equal(result?.DestinationUrl, etlConfiguration.Destination.Url);
+                Assert.Equal(result?.DestinationDatabase, ravenConnectionString.Database);
+                Assert.Equal(result?.DestinationUrl, ravenConnectionString.Url);
             }
         }
 

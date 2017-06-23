@@ -316,9 +316,14 @@ namespace Raven.Server.Web.System
                             else if (sqlEtl.Transforms.Any(x => x.Disabled))
                                 taskState = OngoingTaskState.PartiallyEnabled;
 
+                            if (record.SqlConnectionStrings.TryGetValue(sqlEtl.ConnectionStringName, out var sqlConnection) == false)
+                                throw new InvalidOperationException(
+                                    $"Could not find connection string named '{sqlEtl.ConnectionStringName}' in the database record for '{sqlEtl.Name}' ETL");
+
+
                             var (database, server) =
                                 SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlEtl.FactoryName,
-                                    sqlEtl.Connection.ConnectionString);
+                                    sqlConnection.ConnectionString);
 
                             var sqlTaskInfo = new OngoingSqlEtl
                             {
@@ -353,6 +358,10 @@ namespace Raven.Server.Web.System
                             else if (ravenEtl.Transforms.Any(x => x.Disabled))
                                 taskState = OngoingTaskState.PartiallyEnabled;
 
+                            if (record.RavenConnectionStrings.TryGetValue(ravenEtl.ConnectionStringName, out var connection) == false)
+                                throw new InvalidOperationException(
+                                    $"Could not find connection string named '{ravenEtl.ConnectionStringName}' in the database record for '{ravenEtl.Name}' ETL");
+
                             var ravenTaskInfo = new OngoingRavenEtl
                             {
                                 TaskId = ravenEtl.Id,
@@ -362,8 +371,8 @@ namespace Raven.Server.Web.System
                                     NodeTag = tag,
                                     NodeUrl = clusterTopology.GetUrlFromTag(tag)
                                 },
-                                DestinationUrl = ravenEtl.Connection.Url,
-                                DestinationDatabase = ravenEtl.Connection.Database
+                                DestinationUrl = connection.Url,
+                                DestinationDatabase = connection.Database
                             };
 
                             WriteResult(context, ravenTaskInfo);
