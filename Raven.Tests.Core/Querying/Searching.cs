@@ -11,7 +11,6 @@ using Raven.Tests.Core.Utils.Indexes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Lucene.Net.Analysis.Standard;
 using Raven.Client.Indexes;
 using Xunit;
 
@@ -475,7 +474,7 @@ namespace Raven.Tests.Core.Querying
                 Map = objects => objects.Select(x => new {x.Name});
 
                 Indexes.Add(x => x.Name, FieldIndexing.Analyzed);
-                Analyzers.Add(x => x.Name, typeof(StandardAnalyzer).FullName);
+                Analyzers.Add(x => x.Name, "Lucene.Net.Analysis.Standard.StandardAnalyzer");
             }
         }
 
