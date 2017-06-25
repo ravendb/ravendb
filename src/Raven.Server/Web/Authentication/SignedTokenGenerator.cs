@@ -16,14 +16,15 @@ namespace Raven.Server.Web.Authentication
         [ThreadStatic] private static byte[] _signatureBuffer;
 
         public static unsafe ArraySegment<byte> GenerateToken(
-            TransactionOperationContext context,
+            JsonOperationContext context,
             byte[] signSecretKey,
             string apiKeyName,
-            string nodeTag)
+            string nodeTag,
+            out DateTime expires)
         {
             if (_signatureBuffer == null)
                 _signatureBuffer = new byte[Sodium.crypto_sign_bytes()];
-            var expires = DateTime.UtcNow.AddMinutes(30);
+            expires = DateTime.UtcNow.AddMinutes(30);
 
             var ms = new MemoryStream();
             using (var writer = new BlittableJsonTextWriter(context, ms))

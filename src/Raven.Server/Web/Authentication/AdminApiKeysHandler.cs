@@ -23,7 +23,8 @@ namespace Raven.Server.Web.Authentication
         public async Task Put()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
+            if (name.ToLowerInvariant().StartsWith("raven"))
+                throw new InvalidOperationException($"Can't create api key named {name}, api keys starting with 'raven' are reserved");
             TransactionOperationContext ctx;
             using (ServerStore.ContextPool.AllocateOperationContext(out ctx))
             {
@@ -49,7 +50,8 @@ namespace Raven.Server.Web.Authentication
         public async Task Delete()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
+            if (name.ToLowerInvariant().StartsWith("raven"))
+                throw new InvalidOperationException($"Can't delete api key named {name}, api keys starting with 'raven' are protected");
             TransactionOperationContext ctx;
             using (ServerStore.ContextPool.AllocateOperationContext(out ctx))
             {
