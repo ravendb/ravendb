@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
             base.VisitInvocationExpression(invocationExpression);
 
             var selectExpressions = new Dictionary<string, ExpressionSyntax>();
-            var visitor = new CaptureSelectNewFieldNamesVisitor(false, new HashSet<string>(), selectExpressions);
+            var visitor = new CaptureSelectExpressionsAndNewFieldNamesVisitor(false, new HashSet<string>(), selectExpressions);
             invocationExpression.Accept(visitor);
 
             var memberAccessExpression = invocationExpression.Expression as MemberAccessExpressionSyntax;
@@ -67,16 +67,15 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
 
         public override void VisitQueryBody(QueryBodySyntax node)
         {
-            if (!(node.SelectOrGroup is SelectClauseSyntax selectClause))
+            if ((node.SelectOrGroup is SelectClauseSyntax) == false)
             {
-                base.VisitGroupClause(node.SelectOrGroup as GroupClauseSyntax);
-                _indexData.HasGroup = true;
+               VisitGroupClause(node.SelectOrGroup as GroupClauseSyntax);
                 return;
             }
 
             var selectExpressions = new Dictionary<string, ExpressionSyntax>();
-            var visitor = new CaptureSelectNewFieldNamesVisitor(false, new HashSet<string>(), selectExpressions);
-            selectClause.Accept(visitor);
+            var visitor = new CaptureSelectExpressionsAndNewFieldNamesVisitor(false, new HashSet<string>(), selectExpressions);
+            node.Accept(visitor);
 
             _indexData.SelectExpressions = selectExpressions;
             _indexData.NumberOfSelectClauses++;
