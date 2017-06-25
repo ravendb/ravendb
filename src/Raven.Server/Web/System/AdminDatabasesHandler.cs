@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Conventions;
@@ -726,19 +727,18 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var content = await context.ReadForMemoryAsync(RequestBodyStream(), "read-admin-script");
-                if (content.TryGet(nameof(AdminJsScript), out BlittableJsonReaderObject adminJsBlittable) == false)
+                if (content.TryGet(nameof(AdminJsScript.Script), out string _) == false)
                 {
-                    throw new InvalidDataException("AdminJsScript was not found.");
+                    throw new InvalidDataException("Field " + nameof(AdminJsScript.Script) + " was not found.");
                 }
 
-                var adminJsScript = JsonDeserializationCluster.AdminJsScript(adminJsBlittable);
+                var adminJsScript = JsonDeserializationCluster.AdminJsScript(content);
                 DynamicJsonValue result;
 
                 if (isServerScript)
                 {
                     var console = new AdminJsConsole(Server);
                     result = console.ApplyServerScript(adminJsScript);
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                 }
 
                 else if (string.IsNullOrWhiteSpace(name) == false)
@@ -752,7 +752,6 @@ namespace Raven.Server.Web.System
 
                     var console = new AdminJsConsole(database);
                     result = console.ApplyScript(adminJsScript);
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                 }
 
                 else
@@ -760,13 +759,24 @@ namespace Raven.Server.Web.System
                     throw new InvalidOperationException("'database' query string parmater not found, and 'server-script' query string is not found. Don't know what to apply this script on");
                 }
 
-                if (result != null)
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName(nameof(AdminJsScriptResult.Result));
+                    if (result != null)
                     {
                         context.Write(writer, result);
-                        writer.Flush();
                     }
+                    else
+                    {
+                        writer.WriteNull();
+                    }
+
+                    writer.WriteEndObject();
+                    writer.Flush();
                 }
             }
         }

@@ -246,6 +246,9 @@ namespace TypingsGenerator
             scripter.AddType(typeof(ExternalReplication));
             scripter.AddType(typeof(GetTaskInfoResult));
 
+            scripter.AddType(typeof(AdminJsScript));
+            scripter.AddType(typeof(AdminJsScriptResult));
+
             return scripter;
         }
     }

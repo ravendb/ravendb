@@ -211,7 +211,7 @@ class appUrl {
     }
 
     static forAdminJsConsole(): string {
-        return "#admin/settings/console";
+        return "#admin/settings/adminJsConsole";
     }
 
     static forStudioConfig(): string {
