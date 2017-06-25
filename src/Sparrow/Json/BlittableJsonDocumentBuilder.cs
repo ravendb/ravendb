@@ -2,6 +2,7 @@
 using System.IO;
 using System.Runtime.CompilerServices;
 using Sparrow.Collections;
+using Sparrow.Exceptions;
 using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
@@ -318,12 +319,12 @@ namespace Sparrow.Json
 
         private void ThrowExpectedStartOfArray()
         {
-            throw new InvalidDataException("Expected start of array, but got " + _state.CurrentTokenType + _reader.GenerateErrorState());
+            throw new InvalidStartOfObjectException("Expected start of array, but got " + _state.CurrentTokenType + _reader.GenerateErrorState());
         }
 
         private void ThrowExpectedStartOfObject()
         {
-            throw new InvalidDataException("Expected start of object, but got " + _state.CurrentTokenType + _reader.GenerateErrorState());
+            throw new InvalidStartOfObjectException("Expected start of object, but got " + _state.CurrentTokenType + _reader.GenerateErrorState());
         }
 
         private interface IWriteStrategy { }

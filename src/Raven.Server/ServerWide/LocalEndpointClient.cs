@@ -15,6 +15,7 @@ using Microsoft.Extensions.ObjectPool;
 using Microsoft.Extensions.Primitives;
 using Raven.Server.Routing;
 using Raven.Server.Web;
+using Sparrow.Exceptions;
 using Sparrow.Json;
 
 namespace Raven.Server.ServerWide
@@ -88,7 +89,16 @@ namespace Raven.Server.ServerWide
         public async Task<BlittableJsonReaderObject> InvokeAndReadObjectAsync(RouteInformation route, JsonOperationContext context, Dictionary<string, StringValues> parameters = null)
         {
             var response = await InvokeAsync(route, parameters);
-            return context.ReadForMemory(response.Body, $"read/local endpoint/{route.Path}");
+
+            try
+            {
+                return context.ReadForMemory(response.Body, $"read/local endpoint/{route.Path}");
+            }
+            catch (InvalidStartOfObjectException e)
+            {
+                //precaution, ideally this exception should never be thrown
+                throw new InvalidOperationException("Expected to find a blittable object as a result of debug endpoint, but found something else (see inner exception for details). This should be investigated as all RavenDB endpoints are supposed to return an object.",e);
+            }
         }
      
         private class LocalInvocationCustomHttpContext : HttpContext, IDisposable
