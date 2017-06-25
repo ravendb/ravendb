@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Raven.Client.Documents.Replication;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -12,6 +10,7 @@ namespace Raven.Client.Server
     {
         public string ApiKey;
         public long TaskId;
+        public string Name;
 
         public static void RemoveWatcher(ref List<ExternalReplication> watchers, long taskId)
         {
@@ -72,6 +71,7 @@ namespace Raven.Client.Server
             var json = base.ToJson();
             json[nameof(TaskId)] = TaskId;
             json[nameof(ApiKey)] = ApiKey;
+            json[nameof(Name)] = Name;
             return json;
         }
 

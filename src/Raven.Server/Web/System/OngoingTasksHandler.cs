@@ -90,6 +90,7 @@ namespace Raven.Server.Web.System
                 yield return new OngoingTaskReplication
                 {
                     TaskId = watcher.TaskId,
+                    TaskName = watcher.Name,
                     ResponsibleNode = new NodeId
                     {
                         NodeTag = tag,
@@ -120,7 +121,7 @@ namespace Raven.Server.Web.System
                 {
                     TaskId = backupConfiguration.TaskId,
                     BackupType = backupConfiguration.BackupType,
-                    Name = backupConfiguration.Name,
+                    TaskName = backupConfiguration.Name,
                     TaskState = backupConfiguration.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
                     ResponsibleNode = new NodeId
                     {
@@ -169,6 +170,7 @@ namespace Raven.Server.Web.System
                     yield return new OngoingRavenEtl
                     {
                         TaskId = (long)ravenEtl.Id,
+                        TaskName = ravenEtl.Name,
                         // TODO arek TaskConnectionStatus = 
                         TaskState = taskState,
                         ResponsibleNode = new NodeId
@@ -202,6 +204,7 @@ namespace Raven.Server.Web.System
                     yield return new OngoingSqlEtl
                     {
                         TaskId = (long)sqlEtl.Id,
+                        TaskName = sqlEtl.Name,
                         // TODO arek TaskConnectionStatus = 
                         TaskState = taskState,
                         ResponsibleNode = new NodeId
@@ -256,6 +259,7 @@ namespace Raven.Server.Web.System
                             var replicationTaskInfo = new OngoingTaskReplication
                             {
                                 TaskId = watcher.TaskId,
+                                TaskName = watcher.Name,
                                 ResponsibleNode = new NodeId
                                 {
                                     NodeTag = tag,
@@ -286,7 +290,7 @@ namespace Raven.Server.Web.System
                             {
                                 TaskId = backup.TaskId,
                                 BackupType = backup.BackupType,
-                                Name = backup.Name,
+                                TaskName = backup.Name,
                                 TaskState = backup.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
                                 ResponsibleNode = new NodeId
                                 {
@@ -329,6 +333,7 @@ namespace Raven.Server.Web.System
                             {
                                 TaskId = sqlEtl.Id,
                                 TaskState = taskState,
+                                TaskName = sqlEtl.Name,
                                 ResponsibleNode = new NodeId
                                 {
                                     NodeTag = tag,
@@ -366,6 +371,7 @@ namespace Raven.Server.Web.System
                             {
                                 TaskId = ravenEtl.Id,
                                 TaskState = taskState,
+                                TaskName = ravenEtl.Name,
                                 ResponsibleNode = new NodeId
                                 {
                                     NodeTag = tag,
@@ -537,6 +543,8 @@ namespace Raven.Server.Web.System
         public OngoingTaskState TaskState { get; set; }
         public DateTime LastModificationTime { get; set; }
         public OngoingTaskConnectionStatus TaskConnectionStatus { get; set; }
+        public string TaskName { get; set; }
+
         public virtual DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -546,8 +554,9 @@ namespace Raven.Server.Web.System
                 [nameof(ResponsibleNode)] = ResponsibleNode?.ToJson(),
                 [nameof(TaskState)] = TaskState,
                 [nameof(LastModificationTime)] = LastModificationTime,
-                [nameof(TaskConnectionStatus)] = TaskConnectionStatus
-            };
+                [nameof(TaskConnectionStatus)] = TaskConnectionStatus,
+                [nameof(TaskName)] = TaskName
+        };
         }
     }
 
@@ -613,7 +622,6 @@ namespace Raven.Server.Web.System
     {
         public BackupType BackupType { get; set; }
         public List<string> BackupDestinations { get; set; }
-        public string Name { get; set; }
 
         public OngoingTaskBackup()
         {
@@ -624,7 +632,6 @@ namespace Raven.Server.Web.System
         {
             var json = base.ToJson();
             json[nameof(BackupType)] = BackupType;
-            json[nameof(Name)] = Name;
             json[nameof(BackupDestinations)] = new DynamicJsonArray(BackupDestinations);
             return json;
         }
