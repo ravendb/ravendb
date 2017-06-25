@@ -4,8 +4,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Documents.Indexes.IndexMerging;
 using Xunit;
-using Raven.Server.Documents.Handlers;
-using Raven.Server.Web.System;
 
 namespace FastTests.Server.Documents.Indexing
 {

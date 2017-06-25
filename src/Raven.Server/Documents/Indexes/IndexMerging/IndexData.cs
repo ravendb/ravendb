@@ -55,8 +55,17 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
 
             if (InvocationExpression != null)
             {
-                var memberAccessExpression = InvocationExpression.Expression as MemberAccessExpressionSyntax;
-                var invocExp = SyntaxFactory.InvocationExpression(memberAccessExpression)
+                ExpressionSyntax expression = null;
+                if (InvocationExpression.Expression is MemberAccessExpressionSyntax mae)
+                {
+                    expression = mae;
+                }
+                else if (InvocationExpression.Expression is IdentifierNameSyntax identifier)
+                {
+                    expression = identifier;
+                }
+
+                var invocExp = SyntaxFactory.InvocationExpression(expression)
                     .WithArgumentList(
                         SyntaxFactory.ArgumentList(
                             SyntaxFactory.SingletonSeparatedList(

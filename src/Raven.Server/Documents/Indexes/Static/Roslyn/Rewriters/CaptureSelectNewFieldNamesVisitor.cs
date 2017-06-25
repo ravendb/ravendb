@@ -4,7 +4,6 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Raven.Client.Exceptions;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
