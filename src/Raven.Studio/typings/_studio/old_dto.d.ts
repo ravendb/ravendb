@@ -810,15 +810,6 @@ interface dataExplorationRequestDto {
     PageSize: number;
 }
 
-interface adminJsScriptDto {
-    Script: string;
-}
-
-
-interface consoleJsSampleDto {
-    Name: string;
-    Code: string;
-}
 
 interface diskIoPerformanceRunDto {
     ProcessId: number;

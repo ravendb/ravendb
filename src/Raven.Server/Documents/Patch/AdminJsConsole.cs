@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Patch
 
         private static DynamicJsonValue ConvertResultsToJson(JsValue jsVal, DocumentDatabase database = null)
         {
-            if (jsVal.IsUndefined())
+            if (jsVal.IsUndefined() || jsVal.IsNull())
                 return null;
 
             using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Patch
             Engine jintEngine;
             try
             {
-                jintEngine = CreateEngine(script.Script, executionString);                
+                jintEngine = CreateEngine(script.Script, executionString);
             }
             catch (NotSupportedException e)
             {
@@ -89,5 +89,10 @@ namespace Raven.Server.Documents.Patch
     public class AdminJsScript
     {
         public string Script { get; set; }
+    }
+
+    public class AdminJsScriptResult
+    {
+        public DynamicJsonValue Result { get; set; }
     }
 }

@@ -501,8 +501,8 @@ namespace Raven.Server.Documents.Patch
                     if (jsInstance == null)
                         continue;
 
-                    object ravenJToken = null;                   
-                    ravenJToken = ToBlittableValue(jsInstance, propertyKey + "[" + property.Key + "]", recursiveCall);                   
+                    object ravenJToken = null;
+                    ravenJToken = ToBlittableValue(jsInstance, propertyKey + "[" + property.Key + "]", recursiveCall);
 
                     if (ravenJToken == null)
                         continue;
@@ -518,7 +518,7 @@ namespace Raven.Server.Documents.Patch
             }
             if (v.IsObject())
             {
-                return ToBlittable(v.AsObject(),propertyKey,recursiveCall);
+                return ToBlittable(v.AsObject(), propertyKey, recursiveCall);
             }
             if (v.IsRegExp())
                 return null;

@@ -85,6 +85,15 @@ function getManageServerMenuItem() {
             dynamicHash: appUrl.forCluster,
             enabled: canReadOrWrite
         }),
+        new leafMenuItem({
+            route: 'admin/settings/adminJsConsole',
+            moduleId: "viewmodels/manage/adminJsConsole",
+            title: "Administrator JS Console",
+            nav: true,
+            css: 'icon-administrator-js-console',
+            dynamicHash: appUrl.forAdminJsConsole,
+            enabled: accessHelper.isGlobalAdmin
+        }),
         /* TODO
         new leafMenuItem({
             route: "admin/settings/serverSmuggling",
@@ -185,15 +194,7 @@ function getManageServerMenuItem() {
             dynamicHash: appUrl.forDiskIoViewer,
             enabled: canReadOrWrite
         }),
-        new leafMenuItem({
-            route: 'admin/settings/console',
-            moduleId: "viewmodels/manage/console",
-            title: "Administrator JS Console",
-            nav: true,
-            css: 'icon-administrator-js-console',
-            dynamicHash: appUrl.forAdminJsConsole,
-            enabled: accessHelper.isGlobalAdmin
-        }),
+        
         new leafMenuItem({
             route: 'admin/settings/studioConfig',
             moduleId: 'viewmodels/manage/studioConfig',

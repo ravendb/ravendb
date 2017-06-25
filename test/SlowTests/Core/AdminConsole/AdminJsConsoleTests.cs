@@ -104,5 +104,16 @@ namespace SlowTests.Core.AdminConsole
             Assert.Equal(2048, configuration.Queries.MaxClauseCount);
             Assert.Equal(40, configuration.Storage.MaxConcurrentFlushes);            
         }
+
+        [Fact]
+        public void CanReturnNullResult()
+        {
+            var result = new AdminJsConsole(Server).ApplyServerScript(new AdminJsScript
+            {
+                Script = @"return null"
+            });
+
+            Assert.Null(result);
+        }
     }
 }
