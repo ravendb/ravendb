@@ -1004,7 +1004,14 @@ more responsive application.
 
         ~InMemoryDocumentSessionOperations()
         {
-            Dispose(false);
+            try
+            {
+                Dispose(false);
+            }
+            catch (ObjectDisposedException)
+            {
+                // nothing can be done here
+            }
 
 #if DEBUG
             Debug.WriteLine("Disposing a session for finalizer! It should be disposed by calling session.Dispose()!");

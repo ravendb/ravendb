@@ -4,7 +4,9 @@ using System.Linq;
 using System.Threading;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Server;
 using Raven.Client.Server.ETL;
+using Raven.Client.Server.Operations.ConnectionStrings;
 using Raven.Client.Server.Operations.ETL;
 using Raven.Server.Documents.ETL;
 using Xunit;
@@ -14,8 +16,9 @@ namespace SlowTests.Server.Documents.ETL
     [Trait("Category", "ETL")]
     public class EtlTestBase : RavenTestBase
     {
-        protected static void AddEtl<T>(DocumentStore src, EtlConfiguration<T> configuration) where T : EtlDestination
+        protected static void AddEtl<T>(DocumentStore src, EtlConfiguration<T> configuration, T connectionString) where T : ConnectionString
         {
+            src.Admin.Server.Send(new AddConnectionStringOperation<T>(connectionString, src.Database));
             src.Admin.Server.Send(new AddEtlOperation<T>(configuration, src.Database));
         }
 
@@ -26,25 +29,31 @@ namespace SlowTests.Server.Documents.ETL
 
         protected static void AddEtl(DocumentStore src, DocumentStore dst, IEnumerable<string> collections, string script, bool applyToAllDocuments = false, bool disabled = false)
         {
-            AddEtl(src, new EtlConfiguration<RavenDestination>()
-            {
-                Destination = new RavenDestination
+            var connectionStringName = $"{src.Database}@{src.Urls.First()} to {dst.Database}@{dst.Urls.First()}";
+
+            AddEtl(src, new RavenEtlConfiguration()
                 {
-                    Database = dst.Database,
-                    Url = dst.Urls.First()
-                },
-                Transforms =
-                {
-                    new Transformation
+                    Name = connectionStringName,
+                    ConnectionStringName = connectionStringName,
+                    Transforms =
                     {
-                        Name = $"ETL : {src.Database}@{src.Urls.First()} to {dst.Database}@{dst.Urls.First()}",
-                        Collections = new List<string>(collections),
-                        Script = script,
-                        ApplyToAllDocuments = applyToAllDocuments,
-                        Disabled = disabled
+                        new Transformation
+                        {
+                            Name = $"ETL : {connectionStringName}",
+                            Collections = new List<string>(collections),
+                            Script = script,
+                            ApplyToAllDocuments = applyToAllDocuments,
+                            Disabled = disabled
+                        }
                     }
+                },
+                new RavenConnectionString
+                {
+                    Name = connectionStringName,
+                    Database = dst.Database,
+                    Url = dst.Urls.First(),
                 }
-            });
+            );
         }
 
         protected ManualResetEventSlim WaitForEtl(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate)

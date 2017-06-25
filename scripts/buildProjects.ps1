@@ -1,41 +1,32 @@
-
 function BuildServer ( $srcDir, $outDir, $spec ) {
-    if ($spec.TargetId -eq 'rpi') {
-        BuildServerArm $srcDir $outDir $spec
-    } else {
-        BuildServerRegular $srcDir $outDir $spec
-    }
-}
-
-function BuildServerRegular ( $srcDir, $outDir, $spec ) {
-    write-host "Building Server for $specName..."
+    write-host "Building Server for $($spec.Name)..."
+    $command = "dotnet" 
+    $commandArgs = @( "publish" )
 
     $output = [io.path]::combine($outDir, "Server");
-    if ([string]::IsNullOrEmpty($spec.Arch)) {
-        & dotnet publish --output $output `
-            --runtime $($spec.Runtime) `
-            --configuration "Release" $srcDir;
-    } else {
-            & dotnet publish --output $output `
-                --runtime $($spec.Runtime) `
-                --configuration "Release" $srcDir `
-                /p:Platform=$($spec.Arch);
+    $commandArgs += @( "--output", $output )
+    
+    if ($spec.TargetId -ne 'rpi') {
+        $commandArgs += $( "--runtime", "$($spec.Runtime)" )
     }
 
-    CheckLastExitCode
-}
+    $commandArgs += @( "--configuration", "Release" )
 
-function BuildServerArm ( $srcDir, $outDir, $spec ) {
-    write-host "Building Server for $($spec.Name)"
+    $commandArgs += "$srcDir"
 
-    $output = [io.path]::combine($outDir, "Server");
-    $bin = [io.path]::combine($srcDir, "bin");
+    if ($spec.TargetId -eq "rpi") {
+        $bin = [io.path]::combine($srcDir, "bin");
+        Remove-Item -Recurse -Force $bin
 
-    Remove-Item -Recurse -Force $bin
+        $commandArgs += "/p:ARM=true"
+    }
 
-    & dotnet publish --output $output `
-                 --configuration "Release" $srcDir `
-                 /p:ARM=true
+    if ([string]::IsNullOrEmpty($spec.Arch) -eq $false) {
+        $commandArgs += "/p:Platform=$($spec.Arch)"
+    }
+
+    write-host -ForegroundColor Cyan "Publish server: $command $commandArgs"
+    Invoke-Expression -Command "$command $commandArgs"
     CheckLastExitCode
 }
 
@@ -93,4 +84,36 @@ function ShouldBuildStudio( $studioOutDir, $dontRebuildStudio ) {
     }
 
     return $true
+}
+
+function BuildRvn ( $srcDir, $outDir, $spec ) {
+    write-host "Building Rvn for $($spec.Name)..."
+    $command = "dotnet" 
+    $commandArgs = @( "publish" )
+
+    $output = [io.path]::combine($outDir, "rvn");
+    $commandArgs += @( "--output", $output )
+    
+    if ($spec.TargetId -ne 'rpi') {
+        $commandArgs += $( "--runtime", "$($spec.Runtime)" )
+    }
+
+    $commandArgs += @( "--configuration", "Release" )
+
+    $commandArgs += "$srcDir"
+
+    if ($spec.TargetId -eq "rpi") {
+        $bin = [io.path]::combine($srcDir, "bin");
+        Remove-Item -Recurse -Force $bin
+
+        $commandArgs += "/p:ARM=true"
+    }
+
+    if ([string]::IsNullOrEmpty($spec.Arch) -eq $false) {
+        $commandArgs += "/p:Platform=$($spec.Arch)"
+    }
+
+    write-host -ForegroundColor Cyan "Publish rvn: $command $commandArgs"
+    Invoke-Expression -Command "$command $commandArgs"
+    CheckLastExitCode
 }

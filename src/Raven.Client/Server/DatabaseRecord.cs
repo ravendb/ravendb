@@ -60,11 +60,15 @@ namespace Raven.Client.Server
 
         public List<PeriodicBackupConfiguration> PeriodicBackups { get; set; }
 
-        public List<EtlConfiguration<RavenDestination>> RavenEtls;
-
         public List<ExternalReplication> ExternalReplication = new List<ExternalReplication>(); // Watcher only receives (slave)
 
-        public List<EtlConfiguration<SqlDestination>> SqlEtls;
+        public Dictionary<string, RavenConnectionString> RavenConnectionStrings = new Dictionary<string, RavenConnectionString>();
+
+        public Dictionary<string, SqlConnectionString> SqlConnectionStrings = new Dictionary<string, SqlConnectionString>();
+
+        public List<RavenEtlConfiguration> RavenEtls;
+
+        public List<SqlEtlConfiguration> SqlEtls;
 
         public string CustomFunctions { get; set; }
 

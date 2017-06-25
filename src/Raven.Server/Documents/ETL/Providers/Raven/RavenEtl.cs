@@ -13,7 +13,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
-    public class RavenEtl : EtlProcess<RavenEtlItem, ICommandData, RavenDestination>
+    public class RavenEtl : EtlProcess<RavenEtlItem, ICommandData, RavenEtlConfiguration, RavenConnectionString>
     {
         public const string RavenEtlTag = "Raven ETL";
 
@@ -21,10 +21,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         private readonly RavenEtlDocumentTransformer.ScriptInput _script;
 
-        public RavenEtl(Transformation transformation, RavenDestination destination, DocumentDatabase database, ServerStore serverStore) : base(transformation, destination, database, serverStore, RavenEtlTag)
+        public RavenEtl(Transformation transformation, RavenEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore) : base(transformation, configuration, database, serverStore, RavenEtlTag)
         {
             Metrics = new EtlMetricsCountersManager();
-            _requestExecutor = RequestExecutor.CreateForSingleNode(Destination.Url, Destination.Database, Destination.ApiKey);
+            _requestExecutor = RequestExecutor.CreateForSingleNode(configuration.Connection.Url, configuration.Connection.Database, configuration.Connection.ApiKey);
             _script = new RavenEtlDocumentTransformer.ScriptInput(transformation);
         }
 
@@ -53,11 +53,11 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 return;
 
             BatchOptions options = null;
-            if (Destination.LoadRequestTimeoutInSec != null)
+            if (Configuration.LoadRequestTimeoutInSec != null)
             {
                 options = new BatchOptions
                 {
-                    RequestTimeout = TimeSpan.FromSeconds(Destination.LoadRequestTimeoutInSec.Value)
+                    RequestTimeout = TimeSpan.FromSeconds(Configuration.LoadRequestTimeoutInSec.Value)
                 };
             }
 

@@ -674,6 +674,22 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        [RavenAction("/databases/*/indexes/suggest-index-merge", "GET")]
+        public Task SuggestIndexMerge()
+        {
+            var mergeIndexSuggestions = Database.IndexStore.ProposeIndexMergeSuggestions();
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, mergeIndexSuggestions.ToJson());
+                writer.Flush();
+            }
+            return Task.CompletedTask;
+
+        }
+
         private async Task<bool> SendDataOrHeartbeatToWebSocket(Task<WebSocketReceiveResult> receive, WebSocket webSocket, LiveIndexingPerformanceCollector collector, MemoryStream ms, int timeToWait)
         {
             if (receive.IsCompleted || webSocket.State != WebSocketState.Open)

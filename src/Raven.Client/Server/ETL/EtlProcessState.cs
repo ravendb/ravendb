@@ -13,7 +13,7 @@ namespace Raven.Client.Server.ETL
             ChangeVector = new ChangeVectorEntry[0];
         }
 
-        public string Destination { get; set; }
+        public string ConfigurationName { get; set; }
 
         public string TransformationName { get; set; }
 
@@ -33,7 +33,7 @@ namespace Raven.Client.Server.ETL
         {
             var json = new DynamicJsonValue
             {
-                [nameof(Destination)] = Destination,
+                [nameof(ConfigurationName)] = ConfigurationName,
                 [nameof(TransformationName)] = TransformationName,
                 [nameof(LastProcessedEtagPerNode)] = LastProcessedEtagPerNode.ToJson(),
                 [nameof(ChangeVector)] = ChangeVector.ToJson(),
@@ -42,9 +42,9 @@ namespace Raven.Client.Server.ETL
             return json;
         }
 
-        public static string GenerateItemName(string databaseName, string destinationName, string transformationName)
+        public static string GenerateItemName(string databaseName, string configurationName, string transformationName)
         {
-            return $"values/{databaseName}/etl/{destinationName.ToLowerInvariant()}/{transformationName.ToLowerInvariant()}";
+            return $"values/{databaseName}/etl/{configurationName.ToLowerInvariant()}/{transformationName.ToLowerInvariant()}";
         }
     }
 }

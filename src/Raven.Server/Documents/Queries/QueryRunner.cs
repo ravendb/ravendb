@@ -71,6 +71,8 @@ namespace Raven.Server.Documents.Queries
                 var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
 
                 await runner.ExecuteStream(response, writer, indexName, query).ConfigureAwait(false);
+
+                return;
             }
 
             var index = GetIndex(indexName);

@@ -770,5 +770,11 @@ namespace Raven.Server.Web.System
                 }
             }
         }
+
+        [RavenAction("/admin/connection-strings/add", "PUT", "/admin/connection-strings/add?name={databaseName:string}&type={[sql|raven]:string}")]
+        public async Task AddConnectionString()
+        {
+            await DatabaseConfigurations((_, databaseName, connectionString) => ServerStore.AddConnectionString(_, databaseName, connectionString), "add-connection-string");
+        }
     }
 }

@@ -8,6 +8,7 @@ using Raven.Client.Server.PeriodicBackup;
 using Raven.Client.Server.Versioning;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
@@ -39,13 +40,17 @@ namespace Raven.Server.ServerWide
 
         public static readonly Func<BlittableJsonReaderObject, VersioningConfiguration> VersioningConfiguration = GenerateJsonDeserializationRoutine<VersioningConfiguration>();
 
-        public static Func<BlittableJsonReaderObject, EtlConfiguration<RavenDestination>> RavenEtlConfiguration = GenerateJsonDeserializationRoutine<EtlConfiguration<RavenDestination>>();
+        public static Func<BlittableJsonReaderObject, RavenEtlConfiguration> RavenEtlConfiguration = GenerateJsonDeserializationRoutine<RavenEtlConfiguration>();
 
-        public static Func<BlittableJsonReaderObject, EtlConfiguration<SqlDestination>> SqlEtlConfiguration = GenerateJsonDeserializationRoutine<EtlConfiguration<SqlDestination>>();
+        public static Func<BlittableJsonReaderObject, SqlEtlConfiguration> SqlEtlConfiguration = GenerateJsonDeserializationRoutine<SqlEtlConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, ServerStore.PutRaftCommandResult> PutRaftCommandResult = GenerateJsonDeserializationRoutine<ServerStore.PutRaftCommandResult>();
 
         public static readonly Func<BlittableJsonReaderObject, AdminJsScript> AdminJsScript = GenerateJsonDeserializationRoutine<AdminJsScript>();
+
+        public static Func<BlittableJsonReaderObject, RavenConnectionString> RavenConnectionString = GenerateJsonDeserializationRoutine<RavenConnectionString>();
+
+        public static Func<BlittableJsonReaderObject, SqlConnectionString> SqlConnectionString = GenerateJsonDeserializationRoutine<SqlConnectionString>();
 
         public static Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>> Commands = new Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>>
         {
@@ -82,7 +87,9 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateRavenEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateRavenEtlCommand>(),
             [nameof(UpdateSqlEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateSqlEtlCommand>(),
             [nameof(UpdateEtlProcessStateCommand)] = GenerateJsonDeserializationRoutine<UpdateEtlProcessStateCommand>(),
-            [nameof(DeleteOngoingTaskCommand)] = GenerateJsonDeserializationRoutine<DeleteOngoingTaskCommand>()
+            [nameof(DeleteOngoingTaskCommand)] = GenerateJsonDeserializationRoutine<DeleteOngoingTaskCommand>(),
+            [nameof(AddRavenConnectionString)] = GenerateJsonDeserializationRoutine<AddRavenConnectionString>(),
+            [nameof(AddSqlConnectionString)] = GenerateJsonDeserializationRoutine<AddSqlConnectionString>(),
         };
     }
 }

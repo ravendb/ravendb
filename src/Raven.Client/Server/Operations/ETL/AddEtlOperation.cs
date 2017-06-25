@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations.ETL
 {
-    public class AddEtlOperation<T> : IServerOperation<AddEtlOperationResult> where T : EtlDestination
+    public class AddEtlOperation<T> : IServerOperation<AddEtlOperationResult> where T : ConnectionString
     {
         private readonly EtlConfiguration<T> _configuration;
         private readonly string _databaseName;

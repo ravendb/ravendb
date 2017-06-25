@@ -27,6 +27,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
@@ -826,6 +827,31 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(editVersioning);
         }
 
+        public async Task<(long, object)> AddConnectionString(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject connectionString)
+        {
+            if (connectionString.TryGet(nameof(ConnectionString.Type), out string type) == false)
+                throw new InvalidOperationException($"Connection string must have {nameof(ConnectionString.Type)} field");
+
+            if (Enum.TryParse<ConnectionStringType>(type, true, out var connectionStringType) == false)
+                throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
+
+            UpdateDatabaseCommand command;
+            
+            switch (connectionStringType)
+            {
+                case ConnectionStringType.Raven:
+                    command = new AddRavenConnectionString(JsonDeserializationCluster.RavenConnectionString(connectionString), databaseName);
+                    break;
+                case ConnectionStringType.Sql:
+                    command = new AddSqlConnectionString(JsonDeserializationCluster.SqlConnectionString(connectionString), databaseName);
+                    break;
+                default:
+                    throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
+            }
+
+            return await SendToLeaderAsync(command);
+        }
+
         public Guid GetServerId()
         {
             return _env.DbId;
@@ -1231,9 +1257,10 @@ namespace Raven.Server.ServerWide
                 if (_nodeHttpServerUrl != null)
                     return _nodeHttpServerUrl;
 
-                var webUrls = _ravenServer.WebUrls;
-                Debug.Assert(webUrls != null && webUrls.Length > 0);
-                return _nodeHttpServerUrl = Configuration.Core.GetNodeHttpServerUrl(webUrls[0]);
+                Debug.Assert(_ravenServer.WebUrls != null && _ravenServer.WebUrls.Length > 0);
+                return _nodeHttpServerUrl = Configuration.Core.GetNodeHttpServerUrl(
+                    Configuration.Core.PublicServerUrl?.UriValue ?? _ravenServer.WebUrls[0]
+                    );
             }
         }
 

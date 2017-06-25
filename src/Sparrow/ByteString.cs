@@ -390,7 +390,13 @@ namespace Sparrow
 
         ~UnmanagedGlobalSegment()
         {
-            Dispose();
+            try
+            {
+                Dispose();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
         }
 
         public override void Dispose()
@@ -1460,7 +1466,13 @@ namespace Sparrow
         ~ByteStringContext()
         {
             _isFinalizerThread = true;
-            Dispose();
+            try
+            {
+                Dispose();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
         }
 
         public void Dispose()

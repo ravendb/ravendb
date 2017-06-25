@@ -63,6 +63,8 @@ $TYPINGS_GENERATOR_BIN_DIR = [io.path]::combine($TYPINGS_GENERATOR_SRC_DIR, "bin
 $STUDIO_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio")
 $STUDIO_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio", "build")
 
+$RVN_SRC_DIR = [io.path]::combine($PROJECT_DIR, "tools", "rvn")
+
 if ([string]::IsNullOrEmpty($Target) -eq $false) {
     $Target = $Target.Split(",")
 } else {
@@ -129,11 +131,13 @@ Foreach ($spec in $targets) {
     $specOutDir = [io.path]::combine($OUT_DIR, $spec.Name)
 
     BuildServer $SERVER_SRC_DIR $specOutDir $spec
-
+    BuildRvn $RVN_SRC_DIR $specOutDir $spec
+    
     $specOutDirs = @{
         "Main" = $specOutDir;
         "Client" = $CLIENT_OUT_DIR;
         "Server" = $([io.path]::combine($specOutDir, "Server"));
+        "Rvn" = $([io.path]::combine($specOutDir, "rvn"));
         "Studio" = $STUDIO_OUT_DIR;
         "Sparrow" = $SPARROW_OUT_DIR;
     }

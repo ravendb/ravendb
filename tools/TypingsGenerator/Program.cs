@@ -185,7 +185,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(VersioningConfiguration));
 
             // etl
-            scripter.AddType(typeof(SqlDestination));
+            scripter.AddType(typeof(RavenEtlConfiguration));
+            scripter.AddType(typeof(SqlEtlConfiguration));
             scripter.AddType(typeof(EtlProcessStatistics));
             scripter.AddType(typeof(SimulateSqlEtl));
             scripter.AddType(typeof(SqlEtlTable));

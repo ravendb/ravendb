@@ -128,7 +128,18 @@ namespace Raven.Client.Json
                             _manualBlittableJsonDocumentBuilder.WriteValue((long) propertyDetails.Value);
                             break;
                         case BlittableJsonToken.Float:
-                            _manualBlittableJsonDocumentBuilder.WriteValue((float)propertyDetails.Value);
+                            if (propertyDetails.Value is LazyDoubleValue ldv)
+                            {
+                                _manualBlittableJsonDocumentBuilder.WriteValue(ldv);
+                            }
+                            else if (propertyDetails.Value is double d)
+                            {
+                                _manualBlittableJsonDocumentBuilder.WriteValue(d);
+                            }
+                            else
+                            {
+                                _manualBlittableJsonDocumentBuilder.WriteValue((float)propertyDetails.Value);
+                            }
                             break;
                         case BlittableJsonToken.String:
                             _manualBlittableJsonDocumentBuilder.WriteValue(propertyDetails.Value.ToString());

@@ -1,4 +1,10 @@
 .databases {
+
+    .link-disabled {
+        pointer-events: none;
+        cursor: default;
+    }
+
     .databasesToolbar-toggleCompactView {
         display: inline-block;
         margin-left: 10px;
@@ -165,11 +171,6 @@
                 color: lighten(@gray-light, 25%);
                 transition: color .15s ease;
             }
-        }
-
-        .link-disabled {
-            pointer-events: none;
-            cursor: default;
         }
     }
 

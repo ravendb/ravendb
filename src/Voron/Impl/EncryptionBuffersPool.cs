@@ -98,7 +98,13 @@ namespace Voron.Impl
 
         ~EncryptionBuffersPool()
         {
-            Dispose();
+            try
+            {
+                Dispose();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
         }
     }
 }

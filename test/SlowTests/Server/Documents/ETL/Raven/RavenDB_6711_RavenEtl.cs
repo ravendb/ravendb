@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Server.ETL;
-using Raven.Server.Documents.ETL;
-using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -16,13 +13,10 @@ namespace SlowTests.Server.Documents.ETL.Raven
         [Fact]
         public void Error_if_script_has_both_apply_to_all_documents_and_collections_specified()
         {
-            var config = new EtlConfiguration<RavenDestination>()
+            var config = new RavenEtlConfiguration
             {
-                Destination = new RavenDestination
-                {
-                    Url = "http://localhost:8080",
-                    Database = "Northwind",
-                },
+                Name = "test",
+                ConnectionStringName = "test",
                 Transforms =
                 {
                     new Transformation
@@ -33,6 +27,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     }
                 }
             };
+
+            config.Initialize(new RavenConnectionString() { Database = "Foo", Url = "http://localhost:8080" });
 
             List<string> errors;
             config.Validate(out errors);
