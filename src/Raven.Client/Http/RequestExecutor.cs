@@ -70,6 +70,7 @@ namespace Raven.Client.Http
         //note: the condition for non empty nodes is precaution, should never happen..
         public string Url => _nodeSelector?.GetCurrentNode()?.Url;
 
+        public string ClusterToken;
         public long TopologyEtag;
 
         protected bool _withoutTopology;
@@ -330,7 +331,7 @@ namespace Raven.Client.Http
 
         public async Task ExecuteAsync<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, CancellationToken token = default(CancellationToken), bool shouldRetry = true)
         {
-            var request = CreateRequest(chosenNode, command, out string url);
+            var request = CreateRequest(chosenNode, command, ClusterToken, out string url);
 
             var nodeIndex = _nodeSelector?.GetCurrentNodeIndex() ?? 0;
 
@@ -451,14 +452,14 @@ namespace Raven.Client.Http
 
         public static readonly string ClientVersion = typeof(RequestExecutor).GetTypeInfo().Assembly.GetName().Version.ToString();
 
-        private static HttpRequestMessage CreateRequest<TResult>(ServerNode node, RavenCommand<TResult> command, out string url)
+        private static HttpRequestMessage CreateRequest<TResult>(ServerNode node, RavenCommand<TResult> command, string ClusterToken, out string url)
         {
             var request = command.CreateRequest(node, out url);
 
             request.RequestUri = new Uri(url);
 
-            if (node.ClusterToken != null)
-                request.Headers.Add("Raven-Authorization", node.ClusterToken);
+            if (ClusterToken != null)
+                request.Headers.Add("Raven-Authorization", ClusterToken);
 
             if (!request.Headers.Contains("Raven-Client-Version"))
                 request.Headers.Add("Raven-Client-Version", ClientVersion);
@@ -658,7 +659,7 @@ namespace Raven.Client.Http
 
         public async Task<string> GetAuthenticationToken(JsonOperationContext context, ServerNode node)
         {
-            return node.ClusterToken = await _authenticator.GetAuthenticationTokenAsync(_apiKey, node.Url, context).ConfigureAwait(false);          
+            return ClusterToken = await _authenticator.GetAuthenticationTokenAsync(_apiKey, node.Url, context).ConfigureAwait(false);          
         }
 
         private async Task HandleUnauthorized(ServerNode node, JsonOperationContext context, bool shouldThrow = true)
@@ -666,7 +667,7 @@ namespace Raven.Client.Http
             try
             {
                 var currentToken = await _authenticator.GetAuthenticationTokenAsync(_apiKey, node.Url, context).ConfigureAwait(false);
-                node.ClusterToken = currentToken;
+                ClusterToken = currentToken;
             }
             catch (Exception e)
             {

@@ -7,7 +7,6 @@ namespace Raven.Client.Http
         public string Url;
         public string Database;
         public string ClusterTag;
-        public string ClusterToken;
         public bool IsFailed;
 
         private readonly EWMA _ewma = new EWMA(EWMA.M1Alpha, 1, TimeUnit.Milliseconds);
