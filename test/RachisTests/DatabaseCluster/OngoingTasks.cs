@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Server;
 using Raven.Client.Server.ETL;
 using Raven.Client.Server.Operations;
@@ -48,7 +47,8 @@ namespace RachisTests.DatabaseCluster
                 watcher = new ExternalReplication
                 {
                     Database = "Watcher1",
-                    Url = "http://127.0.0.1:9090"
+                    Url = "http://127.0.0.1:9090",
+                    Name = "MyExternalReplication"
                 };
 
                 addWatcherRes = await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
@@ -110,13 +110,14 @@ namespace RachisTests.DatabaseCluster
 
                 Assert.Equal(watcher.Database, result.DestinationDatabase);
                 Assert.Equal(watcher.Url, result.DestinationUrl);
+                Assert.Equal(watcher.Name, result.TaskName);
 
                 taskId = updateBackupResult.TaskId;
                 result = await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.Backup);
 
                 Assert.Equal("Local", result.BackupDestinations[0]);
                 Assert.Equal("Azure", result.BackupDestinations[1]);
-                Assert.Equal("backup1", result.Name);
+                Assert.Equal("backup1", result.TaskName);
                 Assert.Equal(OngoingTaskState.Disabled, result.TaskState);
 
                 taskId = etlConfiguration.Id;
@@ -124,6 +125,7 @@ namespace RachisTests.DatabaseCluster
                 result = await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.RavenEtl);              
                 Assert.Equal(result?.DestinationDatabase, ravenConnectionString.Database);
                 Assert.Equal(result?.DestinationUrl, ravenConnectionString.Url);
+                Assert.Equal(result?.TaskName, etlConfiguration.Name);
             }
         }
 

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Client.Attachments;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Server;
@@ -205,7 +204,8 @@ namespace RachisTests.DatabaseCluster
                 watcher = new ExternalReplication
                 {
                     Database = "Watcher",
-                    Url = res.NodesAddedTo[0]
+                    Url = res.NodesAddedTo[0],
+                    Name = "MyExternalReplication1"
                 };
 
                 await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
@@ -216,6 +216,7 @@ namespace RachisTests.DatabaseCluster
             var repTask = tasks.OngoingTasksList[0] as OngoingTaskReplication;
             Assert.Equal(repTask?.DestinationDatabase, watcher.Database);
             Assert.Equal(repTask?.DestinationUrl, watcher.Url);
+            Assert.Equal(repTask?.TaskName, watcher.Name);
 
             watcher.TaskId = Convert.ToInt64(repTask?.TaskId);
 
@@ -251,6 +252,7 @@ namespace RachisTests.DatabaseCluster
                 //modify watcher
                 watcher.Database = "Watcher2";
                 watcher.Url = res.NodesAddedTo[0];
+                watcher.Name = "MyExternalReplication2";
 
                 await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
             }
@@ -260,6 +262,7 @@ namespace RachisTests.DatabaseCluster
             repTask = tasks.OngoingTasksList[0] as OngoingTaskReplication;
             Assert.Equal(repTask?.DestinationDatabase, watcher.Database);
             Assert.Equal(repTask?.DestinationUrl, watcher.Url);
+            Assert.Equal(repTask?.TaskName, watcher.Name);
 
             using (var store = new DocumentStore
             {
