@@ -392,29 +392,24 @@ namespace Raven.Server.ServerWide
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
                 if (TryLoadAuthenticationKeyPairs(ctx) == false)
-                    GenerateAuthenticationKeyPairs(ctx);
+                    GenerateAuthenticationSignetureKeys(ctx);                
             }
+            GenerateAuthenticationBoxKeys();
 
             Task.Run(ClusterMaintenanceSetupTask, ServerShutdown);
         }
 
         public byte[] BoxPublicKey, BoxSecretKey, SignPublicKey, SignSecretKey;
 
-        private void GenerateAuthenticationKeyPairs(TransactionOperationContext ctx)
+        private void GenerateAuthenticationSignetureKeys(TransactionOperationContext ctx)
         {
-            BoxPublicKey = new byte[Sodium.crypto_box_publickeybytes()];
-            BoxSecretKey = new byte[Sodium.crypto_box_secretkeybytes()];
             SignPublicKey = new byte[Sodium.crypto_sign_publickeybytes()];
             SignSecretKey = new byte[Sodium.crypto_sign_secretkeybytes()];
             unsafe
             {
-                fixed (byte* boxPk = BoxPublicKey)
-                fixed (byte* boxSk = BoxSecretKey)
                 fixed (byte* signPk = SignPublicKey)
                 fixed (byte* signSk = SignSecretKey)
                 {
-                    if (Sodium.crypto_box_keypair(boxPk, boxSk) != 0)
-                        throw new CryptographicException("Unable to generate crypto_box_keypair for authentication");
                     if (Sodium.crypto_sign_keypair(signPk, signSk) != 0)
                         throw new CryptographicException("Unable to generate crypto_sign_keypair for authentication");
                 }
@@ -422,20 +417,31 @@ namespace Raven.Server.ServerWide
 
             using (var tx = ctx.OpenWriteTransaction())
             {
-                PutSecretKey(ctx, "Raven/Box/Public", BoxPublicKey, overwrite:true, cloneKey:true);
-                PutSecretKey(ctx, "Raven/Box/Private", BoxSecretKey, overwrite: true, cloneKey: true);
                 PutSecretKey(ctx, "Raven/Sign/Public", SignPublicKey, overwrite: true, cloneKey: true);
                 PutSecretKey(ctx, "Raven/Sign/Private", SignSecretKey, overwrite: true, cloneKey: true);
                 tx.Commit();
             }
+        }
+        private void GenerateAuthenticationBoxKeys()
+        {
+            BoxPublicKey = new byte[Sodium.crypto_box_publickeybytes()];
+            BoxSecretKey = new byte[Sodium.crypto_box_secretkeybytes()];
+            unsafe
+            {
+                fixed (byte* boxPk = BoxPublicKey)
+                fixed (byte* boxSk = BoxSecretKey)
+                {
+                    if (Sodium.crypto_box_keypair(boxPk, boxSk) != 0)
+                        throw new CryptographicException("Unable to generate crypto_box_keypair for authentication");
+                }
+            }
+
         }
 
         private bool TryLoadAuthenticationKeyPairs(TransactionOperationContext ctx)
         {
             using (ctx.OpenReadTransaction())
             {
-                BoxPublicKey = GetSecretKey(ctx, "Raven/Box/Public");
-                BoxSecretKey = GetSecretKey(ctx, "Raven/Box/Private");
                 SignPublicKey = GetSecretKey(ctx, "Raven/Sign/Public");
                 SignSecretKey = GetSecretKey(ctx, "Raven/Sign/Private");
             }
@@ -972,7 +978,7 @@ namespace Raven.Server.ServerWide
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
-                GenerateAuthenticationKeyPairs(ctx);
+                GenerateAuthenticationSignetureKeys(ctx);
             }
             Engine.Bootstrap(NodeHttpServerUrl, SignPublicKey, forNewCluster:true);
         }

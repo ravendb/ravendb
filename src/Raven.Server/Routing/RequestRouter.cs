@@ -264,8 +264,19 @@ namespace Raven.Server.Routing
 
                         var clusterTopology = ravenServer.ServerStore.GetClusterTopology(txContext);
                         var publicKey = clusterTopology.GetPublicKeyFromTag(tag);
+                        //This is the case where we don't know the server but the admin had injected the server's 
+                        //public key into our server store using an external tool.
                         if (publicKey == null)
-                            return false;// we don't know this server, maybe a new one or one that was added?
+                        {
+                            try
+                            {
+                                publicKey = ravenServer.ServerStore.GetSecretKey(txContext, $"Raven/Sign/Public/{tag}");
+                            }
+                            catch
+                            {
+                                return false;
+                            }
+                        }
 
                         fixed (byte* pk = publicKey)
                         {
