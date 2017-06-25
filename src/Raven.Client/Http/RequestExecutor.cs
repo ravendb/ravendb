@@ -331,7 +331,7 @@ namespace Raven.Client.Http
 
         public async Task ExecuteAsync<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, CancellationToken token = default(CancellationToken), bool shouldRetry = true)
         {
-            var request = CreateRequest(chosenNode, command, ClusterToken, out string url);
+            var request = CreateRequest(chosenNode, command, out string url);
 
             var nodeIndex = _nodeSelector?.GetCurrentNodeIndex() ?? 0;
 
@@ -452,7 +452,7 @@ namespace Raven.Client.Http
 
         public static readonly string ClientVersion = typeof(RequestExecutor).GetTypeInfo().Assembly.GetName().Version.ToString();
 
-        private static HttpRequestMessage CreateRequest<TResult>(ServerNode node, RavenCommand<TResult> command, string ClusterToken, out string url)
+        private HttpRequestMessage CreateRequest<TResult>(ServerNode node, RavenCommand<TResult> command, out string url)
         {
             var request = command.CreateRequest(node, out url);
 
