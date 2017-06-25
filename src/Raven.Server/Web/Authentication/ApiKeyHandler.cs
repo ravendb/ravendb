@@ -221,7 +221,7 @@ namespace Raven.Server.Web.Authentication
                         throw new InvalidOperationException($"Missing 'Secret' property in api key: {apiKeyName}");
                     }
                 }
-                return SignedTokenGenerator.GenerateToken(context, ServerStore.SignSecretKey, apiKeyName, ServerStore.NodeTag);
+                return SignedTokenGenerator.GenerateToken(context, ServerStore.SignSecretKey, apiKeyName, ServerStore.NodeTag,out var expires);
             }
         }
     }

@@ -305,7 +305,10 @@ namespace Raven.Server.Routing
         public static Dictionary<string, AccessModes> GetAuthorizedDatabases(TransactionOperationContext txContext, RavenServer ravenServer, string apiKeyName)
         {
             BlittableJsonReaderObject resourcesAccessMode;
-
+            if (apiKeyName.StartsWith("Raven"))
+            {
+                return new Dictionary<string, AccessModes>{{"*",AccessModes.Admin}};
+            }
             var apiDoc = ravenServer.ServerStore.Cluster.Read(txContext, Constants.ApiKeys.Prefix + apiKeyName);
 
             if (apiDoc == null)

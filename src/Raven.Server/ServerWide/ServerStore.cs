@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
+using Raven.Client;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Server;
 using Raven.Client.Extensions;
@@ -33,6 +34,7 @@ using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
+using Raven.Server.Web.Authentication;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -401,6 +403,27 @@ namespace Raven.Server.ServerWide
         }
 
         public byte[] BoxPublicKey, BoxSecretKey, SignPublicKey, SignSecretKey;
+
+        private Tuple<DateTime, string> _clusterToken = Tuple.Create<DateTime, string>(DateTime.MinValue, null);
+
+        internal string GetClusterTokenForNode(JsonOperationContext context)
+        {
+            if (DateTime.UtcNow > _clusterToken.Item1 || _clusterToken.Item2 == null)
+            {
+                lock (this)
+                {
+                    if (DateTime.UtcNow > _clusterToken.Item1 || _clusterToken.Item2 == null)
+                    {
+                        DateTime expires;
+                        var token = System.Text.Encoding.UTF8.GetString(SignedTokenGenerator.GenerateToken(context, SignSecretKey,
+                            Constants.ApiKeys.ClusterApiKeyName, NodeTag, out expires).ToArray());
+                        Interlocked.Exchange(ref _clusterToken, Tuple.Create(expires, token));
+                        return token;
+                    }
+                }
+            }
+            return _clusterToken.Item2;
+        }
 
         private void GenerateAuthenticationSignetureKeys(TransactionOperationContext ctx)
         {
@@ -1168,6 +1191,7 @@ namespace Raven.Server.ServerWide
                 {
                     _clusterRequestExecutor?.Dispose();
                     _clusterRequestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, clusterTopology.ApiKey);
+                    _clusterRequestExecutor.ClusterToken = GetClusterTokenForNode(context);
                     _clusterRequestExecutor.DefaultTimeout = Engine.OperationTimeout;
                 }
 
