@@ -16,7 +16,6 @@ using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Utils;
 using Sparrow;
-using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Data.BTrees;
@@ -37,7 +36,7 @@ namespace Raven.Server.Json
             writer.WriteStartArray();
             var first = true;
 
-            for (int i = 0; i < changeVector.Length; i++)
+            for (var i = 0; i < changeVector.Length; i++)
             {
                 if (first == false)
                     writer.WriteComma();
@@ -281,6 +280,19 @@ namespace Raven.Server.Json
             writer.WriteComma();
 
             writer.WriteQueryResult(context, result, metadataOnly, out numberOfResults, partial: true);
+
+            writer.WriteEndObject();
+        }
+
+        public static void WriteMoreLikeThisQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, MoreLikeThisQueryResultServerSide result, out int numberOfResults)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(result.DurationMilliseconds));
+            writer.WriteInteger(result.DurationMilliseconds);
+            writer.WriteComma();
+
+            writer.WriteQueryResult(context, result, metadataOnly: false, numberOfResults: out numberOfResults, partial: true);
 
             writer.WriteEndObject();
         }
@@ -683,7 +695,7 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName(nameof(statistics.DatabaseChangeVector));
             writer.WriteChangeVector(statistics.DatabaseChangeVector);
-            writer.WriteComma();            
+            writer.WriteComma();
 
             writer.WritePropertyName(nameof(statistics.DatabaseId));
             writer.WriteString(statistics.DatabaseId.ToString());

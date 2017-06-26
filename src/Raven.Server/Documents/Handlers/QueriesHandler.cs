@@ -174,7 +174,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteDocumentQueryResult(context, result, metadataOnly, out numberOfResults);
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Queries, nameof(Query), numberOfResults, indexQuery.PageSize);
+            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({indexName})", HttpContext, numberOfResults, indexQuery.PageSize, TimeSpan.FromMilliseconds(result.DurationMilliseconds));
         }
 
         private IndexQueryServerSide GetIndexQuery(DocumentsOperationContext context, HttpMethod method)
@@ -212,10 +212,10 @@ namespace Raven.Server.Documents.Handlers
             int numberOfResults;
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteQueryResult(context, result, metadataOnly: false, numberOfResults: out numberOfResults);
+                writer.WriteMoreLikeThisQueryResult(context, result, out numberOfResults);
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Queries, nameof(MoreLikeThis), numberOfResults, query.PageSize);
+            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(MoreLikeThis)} ({indexName})", HttpContext, numberOfResults, query.PageSize, TimeSpan.FromMilliseconds(result.DurationMilliseconds));
         }
 
         private void Explain(DocumentsOperationContext context, string indexName)

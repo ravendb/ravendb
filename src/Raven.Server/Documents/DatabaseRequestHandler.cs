@@ -1,9 +1,11 @@
-﻿using Raven.Server.Documents.Indexes;
+﻿using System;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
 using System.Linq;
+using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Transformers;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json.Parsing;
@@ -55,12 +57,12 @@ namespace Raven.Server.Documents
             return context.ReadObject(transformerParameters, "transformer/parameters");
         }
 
-        protected void AddPagingPerformanceHint(PagingOperationType operation, string action, int numberOfResults, int pageSize)
+        protected void AddPagingPerformanceHint(PagingOperationType operation, string action, HttpContext httpContext, int numberOfResults, int pageSize, TimeSpan duration)
         {
             if (numberOfResults <= Database.Configuration.PerformanceHints.MaxNumberOfResults)
                 return;
 
-            Database.NotificationCenter.Paging.Add(operation, action, numberOfResults, pageSize);
+            Database.NotificationCenter.Paging.Add(operation, action, httpContext.Request.QueryString.Value, numberOfResults, pageSize, duration);
         }
     }
 }
