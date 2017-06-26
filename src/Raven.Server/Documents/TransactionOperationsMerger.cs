@@ -576,6 +576,8 @@ namespace Raven.Server.Documents
 
         private void NotifyOnThreadPool(List<MergedTransactionCommand> cmds)
         {
+            if (cmds == null)
+                return;
             TaskExecutor.Execute(DoCommandsNotification, cmds);
         }
 
