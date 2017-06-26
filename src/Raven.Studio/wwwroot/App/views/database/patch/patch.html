@@ -7,7 +7,7 @@
                     <div class="input-group patch-save" data-bind="css: { active: inSaveMode }, validationElement: patchSaveName, validationOptions: { insertMessages: false }">
                         <input class="form-control" style="display: none" placeholder="Patch name" data-bind="textInput: patchSaveName">
                         <span class="input-group-btn">
-                            <button class="btn btn-success" data-class="active" type="button" data-bind="click: savePatch, css: { 'btn-spinner': spinners.save }">
+                            <button class="btn btn-success" data-class="active" type="button" data-bind="click: savePatch, css: { 'btn-spinner': spinners.save }" title="Save patch under given name">
                                 <i class="icon-save"></i> <span data-bind="text: inSaveMode() ? 'Save' : 'Save...'"></span>
                             </button>
                         </span>
@@ -39,7 +39,7 @@
 
                     <div class="col-sm-9 col-lg-4 margin-bottom" data-bind="validationElement: selectedItem">
                         <div class="input-group">
-                            <input type="text" id="selectedItem" data-bind="textInput: selectedItem" class="form-control" />
+                            <input type="text" id="selectedItem" data-bind="textInput: selectedItem" class="form-control" placeholder="Document id" />
                             <ul class="dropdown-menu autocomplete-list" role="menu" style="display: none;" data-bind="autoComplete: '#selectedItem', foreach: $root.documentIdSearchResults">
                                 <li role="presentation" data-bind="click: $parent.selectedItem.bind($parent, $data)">
                                     <a role="menuitem" tabindex="-1" href="#">
@@ -48,7 +48,7 @@
                                 </li>
                             </ul>
                             <span class="input-group-btn" style="vertical-align:top">
-                                <button class="btn" type="button" data-bind="click: $root.previewDocument, css: { 'btn-spinner': $root.spinners.preview }, disable: $root.spinners.preview" title="Show preview">
+                                <button class="btn" type="button" data-bind="click: $root.previewDocument, css: { 'btn-spinner': $root.spinners.preview }, disable: $root.spinners.preview" title="Show document preview">
                                     <i class="icon-preview"></i>
                                 </button>
                             </span>
@@ -163,21 +163,21 @@
                         </div>
                     </div>
                     <div class="patch-controls">
-                        <button class="btn btn-primary btn-block btn-lg text-center" data-bind="click: runPatch">
+                        <button class="btn btn-primary btn-block btn-lg text-center" data-bind="click: runPatch" title="Execute patch">
                             <i class="icon-play2 icon-lg"></i><br />
                             <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
                         </button>
                         <div class="flex-separator"></div>
-                        <button class="btn btn-default btn-block text-center margin-top" data-bind="click: enterTestMode">
+                        <button class="btn btn-default btn-block text-center margin-top" data-bind="click: enterTestMode" title="Dry patch run. It doesn't modify any data">
                             <i class="icon-rocket"></i><span>Test</span>
                         </button>
                     </div>
                     <div class="test-controls">
-                        <button class="btn btn-primary btn-block text-center" data-bind="click: test.runTest, css: { 'btn-spinner' : test.spinners.testing }, disable: test.spinners.testing">
+                        <button class="btn btn-primary btn-block text-center" data-bind="click: test.runTest, css: { 'btn-spinner' : test.spinners.testing }, disable: test.spinners.testing" ttile="Dry patch run. It doesn't modify any data">
                             <i class="icon-rocket"></i><span>Test</span>
                         </button>
                         <div class="flex-separator"></div>
-                        <button class="btn btn-default btn-block text-center test-close" data-bind="click: test.closeTestMode">
+                        <button class="btn btn-default btn-block text-center test-close" data-bind="click: test.closeTestMode" title="Leave test mode">
                             <i class="icon-check"></i><span>Done</span>
                         </button>
                     </div>
@@ -208,12 +208,10 @@
                             </li>
                         </ul>
                         <span class="input-group-btn">
-                            <button class="btn btn-default" type="button" data-bind="click: loadDocument, css: { 'btn-spinner': spinners.loadingDocument }, disable: spinners.loadingDocument">
+                            <button class="btn btn-default" type="button" data-bind="click: loadDocument, css: { 'btn-spinner': spinners.loadingDocument }, disable: spinners.loadingDocument() || !documentId()">
                                 <i class="icon-import"></i> <span>Load</span>
                             </button>
                         </span>
-
-
                     </div>
                 </div>
                 <div class="col-sm-6">
@@ -227,28 +225,28 @@
 
             <ul class="nav nav-tabs nav-stacked" data-bind="with: test">
                 <li class="active">
-                    <a href="#preview" data-toggle="tab">
+                    <a href="#preview" data-toggle="tab" title="Show document before and after patch">
                         <i class="icon-preview"></i>
                         <span>Preview</span>
                     </a>
                 </li>
                 <li>
-                    <a href="#puts" data-toggle="tab">
+                    <a href="#puts" data-toggle="tab" title="Show information about documents saved during patch execution">
                         <i class="icon-export"></i>
                         <span>Puts</span>
                         <span class="label label-primary pull-right" data-bind="text: actions.putDocument().length || ''"></span>
                     </a>
                 </li>
                 <li>
-                    <a href="#loads" data-toggle="tab">
+                    <a href="#loads" data-toggle="tab" title="Show information about loaded documents during patch execution">
                         <i class="icon-import"></i>
                         <span>Loads</span>
                         <span class="label label-primary pull-right" data-bind="text: actions.loadDocument().length || ''"></span>
                     </a>
                 </li>
                 <li>
-                    <a href="#output" data-toggle="tab">
-                        <i class="icon-rocket"></i>
+                    <a href="#output" data-toggle="tab" title="Show log generated during patch execution">
+                        <i class="icon-administrator-js-console"></i>
                         <span>Output</span>
                         <span class="label label-primary pull-right" data-bind="text: actions.info().length || ''"></span>
                     </a>
@@ -318,7 +316,7 @@
 </script>
 
 <script type="text/html" id="saved-patches-dialog">
-    <button class="btn btn-default dropdown-toggle" type="button" id="dropdownLoadPatch" data-toggle="dropdown" data-bind="enable: savedPatches.hasAnySavedPatch">
+    <button class="btn btn-default dropdown-toggle" type="button" id="dropdownLoadPatch" data-toggle="dropdown" data-bind="enable: savedPatches.hasAnySavedPatch" title="Load saved patch">
         <i class="icon-patch"></i> <span>Load patch</span>
         <span class="caret"></span>
     </button>
@@ -358,7 +356,7 @@
                                 <h3>Select patch</h3>
                             </div>
                             <div class="col-xs-6">
-                                <input type="search" class="form-control input-sm patch-filter" data-bind="textInput: filters.searchText" placeholder="filter">
+                                <input type="search" class="form-control input-sm patch-filter" data-bind="textInput: filters.searchText" placeholder="filter" title="Filter saved patches by name">
                             </div>
                         </div>
                     </div>
@@ -377,7 +375,7 @@
             </div>
                 <div class="flex-footer">
                     <div class="text-right">
-                        <button class="btn btn-success btn-sm close-panel" data-bind="click: usePatch, enable: previewItem()">Load</button>
+                        <button title="Load saved patch" class="btn btn-success btn-sm close-panel" data-bind="click: usePatch, enable: previewItem()">Load</button>
                     </div>
                 </div>
             
