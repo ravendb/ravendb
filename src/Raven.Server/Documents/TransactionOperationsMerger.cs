@@ -342,7 +342,7 @@ namespace Raven.Server.Documents
                             {
                                 transactionMeter.Dispose();
                             }
-                            CompletePreviousTransaction(previous, previousPendingOps, throwOnError: true);
+                            CompletePreviousTransaction(previous, ref previousPendingOps, throwOnError: true);
                         }
                         catch (Exception e)
                         {
@@ -352,7 +352,7 @@ namespace Raven.Server.Documents
                                     $"Failed to run merged transaction with {currentPendingOps.Count:#,#} operations in async manner, will retry independently",
                                     e);
                             }
-                            CompletePreviousTransaction(previous, previousPendingOps,
+                            CompletePreviousTransaction(previous, ref previousPendingOps,
                                 // if this previous threw, it won't throw again
                                 throwOnError: false);
                             previous.Dispose();
@@ -405,7 +405,7 @@ namespace Raven.Server.Documents
        
         private void CompletePreviousTransaction(
             RavenTransaction previous,
-            List<MergedTransactionCommand> previousPendingOps,
+            ref List<MergedTransactionCommand> previousPendingOps,
             bool throwOnError)
         {
             try
@@ -423,6 +423,7 @@ namespace Raven.Server.Documents
                     op.Exception = e;
                 }
                 NotifyOnThreadPool(previousPendingOps);
+                previousPendingOps = null; // RavenDB-7417
                 if (throwOnError)
                     throw;
             }
