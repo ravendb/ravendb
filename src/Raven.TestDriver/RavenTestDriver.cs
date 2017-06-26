@@ -140,7 +140,7 @@ namespace Raven.TestDriver
             while ((line = output.ReadLine()) != null)
             {
                 sb.AppendLine(line);
-                const string prefix = "Listening on: ";
+                const string prefix = "Server available on: ";
                 if (line.StartsWith(prefix))
                 {
                     url = line.Substring(prefix.Length);
