@@ -140,8 +140,8 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/revisions/zombies", "GET", "/databases/*/revisions/zombies?etag={long.MaxValue}&pageSize=25")]
-        public Task GetZombies()
+        [RavenAction("/databases/*/revisions/bin", "GET", "/databases/*/revisions/bin?etag={long.MaxValue}&pageSize=25")]
+        public Task GetRevisionsBin()
         {
             var versioningStorage = Database.DocumentsStorage.VersioningStorage;
             if (versioningStorage.Configuration == null)
@@ -174,7 +174,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteEndObject();
                 }
 
-                AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetZombies), count, pageSize);
+                AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisionsBin), count, pageSize);
             }
 
             return Task.CompletedTask;

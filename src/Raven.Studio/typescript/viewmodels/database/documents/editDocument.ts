@@ -8,7 +8,7 @@ import saveDocumentCommand = require("commands/database/documents/saveDocumentCo
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import resolveMergeCommand = require("commands/database/studio/resolveMergeCommand");
 import getDocumentsFromCollectionCommand = require("commands/database/documents/getDocumentsFromCollectionCommand");
-import getZombieDocumentMetadataCommand = require("commands/database/documents/getZombieDocumentMetadataCommand");
+import getRevisionsBinDocumentMetadataCommand = require("commands/database/documents/getRevisionsBinDocumentMetadataCommand");
 import generateClassCommand = require("commands/database/documents/generateClassCommand");
 import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
@@ -89,8 +89,8 @@ class editDocument extends viewModelBase {
     canActivate(args: any) {
         super.canActivate(args);
 
-        if (args && args.zombie && args.id) {
-            return this.activateByZombie(args.id);
+        if (args && args.revisionBinEntry && args.id) {
+            return this.activateByRevisionsBinEntry(args.id);
         } else if (args && args.id && args.revision) {
             return this.activateByRevision(args.id, args.revision);
         } else if (args && args.id) {
@@ -152,10 +152,10 @@ class editDocument extends viewModelBase {
         return canActivateResult;
     }
 
-    private activateByZombie(id: string) {
+    private activateByRevisionsBinEntry(id: string) {
         const canActivateResult = $.Deferred<canActivateResultDto>();
 
-        this.loadZombie(id)
+        this.loadRevisionsBinEntry(id)
             .done(() => canActivateResult.resolve({ can: true }))
             .fail(() => canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocumentsCollectionName, this.activeDatabase()) }));
             
@@ -625,9 +625,9 @@ class editDocument extends viewModelBase {
 
             })
             .fail((xhr: JQueryXHR) => {
-                // if versioning is enabled try to load zombie
+                // if versioning is enabled try to load revisions bin entry
                 if (xhr.status === 404 && db.hasVersioningConfiguration()) {
-                    this.loadZombie(id)
+                    this.loadRevisionsBinEntry(id)
                         .done(doc => loadTask.resolve(doc))
                         .fail(() => loadTask.reject())
                         .always(() => this.isBusy(false));
@@ -642,8 +642,8 @@ class editDocument extends viewModelBase {
         return loadTask;
     }
 
-    private loadZombie(id: string): JQueryPromise<document> {
-        return new getZombieDocumentMetadataCommand(id, this.activeDatabase())
+    private loadRevisionsBinEntry(id: string): JQueryPromise<document> {
+        return new getRevisionsBinDocumentMetadataCommand(id, this.activeDatabase())
             .execute()
             .done((doc: document) => {
                 this.document(doc);
@@ -659,7 +659,7 @@ class editDocument extends viewModelBase {
             .fail(() => {
                 this.dirtyFlag().reset();
 
-                messagePublisher.reportError("Could not find zombie document: " + id);
+                messagePublisher.reportError("Could not find revisions bin entry: " + id);
                 router.navigate(appUrl.forDocuments(null, this.activeDatabase()));
             });
     }

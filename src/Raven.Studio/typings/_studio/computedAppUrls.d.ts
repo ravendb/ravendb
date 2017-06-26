@@ -8,7 +8,7 @@ interface computedAppUrls {
     databases: KnockoutComputed<string>;
     manageDatabaseGroup: KnockoutComputed<string>;
     documents: KnockoutComputed<string>;
-    zombies: KnockoutComputed<string>;
+    revisionsBin: KnockoutComputed<string>;
     conflicts: KnockoutComputed<string>;
     patch: KnockoutComputed<string>;
     indexes: KnockoutComputed<string>;

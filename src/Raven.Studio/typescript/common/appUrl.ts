@@ -32,7 +32,7 @@ class appUrl {
         databases: ko.pureComputed(() => appUrl.forDatabases()),
         manageDatabaseGroup: ko.pureComputed(() => appUrl.forManageDatabaseGroup(appUrl.currentDatabase())),
         documents: ko.pureComputed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
-        zombies: ko.pureComputed(() => appUrl.forZombies(appUrl.currentDatabase())),
+        revisionsBin: ko.pureComputed(() => appUrl.forRevisionsBin(appUrl.currentDatabase())),
         conflicts: ko.pureComputed(() => appUrl.forConflicts(appUrl.currentDatabase())),
         patch: ko.pureComputed(() => appUrl.forPatch(appUrl.currentDatabase())),
         indexes: ko.pureComputed(() => appUrl.forIndexes(appUrl.currentDatabase())),
@@ -483,9 +483,9 @@ class appUrl {
         return "#databases/documents?" + collectionPart + databasePart;
     }
 
-    static forZombies(db: database | databaseInfo): string {
+    static forRevisionsBin(db: database | databaseInfo): string {
         const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/documents/zombies?" + databasePart;
+        return "#databases/documents/revisions/bin?" + databasePart;
     }
 
     static forDocumentsByDatabaseName(collection: string, dbName: string): string {

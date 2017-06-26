@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 import document = require("models/database/documents/document");
 import endpoints = require("endpoints");
 
-class getZombieDocumentMetadataCommand extends commandBase {
+class getRevisionsBinDocumentMetadataCommand extends commandBase {
 
     constructor(private id: string, private db: database) {
         super();
@@ -33,4 +33,4 @@ class getZombieDocumentMetadataCommand extends commandBase {
     }
  }
 
-export = getZombieDocumentMetadataCommand;
+export = getRevisionsBinDocumentMetadataCommand;

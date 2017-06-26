@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 import document = require("models/database/documents/document");
 
-class getZombiesCommand extends commandBase {
+class getRevisionsBinEntryCommand extends commandBase {
 
     constructor(private database: database, private etag: number, private take: number) {
         super();
@@ -22,10 +22,10 @@ class getZombiesCommand extends commandBase {
                 resultEtag: this.extractEtag(xhr)
             } as pagedResult<document>;
         };
-        const url = endpoints.databases.versioning.revisionsZombies + this.urlEncodeArgs(args);
+        const url = endpoints.databases.versioning.revisionsBin + this.urlEncodeArgs(args);
         return this.query(url, null, this.database, resultsSelector);
     }
 
 }
 
-export = getZombiesCommand;
+export = getRevisionsBinEntryCommand;
