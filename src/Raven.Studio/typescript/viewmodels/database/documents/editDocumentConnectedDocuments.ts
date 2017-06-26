@@ -51,6 +51,7 @@ class connectedDocuments {
     searchInputVisible: KnockoutObservable<boolean>;
     clearSearchInputSubscription: KnockoutSubscription;
     gridResetSubscription: KnockoutSubscription;
+    revisionsCount = ko.observable<number>();
 
     docsColumns: virtualColumn[];
     attachmentsColumns: virtualColumn[];
@@ -171,6 +172,11 @@ class connectedDocuments {
             return connectedDocuments.emptyDocResult<connectedDocumentItem | attachmentItem>();
         }
 
+        if (connectedDocuments.currentTab() !== "revisions") {
+            // going to different tab - stop displaying revisions count
+            this.revisionsCount(null);
+        }
+
         switch (connectedDocuments.currentTab()) {
             case "related":
                 return this.fetchRelatedDocs(skip, take);
@@ -252,6 +258,7 @@ class connectedDocuments {
             .execute()
             .done(result => {
                 const mappedResults = result.items.map(x => this.revisionToConnectedDocument(x));
+                this.revisionsCount(result.totalResultCount);
                 fetchTask.resolve({
                     items: mappedResults,
                     totalResultCount: result.totalResultCount
