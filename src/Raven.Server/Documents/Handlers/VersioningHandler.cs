@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -106,6 +107,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var versioningStorage = Database.DocumentsStorage.VersioningStorage;
 
+                var sw = Stopwatch.StartNew();
                 var start = GetStart();
                 var pageSize = GetPageSize();
                 var revisions = versioningStorage.GetRevisions(context, id, start, pageSize);
@@ -134,7 +136,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteEndObject();
                 }
 
-                AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisions), count, pageSize);
+                AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisions), HttpContext, count, pageSize, sw.Elapsed);
             }
 
             return Task.CompletedTask;
@@ -147,6 +149,7 @@ namespace Raven.Server.Documents.Handlers
             if (versioningStorage.Configuration == null)
                 throw new VersioningDisabledException();
 
+            var sw = Stopwatch.StartNew();
             var etag = GetLongQueryString("etag", false) ?? long.MaxValue;
             var pageSize = GetPageSize();
 
@@ -174,7 +177,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteEndObject();
                 }
 
-                AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisionsBin), count, pageSize);
+                AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisionsBin), HttpContext, count, pageSize, sw.Elapsed);
             }
 
             return Task.CompletedTask;

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Json;
@@ -45,6 +46,7 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
+                var sw = Stopwatch.StartNew();
                 var pageSize = GetPageSize();
                 var documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), pageSize);
 
@@ -58,7 +60,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteEndObject();
                 }
 
-                AddPagingPerformanceHint(PagingOperationType.Documents, "Collection", numberOfResults, pageSize);
+                AddPagingPerformanceHint(PagingOperationType.Documents, "Collection", HttpContext, numberOfResults, pageSize, sw.Elapsed);
             }
 
             return Task.CompletedTask;

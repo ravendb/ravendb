@@ -10,7 +10,7 @@ type pagingDetailsItemDto = {
     Action: string;
     NumberOfResults: number;
     PageSize: number;
-    Occurence: string;
+    Occurrence: string;
 }
 
 class pagingDetails extends abstractPerformanceHintDetails {
@@ -35,7 +35,7 @@ class pagingDetails extends abstractPerformanceHintDetails {
                 new textColumn<pagingDetailsItemDto>(grid, x => x.Action, "Action", "30%"),
                 new textColumn<pagingDetailsItemDto>(grid, x => x.NumberOfResults ? x.NumberOfResults.toLocaleString() : 'n/a', "# of results", "20%"),
                 new textColumn<pagingDetailsItemDto>(grid, x => x.PageSize ? x.PageSize.toLocaleString() : 'n/a', "Page size", "20%"),
-                new textColumn<pagingDetailsItemDto>(grid, x => x.Occurence, "Date", "30%")
+                new textColumn<pagingDetailsItemDto>(grid, x => x.Occurrence, "Date", "30%")
             ];
         });
     }
@@ -54,7 +54,7 @@ class pagingDetails extends abstractPerformanceHintDetails {
                 ({
                     Action: key,
                     NumberOfResults: item.NumberOfResults,
-                    Occurence: item.Occurence,
+                    Occurrence: item.Occurrence,
                     PageSize: item.PageSize
                 } as pagingDetailsItemDto));
         });
