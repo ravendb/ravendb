@@ -197,14 +197,14 @@ namespace FastTests
                 return new DynamicArray(command.Result.Results);
             }
 
-            public DynamicArray GetZombies(long etag, int? pageSize = null)
+            public DynamicArray GetRevisionsBinEntries(long etag, int? pageSize = null)
             {
-                return AsyncHelpers.RunSync(() => GetZombiesAsync(etag, pageSize));
+                return AsyncHelpers.RunSync(() => GetRevisionsBinEntriesAsync(etag, pageSize));
             }
 
-            public async Task<DynamicArray> GetZombiesAsync(long etag, int? pageSize = null)
+            public async Task<DynamicArray> GetRevisionsBinEntriesAsync(long etag, int? pageSize = null)
             {
-                var command = new GetZombiesCommand(etag, pageSize);
+                var command = new GetRevisionsBinEntryCommand(etag, pageSize);
                 await RequestExecutor.ExecuteAsync(command, Context);
                 return new DynamicArray(command.Result.Results);
             }

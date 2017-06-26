@@ -362,14 +362,14 @@ namespace FastTests.Server.Documents.Versioning
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public async Task GetZombies(bool useSession)
+        public async Task GetRevisionsBinEntries(bool useSession)
         {
             using (var store = GetDocumentStore())
             {
                 await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database, false);
 
-                var zombies = await store.Commands().GetZombiesAsync(long.MaxValue);
-                Assert.Equal(0, zombies.Count);
+                var deletedRevisions = await store.Commands().GetRevisionsBinEntriesAsync(long.MaxValue);
+                Assert.Equal(0, deletedRevisions.Count);
 
                 var id = "users/1";
                 if (useSession)
@@ -402,8 +402,8 @@ namespace FastTests.Server.Documents.Versioning
                 Assert.Equal(useSession ? 1 : 0, statistics.CountOfDocuments);
                 Assert.Equal(4, statistics.CountOfRevisionDocuments);
 
-                zombies = await store.Commands().GetZombiesAsync(long.MaxValue);
-                Assert.Equal(1, zombies.Count);
+                deletedRevisions = await store.Commands().GetRevisionsBinEntriesAsync(long.MaxValue);
+                Assert.Equal(1, deletedRevisions.Count);
 
                 using (var session = store.OpenAsyncSession())
                 {

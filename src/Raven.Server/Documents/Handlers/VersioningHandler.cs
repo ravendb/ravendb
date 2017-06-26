@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Handlers
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
-            using (versioningStorage.GetLatestZombieEtag(context, etag, out Slice zombieKey, out long actualEtag))
+            using (versioningStorage.GetLatestRevisionsBinEntryEtag(context, etag, out Slice revisionsBinEntryKey, out long actualEtag))
             {
                 if (GetLongFromHeaders("If-None-Match") == actualEtag)
                 {
@@ -168,7 +168,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteStartObject();
 
                     writer.WritePropertyName("Results");
-                    var revisions = versioningStorage.GetZombies(context, zombieKey, pageSize);
+                    var revisions = versioningStorage.GetRevisionsBinEntries(context, revisionsBinEntryKey, pageSize);
                     writer.WriteDocuments(context, revisions, false, out count);
 
                     writer.WriteEndObject();

@@ -507,7 +507,7 @@ class storageReport extends viewModelBase {
         if (d.showType) {
             html += "<br />Type: <strong>" + _.upperFirst(d.type) + "</strong>";
         }
-        if (this.shouldDisplayNumberOfEntires(d)) {
+        if (this.shouldDisplayNumberOfEntries(d)) {
             html += "<br />Entries: <strong>" + d.numberOfEntries.toLocaleString() + "</strong>";
         }
         html += " <br /> <span class='size'>Size: <strong>" + generalUtils.formatBytesToSize(d.size) + "</strong></span>";
@@ -516,7 +516,7 @@ class storageReport extends viewModelBase {
         this.onMouseMove(d);
     }
 
-    private shouldDisplayNumberOfEntires(d: storageReportItem) {
+    private shouldDisplayNumberOfEntries(d: storageReportItem) {
         return d.type === "tree" || d.type === "table";
     }
 
