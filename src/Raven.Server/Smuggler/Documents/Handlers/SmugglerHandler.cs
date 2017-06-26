@@ -403,9 +403,19 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             var url = GetStringQueryString("url", required: false);
             if (string.IsNullOrEmpty(url) == false)
             {
-
-                var stream = await HttpClient.GetStreamAsync(url);
-                return stream;
+                if (HttpContext.Request.Method == "POST")
+                {
+                    var msg = await HttpClient.PostAsync(url, new StreamContent(HttpContext.Request.Body)
+                    {
+                        Headers =
+                        {
+                            ContentType =  new System.Net.Http.Headers.MediaTypeHeaderValue(HttpContext.Request.ContentType)
+                        }
+                    });
+                    return await msg.Content.ReadAsStreamAsync();
+                }
+                
+                return await HttpClient.GetStreamAsync(url);
             }
 
             return HttpContext.Request.Body;
