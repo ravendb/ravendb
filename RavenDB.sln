@@ -48,7 +48,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tryouts", "test\Tryouts\Try
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Raven.Traffic", "tools\Raven.Traffic\Raven.Traffic.csproj", "{EF58FEBA-36A3-4829-9073-DB1F0CE5396A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Voron.Recovery", "Tools\Voron.Recovery\Voron.Recovery.csproj", "{5885A9D7-FC66-4486-ACFF-2F882A3DD0E5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Voron.Recovery", "tools\Voron.Recovery\Voron.Recovery.csproj", "{5885A9D7-FC66-4486-ACFF-2F882A3DD0E5}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StressTests", "test\StressTests\StressTests.csproj", "{D8AB200A-6DF6-442E-85E0-9A906E0F7521}"
 EndProject
@@ -62,7 +62,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SubscriptionFailover.Benchm
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.TestDriver", "src\Raven.TestDriver\Raven.TestDriver.csproj", "{EFAA52C9-63F1-4DBA-BDD3-E2BFCF6D7968}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "rvn", "tools\RVN\rvn.csproj", "{579E2927-4840-4E36-8D12-01878EFB53E4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "rvn", "tools\rvn\rvn.csproj", "{579E2927-4840-4E36-8D12-01878EFB53E4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
