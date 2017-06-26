@@ -13,7 +13,8 @@ namespace Raven.Client.Server.ETL
         public string Url
         {
             get => _url;
-            set => _url = value?.TrimEnd("/");        }
+            set => _url = value?.TrimEnd('/');        
+        }
 
         public override ConnectionStringType Type => ConnectionStringType.Raven;
 
