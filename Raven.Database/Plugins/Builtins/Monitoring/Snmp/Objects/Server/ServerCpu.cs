@@ -19,7 +19,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 
         protected override Gauge32 GetData()
         {
-            return new Gauge32((int)CpuStatistics.Average);
+            return new Gauge32((int)(CpuStatistics.Average * 100));
         }
     }
 }
