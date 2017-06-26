@@ -5,17 +5,17 @@ function BuildServer ( $srcDir, $outDir, $spec ) {
 
     $output = [io.path]::combine($outDir, "Server");
     $commandArgs += @( "--output", $output )
+    $commandArgs += @( "--configuration", "Release" )
     
     if ($spec.TargetId -ne 'rpi') {
         $commandArgs += $( "--runtime", "$($spec.Runtime)" )
     }
 
-    $commandArgs += @( "--configuration", "Release" )
-
     $commandArgs += "$srcDir"
 
     if ($spec.TargetId -eq "rpi") {
         $bin = [io.path]::combine($srcDir, "bin");
+        write-host "Clean $bin"
         Remove-Item -Recurse -Force $bin
 
         $commandArgs += "/p:ARM=true"
@@ -93,12 +93,11 @@ function BuildRvn ( $srcDir, $outDir, $spec ) {
 
     $output = [io.path]::combine($outDir, "rvn");
     $commandArgs += @( "--output", $output )
+    $commandArgs += @( "--configuration", "Release" )
     
     if ($spec.TargetId -ne 'rpi') {
         $commandArgs += $( "--runtime", "$($spec.Runtime)" )
     }
-
-    $commandArgs += @( "--configuration", "Release" )
 
     $commandArgs += "$srcDir"
 
