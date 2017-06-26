@@ -111,10 +111,10 @@ class ongoingTasks extends viewModelBase {
 
         this.existingTaskTypes(Array.from(taskTypesSet).sort());
 
-        this.replicationTasks.sort((a,b) => a.taskName().toUpperCase() > b.taskName().toUpperCase() ? 1: -1);
-        this.backupTasks.sort((a,b) => a.taskName().toUpperCase() > b.taskName().toUpperCase() ? 1: -1);
-        this.etlTasks.sort((a,b) => a.taskName().toUpperCase() > b.taskName().toUpperCase() ? 1: -1);
-        this.sqlTasks.sort((a,b) => a.taskName().toUpperCase() > b.taskName().toUpperCase() ? 1: -1);
+        this.replicationTasks(_.sortBy(this.replicationTasks(), x => x.taskName().toUpperCase()));
+        this.backupTasks(_.sortBy(this.backupTasks(), x => x.taskName().toUpperCase())); 
+        this.etlTasks(_.sortBy(this.etlTasks(), x => x.taskName().toUpperCase())); 
+        this.sqlTasks(_.sortBy(this.sqlTasks(), x => x.taskName().toUpperCase())); 
     }
 
     manageDatabaseGroupUrl(dbInfo: databaseInfo): string {
