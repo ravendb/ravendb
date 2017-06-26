@@ -57,8 +57,9 @@ function WrapContentsInDir ( $packageDir, $wrapperDirName ) {
     Pop-Location
 }
 
-function IncludeDotnetForRaspberryPi( $packageDir, $outDirs ) {
-    DownloadDotnetRuntimeForUbuntu14Arm32 $packageDir
+function IncludeDotnetForRaspberryPi( $packageDir, $outDirs, $projectDir ) {
+    $dotnetCacheDir = [system.io.path]::combine($projectDir, 'temp')
+    DownloadDotnetRuntimeForUbuntu14Arm32 $packageDir $dotnetCacheDir
     $dotnetArchivePath = $(Join-Path -ChildPath "dotnet.tar.gz" $packageDir)
     $dotnetPath = $(Join-Path -ChildPath "dotnet" $packageDir)
     UnpackToDir  $dotnetArchivePath $dotnetPath
