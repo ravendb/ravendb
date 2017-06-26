@@ -191,6 +191,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     }
                     using (var requestExecuter = ClusterRequestExecutor.CreateForSingleNode(serverUrl, apiKey))
                     {
+                        requestExecuter.ClusterToken = ServerStore.GetClusterTokenForNode(ctx);
                         var infoCmd = new GetNodeInfoCommand();
                         await requestExecuter.ExecuteAsync(infoCmd, ctx);
                         var nodeInfo = infoCmd.Result;

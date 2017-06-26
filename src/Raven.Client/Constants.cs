@@ -71,6 +71,7 @@ namespace Raven.Client
             }
 
             public const string Prefix = "apikeys/";
+            public const string ClusterApiKeyName = "Raven/Cluster";
         }
 
         public class Documents

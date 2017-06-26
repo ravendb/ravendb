@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
-using System.IO;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
@@ -197,9 +195,6 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        private readonly string _emptySignature = new string(' ',
-            Sparrow.Utils.Base64.CalculateAndValidateOutputLength(Sodium.crypto_sign_bytes()));
-
         private unsafe ArraySegment<byte> BuildAccessTokenAndGetApiKeySecret(string apiKeyName, out string secret)
         {
             TransactionOperationContext context;
@@ -226,44 +221,7 @@ namespace Raven.Server.Web.Authentication
                         throw new InvalidOperationException($"Missing 'Secret' property in api key: {apiKeyName}");
                     }
                 }
-                var signature = new byte[Sodium.crypto_sign_bytes()];
-                var expires = DateTime.UtcNow.AddMinutes(30);
-
-                var ms = new MemoryStream();
-                using (var writer = new BlittableJsonTextWriter(context, ms))
-                {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("Sig");
-                    writer.WriteString(_emptySignature); // placeholder for signature
-                    writer.WriteComma();
-                    writer.WritePropertyName("Name");
-                    writer.WriteString(apiKeyName);
-                    writer.WriteComma();
-                    writer.WritePropertyName("Node");
-                    writer.WriteString(ServerStore.NodeTag);
-                    writer.WriteComma();
-                    writer.WritePropertyName("Expires");
-                    writer.WriteString(expires.ToString("O", CultureInfo.InvariantCulture));
-                    writer.WriteEndObject();
-                    writer.Flush();
-                }
-
-                ms.TryGetBuffer(out var buffer);
-
-                fixed (byte* msg = buffer.Array)
-                fixed (byte* sig = signature)
-                fixed (byte* sk = ServerStore.SignSecretKey)
-                {
-                    if (Sodium.crypto_sign_detached(sig, null, msg + buffer.Offset, (ulong)buffer.Count, sk) != 0)
-                        throw new AuthenticationException($"Unable to create and sign Access Token in node {ServerStore.NodeTag} for api key: {apiKeyName} ");
-
-                    // Copies the signature into the placeholder
-                    Sparrow.Utils.Base64.ConvertToBase64Array(msg + 8, sig, 0, signature.Length);
-
-                    ms.TryGetBuffer(out buffer);
-                    return buffer;
-                }
-
+                return SignedTokenGenerator.GenerateToken(context, ServerStore.SignSecretKey, apiKeyName, ServerStore.NodeTag,out var expires);
             }
         }
     }

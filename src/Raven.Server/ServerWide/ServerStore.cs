@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
+using Raven.Client;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Server;
 using Raven.Client.Extensions;
@@ -33,6 +34,7 @@ using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
+using Raven.Server.Web.Authentication;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -393,29 +395,45 @@ namespace Raven.Server.ServerWide
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
                 if (TryLoadAuthenticationKeyPairs(ctx) == false)
-                    GenerateAuthenticationKeyPairs(ctx);
+                    GenerateAuthenticationSignetureKeys(ctx);                
             }
+            GenerateAuthenticationBoxKeys();
 
             Task.Run(ClusterMaintenanceSetupTask, ServerShutdown);
         }
 
         public byte[] BoxPublicKey, BoxSecretKey, SignPublicKey, SignSecretKey;
 
-        private void GenerateAuthenticationKeyPairs(TransactionOperationContext ctx)
+        private Tuple<DateTime, string> _clusterToken = Tuple.Create<DateTime, string>(DateTime.MinValue, null);
+
+        internal string GetClusterTokenForNode(JsonOperationContext context)
         {
-            BoxPublicKey = new byte[Sodium.crypto_box_publickeybytes()];
-            BoxSecretKey = new byte[Sodium.crypto_box_secretkeybytes()];
+            if (DateTime.UtcNow > _clusterToken.Item1 || _clusterToken.Item2 == null)
+            {
+                lock (this)
+                {
+                    if (DateTime.UtcNow > _clusterToken.Item1 || _clusterToken.Item2 == null)
+                    {
+                        DateTime expires;
+                        var token = System.Text.Encoding.UTF8.GetString(SignedTokenGenerator.GenerateToken(context, SignSecretKey,
+                            Constants.ApiKeys.ClusterApiKeyName, NodeTag, out expires).ToArray());
+                        Interlocked.Exchange(ref _clusterToken, Tuple.Create(expires, token));
+                        return token;
+                    }
+                }
+            }
+            return _clusterToken.Item2;
+        }
+
+        private void GenerateAuthenticationSignetureKeys(TransactionOperationContext ctx)
+        {
             SignPublicKey = new byte[Sodium.crypto_sign_publickeybytes()];
             SignSecretKey = new byte[Sodium.crypto_sign_secretkeybytes()];
             unsafe
             {
-                fixed (byte* boxPk = BoxPublicKey)
-                fixed (byte* boxSk = BoxSecretKey)
                 fixed (byte* signPk = SignPublicKey)
                 fixed (byte* signSk = SignSecretKey)
                 {
-                    if (Sodium.crypto_box_keypair(boxPk, boxSk) != 0)
-                        throw new CryptographicException("Unable to generate crypto_box_keypair for authentication");
                     if (Sodium.crypto_sign_keypair(signPk, signSk) != 0)
                         throw new CryptographicException("Unable to generate crypto_sign_keypair for authentication");
                 }
@@ -423,20 +441,31 @@ namespace Raven.Server.ServerWide
 
             using (var tx = ctx.OpenWriteTransaction())
             {
-                PutSecretKey(ctx, "Raven/Box/Public", BoxPublicKey, overwrite:true, cloneKey:true);
-                PutSecretKey(ctx, "Raven/Box/Private", BoxSecretKey, overwrite: true, cloneKey: true);
                 PutSecretKey(ctx, "Raven/Sign/Public", SignPublicKey, overwrite: true, cloneKey: true);
                 PutSecretKey(ctx, "Raven/Sign/Private", SignSecretKey, overwrite: true, cloneKey: true);
                 tx.Commit();
             }
+        }
+        private void GenerateAuthenticationBoxKeys()
+        {
+            BoxPublicKey = new byte[Sodium.crypto_box_publickeybytes()];
+            BoxSecretKey = new byte[Sodium.crypto_box_secretkeybytes()];
+            unsafe
+            {
+                fixed (byte* boxPk = BoxPublicKey)
+                fixed (byte* boxSk = BoxSecretKey)
+                {
+                    if (Sodium.crypto_box_keypair(boxPk, boxSk) != 0)
+                        throw new CryptographicException("Unable to generate crypto_box_keypair for authentication");
+                }
+            }
+
         }
 
         private bool TryLoadAuthenticationKeyPairs(TransactionOperationContext ctx)
         {
             using (ctx.OpenReadTransaction())
             {
-                BoxPublicKey = GetSecretKey(ctx, "Raven/Box/Public");
-                BoxSecretKey = GetSecretKey(ctx, "Raven/Box/Private");
                 SignPublicKey = GetSecretKey(ctx, "Raven/Sign/Public");
                 SignSecretKey = GetSecretKey(ctx, "Raven/Sign/Private");
             }
@@ -998,7 +1027,7 @@ namespace Raven.Server.ServerWide
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
-                GenerateAuthenticationKeyPairs(ctx);
+                GenerateAuthenticationSignetureKeys(ctx);
             }
             Engine.Bootstrap(NodeHttpServerUrl, SignPublicKey, forNewCluster:true);
         }
@@ -1162,6 +1191,7 @@ namespace Raven.Server.ServerWide
                 {
                     _clusterRequestExecutor?.Dispose();
                     _clusterRequestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, clusterTopology.ApiKey);
+                    _clusterRequestExecutor.ClusterToken = GetClusterTokenForNode(context);
                     _clusterRequestExecutor.DefaultTimeout = Engine.OperationTimeout;
                 }
 
