@@ -52,10 +52,10 @@ namespace Raven.Server.Smuggler.Documents
             _parser = new UnmanagedJsonParser(_context, _state, "file");
 
             if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
-                ThrowInvalidJson();
+                ThrowInvalidJson("Unexpected end of json.");
 
             if (_state.CurrentTokenType != JsonParserToken.StartObject)
-                ThrowInvalidJson();
+                ThrowInvalidJson("Expected start object, but got " + _state.CurrentTokenType);
 
             buildVersion = ReadBuildVersion();
             _buildVersionType = BuildVersion.Type(buildVersion);
@@ -202,20 +202,20 @@ namespace Raven.Server.Smuggler.Documents
         private unsafe string ReadType()
         {
             if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
-                ThrowInvalidJson();
+                ThrowInvalidJson("Unexpected end of object when reading type");
 
             if (_state.CurrentTokenType == JsonParserToken.EndObject)
                 return null;
 
             if (_state.CurrentTokenType != JsonParserToken.String)
-                ThrowInvalidJson();
+                ThrowInvalidJson("Expected property type to be string, but was " + _state.CurrentTokenType );
 
             return _context.AllocateStringValue(null, _state.StringBuffer, _state.StringSize).ToString();
         }
 
-        private static void ThrowInvalidJson()
+        private void ThrowInvalidJson(string msg)
         {
-            throw new InvalidOperationException("Invalid JSON.");
+            throw new InvalidOperationException("Invalid JSON. " + msg + " on " + _parser.GenerateErrorState());
         }
 
         private void ReadObject(BlittableJsonDocumentBuilder builder)
@@ -238,10 +238,10 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
-                ThrowInvalidJson();
+                ThrowInvalidJson("Unexpected end of json.");
 
             if (_state.CurrentTokenType != JsonParserToken.Integer)
-                ThrowInvalidJson();
+                ThrowInvalidJson("Expected integer BuildVersion, but got " + _state.CurrentTokenType);
 
             return _state.Long;
         }
@@ -260,10 +260,10 @@ namespace Raven.Server.Smuggler.Documents
         private IEnumerable<BlittableJsonReaderObject> ReadArray(INewDocumentActions actions = null)
         {
             if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
-                ThrowInvalidJson();
+                ThrowInvalidJson("Unexpected end of json");
 
             if (_state.CurrentTokenType != JsonParserToken.StartArray)
-                ThrowInvalidJson();
+                ThrowInvalidJson("Expected start array, got " + _state.CurrentTokenType);
 
             var context = _context;
             var builder = CreateBuilder(_context, null);
@@ -272,7 +272,7 @@ namespace Raven.Server.Smuggler.Documents
                 while (true)
                 {
                     if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
-                        ThrowInvalidJson();
+                        ThrowInvalidJson("Unexpected end of json while reading array");
 
                     if (_state.CurrentTokenType == JsonParserToken.EndArray)
                         break;
@@ -303,10 +303,10 @@ namespace Raven.Server.Smuggler.Documents
         private IEnumerable<DocumentItem> ReadDocuments(INewDocumentActions actions = null)
         {
             if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
-                ThrowInvalidJson();
+                ThrowInvalidJson("Unexpected end of json");
 
             if (_state.CurrentTokenType != JsonParserToken.StartArray)
-                ThrowInvalidJson();
+                ThrowInvalidJson("Expected start array, but got " + _state.CurrentTokenType);
 
             var context = _context;
             var modifier = new BlittableMetadataModifier(context);
@@ -317,7 +317,7 @@ namespace Raven.Server.Smuggler.Documents
                 while (true)
                 {
                     if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
-                        ThrowInvalidJson();
+                        ThrowInvalidJson("Unexpected end of json while reading docs");
 
                     if (_state.CurrentTokenType == JsonParserToken.EndArray)
                         break;
@@ -410,7 +410,7 @@ namespace Raven.Server.Smuggler.Documents
                 modifier: modifier);
         }
 
-        private static DatabaseItemType GetType(string type)
+        private DatabaseItemType GetType(string type)
         {
             if (type == null)
                 return DatabaseItemType.None;
@@ -430,7 +430,7 @@ namespace Raven.Server.Smuggler.Documents
             if (type.Equals("Identities", StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.Identities;
 
-            throw new InvalidOperationException();
+            throw new InvalidOperationException("Got unexpected property name '" + type + "' on " + _parser.GenerateErrorState());
         }
     }
 }
