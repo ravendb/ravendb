@@ -8,7 +8,9 @@ using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Http;
 using Raven.Client.Server;
+using Raven.Client.Server.Commands;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Exceptions;
 using Raven.Server.Json;
@@ -23,8 +25,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class ServerWideDebugInfoPackageHandler : AdminRequestHandler
     {
-        private static readonly string[] EmptyStringArray = new string[0];
-        private static readonly Logger _log = LoggingSource.Instance.GetLogger<ServerStore>(nameof(ServerWideDebugInfoPackageHandler));
+        private static readonly string[] EmptyStringArray = new string[0];        
 
         //this endpoint is intended to be called by /debug/cluster-info-package only
         [RavenAction("/debug/remote-cluster-info-package", "GET")]
@@ -62,9 +63,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public async Task GetClusterwideInfoPackage()
         {
             var contentDisposition = $"attachment; filename=Cluster wide debug-info {DateTime.UtcNow}.zip";
-            HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
+            HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;            
 
-            using (var httpClient = new HttpClient())
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
             using (transactionOperationContext.OpenReadTransaction())
@@ -81,12 +81,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             localEndpointClient, $"Node - [{ServerStore.NodeTag}]");
 
                         var databaseNames = ServerStore.Cluster.GetDatabaseNames(transactionOperationContext).ToList();
+                        var topology = ServerStore.GetClusterTopology(transactionOperationContext);
 
                         //this means no databases are defined in the cluster
                         //in this case just output server-wide endpoints from all cluster nodes
                         if (databaseNames.Count == 0)
-                        {
-                            var topology = ServerStore.GetClusterTopology(transactionOperationContext);
+                        {                            
                             foreach (var tagWithUrl in topology.AllNodes)
                             {
                                 if (tagWithUrl.Value.Contains(ServerStore.NodeHttpServerUrl))
@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                                 try
                                 {
-                                    await WriteDebugInfoPackageForNodeAsync(httpClient, jsonOperationContext, archive, tagWithUrl.Key, tagWithUrl.Value);
+                                    await WriteDebugInfoPackageForNodeAsync(jsonOperationContext, archive, tagWithUrl.Key, tagWithUrl.Value,apiKey: topology.ApiKey);
                                 }
                                 catch (Exception e)
                                 {
@@ -111,12 +111,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                     continue; //skip writing local data, we do it separately
 
                                 await WriteDebugInfoPackageForNodeAsync(
-                                    httpClient,
                                     jsonOperationContext,
                                     archive,
                                     urlToDatabaseNamesMap.Value.Item2,
                                     urlToDatabaseNamesMap.Key,
-                                    urlToDatabaseNamesMap.Value.Item1);
+                                    urlToDatabaseNamesMap.Value.Item1,
+                                    topology.ApiKey);
                             }
                         }
                     }
@@ -128,15 +128,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
         }       
 
         private async Task WriteDebugInfoPackageForNodeAsync(
-            HttpClient httpClient, 
             JsonOperationContext jsonOperationContext, 
-            ZipArchive archive, string tag, string url, IEnumerable<string> databaseNames = null)
+            ZipArchive archive, string tag, string url, IEnumerable<string> databaseNames = null, string apiKey = null)
         {
             using (var responseStream = await GetDebugInfoFromNodeAsync(
-                httpClient,
                 jsonOperationContext,
                 url,
-                databaseNames ?? EmptyStringArray))
+                databaseNames ?? EmptyStringArray,apiKey))
             {
                 var entry = archive.CreateEntry($"Node - [{tag}].zip");
                 using (var entryStream = entry.Open())
@@ -149,7 +147,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
         [RavenAction("/debug/info-package", "GET", IsDebugInformationEndpoint = true)]
         public async Task GetInfoPackage()
-        {              
+        {
             var contentDisposition = $"attachment; filename=Server wide debug-info {DateTime.UtcNow}.zip";
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -181,32 +179,29 @@ namespace Raven.Server.Documents.Handlers.Debugging
         }
 
         private async Task<Stream> GetDebugInfoFromNodeAsync(
-            HttpClient httpClient, 
             JsonOperationContext jsonOperationContext,
             string url, 
-            IEnumerable<string> databaseNames)
+            IEnumerable<string> databaseNames,
+            string apiKey)
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, $"{url}/debug/remote-cluster-info-package");
-            using (var ms = new MemoryStream())
+            var bodyJson = new DynamicJsonValue
             {
-                var bodyJson = new DynamicJsonValue
-                {
-                    [nameof(NodeDebugInfoRequestHeader.FromUrl)] = ServerStore.NodeHttpServerUrl,
-                    [nameof(NodeDebugInfoRequestHeader.DatabaseNames)] = databaseNames
-                };
+                [nameof(NodeDebugInfoRequestHeader.FromUrl)] = ServerStore.NodeHttpServerUrl,
+                [nameof(NodeDebugInfoRequestHeader.DatabaseNames)] = databaseNames
+            };
 
-                using (var writer = new BlittableJsonTextWriter(jsonOperationContext, ms))
-                {
-                    jsonOperationContext.Write(writer, bodyJson);
-                    writer.Flush();
-                    ms.Flush();
+            using (var ms = new MemoryStream())
+            using (var writer = new BlittableJsonTextWriter(jsonOperationContext, ms))
+            {
+                jsonOperationContext.Write(writer, bodyJson);
+                writer.Flush();
+                ms.Flush();
 
-                    ms.Position = 0;
-                    request.Content = new StreamContent(ms);
-                    var response = await httpClient.SendAsync(request);
+                var requestExecuter = RequestExecutor.CreateForSingleNode(url, null, apiKey);
+                var rawStreamCommand = new GetRawStreamResultCommand("/debug/remote-cluster-info-package", ms);
 
-                    return await response.Content.ReadAsStreamAsync();
-                }
+                await requestExecuter.ExecuteAsync(rawStreamCommand, jsonOperationContext);
+                return rawStreamCommand.Result;
             }
         }
 

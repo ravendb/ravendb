@@ -204,7 +204,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                         var nodeTag = nodeInfo.NodeTag == "?" 
                             ? null : nodeInfo.NodeTag;
-                        await ServerStore.AddNodeToClusterAsync(serverUrl, Convert.FromBase64String(nodeInfo.PublicKey ?? string.Empty), nodeTag, validateNotInTopology:false);
+                        await ServerStore.AddNodeToClusterAsync(serverUrl, Convert.FromBase64String(nodeInfo.PublicKey), nodeTag, validateNotInTopology:false);
                         NoContentStatus();
                         return;
                     }
