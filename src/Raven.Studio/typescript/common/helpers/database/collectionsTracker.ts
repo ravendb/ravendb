@@ -12,7 +12,7 @@ class collectionsTracker {
 
     collections = ko.observableArray<collection>();
 
-    zombies = ko.observable<collection>();
+    revisionsBin = ko.observable<collection>();
 
     private db: database;
 
@@ -36,9 +36,9 @@ class collectionsTracker {
 
     configureVersioning(hasVersioning: boolean, db: database) {
         if (hasVersioning) {
-            this.zombies(new collection(collection.zombiesCollectionName, db));
+            this.revisionsBin(new collection(collection.revisionsBinCollectionName, db));
         } else {
-            this.zombies(null);
+            this.revisionsBin(null);
         }
     }
 
@@ -83,8 +83,8 @@ class collectionsTracker {
             .map(x => x.name);
     }
 
-    getZombiesCollection() {
-        return this.zombies();
+    getRevisionsBinCollection() {
+        return this.revisionsBin();
     }
 
     getAllDocumentsCollection() {

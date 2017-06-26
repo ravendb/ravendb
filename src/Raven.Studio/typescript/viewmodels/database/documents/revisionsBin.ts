@@ -1,7 +1,7 @@
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import deleteRevisionsForDocumentsCommand = require("commands/database/documents/deleteRevisionsForDocumentsCommand");
-import getZombiesCommand = require("commands/database/documents/getZombiesCommand");
+import getRevisionsBinEntryCommand = require("commands/database/documents/getRevisionsBinEntryCommand");
 
 import document = require("models/database/documents/document");
 
@@ -14,7 +14,7 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import evaluationContextHelper = require("common/helpers/evaluationContextHelper");
 
-class zombies extends viewModelBase {
+class revisionsBin extends viewModelBase {
 
     dirtyResult = ko.observable<boolean>(false);
     dataChanged: KnockoutComputed<boolean>;
@@ -25,7 +25,7 @@ class zombies extends viewModelBase {
         delete: ko.observable<boolean>(false)
     }
 
-    private zombiesNextEtag = undefined as number;
+    private revisionsBinEntryNextEtag = undefined as number;
 
     private gridController = ko.observable<virtualGridController<document>>();
     private columnPreview = new columnPreviewPlugin<document>();
@@ -57,15 +57,15 @@ class zombies extends viewModelBase {
     }
 
     refresh() {
-        eventsCollector.default.reportEvent("zombies", "refresh");
-        this.zombiesNextEtag = undefined;
+        eventsCollector.default.reportEvent("revisions-bin", "refresh");
+        this.revisionsBinEntryNextEtag = undefined;
         this.gridController().reset(true);
     }
 
-    fetchZombies(skip: number): JQueryPromise<pagedResult<document>> {
+    fetchRevisionsBinEntries(skip: number): JQueryPromise<pagedResult<document>> {
         const task = $.Deferred<pagedResult<document>>();
 
-        new getZombiesCommand(this.activeDatabase(), this.zombiesNextEtag, 101)
+        new getRevisionsBinEntryCommand(this.activeDatabase(), this.revisionsBinEntryNextEtag, 101)
             .execute()
             .done(result => {
                 //TODO: etag
@@ -73,7 +73,7 @@ class zombies extends viewModelBase {
                 const totalCount = skip + result.items.length;
                 if (hasMore) {
                     const nextItem = result.items.pop();
-                    this.zombiesNextEtag = nextItem.__metadata.etag();
+                    this.revisionsBinEntryNextEtag = nextItem.__metadata.etag();
                 }
 
                 task.resolve({
@@ -92,7 +92,7 @@ class zombies extends viewModelBase {
 
         grid.headerVisible(true);
 
-        grid.init((s, _) => this.fetchZombies(s), () => [
+        grid.init((s, _) => this.fetchRevisionsBinEntries(s), () => [
             new checkedColumn(false),
             new hyperlinkColumn<document>(grid, x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.activeDatabase()), "Id", "300px"),
             new textColumn<document>(grid, x => x.__metadata.etag(), "ETag", "200px"),
@@ -116,7 +116,7 @@ class zombies extends viewModelBase {
     deleteSelected() {
         const selectedIds = this.gridController().getSelectedItems().map(x => x.getId());
 
-        this.confirmationMessage("Are you sure?", "Do you have to delete selected zombies and its revisions?", ["Cancel", "Yes, delete"])
+        this.confirmationMessage("Are you sure?", "Do you want to delete selected items and its revisions?", ["Cancel", "Yes, delete"])
             .done(result => {
                 if (result.can) {
 
@@ -135,4 +135,4 @@ class zombies extends viewModelBase {
 
 }
 
-export = zombies;
+export = revisionsBin;
