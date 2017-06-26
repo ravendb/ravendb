@@ -3,7 +3,6 @@ import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import ongoingTask = require("models/database/tasks/ongoingTaskModel"); 
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
-import generalUtils = require("common/generalUtils");
 
 class ongoingTaskReplicationModel extends ongoingTask {
 
@@ -41,13 +40,15 @@ class ongoingTaskReplicationModel extends ongoingTask {
 
     toDto(): externalReplicationDataFromUI {
         return {
+            TaskName: this.taskName(),
             DestinationURL: this.destinationURL(),
             DestinationDB: this.destinationDB(),
             ApiKey: this.apiKey()
         };
     }
 
-    private initValidation() {
+    initValidation() {
+        super.initValidation();
 
         this.destinationDB.extend({
             required: true,
@@ -68,13 +69,15 @@ class ongoingTaskReplicationModel extends ongoingTask {
         this.validationGroup = ko.validatedObservable({
             destinationDB: this.destinationDB,
             destinationURL: this.destinationURL,
-            apiKey: this.apiKey
+            apiKey: this.apiKey,
+            taskName: this.taskName
         });
     }
 
     static empty(): ongoingTaskReplicationModel {
 
         return new ongoingTaskReplicationModel({
+            TaskName: "",
             TaskType: "Replication",
             DestinationDatabase: null,
             DestinationUrl: clusterTopologyManager.default.localNodeUrl()
