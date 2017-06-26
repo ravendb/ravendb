@@ -24,6 +24,9 @@ namespace Sparrow.Json
         {
             ~ContextStack()
             {
+                if (Environment.HasShutdownStarted)
+                    return; // let the OS clean this up
+
                 try
                 {
                     Dispose();
