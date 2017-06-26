@@ -11,6 +11,7 @@ class saveExternalReplicationTaskCommand extends commandBase {
 
         this.externalReplicationToSend = {
             // From UI:
+            Name: replicationSettings.TaskName,
             ApiKey: replicationSettings.ApiKey,
             Database: replicationSettings.DestinationDB,
             Url: replicationSettings.DestinationURL,

@@ -10,12 +10,19 @@
             <div class="panel">
                 <form class="flex-form">
                     <div class="panel-body" data-bind="with: editedExternalReplication">
+                        <h2 data-bind="visible: $parent.isAddingNewReplicationTask">New External Replication</h2>
+                        <h2 data-bind="visible: !$parent.isAddingNewReplicationTask()">Edit External Replication</h2>
+                        <div class="form-group" data-bind="validationElement: taskName">
+                            <label for="taskName" class="control-label">Task Name</label>
+                            <div class="flex-grow">
+                                <input type="text" class="form-control" data-bind="value: taskName" id="taskName" placeholder="Enter a task name of your choice">
+                            </div>
+                        </div>
                         <div class="form-group" data-bind="validationElement: destinationURL">
                             <label for="url" class="control-label">Destination URL</label>
                             <div class="flex-grow">
                                 <input type="text" class="form-control" data-bind="value: destinationURL" id="url">     
                             </div>
-                            <!-- TODO: Why autofocus is not working when coming from the dialog? only works upon refreshing page.. -->
                         </div>
                         <div class="form-group" data-bind="validationElement: destinationDB">
                             <label for="databaseName" class="control-label">Destination DB</label>

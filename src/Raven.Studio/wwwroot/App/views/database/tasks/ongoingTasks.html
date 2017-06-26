@@ -38,6 +38,7 @@
                         </div>
                         <div data-bind="foreach: replicationTasks">
                             <div class="panel destination-item external-replication">
+                                <h5 class="text-center" data-bind="text: taskName"></h5> <!-- TODO: this is a temporary place for the Task Name title - waiting for Rafal input.. -->
                                 <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
                                 <div class="padding padding-sm destination-info">
                                     <div class="info-container flex-horizontal flex-grow">

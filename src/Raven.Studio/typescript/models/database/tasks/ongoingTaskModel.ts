@@ -3,6 +3,7 @@
 abstract class ongoingTaskModel { 
 
     taskId: number;
+    taskName = ko.observable<string>();
     taskType = ko.observable<Raven.Client.Server.Operations.OngoingTaskType>();
     responsibleNode = ko.observable<Raven.Client.Server.Operations.NodeId>();
     taskState = ko.observable<Raven.Client.Server.Operations.OngoingTaskState>();
@@ -48,11 +49,18 @@ abstract class ongoingTaskModel {
 
     protected update(dto: Raven.Server.Web.System.OngoingTask) {
         this.taskId = dto.TaskId;
+        this.taskName(dto.TaskName);
         this.taskType(dto.TaskType);
         this.responsibleNode(dto.ResponsibleNode);
         this.taskState(dto.TaskState);
         this.lastModificationTime(dto.LastModificationTime);
         this.taskConnectionStatus(dto.TaskConnectionStatus);
+    }
+
+    protected initValidation() {
+        this.taskName.extend({
+            required: true
+        });
     }
 }
 

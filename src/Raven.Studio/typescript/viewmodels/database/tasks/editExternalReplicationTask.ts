@@ -30,7 +30,11 @@ class editExternalReplicationTask extends viewModelBase {
             this.editedExternalReplication(ongoingTaskReplication.empty());
         }
     }
-    
+
+    compositionComplete() {
+        document.getElementById('taskName').focus();
+    }
+
     saveExternalReplication() {
         // 1. validate model
         if (!this.validate()) {
