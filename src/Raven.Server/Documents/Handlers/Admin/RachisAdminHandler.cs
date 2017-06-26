@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         [RavenAction("/admin/cluster/node-info", "GET", "/admin/cluster/node-info")]
-        public Task GetTag()
+        public Task GetNodeInfo()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -69,6 +69,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     json[nameof(NodeInfo.NodeTag)] = ServerStore.NodeTag;
                     json[nameof(NodeInfo.TopologyId)] = ServerStore.GetClusterTopology(context).TopologyId;
                     json[nameof(NodeInfo.PublicKey)] = Convert.ToBase64String(ServerStore.SignPublicKey);
+                    json[nameof(ServerStore.ClusterStatus)] = ServerStore.ClusterStatus();
                 }
                 context.Write(writer, json);
                 writer.Flush();
