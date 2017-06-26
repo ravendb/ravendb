@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Versioning
             Id = 4,
             Document = 5,
             Flags = 6,
-            Etag2 = 7, // Needed to get the zombies with a consistent order
+            Etag2 = 7, // Needed to get the revisions bin entries with a consistent order
             LastModified = 8,
         }
 
@@ -422,7 +422,7 @@ namespace Raven.Server.Documents.Versioning
                     {
                         [Constants.Documents.Metadata.Collection] = collectionName.Name
                     }
-                }, "Zombies");
+                }, "RevisionsBin");
                 Delete(context, lowerId, idPtr, collectionName, deleteRevisionDocument, changeVector, lastModifiedTicks, nonPersistentFlags);
             }
         }
@@ -554,13 +554,13 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
-        public ByteStringContext<ByteStringMemoryCache>.InternalScope GetLatestZombieEtag(DocumentsOperationContext context, long startEtag, 
-            out Slice zombieKey, out long latestEtag)
+        public ByteStringContext<ByteStringMemoryCache>.InternalScope GetLatestRevisionsBinEntryEtag(DocumentsOperationContext context, long startEtag, 
+            out Slice revisionsBinEntryKey, out long latestEtag)
         {
-            var dispose = GetZombieKey(context, startEtag, out zombieKey);
-            foreach (var zombie in GetZombies(context, zombieKey, 1))
+            var dispose = GetRevisionsBinEntryKey(context, startEtag, out revisionsBinEntryKey);
+            foreach (var entry in GetRevisionsBinEntries(context, revisionsBinEntryKey, 1))
             {
-                latestEtag = zombie.Etag;
+                latestEtag = entry.Etag;
                 return dispose;
             }
 
@@ -568,10 +568,10 @@ namespace Raven.Server.Documents.Versioning
             return dispose;
         }
 
-        public IEnumerable<Document> GetZombies(DocumentsOperationContext context, Slice zombieKey, int take)
+        public IEnumerable<Document> GetRevisionsBinEntries(DocumentsOperationContext context, Slice revisionsBinEntryKey, int take)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
-            foreach (var tvr in table.SeekBackwardFrom(DocsSchema.Indexes[FlagsAndEtagSlice], DeleteRevisionSlice, zombieKey))
+            foreach (var tvr in table.SeekBackwardFrom(DocsSchema.Indexes[FlagsAndEtagSlice], DeleteRevisionSlice, revisionsBinEntryKey))
             {
                 if (take-- <= 0)
                     yield break;
@@ -579,7 +579,7 @@ namespace Raven.Server.Documents.Versioning
                 var etag = DocumentsStorage.TableValueToEtag((int)Columns.Etag, ref tvr.Result.Reader);
                 using (DocumentsStorage.TableValueToSlice(context, (int)Columns.LowerId, ref tvr.Result.Reader, out Slice lowerId))
                 {
-                    if (IsZombie(context, table, lowerId, etag) == false)
+                    if (IsRevisionsBinEntry(context, table, lowerId, etag) == false)
                         continue;
                 }
 
@@ -587,7 +587,7 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
-        private bool IsZombie(DocumentsOperationContext context, Table table, Slice lowerId, long zombieEtag)
+        private bool IsRevisionsBinEntry(DocumentsOperationContext context, Table table, Slice lowerId, long revisionsBinEntryEtag)
         {
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
             using (GetLastKey(context, lowerId, out Slice lastKey))
@@ -601,23 +601,23 @@ namespace Raven.Server.Documents.Versioning
 
                 var etag = DocumentsStorage.TableValueToEtag((int)Columns.Etag, ref tvr.Reader);
                 var flags = DocumentsStorage.TableValueToFlags((int)Columns.Flags, ref tvr.Reader);
-                Debug.Assert(zombieEtag <= etag, "Zombie etag candidate cannot meet a bigger etag.");
-                return flags == DocumentFlags.DeleteRevision && zombieEtag >= etag;
+                Debug.Assert(revisionsBinEntryEtag <= etag, "Revisions bin entry etag candidate cannot meet a bigger etag.");
+                return flags == DocumentFlags.DeleteRevision && revisionsBinEntryEtag >= etag;
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ByteStringContext<ByteStringMemoryCache>.InternalScope GetZombieKey(DocumentsOperationContext context, long etag, out Slice zombieKey)
+        private ByteStringContext<ByteStringMemoryCache>.InternalScope GetRevisionsBinEntryKey(DocumentsOperationContext context, long etag, out Slice deletedRevisionKey)
         {
             var scope = context.Allocator.Allocate(sizeof(DocumentFlags) + sizeof(long), out ByteString keyMem);
 
-            var zombieRevision = DocumentFlags.DeleteRevision;
-            Memory.Copy(keyMem.Ptr, (byte*)&zombieRevision, sizeof(DocumentFlags));
+            var deleteRevision = DocumentFlags.DeleteRevision;
+            Memory.Copy(keyMem.Ptr, (byte*)&deleteRevision, sizeof(DocumentFlags));
 
             var swapBytesEtag = Bits.SwapBytes(etag);
             Memory.Copy(keyMem.Ptr + sizeof(DocumentFlags), (byte*)&swapBytesEtag, sizeof(long));
 
-            zombieKey = new Slice(SliceOptions.Key, keyMem);
+            deletedRevisionKey = new Slice(SliceOptions.Key, keyMem);
             return scope;
         }
 
