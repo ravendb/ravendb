@@ -192,6 +192,10 @@ class patchTester extends viewModelBase {
 
         if (documentIdToUse) {
             this.loadDocument();
+
+            if (this.isValid(this.validationGroup, false)) {
+                this.runTest();
+            }
         }
     }
 
@@ -444,7 +448,13 @@ class patch extends viewModelBase {
             trigger: "hover",
             container: "body",
             template: popoverUtils.longPopoverTemplate,
-            content: `<p>Patch Scripts are written in JavaScript. <br />Examples: <pre>${jsCode}</pre></p>`
+            content: `<p>Patch Scripts are written in JavaScript. <br />Examples: <pre>${jsCode}</pre></p>` 
+            + `<p>You can use following functions in your patch script:</p>`
+            + `<ul>`
+            + `<li><code>PutDocument(documentId, document)</code> - puts document with given name and data</li>`
+            + `<li><code>LoadDocument(documentIdToLoad)</code> - loads document by id`
+            + `<li><code>output(message)</code> - allows to output debug info when testing patches</li>`
+            + `</ul>`
         });
     }
 
