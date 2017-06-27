@@ -60,7 +60,7 @@ namespace Raven.Server.Routing
             {
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
 
-                using(var ctx = JsonOperationContext.ShortTermSingleUse())
+                using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
                 {
                     ctx.Write(writer,
@@ -127,12 +127,12 @@ namespace Raven.Server.Routing
 
         private unsafe delegate Int32 FromBase64_DecodeDelegate(Char* startInputPtr, Int32 inputLength, Byte* startDestPtr, Int32 destLength);
 
-        static readonly FromBase64_DecodeDelegate _fromBase64_Decode = (FromBase64_DecodeDelegate)typeof(Convert).GetTypeInfo().GetMethod("FromBase64_Decode", BindingFlags.Static|BindingFlags.NonPublic)
+        static readonly FromBase64_DecodeDelegate _fromBase64_Decode = (FromBase64_DecodeDelegate)typeof(Convert).GetTypeInfo().GetMethod("FromBase64_Decode", BindingFlags.Static | BindingFlags.NonPublic)
             .CreateDelegate(typeof(FromBase64_DecodeDelegate));
 
         private unsafe bool TryAuthorize(HttpContext context, RavenConfiguration configuration,
             DocumentDatabase database)
-        {            
+        {
             var authHeaderValues = context.Request.Headers["Raven-Authorization"];
             var token = authHeaderValues.Count == 0 ? null : authHeaderValues[0];
 
@@ -246,63 +246,61 @@ namespace Raven.Server.Routing
                 var signature = new byte[Sodium.crypto_sign_bytes()];
                 TransactionOperationContext txContext;
                 using (ravenServer.ServerStore.ContextPool.AllocateOperationContext(out txContext))
-                fixed (byte* sig = signature)
-                fixed (byte* msg = tokenBytes)
-                fixed (char* pToken = token)
-                using (txContext.OpenReadTransaction())
-                {
-                    _fromBase64_Decode(pToken + 8, sigBase64Size, sig, Sodium.crypto_sign_bytes());
-                    Memory.Set(msg + 8, (byte)' ', sigBase64Size);
-
-                    using (var tokenJson = txContext.ParseBuffer(msg, tokenBytes.Length, "auth token", BlittableJsonDocumentBuilder.UsageMode.None))
-                    {
-                        if (tokenJson.TryGet("Node", out string tag) == false)
-                            throw new InvalidOperationException("Missing 'Node' property in authentication token");
-                        if (tokenJson.TryGet("Name", out string apiKeyName) == false)
-                            throw new InvalidOperationException("Missing 'Name' property in authentication token");
-                        if (tokenJson.TryGet("Expires", out string expires) == false)
-                            throw new InvalidOperationException("Missing 'Expires' property in authentication token");
-
-                        var clusterTopology = ravenServer.ServerStore.GetClusterTopology(txContext);
-                        var publicKey = clusterTopology.GetPublicKeyFromTag(tag);
-                        //This is the case where we don't know the server but the admin had injected the server's 
-                        //public key into our server store using an external tool.
-                        if (publicKey == null)
+                    fixed (byte* sig = signature)
+                    fixed (byte* msg = tokenBytes)
+                    fixed (char* pToken = token)
+                        using (txContext.OpenReadTransaction())
                         {
-                            try
+                            _fromBase64_Decode(pToken + 8, sigBase64Size, sig, Sodium.crypto_sign_bytes());
+                            Memory.Set(msg + 8, (byte)' ', sigBase64Size);
+
+                            using (var tokenJson = txContext.ParseBuffer(msg, tokenBytes.Length, "auth token", BlittableJsonDocumentBuilder.UsageMode.None))
                             {
-                                //If we are not a part of a cluster we won't have our public key in the topology so we will 
-                                // try to validate against our own public key
-                                var key = (tag == ravenServer.ServerStore.NodeTag || ravenServer.ServerStore.NodeTag == "?") 
-                                    ? "Raven/Sign/Public" : 
-                                    $"Raven/Sign/Public/{tag}";
-                                publicKey = ServerStore.GetSecretKey(txContext, key);
-                            }
-                            catch
-                            {
-                                return false;
+                                if (tokenJson.TryGet("Node", out string tag) == false)
+                                    throw new InvalidOperationException("Missing 'Node' property in authentication token");
+                                if (tokenJson.TryGet("Name", out string apiKeyName) == false)
+                                    throw new InvalidOperationException("Missing 'Name' property in authentication token");
+                                if (tokenJson.TryGet("Expires", out string expires) == false)
+                                    throw new InvalidOperationException("Missing 'Expires' property in authentication token");
+
+                                var clusterTopology = ravenServer.ServerStore.GetClusterTopology(txContext);
+                                var publicKey = clusterTopology.GetPublicKeyFromTag(tag);
+                                //This is the case where we don't know the server but the admin had injected the server's 
+                                //public key into our server store using an external tool.
+                                if (publicKey == null)
+                                {
+                                    //If we are not a part of a cluster we won't have our public key in the topology so we will 
+                                    // try to validate against our own public key
+                                    var key = (tag == ravenServer.ServerStore.NodeTag || ravenServer.ServerStore.NodeTag == "?")
+                                        ? "Raven/Sign/Public" :
+                                        $"Raven/Sign/Public/{tag}";
+                                    publicKey = ServerStore.GetSecretKey(txContext, key);
+                                }
+
+                                if (publicKey == null || publicKey.Length < 32)
+                                {
+                                    throw new InvalidOperationException("Unable to find any valid public key for " + tag +" to validate the token");
+                                }
+
+                                fixed (byte* pk = publicKey)
+                                {
+                                    if (Sodium.crypto_sign_verify_detached(sig, msg, (ulong)tokenBytes.Length, pk) != 0)
+                                        return false;
+                                }
+
+                                accessToken = new AccessToken
+                                {
+                                    Token = token,
+                                    Name = apiKeyName,
+                                    Expires = DateTime.ParseExact(expires, "O", CultureInfo.InvariantCulture),
+                                    AuthorizedDatabases = GetAuthorizedDatabases(txContext, ravenServer, apiKeyName)
+                                };
+
+                                if (accessToken.IsExpired == false)
+                                    ravenServer.AccessTokenCache.TryAdd(token, accessToken);
                             }
                         }
 
-                        fixed (byte* pk = publicKey)
-                        {
-                            if (Sodium.crypto_sign_verify_detached(sig, msg, (ulong)tokenBytes.Length, pk) != 0)
-                                return false;
-                        }
-
-                        accessToken = new AccessToken
-                        {
-                            Token = token,
-                            Name = apiKeyName,
-                            Expires = DateTime.ParseExact(expires, "O", CultureInfo.InvariantCulture),
-                            AuthorizedDatabases = GetAuthorizedDatabases(txContext, ravenServer, apiKeyName)
-                        };
-
-                        if (accessToken.IsExpired == false)
-                            ravenServer.AccessTokenCache.TryAdd(token, accessToken);
-                    }
-                }
-                
             }
 
             return !accessToken.IsExpired;
@@ -313,7 +311,7 @@ namespace Raven.Server.Routing
             BlittableJsonReaderObject resourcesAccessMode;
             if (apiKeyName.StartsWith("Raven"))
             {
-                return new Dictionary<string, AccessModes>{{"*",AccessModes.Admin}};
+                return new Dictionary<string, AccessModes> { { "*", AccessModes.Admin } };
             }
             var apiDoc = ravenServer.ServerStore.Cluster.Read(txContext, Constants.ApiKeys.Prefix + apiKeyName);
 
