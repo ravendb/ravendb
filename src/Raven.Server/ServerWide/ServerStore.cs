@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
+using System.ServiceModel;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -1122,6 +1123,10 @@ namespace Raven.Server.ServerWide
                 {
                     return await _engine.PutAsync(cmd);
                 }
+                if (_engine.CurrentState == RachisConsensus.State.Passive)
+                {
+                    ThrowInvalidEngineState(cmd);
+                }
 
                 var logChange = _engine.WaitForHeartbeat();
 
@@ -1152,6 +1157,12 @@ namespace Raven.Server.ServerWide
                 if (logChange.IsCompleted == false)
                     ThrowTimeoutException();
             }
+        }
+
+        private static void ThrowInvalidEngineState(CommandBase cmd)
+        {
+            throw new NotSupportedException("Cannot send command " + cmd.GetType().FullName + " to the cluster because this node is passive." + Environment.NewLine +
+                                            "Passive nodes aren't members of a cluster and require admin action (such as creating a db) to indicate that this node should create its own cluster");
         }
 
         private static void ThrowTimeoutException()
