@@ -1,6 +1,10 @@
+using System;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Utils.Metrics;
+using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace SlowTests.Core.AdminConsole
@@ -24,11 +28,114 @@ namespace SlowTests.Core.AdminConsole
                                 };
                              "
                 });
+                var djv = result as DynamicJsonValue;
+                Assert.NotNull(djv);
+                Assert.Equal(database.Name , djv["DatabaseName"]);
+                Assert.Equal(true, djv["RunInMemory"]);
+                Assert.Equal(10L, djv["MaxConcurrentFlushes"]);
+            }
+        }
+
+        [Fact]
+        public async Task CanGetResultAsDateObject()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                var startTime = database.StartTime;
+
+                var result = new AdminJsConsole(database).ApplyScript(new AdminJsScript
+                {
+                    Script = @"
+                                return database.StartTime;
+                             "
+                });
 
                 Assert.NotNull(result);
-                Assert.Equal(database.Name ,result["DatabaseName"]);
-                Assert.Equal(true, result["RunInMemory"]);
-                Assert.Equal(10L, result["MaxConcurrentFlushes"]);
+                Assert.IsType<DateTime>(result);
+                Assert.Equal(startTime.ToInvariantString(), result.ToInvariantString());
+            }
+        }
+
+        [Fact]
+        public async Task CanGetResultAsPrimitiveObject()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                var maxConcurrentFlushes = (long)database.Configuration.Storage.MaxConcurrentFlushes;
+
+                var result = new AdminJsConsole(database).ApplyScript(new AdminJsScript
+                {
+                    Script = @"
+                                return database.Configuration.Storage.MaxConcurrentFlushes
+                             "
+                });
+
+                Assert.NotNull(result);
+                Assert.IsType<long>(result);
+                Assert.Equal(maxConcurrentFlushes, result);
+
+                var allowScriptsToAdjustNumberOfSteps = database.Configuration.Patching.AllowScriptsToAdjustNumberOfSteps;
+
+                var result2 = new AdminJsConsole(database).ApplyScript(new AdminJsScript
+                {
+                    Script = @"
+                                return database.Configuration.Patching.AllowScriptsToAdjustNumberOfSteps
+                             "
+                });
+
+                Assert.NotNull(result2);
+                Assert.IsType<bool>(result2);
+                Assert.Equal(allowScriptsToAdjustNumberOfSteps, result2);
+
+                var serverUrl = database.Configuration.Core.ServerUrl;
+
+                var result3 = new AdminJsConsole(database).ApplyScript(new AdminJsScript
+                {
+                    Script = @"
+                                return database.Configuration.Core.ServerUrl
+                             "
+                });
+
+                Assert.NotNull(result3);
+                Assert.IsType<string>(result3);
+                Assert.Equal(serverUrl, result3);
+            }
+        }
+
+        [Fact]
+        public async Task CanGetResultAsComplexObject()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                var requestsMeter = database.Metrics.RequestsMeter;
+
+                using (var session = store.OpenSession())
+                {                    
+                    for (var i = 0; i < 10; i++)
+                    {
+                        session.Store(new object());
+                    }
+                    session.SaveChanges();
+                }
+
+                var result = new AdminJsConsole(database).ApplyScript(new AdminJsScript
+                {
+                    Script = @"
+                                return database.Metrics.RequestsMeter
+                             "
+                });
+
+                var resultAsMeterMetric = result as MeterMetric;
+                Assert.NotNull(resultAsMeterMetric);
+                Assert.Equal(requestsMeter.Count, resultAsMeterMetric.Count);
+                Assert.Equal(requestsMeter.FifteenMinuteRate, resultAsMeterMetric.FifteenMinuteRate);
+                Assert.Equal(requestsMeter.FiveMinuteRate, resultAsMeterMetric.FiveMinuteRate);
+                Assert.Equal(requestsMeter.FiveSecondRate, resultAsMeterMetric.FiveSecondRate);
+                Assert.Equal(requestsMeter.OneMinuteRate, resultAsMeterMetric.OneMinuteRate);
+                Assert.Equal(requestsMeter.OneSecondRate, resultAsMeterMetric.OneSecondRate);
             }
         }
 
@@ -73,10 +180,11 @@ namespace SlowTests.Core.AdminConsole
                                 MaxConcurrentFlushes: server.Configuration.Storage.MaxConcurrentFlushes
                             };"
             });
+            var djv = result as DynamicJsonValue;
 
-            Assert.NotNull(result);
-            Assert.Equal(false, result["AllowScriptsToAdjustNumberOfSteps"]);
-            Assert.Equal(10L, result["MaxConcurrentFlushes"]);           
+            Assert.NotNull(djv);
+            Assert.Equal(false, djv["AllowScriptsToAdjustNumberOfSteps"]);
+            Assert.Equal(10L, djv["MaxConcurrentFlushes"]);           
         }
 
         [Fact]

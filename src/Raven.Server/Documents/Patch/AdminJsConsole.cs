@@ -33,33 +33,42 @@ namespace Raven.Server.Documents.Patch
         private const string ExecutionStr = "function ExecuteAdminScript(databaseInner){{ return (function(database){{ {0} }}).apply(this, [databaseInner]); }};";
         private const string ServerExecutionStr = "function ExecuteAdminScript(serverInner){{ return (function(server){{ {0} }}).apply(this, [serverInner]); }};";
 
-        public DynamicJsonValue ApplyScript(AdminJsScript script)
+        public object ApplyScript(AdminJsScript script)
         {
             var jintEngine = GetEngine(script, ExecutionStr);
 
             var jsVal = jintEngine.Invoke("ExecuteAdminScript", Database);
 
-            return ConvertResultsToJson(jsVal, Database);
+            return ConvertResults(jsVal, Database);
         }
 
-        public DynamicJsonValue ApplyServerScript(AdminJsScript script)
+        public object ApplyServerScript(AdminJsScript script)
         {
             var jintEngine = GetEngine(script, ServerExecutionStr);
 
             var jsVal = jintEngine.Invoke("ExecuteAdminScript", _server);
 
-            return ConvertResultsToJson(jsVal);
+            return ConvertResults(jsVal);
         }
 
-        private static DynamicJsonValue ConvertResultsToJson(JsValue jsVal, DocumentDatabase database = null)
+        private static object ConvertResults(JsValue jsVal, DocumentDatabase database = null)
         {
             if (jsVal.IsUndefined() || jsVal.IsNull())
                 return null;
 
+            if (jsVal.IsObject())
+            {
+                var obj = jsVal.ToObject();
+                var typeName = obj.GetType().Name.ToLowerInvariant();
+
+                if (typeName != "expandoobject")
+                    return obj;
+            }
+
             using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
             using (var scope = new PatcherOperationScope(database).Initialize(context))
             {
-                return scope.ToBlittable(jsVal.AsObject());
+                return scope.ToBlittableValue(jsVal, string.Empty, false);
             }
         }
 
