@@ -733,7 +733,7 @@ namespace Raven.Server.Web.System
                 }
 
                 var adminJsScript = JsonDeserializationCluster.AdminJsScript(content);
-                DynamicJsonValue result;
+                object result;
 
                 if (isServerScript)
                 {
@@ -761,22 +761,35 @@ namespace Raven.Server.Web.System
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                if (result == null || result is DynamicJsonValue)
                 {
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName(nameof(AdminJsScriptResult.Result));
-                    if (result != null)
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        context.Write(writer, result);
-                    }
-                    else
-                    {
-                        writer.WriteNull();
-                    }
+                        writer.WriteStartObject();
 
-                    writer.WriteEndObject();
-                    writer.Flush();
+                        writer.WritePropertyName(nameof(AdminJsScriptResult.Result));
+
+                        if (result != null)
+                        {
+                            context.Write(writer, result as DynamicJsonValue);
+                        }
+                        else
+                        {
+                            writer.WriteNull();
+                        }
+
+                        writer.WriteEndObject();
+                        writer.Flush();
+                    }
+                }
+
+                else
+                {
+                    using (var textWriter = new StreamWriter(ResponseBodyStream()))
+                    {
+                        textWriter.Write(result.ToString());
+                        await textWriter.FlushAsync();
+                    }
                 }
             }
         }
