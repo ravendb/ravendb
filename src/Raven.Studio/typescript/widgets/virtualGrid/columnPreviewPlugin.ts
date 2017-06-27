@@ -18,8 +18,8 @@ class columnPreviewPlugin<T> {
         height: 300
     }
 
-    install(selector: string, tooltipSelector: string, previewContextProvider: (item: T, column: virtualColumn, event: JQueryEventObject, onValueProvided: (context: any) => void) => void) {
-        const $grid = $(selector + " .virtual-grid");
+    install(containerSelector: string, tooltipSelector: string, previewContextProvider: (item: T, column: virtualColumn, event: JQueryEventObject, onValueProvided: (context: any) => void) => void) {
+        const $grid = $(containerSelector + " .virtual-grid");
         const grid = ko.dataFor($grid[0]) as virtualGrid<T>;
         if (!grid || !(grid instanceof virtualGrid)) {
             throw new Error("Unable to find virtualGrid");
@@ -29,7 +29,7 @@ class columnPreviewPlugin<T> {
 
         this.grid = grid;
 
-        $(selector).on("mouseenter", ".cell", e => {
+        $(containerSelector).on("mouseenter", ".cell", e => {
             const [element, column] = this.findItemAndColumn(e);
             this.previewTimeoutHandle = setTimeout(() => {
                 if (document.contains(e.target)) {
@@ -40,7 +40,7 @@ class columnPreviewPlugin<T> {
             }, columnPreviewPlugin.delay);
         });
 
-        $(selector).on("mouseleave", ".cell", e => {
+        $(containerSelector).on("mouseleave", ".cell", e => {
             clearTimeout(this.previewTimeoutHandle);
             this.previewTimeoutHandle = undefined;
 

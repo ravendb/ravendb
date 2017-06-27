@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 var snapshotRestore = false;
                 if (extension == Constants.Documents.PeriodicBackup.SnapshotExtension)
                 {
-                    // resotre the snapshot
+                    // restore the snapshot
                     restoreSettings = SnapshotRestore(firstFile, 
                         _restoreConfiguration.DataDirectory, 
                         _restoreConfiguration.JournalsStoragePath, 
