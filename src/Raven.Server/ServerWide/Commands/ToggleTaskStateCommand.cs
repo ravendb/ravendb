@@ -50,7 +50,7 @@ namespace Raven.Server.ServerWide.Commands
 
                 case OngoingTaskType.SqlEtl:
 
-                    var sqlEtl = record?.SqlEtls?.Find(x => x.Id == TaskId);
+                    var sqlEtl = record?.SqlEtls?.Find(x => x.TaskId == TaskId);
                     if (sqlEtl != null)
                     {
                         sqlEtl.Disabled = Disable;
@@ -59,7 +59,7 @@ namespace Raven.Server.ServerWide.Commands
 
                 case OngoingTaskType.RavenEtl:
 
-                    var ravenEtl = record?.SqlEtls?.Find(x => x.Id == TaskId);
+                    var ravenEtl = record?.SqlEtls?.Find(x => x.TaskId == TaskId);
                     if (ravenEtl != null)
                     {
                         ravenEtl.Disabled = Disable;

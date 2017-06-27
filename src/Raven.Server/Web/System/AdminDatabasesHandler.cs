@@ -704,7 +704,8 @@ namespace Raven.Server.Web.System
             if (Enum.TryParse<EtlType>(type, true, out var etlType) == false)
                 throw new ArgumentException($"Unknown ETL type: {type}", "type");
 
-            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.AddEtl(_, databaseName, etlConfiguration, etlType), "etl-add");
+            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.AddEtl(_, databaseName, etlConfiguration, etlType), "etl-add",
+                fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
         }
 
         [RavenAction("/admin/etl/update", "POST", "/admin/etl/update?id={id:ulong}&name={databaseName:string}&type={[sql|raven]:string}")]
@@ -716,7 +717,8 @@ namespace Raven.Server.Web.System
             if (Enum.TryParse<EtlType>(type, true, out var etlType) == false)
                 throw new ArgumentException($"Unknown ETL type: {type}", "type");
 
-            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.UpdateEtl(_, databaseName, id, etlConfiguration, etlType), "etl-update");
+            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.UpdateEtl(_, databaseName, id, etlConfiguration, etlType), "etl-update",
+                fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
         }
 
         [RavenAction("/admin/console", "POST", "/admin/console?database={databaseName:string}&server-script={isServerScript:bool|optional(false)}")]

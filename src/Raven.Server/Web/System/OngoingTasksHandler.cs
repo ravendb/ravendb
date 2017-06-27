@@ -169,7 +169,7 @@ namespace Raven.Server.Web.System
                     
                     yield return new OngoingRavenEtl
                     {
-                        TaskId = (long)ravenEtl.Id,
+                        TaskId = ravenEtl.TaskId,
                         TaskName = ravenEtl.Name,
                         // TODO arek TaskConnectionStatus = 
                         TaskState = taskState,
@@ -203,7 +203,7 @@ namespace Raven.Server.Web.System
 
                     yield return new OngoingSqlEtl
                     {
-                        TaskId = (long)sqlEtl.Id,
+                        TaskId = sqlEtl.TaskId,
                         TaskName = sqlEtl.Name,
                         // TODO arek TaskConnectionStatus = 
                         TaskState = taskState,
@@ -305,7 +305,7 @@ namespace Raven.Server.Web.System
 
                         case OngoingTaskType.SqlEtl:
 
-                            var sqlEtl = record?.SqlEtls?.Find(x => x.Id == key);
+                            var sqlEtl = record?.SqlEtls?.Find(x => x.TaskId == key);
                             if (sqlEtl == null)
                             {
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -331,7 +331,7 @@ namespace Raven.Server.Web.System
 
                             var sqlTaskInfo = new OngoingSqlEtl
                             {
-                                TaskId = sqlEtl.Id,
+                                TaskId = sqlEtl.TaskId,
                                 TaskState = taskState,
                                 TaskName = sqlEtl.Name,
                                 ResponsibleNode = new NodeId
@@ -348,7 +348,7 @@ namespace Raven.Server.Web.System
 
                         case OngoingTaskType.RavenEtl:
 
-                            var ravenEtl = record?.RavenEtls?.Find(x => x.Id == key);
+                            var ravenEtl = record?.RavenEtls?.Find(x => x.TaskId == key);
                             if (ravenEtl == null)
                             {
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -369,7 +369,7 @@ namespace Raven.Server.Web.System
 
                             var ravenTaskInfo = new OngoingRavenEtl
                             {
-                                TaskId = ravenEtl.Id,
+                                TaskId = ravenEtl.TaskId,
                                 TaskState = taskState,
                                 TaskName = ravenEtl.Name,
                                 ResponsibleNode = new NodeId

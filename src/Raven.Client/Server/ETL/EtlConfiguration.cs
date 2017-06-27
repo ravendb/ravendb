@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Sparrow;
 using Sparrow.Json;
 
@@ -7,9 +8,11 @@ namespace Raven.Client.Server.ETL
 {
     public abstract class EtlConfiguration<T> : IDatabaseTask where T : ConnectionString
     {
+        private ulong? _taskKey;
         private bool _initialized;
-        private long? _id;
 
+        public long TaskId { get; set; }
+        
         public string Name { get; set; }
 
         public abstract string GetDestination();
@@ -58,16 +61,17 @@ namespace Raven.Client.Server.ETL
             return errors.Count == 0;
         }
 
-        // TODO arek
-        public long Id => _id ?? (_id = (long)Hashing.XXHash64.Calculate(Name.ToLowerInvariant(), Encodings.Utf8)).Value;
-
         public abstract EtlType EtlType { get; }
 
         public abstract bool UsingEncryptedCommunicationChannel();
 
         public ulong GetTaskKey()
         {
-            return (ulong)Id;
+            Debug.Assert(Name != null);
+            Debug.Assert(ConnectionStringName != null);
+
+            return _taskKey ?? (_taskKey = Hashing.XXHash64.Calculate(Name.ToLowerInvariant(), Encodings.Utf8) ^
+                                           Hashing.XXHash64.Calculate(ConnectionStringName.ToLowerInvariant(), Encodings.Utf8)).Value;
         }
 
         public override string ToString()
