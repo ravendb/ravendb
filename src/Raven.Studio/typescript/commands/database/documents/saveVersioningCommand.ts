@@ -11,7 +11,8 @@ class saveVersioningCommand extends commandBase {
 
         const url = endpoint.global.adminDatabases.adminVersioningConfig + this.urlEncodeArgs({ name: this.db.name });
         const args = ko.toJSON(this.versioningConfiguration);
-        return this.post<updateDatabaseConfigurationsResult>(url, args);
+        return this.post<updateDatabaseConfigurationsResult>(url, args)
+            .fail((response: JQueryXHR) => this.reportError("Failed to save versioning configuration", response.responseText, response.statusText));
 
     }
 }
