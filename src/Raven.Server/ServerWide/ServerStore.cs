@@ -805,11 +805,11 @@ namespace Raven.Server.ServerWide
             return await SendToLeaderAsync(modifyPeriodicBackup);
         }
 
-        public async Task<(long, object)> AddEtl(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject etlConfiguration, EtlType type)
+        public async Task<(long, object)> AddEtl(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject etlConfiguration)
         {
             UpdateDatabaseCommand command;
 
-            switch (type)
+            switch (GetEtlType(etlConfiguration))
             {
                 case EtlType.Raven:
                     command = new AddRavenEtlCommand(JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration), databaseName);
@@ -818,18 +818,17 @@ namespace Raven.Server.ServerWide
                     command = new AddSqlEtlCommand(JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration), databaseName);
                     break;
                 default:
-                    throw new NotSupportedException($"Unknown ETL configuration destination type: {type}");
+                    throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
             }
 
             return await SendToLeaderAsync(command);
         }
 
-        public async Task<(long, object)> UpdateEtl(TransactionOperationContext context, string databaseName, long id, BlittableJsonReaderObject etlConfiguration,
-            EtlType type)
+        public async Task<(long, object)> UpdateEtl(TransactionOperationContext context, string databaseName, long id, BlittableJsonReaderObject etlConfiguration)
         {
             UpdateDatabaseCommand command;
 
-            switch (type)
+            switch (GetEtlType(etlConfiguration))
             {
                 case EtlType.Raven:
                     command = new UpdateRavenEtlCommand(id, JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration), databaseName);
@@ -838,10 +837,21 @@ namespace Raven.Server.ServerWide
                     command = new UpdateSqlEtlCommand(id, JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration), databaseName);
                     break;
                 default:
-                    throw new NotSupportedException($"Unknown ETL configuration destination type: {type}");
+                    throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
             }
 
             return await SendToLeaderAsync(command);
+        }
+
+        private static EtlType GetEtlType(BlittableJsonReaderObject etlConfiguration)
+        {
+            if (etlConfiguration.TryGet(nameof(EtlConfiguration<ConnectionString>.EtlType), out string type) == false)
+                throw new InvalidOperationException($"ETL configuration must have {nameof(EtlConfiguration<ConnectionString>.EtlType)} field");
+
+            if (Enum.TryParse<EtlType>(type, true, out var etlType) == false)
+                throw new NotSupportedException($"Unknown ETL type: {etlType}");
+
+            return etlType;
         }
 
         public Task<(long, object)> ModifyDatabaseVersioning(JsonOperationContext context, string name, BlittableJsonReaderObject configurationJson)
