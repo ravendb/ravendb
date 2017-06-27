@@ -116,11 +116,7 @@ class importDatabase extends viewModelBase {
 
     private setupValidation() {
         this.importedFileName.extend({
-            required: true,
-            validation: [{
-                validator: (name: string) => name && name.endsWith(".ravendbdump"),
-                message: "Invalid file extension."
-            }]
+            required: true
         });
     }
 
