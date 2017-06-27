@@ -1,4 +1,5 @@
 using System;
+using System.Dynamic;
 using Jint;
 using Jint.Native;
 using Raven.Client.Documents.Exceptions.Patching;
@@ -59,9 +60,7 @@ namespace Raven.Server.Documents.Patch
             if (jsVal.IsObject())
             {
                 var obj = jsVal.ToObject();
-                var typeName = obj.GetType().Name.ToLowerInvariant();
-
-                if (typeName != "expandoobject")
+                if (obj is ExpandoObject == false)
                     return obj;
             }
 
