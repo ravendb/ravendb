@@ -86,37 +86,40 @@ namespace Raven.Server.Documents.ETL
                 SqlEtlConfiguration sqlConfig = null;
                 RavenEtlConfiguration ravenConfig = null;
 
+                var connectionStringNotFound = false;
+                
                 switch (config.EtlType)
                 {
                     case EtlType.Raven:
                         ravenConfig = config as RavenEtlConfiguration;
-                        if (_databaseRecord.RavenConnectionStrings.TryGetValue(config.ConnectionStringName, out var ravenConnection) == false)
-                        {
-                            LogConfigurationError(config,
-                                new List<string>
-                                {
-                                    $"Connection string named '{config.ConnectionStringName}' was not found for '{config.Name}' ETL"
-                                });
-                            continue;
-                        }
-                        ravenConfig.Initialize(ravenConnection);
+                        if (_databaseRecord.RavenConnectionStrings.TryGetValue(config.ConnectionStringName, out var ravenConnection))
+                            ravenConfig.Initialize(ravenConnection);
+                        else
+                            connectionStringNotFound = true;
+
                         break;
                     case EtlType.Sql:
                         sqlConfig = config as SqlEtlConfiguration;
-                        if (_databaseRecord.SqlConnectionStrings.TryGetValue(config.ConnectionStringName, out var sqlConnection) == false)
-                        {
-                            LogConfigurationError(config,
-                                new List<string>
-                                {
-                                    $"Connection string named '{config.ConnectionStringName}' was not found for '{config.Name}' ETL"
-                                });
-                            continue;
-                        }
-                        sqlConfig.Initialize(sqlConnection);
+                        if (_databaseRecord.SqlConnectionStrings.TryGetValue(config.ConnectionStringName, out var sqlConnection))
+                            sqlConfig.Initialize(sqlConnection);
+                        else
+                            connectionStringNotFound = true;
+
                         break;
                     default:
                         ThrownUnknownEtlConfiguration(config.GetType());
                         break;
+                }
+
+                if (connectionStringNotFound)
+                {
+                    LogConfigurationError(config,
+                        new List<string>
+                        {
+                            $"Connection string named '{config.ConnectionStringName}' was not found for {config.EtlType} ETL"
+                        });
+                    
+                    continue;
                 }
 
                 if (ValidateConfiguration(config, uniqueNames) == false)
@@ -175,7 +178,7 @@ namespace Raven.Server.Documents.ETL
                 LogConfigurationError(config,
                     new List<string>
                     {
-                        $"ETL with name '{config.Name}' is already defined. Please just combine transformation scripts for the same destination"
+                        $"ETL with name '{config.Name}' is already defined"
                     });
                 return false;
             }
@@ -185,7 +188,7 @@ namespace Raven.Server.Documents.ETL
 
         private void LogConfigurationError<T>(EtlConfiguration<T> config, List<string> errors) where T : ConnectionString
         {
-            var errorMessage = $"Invalid ETL configuration for: {config.Name} to {config.GetDestination()}. " +
+            var errorMessage = $"Invalid ETL configuration for '{config.Name}'{(config.Connection != null ? $" ({config.GetDestination()})" : string.Empty)}. " +
                                $"Reason{(errors.Count > 1 ? "s" : string.Empty)}: {string.Join(";", errors)}.";
 
             if (Logger.IsInfoEnabled)
