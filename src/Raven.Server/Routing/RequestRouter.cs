@@ -245,61 +245,79 @@ namespace Raven.Server.Routing
                 var tokenBytes = Encodings.Utf8.GetBytes(token);
                 var signature = new byte[Sodium.crypto_sign_bytes()];
                 TransactionOperationContext txContext;
-                using (ravenServer.ServerStore.ContextPool.AllocateOperationContext(out txContext))
-                    fixed (byte* sig = signature)
-                    fixed (byte* msg = tokenBytes)
-                    fixed (char* pToken = token)
-                        using (txContext.OpenReadTransaction())
+                fixed (byte* sig = signature)
+                fixed (byte* msg = tokenBytes)
+                fixed (char* pToken = token)
+                {
+                    _fromBase64_Decode(pToken + 8, sigBase64Size, sig, Sodium.crypto_sign_bytes());
+                    Memory.Set(msg + 8, (byte)' ', sigBase64Size);
+
+                    using (ravenServer.ServerStore.ContextPool.AllocateOperationContext(out txContext))
+                    using (txContext.OpenReadTransaction())
+                    using (var tokenJson = txContext.ParseBuffer(msg, tokenBytes.Length, "auth token", BlittableJsonDocumentBuilder.UsageMode.None))
+                    {
+
+                        if (tokenJson.TryGet("Node", out string tag) == false)
+                            throw new InvalidOperationException("Missing 'Node' property in authentication token");
+                        if (tokenJson.TryGet("Name", out string apiKeyName) == false)
+                            throw new InvalidOperationException("Missing 'Name' property in authentication token");
+                        if (tokenJson.TryGet("Expires", out string expires) == false)
+                            throw new InvalidOperationException("Missing 'Expires' property in authentication token");
+
+                        var clusterTopology = ravenServer.ServerStore.GetClusterTopology(txContext);
+                        var publicKey = clusterTopology.GetPublicKeyFromTag(tag);
+                        //This is the case where we don't know the server but the admin had injected the server's 
+                        //public key into our server store using an external tool.
+                        bool unknownPublicKey = false;
+                        if (publicKey == null)
                         {
-                            _fromBase64_Decode(pToken + 8, sigBase64Size, sig, Sodium.crypto_sign_bytes());
-                            Memory.Set(msg + 8, (byte)' ', sigBase64Size);
-
-                            using (var tokenJson = txContext.ParseBuffer(msg, tokenBytes.Length, "auth token", BlittableJsonDocumentBuilder.UsageMode.None))
+                            //If we are not a part of a cluster we won't have our public key in the topology so we will 
+                            // try to validate against our own public key
+                            publicKey = ServerStore.GetSecretKey(txContext, $"Raven/Sign/Public/{tag}");
+                            if (publicKey == null)
                             {
-                                if (tokenJson.TryGet("Node", out string tag) == false)
-                                    throw new InvalidOperationException("Missing 'Node' property in authentication token");
-                                if (tokenJson.TryGet("Name", out string apiKeyName) == false)
-                                    throw new InvalidOperationException("Missing 'Name' property in authentication token");
-                                if (tokenJson.TryGet("Expires", out string expires) == false)
-                                    throw new InvalidOperationException("Missing 'Expires' property in authentication token");
-
-                                var clusterTopology = ravenServer.ServerStore.GetClusterTopology(txContext);
-                                var publicKey = clusterTopology.GetPublicKeyFromTag(tag);
-                                //This is the case where we don't know the server but the admin had injected the server's 
-                                //public key into our server store using an external tool.
-                                if (publicKey == null)
-                                {
-                                    //If we are not a part of a cluster we won't have our public key in the topology so we will 
-                                    // try to validate against our own public key
-                                    var key = (tag == ravenServer.ServerStore.NodeTag || ravenServer.ServerStore.NodeTag == "?")
-                                        ? "Raven/Sign/Public" :
-                                        $"Raven/Sign/Public/{tag}";
-                                    publicKey = ServerStore.GetSecretKey(txContext, key);
-                                }
-
-                                if (publicKey == null || publicKey.Length < 32)
-                                {
-                                    throw new InvalidOperationException("Unable to find any valid public key for " + tag +" to validate the token");
-                                }
-
-                                fixed (byte* pk = publicKey)
-                                {
-                                    if (Sodium.crypto_sign_verify_detached(sig, msg, (ulong)tokenBytes.Length, pk) != 0)
-                                        return false;
-                                }
-
-                                accessToken = new AccessToken
-                                {
-                                    Token = token,
-                                    Name = apiKeyName,
-                                    Expires = DateTime.ParseExact(expires, "O", CultureInfo.InvariantCulture),
-                                    AuthorizedDatabases = GetAuthorizedDatabases(txContext, ravenServer, apiKeyName)
-                                };
-
-                                if (accessToken.IsExpired == false)
-                                    ravenServer.AccessTokenCache.TryAdd(token, accessToken);
+                                unknownPublicKey = true;
+                                publicKey = ServerStore.GetSecretKey(txContext, $"Raven/Sign/Public");
+                            }
+                            if (publicKey == null)
+                            {
+                                throw new InvalidOperationException("Unable to find any valid public key to validate the token");
                             }
                         }
+
+                        if (publicKey.Length < 32)
+                        {
+                            throw new InvalidOperationException("Unable to find any valid public key for " + tag + " to validate the token");
+                        }
+
+                        fixed (byte* pk = publicKey)
+                        {
+                            if (Sodium.crypto_sign_verify_detached(sig, msg, (ulong)tokenBytes.Length, pk) != 0)
+                            {
+                                if (unknownPublicKey == false ||
+                                    ravenServer.Configuration.Server.AnonymousUserAccessMode != AnonymousUserAccessModeValues.Admin)
+                                    return false;
+
+                                // if the key failed to validate, but we aren't familiar with the public key AND
+                                // the user said that we should allow anonymous access, then we accept the token 
+                                // as trusted. This is meant to simplify the deployment process of clusters in
+                                // networks that are trusted only. When anonymous users don't have admin access,
+                                // then we require the administrator to install the second server key first.
+                            }
+                        }
+
+                        accessToken = new AccessToken
+                        {
+                            Token = token,
+                            Name = apiKeyName,
+                            Expires = DateTime.ParseExact(expires, "O", CultureInfo.InvariantCulture),
+                            AuthorizedDatabases = GetAuthorizedDatabases(txContext, ravenServer, apiKeyName)
+                        };
+
+                        if (accessToken.IsExpired == false)
+                            ravenServer.AccessTokenCache.TryAdd(token, accessToken);
+                    }
+                }
 
             }
 
