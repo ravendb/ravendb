@@ -123,7 +123,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                         ["Leader"] = ServerStore.LeaderTag,
                         ["CurrentState"] = ServerStore.CurrentState,
                         ["NodeTag"] = nodeTag,
-                        ["CurrentTerm"] = ServerStore.Engine.CurrentTerm
+                        ["CurrentTerm"] = ServerStore.Engine.CurrentTerm,
+                        [nameof(ServerStore.ClusterStatus)] = ServerStore.ClusterStatus()
                     };
                     var clusterErrors = ServerStore.GetClusterErrors();
                     if (clusterErrors.Count > 0)
