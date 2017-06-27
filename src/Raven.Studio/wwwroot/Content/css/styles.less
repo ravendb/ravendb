@@ -1584,6 +1584,28 @@ pre {
     }
 }
 
+ul.properties {
+    display: block;
+    font-size: 11px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+
+    li {
+        & > span {
+            display: inline-block;
+            width: 90px;
+            text-align: right;
+            margin-right: @grid-gutter-width/2;
+        }
+
+        & > strong {
+            color: @gray-lighter;
+            margin-right: @grid-gutter-width/2;
+        }
+    }
+}
+
 
 @import "pages/tasks-sampleData";
 @import "pages/tasks-csvImport";
