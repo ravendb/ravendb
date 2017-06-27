@@ -69,6 +69,8 @@ namespace Raven.Client.Server.Operations.ETL
 
     public class AddEtlOperationResult
     {
-        public long? ETag { get; set; }
+        public long RaftCommandIndex { get; set; }
+
+        public long TaskId { get; set; }
     }
 }

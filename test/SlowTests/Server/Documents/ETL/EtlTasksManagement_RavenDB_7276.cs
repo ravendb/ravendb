@@ -28,14 +28,14 @@ namespace SlowTests.Server.Documents.ETL
                     }
                 };
 
-                AddEtl(store, configuration, new RavenConnectionString()
+                var result = AddEtl(store, configuration, new RavenConnectionString()
                 {
                     Name = "test",
                     Url = "http://127.0.0.1:8080",
                     Database = "Northwind",
                 });
 
-                store.Admin.Server.Send(new DeleteOngoingTaskOperation(database.Name, configuration.Id, OngoingTaskType.RavenEtl));
+                store.Admin.Server.Send(new DeleteOngoingTaskOperation(database.Name, result.TaskId, OngoingTaskType.RavenEtl));
             }
         }
 
@@ -59,18 +59,16 @@ namespace SlowTests.Server.Documents.ETL
                     }
                 };
 
-                AddEtl(store, configuration, new RavenConnectionString()
+                var result = AddEtl(store, configuration, new RavenConnectionString()
                 {
                     Name = "test",
                     Url = "http://127.0.0.1:8080",
                     Database = "Northwind",
                 });
 
-                var id = configuration.Id;
-
                 configuration.Transforms[0].Disabled = true;
 
-                store.Admin.Server.Send(new UpdateEtlOperation<RavenConnectionString>(id, configuration, database.Name));
+                store.Admin.Server.Send(new UpdateEtlOperation<RavenConnectionString>(result.TaskId, configuration, database.Name));
             }
         }
 
@@ -94,7 +92,7 @@ namespace SlowTests.Server.Documents.ETL
                     }
                 };
 
-                AddEtl(store, configuration, new RavenConnectionString()
+                var result = AddEtl(store, configuration, new RavenConnectionString()
                 {
                     Name = "test",
                     Url = "http://127.0.0.1:8080",
@@ -102,7 +100,7 @@ namespace SlowTests.Server.Documents.ETL
                 });
 
 
-                store.Admin.Server.Send(new ToggleTaskStateOperation(database.Name , configuration.Id, OngoingTaskType.RavenEtl, true));
+                store.Admin.Server.Send(new ToggleTaskStateOperation(database.Name , result.TaskId, OngoingTaskType.RavenEtl, true));
             }
         }
     }

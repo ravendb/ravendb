@@ -48,6 +48,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            Configuration.TaskId = etag;
             Add(ref record.RavenEtls, Configuration);
             return null;
         }
@@ -67,6 +68,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            Configuration.TaskId = etag;
             Add(ref record.SqlEtls, Configuration);
             return null;
         }

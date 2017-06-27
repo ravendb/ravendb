@@ -22,6 +22,7 @@ namespace RachisTests.DatabaseCluster
             var leader = await CreateRaftClusterAndGetLeader(clusterSize);
             ModifyOngoingTaskResult addWatcherRes;
             UpdatePeriodicBackupOperationResult updateBackupResult;
+            AddEtlOperationResult addEtlREsult;
             RavenEtlConfiguration etlConfiguration;
             ExternalReplication watcher;
             RavenConnectionString ravenConnectionString;
@@ -92,7 +93,7 @@ namespace RachisTests.DatabaseCluster
                     }
                 };
 
-                store.Admin.Server.Send(new AddEtlOperation<RavenConnectionString>(etlConfiguration, store.Database));
+                addEtlREsult = store.Admin.Server.Send(new AddEtlOperation<RavenConnectionString>(etlConfiguration, store.Database));
             }
 
             using (var store = new DocumentStore
@@ -120,7 +121,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal("backup1", result.TaskName);
                 Assert.Equal(OngoingTaskState.Disabled, result.TaskState);
 
-                taskId = etlConfiguration.Id;
+                taskId = addEtlREsult.TaskId;
 
                 result = await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.RavenEtl);              
                 Assert.Equal(result?.DestinationDatabase, ravenConnectionString.Database);
