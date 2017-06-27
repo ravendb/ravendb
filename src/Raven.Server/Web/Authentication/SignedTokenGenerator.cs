@@ -20,12 +20,10 @@ namespace Raven.Server.Web.Authentication
             byte[] signSecretKey,
             string apiKeyName,
             string nodeTag,
-            out DateTime expires,
-            bool longDuration = false)
+            DateTime expires)
         {
             if (_signatureBuffer == null)
                 _signatureBuffer = new byte[Sodium.crypto_sign_bytes()];
-            expires = longDuration? DateTime.UtcNow.AddDays(1): DateTime.UtcNow.AddMinutes(30);
 
             var ms = new MemoryStream();
             using (var writer = new BlittableJsonTextWriter(context, ms))

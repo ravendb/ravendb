@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
@@ -404,25 +405,14 @@ namespace Raven.Server.ServerWide
 
         public byte[] BoxPublicKey, BoxSecretKey, SignPublicKey, SignSecretKey;
 
-        private Tuple<DateTime, string> _clusterToken = Tuple.Create<DateTime, string>(DateTime.MinValue, null);
 
         internal string GetClusterTokenForNode(JsonOperationContext context)
         {
-            if (DateTime.UtcNow > _clusterToken.Item1 || _clusterToken.Item2 == null)
-            {
-                lock (this)
-                {
-                    if (DateTime.UtcNow > _clusterToken.Item1 || _clusterToken.Item2 == null)
-                    {
-                        DateTime expires;
-                        var token = System.Text.Encoding.UTF8.GetString(SignedTokenGenerator.GenerateToken(context, SignSecretKey,
-                            Constants.ApiKeys.ClusterApiKeyName, NodeTag, out expires).ToArray());
-                        Interlocked.Exchange(ref _clusterToken, Tuple.Create(expires, token));
-                        return token;
-                    }
-                }
-            }
-            return _clusterToken.Item2;
+            var token = SignedTokenGenerator.GenerateToken(context, SignSecretKey,
+                Constants.ApiKeys.ClusterApiKeyName, NodeTag,
+                DateTime.UtcNow.AddMinutes(30));
+
+            return Encoding.UTF8.GetString(token.Array, token.Offset, token.Count);
         }
 
         private void GenerateAuthenticationSignetureKeys(TransactionOperationContext ctx)

@@ -271,8 +271,11 @@ namespace Raven.Server.Routing
                         {
                             try
                             {
-                                //If we are not a part of a cluster we won't have our public key in the topology so we will try to validate agaist our own public key
-                                var key = (tag == ravenServer.ServerStore.NodeTag || ravenServer.ServerStore.NodeTag == "?") ? "Raven/Sign/Public" : $"Raven/Sign/Public/{tag}";
+                                //If we are not a part of a cluster we won't have our public key in the topology so we will 
+                                // try to validate against our own public key
+                                var key = (tag == ravenServer.ServerStore.NodeTag || ravenServer.ServerStore.NodeTag == "?") 
+                                    ? "Raven/Sign/Public" : 
+                                    $"Raven/Sign/Public/{tag}";
                                 publicKey = ServerStore.GetSecretKey(txContext, key);
                             }
                             catch
