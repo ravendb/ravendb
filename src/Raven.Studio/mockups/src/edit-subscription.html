@@ -254,7 +254,7 @@
                                     </div>
                                 </div>
                                 <!--Placeholder virtual grid-->
-                                <div class="virtual-grid flex-grow flex-vertical flex-grow" data-bind="attr: { id: gridId }" id="vg_17">
+                                <div class="virtual-grid flex-grow flex-vertical flex-grow no-margin" data-bind="attr: { id: gridId }" id="vg_17">
                                     <div class="absolute-center loading" data-bind="visible: isLoading" style="display: none;"><div class="global-spinner"></div></div>
                                     <div class="column-container flex-window-head" data-bind="foreach: columns, visible: settings.showHeader"><div class="column" data-bind="style: { width: $data.width }" style="width: 38px;"><strong data-bind="html: $data.header"><div class="checkbox checkbox-table-selector"><input class="checked-column-header styled" type="checkbox"><label></label></div></strong></div><div class="column" data-bind="style: { width: $data.width }" style="width: 300px;"><strong data-bind="html: $data.header">Id</strong></div><div class="column" data-bind="style: { width: $data.width }" style="width: 200px;"><strong data-bind="html: $data.header">ETag</strong></div><div class="column" data-bind="style: { width: $data.width }" style="width: 300px;"><strong data-bind="html: $data.header">Last Modified</strong></div><div class="column" data-bind="style: { width: $data.width }" style="width: 200px;"><strong data-bind="html: $data.header">Collection</strong></div></div>
                                     <div class="viewport flex-window-scroll header-visible flex-grow" data-bind="css: { 'header-visible': settings.showHeader }">
