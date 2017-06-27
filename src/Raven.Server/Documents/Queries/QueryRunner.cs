@@ -141,6 +141,7 @@ namespace Raven.Server.Documents.Queries
             if (string.IsNullOrEmpty(query.DocumentId) && query.MapGroupFields.Count == 0)
                 throw new InvalidOperationException("The document id or map group fields are mandatory");
 
+            var sw = Stopwatch.StartNew();
             var index = GetIndex(indexName);
 
             var etag = index.GetIndexEtag();
@@ -149,7 +150,9 @@ namespace Raven.Server.Documents.Queries
 
             context.OpenReadTransaction();
 
-            return index.MoreLikeThisQuery(query, context, token);
+            var result = index.MoreLikeThisQuery(query, context, token);
+            result.DurationMilliseconds = (int)sw.Elapsed.TotalMilliseconds;
+            return result;
         }
 
         public async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(string indexName, IndexQueryServerSide query, long? existingResultEtag, OperationCancelToken token)
@@ -242,7 +245,7 @@ namespace Raven.Server.Documents.Queries
             {
                 context.CloseTransaction();
             }
-            
+
             var progress = new DeterminateProgress
             {
                 Total = resultIds.Count,

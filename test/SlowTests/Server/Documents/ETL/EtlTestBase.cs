@@ -16,22 +16,22 @@ namespace SlowTests.Server.Documents.ETL
     [Trait("Category", "ETL")]
     public class EtlTestBase : RavenTestBase
     {
-        protected static void AddEtl<T>(DocumentStore src, EtlConfiguration<T> configuration, T connectionString) where T : ConnectionString
+        protected static AddEtlOperationResult AddEtl<T>(DocumentStore src, EtlConfiguration<T> configuration, T connectionString) where T : ConnectionString
         {
             src.Admin.Server.Send(new AddConnectionStringOperation<T>(connectionString, src.Database));
-            src.Admin.Server.Send(new AddEtlOperation<T>(configuration, src.Database));
+            return src.Admin.Server.Send(new AddEtlOperation<T>(configuration, src.Database));
         }
 
-        protected static void AddEtl(DocumentStore src, DocumentStore dst, string collection, string script, bool applyToAllDocuments = false, bool disabled = false)
+        protected static AddEtlOperationResult AddEtl(DocumentStore src, DocumentStore dst, string collection, string script, bool applyToAllDocuments = false, bool disabled = false)
         {
-            AddEtl(src, dst, new[] { collection }, script, applyToAllDocuments, disabled);
+            return AddEtl(src, dst, new[] { collection }, script, applyToAllDocuments, disabled);
         }
 
-        protected static void AddEtl(DocumentStore src, DocumentStore dst, IEnumerable<string> collections, string script, bool applyToAllDocuments = false, bool disabled = false)
+        protected static AddEtlOperationResult AddEtl(DocumentStore src, DocumentStore dst, IEnumerable<string> collections, string script, bool applyToAllDocuments = false, bool disabled = false)
         {
             var connectionStringName = $"{src.Database}@{src.Urls.First()} to {dst.Database}@{dst.Urls.First()}";
 
-            AddEtl(src, new RavenEtlConfiguration()
+            return AddEtl(src, new RavenEtlConfiguration()
                 {
                     Name = connectionStringName,
                     ConnectionStringName = connectionStringName,

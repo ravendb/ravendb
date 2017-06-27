@@ -37,7 +37,7 @@ namespace Raven.Server.ServerWide.Commands
                     return TaskId.ToString();
 
                 case OngoingTaskType.SqlEtl:
-                    var sqlEtl = record.SqlEtls?.Find(x => x.Id == TaskId);
+                    var sqlEtl = record.SqlEtls?.Find(x => x.TaskId == TaskId);
                     if (sqlEtl != null)
                     {
                         record.SqlEtls.Remove(sqlEtl);
@@ -45,7 +45,7 @@ namespace Raven.Server.ServerWide.Commands
                     break;
 
                 case OngoingTaskType.RavenEtl:
-                    var ravenEtl = record.RavenEtls?.Find(x => x.Id == TaskId);
+                    var ravenEtl = record.RavenEtls?.Find(x => x.TaskId == TaskId);
                     if (ravenEtl != null)
                     {
                         record.RavenEtls.Remove(ravenEtl);

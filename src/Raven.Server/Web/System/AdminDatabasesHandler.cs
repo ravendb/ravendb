@@ -699,24 +699,17 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/etl/add", "PUT", "/admin/etl/add?name={databaseName:string}&type={[sql|raven]:string}")]
         public async Task AddEtl()
         {
-            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
-
-            if (Enum.TryParse<EtlType>(type, true, out var etlType) == false)
-                throw new ArgumentException($"Unknown ETL type: {type}", "type");
-
-            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.AddEtl(_, databaseName, etlConfiguration, etlType), "etl-add");
+            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.AddEtl(_, databaseName, etlConfiguration), "etl-add",
+                fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
         }
 
         [RavenAction("/admin/etl/update", "POST", "/admin/etl/update?id={id:ulong}&name={databaseName:string}&type={[sql|raven]:string}")]
         public async Task UpdateEtl()
         {
-            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
             var id = GetLongQueryString("id");
 
-            if (Enum.TryParse<EtlType>(type, true, out var etlType) == false)
-                throw new ArgumentException($"Unknown ETL type: {type}", "type");
-
-            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.UpdateEtl(_, databaseName, id, etlConfiguration, etlType), "etl-update");
+            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.UpdateEtl(_, databaseName, id, etlConfiguration), "etl-update",
+                fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
         }
 
         [RavenAction("/admin/console", "POST", "/admin/console?database={databaseName:string}&server-script={isServerScript:bool|optional(false)}")]

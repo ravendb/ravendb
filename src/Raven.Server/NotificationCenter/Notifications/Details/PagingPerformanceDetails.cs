@@ -29,7 +29,9 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
                     {
                         [nameof(ActionDetails.NumberOfResults)] = details.NumberOfResults,
                         [nameof(ActionDetails.PageSize)] = details.PageSize,
-                        [nameof(ActionDetails.Occurence)] = details.Occurence
+                        [nameof(ActionDetails.Occurrence)] = details.Occurrence,
+                        [nameof(ActionDetails.Duration)] = details.Duration,
+                        [nameof(ActionDetails.QueryString)] = details.QueryString
                     });
                 }
 
@@ -42,13 +44,13 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             };
         }
 
-        public void Update(string action, int numberOfResults, int pageSize, DateTime occurence)
+        public void Update(string action, string queryString, int numberOfResults, int pageSize, TimeSpan duration, DateTime occurrence)
         {
             Queue<ActionDetails> details;
             if (Actions.TryGetValue(action, out details) == false)
                 Actions[action] = details = new Queue<ActionDetails>();
 
-            details.Enqueue(new ActionDetails { Occurence = occurence, NumberOfResults = numberOfResults, PageSize = pageSize });
+            details.Enqueue(new ActionDetails { Duration = duration, Occurrence = occurrence, NumberOfResults = numberOfResults, PageSize = pageSize, QueryString = queryString });
 
             while (details.Count > 10)
                 details.Dequeue();
@@ -56,7 +58,9 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
 
         internal class ActionDetails
         {
-            public DateTime Occurence { get; set; }
+            public string QueryString { get; set; }
+            public TimeSpan Duration { get; set; }
+            public DateTime Occurrence { get; set; }
             public int NumberOfResults { get; set; }
             public int PageSize { get; set; }
         }

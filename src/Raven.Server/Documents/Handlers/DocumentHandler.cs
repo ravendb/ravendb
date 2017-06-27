@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -109,6 +110,8 @@ namespace Raven.Server.Documents.Handlers
 
         private void GetDocuments(DocumentsOperationContext context, Transformer transformer, bool metadataOnly)
         {
+            var sw = Stopwatch.StartNew();
+
             // everything here operates on all docs
             var actualEtag = DocumentsStorage.ComputeEtag(
                 DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction), Database.DocumentsStorage.GetNumberOfDocuments(context)
@@ -170,11 +173,13 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteEndObject();
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Documents, isStartsWith ? nameof(DocumentsStorage.GetDocumentsStartingWith) : nameof(GetDocuments), numberOfResults, pageSize);
+            AddPagingPerformanceHint(PagingOperationType.Documents, isStartsWith ? nameof(DocumentsStorage.GetDocumentsStartingWith) : nameof(GetDocuments), HttpContext, numberOfResults, pageSize, sw.Elapsed);
         }
 
         private void GetDocumentsById(DocumentsOperationContext context, StringValues ids, Transformer transformer, bool metadataOnly)
         {
+            var sw = Stopwatch.StartNew();
+
             var includePaths = GetStringValuesQueryString("include", required: false);
             var documents = new List<Document>(ids.Count);
             List<long> etags = null;
@@ -233,7 +238,7 @@ namespace Raven.Server.Documents.Handlers
                 WriteDocumentsJson(context, metadataOnly, documentsToWrite, includeDocs, includes, out numberOfResults);
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsById), numberOfResults, documents.Count);
+            AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsById), HttpContext, numberOfResults, documents.Count, sw.Elapsed);
         }
 
         private void WriteDocumentsJson(DocumentsOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite,
