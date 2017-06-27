@@ -11,6 +11,7 @@ using System.Runtime.Loader;
 #endif
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -133,12 +134,31 @@ namespace Raven.TestDriver
             };
 #endif
 
-            string line;
             string url = null;
             var output = process.StandardOutput;
             var sb = new StringBuilder();
-            while ((line = output.ReadLine()) != null)
+
+            var startupDuration = Stopwatch.StartNew();
+
+            Task<string> readLineTask = null;
+            
+            while (true)
             {
+                if (readLineTask == null)
+                    readLineTask = output.ReadLineAsync();
+                
+                var task = Task.WhenAny(readLineTask, Task.Delay(TimeSpan.FromSeconds(5))).Result;
+
+                if (startupDuration.Elapsed > TimeSpan.FromMinutes(1))
+                    break;
+
+                if (task != readLineTask)
+                    continue;
+
+                var line = readLineTask.Result;
+
+                readLineTask = null;
+                
                 sb.AppendLine(line);
                 const string prefix = "Server available on: ";
                 if (line.StartsWith(prefix))
@@ -148,13 +168,13 @@ namespace Raven.TestDriver
                 }
             }
 
-            Console.WriteLine(url);
-
             if (url == null)
             {
                 process.Kill();
                 throw new InvalidOperationException("Unable to start server, log is: " + Environment.NewLine + sb);
             }
+            
+            Console.WriteLine(url);
 
             output.ReadToEndAsync()
                 .ContinueWith(x => GC.KeepAlive(x.Exception)); // just discard any other output
