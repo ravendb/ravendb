@@ -15,13 +15,15 @@ namespace Raven.Server.Indexing
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
         private readonly string _name;
+        private readonly string _tree;
         private VoronStream _stream;
 
         private bool _isOriginal = true;
 
-        public VoronIndexInput(string name, Transaction transaction)
+        public VoronIndexInput(string name, Transaction transaction, string tree)
         {
             _name = name;
+            _tree = tree;
 
             OpenInternal(transaction);
         }
@@ -33,7 +35,7 @@ namespace Raven.Server.Indexing
 
         private void OpenInternal(Transaction transaction)
         {
-            var fileTree = transaction.ReadTree("Files");
+            var fileTree = transaction.ReadTree(_tree);
             if (fileTree == null)
                 throw new FileNotFoundException("Could not find index input", _name);
 

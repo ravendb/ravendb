@@ -17,7 +17,9 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.Suggestion;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
+using Raven.Client.Http;
 using Raven.Client.Util;
 
 namespace Raven.Client.Documents
@@ -390,12 +392,23 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Suggest alternative values for the queried term
         /// </summary>
-        public static SuggestionQueryResult Suggest(this IQueryable queryable, SuggestionQuery query)
+        public static SuggestionQueryResult Suggest(this IQueryable source, SuggestionQuery query)
         {
-            throw new NotImplementedException("This feature is not yet implemented");
-            /*var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-            SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query);
-            return ravenQueryInspector.DatabaseCommands.Suggest(ravenQueryInspector.IndexQueried, query);*/
+            var inspector = source as IRavenQueryInspector;
+            if (inspector == null)
+                throw new ArgumentException("You can only use Raven Queryable with suggests");
+
+            SetSuggestionQueryParameters(inspector, query);
+
+            var operation = new SuggestionOperation(inspector.Session, query);
+
+            var command = operation.CreateRequest();
+            inspector.Session.RequestExecutor.Execute(command, inspector.Session.Context);
+
+            var result = command.Result;
+            operation.SetResult(result);
+
+            return operation.Complete();
         }
 
         /// <summary>
@@ -403,31 +416,34 @@ namespace Raven.Client.Documents
         /// </summary>
         public static Lazy<SuggestionQueryResult> SuggestLazy(this IQueryable queryable)
         {
-            throw new NotImplementedException("This feature is not yet implemented");
-            //return SuggestLazy(queryable, new SuggestionQuery());
+            return SuggestLazy(queryable, new SuggestionQuery());
         }
 
         /// <summary>
         /// Lazy Suggest alternative values for the queried term
         /// </summary>
-        public static Lazy<SuggestionQueryResult> SuggestLazy(this IQueryable queryable, SuggestionQuery query)
+        public static Lazy<SuggestionQueryResult> SuggestLazy(this IQueryable source, SuggestionQuery query)
         {
-            throw new NotImplementedException("This feature is not yet implemented");
-            //var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-            //SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query);
+            var inspector = source as IRavenQueryInspector;
+            if (inspector == null)
+                throw new ArgumentException("You can only use Raven Queryable with suggests");
+           
+            SetSuggestionQueryParameters(inspector, query);
+            
+            var lazyOperation = new LazySuggestionOperation(inspector.Session, query);
 
-            //var lazyOperation = new LazySuggestOperation(ravenQueryInspector.IndexQueried, query);
-
-            //var documentSession = ((DocumentSession)ravenQueryInspector.Session);
-            //return documentSession.AddLazyOperation<SuggestionQueryResult>(lazyOperation, null);
+            var documentSession = ((DocumentSession)inspector.Session);
+            return documentSession.AddLazyOperation<SuggestionQueryResult>(lazyOperation, null);
         }
 
-        private static void SetSuggestionQueryFieldAndTerm(IRavenQueryInspector queryInspector, SuggestionQuery query, bool isAsync = false)
+        private static void SetSuggestionQueryParameters(IRavenQueryInspector inspector, SuggestionQuery query, bool isAsync = false)
         {
+            query.IndexName = isAsync ? inspector.AsyncIndexQueried : inspector.IndexQueried;
+
             if (string.IsNullOrEmpty(query.Field) == false && string.IsNullOrEmpty(query.Term) == false)
                 return;
 
-            var lastEqualityTerm = queryInspector.GetLastEqualityTerm(isAsync);
+            var lastEqualityTerm = inspector.GetLastEqualityTerm(isAsync);
             if (lastEqualityTerm.Key == null)
                 throw new InvalidOperationException("Could not suggest on a query that doesn't have a single equality check");
 
@@ -438,13 +454,23 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Suggest alternative values for the queried term
         /// </summary>
-        public static Task<SuggestionQueryResult> SuggestAsync(this IQueryable queryable, SuggestionQuery query, CancellationToken token = default(CancellationToken))
+        public static async Task<SuggestionQueryResult> SuggestAsync(this IQueryable source, SuggestionQuery query, CancellationToken token = default(CancellationToken))
         {
-            throw new NotImplementedException("This feature is not yet implemented");
-            /* var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-             SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query, true);
+            var inspector = source as IRavenQueryInspector;
+            if (inspector == null)
+                throw new ArgumentException("You can only use Raven Queryable with suggests");
 
-             return ravenQueryInspector.AsyncDatabaseCommands.SuggestAsync(ravenQueryInspector.AsyncIndexQueried, query, token);*/
+            SetSuggestionQueryParameters(inspector, query, isAsync: true);
+
+            var operation = new SuggestionOperation(inspector.Session, query);
+
+            var command = operation.CreateRequest();
+            await inspector.Session.RequestExecutor.ExecuteAsync(command, inspector.Session.Context, token).ConfigureAwait(false);
+
+            var result = command.Result;
+            operation.SetResult(result);
+
+            return operation.Complete();
         }
 
         /// <summary>

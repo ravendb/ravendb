@@ -9,7 +9,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Queries.MoreLikeThis
 {
-    public class MoreLikeThisQueryServerSide : MoreLikeThisQuery<BlittableJsonReaderObject>
+    public sealed class MoreLikeThisQueryServerSide : MoreLikeThisQuery<BlittableJsonReaderObject>
     {
         public static MoreLikeThisQueryServerSide Create(HttpContext httpContext, int pageSize, JsonOperationContext context)
         {

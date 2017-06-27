@@ -32,6 +32,7 @@ using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Parse;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Sorting;
+using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;
@@ -156,6 +157,24 @@ namespace Raven.Server.Documents.Indexes
             Suggestion = "Please verify this index definition and consider a re-design of your entities or index for better indexing performance"
         };
 
+        public const string DynamicIndex = "dynamic";
+
+        public const string DynamicIndexPrefix = "dynamic/";
+
+        public static bool IsDynamicIndex(string indexName)
+        {
+            if (indexName == null || indexName.Length < DynamicIndex.Length)
+                return false;
+
+            if (indexName.StartsWith(DynamicIndex, StringComparison.OrdinalIgnoreCase) == false)
+                return false;
+
+            if (indexName.Length == DynamicIndex.Length)
+                return true;
+
+            return indexName[DynamicIndex.Length] == '/';
+        }
+
 
         protected Index(long etag, IndexType type, IndexDefinitionBase definition)
         {
@@ -221,7 +240,7 @@ namespace Raven.Server.Documents.Indexes
                     case IndexType.MapReduce:
                         return MapReduceIndex.Open(etag, environment, documentDatabase);
                     default:
-                        throw new ArgumentException($"Uknown index type {type} for index {etag}");
+                        throw new ArgumentException($"Unknown index type {type} for index {etag}");
                 }
             }
             catch (Exception e)
@@ -492,7 +511,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var indexingThread = _indexingThread;
                 _indexingThread = null;
-                //Cancelation was requested, the thread will exit the indexing loop and terminate.
+                //Cancellation was requested, the thread will exit the indexing loop and terminate.
                 //If we invoke Thread.Join from the indexing thread itself it will cause a deadlock
                 if (Thread.CurrentThread != indexingThread)
                     indexingThread.Join();
@@ -981,7 +1000,7 @@ namespace Raven.Server.Documents.Indexes
 
             var afterFree = NativeMemory.ThreadAllocations.Value.Allocations;
             if (_logger.IsInfoEnabled)
-                _logger.Info($"After clenaup, using {afterFree / 1024:#,#} kb by '{Name} ({Etag})'.");
+                _logger.Info($"After cleanup, using {afterFree / 1024:#,#} Kb by '{Name} ({Etag})'.");
         }
 
         internal void ResetErrors()
@@ -1842,8 +1861,36 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public virtual MoreLikeThisQueryResultServerSide MoreLikeThisQuery(MoreLikeThisQueryServerSide query,
-            DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public virtual SuggestionQueryResultServerSide SuggestionsQuery(SuggestionQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        {
+            AssertIndexState();
+
+            using (var marker = MarkQueryAsRunning(query, token))
+            {
+                AssertIndexState();
+                marker.HoldLock();
+
+                TransactionOperationContext indexContext;
+                using (_contextPool.AllocateOperationContext(out indexContext))
+                using (var tx = indexContext.OpenReadTransaction())
+                {
+                    var result = new SuggestionQueryResultServerSide();
+
+                    var isStale = IsStale(documentsContext, indexContext);
+
+                    FillSuggestionQueryResult(result, isStale, documentsContext, indexContext);                                            
+
+                    using (var reader = IndexPersistence.OpenSuggestionIndexReader(tx.InnerTransaction, query.Field))
+                    {
+                        result.Suggestions = reader.Suggestions(query, token.Token);                                      
+                    }
+
+                    return result;
+                }
+            }
+        }
+
+        public virtual MoreLikeThisQueryResultServerSide MoreLikeThisQuery(MoreLikeThisQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             AssertIndexState();
 
@@ -2067,6 +2114,16 @@ namespace Raven.Server.Documents.Indexes
             result.IndexTimestamp = LastIndexingTime ?? DateTime.MinValue;
             result.LastQueryTime = _lastQueryingTime ?? DateTime.MinValue;
             result.ResultEtag = CalculateIndexEtag(result.IsStale, documentsContext, indexContext) ^ facetSetupEtag;
+        }
+
+        private void FillSuggestionQueryResult(SuggestionQueryResult result, bool isStale,
+            DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
+        {
+            result.IndexName = Name;
+            result.IsStale = isStale;
+            result.IndexTimestamp = LastIndexingTime ?? DateTime.MinValue;
+            result.LastQueryTime = _lastQueryingTime ?? DateTime.MinValue;
+            result.ResultEtag = CalculateIndexEtag(result.IsStale, documentsContext, indexContext);
         }
 
         private void FillQueryResult<T>(QueryResultBase<T> result, bool isStale,
@@ -2430,86 +2487,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 return _environment.GenerateDetailedReport(tx.InnerTransaction, calculateExactSizes);
             }
-        }
-
-        private bool TryIncreasingMemoryUsageForIndex(Size currentlyAllocated, IndexingStatsScope stats)
-        {
-            if (_environment.Options.RunningOn32Bits)
-                return false;
-
-            //TODO: This has to be exposed via debug endpoint
-
-            // we run out our memory quota, so we need to see if we can increase it or break
-            var memoryInfoResult = MemoryInformation.GetMemoryInfo();
-
-            using (var currentProcess = Process.GetCurrentProcess())
-            {
-                // a lot of the memory that we use is actually from memory mapped files, as such, we can
-                // rely on the OS to page it out (without needing to write, since it is read only in this case)
-                // so we try to calculate how much such memory we can use with this assumption 
-                var memoryMappedSize = new Size(currentProcess.WorkingSet64 - currentProcess.PrivateMemorySize64, SizeUnit.Bytes);
-
-                stats.RecordMapMemoryStats(currentProcess.WorkingSet64, currentProcess.PrivateMemorySize64, _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes));
-
-                if (memoryMappedSize < Size.Zero)
-                {
-                    // in this case, we are likely paging, our working set is smaller than the memory we allocated
-                    // it isn't _neccesarily_ a bad thing, we might be paged on allocated memory we aren't using, but
-                    // at any rate, we'll ignore that and just use the actual physical memory available
-                    memoryMappedSize = Size.Zero;
-                }
-                var minMemoryToLeaveForMemoryMappedFiles = memoryInfoResult.TotalPhysicalMemory / 4;
-
-                var memoryAssumedFreeOrCheapToFree = (memoryInfoResult.AvailableMemory + memoryMappedSize - minMemoryToLeaveForMemoryMappedFiles);
-
-                // there isn't enough available memory to try, we want to leave some out for other things
-                if (memoryAssumedFreeOrCheapToFree < memoryInfoResult.TotalPhysicalMemory / 10)
-                {
-                    if (_logger.IsInfoEnabled)
-                    {
-                        _logger.Info(
-                            $"{Name} ({Etag}) which is already using {currentlyAllocated}/{_currentMaximumAllowedMemory} and the system has" +
-                            $"{memoryInfoResult.AvailableMemory}/{memoryInfoResult.TotalPhysicalMemory} free RAM. Also have ~{memoryMappedSize} in mmap " +
-                            $"files that can be cleanly released, not enough to proceed in batch.");
-                    }
-                    _allocationCleanupNeeded = true;
-                    return false;
-                }
-
-                // If there isn't enough here to double our current allocation, we won't allocate any more
-                // we do this check in this way to prevent multiple indexes of hitting this at the
-                // same time and each thinking that they have enough space
-                if (memoryAssumedFreeOrCheapToFree < _currentMaximumAllowedMemory)
-                {
-                    // TODO: We probably need to make a note of this in log & expose in stats
-                    // TODO: to explain why we aren't increasing the memory in use
-                    _allocationCleanupNeeded = true;
-                    if (_logger.IsInfoEnabled)
-                    {
-                        _logger.Info(
-                            $"{Name} ({Etag}) which is already using {currentlyAllocated}/{_currentMaximumAllowedMemory} and the system has" +
-                            $"{memoryInfoResult.AvailableMemory}/{memoryInfoResult.TotalPhysicalMemory} free RAM. Also have ~{memoryMappedSize} in mmap " +
-                            $"files that can be cleanly released, not enough to proceed in batch.");
-                    }
-                    return false;
-                }
-
-                // even though we have twice as much memory as we have current allocated, we will 
-                // only increment by 16MB to avoid over allocation by multiple indexes. This way, 
-                // we'll check often as we go along this
-                var oldBudget = _currentMaximumAllowedMemory;
-                _currentMaximumAllowedMemory = currentlyAllocated + new Size(16, SizeUnit.Megabytes);
-
-                if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info(
-                        $"Increasing memory budget for {Name} ({Etag}) which is using  {currentlyAllocated}/{oldBudget} and the system has" +
-                        $"{memoryInfoResult.AvailableMemory}/{memoryInfoResult.TotalPhysicalMemory} free RAM with {memoryMappedSize} in mmap " +
-                        $"files that can be cleanly released. Budget increased to {_currentMaximumAllowedMemory}");
-                }
-                return true;
-            }
-        }
+        }       
 
         private struct QueryDoneRunning : IDisposable
         {

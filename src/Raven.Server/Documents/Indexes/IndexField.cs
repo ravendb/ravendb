@@ -18,6 +18,8 @@ namespace Raven.Server.Documents.Indexes
         public FieldIndexing Indexing { get; set; }
 
         public FieldTermVector TermVector { get; set; }
+        
+        public bool HasSuggestions { get; set; }
 
         public static string ReplaceInvalidCharactersInFieldName(string field)
         {
@@ -70,10 +72,12 @@ namespace Raven.Server.Documents.Indexes
 
         public static IndexField Create(string name, IndexFieldOptions options, IndexFieldOptions allFields)
         {
-            var field = new IndexField();
-            field.Name = name;
-            field.Analyzer = options.Analyzer ?? allFields?.Analyzer;
-
+            var field = new IndexField
+            {
+                Name = name,
+                Analyzer = options.Analyzer ?? allFields?.Analyzer
+            };
+            
             if (options.Indexing.HasValue)
                 field.Indexing = options.Indexing.Value;
             else if (string.IsNullOrWhiteSpace(field.Analyzer) == false)
@@ -94,7 +98,9 @@ namespace Raven.Server.Documents.Indexes
             else if (allFields?.TermVector != null)
                 field.TermVector = allFields.TermVector.Value;
 
-            // options.Suggestions // TODO [ppekrol]
+            if (options.Suggestions.HasValue)
+                field.HasSuggestions = options.Suggestions.Value;
+                        
             // options.Spatial // TODO [ppekrol]
 
             return field;
@@ -139,6 +145,7 @@ namespace Raven.Server.Documents.Indexes
                 hashCode = (hashCode * 397) ^ (int)Storage;
                 hashCode = (hashCode * 397) ^ (int)Indexing;
                 hashCode = (hashCode * 397) ^ (int)TermVector;
+                hashCode = (hashCode * 397) ^ (HasSuggestions ? 233 : 343);
                 return hashCode;
             }
         }

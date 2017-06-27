@@ -24,6 +24,7 @@ namespace Raven.Client.Documents.Indexes
             public const string Delete = "Lucene/Delete";
             public const string Convert = "Lucene/Convert";
             public const string AddDocument = "Lucene/AddDocument";
+            public const string Suggestion = "Lucene/Suggestion";
             public const string FlushToDisk = "Lucene/FlushToDisk";
             public const string RecreateSearcher = "Lucene/RecreateSearcher";
         }

@@ -8,19 +8,25 @@ using Voron.Impl;
 
 namespace Raven.Server.Indexing
 {
-    public unsafe class LuceneVoronDirectory : Lucene.Net.Store.Directory
+    public sealed unsafe class LuceneVoronDirectory : Lucene.Net.Store.Directory
     {
         private readonly StorageEnvironment _environment;
+        private readonly string _name;
+        
+        public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment) : this (tx, environment, "Files")
+        {}                
 
-        public LuceneVoronDirectory(StorageEnvironment environment)
+        public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment, string name)
         {
+            if ( !tx.IsWriteTransaction )
+                throw new InvalidOperationException($"Creation of the {nameof(LuceneVoronDirectory)} must be done under a write transaction.");
+            
             _environment = environment;
+            _name = name;
+
             base.SetLockFactory(NoLockFactory.Instance);
-            using (var tx = _environment.WriteTransaction())
-            {
-                tx.CreateTree("Files");
-                tx.Commit();
-            }
+
+            tx.CreateTree(_name);
         }
 
         public override bool FileExists(string name, IState s)
@@ -29,7 +35,7 @@ namespace Raven.Server.Indexing
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
 
-            var filesTree = state.Transaction.ReadTree("Files");
+            var filesTree = state.Transaction.ReadTree(_name);
             return filesTree.Read(name) != null;
         }
 
@@ -40,7 +46,7 @@ namespace Raven.Server.Indexing
                 throw new ArgumentNullException(nameof(s));
 
             var files = new List<string>();
-            var filesTree = state.Transaction.ReadTree("Files");
+            var filesTree = state.Transaction.ReadTree(_name);
             using (var it = filesTree.Iterate(false))
             {
                 if (it.Seek(Slices.BeforeAllKeys))
@@ -60,7 +66,7 @@ namespace Raven.Server.Indexing
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
 
-            var filesTree = state.Transaction.ReadTree("Files");
+            var filesTree = state.Transaction.ReadTree(_name);
             Slice str;
             using (Slice.From(state.Transaction.Allocator, name, out str))
             {
@@ -77,7 +83,7 @@ namespace Raven.Server.Indexing
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
 
-            var filesTree = state.Transaction.ReadTree("Files");
+            var filesTree = state.Transaction.ReadTree(_name);
             var readResult = filesTree.Read(name);
             if (readResult == null)
                 throw new FileNotFoundException("Could not find file", name);
@@ -96,7 +102,7 @@ namespace Raven.Server.Indexing
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
 
-            var filesTree = state.Transaction.ReadTree("Files");
+            var filesTree = state.Transaction.ReadTree(_name);
             Slice str;
             using (Slice.From(state.Transaction.Allocator, name, out str))
             {
@@ -113,7 +119,7 @@ namespace Raven.Server.Indexing
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
 
-            var filesTree = state.Transaction.ReadTree("Files");
+            var filesTree = state.Transaction.ReadTree(_name);
             var readResult = filesTree.ReadStream(name);
             if (readResult == null)
                 throw new FileNotFoundException("Could not find file", name);
@@ -127,7 +133,7 @@ namespace Raven.Server.Indexing
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
 
-            return new VoronIndexInput(name, state.Transaction);
+            return new VoronIndexInput(name, state.Transaction, _name);
             
         }
 
@@ -137,7 +143,7 @@ namespace Raven.Server.Indexing
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
 
-            return new VoronIndexOutput(_environment.Options, name, state.Transaction);
+            return new VoronIndexOutput(_environment.Options, name, state.Transaction, _name);
         }
 
         public IDisposable SetTransaction(Transaction tx, out IState state)

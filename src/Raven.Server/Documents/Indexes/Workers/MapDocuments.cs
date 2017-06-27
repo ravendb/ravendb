@@ -14,7 +14,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.Workers
 {
-    public class MapDocuments : IIndexingWork
+    public sealed class MapDocuments : IIndexingWork
     {
         private readonly Logger _logger;
         private readonly Index _index;
