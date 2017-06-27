@@ -5,18 +5,22 @@ import performanceHint = require("common/notifications/models/performanceHint");
 import abstractPerformanceHintDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/abstractPerformanceHintDetails");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
+import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 
 type pagingDetailsItemDto = {
     Action: string;
     NumberOfResults: number;
     PageSize: number;
     Occurrence: string;
+    Duration: string;
+    QueryString: string;
 }
 
 class pagingDetails extends abstractPerformanceHintDetails {
 
     tableItems = [] as pagingDetailsItemDto[];
     private gridController = ko.observable<virtualGridController<pagingDetailsItemDto>>();
+    private columnPreview = new columnPreviewPlugin<pagingDetailsItemDto>();
 
     constructor(hint: performanceHint, notificationCenter: notificationCenter) {
         super(hint, notificationCenter);
@@ -32,11 +36,22 @@ class pagingDetails extends abstractPerformanceHintDetails {
 
         grid.init((s, t) => this.fetcher(s, t), () => {
             return [
-                new textColumn<pagingDetailsItemDto>(grid, x => x.Action, "Action", "30%"),
-                new textColumn<pagingDetailsItemDto>(grid, x => x.NumberOfResults ? x.NumberOfResults.toLocaleString() : 'n/a', "# of results", "20%"),
-                new textColumn<pagingDetailsItemDto>(grid, x => x.PageSize ? x.PageSize.toLocaleString() : 'n/a', "Page size", "20%"),
-                new textColumn<pagingDetailsItemDto>(grid, x => x.Occurrence, "Date", "30%")
+                new textColumn<pagingDetailsItemDto>(grid, x => x.Action, "Action", "20%"),
+                new textColumn<pagingDetailsItemDto>(grid, x => x.NumberOfResults ? x.NumberOfResults.toLocaleString() : 'n/a', "# of results", "10%"),
+                new textColumn<pagingDetailsItemDto>(grid, x => x.PageSize ? x.PageSize.toLocaleString() : 'n/a', "Page size", "10%"),
+                new textColumn<pagingDetailsItemDto>(grid, x => x.Occurrence, "Date", "15%"),
+                new textColumn<pagingDetailsItemDto>(grid, x => x.Duration, "Duration", "15%"),
+                new textColumn<pagingDetailsItemDto>(grid, x => x.QueryString, "Query string", "30%")
             ];
+        });
+
+        this.columnPreview.install(".pagingDetails", ".paging-details-tooltip", (details: pagingDetailsItemDto, column: textColumn<pagingDetailsItemDto>, e: JQueryEventObject, onValue: (context: any) => void) => {
+            const value = column.getCellValue(details);
+            if (!_.isUndefined(value)) {
+                const json = JSON.stringify(value, null, 4);
+                const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                onValue(html);  
+            }
         });
     }
 
@@ -55,7 +70,9 @@ class pagingDetails extends abstractPerformanceHintDetails {
                     Action: key,
                     NumberOfResults: item.NumberOfResults,
                     Occurrence: item.Occurrence,
-                    PageSize: item.PageSize
+                    PageSize: item.PageSize,
+                    Duration: item.Duration,
+                    QueryString: item.QueryString
                 } as pagingDetailsItemDto));
         });
     }
