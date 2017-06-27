@@ -21,6 +21,7 @@ using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Server.Operations.ApiKeys;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web;
@@ -270,7 +271,9 @@ namespace Raven.Server.Routing
                         {
                             try
                             {
-                                publicKey = ravenServer.ServerStore.GetSecretKey(txContext, $"Raven/Sign/Public/{tag}");
+                                //If we are not a part of a cluster we won't have our public key in the topology so we will try to validate agaist our own public key
+                                var key = (tag == ravenServer.ServerStore.NodeTag || ravenServer.ServerStore.NodeTag == "?") ? "Raven/Sign/Public" : $"Raven/Sign/Public/{tag}";
+                                publicKey = ServerStore.GetSecretKey(txContext, key);
                             }
                             catch
                             {

@@ -462,7 +462,7 @@ namespace Raven.Server.ServerWide
 
         }
 
-        private bool TryLoadAuthenticationKeyPairs(TransactionOperationContext ctx)
+        private unsafe bool TryLoadAuthenticationKeyPairs(TransactionOperationContext ctx)
         {
             using (ctx.OpenReadTransaction())
             {
@@ -470,7 +470,7 @@ namespace Raven.Server.ServerWide
                 SignSecretKey = GetSecretKey(ctx, "Raven/Sign/Private");
             }
 
-            return BoxPublicKey != null && BoxSecretKey != null && SignPublicKey != null && SignSecretKey != null;
+            return SignPublicKey != null && SignSecretKey != null;
         }
 
         private void OnStateChanged(object sender, RachisConsensus.StateTransition state)
@@ -673,7 +673,7 @@ namespace Raven.Server.ServerWide
         }
 
 
-        public unsafe byte[] GetSecretKey(TransactionOperationContext context, string name)
+        public static unsafe byte[] GetSecretKey(TransactionOperationContext context, string name)
         {
             Debug.Assert(context.Transaction != null);
 

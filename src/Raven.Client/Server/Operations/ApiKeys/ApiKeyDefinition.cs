@@ -11,7 +11,7 @@ namespace Raven.Client.Server.Operations.ApiKeys
         public bool ServerAdmin;
         public Dictionary<string, AccessModes> ResourcesAccessMode = new Dictionary<string, AccessModes>(StringComparer.OrdinalIgnoreCase);
 
-        internal virtual DynamicJsonValue ToJson()
+        public virtual DynamicJsonValue ToJson()
         {
             var ram = new DynamicJsonValue();
             foreach (var kvp in ResourcesAccessMode)
@@ -41,7 +41,7 @@ namespace Raven.Client.Server.Operations.ApiKeys
     {
         public string UserName;
 
-        internal override DynamicJsonValue ToJson()
+        public override DynamicJsonValue ToJson()
         {
             var djv = base.ToJson();
             djv[nameof(UserName)] = UserName;
