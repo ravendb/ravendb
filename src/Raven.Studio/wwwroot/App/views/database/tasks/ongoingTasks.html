@@ -278,7 +278,7 @@
 
                 <!-- subscription -->
 
-                <div data-bind="if: subscriptionsCount() > 0 && (selectedTaskType() === 'Subscription' || selectedTaskType() === 'All' )">
+                <div > <!--data-bind="if: subscriptionsCount() > 0 && (selectedTaskType() === 'Subscription' || selectedTaskType() === 'All' )"-->
                     <div class="hr-title">
                         <h5>SUBSCRIPTION</h5><hr>
                     </div>
@@ -291,15 +291,47 @@
                                     <label></label>
                                 </div>
                                 <div class="destination flex-grow">
+                                    <h5>DESTINATION</h5>
                                     <h3>
                                         <a data-bind="attr: { href: urlForSubscriptions() }" title="Click for details" class="destination-name"><i class="icon-subscription"></i><span>Subscriptions</span></a>
                                         <span title="Number of subscriptions" class="location" data-bind="text: subsCountText"></span>
                                     </h3>
                                 </div>
+                                <div class="status">
+                                    <h5>STATUS</h5>
+                                    <div class="btn-group">
+                                        <button type="button" class="btn dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                            <!--set-size-->
+                                            <span data-bind="text: badgeText">Enabled</span><span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a href="#" data-bind="click: $root.confirmEnableOngoingTask"><span>Enable</span></a></li>
+                                            <li><a href="#" data-bind="click: $root.confirmDisableOngoingTask"><span>Disable</span></a></li>
+                                        </ul>
+                                    </div>
+                                </div>
                             </div>
                             <div class="actions-container">
                                 <div class="actions">
+                                    <button class="btn btn-default" data-toggle="collapse" data-target="#SubscriptionDetails"><i class="icon-info"></i></button>
                                     <button class="btn btn-default disabled"><i class="icon-edit"></i></button>
+                                    <button class="btn btn-danger disabled"><i class="icon-trash"></i></button>
+                                </div>
+                            </div>
+                            <div id="SubscriptionDetails" class="collapse flex-grow">
+                                <hr />
+                                <div class="flex-horizontal">
+                                    <div class="flex-grow">
+
+                                        <ul class="properties">
+                                            <li><span>Collection</span> <strong>Animals</strong></li>
+                                            <li><span>Client adress</span> <strong>192.168.1.54:53221</strong> <button class="btn btn-xs"><i class="icon-disconnected"></i><span>Disconect</span></button></li>
+                                            <li><span>Connected</span> <strong>2017-06-06 12:30 PM</strong></li>
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <button class="btn btn-default"><i class="icon-refresh"></i></button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -372,7 +404,7 @@
             <!--set-size-->
             <span data-bind="text: badgeText"></span><span class="caret"></span>
         </button>
-        <ul class="dropdown-menu settings-menu">
+        <ul class="dropdown-menu">
             <li><a href="#" data-bind="click: $root.confirmEnableOngoingTask"><span>Enable</span></a></li>
             <li><a href="#" data-bind="click: $root.confirmDisableOngoingTask"><span>Disable</span></a></li>
         </ul>
