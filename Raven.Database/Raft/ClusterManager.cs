@@ -54,7 +54,22 @@ namespace Raven.Database.Raft
         private readonly DateTime clusterManagerStartTime;
         private void OnProposingCandidacy(object sender, ProposingCandidacyResult e)
         {
+            var clusterConfigurationsDoc = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.Cluster.ClusterConfigurationDocumentKey,null);
+            if (clusterConfigurationsDoc == null)
+            {
+                return;
+            }
+            var clusterConfigurations = clusterConfigurationsDoc.DataAsJson.JsonDeserialization<ClusterConfiguration>();
+            if (clusterConfigurations == null)
+            {
+                return;
+            }
+            if (clusterConfigurations.DisableReplicationStateChecks == true)
+            {
+                return;
+            }
             var replicationStateDoc = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.Cluster.ClusterReplicationStateDocumentKey,null);
+
             if (replicationStateDoc == null)
             {
                 //This is a case of a node loading for the first time and just never got any replication state.
