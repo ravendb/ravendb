@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents;
 using Sparrow.LowMemory;
 using Voron;
@@ -8,6 +10,9 @@ namespace Raven.Server.ServerWide.Context
     public class DocumentsOperationContext : TransactionOperationContext<DocumentsTransaction>
     {
         private readonly DocumentDatabase _documentDatabase;
+
+        internal ChangeVectorEntry[] LastDatabaseChangeVector;
+        internal Dictionary<string, long> LastReplicationEtagFrom;
 
         public static DocumentsOperationContext ShortTermSingleUse(DocumentDatabase documentDatabase)
         {

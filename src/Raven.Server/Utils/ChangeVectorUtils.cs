@@ -49,24 +49,6 @@ namespace Raven.Server.Utils
             }
         }
 
-        public static unsafe void WriteChangeVectorTo(ByteStringContext context, Dictionary<Guid, long> changeVector, Tree tree)
-        {
-            Guid dbId;
-            long etagBigEndian;
-            Slice keySlice;
-            Slice valSlice;
-            using (Slice.External(context, (byte*)&dbId, sizeof(Guid), out keySlice))
-            using (Slice.External(context, (byte*)&etagBigEndian, sizeof(long), out valSlice))
-            {
-                foreach (var kvp in changeVector)
-                {
-                    dbId = kvp.Key;
-                    etagBigEndian = Bits.SwapBytes(kvp.Value);
-                    tree.Add(keySlice, valSlice);
-                }
-            }
-        }
-
         public static unsafe ChangeVectorEntry[] ReadChangeVectorFrom(Tree tree)
         {
             var changeVector = new ChangeVectorEntry[tree.State.NumberOfEntries];
