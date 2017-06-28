@@ -147,7 +147,7 @@ namespace Voron.Impl.Scratch
 
             var val = list.Last.Value;
 
-            if (val.ValidAfterTransactionId >= tx.Environment.PossibleOldestReadTransaction)
+            if (val.ValidAfterTransactionId >= tx.Environment.PossibleOldestReadTransaction(tx))
                 return false;
 
             list.RemoveLast();
