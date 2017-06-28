@@ -78,92 +78,117 @@ namespace Raven.Server.ServerWide
         protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             if (cmd.TryGet("Type", out string type) == false)
-                return;
-            string errorMessage;
-            switch (type)
             {
-                //The reason we have a separate case for removing node from database is because we must 
-                //actually delete the database before we notify about changes to the record otherwise we 
-                //don't know that it was us who needed to delete the database.
-                case nameof(RemoveNodeFromDatabaseCommand):
-                    RemoveNodeFromDatabase(context, cmd, index, leader);
-                    break;
-
-                case nameof(DeleteValueCommand):
-                    DeleteValue(context, cmd, index, leader);
-                    break;
-                case nameof(IncrementClusterIdentityCommand):
-                    if (!ValidatePropertyExistance(cmd,
-                        nameof(IncrementClusterIdentityCommand),
-                        nameof(IncrementClusterIdentityCommand.Prefix), 
-                        out errorMessage))
-                    {
-                        NotifyLeaderAboutError(index, leader,
-                            new InvalidDataException(errorMessage));
-                        return;
-                    }
-
-
-                    var updatedDatabaseRecord = UpdateDatabase(context, type, cmd, index, leader);
-
-                    cmd.TryGet(nameof(IncrementClusterIdentityCommand.Prefix), out string prefix);
-                    Debug.Assert(prefix != null,"since we verified that the property exist, it must not be null");
-
-                    leader?.SetStateOf(index, updatedDatabaseRecord.Identities[prefix]);
-                    break;
-                case nameof(UpdateClusterIdentityCommand):
-                    if (!ValidatePropertyExistance(cmd,
-                        nameof(UpdateClusterIdentityCommand),
-                        nameof(UpdateClusterIdentityCommand.Identities),
-                        out errorMessage))
-                    {
-                        NotifyLeaderAboutError(index, leader,
-                            new InvalidDataException(errorMessage));
-                        return;
-                    }
-                    UpdateDatabase(context, type, cmd, index, leader);
-                    break;
-                case nameof(PutIndexCommand):
-                case nameof(PutAutoIndexCommand):
-                case nameof(DeleteIndexCommand):
-                case nameof(SetIndexLockCommand):
-                case nameof(SetIndexPriorityCommand):
-                case nameof(PutTransformerCommand):
-                case nameof(SetTransformerLockCommand):
-                case nameof(DeleteTransformerCommand):
-                case nameof(RenameTransformerCommand):
-                case nameof(EditVersioningCommand):
-                case nameof(UpdatePeriodicBackupCommand):
-                case nameof(EditExpirationCommand):
-                case nameof(ModifyConflictSolverCommand):
-                case nameof(UpdateTopologyCommand):
-                case nameof(DeleteDatabaseCommand):
-                case nameof(ModifyCustomFunctionsCommand):
-                case nameof(UpdateExternalReplicationCommand):
-                case nameof(ToggleTaskStateCommand):
-                case nameof(AddRavenEtlCommand):
-                case nameof(AddSqlEtlCommand):
-                case nameof(UpdateRavenEtlCommand):
-                case nameof(UpdateSqlEtlCommand):
-                case nameof(DeleteOngoingTaskCommand):
-                case nameof(AddRavenConnectionString):
-                case nameof(AddSqlConnectionString):
-                    UpdateDatabase(context, type, cmd, index, leader);
-                    break;
-                case nameof(UpdatePeriodicBackupStatusCommand):
-                case nameof(AcknowledgeSubscriptionBatchCommand):
-                case nameof(CreateSubscriptionCommand):
-                case nameof(DeleteSubscriptionCommand):
-                case nameof(UpdateEtlProcessStateCommand):
-                    SetValueForTypedDatabaseCommand(context, type, cmd, index, leader);
-                    break;
-                case nameof(PutApiKeyCommand):
-                    PutValue<ApiKeyDefinition>(context, cmd, index, leader);
-                    break;
-                case nameof(AddDatabaseCommand):
-                    AddDatabase(context, cmd, index, leader);
-                    break;
+                NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute command, wrong format"));
+                return;
             }
+                
+
+            try
+            {
+                string errorMessage;
+                switch (type)
+                {
+                    //The reason we have a separate case for removing node from database is because we must 
+                    //actually delete the database before we notify about changes to the record otherwise we 
+                    //don't know that it was us who needed to delete the database.
+                    case nameof(RemoveNodeFromDatabaseCommand):
+                        RemoveNodeFromDatabase(context, cmd, index, leader);
+                        break;
+
+                    case nameof(DeleteValueCommand):
+                        DeleteValue(context, cmd, index, leader);
+                        break;
+                    case nameof(IncrementClusterIdentityCommand):
+                        if (!ValidatePropertyExistance(cmd,
+                            nameof(IncrementClusterIdentityCommand),
+                            nameof(IncrementClusterIdentityCommand.Prefix),
+                            out errorMessage))
+                        {
+                            NotifyLeaderAboutError(index, leader,
+                                new InvalidDataException(errorMessage));
+                            return;
+                        }
+
+
+                        var updatedDatabaseRecord = UpdateDatabase(context, type, cmd, index, leader);
+
+                        cmd.TryGet(nameof(IncrementClusterIdentityCommand.Prefix), out string prefix);
+                        Debug.Assert(prefix != null, "since we verified that the property exist, it must not be null");
+
+                        leader?.SetStateOf(index, updatedDatabaseRecord.Identities[prefix]);
+                        break;
+                    case nameof(UpdateClusterIdentityCommand):
+                        if (!ValidatePropertyExistance(cmd,
+                            nameof(UpdateClusterIdentityCommand),
+                            nameof(UpdateClusterIdentityCommand.Identities),
+                            out errorMessage))
+                        {
+                            NotifyLeaderAboutError(index, leader,
+                                new InvalidDataException(errorMessage));
+                            return;
+                        }
+                        UpdateDatabase(context, type, cmd, index, leader);
+                        break;
+                    case nameof(PutIndexCommand):
+                    case nameof(PutAutoIndexCommand):
+                    case nameof(DeleteIndexCommand):
+                    case nameof(SetIndexLockCommand):
+                    case nameof(SetIndexPriorityCommand):
+                    case nameof(PutTransformerCommand):
+                    case nameof(SetTransformerLockCommand):
+                    case nameof(DeleteTransformerCommand):
+                    case nameof(RenameTransformerCommand):
+                    case nameof(EditVersioningCommand):
+                    case nameof(UpdatePeriodicBackupCommand):
+                    case nameof(EditExpirationCommand):
+                    case nameof(ModifyConflictSolverCommand):
+                    case nameof(UpdateTopologyCommand):
+                    case nameof(DeleteDatabaseCommand):
+                    case nameof(ModifyCustomFunctionsCommand):
+                    case nameof(UpdateExternalReplicationCommand):
+                    case nameof(ToggleTaskStateCommand):
+                    case nameof(AddRavenEtlCommand):
+                    case nameof(AddSqlEtlCommand):
+                    case nameof(UpdateRavenEtlCommand):
+                    case nameof(UpdateSqlEtlCommand):
+                    case nameof(DeleteOngoingTaskCommand):
+                    case nameof(AddRavenConnectionString):
+                    case nameof(AddSqlConnectionString):
+                        UpdateDatabase(context, type, cmd, index, leader);
+                        break;
+                    case nameof(UpdatePeriodicBackupStatusCommand):
+                    case nameof(AcknowledgeSubscriptionBatchCommand):
+                    case nameof(CreateSubscriptionCommand):
+                    case nameof(DeleteSubscriptionCommand):
+                    case nameof(UpdateEtlProcessStateCommand):
+                        SetValueForTypedDatabaseCommand(context, type, cmd, index, leader);
+                        break;
+                    case nameof(PutApiKeyCommand):
+                        PutValue<ApiKeyDefinition>(context, cmd, index, leader);
+                        break;
+                    case nameof(AddDatabaseCommand):
+                        AddDatabase(context, cmd, index, leader);
+                        break;
+                }
+            }             
+            catch (Exception e)
+            {
+                NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute command of type {type}", e));
+                return;
+            }
+        }
+
+        protected static void NotifyLeaderAboutError(long index, Leader leader, Exception e)
+        {
+            // ReSharper disable once UseNullPropagation
+            if (leader == null)
+                return;
+
+            leader.SetStateOf(index, tcs =>
+            {
+                tcs.TrySetException(e);
+            });
         }
 
         private static bool ValidatePropertyExistance(BlittableJsonReaderObject cmd, string propertyTypeName, string propertyName, out string errorMessage)
@@ -483,28 +508,27 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, dbKey, out Slice valueName))
                 using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
                 {
-                    var databaseRecordJson = ReadInternal(context, out long etag, valueNameLowered);
-
-                    var updateCommand = (UpdateDatabaseCommand)JsonDeserializationCluster.Commands[type](cmd);
-
-                    if (databaseRecordJson == null)
-                    {
-                        if (updateCommand.ErrorOnDatabaseDoesNotExists)
-                            NotifyLeaderAboutError(index, leader, DatabaseDoesNotExistException.CreateWithMessage(databaseName, $"Could not execute update command of type '{type}'."));
-                        return null;
-                    }
-
-                    databaseRecord = JsonDeserializationCluster.DatabaseRecord(databaseRecordJson);
-
-                    if (updateCommand.RaftCommandIndex != null && etag != updateCommand.RaftCommandIndex.Value)
-                    {
-                        NotifyLeaderAboutError(index, leader,
-                            new ConcurrencyException($"Concurrency violation at executing {type} command, the database {databaseRecord.DatabaseName} has etag {etag} but was expecting {updateCommand.RaftCommandIndex}"));
-                        return null;
-                    }
-
                     try
                     {
+                        var databaseRecordJson = ReadInternal(context, out long etag, valueNameLowered);
+                        var updateCommand = (UpdateDatabaseCommand)JsonDeserializationCluster.Commands[type](cmd);
+
+                        if (databaseRecordJson == null)
+                        {
+                            if (updateCommand.ErrorOnDatabaseDoesNotExists)
+                                NotifyLeaderAboutError(index, leader, DatabaseDoesNotExistException.CreateWithMessage(databaseName, $"Could not execute update command of type '{type}'."));
+                            return null;
+                        }
+
+                        databaseRecord = JsonDeserializationCluster.DatabaseRecord(databaseRecordJson);
+
+                        if (updateCommand.RaftCommandIndex != null && etag != updateCommand.RaftCommandIndex.Value)
+                        {
+                            NotifyLeaderAboutError(index, leader,
+                                new ConcurrencyException($"Concurrency violation at executing {type} command, the database {databaseRecord.DatabaseName} has etag {etag} but was expecting {updateCommand.RaftCommandIndex}"));
+                            return null;
+                        }
+
                         var relatedRecordIdToDelete = updateCommand.UpdateDatabaseRecord(databaseRecord, index);
                         if (relatedRecordIdToDelete != null)
                         {
@@ -534,17 +558,7 @@ namespace Raven.Server.ServerWide
             return databaseRecord;
         }
 
-        private static void NotifyLeaderAboutError(long index, Leader leader, Exception e)
-        {
-            // ReSharper disable once UseNullPropagation
-            if (leader == null)
-                return;
-
-            leader.SetStateOf(index, tcs =>
-            {
-                tcs.TrySetException(e);
-            });
-        }
+       
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
         {
