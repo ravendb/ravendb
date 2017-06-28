@@ -4,32 +4,34 @@
 
 
     .form-control {
-        width: 75% !important;
+        margin-right: -30px;
         opacity: 0;
-        transition: opacity .2s cubic-bezier(0, 0.5, 0.5, 1), width .2s cubic-bezier(0, 0.5, 0.5, 0.99);
-        float: right;
-        display: table-cell;
+        transition: opacity .2s cubic-bezier(0, 0.5, 0.5, 1), margin .2s cubic-bezier(0, 0.5, 0.5, 0.99);
     }
 
     &.active .form-control {
-        width: 100% !important;
         opacity: 1;
+        margin-right: 0px;
     }
 
     &.has-error {
-        padding-bottom:0;
+        padding-bottom: 0;
+
         input {
             &::-webkit-input-placeholder { /* Chrome/Opera/Safari */
-              color: @brand-danger-dark;
+                color: @brand-danger-dark;
             }
+
             &::-moz-placeholder { /* Firefox 19+ */
-              color: @brand-danger-dark;
+                color: @brand-danger-dark;
             }
+
             &:-ms-input-placeholder { /* IE 10+ */
-              color: @brand-danger-dark;
+                color: @brand-danger-dark;
             }
+
             &:-moz-placeholder { /* Firefox 18- */
-              color: @brand-danger-dark;
+                color: @brand-danger-dark;
             }
         }
     }

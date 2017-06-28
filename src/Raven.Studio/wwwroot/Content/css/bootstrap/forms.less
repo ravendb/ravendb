@@ -503,8 +503,8 @@ input[type="checkbox"] {
     }
 
     .input-group {
-      display: inline-table;
-      vertical-align: middle;
+      display: flex;
+      flex-wrap: wrap;
 
       .input-group-addon,
       .input-group-btn,
@@ -515,7 +515,6 @@ input[type="checkbox"] {
 
     // Input groups need that 100% width though
     .input-group > .form-control {
-      width: 100%;
     }
 
     .control-label {
