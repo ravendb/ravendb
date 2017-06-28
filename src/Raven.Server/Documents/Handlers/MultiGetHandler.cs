@@ -11,7 +11,6 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using AsyncFriendlyStackTrace;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Raven.Client.Documents.Commands.MultiGet;
@@ -160,18 +159,8 @@ namespace Raven.Server.Documents.Handlers
                                 [nameof(ExceptionDispatcher.ExceptionSchema.Message)] = e.Message
                             };
 
-                            string errorString;
 
-                            try
-                            {
-                                errorString = e.ToAsyncString();
-                            }
-                            catch (Exception)
-                            {
-                                errorString = e.ToString();
-                            }
-
-                            djv[nameof(ExceptionDispatcher.ExceptionSchema.Error)] = errorString;
+                            djv[nameof(ExceptionDispatcher.ExceptionSchema.Error)] = e.ToString();
 
                             using (var json = context.ReadObject(djv, "exception"))
                                 writer.WriteObject(json);

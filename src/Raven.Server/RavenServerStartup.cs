@@ -6,7 +6,6 @@ using System.Net;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using AsyncFriendlyStackTrace;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -212,23 +211,13 @@ namespace Raven.Server
                         [nameof(ExceptionDispatcher.ExceptionSchema.Message)] = e.Message
                     };
 
-                    string errorString;
-
-                    try
-                    {
-                        errorString = e.ToAsyncString();
-                    }
-                    catch (Exception)
-                    {
-                        errorString = e.ToString();
-                    }
 
 #if EXCEPTION_ERROR_HUNT
                     var f = Guid.NewGuid() + ".error";
                     File.WriteAllText(f,
                         $"{context.Request.Path}{context.Request.QueryString}" + Environment.NewLine + errorString);
 #endif
-                    djv[nameof(ExceptionDispatcher.ExceptionSchema.Error)] = errorString;
+                    djv[nameof(ExceptionDispatcher.ExceptionSchema.Error)] = e.ToString();
 
                     MaybeAddAdditionalExceptionData(djv, e);
 
