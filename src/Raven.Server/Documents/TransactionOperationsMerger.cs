@@ -520,7 +520,10 @@ namespace Raven.Server.Documents
             if (_alreadyListeningToPreviousOperationEnd == false)
             {
                 _alreadyListeningToPreviousOperationEnd = true;
-                previousOperation.ContinueWith(_ => _waitHandle.Set(), _shutdown);
+                if (previousOperation.IsCompleted)
+                    _waitHandle.Set();
+                else
+                    previousOperation.ContinueWith(_ => _waitHandle.Set(), _shutdown);
             }
             while (true)
             {

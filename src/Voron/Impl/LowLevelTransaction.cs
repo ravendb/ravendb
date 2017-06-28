@@ -982,12 +982,12 @@ namespace Voron.Impl
 
             foreach (var pageFromScratch in _transactionPages)
             {
-                _env.ScratchBufferPool.Free(pageFromScratch.ScratchFileNumber, pageFromScratch.PositionInScratchBuffer, null);
+                _env.ScratchBufferPool.Free(this, pageFromScratch.ScratchFileNumber, pageFromScratch.PositionInScratchBuffer, null);
             }
 
             foreach (var pageFromScratch in _unusedScratchPages)
             {
-                _env.ScratchBufferPool.Free(pageFromScratch.ScratchFileNumber, pageFromScratch.PositionInScratchBuffer, null);
+                _env.ScratchBufferPool.Free(this, pageFromScratch.ScratchFileNumber, pageFromScratch.PositionInScratchBuffer, null);
             }
 
             // release scratch file page allocated for the transaction header
@@ -1015,6 +1015,7 @@ namespace Voron.Impl
         internal ImmutableAppendOnlyList<JournalFile> JournalFiles;
         internal bool AlreadyAllowedDisposeWithLazyTransactionRunning;
         public DateTime TxStartTime;
+        internal long? LocalPossibleOldestReadTransaction;
 
         public void EnsurePagerStateReference(PagerState state)
         {

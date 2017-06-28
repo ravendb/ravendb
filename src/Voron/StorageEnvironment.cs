@@ -625,17 +625,17 @@ namespace Voron
         public long CurrentReadTransactionId => Volatile.Read(ref _transactionsCounter);
         public long NextWriteTransactionId => Volatile.Read(ref _transactionsCounter) + 1;
 
-        public long PossibleOldestReadTransaction
+        public long PossibleOldestReadTransaction(LowLevelTransaction tx)
         {
-            get
-            {
-                var oldestActive = ActiveTransactions.OldestTransaction;
+            if (tx?.LocalPossibleOldestReadTransaction != null)
+                return tx.LocalPossibleOldestReadTransaction.Value;
 
-                if (oldestActive == 0)
-                    return CurrentReadTransactionId;
+            var oldestActive = ActiveTransactions.OldestTransaction;
 
-                return Math.Min(CurrentReadTransactionId, oldestActive);
-            }
+            var result = oldestActive == 0 ? CurrentReadTransactionId : Math.Min(CurrentReadTransactionId, oldestActive);
+            if (tx != null)
+                tx.LocalPossibleOldestReadTransaction = result;
+            return result;
         }
 
         internal ExitWriteLock PreventNewReadTransactions()
@@ -829,7 +829,7 @@ namespace Voron
                 FixedSizeTrees = fixedSizeTrees,
                 Tables = tables,
                 CalculateExactSizes = calculateExactSizes,
-                ScratchBufferPoolInfo = _scratchBufferPool.InfoForDebug(PossibleOldestReadTransaction)
+                ScratchBufferPoolInfo = _scratchBufferPool.InfoForDebug(PossibleOldestReadTransaction(tx.LowLevelTransaction))
             });
         }
 

@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         public void Clean()
         {
             _converter?.Clean();
-            _indexSearcherHolder.Cleanup(_index._indexStorage.Environment().PossibleOldestReadTransaction);
+            _indexSearcherHolder.Cleanup(_index._indexStorage.Environment().PossibleOldestReadTransaction(null));
         }
 
         public void Initialize(StorageEnvironment environment)

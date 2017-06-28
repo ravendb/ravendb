@@ -89,6 +89,7 @@ namespace Voron.Impl.Scratch
         private ScratchBufferItem NextFile(long minSize, long? requestedSize)
         {
             var current = _recycleArea.Last;
+            var oldestTx = _env.PossibleOldestReadTransaction(null);
             while (current != null)
             {
                 var recycled = current.Value;
@@ -96,7 +97,7 @@ namespace Voron.Impl.Scratch
                 if (recycled.File.Size >= Math.Max(minSize, requestedSize ?? 0) &&
                     // even though this is in the recyle bin, there might still be some transactions looking at it
                     // so we have to make sure that this is really unused before actually reusing it
-                    recycled.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction) == false)
+                    recycled.File.HasActivelyUsedBytes(oldestTx) == false)
                 {
                     recycled.File.Reset();
                     recycled.RecycledAt = default(DateTime);
@@ -183,7 +184,7 @@ namespace Voron.Impl.Scratch
             }
         }
 
-        public void Free(int scratchNumber, long page, long? txId)
+        public void Free(LowLevelTransaction tx, int scratchNumber, long page, long? txId)
         {
             var scratch = _scratchBuffers[scratchNumber];
             scratch.File.Free(page, txId);
@@ -199,7 +200,7 @@ namespace Voron.Impl.Scratch
 
                 _recycleArea.RemoveFirst();
 
-                if (recycledScratch.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction))
+                if (recycledScratch.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction(tx)))
                 {
                     // even though this was in the recycle area, there might still be some transactions looking at it
                     // so we cannot dispose it right now, the disposal will happen in RemoveInactiveScratches 
@@ -218,7 +219,7 @@ namespace Voron.Impl.Scratch
                 {
                     // we'll take the chance that no one is using us to reset the memory allocations
                     // and avoid fragmentation, we can only do that if no transaction is looking at us
-                    if (scratch.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction) == false)
+                    if (scratch.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction(tx)) == false)
                         scratch.File.Reset();
 
                     return;
@@ -341,7 +342,7 @@ namespace Voron.Impl.Scratch
             {
                 var scratchBufferItem = item.Value;
 
-                if (scratchBufferItem.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction) ||
+                if (scratchBufferItem.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction(null)) ||
                     scratchBufferItem == except)
                     continue;
 

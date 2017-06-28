@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             _states = _states.Insert(0, state);
 
-            Cleanup(asOfTx.LowLevelTransaction.Environment.PossibleOldestReadTransaction);
+            Cleanup(asOfTx.LowLevelTransaction.Environment.PossibleOldestReadTransaction(asOfTx.LowLevelTransaction));
         }
         
         public IDisposable GetSearcher(Transaction tx, IState state, out IndexSearcher searcher)
