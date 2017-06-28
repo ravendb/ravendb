@@ -27,25 +27,30 @@ namespace Rhino.Licensing
 
         private bool licenseInfoLogged;
 
+
         /// <summary>
         /// Standard Time servers
         /// </summary>
-        protected readonly string[] TimeServers = new[]
+        protected readonly string[] TimeServers = StandardTimeServer; //allowing to override the standard
+
+        public static readonly string[] StandardTimeServer = 
         {
-            "time.nist.gov",
-            "time-nw.nist.gov",
+            "europe.pool.ntp.org",
+            "north-america.pool.ntp.org",
+            "asia.pool.ntp.org",
+            "oceania.pool.ntp.org",
+            "south-america.pool.ntp.org",
+            "africa.pool.ntp.org",
+            "time.nist.gov",            
             "time-a.nist.gov",
             "time-b.nist.gov",
             "time-a.timefreq.bldrdoc.gov",
             "time-b.timefreq.bldrdoc.gov",
             "time-c.timefreq.bldrdoc.gov",
             "utcnist.colorado.edu",
-            "nist1.datum.com",
-            "nist1.dc.certifiedtime.com",
-            "nist1.nyc.certifiedtime.com",
         };
 
-        private readonly string licenseServerUrl;
+    private readonly string licenseServerUrl;
         private readonly Guid clientId;
         private readonly string publicKey;
         private Timer nextLeaseTimer;
