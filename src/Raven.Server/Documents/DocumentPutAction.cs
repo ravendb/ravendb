@@ -168,7 +168,7 @@ namespace Raven.Server.Documents
                     _documentDatabase.ExpiredDocumentsCleaner?.Put(context, lowerId, document);
                 }
 
-                _documentDatabase.DocumentsStorage.SetDatabaseChangeVector(context, changeVector);
+                context.LastDatabaseChangeVector = changeVector;
                 _documentDatabase.Metrics.DocPutsPerSecond.MarkSingleThreaded(1);
                 _documentDatabase.Metrics.BytesPutsPerSecond.MarkSingleThreaded(document.Size);
 
@@ -240,7 +240,9 @@ namespace Raven.Server.Documents
             ChangeVectorEntry[] oldChangeVector;
             if (fromReplication == false)
             {
-                oldChangeVector = _documentsStorage.GetDatabaseChangeVector(context);
+                if(context.LastDatabaseChangeVector == null)
+                    context.LastDatabaseChangeVector = _documentsStorage.GetDatabaseChangeVector(context);
+                oldChangeVector = context.LastDatabaseChangeVector;
             }
             else
             {

@@ -255,6 +255,7 @@ namespace Raven.Server.Documents
                         case PendingOperations.ModifiedSystemDocuments:
                             try
                             {
+                                UpdateGlobalReplicationInfoBeforeCommit(context);
                                 tx.Commit();
                                 tx.Dispose();
                             }
@@ -281,6 +282,22 @@ namespace Raven.Server.Documents
                 finally
                 {
                     tx?.Dispose();
+                }
+            }
+        }
+
+        private static void UpdateGlobalReplicationInfoBeforeCommit(DocumentsOperationContext context)
+        {
+            if (context.LastDatabaseChangeVector != null)
+            {
+                context.DocumentDatabase.DocumentsStorage.SetDatabaseChangeVector(context, context.LastDatabaseChangeVector);
+            }
+
+            if (context.LastReplicationEtagFrom != null)
+            {
+                foreach (var repEtag in context.LastReplicationEtagFrom)
+                {
+                    context.DocumentDatabase.DocumentsStorage.SetLastReplicateEtagFrom(context, repEtag.Key, repEtag.Value);
                 }
             }
         }
@@ -368,6 +385,7 @@ namespace Raven.Server.Documents
                             case PendingOperations.ModifiedSystemDocuments:
                                 try
                                 {
+                                    UpdateGlobalReplicationInfoBeforeCommit(context);
                                     context.Transaction.Commit();
                                     context.Transaction.Dispose();
                                 }
