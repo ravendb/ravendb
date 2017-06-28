@@ -2,7 +2,6 @@ using System;
 using System.Globalization;
 using System.IO;
 using Raven.Client.Exceptions.Security;
-using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 

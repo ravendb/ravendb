@@ -32,16 +32,24 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                         foreach (var route in DebugInfoPackageUtils.Routes.Where(x => x.TypeOfRoute == RouteInformation.RouteType.Databases))
                         {
-                            var entry = archive.CreateEntry(DebugInfoPackageUtils.GetOutputPathFromRouteInformation(route, null));
-                            using (var entryStream = entry.Open())
-                            using (var writer = new BlittableJsonTextWriter(context, entryStream))
+                            var entryName = DebugInfoPackageUtils.GetOutputPathFromRouteInformation(route, null);
+                            try
                             {
-                                using (var endpointOutput = await localEndpointClient.InvokeAndReadObjectAsync(route, context, endpointParameters))
+                                var entry = archive.CreateEntry(entryName);
+                                using (var entryStream = entry.Open())
+                                using (var writer = new BlittableJsonTextWriter(context, entryStream))
                                 {
-                                    context.Write(writer, endpointOutput);
-                                    writer.Flush();
-                                    await entryStream.FlushAsync();
+                                    using (var endpointOutput = await localEndpointClient.InvokeAndReadObjectAsync(route, context, endpointParameters))
+                                    {
+                                        context.Write(writer, endpointOutput);
+                                        writer.Flush();
+                                        await entryStream.FlushAsync();
+                                    }
                                 }
+                            }
+                            catch (Exception e)
+                            {                                
+                                WriteExceptionAsZipEntry(e,archive,entryName.Replace(".json", string.Empty));
                             }
                         }
                     }
@@ -51,5 +59,23 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
             }
         }
+
+        private static void WriteExceptionAsZipEntry(Exception e, ZipArchive archive, string entryName)
+        {
+            if (entryName.EndsWith(".json"))
+            {
+                var index = entryName.LastIndexOf(".json", StringComparison.OrdinalIgnoreCase);
+                entryName = entryName.Substring(0, index);
+            }
+
+            var entry = archive.CreateEntry($"{entryName}.error");
+            using (var entryStream = entry.Open())
+            using (var sw = new StreamWriter(entryStream))
+            {
+                sw.Write(e);
+                sw.Flush();
+            }
+        }
+
     }
 }
