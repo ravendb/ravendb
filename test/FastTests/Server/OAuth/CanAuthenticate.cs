@@ -23,12 +23,7 @@ namespace FastTests.Server.OAuth
         private readonly ApiKeyDefinition _apiKey = new ApiKeyDefinition
         {
             Enabled = true,
-            Secret = "secret",
-            ResourcesAccessMode =
-            {
-                ["db/CanGetDocWithValidToken"] = AccessModes.ReadWrite,
-                ["db/CanGetTokenFromServer"] = AccessModes.Admin
-            }
+            Secret = "secret"
         };
 
         [Fact]
