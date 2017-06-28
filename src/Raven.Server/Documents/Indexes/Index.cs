@@ -1624,7 +1624,16 @@ namespace Raven.Server.Documents.Indexes
                         // we have to open read tx for mapResults _after_ we open index tx
 
                         if (query.WaitForNonStaleResultsAsOfNow && query.CutoffEtag == null)
-                            query.CutoffEtag = Collections.Max(x => GetLastDocumentEtagInCollection(documentsContext, x));
+                        {
+                            query.CutoffEtag = 0;
+                            foreach (var collection in Collections)
+                            {
+                                var etag = GetLastDocumentEtagInCollection(documentsContext, collection);
+
+                                if (etag > query.CutoffEtag)
+                                    query.CutoffEtag = etag;
+                            }
+                        }
 
                         var isStale = IsStale(documentsContext, indexContext, query.CutoffEtag);
                         if (WillResultBeAcceptable(isStale, query, wait) == false)
