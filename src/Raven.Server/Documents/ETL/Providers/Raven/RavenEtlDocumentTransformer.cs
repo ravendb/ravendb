@@ -44,17 +44,18 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             }
             else
             {
-                DynamicJsonValue metadata;
-
-                if (transformed[Constants.Documents.Metadata.Key] != null)
-                    metadata = transformed[Constants.Documents.Metadata.Key] as DynamicJsonValue;
-                else
-                    transformed[Constants.Documents.Metadata.Key] = metadata = new DynamicJsonValue();
-
                 id = GetPrefixedId(Current.DocumentId, collectionName, OperationType.Put);
 
-                metadata[Constants.Documents.Metadata.Collection] = collectionName;
-                metadata[Constants.Documents.Metadata.Id] = id;
+                var newMetadata = new DynamicJsonValue()
+                {
+                    [Constants.Documents.Metadata.Collection] = collectionName,
+                    [Constants.Documents.Metadata.Id] = id
+                };
+
+                if (transformed[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata)
+                    metadata.Modifications = newMetadata;
+                else
+                    transformed[Constants.Documents.Metadata.Key] = newMetadata;
             }
 
             var transformResult = Context.ReadObject(transformed, id);
