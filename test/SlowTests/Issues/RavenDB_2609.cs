@@ -36,7 +36,7 @@ namespace SlowTests.Issues
     public class RavenDB_2609 : RavenTestBase
     {
         [Fact]
-        public void ShouldNotOverwriteDocumentIfPatchOpetationDidntModifiedIt()
+        public void ShouldNotOverwriteDocumentIfPatchOperationDidNotModifiedIt()
         {
             using (var store = GetDocumentStore())
             {
@@ -67,7 +67,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void ShouldNotOverwriteDocumentIfPatchOpetationDidntModifyItButPutDeaultValues()
+        public void ShouldNotOverwriteDocumentIfPatchOperationDidNotModifyItButPutDefaultValues()
         {
             using (var store = GetDocumentStore())
             {
