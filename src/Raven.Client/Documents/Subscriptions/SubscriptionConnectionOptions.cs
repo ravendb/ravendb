@@ -63,23 +63,34 @@ namespace Raven.Client.Documents.Subscriptions
 
     public class SubscriptionConnectionOptions
     {
+        public string SubscriptionName { get; }
+
         private SubscriptionConnectionOptions()
         {
             // for deserialization
-        }
-
-        public SubscriptionConnectionOptions(string subscriptionId)
-        {
-            if (string.IsNullOrWhiteSpace(subscriptionId))
-                throw new ArgumentOutOfRangeException(nameof(subscriptionId));
-
-            SubscriptionId = subscriptionId;
             Strategy = SubscriptionOpeningStrategy.OpenIfFree;
             MaxDocsPerBatch = 4096;
             TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(5000);
         }
 
-        public string SubscriptionId { get; private set; }
+        public SubscriptionConnectionOptions(string subscriptionName) : this()
+        {
+            if (string.IsNullOrEmpty(subscriptionName)) 
+                throw new ArgumentException("Value cannot be null or empty.", nameof(subscriptionName));
+            
+            SubscriptionName = subscriptionName;
+            SubscriptionId = -1;
+        }
+        
+        public SubscriptionConnectionOptions(long subscriptionId): this()
+        {
+            if (subscriptionId <= 0)
+                throw new ArgumentOutOfRangeException(nameof(subscriptionId));
+
+            SubscriptionId = subscriptionId;
+        }
+
+        public long SubscriptionId { get; set; }
         public TimeSpan TimeToWaitBeforeConnectionRetry { get; set; }
         public bool IgnoreSubscriberErrors { get; set; }
         public SubscriptionOpeningStrategy Strategy { get; set; }

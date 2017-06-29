@@ -217,44 +217,16 @@ namespace Raven.Server.ServerWide
                     NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot set typed value of type {type} for database {updateCommand.DatabaseName}, because does not exist"));
                     return;
                 }
-
-                BlittableJsonReaderObject itemBlittable = null;
-
-                var itemKey = updateCommand.GetItemId();
-                using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
+                
+                try
                 {
-                    if (items.ReadByKey(valueNameLowered, out TableValueReader reader))
-                    {
-                        var ptr = reader.Read(2, out int size);
-                        itemBlittable = new BlittableJsonReaderObject(ptr, size, context);
-                    }
-
-                    try
-                    {
-                        itemBlittable = updateCommand.GetUpdatedValue(index, record, context, itemBlittable, _parent.CurrentState == RachisConsensus.State.Passive);
-
-                        // if returned null, means, there is nothing to update and we just wanted to delete the value
-                        if (itemBlittable == null)
-                        {
-                            items.DeleteByKey(valueNameLowered);
-                            return;
-                        }
-
-                        // here we get the item key again, in case it was changed (a new entity, etc)
-                        itemKey = updateCommand.GetItemId();
-                    }
-                    catch (Exception e)
-                    {
-                        NotifyLeaderAboutError(index, leader,
-                            new CommandExecutionException($"Cannot set typed value of type {type} for database {updateCommand.DatabaseName}, because does not exist", e));
-                        return;
-                    }
+                    updateCommand.Execute(context, items, index, record, _parent.CurrentState == RachisConsensus.State.Passive);
                 }
-
-                using (Slice.From(context.Allocator, itemKey, out Slice valueName))
-                using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
+                catch (Exception e)
                 {
-                    UpdateValue(index, items, valueNameLowered, valueName, itemBlittable);
+                    NotifyLeaderAboutError(index, leader,
+                        new CommandExecutionException($"Cannot set typed value of type {type} for database {updateCommand.DatabaseName}, because does not exist", e));
+                    return;
                 }
             }
             finally
@@ -326,7 +298,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static unsafe void UpdateValue(long index, Table items, Slice lowerKey, Slice key, BlittableJsonReaderObject updated)
+        internal static unsafe void UpdateValue(long index, Table items, Slice lowerKey, Slice key, BlittableJsonReaderObject updated)
         {
             using (items.Allocate(out TableValueBuilder builder))
             {

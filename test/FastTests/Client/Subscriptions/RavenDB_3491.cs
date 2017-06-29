@@ -191,7 +191,7 @@ namespace FastTests.Client.Subscriptions
                 var us4 = new User { Id = "users/4", Name = "Hila", Age = 29 };
                 var us5 = new User { Id = "users/5", Name = "Revital", Age = 34 };
 
-                string subscriptionId;
+                long subscriptionId;
                 var subscriptionReleasedAwaiter = Task.CompletedTask;
                 using (var session = store.OpenAsyncSession())
                 {
