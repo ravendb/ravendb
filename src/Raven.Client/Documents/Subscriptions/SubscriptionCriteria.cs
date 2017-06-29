@@ -72,6 +72,15 @@ namespace Raven.Client.Documents.Subscriptions
         public string Script { get; set; }
         public bool? IsVersioned { get; set; }
     }
+    
+    
+    public class SubscriptionTryout
+    {
+        public ChangeVectorEntry[] ChangeVector { get; set; }
+        public string Collection { get; set; }
+        public string Script { get; set; }
+        public bool IsVersioned { get; set; }
+    }
 
     public class SubscriptionCreationOptions
     {
