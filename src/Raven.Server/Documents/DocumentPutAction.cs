@@ -47,8 +47,6 @@ namespace Raven.Server.Documents
             document.BlittableValidation();
             BlittableJsonReaderObject.AssertNoModifications(document, id, assertChildren: true);
             AssertMetadataWasFiltered(document);
-            if ((nonPersistentFlags & NonPersistentDocumentFlags.ResolveAttachmentsConflict) != NonPersistentDocumentFlags.ResolveAttachmentsConflict)
-                AttachmentsStorage.AssertAttachments(document, flags);
 #endif
 
             var collectionName = _documentsStorage.ExtractCollectionName(context, id, document);

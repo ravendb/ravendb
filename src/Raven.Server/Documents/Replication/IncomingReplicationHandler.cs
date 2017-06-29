@@ -899,8 +899,11 @@ namespace Raven.Server.Documents.Replication
                                             if (document != null)
                                             {
                                                 if (_incoming._log.IsInfoEnabled)
-                                                    _incoming._log.Info(
-                                                        $"Conflict check resolved to Update operation, doing PUT on doc = {item.Id}, with change vector = {_changeVector.Format()}");
+                                                    _incoming._log.Info($"Conflict check resolved to Update operation, doing PUT on doc = {item.Id}, " +
+                                                                        $"with change vector = {_changeVector.Format()}");
+#if DEBUG
+                                                AttachmentsStorage.AssertAttachments(document, item.Flags);
+#endif
                                                 database.DocumentsStorage.Put(context, item.Id, null, document, item.LastModifiedTicks, _changeVector,
                                                     item.Flags, NonPersistentDocumentFlags.FromReplication);
                                             }
@@ -908,7 +911,8 @@ namespace Raven.Server.Documents.Replication
                                             {
                                                 if (_incoming._log.IsInfoEnabled)
                                                     _incoming._log.Info(
-                                                        $"Conflict check resolved to Update operation, writing tombstone for doc = {item.Id}, with change vector = {_changeVector.Format()}");
+                                                        $"Conflict check resolved to Update operation, writing tombstone for doc = {item.Id}, " +
+                                                        $"with change vector = {_changeVector.Format()}");
                                                 using (DocumentIdWorker.GetSliceFromId(context, item.Id, out Slice keySlice))
                                                 {
                                                     database.DocumentsStorage.Delete(
