@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Replication
                     InputCount = Stats.InputCount,
                     ArtificialDocumentSkipCount = Stats.ArtificialDocumentSkipCount,
                     SystemDocumentSkipCount = Stats.SystemDocumentSkipCount,
-                    DocumentChangeVectorSkipCount = Stats.DocumentChangeVectorSkipCount,
+                    ChangeVectorSkipCount = Stats.ChangeVectorSkipCount,
                 },
                 Network = new OutgoingReplicationPerformanceStats.NetworkStats
                 {
@@ -111,9 +111,9 @@ namespace Raven.Server.Documents.Replication
             _stats.SystemDocumentSkipCount++;
         }
 
-        public void RecordDocumentChangeVectorSkip()
+        public void RecordChangeVectorSkip()
         {
-            _stats.DocumentChangeVectorSkipCount++;
+            _stats.ChangeVectorSkipCount++;
         }
 
         public void RecordAttachmentOutput(long sizeInBytes)
@@ -174,7 +174,7 @@ namespace Raven.Server.Documents.Replication
 
         public int ArtificialDocumentSkipCount;
         public int SystemDocumentSkipCount;
-        public int DocumentChangeVectorSkipCount;
+        public int ChangeVectorSkipCount;
 
         public int AttachmentOutputCount;
         public Size AttachmentOutputSize;

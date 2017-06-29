@@ -19,7 +19,7 @@ namespace Raven.Server.ServerWide.Maintenance
         public string Name;
         public string NodeName;
 
-        public ChangeVectorEntry[] LastDocumentChangeVector;
+        public ChangeVectorEntry[] LastChangeVector;
 
         public Dictionary<string, ObservedIndexStatus> LastIndexStats = new Dictionary<string, ObservedIndexStatus>();
 
@@ -47,7 +47,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 [nameof(LastEtag)] = LastEtag,
                 [nameof(LastTombstoneEtag)] = LastTombstoneEtag,
                 [nameof(NumberOfConflicts)] = NumberOfConflicts,
-                [nameof(LastDocumentChangeVector)] = LastDocumentChangeVector?.ToJson(),
+                [nameof(LastChangeVector)] = LastChangeVector?.ToJson(),
                 [nameof(Error)] = Error,
             };
             var indexStats = new DynamicJsonValue();

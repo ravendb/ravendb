@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Replication.Messages
 
         public string MessageType { get; set; }
 
-        public ChangeVectorEntry[] DocumentsChangeVector { get; set; }
+        public ChangeVectorEntry[] ChangeVector { get; set; }
 
         public string DatabaseId { get; set; }
     }

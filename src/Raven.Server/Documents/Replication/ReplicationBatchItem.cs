@@ -1,19 +1,11 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
 using Voron;
 
 namespace Raven.Server.Documents.Replication
 {
-    public class ReplicationBatchIndexItem
-    {
-        public string Name;
-        public ChangeVectorEntry[] ChangeVector;
-        public BlittableJsonReaderObject Definition;
-        public long Etag;
-        public int Type;
-    }
-
     public class ReplicationBatchItem
     {
         public LazyStringValue Id;
@@ -62,19 +54,22 @@ namespace Raven.Server.Documents.Replication
                 Etag = doc.Etag,
                 Id = doc.LowerId,
                 TransactionMarker = doc.TransactionMarker,
+                ChangeVector = doc.ChangeVector,
             };
 
-            if (doc.Type == DocumentTombstone.TombstoneType.Document)
+            switch (doc.Type)
             {
-                item.Type = ReplicationItemType.DocumentTombstone;
-                item.ChangeVector = doc.ChangeVector;
-                item.Collection = doc.Collection;
-                item.Flags = doc.Flags;
-                item.LastModifiedTicks = doc.LastModified.Ticks;
-            }
-            else
-            {
-                item.Type = ReplicationItemType.AttachmentTombstone;
+                case DocumentTombstone.TombstoneType.Document:
+                    item.Type = ReplicationItemType.DocumentTombstone;
+                    item.Collection = doc.Collection;
+                    item.Flags = doc.Flags;
+                    item.LastModifiedTicks = doc.LastModified.Ticks;
+                    break;
+                case DocumentTombstone.TombstoneType.Attachment:
+                    item.Type = ReplicationItemType.AttachmentTombstone;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(doc.Type));
             }
 
             return item;
@@ -90,6 +85,7 @@ namespace Raven.Server.Documents.Replication
                 Collection = doc.Collection,
                 Data = doc.Doc,
                 Id = doc.Id,
+                Flags = doc.Flags,
                 LastModifiedTicks = doc.LastModified.Ticks,
                 TransactionMarker = -1// not relevant
             };
@@ -102,6 +98,7 @@ namespace Raven.Server.Documents.Replication
                 Type = ReplicationItemType.Attachment,
                 Id = attachment.Key,
                 Etag = attachment.Etag,
+                ChangeVector = attachment.ChangeVector,
                 Name = attachment.Name,
                 ContentType = attachment.ContentType,
                 Base64Hash = attachment.Base64Hash,
@@ -116,7 +113,7 @@ namespace Raven.Server.Documents.Replication
             DocumentTombstone = 2,
             Attachment = 3,
             AttachmentStream = 4,
-            AttachmentTombstone = 5
+            AttachmentTombstone = 5,
         }
     }
 }

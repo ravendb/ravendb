@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
 using Voron;
 
@@ -10,6 +11,7 @@ namespace Raven.Server.Documents
         public long StorageId;
         public LazyStringValue Key;
         public long Etag;
+        public ChangeVectorEntry[] ChangeVector;
         public LazyStringValue Name;
         public LazyStringValue ContentType;
         public Slice Base64Hash;
