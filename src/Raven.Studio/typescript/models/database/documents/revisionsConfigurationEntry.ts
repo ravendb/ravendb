@@ -1,10 +1,10 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
-class versioningEntry {
+class revisionsConfigurationEntry {
 
     static readonly DefaultConfiguration = "DefaultConfiguration";
 
-    active = ko.observable<boolean>();
+    disabled = ko.observable<boolean>();
     minimumRevisionsToKeep = ko.observable<number>();
     minimumRevisionAgeToKeep = ko.observable<string>();
     purgeOnDelete = ko.observable<boolean>();
@@ -22,9 +22,9 @@ class versioningEntry {
         this.collection(collection);
         this.minimumRevisionsToKeep(dto.MinimumRevisionsToKeep);
         this.minimumRevisionAgeToKeep(dto.MinimumRevisionAgeToKeep);
-        this.active(dto.Active);
+        this.disabled(!dto.Active);
         this.purgeOnDelete(dto.PurgeOnDelete);
-        this.isDefault = ko.pureComputed<boolean>(() => this.collection() === versioningEntry.DefaultConfiguration);
+        this.isDefault = ko.pureComputed<boolean>(() => this.collection() === revisionsConfigurationEntry.DefaultConfiguration);
 
         this.initValidation();
     }
@@ -44,7 +44,7 @@ class versioningEntry {
 
     toDto(): Raven.Client.Server.Versioning.VersioningCollectionConfiguration {
         return {
-            Active: this.active(),
+            Active: !this.disabled(),
             MinimumRevisionsToKeep: this.minimumRevisionsToKeep(),
             MinimumRevisionAgeToKeep: this.minimumRevisionAgeToKeep(),
             PurgeOnDelete: this.purgeOnDelete()
@@ -52,7 +52,7 @@ class versioningEntry {
     }
 
     static empty() {
-        return new versioningEntry("",
+        return new revisionsConfigurationEntry("",
         {
             Active: true,
             MinimumRevisionsToKeep: null,
@@ -62,10 +62,10 @@ class versioningEntry {
     }
 
     static defaultConfiguration() {
-        const item = versioningEntry.empty();
-        item.collection(versioningEntry.DefaultConfiguration);
+        const item = revisionsConfigurationEntry.empty();
+        item.collection(revisionsConfigurationEntry.DefaultConfiguration);
         return item;
     }
 }
 
-export = versioningEntry;
+export = revisionsConfigurationEntry;
