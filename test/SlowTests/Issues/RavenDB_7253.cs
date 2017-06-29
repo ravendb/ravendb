@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Client.Attachments;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.Server.Operations;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Server.Documents.Notifications;
 using Sparrow;
 using Xunit;
 
@@ -19,18 +17,14 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-
                 var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
-
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(200)
                 });
 
                 var mre = new AsyncManualResetEvent();
-
                 subscription.AfterAcknowledgment += b => { mre.Set(); return Task.CompletedTask; };
-
                 var task = subscription.Run(user => { });
 
                 await mre.WaitAsync(TimeSpan.FromSeconds(20));

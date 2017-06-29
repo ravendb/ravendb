@@ -344,10 +344,7 @@ namespace Raven.Server.Documents
         {
             var config = CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase);
             if (config == null)
-            {
                 return Task.FromResult<DocumentDatabase>(null);
-            }
-                
 
             if (!_resourceSemaphore.Wait(0))
                 return UnlikelyCreateDatabaseUnderContention(databaseName, config);
@@ -476,8 +473,7 @@ namespace Raven.Server.Documents
 
             Debug.Assert(_serverStore.Disposed == false);
 
-            TransactionOperationContext context;
-            using (_serverStore.ContextPool.AllocateOperationContext(out context))
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 context.OpenReadTransaction();
 
@@ -495,15 +491,13 @@ namespace Raven.Server.Documents
                         if (ravenServerWebUrl?.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
                         {
                             throw new DatabaseDisabledException(
-                                $"The database {databaseName.Value} is encrypted, and must be accessed only via HTTPS, but the web url used is {ravenServerWebUrl}");       
+                                $"The database {databaseName.Value} is encrypted, and must be accessed only via HTTPS, but the web url used is {ravenServerWebUrl}");
                         }
                     }
                 }
 
                 return CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase, ignoreBeenDeleted, databaseRecord);
-
             }
-
         }
 
         public RavenConfiguration CreateDatabaseConfiguration(StringSegment databaseName, bool ignoreDisabledDatabase, bool ignoreBeenDeleted, DatabaseRecord databaseRecord)

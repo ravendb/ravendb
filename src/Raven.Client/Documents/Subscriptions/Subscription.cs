@@ -650,8 +650,8 @@ namespace Raven.Client.Documents.Subscriptions
                     _processingCts.Cancel();
                     break;
                 case SubscriptionDoesNotBelongToNodeException se:
-                    var requestExecuter = _store.GetRequestExecutor(_dbName);
-                    var nodeToRedirectTo = requestExecuter.TopologyNodes
+                    var requestExecutor = _store.GetRequestExecutor(_dbName);
+                    var nodeToRedirectTo = requestExecutor.TopologyNodes
                         .FirstOrDefault(x => x.ClusterTag == se.AppropriateNode);
                     _redirectNode = nodeToRedirectTo ?? throw new AggregateException(ex,
                                         new InvalidOperationException($"Could not redirect to {se.AppropriateNode}, because it was not found in local topology, even after retrying"));
