@@ -23,7 +23,8 @@ namespace Raven.Server.Documents.Handlers
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
                 var options = JsonDeserializationServer.SubscriptionCreationParams(json);
-                var subscriptionId = await Database.SubscriptionStorage.CreateSubscription(options);
+                var id = GetLongQueryString("id", required: false);
+                var subscriptionId = await Database.SubscriptionStorage.PutSubscription(options, id);
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created; // Created
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

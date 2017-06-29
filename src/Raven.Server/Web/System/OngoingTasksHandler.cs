@@ -409,6 +409,36 @@ namespace Raven.Server.Web.System
 
                             WriteResult(context, ravenTaskInfo);
                             break;
+                            
+                        case OngoingTaskType.Subscription:
+
+                            var itemKey = SubscriptionState.GenerateSubscriptionItemNameFromId(record.DatabaseName, key);
+                            var doc = ServerStore.Cluster.Read(context, itemKey);
+                            if (doc == null)
+                            {
+                                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                                break;
+                            }
+
+                            var sub = JsonDeserializationClient.SubscriptionState(doc);
+                            
+                            tag = dbTopology?.WhoseTaskIsIt(sub, ServerStore.IsPassive());
+                             
+                            WriteResult(context, new OngoingTaskSubscription
+                            {
+                                ChangeVector = sub.ChangeVector,
+                                LastModificationTime = sub.TimeOfLastClientActivity,
+                                ResponsibleNode= new NodeId
+                                {
+                                    NodeTag = tag,
+                                    NodeUrl = clusterTopology.GetUrlFromTag(tag)
+                                },
+                                TaskId = sub.SubscriptionId,
+                                TaskName = sub.SubscriptionName,
+                                TaskState = sub.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled
+                            });
+                            
+                            break;
 
                         default:
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
