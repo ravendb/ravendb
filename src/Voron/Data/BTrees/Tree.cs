@@ -262,24 +262,20 @@ namespace Voron.Data.BTrees
 
             if (AbstractPager.IsKeySizeValid(key.Size) == false)
                 ThrowInvalidKeySize(key);
-            
-            TreeNodeHeader* node;
-            TreeCursorConstructor cursorConstructor;
-            var foundPage = FindPageFor(key, node: out node, cursor: out cursorConstructor, allowCompressed: true);
 
+            var foundPage = FindPageFor(key, node: out TreeNodeHeader* node, cursor: out TreeCursorConstructor cursorConstructor, allowCompressed: true);
             var page = ModifyPage(foundPage);
 
             bool? shouldGoToOverflowPage = null;
             if (page.LastMatch == 0) // this is an update operation
             {
-                if(nodeType == TreeNodeFlags.NewOnly)
+                if((nodeType & TreeNodeFlags.NewOnly) == TreeNodeFlags.NewOnly)
                     ThrowConcurrencyException();
                 
                 node = page.GetNode(page.LastSearchPosition);
 
 #if DEBUG
-                Slice nodeCheck;
-                using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, node, out nodeCheck))
+                using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, node, out Slice nodeCheck))
                 {
                     Debug.Assert(SliceComparer.EqualsInline(nodeCheck, key));
                 }
