@@ -63,8 +63,6 @@ namespace Raven.Client.Documents.Subscriptions
 
     public class SubscriptionConnectionOptions
     {
-        public string SubscriptionName { get; }
-
         private SubscriptionConnectionOptions()
         {
             // for deserialization
@@ -90,6 +88,7 @@ namespace Raven.Client.Documents.Subscriptions
             SubscriptionId = subscriptionId;
         }
 
+        public string SubscriptionName { get; set; }
         public long SubscriptionId { get; set; }
         public TimeSpan TimeToWaitBeforeConnectionRetry { get; set; }
         public bool IgnoreSubscriberErrors { get; set; }

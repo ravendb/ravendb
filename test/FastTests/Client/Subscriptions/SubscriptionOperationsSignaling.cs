@@ -10,6 +10,43 @@ using System.Threading.Tasks;
 
 namespace FastTests.Client.Subscriptions
 {
+    public class NamedSubscriptions : RavenTestBase
+    {
+        [Fact]
+        public void CanNameAndOpenWithNameOnly()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var subscriptionCreationParams = new SubscriptionCreationOptions<User>
+                {
+                    Name = "get-users",
+                    Criteria = new SubscriptionCriteria<User>()
+                };
+                var subscriptionId = store.Subscriptions.Create(subscriptionCreationParams);
+
+                var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions("get-users"));
+
+                var users = new BlockingCollection<User>();
+
+                var subscirptionLifetimeTask = subscription.Run(u =>
+                {
+                    foreach (var item in u.Items)
+                    {
+                        users.Add(item.Result);
+                    }
+                });
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User());
+                    session.SaveChanges();
+                }
+
+                User user;
+                Assert.True(users.TryTake(out user, 1000));
+            }
+        }
+    }
     public class SubscriptionOperationsSignaling : RavenTestBase
     {
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);

@@ -20,11 +20,11 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new FastTests.Client.Subscriptions.SubscriptionOperationsSignaling())
+                using (var a = new FastTests.Client.Subscriptions.NamedSubscriptions())
                 {
                     try
                     {
-                        a.WaitOnSubscriptionTaskWhenSubscriptionIsDeleted();
+                        a.CanNameAndOpenWithNameOnly();
                     }
                     catch (Exception e)
                     {

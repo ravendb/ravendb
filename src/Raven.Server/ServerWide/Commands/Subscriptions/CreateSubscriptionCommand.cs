@@ -78,6 +78,8 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 [nameof(SubscriptionCriteria.IsVersioned)] = Criteria.IsVersioned
             };
             json[nameof(InitialChangeVector)] = InitialChangeVector?.ToJson();
+            json[nameof(SubscriptionName)] = SubscriptionName;
+
         }
     }
 }

@@ -56,7 +56,8 @@ namespace Raven.Server.Documents.Subscriptions
             var command = new CreateSubscriptionCommand(_db.Name)
             {
                 Criteria = options.Criteria,
-                InitialChangeVector = options.ChangeVector
+                InitialChangeVector = options.ChangeVector,
+                SubscriptionName = options.Name
             };
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);

@@ -173,9 +173,9 @@ namespace Raven.Client.Documents.Subscriptions
         {
             _options = options;
             _logger = LoggingSource.Instance.GetLogger<Subscription<T>>(dbName);
-            if (_options.SubscriptionId <= 0)
+            if (_options.SubscriptionId <= 0 && string.IsNullOrEmpty(options.SubscriptionName))
                 throw new ArgumentException(
-                    "SubscriptionConnectionOptions must specify the SubscriptionId, but was set to " + _options.SubscriptionId,
+                    "SubscriptionConnectionOptions must specify the SubscriptionId if the SubscriptionName is not set, but was set to " + _options.SubscriptionId,
                     nameof(options));
             _store = documentStore;
             _dbName = dbName ?? documentStore.Database;
