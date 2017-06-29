@@ -82,15 +82,15 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         var topology = ServerStore.GetClusterTopology(transactionOperationContext);
 
                         var operationTimeout = ServerStore.Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan;
-                        var tokenTTL = TimeSpan.FromMilliseconds(operationTimeout.TotalMilliseconds * topology.AllNodes.Count);
-                        var apiKeyTokenArray = SignedTokenGenerator.GenerateToken(
+                        var tokenTtl = TimeSpan.FromMilliseconds(operationTimeout.TotalMilliseconds * topology.AllNodes.Count);
+                        var apiKeyTokenBuffer = SignedTokenGenerator.GenerateToken(
                             jsonOperationContext,
                             ServerStore.SignSecretKey,
                             "Raven/Debug-Info-Package-Api-Key",
                             ServerStore.NodeTag,
-                            DateTime.UtcNow.Add(tokenTTL)).ToArray();
+                            DateTime.UtcNow.Add(tokenTtl));
 
-                        var apiKeyToken = Encoding.UTF8.GetString(apiKeyTokenArray, 0, apiKeyTokenArray.Length);
+                        var apiKeyToken = Encoding.UTF8.GetString(apiKeyTokenBuffer.Array, apiKeyTokenBuffer.Offset, apiKeyTokenBuffer.Count);
 
                         //this means no databases are defined in the cluster
                         //in this case just output server-wide endpoints from all cluster nodes
