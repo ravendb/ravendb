@@ -3,7 +3,6 @@ using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 using Sparrow.Json;
 using Sparrow.LowMemory;
 
@@ -17,20 +16,17 @@ namespace Voron
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Slice(SliceOptions options, ByteString content)
         {
-            this.Content = content;
+            Content = content;
             Content.SetUserDefinedFlags((ByteStringType)options);               
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Slice(ByteString content)
         {
-            this.Content = content;
+            Content = content;
         }
 
-        public bool HasValue
-        {
-            get { return Content.HasValue; }
-        }
+        public bool HasValue => Content.HasValue;
 
         public int Size
         {
@@ -41,13 +37,7 @@ namespace Voron
             }
         }
 
-        public SliceOptions Options
-        {
-            get
-            {
-                return (SliceOptions) (Content.Flags & ByteStringType.UserDefinedMask);
-            }
-        }
+        public SliceOptions Options => (SliceOptions) (Content.Flags & ByteStringType.UserDefinedMask);
 
         public byte this[int index]
         {
@@ -102,8 +92,7 @@ namespace Voron
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext.InternalScope From(ByteStringContext context, string value, ByteStringType type, out Slice str)
         {
-            ByteString s;
-            var scope = context.From(value, type, out s);
+            var scope = context.From(value, type, out ByteString s);
             str = new Slice(s);
             return scope;
         }
@@ -117,8 +106,7 @@ namespace Voron
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext.InternalScope From(ByteStringContext context, byte[] value, ByteStringType type, out Slice str)
         {
-            ByteString byteString;
-            var scope = context.From(value, 0, value.Length, type, out byteString);
+            var scope = context.From(value, 0, value.Length, type, out ByteString byteString);
             str = new Slice(byteString);
             return scope;
         }
@@ -126,8 +114,7 @@ namespace Voron
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext.InternalScope From(ByteStringContext context, byte[] value, int offset, int count, ByteStringType type, out Slice str)
         {
-            ByteString byteString;
-            var scope = context.From(value, offset, count, type, out byteString);
+            var scope = context.From(value, offset, count, type, out ByteString byteString);
             str = new Slice(byteString);
             return scope;
         }
@@ -141,8 +128,7 @@ namespace Voron
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext.InternalScope From(ByteStringContext context, byte* value, int size, ByteStringType type, out Slice str)
         {
-            ByteString byteString;
-            var scope = context.From(value, size, type, out byteString);
+            var scope = context.From(value, size, type, out ByteString byteString);
             str = new Slice(byteString);
             return scope;
         }
@@ -182,8 +168,7 @@ namespace Voron
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext.ExternalScope External(ByteStringContext context, byte* value, int size, ByteStringType type, out Slice slice)
         {
-            ByteString str;
-            var scope= context.FromPtr(value, size, type | ByteStringType.External, out str);
+            var scope = context.FromPtr(value, size, type | ByteStringType.External, out ByteString str);
             slice = new Slice(str);
             return scope;
         }
@@ -224,14 +209,11 @@ namespace Voron
 
         static Slices()
         {
-            ByteString empty;
-            SharedSliceContent.From(string.Empty, out empty);
+            SharedSliceContent.From(string.Empty, out ByteString empty);
             Empty = new Slice(SliceOptions.Key, empty);
-            ByteString before;
-            SharedSliceContent.From(string.Empty, out before);
+            SharedSliceContent.From(string.Empty, out ByteString before);
             BeforeAllKeys = new Slice(SliceOptions.BeforeAllKeys, before);
-            ByteString after;
-            SharedSliceContent.From(string.Empty, out after);
+            SharedSliceContent.From(string.Empty, out ByteString after);
             AfterAllKeys = new Slice(SliceOptions.AfterAllKeys, after);
         }
     }

@@ -19,7 +19,7 @@ namespace Micro.Benchmark
             //    tests.TestGetReadonly(cacheSize);
             //}
 
-            BenchmarkSwitcher.FromAssembly(typeof(Program).GetTypeInfo().Assembly).Run(args);
+            // BenchmarkSwitcher.FromAssembly(typeof(Program).GetTypeInfo().Assembly).Run(args);
         }
     }
 }

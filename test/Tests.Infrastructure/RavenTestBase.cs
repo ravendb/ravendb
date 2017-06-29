@@ -171,10 +171,17 @@ namespace FastTests
                             if (store.Urls.Any(url => server.WebUrls.Contains(url)) == false)
                                 continue;
 
-                            var databaseTask = server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name, ignoreDisabledDatabase);
-                            if (databaseTask != null && databaseTask.IsCompleted == false)
-                                databaseTask.Wait();
-                            // if we are disposing store before database had chance to load then we need to wait
+                            try
+                            {
+                                var databaseTask = server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name, ignoreDisabledDatabase);
+                                if (databaseTask != null && databaseTask.IsCompleted == false)
+                                    // if we are disposing store before database had chance to load then we need to wait
+                                    databaseTask.Wait();
+                            }
+                            catch (DatabaseDisabledException)
+                            {
+                                continue;
+                            }
 
                             server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
                             if (deleteDatabaseWhenDisposed)

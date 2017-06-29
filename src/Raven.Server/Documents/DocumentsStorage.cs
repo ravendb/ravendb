@@ -20,7 +20,7 @@ using Sparrow.Binary;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Voron.Data;
-using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
+using Voron.Exceptions;
 
 namespace Raven.Server.Documents
 {
@@ -289,6 +289,13 @@ namespace Raven.Server.Documents
             return ChangeVectorUtils.ReadChangeVectorFrom(tree);
         }
 
+        public ChangeVectorEntry[] GetNewChangeVector(DocumentsOperationContext context, long newEtag)
+        {
+            var changeVector = GetDatabaseChangeVector(context);
+            ChangeVectorUtils.UpdateChangeVectorWithNewEtag(Environment.DbId, newEtag, changeVector);
+            return changeVector;
+        }
+
         public void SetDatabaseChangeVector(DocumentsOperationContext context, Dictionary<Guid, long> changeVector)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(GlobalChangeVectorSlice);
@@ -550,7 +557,7 @@ namespace Raven.Server.Documents
                     yield break;
 
                 var curEtag = TableValueToEtag((int)DocumentsTable.Etag, ref result.Reader);
-                var curChangeVector = GetChangeVectorEntriesFromTableValueReader(ref result.Reader, (int)DocumentsTable.ChangeVector);
+                var curChangeVector = TableValueToChangeVector(ref result.Reader, (int)DocumentsTable.ChangeVector);
 
                 yield return (curChangeVector, curEtag);
             }
@@ -803,11 +810,14 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr)
+        private Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr)
         {
             var document = ParseDocument(context, ref tvr);
+#if DEBUG
             DebugDisposeReaderAfterTransaction(context.Transaction, document.Data);
             DocumentPutAction.AssertMetadataWasFiltered(document.Data);
+            AttachmentsStorage.AssertAttachments(document.Data, document.Flags);
+#endif
             return document;
         }
 
@@ -832,7 +842,7 @@ namespace Raven.Server.Documents
                 Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr),
                 Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr),
                 Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context),
-                ChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)DocumentsTable.ChangeVector),
+                ChangeVector = TableValueToChangeVector(ref tvr, (int)DocumentsTable.ChangeVector),
                 LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr),
                 Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr),
                 TransactionMarker = *(short*)tvr.Read((int)DocumentsTable.TransactionMarker, out size)
@@ -841,11 +851,11 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        public static ChangeVectorEntry[] GetChangeVectorEntriesFromTableValueReader(ref TableValueReader tvr, int index)
+        public static ChangeVectorEntry[] TableValueToChangeVector(ref TableValueReader tvr, int index)
         {
             var pChangeVector = (ChangeVectorEntry*)tvr.Read(index, out int size);
             var changeVector = new ChangeVectorEntry[size / sizeof(ChangeVectorEntry)];
-            for (int i = 0; i < changeVector.Length; i++)
+            for (var i = 0; i < changeVector.Length; i++)
             {
                 changeVector[i] = pChangeVector[i];
             }
@@ -864,14 +874,14 @@ namespace Raven.Server.Documents
                 Etag = TableValueToEtag((int)TombstoneTable.Etag, ref tvr),
                 DeletedEtag = TableValueToEtag((int)TombstoneTable.DeletedEtag, ref tvr),
                 Type = *(DocumentTombstone.TombstoneType*)tvr.Read((int)TombstoneTable.Type, out int size),
-                TransactionMarker = *(short*)tvr.Read((int)TombstoneTable.TransactionMarker, out size)
+                TransactionMarker = *(short*)tvr.Read((int)TombstoneTable.TransactionMarker, out size),
+                ChangeVector = TableValueToChangeVector(ref tvr, (int)TombstoneTable.ChangeVector)
             };
 
             if (result.Type == DocumentTombstone.TombstoneType.Document)
             {
                 result.Collection = TableValueToString(context, (int)TombstoneTable.Collection, ref tvr);
                 result.Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
-                result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)TombstoneTable.ChangeVector);
                 result.LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr);
             }
 
@@ -990,7 +1000,7 @@ namespace Raven.Server.Documents
                 table.Delete(doc.StorageId);
 
                 if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
-                    AttachmentsStorage.DeleteAttachmentsOfDocument(context, lowerId);
+                    AttachmentsStorage.DeleteAttachmentsOfDocument(context, lowerId, changeVector);
 
                 // TODO: Do not send here strings. Use lazy strings instead.
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
@@ -1117,7 +1127,7 @@ namespace Raven.Server.Documents
             }
             else
             {
-                ConflictsStorage.DeleteConflictsFor(context, lowerId);
+                ConflictsStorage.DeleteConflictsFor(context, lowerId, null);
             }
 
             fixed (ChangeVectorEntry* pChangeVector = changeVector)
@@ -1126,19 +1136,18 @@ namespace Raven.Server.Documents
                 {
                     var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                         collectionName.GetTableName(CollectionTableType.Tombstones));
-                    using (table.Allocate(out TableValueBuilder tbv))
+                    using (table.Allocate(out TableValueBuilder tvb))
                     {
-                        tbv.Add(lowerId);
-                        tbv.Add(Bits.SwapBytes(newEtag));
-                        tbv.Add(Bits.SwapBytes(documentEtag));
-                        tbv.Add(context.GetTransactionMarker());
-                        tbv.Add((byte)DocumentTombstone.TombstoneType.Document);
-                        tbv.Add(collectionSlice);
-                        tbv.Add((int)flags);
-                        tbv.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
-                        tbv.Add(lastModifiedTicks);
-
-                        table.Insert(tbv);
+                        tvb.Add(lowerId);
+                        tvb.Add(Bits.SwapBytes(newEtag));
+                        tvb.Add(Bits.SwapBytes(documentEtag));
+                        tvb.Add(context.GetTransactionMarker());
+                        tvb.Add((byte)DocumentTombstone.TombstoneType.Document);
+                        tvb.Add(collectionSlice);
+                        tvb.Add((int)flags);
+                        tvb.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
+                        tvb.Add(lastModifiedTicks);
+                        table.Insert(tvb);
                     }
                 }
             }

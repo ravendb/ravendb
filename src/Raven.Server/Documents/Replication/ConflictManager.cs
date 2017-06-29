@@ -33,8 +33,8 @@ namespace Raven.Server.Documents.Replication
             long lastModifiedTicks,
             BlittableJsonReaderObject doc,
             ChangeVectorEntry[] changeVector,
-            ChangeVectorEntry[] conflictedChangeVector
-        )
+            ChangeVectorEntry[] conflictedChangeVector,
+            DocumentFlags flags)
         {
             if (id.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase))
             {
@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.Replication
 
                 return;
             }
-            _database.DocumentsStorage.ConflictsStorage.AddConflict(documentsContext, id, lastModifiedTicks, doc, changeVector, collection);
+            _database.DocumentsStorage.ConflictsStorage.AddConflict(documentsContext, id, lastModifiedTicks, doc, changeVector, collection, flags);
         }
 
         private bool TryResolveConflictByScript(
@@ -261,7 +261,7 @@ namespace Raven.Server.Documents.Replication
                 // no real conflict here, both documents have identical content
                 var mergedChangeVector = ChangeVectorUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
                 var nonPersistentFlags = (compareResult & DocumentCompareResult.ShouldRecreateDocument) == DocumentCompareResult.ShouldRecreateDocument 
-                    ? NonPersistentDocumentFlags.ResolvedAttachmentConflict : NonPersistentDocumentFlags.None;
+                    ? NonPersistentDocumentFlags.ResolveAttachmentsConflict : NonPersistentDocumentFlags.None;
                 _database.DocumentsStorage.Put(context, id, null, incomingDoc, lastModifiedTicks, mergedChangeVector, nonPersistentFlags: nonPersistentFlags);
                 return true;
             }

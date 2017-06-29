@@ -271,11 +271,7 @@ namespace Raven.Server.Documents.Replication
 
         private unsafe bool AddReplicationItemToBatch(ReplicationBatchItem item, OutgoingReplicationStatsScope stats)
         {
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
-            {
-                _replicaAttachmentStreams[item.Base64Hash] = item;
-            }
-            else if (item.Type == ReplicationBatchItem.ReplicationItemType.Document ||
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.Document ||
                      item.Type == ReplicationBatchItem.ReplicationItemType.DocumentTombstone)
             {
                 if ((item.Flags & DocumentFlags.Artificial) == DocumentFlags.Artificial)
@@ -295,17 +291,20 @@ namespace Raven.Server.Documents.Replication
                         _log.Info($"Skipping replication of {item.Id} because it is a system document");
                     return false;
                 }
-
-                // destination already has it
-                if (item.ChangeVector.GreaterThan(_parent._destinationLastKnownDocumentChangeVector) == false)
-                {
-                    stats.RecordDocumentChangeVectorSkip();
-
-                    if (_log.IsInfoEnabled)
-                        _log.Info($"Skipping replication of {item.Id} because destination has a higher change vector. Doc: {item.ChangeVector.Format()} < Destination: {_parent._destinationLastKnownDocumentChangeVectorAsString} ");
-                    return false;
-                }
             }
+
+            // destination already has it
+            if (item.ChangeVector.GreaterThan(_parent._destinationLastKnownChangeVector) == false)
+            {
+                stats.RecordChangeVectorSkip();
+
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Skipping replication of {item.Type} '{item.Id}' because destination has a higher change vector. Current: {item.ChangeVector.Format()} < Destination: {_parent._destinationLastKnownChangeVectorAsString} ");
+                return false;
+            }
+
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
+                _replicaAttachmentStreams[item.Base64Hash] = item;
 
             Debug.Assert(item.Flags.HasFlag(DocumentFlags.Artificial) == false);
             _orderedReplicaItems.Add(item.Etag, item);
@@ -399,7 +398,7 @@ namespace Raven.Server.Documents.Replication
                                sizeof(int); // size of document
 
             if (requiredSize > _tempBuffer.Length)
-                ThrowTooManyChangeVectorEntries(item.Id, item.ChangeVector);
+                ThrowTooManyChangeVectorEntries(item);
 
             fixed (byte* pTemp = _tempBuffer)
             {
@@ -476,7 +475,10 @@ namespace Raven.Server.Documents.Replication
 
         private unsafe void WriteAttachmentToServer(ReplicationBatchItem item)
         {
+            var changeVectorSize = item.ChangeVector.Length * sizeof(ChangeVectorEntry);
             var requiredSize = sizeof(byte) + // type
+                               sizeof(int) + // # of change vectors
+                               changeVectorSize +
                                sizeof(short) + // transaction marker
                                sizeof(int) + // size of ID
                                item.Id.Size +
@@ -488,14 +490,20 @@ namespace Raven.Server.Documents.Replication
                                item.Base64Hash.Size;
 
             if (requiredSize > _tempBuffer.Length)
-                throw new ArgumentOutOfRangeException(nameof(item),
-                    $"Attachment name {item.Name} or content type {item.ContentType} or the key ({item.Id.Size} - {item.Id}) " +
-                    "(which might include the change vector for revisions or conflicts) is too big.");
+                ThrowTooManyChangeVectorEntries(item);
 
             fixed (byte* pTemp = _tempBuffer)
             {
-                int tempBufferPos = 0;
+                var tempBufferPos = 0;
                 pTemp[tempBufferPos++] = (byte)item.Type;
+
+                fixed (ChangeVectorEntry* pChangeVectorEntries = item.ChangeVector)
+                {
+                    *(int*)(pTemp + tempBufferPos) = item.ChangeVector.Length;
+                    tempBufferPos += sizeof(int);
+                    Memory.Copy(pTemp + tempBufferPos, (byte*)pChangeVectorEntries, changeVectorSize);
+                    tempBufferPos += changeVectorSize;
+                }
 
                 *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
                 tempBufferPos += sizeof(short);
@@ -525,19 +533,29 @@ namespace Raven.Server.Documents.Replication
 
         private unsafe void WriteAttachmentTombstoneToServer(ReplicationBatchItem item)
         {
+            var changeVectorSize = item.ChangeVector.Length * sizeof(ChangeVectorEntry);
             var requiredSize = sizeof(byte) + // type
+                               sizeof(int) + // # of change vectors
+                               changeVectorSize +
                                sizeof(short) + // transaction marker
                                sizeof(int) + // size of key
                                item.Id.Size;
 
             if (requiredSize > _tempBuffer.Length)
-                throw new ArgumentOutOfRangeException(nameof(item), $"Attachment key ({item.Id.Size} - {item.Id}) " +
-                                                              "(which might include the change vector for revisions or conflicts) is too big.");
+                ThrowTooManyChangeVectorEntries(item);
 
             fixed (byte* pTemp = _tempBuffer)
             {
-                int tempBufferPos = 0;
+                var tempBufferPos = 0;
                 pTemp[tempBufferPos++] = (byte)item.Type;
+
+                fixed (ChangeVectorEntry* pChangeVectorEntries = item.ChangeVector)
+                {
+                    *(int*)(pTemp + tempBufferPos) = item.ChangeVector.Length;
+                    tempBufferPos += sizeof(int);
+                    Memory.Copy(pTemp + tempBufferPos, (byte*)pChangeVectorEntries, changeVectorSize);
+                    tempBufferPos += changeVectorSize;
+                }
 
                 *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
                 tempBufferPos += sizeof(short);
@@ -587,11 +605,10 @@ namespace Raven.Server.Documents.Replication
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void ThrowTooManyChangeVectorEntries(LazyStringValue id, ChangeVectorEntry[] changeVector)
+        private static void ThrowTooManyChangeVectorEntries(ReplicationBatchItem item)
         {
-            throw new ArgumentOutOfRangeException("doc",
-                "Document " + id + " has too many change vector entries to replicate: " +
-                changeVector.Length);
+            throw new ArgumentOutOfRangeException(nameof(item),
+                $"{item.Type} '{item.Id}' has too many change vector entries to replicate: {item.ChangeVector.Length}");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

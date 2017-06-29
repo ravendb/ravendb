@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Replication
 
             public int ArtificialDocumentSkipCount { get; set; }
             public int SystemDocumentSkipCount { get; set; }
-            public int DocumentChangeVectorSkipCount { get; set; }
+            public int ChangeVectorSkipCount { get; set; }
         }
     }
 

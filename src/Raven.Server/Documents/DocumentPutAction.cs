@@ -45,10 +45,9 @@ namespace Raven.Server.Documents
 #if DEBUG
             var documentDebugHash = document.DebugHash;
             document.BlittableValidation();
-#endif
-
             BlittableJsonReaderObject.AssertNoModifications(document, id, assertChildren: true);
             AssertMetadataWasFiltered(document);
+#endif
 
             var collectionName = _documentsStorage.ExtractCollectionName(context, id, document);
             var newEtag = _documentsStorage.GenerateNextEtag();
@@ -93,22 +92,24 @@ namespace Raven.Server.Documents
 
                     var oldFlags = *(DocumentFlags*)oldValue.Read((int)DocumentsStorage.DocumentsTable.Flags, out int size);
 
-                    if ((nonPersistentFlags & NonPersistentDocumentFlags.ByAttachmentUpdate) != NonPersistentDocumentFlags.ByAttachmentUpdate)
+                    if ((nonPersistentFlags & NonPersistentDocumentFlags.ByAttachmentUpdate) != NonPersistentDocumentFlags.ByAttachmentUpdate &&
+                        (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
                     {
-                        if ((oldFlags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments ||
-                            (nonPersistentFlags & NonPersistentDocumentFlags.ResolvedAttachmentConflict) == NonPersistentDocumentFlags.ResolvedAttachmentConflict)
+                        if ((oldFlags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
                         {
                             flags |= DocumentFlags.HasAttachments;
                         }
                     }
                 }
 
-                changeVector = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, changeVector, expectedEtag, flags, oldValue);
+                var result = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, document, changeVector, expectedEtag, flags, oldValue);
+                changeVector = result.ChangeVector;
+                nonPersistentFlags |= result.NonPersistentFlags;
 
                 if (collectionName.IsSystem == false &&
                     (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                 {
-                    if (ShouldRecreateAttachment(context, lowerId, oldDoc, document, flags, nonPersistentFlags))
+                    if (ShouldRecreateAttachments(context, lowerId, oldDoc, document, ref flags, nonPersistentFlags))
                     {
 #if DEBUG
                         if (document.DebugHash != documentDebugHash)
@@ -121,6 +122,9 @@ namespace Raven.Server.Documents
 #if DEBUG
                         documentDebugHash = document.DebugHash;
                         document.BlittableValidation();
+                        BlittableJsonReaderObject.AssertNoModifications(document, id, assertChildren: true);
+                        AssertMetadataWasFiltered(document);
+                        AttachmentsStorage.AssertAttachments(document, flags);
 #endif
                     }
 
@@ -137,24 +141,24 @@ namespace Raven.Server.Documents
 
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
                 {
-                    using (table.Allocate(out TableValueBuilder tbv))
+                    using (table.Allocate(out TableValueBuilder tvb))
                     {
-                        tbv.Add(lowerId);
-                        tbv.Add(Bits.SwapBytes(newEtag));
-                        tbv.Add(idPtr);
-                        tbv.Add(document.BasePointer, document.Size);
-                        tbv.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
-                        tbv.Add(modifiedTicks);
-                        tbv.Add((int)flags);
-                        tbv.Add(context.GetTransactionMarker());
+                        tvb.Add(lowerId);
+                        tvb.Add(Bits.SwapBytes(newEtag));
+                        tvb.Add(idPtr);
+                        tvb.Add(document.BasePointer, document.Size);
+                        tvb.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
+                        tvb.Add(modifiedTicks);
+                        tvb.Add((int)flags);
+                        tvb.Add(context.GetTransactionMarker());
 
                         if (oldValue.Pointer == null)
                         {
-                            table.Insert(tbv);
+                            table.Insert(tvb);
                         }
                         else
                         {
-                            table.Update(oldValue.Id, tbv);
+                            table.Update(oldValue.Id, tvb);
                         }
                     }
                 }
@@ -183,6 +187,10 @@ namespace Raven.Server.Documents
                     throw new InvalidDataException("The incoming document " + id + " has changed _during_ the put process, " +
                                                    "this is likely because you are trying to save a document that is already stored and was moved");
                 }
+                document.BlittableValidation();
+                BlittableJsonReaderObject.AssertNoModifications(document, id, assertChildren: true);
+                AssertMetadataWasFiltered(document);
+                AttachmentsStorage.AssertAttachments(document, flags);
 #endif
 
                 return new DocumentsStorage.PutOperationResults
@@ -198,8 +206,11 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ChangeVectorEntry[] BuildChangeVectorAndResolveConflicts(DocumentsOperationContext context, string id, Slice lowerId, long newEtag, ChangeVectorEntry[] changeVector, long? expectedEtag, DocumentFlags flags, TableValueReader oldValue)
+        private (ChangeVectorEntry[] ChangeVector, NonPersistentDocumentFlags NonPersistentFlags) BuildChangeVectorAndResolveConflicts(
+            DocumentsOperationContext context, string id, Slice lowerId, long newEtag, 
+            BlittableJsonReaderObject document, ChangeVectorEntry[] changeVector, long? expectedEtag, DocumentFlags flags, TableValueReader oldValue)
         {
+            var nonPersistentFlags = NonPersistentDocumentFlags.None;
             var fromReplication = (flags & DocumentFlags.FromReplication) == DocumentFlags.FromReplication;
 
             if (_documentsStorage.ConflictsStorage.ConflictsCount != 0)
@@ -213,16 +224,18 @@ namespace Raven.Server.Documents
 
                 if (fromReplication)
                 {
-                    _documentsStorage.ConflictsStorage.DeleteConflictsFor(context, id);
+                    nonPersistentFlags = _documentsStorage.ConflictsStorage.DeleteConflictsFor(context, id, document).NonPersistentFlags;
                 }
                 else
                 {
-                    changeVector = _documentsStorage.ConflictsStorage.MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, id, newEtag);
+                    var result = _documentsStorage.ConflictsStorage.MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, id, newEtag, document);
+                    changeVector = result.ChangeVector;
+                    nonPersistentFlags = result.NonPersistentFlags;
                 }
             }
 
             if (changeVector != null)
-               return changeVector;
+               return (changeVector, nonPersistentFlags);
 
             ChangeVectorEntry[] oldChangeVector;
             if (fromReplication == false)
@@ -231,10 +244,10 @@ namespace Raven.Server.Documents
             }
             else
             {
-                oldChangeVector = oldValue.Pointer != null ? DocumentsStorage.GetChangeVectorEntriesFromTableValueReader(ref oldValue, (int)DocumentsStorage.DocumentsTable.ChangeVector) : null;
+                oldChangeVector = oldValue.Pointer != null ? DocumentsStorage.TableValueToChangeVector(ref oldValue, (int)DocumentsStorage.DocumentsTable.ChangeVector) : null;
             }
             changeVector = SetDocumentChangeVectorForLocalChange(context, lowerId, oldChangeVector, newEtag);
-            return changeVector;
+            return (changeVector, nonPersistentFlags);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -275,38 +288,27 @@ namespace Raven.Server.Documents
                                             ". Identities are only generated for external requests, not calls to PutDocument and such.");
         }
 
-        private bool ShouldRecreateAttachment(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject oldDoc, BlittableJsonReaderObject document, DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags)
+        private void RecreateAttachments(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject document, 
+            BlittableJsonReaderObject metadata, ref DocumentFlags flags)
         {
-            var shouldRecreateAttachment = false;
-            BlittableJsonReaderObject metadata = null;
-            if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments &&
-                (nonPersistentFlags & NonPersistentDocumentFlags.ByAttachmentUpdate) != NonPersistentDocumentFlags.ByAttachmentUpdate &&
-                (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
+            var actualAttachments = _documentsStorage.AttachmentsStorage.GetAttachmentsMetadataForDocument(context, lowerId);
+            if (actualAttachments.Count == 0)
             {
-                if (oldDoc != null && 
-                    oldDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject oldMetadata) &&
-                    oldMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray oldAttachments))
+                if (metadata != null)
                 {
-                    // Make sure the user did not changed the value of @attachments in the @metadata
-                    // In most cases it won't be changed so we can use this value 
-                    // instead of recreating the document's blitable from scratch
-                    if (document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
-                        metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false ||
-                        attachments.Equals(oldAttachments) == false)
+                    metadata.Modifications = new DynamicJsonValue(metadata);
+                    metadata.Modifications.Remove(Constants.Documents.Metadata.Attachments);
+                    document.Modifications = new DynamicJsonValue(document)
                     {
-                        shouldRecreateAttachment = true;
-                    }
+                        [Constants.Documents.Metadata.Key] = metadata
+                    };
                 }
+
+                flags &= ~DocumentFlags.HasAttachments;
+                return;
             }
 
-            if (shouldRecreateAttachment == false &&
-                (nonPersistentFlags & NonPersistentDocumentFlags.ResolvedAttachmentConflict) != NonPersistentDocumentFlags.ResolvedAttachmentConflict)
-                return false;
-
-            if (shouldRecreateAttachment == false)
-                document.TryGet(Constants.Documents.Metadata.Key, out metadata);
-
-            var actualAttachments = _documentsStorage.AttachmentsStorage.GetAttachmentsMetadataForDocument(context, lowerId);
+            flags |= DocumentFlags.HasAttachments;
             if (metadata == null)
             {
                 document.Modifications = new DynamicJsonValue(document)
@@ -328,8 +330,40 @@ namespace Raven.Server.Documents
                     [Constants.Documents.Metadata.Key] = metadata
                 };
             }
+        }
 
-            return true;
+        private bool ShouldRecreateAttachments(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject oldDoc, 
+            BlittableJsonReaderObject document, ref DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags)
+        {
+            if ((nonPersistentFlags & NonPersistentDocumentFlags.ResolveAttachmentsConflict) == NonPersistentDocumentFlags.ResolveAttachmentsConflict)
+            {
+                document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
+                RecreateAttachments(context, lowerId, document, metadata, ref flags);
+                return true;
+            }
+
+            if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments &&
+                (nonPersistentFlags & NonPersistentDocumentFlags.ByAttachmentUpdate) != NonPersistentDocumentFlags.ByAttachmentUpdate &&
+                (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
+            {
+                if (oldDoc != null && 
+                    oldDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject oldMetadata) &&
+                    oldMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray oldAttachments))
+                {
+                    // Make sure the user did not changed the value of @attachments in the @metadata
+                    // In most cases it won't be changed so we can use this value 
+                    // instead of recreating the document's blitable from scratch
+                    if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
+                        metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false ||
+                        attachments.Equals(oldAttachments) == false)
+                    {
+                        RecreateAttachments(context, lowerId, document, metadata, ref flags);
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         public static void ThrowRequiresTransaction([CallerMemberName]string caller = null)

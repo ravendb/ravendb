@@ -214,7 +214,7 @@ namespace FastTests.Smuggler
 
                     var stats = await store2.Admin.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(4, stats.CountOfDocuments);
-                    Assert.Equal(8, stats.CountOfRevisionDocuments);
+                    Assert.Equal(10, stats.CountOfRevisionDocuments);
                 }
             }
             finally

@@ -114,22 +114,22 @@ namespace Voron.Data.Tables
 
         public bool ReadByKey(Slice key, out TableValueReader reader)
         {
-            long id;
-            if (TryFindIdFromPrimaryKey(key, out id) == false)
+            if (TryFindIdFromPrimaryKey(key, out long id) == false)
             {
                 reader = default(TableValueReader);
                 return false;
             }
 
-            int size;
-            var rawData = DirectRead(id, out size);
+            var rawData = DirectRead(id, out int size);
             reader = new TableValueReader(id, rawData, size);
             return true;
         }
 
         public bool VerifyKeyExists(Slice key)
         {
-            return TryFindIdFromPrimaryKey(key, out long id);
+            var pkTree = GetTree(_schema.Key);
+            var readResult = pkTree?.Read(key);
+            return readResult != null;
         }
 
         private bool TryFindIdFromPrimaryKey(Slice key, out long id)
@@ -243,8 +243,7 @@ namespace Voron.Data.Tables
 
         public void Delete(long id)
         {
-            int size;
-            var ptr = DirectRead(id, out size);
+            var ptr = DirectRead(id, out int size);
             if (ptr == null)
                 return;
 
@@ -258,7 +257,7 @@ namespace Voron.Data.Tables
                 var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
                 _overflowPageCount -= numberOfPages;
 
-                for (int i = 0; i < numberOfPages; i++)
+                for (var i = 0; i < numberOfPages; i++)
                 {
                     _tx.LowLevelTransaction.FreePage(page.PageNumber + i);
                 }
@@ -266,8 +265,7 @@ namespace Voron.Data.Tables
 
             NumberOfEntries--;
 
-            byte* updatePtr;
-            using (_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats), out updatePtr))
+            using (_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats), out byte* updatePtr))
             {
                 var stats = (TableSchemaStats*)updatePtr;
 
@@ -299,14 +297,12 @@ namespace Voron.Data.Tables
             var idsInSection = ActiveDataSmallSection.GetAllIdsInSectionContaining(id);
             foreach (var idToMove in idsInSection)
             {
-                int itemSize;
-                var pos = ActiveDataSmallSection.DirectRead(idToMove, out itemSize);
+                var pos = ActiveDataSmallSection.DirectRead(idToMove, out int itemSize);
                 var newId = AllocateFromSmallActiveSection(itemSize);
 
                 OnDataMoved(idToMove, newId, pos, itemSize);
 
-                byte* writePos;
-                if (ActiveDataSmallSection.TryWriteDirect(newId, itemSize, out writePos) == false)
+                if (ActiveDataSmallSection.TryWriteDirect(newId, itemSize, out byte* writePos) == false)
                     throw new InvalidDataException($"Cannot write to newly allocated size in {Name} during delete");
 
                 Memory.Copy(writePos, pos, itemSize);
@@ -320,8 +316,7 @@ namespace Voron.Data.Tables
         {
             if (_schema.Key != null)
             {
-                Slice keySlice;
-                using (_schema.Key.GetSlice(_tx.Allocator, ref value, out keySlice))
+                using (_schema.Key.GetSlice(_tx.Allocator, ref value, out Slice keySlice))
                 {
                     var pkTree = GetTree(_schema.Key);
                     pkTree.Delete(keySlice);
@@ -332,8 +327,7 @@ namespace Voron.Data.Tables
             {
                 // For now we wont create secondary indexes on Compact trees.
                 var indexTree = GetTree(indexDef);
-                Slice val;
-                using (indexDef.GetSlice(_tx.Allocator, ref value, out val))
+                using (indexDef.GetSlice(_tx.Allocator, ref value, out Slice val))
                 {
                     var fst = GetFixedSizeTree(indexTree, val.Clone(_tx.Allocator), 0);
                     fst.Delete(id);
@@ -355,7 +349,7 @@ namespace Voron.Data.Tables
             // The ids returned from this function MUST NOT be stored outside of the transaction.
             // These are merely for manipulation within the same transaction, and WILL CHANGE afterwards.
 
-            int size = builder.Size;
+            var size = builder.Size;
 
             byte* pos;
             long id;
@@ -707,8 +701,7 @@ namespace Voron.Data.Tables
 
         private void ReadById(long id, out TableValueReader reader)
         {
-            int size;
-            var ptr = DirectRead(id, out size);
+            var ptr = DirectRead(id, out int size);
             reader = new TableValueReader(id, ptr, size);
         }
 

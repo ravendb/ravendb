@@ -201,12 +201,10 @@ namespace Raven.Server.Documents.Replication
                 using (documentsOperationContext.OpenReadTransaction())
                 using (var configTx = configurationContext.OpenReadTransaction())
                 {
-                    var documentsChangeVector = new DynamicJsonArray();
-                    foreach (
-                        var changeVectorEntry in
-                        Database.DocumentsStorage.GetDatabaseChangeVector(documentsOperationContext))
+                    var changeVector = new DynamicJsonArray();
+                    foreach (var changeVectorEntry in Database.DocumentsStorage.GetDatabaseChangeVector(documentsOperationContext))
                     {
-                        documentsChangeVector.Add(new DynamicJsonValue
+                        changeVector.Add(new DynamicJsonValue
                         {
                             [nameof(ChangeVectorEntry.DbId)] = changeVectorEntry.DbId.ToString(),
                             [nameof(ChangeVectorEntry.Etag)] = changeVectorEntry.Etag
@@ -216,15 +214,13 @@ namespace Raven.Server.Documents.Replication
                     var lastEtagFromSrc = Database.DocumentsStorage.GetLastReplicateEtagFrom(
                         documentsOperationContext, getLatestEtagMessage.SourceDatabaseId);
                     if (_log.IsInfoEnabled)
-                    {
                         _log.Info($"GetLastEtag response, last etag: {lastEtagFromSrc}");
-                    }
                     var response = new DynamicJsonValue
                     {
                         [nameof(ReplicationMessageReply.Type)] = "Ok",
                         [nameof(ReplicationMessageReply.MessageType)] = ReplicationMessageType.Heartbeat,
                         [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastEtagFromSrc,
-                        [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentsChangeVector
+                        [nameof(ReplicationMessageReply.ChangeVector)] = changeVector
                     };
 
                     documentsOperationContext.Write(writer, response);

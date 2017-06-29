@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Documents.Versioning;
@@ -386,7 +387,8 @@ namespace SlowTests.Client.Attachments
                     {
                         var user = session.Load<User>("users/" + i);
                         var metadata = session.Advanced.GetMetadataFor(user);
-                        Assert.False(metadata.ContainsKey(Constants.Documents.Metadata.Flags));
+                        Assert.DoesNotContain(DocumentFlags.HasAttachments.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+                        Assert.Equal(DocumentFlags.FromReplication.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
                         Assert.False(metadata.ContainsKey(Constants.Documents.Metadata.Attachments));
                     }
                 }
@@ -895,15 +897,40 @@ namespace SlowTests.Client.Attachments
 
                 var conflicts = WaitUntilHasConflict(store1, "users/1");
                 Assert.Equal(2, conflicts.Length);
-                AssertConflict(conflicts[0], "a1", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "a1/png", 3);
-                AssertConflict(conflicts[1], "a1", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "a2/jpeg", 3);
+                var hash = "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=";
+                AssertConflict(conflicts[0], "a1", hash, "a1/png", 3);
+                AssertConflict(conflicts[1], "a1", hash, "a2/jpeg", 3);
 
                 conflicts = WaitUntilHasConflict(store2, "users/1");
                 Assert.Equal(2, conflicts.Length);
-                AssertConflict(conflicts[0], "a1", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "a1/png", 3);
-                AssertConflict(conflicts[1], "a1", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "a2/jpeg", 3);
+                AssertConflict(conflicts[0], "a1", hash, "a1/png", 3);
+                AssertConflict(conflicts[1], "a1", hash, "a2/jpeg", 3);
 
-                WaitForUserToContinueTheTest(store1);
+                await ResolveConflict(store1, store2, conflicts[0].Doc, "a1", hash, "a1/png", 3);
+            }
+        }
+
+        private async Task ResolveConflict(DocumentStore store1, DocumentStore store2, BlittableJsonReaderObject document,
+            string name, string hash, string contentType, long size)
+        {
+            await store1.Commands().PutAsync("users/1", null, document);
+            await AssertConflictResolved(store1, name, hash, contentType, size);
+
+            WaitForMarker(store1, store2);
+            await AssertConflictResolved(store2, name, hash, contentType, size);
+        }
+
+        private async Task AssertConflictResolved(DocumentStore store, string name, string hash, string contentType, long size)
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                var user = await session.LoadAsync<User>("users/1");
+                var attachments = session.Advanced.GetAttachmentNames(user);
+                var attachment = attachments.Single();
+                Assert.Equal(name, attachment.Name);
+                Assert.Equal(hash, attachment.Hash);
+                Assert.Equal(contentType, attachment.ContentType);
+                Assert.Equal(size, attachment.Size);
             }
         }
 
@@ -952,6 +979,8 @@ namespace SlowTests.Client.Attachments
                 Assert.Equal(2, conflicts.Length);
                 AssertConflict(conflicts[0], "a1", hash1, "a1/png", 3);
                 AssertConflict(conflicts[1], "a1", hash2, "a1/png", 5);
+
+                await ResolveConflict(store1, store2, conflicts[1].Doc, "a1", hash2, "a1/png", 5);
             }
         }
 

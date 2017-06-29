@@ -47,10 +47,10 @@ namespace Raven.Server.Documents.Replication
 
         internal DateTime _lastDocumentSentTime;
 
-        internal readonly Dictionary<Guid, long> _destinationLastKnownDocumentChangeVector =
+        internal readonly Dictionary<Guid, long> _destinationLastKnownChangeVector =
             new Dictionary<Guid, long>();
 
-        internal string _destinationLastKnownDocumentChangeVectorAsString;
+        internal string _destinationLastKnownChangeVectorAsString;
 
         private TcpClient _tcpClient;
 
@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Replication
 
         public long LastHeartbeatTicks;
         private Stream _stream;
-        private InterruptibleRead _interruptableRead;
+        private InterruptibleRead _interruptibleRead;
 
         public event Action<OutgoingReplicationHandler, Exception> Failed;
 
@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Replication
                     wrapSsl.Wait(CancellationToken);
 
                     using (_stream = wrapSsl.Result)
-                    using (_interruptableRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream))
+                    using (_interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream))
                     using (_buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance())
                     {
                         var documentSender = new ReplicationDocumentSender(_stream, this, _log);
@@ -281,7 +281,7 @@ namespace Raven.Server.Documents.Replication
             {
                 if (_log.IsInfoEnabled)
                     _log.Info(
-                        $"Unexpected exception occured on replication thread ({FromToString}). Replication stopped (will be retried later).",
+                        $"Unexpected exception occurred on replication thread ({FromToString}). Replication stopped (will be retried later).",
                         e);
                 Failed?.Invoke(this, e);
             }
@@ -346,7 +346,7 @@ namespace Raven.Server.Documents.Replication
         private void ReadHeaderResponseAndThrowIfUnAuthorized()
         {
             var timeout = 2 * 60 * 1000; // TODO: configurable
-            using (var replicationTcpConnectReplyMessage = _interruptableRead.ParseToMemory(
+            using (var replicationTcpConnectReplyMessage = _interruptibleRead.ParseToMemory(
                 _connectionDisposed,
                 "replication acknowledge response",
                 timeout,
@@ -377,7 +377,7 @@ namespace Raven.Server.Documents.Replication
         {
             while (true)
             {
-                using (var result = _interruptableRead.ParseToMemory(
+                using (var result = _interruptibleRead.ParseToMemory(
                     _waitForChanges,
                     "replication notify message",
                     timeout,
@@ -398,8 +398,7 @@ namespace Raven.Server.Documents.Replication
 
         internal void WriteToServer(DynamicJsonValue val)
         {
-            DocumentsOperationContext documentsContext;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
             {
                 documentsContext.Write(writer, val);
@@ -412,7 +411,7 @@ namespace Raven.Server.Documents.Replication
                 throw new InvalidOperationException(
                     "MessageType on replication response is null. This is likely is a symptom of an issue, and should be investigated.");
 
-            _destinationLastKnownDocumentChangeVector.Clear();
+            _destinationLastKnownChangeVector.Clear();
 
             UpdateDestinationChangeVectorHeartbeat(replicationBatchReply);
         }
@@ -422,15 +421,14 @@ namespace Raven.Server.Documents.Replication
             _lastSentDocumentEtag = Math.Max(_lastSentDocumentEtag, replicationBatchReply.LastEtagAccepted);
             LastAcceptedDocumentEtag = replicationBatchReply.LastEtagAccepted;
 
-            _destinationLastKnownDocumentChangeVectorAsString = replicationBatchReply.DocumentsChangeVector.Format();
+            _destinationLastKnownChangeVectorAsString = replicationBatchReply.ChangeVector.Format();
 
-            foreach (var changeVectorEntry in replicationBatchReply.DocumentsChangeVector)
+            foreach (var changeVectorEntry in replicationBatchReply.ChangeVector)
             {
-                _destinationLastKnownDocumentChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
+                _destinationLastKnownChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
             }
 
-            DocumentsOperationContext documentsContext;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (documentsContext.OpenReadTransaction())
             {
                 if (DocumentsStorage.ReadLastEtag(documentsContext.Transaction.InnerTransaction) !=
@@ -502,7 +500,7 @@ namespace Raven.Server.Documents.Replication
                 var timeout = 2 * 60 * 1000; // TODO: configurable
                 if (Debugger.IsAttached)
                     timeout *= 10;
-                using (var replicationBatchReplyMessage = _interruptableRead.ParseToMemory(
+                using (var replicationBatchReplyMessage = _interruptibleRead.ParseToMemory(
                     _connectionDisposed,
                     "replication acknowledge message",
                     timeout,
@@ -582,7 +580,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     case ReplicationMessageReply.ReplyType.Ok:
                         _log.Info(
-                            $"Received reply for replication batch from {Destination.FromString()}. New destination change vector is {_destinationLastKnownDocumentChangeVectorAsString}");
+                            $"Received reply for replication batch from {Destination.FromString()}. New destination change vector is {_destinationLastKnownChangeVectorAsString}");
                         break;
                     case ReplicationMessageReply.ReplyType.Error:
                         _log.Info(
@@ -609,7 +607,7 @@ namespace Raven.Server.Documents.Replication
         private int _disposed;
         public void Dispose()
         {
-            //There are multiple invokations of dispose, this happens sometimes during tests, causing failures.
+            //There are multiple invocations of dispose, this happens sometimes during tests, causing failures.
             if (Interlocked.CompareExchange(ref _disposed, 1, 0) == 1)
                 return;
             if (_log.IsInfoEnabled)
@@ -648,7 +646,6 @@ namespace Raven.Server.Documents.Replication
     public static class ReplicationMessageType
     {
         public const string Heartbeat = "Heartbeat";
-        public const string IndexesTransformers = "IndexesTransformers";
         public const string Documents = "Documents";
     }
 }

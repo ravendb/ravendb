@@ -482,7 +482,7 @@ namespace Raven.Server.Documents.Replication
 
         private void SendHeartbeatStatusToSource(DocumentsOperationContext documentsContext, TransactionOperationContext configurationContext, BlittableJsonTextWriter writer, long lastDocumentEtag, string handledMessageType)
         {
-            var documentChangeVectorAsDynamicJson = new DynamicJsonArray();
+            var changeVectorAsDynamicJson = new DynamicJsonArray();
             ChangeVectorEntry[] databaseChangeVector;
 
             using (documentsContext.OpenReadTransaction())
@@ -492,7 +492,7 @@ namespace Raven.Server.Documents.Replication
 
             foreach (var changeVectorEntry in databaseChangeVector)
             {
-                documentChangeVectorAsDynamicJson.Add(new DynamicJsonValue
+                changeVectorAsDynamicJson.Add(new DynamicJsonValue
                 {
                     [nameof(ChangeVectorEntry.DbId)] = changeVectorEntry.DbId.ToString(),
                     [nameof(ChangeVectorEntry.Etag)] = changeVectorEntry.Etag
@@ -511,7 +511,7 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastDocumentEtag,
                 
                 [nameof(ReplicationMessageReply.Exception)] = null,
-                [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentChangeVectorAsDynamicJson,
+                [nameof(ReplicationMessageReply.ChangeVector)] = changeVectorAsDynamicJson,
                 [nameof(ReplicationMessageReply.DatabaseId)] = _database.DbId.ToString(),
             };
 
@@ -608,8 +608,15 @@ namespace Raven.Server.Documents.Replication
 
                 var item = new ReplicationItem
                 {
-                    Type = *(ReplicationBatchItem.ReplicationItemType*)ReadExactly(sizeof(byte))
+                    Type = *(ReplicationBatchItem.ReplicationItemType*)ReadExactly(sizeof(byte)),
+                    Position = writeBuffer.SizeInBytes,
+                    ChangeVectorCount = *(int*)ReadExactly(sizeof(int))
                 };
+
+                var changeVectorSize = sizeof(ChangeVectorEntry) * item.ChangeVectorCount;
+                writeBuffer.Write(ReadExactly(changeVectorSize), changeVectorSize);
+
+                item.TransactionMarker = *(short*)ReadExactly(sizeof(short));
 
                 if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                 {
@@ -617,8 +624,6 @@ namespace Raven.Server.Documents.Replication
 
                     using (attachmentRead.Start())
                     {
-                        item.TransactionMarker = *(short*)ReadExactly(sizeof(short));
-
                         var loweredKeySize = *(int*)ReadExactly(sizeof(int));
                         item.KeyDispose = Slice.From(context.Allocator, ReadExactly(loweredKeySize), loweredKeySize, out item.Key);
 
@@ -640,8 +645,6 @@ namespace Raven.Server.Documents.Replication
 
                     using (tombstoneRead.Start())
                     {
-                        item.TransactionMarker = *(short*)ReadExactly(sizeof(short));
-
                         var keySize = *(int*)ReadExactly(sizeof(int));
                         item.KeyDispose = Slice.From(context.Allocator, ReadExactly(keySize), keySize, out item.Key);
                     }
@@ -663,13 +666,6 @@ namespace Raven.Server.Documents.Replication
 
                     using (scope.Start())
                     {
-                        item.Position = writeBuffer.SizeInBytes;
-                        item.ChangeVectorCount = *(int*)ReadExactly(sizeof(int));
-
-                        writeBuffer.Write(ReadExactly(sizeof(ChangeVectorEntry) * item.ChangeVectorCount), sizeof(ChangeVectorEntry) * item.ChangeVectorCount);
-
-                        item.TransactionMarker = *(short*)ReadExactly(sizeof(short));
-
                         item.LastModifiedTicks = *(long*)ReadExactly(sizeof(long));
 
                         item.Flags = *(DocumentFlags*)ReadExactly(sizeof(DocumentFlags)) | DocumentFlags.FromReplication;
@@ -816,23 +812,24 @@ namespace Raven.Server.Documents.Replication
                         {
                             Debug.Assert(item.Flags.HasFlag(DocumentFlags.Artificial) == false);
 
+                            ReadChangeVector(item.ChangeVectorCount, item.Position, _buffer, maxReceivedChangeVectorByDatabase);
+
                             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                             {
                                 if (_incoming._log.IsInfoEnabled)
-                                    _incoming._log.Info($"Got incoming attachment, doing PUT on attachment = {item.Name}, with key = {item.Key}");
+                                    _incoming._log.Info($"AttachmentPUT '{item.Name}' - '{item.Key}', with change vector = {_changeVector.Format()}");
 
                                 database.DocumentsStorage.AttachmentsStorage.PutDirect(context, item.Key, item.Name,
-                                    item.ContentType, item.Base64Hash);
+                                    item.ContentType, item.Base64Hash, _changeVector);
 
                                 if (_incoming._replicatedAttachmentStreams.TryGetValue(item.Base64Hash, out ReplicationAttachmentStream attachmentStream))
                                 {
                                     using (attachmentStream)
                                     {
                                         if (_incoming._log.IsInfoEnabled)
-                                            _incoming._log.Info($"Got incoming attachment stream, doing PUT on attachment stream = {attachmentStream.Base64Hash}");
+                                            _incoming._log.Info($"AttachmentStreamPUT '{attachmentStream.Base64Hash}' - '{item.Name}' - '{item.Key}', with change vector = {_changeVector.Format()}");
 
-                                        database.DocumentsStorage.AttachmentsStorage.
-                                            PutAttachmentStream(context, item.Key, attachmentStream.Base64Hash, attachmentStream.File);
+                                        database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, item.Key, attachmentStream.Base64Hash, attachmentStream.File);
 
                                         _incoming._replicatedAttachmentStreams.Remove(item.Base64Hash);
                                     }
@@ -841,17 +838,14 @@ namespace Raven.Server.Documents.Replication
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
                             {
                                 if (_incoming._log.IsInfoEnabled)
-                                    _incoming._log.Info($"Got incoming attachment tombstone, doing DELETE on attachment {item.Key}");
-
-                                database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, item.Key, false, "$fromReplication", null);
+                                    _incoming._log.Info($"AttachmentDELETE '{item.Key}', with change vector = {_changeVector.Format()}");
+                                database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, item.Key, false, "$fromReplication", null, _changeVector);
                             }
                             else
                             {
                                 BlittableJsonReaderObject document = null;
                                 try
                                 {
-                                    ReadChangeVector(item.ChangeVectorCount, item.Position, _buffer, maxReceivedChangeVectorByDatabase);
-
                                     // no need to load document data for tombstones
                                     // document size == -1 --> doc is a tombstone
                                     if (item.DocumentSize >= 0)
@@ -862,9 +856,8 @@ namespace Raven.Server.Documents.Replication
 
                                         //if something throws at this point, this means something is really wrong and we should stop receiving documents.
                                         //the other side will receive negative ack and will retry sending again.
-                                        document = new BlittableJsonReaderObject(
-                                            _buffer + item.Position + (item.ChangeVectorCount * sizeof(ChangeVectorEntry)),
-                                            item.DocumentSize, context);
+                                        var changeVectorSize = item.ChangeVectorCount * sizeof(ChangeVectorEntry);
+                                        document = new BlittableJsonReaderObject(_buffer + item.Position + changeVectorSize, item.DocumentSize, context);
                                         document.BlittableValidation();
                                     }
 
@@ -876,6 +869,8 @@ namespace Raven.Server.Documents.Replication
                                                 _incoming._log.Operations("Versioning storage is disabled but the node got a versioned document from replication.");
                                             continue;
                                         }
+                                        if (_incoming._log.IsInfoEnabled)
+                                            _incoming._log.Info($"RevisionPUT '{item.Id}', with change vector = {_changeVector.Format()}");
                                         database.DocumentsStorage.VersioningStorage.Put(context, item.Id, document, item.Flags,
                                             NonPersistentDocumentFlags.FromReplication, _changeVector, item.LastModifiedTicks);
                                         continue;
@@ -889,6 +884,8 @@ namespace Raven.Server.Documents.Replication
                                                 _incoming._log.Operations("Versioning storage is disabled but the node got a versioned document from replication.");
                                             continue;
                                         }
+                                        if (_incoming._log.IsInfoEnabled)
+                                            _incoming._log.Info($"RevisionDELETE '{item.Id}', with change vector = {_changeVector.Format()}");
                                         database.DocumentsStorage.VersioningStorage.Delete(context, item.Id, document, _changeVector,
                                             item.LastModifiedTicks, NonPersistentDocumentFlags.FromReplication);
                                         continue;
@@ -902,8 +899,11 @@ namespace Raven.Server.Documents.Replication
                                             if (document != null)
                                             {
                                                 if (_incoming._log.IsInfoEnabled)
-                                                    _incoming._log.Info(
-                                                        $"Conflict check resolved to Update operation, doing PUT on doc = {item.Id}, with change vector = {_changeVector.Format()}");
+                                                    _incoming._log.Info($"Conflict check resolved to Update operation, doing PUT on doc = {item.Id}, " +
+                                                                        $"with change vector = {_changeVector.Format()}");
+#if DEBUG
+                                                AttachmentsStorage.AssertAttachments(document, item.Flags);
+#endif
                                                 database.DocumentsStorage.Put(context, item.Id, null, document, item.LastModifiedTicks, _changeVector,
                                                     item.Flags, NonPersistentDocumentFlags.FromReplication);
                                             }
@@ -911,7 +911,8 @@ namespace Raven.Server.Documents.Replication
                                             {
                                                 if (_incoming._log.IsInfoEnabled)
                                                     _incoming._log.Info(
-                                                        $"Conflict check resolved to Update operation, writing tombstone for doc = {item.Id}, with change vector = {_changeVector.Format()}");
+                                                        $"Conflict check resolved to Update operation, writing tombstone for doc = {item.Id}, " +
+                                                        $"with change vector = {_changeVector.Format()}");
                                                 using (DocumentIdWorker.GetSliceFromId(context, item.Id, out Slice keySlice))
                                                 {
                                                     database.DocumentsStorage.Delete(
@@ -924,9 +925,8 @@ namespace Raven.Server.Documents.Replication
                                             break;
                                         case ConflictsStorage.ConflictStatus.Conflict:
                                             if (_incoming._log.IsInfoEnabled)
-                                                _incoming._log.Info(
-                                                    $"Conflict check resolved to Conflict operation, resolving conflict for doc = {item.Id}, with change vector = {_changeVector.Format()}");
-                                            _incoming._conflictManager.HandleConflictForDocument(context, item.Id, item.Collection, item.LastModifiedTicks, document, _changeVector, conflictingVector);
+                                                _incoming._log.Info($"Conflict check resolved to Conflict operation, resolving conflict for doc = {item.Id}, with change vector = {_changeVector.Format()}");
+                                            _incoming._conflictManager.HandleConflictForDocument(context, item.Id, item.Collection, item.LastModifiedTicks, document, _changeVector, conflictingVector, item.Flags);
                                             break;
                                         case ConflictsStorage.ConflictStatus.AlreadyMerged:
                                             if (_incoming._log.IsInfoEnabled)

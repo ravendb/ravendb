@@ -226,7 +226,7 @@ namespace Raven.Server.ServerWide.Maintenance
                    promotableClusterStats.LastReport.TryGetValue(dbName, out var promotableDbStats) == false)
                     continue;
 
-                var status = ConflictsStorage.GetConflictStatus(mentorPrevDbStats.LastDocumentChangeVector, promotableDbStats.LastDocumentChangeVector);
+                var status = ConflictsStorage.GetConflictStatus(mentorPrevDbStats.LastChangeVector, promotableDbStats.LastChangeVector);
                 if (status == ConflictsStorage.ConflictStatus.AlreadyMerged)
                 {
                     if (previousClusterStats.TryGetValue(promotable, out var promotablePrevClusterStats) == false ||
@@ -254,7 +254,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     if (_logger.IsInfoEnabled)
                     {
                         _logger.Info($"The database {dbName} on {promotable} not ready to be promoted, because the change vectors are {status}.\n" +
-                                           $"mentor's change vector : {mentorPrevDbStats.LastDocumentChangeVector}, node's change vector : {promotableDbStats.LastDocumentChangeVector}");
+                                           $"mentor's change vector : {mentorPrevDbStats.LastChangeVector}, node's change vector : {promotableDbStats.LastChangeVector}");
                     }
                 }
             }

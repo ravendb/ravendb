@@ -383,7 +383,7 @@ namespace Raven.Server.Documents.Patch
                         if (modification.isDeleted)
                             continue;
 
-                        obj[prop.Name] = ToBlittableValue(modification.value, CreatePropertyKey(prop.Name, propertyKey), jsObject == modification.value);
+                        obj[prop.Name] = ToBlittableValue(modification.value, CreatePropertyKey(prop.Name, propertyKey), jsObject == modification.value, prop.Token, prop.Value);
                     }
                     else
                     {
@@ -461,14 +461,20 @@ namespace Raven.Server.Documents.Patch
             {
                 var num = v.AsNumber();
 
-                if (originalValue != null && token != null && token.HasValue && (
-                    (token.Value & BlittableJsonToken.Float) == BlittableJsonToken.Float ||
-                    (token.Value & BlittableJsonToken.Integer) == BlittableJsonToken.Integer))
+                if (originalValue != null && token.HasValue &&
+                    ((token.Value & BlittableJsonToken.Float) == BlittableJsonToken.Float ||
+                     (token.Value & BlittableJsonToken.Integer) == BlittableJsonToken.Integer))
                 {
                     // If the current value is exactly as the original value, we can return the original value before we made the JS conversion, 
                     // which will convert a Int64 to jsFloat.
 
-                    if (Math.Abs(num - Convert.ToDouble(originalValue)) < double.Epsilon)
+                    double originalDouble;
+                    if (originalValue is LazyDoubleValue ldv)
+                        originalDouble = ldv;
+                    else
+                        originalDouble = Convert.ToDouble(originalValue);
+
+                    if (Math.Abs(num - originalDouble) < double.Epsilon)
                         return originalValue;
 
                     //We might have change the type of num from Integer to long in the script by design 
