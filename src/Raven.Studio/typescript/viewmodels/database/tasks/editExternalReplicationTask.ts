@@ -36,12 +36,12 @@ class editExternalReplicationTask extends viewModelBase {
     }
 
     saveExternalReplication() {
-        // 1. validate model
+        // 1. Validate model
         if (!this.validate()) {
              return;
         }
 
-        // 2. create/add the new replication task
+        // 2. Create/add the new replication task
         const dto = this.editedExternalReplication().toDto();
 
         this.taskId = this.isAddingNewReplicationTask() ? 0 : this.taskId;

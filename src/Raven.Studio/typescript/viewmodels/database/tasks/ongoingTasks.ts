@@ -8,6 +8,7 @@ import ongoingTaskReplication = require("models/database/tasks/ongoingTaskReplic
 import ongoingTaskBackup = require("models/database/tasks/ongoingTaskBackupModel");
 import ongoingTaskEtl = require("models/database/tasks/ongoingTaskETLModel");
 import ongoingTaskSql = require("models/database/tasks/ongoingTaskSQLModel");
+import ongoingTaskSubscription = require("models/database/tasks/ongoingTaskSubscriptionModel");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import createOngoingTask = require("viewmodels/database/tasks/createOngoingTask");
 import deleteOngoingTaskConfirm = require("viewmodels/database/tasks/deleteOngoingTaskConfirm");
@@ -26,18 +27,18 @@ class ongoingTasks extends viewModelBase {
     private clusterManager = clusterTopologyManager.default;
     myNodeTag = ko.observable<string>();
 
-    // Ongoing tasks lists:
+    // The Ongoing Tasks Lists:
     replicationTasks = ko.observableArray<ongoingTaskReplication>(); 
     etlTasks = ko.observableArray<ongoingTaskEtl>();
     sqlTasks = ko.observableArray<ongoingTaskSql>();
     backupTasks = ko.observableArray<ongoingTaskBackup>();
+    subscriptionTasks = ko.observableArray<ongoingTaskSubscription>();
 
     existingTaskTypes = ko.observableArray<string>();
     selectedTaskType = ko.observable<string>();
-    
-    subscriptionsCount = ko.observable<number>();
-    subsCountText: KnockoutComputed<string>;
-    urlForSubscriptions: KnockoutComputed<string>;
+
+    existingNodes = ko.observableArray<string>();
+    selectedNode = ko.observable<string>();
     
     constructor() {
         super();
@@ -48,8 +49,6 @@ class ongoingTasks extends viewModelBase {
 
     private initObservables() {
         this.myNodeTag(this.clusterManager.localNodeTag());
-        this.subsCountText = ko.pureComputed(() => { return `(${this.subscriptionsCount()})`; });
-        this.urlForSubscriptions = ko.pureComputed(() => appUrl.forSubscriptions(this.activeDatabase()));
     }
 
     activate(args: any): JQueryPromise < Raven.Server.Web.System.OngoingTasksResult> {
@@ -63,7 +62,8 @@ class ongoingTasks extends viewModelBase {
         const db = this.activeDatabase();
         this.updateUrl(appUrl.forOngoingTasks(db));
 
-        this.selectedTaskType(_.first(this.existingTaskTypes()) || "All");
+        this.selectedTaskType("All tasks"); 
+        this.selectedNode("All nodes"); 
     }
 
     private fetchOngoingTasks(): JQueryPromise<Raven.Server.Web.System.OngoingTasksResult> {
@@ -80,15 +80,15 @@ class ongoingTasks extends viewModelBase {
         this.backupTasks([]);
         this.etlTasks([]);
         this.sqlTasks([]);
+        this.subscriptionTasks([]);
 
         const taskTypesSet = new Set<TasksNamesInUI>();
-
-        this.subscriptionsCount(result.SubscriptionsCount);
-        if (result.SubscriptionsCount > 0) {
-            taskTypesSet.add("Subscription");
-        }
-
+        const nodesSet = new Set<string>();
+      
         result.OngoingTasksList.map((task) => {
+
+            nodesSet.add(task.ResponsibleNode.NodeTag);
+
             switch (task.TaskType) {
                 case 'Replication':
                     this.replicationTasks.push(new ongoingTaskReplication(task as Raven.Server.Web.System.OngoingTaskReplication));
@@ -106,15 +106,21 @@ class ongoingTasks extends viewModelBase {
                     this.sqlTasks.push(new ongoingTaskSql(task as Raven.Server.Web.System.OngoingSqlEtl));
                     taskTypesSet.add("SQL ETL");
                     break;
+                //case 'Subscription': 
+                //    this.subscriptionTasks.push(new ongoingTaskSubscription(task as Raven.Server.Web.System.OngoingTaskSubscription)); 
+                //    taskTypesSet.add("Subscription");
+                //    break;
             };
         });
 
         this.existingTaskTypes(Array.from(taskTypesSet).sort());
+        this.existingNodes(Array.from(nodesSet).sort());
 
         this.replicationTasks(_.sortBy(this.replicationTasks(), x => x.taskName().toUpperCase()));
         this.backupTasks(_.sortBy(this.backupTasks(), x => x.taskName().toUpperCase())); 
         this.etlTasks(_.sortBy(this.etlTasks(), x => x.taskName().toUpperCase())); 
         this.sqlTasks(_.sortBy(this.sqlTasks(), x => x.taskName().toUpperCase())); 
+        this.subscriptionTasks(_.sortBy(this.subscriptionTasks(), x => x.taskName().toUpperCase())); 
     }
 
     manageDatabaseGroupUrl(dbInfo: databaseInfo): string {
@@ -169,6 +175,16 @@ class ongoingTasks extends viewModelBase {
             .done(() => this.fetchOngoingTasks());
     }
 
+    refreshOngoingTaskInfo(model: ongoingTaskModel) {
+        alert("TBD - Refresh task info...");
+        // TODO...
+    }
+
+    disconnectClientFromSubscription(model: ongoingTaskModel) {
+        alert("TBD - Disconnect client from subscription");
+        // TODO..
+    }
+
     addNewOngoingTask() {
         const addOngoingTaskView = new createOngoingTask();
         app.showBootstrapDialog(addOngoingTaskView);
@@ -176,6 +192,10 @@ class ongoingTasks extends viewModelBase {
 
     setSelectedTaskType(taskName: string) {
         this.selectedTaskType(taskName);
+    }
+
+    setSelectedNode(node: string) {
+        this.selectedNode(node);
     }
 }
 

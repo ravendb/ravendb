@@ -636,4 +636,30 @@ namespace Raven.Server.Web.System
             return json;
         }
     }
+
+    // NOTE: This class is just some initial version - was needed for starting to work on subscriptions - will be obviously modified by issue 7084 !!!
+    public class OngoingTaskSubscription : OngoingTask
+    {
+        public string Script { get; set; }
+        public string ClientAddress { get; set; }
+        public DateTime ConnectedFrom { get; set; }
+        public string Collection { get; set; }
+        public string SendDocumetnsFromChangeVector { get; set; }
+        public string LastSentChangeVector { get; set; }
+
+        public OngoingTaskSubscription()
+        {
+            TaskType = OngoingTaskType.Subscription;
+        }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(Script)] = Script;
+            json[nameof(Collection)] = Collection;
+            json[nameof(SendDocumetnsFromChangeVector)] = SendDocumetnsFromChangeVector;
+            json[nameof(LastSentChangeVector)] = LastSentChangeVector;
+            return json;
+        }
+    }
 }
