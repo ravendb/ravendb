@@ -120,6 +120,8 @@ namespace Raven.Server.Documents.Subscriptions
                         AppropriateNode = whoseTaskIsIt
                     };
                 }
+                if(subscription.Disabled)
+                    throw new SubscriptionClosedException($"The subscription {id} is disabled and cannot be used until enabled");
             }
         }
 

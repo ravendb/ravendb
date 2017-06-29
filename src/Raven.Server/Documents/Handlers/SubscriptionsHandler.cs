@@ -104,30 +104,6 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        // TODO: do we need this?
-        [RavenAction("/databases/*/subscriptions/count", "GET", "/databases/{databaseName:string}/subscriptions/count")]
-        public Task GetRunningSubscriptionsCount()
-        {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            using (context.OpenReadTransaction())
-            {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    var runningCount = Database.SubscriptionStorage.GetRunningCount();
-                    var totalCount = Database.SubscriptionStorage.GetAllSubscriptionsCount();
-
-                    context.Write(writer, new DynamicJsonValue()
-                    {
-                        ["Running"] = runningCount,
-                        ["Total"] = totalCount
-                    });
-                }
-            }
-
-            return Task.CompletedTask;
-        }
-
         [RavenAction("/databases/*/subscriptions/drop", "POST", "/databases/{databaseName:string}/subscriptions/drop?id={subscriptionId:long}")]
         public Task DropSubscriptionConnection()
         {
