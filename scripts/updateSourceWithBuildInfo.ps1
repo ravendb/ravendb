@@ -17,6 +17,7 @@ function UpdateCsprojWithVersionInfo ( $projectDir, $version ) {
     $toolsCsprojs = Get-ChildItem -Recurse -Path $(Join-Path $projectDir -ChildPath "tools") -Include *.csproj
 
     foreach ($csproj in $($srcCsprojs + $testCsprojs + $toolsCsprojs)) {
+        "Set version in $csproj..."
         $text = $([System.IO.File]::ReadAllText($csproj)) -Replace '<Version>[A-Za-z0-9.-]*</Version>',"<Version>$version</Version>"
         [System.IO.File]::WriteAllText($csproj, $text, [System.Text.Encoding]::UTF8)
     }
