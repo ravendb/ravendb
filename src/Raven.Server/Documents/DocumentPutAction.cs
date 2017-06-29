@@ -45,10 +45,11 @@ namespace Raven.Server.Documents
 #if DEBUG
             var documentDebugHash = document.DebugHash;
             document.BlittableValidation();
-#endif
-
             BlittableJsonReaderObject.AssertNoModifications(document, id, assertChildren: true);
             AssertMetadataWasFiltered(document);
+            if ((nonPersistentFlags & NonPersistentDocumentFlags.ResolveAttachmentsConflict) != NonPersistentDocumentFlags.ResolveAttachmentsConflict)
+                AttachmentsStorage.AssertAttachments(document, flags);
+#endif
 
             var collectionName = _documentsStorage.ExtractCollectionName(context, id, document);
             var newEtag = _documentsStorage.GenerateNextEtag();
@@ -93,7 +94,8 @@ namespace Raven.Server.Documents
 
                     var oldFlags = *(DocumentFlags*)oldValue.Read((int)DocumentsStorage.DocumentsTable.Flags, out int size);
 
-                    if ((nonPersistentFlags & NonPersistentDocumentFlags.ByAttachmentUpdate) != NonPersistentDocumentFlags.ByAttachmentUpdate)
+                    if ((nonPersistentFlags & NonPersistentDocumentFlags.ByAttachmentUpdate) != NonPersistentDocumentFlags.ByAttachmentUpdate &&
+                        (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
                     {
                         if ((oldFlags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
                         {
@@ -122,6 +124,9 @@ namespace Raven.Server.Documents
 #if DEBUG
                         documentDebugHash = document.DebugHash;
                         document.BlittableValidation();
+                        BlittableJsonReaderObject.AssertNoModifications(document, id, assertChildren: true);
+                        AssertMetadataWasFiltered(document);
+                        AttachmentsStorage.AssertAttachments(document, flags);
 #endif
                     }
 
@@ -138,13 +143,6 @@ namespace Raven.Server.Documents
 
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
                 {
-#if DEBUG
-                    if ((flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments &&
-                        document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
-                        metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
-                        Debug.Assert(false, $"Found {attachments.Length} attachment but {DocumentFlags.HasAttachments} flags is missing.");
-#endif
-
                     using (table.Allocate(out TableValueBuilder tvb))
                     {
                         tvb.Add(lowerId);
@@ -191,6 +189,10 @@ namespace Raven.Server.Documents
                     throw new InvalidDataException("The incoming document " + id + " has changed _during_ the put process, " +
                                                    "this is likely because you are trying to save a document that is already stored and was moved");
                 }
+                document.BlittableValidation();
+                BlittableJsonReaderObject.AssertNoModifications(document, id, assertChildren: true);
+                AssertMetadataWasFiltered(document);
+                AttachmentsStorage.AssertAttachments(document, flags);
 #endif
 
                 return new DocumentsStorage.PutOperationResults

@@ -810,11 +810,14 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr)
+        private Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr)
         {
             var document = ParseDocument(context, ref tvr);
+#if DEBUG
             DebugDisposeReaderAfterTransaction(context.Transaction, document.Data);
             DocumentPutAction.AssertMetadataWasFiltered(document.Data);
+            AttachmentsStorage.AssertAttachments(document.Data, document.Flags);
+#endif
             return document;
         }
 

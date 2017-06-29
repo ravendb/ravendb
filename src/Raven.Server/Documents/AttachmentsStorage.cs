@@ -954,5 +954,27 @@ namespace Raven.Server.Documents
                     IOExtensions.DeleteFile(_tempFile);
             }
         }
+
+#if DEBUG
+        public static void AssertAttachments(BlittableJsonReaderObject document, DocumentFlags flags)
+        {
+            if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+            {
+                if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
+                    metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+                {
+                    Debug.Assert(false, $"Found {DocumentFlags.HasAttachments} flag bug {Constants.Documents.Metadata.Attachments} is missing from metadata.");
+                }
+            }
+            else
+            {
+                if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
+                    metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
+                {
+                    Debug.Assert(false, $"Found {Constants.Documents.Metadata.Attachments}({attachments.Length}) in metadata but {DocumentFlags.HasAttachments} flag is missing.");
+                }
+            }
+        }
+#endif
     }
 }

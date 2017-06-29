@@ -387,7 +387,8 @@ namespace SlowTests.Client.Attachments
                     {
                         var user = session.Load<User>("users/" + i);
                         var metadata = session.Advanced.GetMetadataFor(user);
-                        Assert.False(metadata.ContainsKey(Constants.Documents.Metadata.Flags));
+                        Assert.DoesNotContain(DocumentFlags.HasAttachments.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+                        Assert.Equal(DocumentFlags.FromReplication.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
                         Assert.False(metadata.ContainsKey(Constants.Documents.Metadata.Attachments));
                     }
                 }
