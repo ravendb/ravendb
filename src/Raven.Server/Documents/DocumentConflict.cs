@@ -14,6 +14,7 @@ namespace Raven.Server.Documents
         public ChangeVectorEntry[] ChangeVector;
         public LazyStringValue Collection;
         public DateTime LastModified;
+        public DocumentFlags Flags;
         public long Etag; // the etag of the current db when this conflict was added
 
         public static DocumentConflict From(JsonOperationContext ctx,Document doc)
