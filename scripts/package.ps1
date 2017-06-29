@@ -3,13 +3,16 @@ $NETCORE_ARM_VERSION = "1.2.0-beta-001291-00"
 function CreateRavenPackage ( $projectDir, $releaseDir, $outDirs, $spec, $version ) {
     write-host "Create package for $($spec.runtime)..."
     $packageDir = [io.path]::combine($outDirs.Main, "package")
-    New-Item -ItemType Directory -Path $packageDir
+    New-Item -ItemType Directory -Path $packageDir | Out-Null
 
     CreatePackageLayout $packageDir $projectDir $outDirs $spec
 
     $releaseArchiveFile = GetRavenArchiveFileName $version $spec
     $releaseArchivePath = [io.path]::combine($releaseDir, $releaseArchiveFile)
     CreateArchiveFromDir $releaseArchivePath $packageDir $spec
+    
+    Remove-Item -Recurse -ErrorAction SilentlyContinue "$($outDirs.Server)"
+    Remove-Item -Recurse -ErrorAction SilentlyContinue "$($outDirs.Rvn)"
 }
 
 function GetRavenArchiveFileName ( $version, $spec ) {
@@ -47,7 +50,7 @@ function LayoutRaspberryPiPackage ( $packageDir, $projectDir, $outDirs, $spec ) 
 function WrapContentsInDir ( $packageDir, $wrapperDirName ) {
     $wrapperDir = Join-Path $packageDir -ChildPath $wrapperDirName
     $rpiPkgContents = Get-ChildItem -Path $packageDir;
-    New-Item -ItemType Directory -Path $wrapperDir
+    New-Item -ItemType Directory -Path $wrapperDir | Out-Null
 
     Push-Location
     cd $packageDir
