@@ -15,7 +15,7 @@ namespace FastTests.Blittable
     {
         public static readonly Func<BlittableJsonReaderObject, SerializationDeserializationValidation.Values> SerializationDeserializationValidation = GenerateJsonDeserializationRoutine<SerializationDeserializationValidation.Values>();
     }
-    public class SerializationDeserializationValidation
+    public class SerializationDeserializationValidation : NoDisposalNeeded
     {
         public class Values
         {
