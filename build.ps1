@@ -102,7 +102,7 @@ if ($targets.Count -eq 0) {
 
 SetVersionEnvironmentVariableInTeamCity $version
 
-CleanDir $RELEASE_DIR
+CleanFiles $RELEASE_DIR
 CleanBinDirs $TYPINGS_GENERATOR_SRC_DIR, $RVN_SRC_DIR, $SERVER_SRC_DIR, $CLIENT_SRC_DIR, $SPARROW_SRC_DIR, $TESTDRIVER_SRC_DIR
 
 UpdateSourceWithBuildInfo $PROJECT_DIR $buildNumber $version
@@ -129,6 +129,7 @@ if (ShouldBuildStudio $STUDIO_OUT_DIR $DontRebuildStudio) {
 
 Foreach ($spec in $targets) {
     $specOutDir = [io.path]::combine($OUT_DIR, $spec.Name)
+    CleanDir $specOutDir
 
     BuildServer $SERVER_SRC_DIR $specOutDir $spec
     BuildRvn $RVN_SRC_DIR $specOutDir $spec
