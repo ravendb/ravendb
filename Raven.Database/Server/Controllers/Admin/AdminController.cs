@@ -24,7 +24,7 @@ using Raven.Database.Config;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
-
+using Rachis;
 using Raven.Abstractions.Smuggler;
 using Raven.Client.Document;
 using Raven.Database.DiskIO;
@@ -82,6 +82,13 @@ namespace Raven.Database.Server.Controllers.Admin
         [RavenRoute("admin/cluster-statistics")]
         public HttpResponseMessage GetClusterStatistics()
         {
+            var statistics = ClusterManager.Engine.EngineStatistics;
+            statistics.CurrenTopology = ClusterManager.Engine.PersistentStateCurrentTopology;
+            statistics.CommitIndex = ClusterManager.Engine.CommitIndex;
+            statistics.CurrentTerm = ClusterManager.Engine.PersistentState.CurrentTerm;
+            statistics.LastLogEntry = ClusterManager.Engine.PersistentState.LastLogEntry();
+            statistics.CurrentLeader = ClusterManager.Engine.CurrentLeader;
+            statistics.FollowersStatistics = ClusterManager.Engine.GetFollowerStatistics();
             return GetMessageWithObject(ClusterManager.Engine.EngineStatistics);
         }
 

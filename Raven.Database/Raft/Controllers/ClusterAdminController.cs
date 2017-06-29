@@ -135,7 +135,7 @@ namespace Raven.Database.Raft.Controllers
             nodeConnectionInfo.Name = ClusterManager.Engine.Name;
 
             ClusterManager.InitializeTopology(nodeConnectionInfo);
-
+            ClusterManager.Engine.WaitForLeader();
             return GetEmptyMessage(HttpStatusCode.Created);
         }
 
