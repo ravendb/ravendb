@@ -429,7 +429,7 @@ namespace Raven.Client.Http
                 {
                     await UpdateTopologyAsync(new ServerNode
                     {
-                        Url = url,
+                        Url = chosenNode.Url,
                         Database = _databaseName,
                     }, 0).ConfigureAwait(false);
                 }
