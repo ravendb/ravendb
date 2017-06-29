@@ -32,7 +32,7 @@ function LayoutRegularPackage ( $packageDir, $projectDir, $outDirs, $spec ) {
     CopyLicenseFile $packageDir
     CopyAckFile $packageDir
     CopyStartScript $spec $packageDir
-    CopyTools $packageDir $outDirs
+    CopyTools $outDirs
     CreatePackageServerLayout $projectDir $($outDirs.Server) $packageDir $spec
 }
 
@@ -42,7 +42,7 @@ function LayoutRaspberryPiPackage ( $packageDir, $projectDir, $outDirs, $spec ) 
     CopyAckFile $packageDir
     CopyRaspberryPiScripts $projectDir $packageDir
     IncludeDotnetForRaspberryPi $packageDir $outDirs
-    CopyTools $packageDir $outDirs
+    CopyTools $outDirs
     CreatePackageServerLayout $projectDir $($outDirs.Server) $packageDir $spec
     WrapContentsInDir $packageDir "RavenDB.4.0"
 }
@@ -94,7 +94,7 @@ function IncludeDotnetForRaspberryPi( $packageDir, $outDirs, $projectDir ) {
 function CopyStudioPackage ( $outDirs ) {
     $studioZipPath = [io.path]::combine($outDirs.Studio, "Raven.Studio.zip")
     $dst = $outDirs.Server
-    write-host "Copying Studio package from $studioZipPath to $dst"
+    write-host "Copying Studio $studioZipPath -> $dst"
     Copy-Item "$studioZipPath" -Destination $dst
     CheckLastExitCode
 }
@@ -130,11 +130,10 @@ function CopyDaemonScripts ( $projectDir, $packageDir ) {
     }
 }
 
-function CopyTools ( $packageDir, $outDirs ) {
-    write-host "Copy tools files..."
-    $toolsDir = [io.path]::combine($packageDir, "Tools")
-    New-Item -ItemType Directory -Path $toolsDir
-    Copy-Item -Recurse "$($outDirs.Rvn)" -Destination "$toolsDir"
+function CopyTools ( $outDirs ) {
+    write-host "Copy rvn files..."
+    $rvnContents = [io.path]::combine($outDirs.Rvn, "*")
+    Copy-Item -Recurse "$rvnContents" -Destination "$($outDirs.Server)" -Force 
 }
 
 function CreatePackageServerLayout ( $projectDir, $serverOutDir, $packageDir, $spec ) {

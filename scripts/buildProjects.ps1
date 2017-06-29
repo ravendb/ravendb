@@ -73,6 +73,7 @@ function BuildStudio ( $srcDir, $version ) {
         CheckLastExitCode
     } 
     finally {
+        [Console]::ResetColor()
         Pop-Location
     }
 }
