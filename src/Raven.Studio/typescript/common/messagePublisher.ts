@@ -16,6 +16,8 @@ class messagePublisher {
             toastr.options.timeOut = 6000;
             toastr.options.showDuration = 100;
             toastr.options.hideDuration = 100;
+            toastr.options.showEasing = "linear";
+            toastr.options.hideEasing = "linear";
         }
     }
 
