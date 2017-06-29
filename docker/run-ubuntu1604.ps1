@@ -70,7 +70,7 @@ function DetermineServerIp ($serverId, $dockerSubnetAddress, $shouldScan) {
 
             $uri = "$netPrefix.$( $scanOctet ):$BindPort/debug/server-id"
             try {
-                $response = (Invoke-WebRequest -Uri $uri -TimeoutSec 1 -Method 'GET').Content | ConvertFrom-Json
+                $response = (Invoke-WebRequest -Uri $uri -TimeoutSec 1 -Method 'GET' -UseBasicParsing).Content | ConvertFrom-Json
                 if ($response.ServerId -eq $serverId) {
                     $lastOctet = $scanOctet
                     break;
