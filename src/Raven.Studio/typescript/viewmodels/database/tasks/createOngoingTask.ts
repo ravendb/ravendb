@@ -11,15 +11,17 @@ class createOngoingTask extends dialogViewModelBase {
     }
 
     newReplicationTask(task: createOngoingTask) {
-        eventsCollector.default.reportEvent("externalReplication", "new");
+        eventsCollector.default.reportEvent("ExternalReplication", "new");
         const url = appUrl.forNewExternalReplication(this.activeDatabase());
         router.navigate(url);
         this.close();
     }
 
-    urlForExternalReplication() {
-       return appUrl.forNewExternalReplication(this.activeDatabase());
-        
+    newSubscriptionTask(task: createOngoingTask) {
+        eventsCollector.default.reportEvent("Subscription", "new");
+        const url = appUrl.forNewSubscription(this.activeDatabase());
+        router.navigate(url);
+        this.close();
     }
 
     newEtlTask() {
@@ -35,11 +37,6 @@ class createOngoingTask extends dialogViewModelBase {
     newBackupTask() {
         alert("NewBackupTask");
         // ...
-    }
-
-    newSubscriptionTask() {
-        alert("NewSubscriptionTask");
-        // ... 
     }
 }
 

@@ -184,15 +184,6 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-stats',
             dynamicHash: appUrls.status
         }),
-
-        new leafMenuItem({
-            route: 'databases/status/subscriptions',
-            moduleId: 'viewmodels/database/status/subscriptions',
-            title: 'Subscriptions',
-            nav: true,
-            css: 'icon-subscriptions',
-            dynamicHash: appUrls.subscriptions
-        }),
         /* TODO: 
         new leafMenuItem({
             route: 'databases/status/logs',
