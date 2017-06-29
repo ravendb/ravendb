@@ -45,7 +45,7 @@ interface computedAppUrls {
     replications: KnockoutComputed<string>;
     etl: KnockoutComputed<string>;
     hotSpare: KnockoutComputed<string>;
-    versioning: KnockoutComputed<string>;
+    revisions: KnockoutComputed<string>;
     sqlReplications: KnockoutComputed<string>;
     sqlReplicationsConnections: KnockoutComputed<string>;
     editSqlReplication: KnockoutComputed<string>;

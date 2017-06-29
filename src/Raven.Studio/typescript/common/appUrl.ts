@@ -75,7 +75,7 @@ class appUrl {
         replications: ko.pureComputed(() => appUrl.forReplications(appUrl.currentDatabase())),
         etl: ko.pureComputed(() => appUrl.forEtl(appUrl.currentDatabase())),
         hotSpare: ko.pureComputed(() => appUrl.forHotSpare()),
-        versioning: ko.pureComputed(() => appUrl.forVersioning(appUrl.currentDatabase())),
+        revisions: ko.pureComputed(() => appUrl.forRevisions(appUrl.currentDatabase())),
         sqlReplications: ko.pureComputed(() => appUrl.forSqlReplications(appUrl.currentDatabase())),
         editSqlReplication: ko.pureComputed(() => appUrl.forEditSqlReplication(undefined, appUrl.currentDatabase())),
         sqlReplicationsConnections: ko.pureComputed(() => appUrl.forSqlReplicationConnections(appUrl.currentDatabase())),
@@ -450,8 +450,8 @@ class appUrl {
         return "#databases/settings/etl?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forVersioning(db: database | databaseInfo): string {
-        return "#databases/settings/versioning?" + appUrl.getEncodedDbPart(db);
+    static forRevisions(db: database | databaseInfo): string {
+        return "#databases/settings/revisions?" + appUrl.getEncodedDbPart(db);
     }
 
     static forSqlReplications(db: database | databaseInfo): string {

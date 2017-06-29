@@ -8,7 +8,7 @@ import messagePublisher = require("common/messagePublisher");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import getVersioningCommand = require("commands/database/documents/getVersioningCommand");
 
-class versioning extends viewModelBase {
+class revisions extends viewModelBase {
 
     static readonly versioningDocumentKey = "Raven/Versioning/Configuration";
 
@@ -172,4 +172,4 @@ class versioning extends viewModelBase {
 
 }
 
-export = versioning;
+export = revisions;

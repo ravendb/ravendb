@@ -66,12 +66,12 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.sqlReplicationsConnections
         }),
         new leafMenuItem({
-            route: 'databases/settings/versioning',
-            moduleId: 'viewmodels/database/settings/versioning',
-            title: 'Versioning',
+            route: 'databases/settings/revisions',
+            moduleId: 'viewmodels/database/settings/revisions',
+            title: 'Revisions',
             nav: true,
-            css: 'icon-versioning',
-            dynamicHash: appUrls.versioning
+            css: 'icon-versioning', //TODO: rename icon 
+            dynamicHash: appUrls.revisions
         }),
         /* TODO: move to tasks in menu
         new leafMenuItem({
