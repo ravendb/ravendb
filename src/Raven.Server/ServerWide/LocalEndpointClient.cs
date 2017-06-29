@@ -86,7 +86,6 @@ namespace Raven.Server.ServerWide
             throw new HttpRequestException($"A call to endpoint <<{route.Method} {route.Path}>> has failed with status code {statusCode}");
         }
 
-        //note : this method can throw, so proper error handling should be used
         public async Task<BlittableJsonReaderObject> InvokeAndReadObjectAsync(RouteInformation route, JsonOperationContext context, Dictionary<string, StringValues> parameters = null)
         {
             var response = await InvokeAsync(route, parameters);
