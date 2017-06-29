@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -17,7 +16,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Server.Documents.Versioning;
 using Raven.Server.Utils;
 using Sparrow.Utils;
 using System.Linq;
@@ -361,6 +359,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 ChangeVectorEntry[] lastChangeVector = null;
 
                 var patch = SetupFilterScript(subscription.Criteria);
+                var fetcher = new SubscriptionDocumentsFetcher(TcpConnection.DocumentDatabase,_options.MaxDocsPerBatch, SubscriptionId, TcpConnection.TcpClient.Client.RemoteEndPoint);
                 while (CancellationTokenSource.IsCancellationRequested == false)
                 {
                     bool anyDocumentsSentInCurrentIteration = false;
@@ -376,7 +375,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         using (TcpConnection.ContextPool.AllocateOperationContext(out context))
                         using (var writer = new BlittableJsonTextWriter(context, _buffer))
                         {
-                            foreach (var doc in GetDataToSend(docsContext, subscription, startEtag, patch))
+                            foreach (var doc in fetcher.GetDataToSend(docsContext, subscription, startEtag, patch))
                             {
                                 startEtag = doc.Etag;
                                 lastChangeVector = ChangeVectorUtils.MergeVectors(doc.ChangeVector, subscription.ChangeVector);
@@ -504,118 +503,6 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        private IEnumerable<Document> GetDataToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch)
-        {
-            
-            var db = TcpConnection.DocumentDatabase;
-            if (subscription.Criteria.IsVersioned)
-            {
-                if (db.DocumentsStorage.VersioningStorage == null || db.DocumentsStorage.VersioningStorage.IsVersioned(subscription.Criteria.Collection) == false)
-                    throw new SubscriptionInvalidStateException($"Cannot use a versioned subscription, database {db.Name} does not have versioning setup"); 
-
-                return GetVerionTuplesToSend(docsContext, subscription, startEtag, patch, db.DocumentsStorage.VersioningStorage);
-            }
-
-
-            return GetDocumentsToSend(docsContext, subscription, startEtag, patch, db);
-        }
-
-        private IEnumerable<Document> GetDocumentsToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch,
-            DocumentDatabase db)
-        {
-            foreach (var doc in db.DocumentsStorage.GetDocumentsFrom(
-                docsContext,
-                subscription.Criteria.Collection,
-                startEtag + 1,
-                0,
-                _options.MaxDocsPerBatch))
-            {
-                using (doc.Data)
-                {
-                    BlittableJsonReaderObject transformResult;
-                    if (ShouldSendDocument(subscription, patch, docsContext, doc, out transformResult) == false)
-                    {
-                        doc.Data = null;
-                        yield return doc;
-                    }
-                    else
-                    {
-                        using (transformResult)
-                        {
-                            if (transformResult == null)
-                            {
-                                yield return doc;
-                                continue;
-                            }
-
-                            yield return new Document
-                            {
-                                Id = doc.Id,
-                                Etag = doc.Etag,
-                                Data = transformResult,
-                                LowerId = doc.LowerId,
-                                ChangeVector = doc.ChangeVector
-                            };
-                        }
-                    }
-                }
-            }
-        }
-
-        private IEnumerable<Document> GetVerionTuplesToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch,
-             VersioningStorage revisions)
-        {
-            foreach (var versionedDocs in revisions.GetRevisionsFrom(docsContext, new CollectionName(subscription.Criteria.Collection), startEtag + 1, _options.MaxDocsPerBatch))
-            {
-                var item = (versionedDocs.current ?? versionedDocs.previous);
-                Debug.Assert(item != null);
-
-                var dynamicValue = new DynamicJsonValue();
-
-                if (versionedDocs.current != null)
-                    dynamicValue["Current"] = versionedDocs.current.Data;
-
-                if (versionedDocs.previous != null)
-                    dynamicValue["Previous"] = versionedDocs.previous.Data;
-
-                using (var versioned = docsContext.ReadObject(dynamicValue, item.Id))
-                {
-                    if (ShouldSendDocumentWithVersioning(subscription, patch, docsContext, item, versioned, out var transformResult) == false)
-                    {
-                        // make sure that if we read a lot of irrelevant documents, we send keep alive over the network            
-                        var doc = new Document
-                        {
-                            Data = null,
-                            ChangeVector = item.ChangeVector,
-                            Etag = item.Etag
-                        };
-
-                        yield return doc;
-                    }
-                    else
-                    {
-                        using (transformResult)
-                        {
-                            if (transformResult == null)
-                            {
-                                yield return versionedDocs.current;
-                                continue;
-                            }
-
-                            yield return new Document
-                            {
-                                Id = item.Id,
-                                Etag = item.Etag,
-                                Data = transformResult,
-                                LowerId = item.LowerId,
-                                ChangeVector = item.ChangeVector
-                            };
-                        }
-                    }
-                }
-            }
-        }
-
         private long GetStartEtagForSubscription(DocumentsOperationContext docsContext, SubscriptionState subscription)
         {
             using (docsContext.OpenReadTransaction())
@@ -681,77 +568,6 @@ namespace Raven.Server.Documents.TcpHandlers
                 await SendHeartBeat();
             } while (CancellationTokenSource.IsCancellationRequested == false);
             return false;
-        }
-
-        private bool ShouldSendDocumentWithVersioning(SubscriptionState subscriptionState, SubscriptionPatchDocument patch, DocumentsOperationContext dbContext,
-            Document item, BlittableJsonReaderObject versioned, out BlittableJsonReaderObject transformResult)
-        {
-            transformResult = null;
-            var conflictStatus = ConflictsStorage.GetConflictStatus(
-                remote: item.ChangeVector,
-                local: subscriptionState.ChangeVector);
-
-            if (conflictStatus == ConflictsStorage.ConflictStatus.AlreadyMerged)
-                return false;
-
-            if (patch == null)
-                return true;
-            
-            if (patch.FilterJavaScript == SubscriptionCreationOptions.DefaultVersioningScript)
-            {
-                transformResult = versioned;
-                return true;
-            }
-            try
-            {
-                var docToProccess = new Document
-                {
-                    Data = versioned,
-                    Id = item.Id,
-                };
-
-                return patch.MatchCriteria(dbContext, docToProccess, out transformResult);
-            }
-            catch (Exception ex)
-            {
-                if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info(
-                        $"Criteria script threw exception for subscription {_options.SubscriptionId} connected to {TcpConnection.TcpClient.Client.RemoteEndPoint} for document id {item.Id}",
-                        ex);
-                }
-                return false;
-            }
-        }
-
-        private bool ShouldSendDocument(SubscriptionState subscriptionState, SubscriptionPatchDocument patch, DocumentsOperationContext dbContext,
-            Document doc, out BlittableJsonReaderObject transformResult)
-        {
-            transformResult = null;
-            var conflictStatus = ConflictsStorage.GetConflictStatus(
-                remote: doc.ChangeVector,
-                local: subscriptionState.ChangeVector);
-
-            if (conflictStatus == ConflictsStorage.ConflictStatus.AlreadyMerged)
-                return false;
-
-            if (patch == null)
-                return true;
-
-            try
-            {
-                return patch.MatchCriteria(dbContext, doc, out transformResult);
-            }
-            catch (Exception ex)
-            {
-                if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info(
-                        $"Criteria script threw exception for subscription {_options.SubscriptionId} connected to {TcpConnection.TcpClient.Client.RemoteEndPoint} for document id {doc.Id}",
-                        ex);
-                }
-                return false;
-            }
         }
 
         private SubscriptionPatchDocument SetupFilterScript(SubscriptionCriteria criteria)

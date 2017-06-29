@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Server.Json;
@@ -10,11 +11,66 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Conventions;
 using System.Linq;
 using Raven.Client.Documents.Exceptions.Subscriptions;
+using Raven.Client.Documents.Subscriptions;
+using Raven.Server.Documents.Subscriptions;
+using Raven.Server.Documents.TcpHandlers;
 
 namespace Raven.Server.Documents.Handlers
 {
     public class SubscriptionsHandler : DatabaseRequestHandler
     {
+        [RavenAction("/databases/*/subscriptions/try", "POST", "/databases/{databaseName:string}/subscriptions/try")]
+        public async Task Try()
+        {
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
+                var tryout = JsonDeserializationServer.SubscriptionTryout(json);
+
+                SubscriptionPatchDocument patch = null;
+                if (string.IsNullOrEmpty(tryout.Script) == false)
+                {
+                    patch = new SubscriptionPatchDocument(Database,tryout.Script);
+                }
+
+                if(tryout.Collection == null)
+                    throw new ArgumentException("Collection must be specified");
+
+                var pageSize = GetIntValueQueryString("pageSize", required: true) ?? 1;
+                var etag = GetLongQueryString("etag", required: false) ?? 0;
+
+                var fetcher = new SubscriptionDocumentsFetcher(Database, pageSize, -0x42, 
+                    new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort));
+                var state = new SubscriptionState
+                {
+                    ChangeVector = tryout.ChangeVector,
+                    Criteria = new SubscriptionCriteria
+                    {
+                        Collection = tryout.Collection,
+                        IsVersioned = tryout.IsVersioned,
+                        Script = tryout.Script
+                    },
+                };
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Results");
+
+                    using (context.OpenReadTransaction())
+                    {
+                        writer.WriteDocuments(context, 
+
+                            fetcher.GetDataToSend(context, state, etag, patch)
+                                .Where(x=>x.Data != null)
+                            
+                            , false, out int _);
+                    }
+                    writer.WriteEndObject();
+                }
+            }
+        }
+        
         [RavenAction("/databases/*/subscriptions", "PUT", "/databases/{databaseName:string}/subscriptions")]
         public async Task Create()
         {
