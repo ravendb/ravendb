@@ -81,7 +81,9 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 if (string.IsNullOrEmpty(_options.SubscriptionName))
                     return;
-                
+
+                context.OpenReadTransaction();
+
                 var subscriptionItemKey = SubscriptionState.GenerateSubscriptionItemKeyName(TcpConnection.DocumentDatabase.Name, _options.SubscriptionName);
                 var translation = TcpConnection.DocumentDatabase.ServerStore.Cluster.Read(context, subscriptionItemKey);
                 if (translation == null)

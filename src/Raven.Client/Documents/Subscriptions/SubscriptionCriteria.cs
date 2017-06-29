@@ -76,18 +76,18 @@ namespace Raven.Client.Documents.Subscriptions
     public class SubscriptionCreationOptions
     {
         public const string DefaultVersioningScript = "return {Current:this.Current, Previous:this.Previous};";
-
+        public string Name { get; set; }
         public SubscriptionCriteria Criteria { get; set; }
         public ChangeVectorEntry[] ChangeVector { get; set; }
     }
 
     public class SubscriptionCreationOptions<T>
     {
-
         public SubscriptionCreationOptions()
         {
             Criteria = new SubscriptionCriteria<T>();
         }
+
 
         public SubscriptionCriteria CreateOptions(DocumentConventions conventions)
         {
@@ -101,7 +101,8 @@ namespace Raven.Client.Documents.Subscriptions
             };
 
         }
-        
+
+        public string Name { get; set; }
         public SubscriptionCriteria<T> Criteria { get; set; }
         public ChangeVectorEntry[] ChangeVector { get; set; }
     }
