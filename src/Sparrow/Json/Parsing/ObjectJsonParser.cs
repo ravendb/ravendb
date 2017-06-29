@@ -453,7 +453,7 @@ namespace Sparrow.Json.Parsing
                 if (current is TimeSpan)
                 {
                     var timeSpan = (TimeSpan)current;
-                    var s = timeSpan.ToString("g");
+                    var s = timeSpan.ToString("c");
 
                     SetStringBuffer(s);
                     _state.CurrentTokenType = JsonParserToken.String;

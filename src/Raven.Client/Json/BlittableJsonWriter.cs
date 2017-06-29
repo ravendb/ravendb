@@ -422,12 +422,12 @@ namespace Raven.Client.Json
 
         public override void WriteValue(TimeSpan value)
         {
-            _manualBlittableJsonDocumentBuilder.WriteValue(value.ToString("g"));
+            _manualBlittableJsonDocumentBuilder.WriteValue(value.ToString("c"));
         }
 
         public override void WriteValue(TimeSpan? value)
         {
-            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value.ToString("g"));
+            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value.ToString("c"));
             else _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
