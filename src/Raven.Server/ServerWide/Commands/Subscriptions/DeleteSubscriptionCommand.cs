@@ -33,7 +33,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         public override unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive)
         {
-            var itemKey = SubscriptionState.GenerateSubscriptionItemNameFromId(DatabaseName, index);
+            var itemKey = SubscriptionState.GenerateSubscriptionItemNameFromId(DatabaseName, SubscriptionId);
             using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
             {
                 if (items.ReadByKey(valueNameLowered, out TableValueReader tvr) == false)
@@ -41,8 +41,10 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                     return; // nothing to do
                 }
 
-                var json = new BlittableJsonReaderObject(tvr.Pointer, tvr.Size, context);
-                var subscriptionState = JsonDeserializationClient.SubscriptionState(json);
+                var ptr = tvr.Read(2, out int size);
+                var doc = new BlittableJsonReaderObject(ptr, size, context);
+
+                var subscriptionState = JsonDeserializationClient.SubscriptionState(doc);
                 
                 items.DeleteByKey(valueNameLowered);
                 
