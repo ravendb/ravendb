@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Patch
             else if (DocumentCompare.IsEqualTo(originalDocument.Data, modifiedDocument, tryMergeAttachmentsConflict: true) == DocumentCompareResult.NotEqual) // http://issues.hibernatingrhinos.com/issue/RavenDB-6408
             {
                 if (_isTest == false || _scriptIsPuttingDocument)
-                    putResult = _database.DocumentsStorage.Put(context, originalDocument.Id, originalDocument.Etag, modifiedDocument);
+                    putResult = _database.DocumentsStorage.Put(context, originalDocument.Id, originalDocument.Etag, modifiedDocument, null, null, originalDocument.Flags);
 
                 result.Status = PatchStatus.Patched;
             }
