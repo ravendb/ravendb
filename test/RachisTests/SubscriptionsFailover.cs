@@ -33,7 +33,7 @@ namespace RachisTests
         {
             public int MaxId;
         }
-        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(6000);
+        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(6);
 
         [Theory]
         [InlineData(1)]
