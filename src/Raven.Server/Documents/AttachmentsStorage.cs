@@ -265,13 +265,17 @@ namespace Raven.Server.Documents
         {
             Debug.Assert(base64Hash.Size == 44, $"Hash size should be 44 but was: {key.Size}");
 
+            var newEtag = _documentsStorage.GenerateNextEtag();
+            if (changeVector == null)
+                changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
+
             fixed (ChangeVectorEntry* pChangeVector = changeVector)
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
                     tvb.Add(key.Content.Ptr, key.Size);
-                    tvb.Add(Bits.SwapBytes(_documentsStorage.GenerateNextEtag()));
+                    tvb.Add(Bits.SwapBytes(newEtag));
                     tvb.Add(name.Content.Ptr, name.Size);
                     tvb.Add(contentType.Content.Ptr, contentType.Size);
                     tvb.Add(base64Hash.Content.Ptr, base64Hash.Size);

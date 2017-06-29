@@ -11,7 +11,6 @@ using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
@@ -310,7 +309,7 @@ namespace Raven.Server.Smuggler.Documents
                         }
 
                         PutAttachments(context, document);
-                        _database.DocumentsStorage.Put(context, id, null, document.Data, null, document.ChangeVector, document.Flags, document.NonPersistentFlags);
+                        _database.DocumentsStorage.Put(context, id, null, document.Data, null, null, document.Flags, document.NonPersistentFlags);
                     }
                 }
 
@@ -343,7 +342,6 @@ namespace Raven.Server.Smuggler.Documents
                     using (attachmentsStorage.GetAttachmentKey(_context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
                         base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, type, document.ChangeVector, out Slice keySlice))
                     {
-                        // TODO: RavenDB-7642 Export the attachment in smuggler in a different item which would include the attachment change vector
                         attachmentsStorage.PutDirect(context, keySlice, nameSlice, contentTypeSlice, base64Hash, null);
                     }
                 }
