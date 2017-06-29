@@ -35,10 +35,10 @@
             </form>
         </div>
         <div class="modal-footer">
-            <div class="row">
-                <button data-bind="click: keepFiles" type="button" class="col-sm-3 col-sm-offset-3 btn btn-danger" title="Keep the physical database files on disk">Delete & keep files</button>
-                <button data-bind="click: deleteEverything" type="button" class="col-sm-3 btn btn-danger" title="Delete all the on-disk files for this database">Delete everything</button>
-                <button type="button" class="col-sm-2 btn btn-default" data-bind="click: cancel">Cancel</button>
+            <div class="text-right">
+                <button data-bind="click: keepFiles" type="button" class="btn btn-warning" title="Keep the physical database files on disk"><i class="icon-trash"></i><span>Delete & keep files</span></button>
+                <button data-bind="click: deleteEverything" type="button" class="btn btn-danger" title="Delete all the on-disk files for this database"><i class="icon-trash"></i>&nbsp;<i class="icon-force"></i><span>Delete everything</span></button>
+                <button type="button" class=" btn btn-default" data-bind="click: cancel"><i class="icon-cancel"></i><span>Cancel</span></button>
             </div>
         </div>
     </div>
