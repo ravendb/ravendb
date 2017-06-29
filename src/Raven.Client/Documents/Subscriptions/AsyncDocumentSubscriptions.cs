@@ -26,17 +26,17 @@ namespace Raven.Client.Documents.Subscriptions
             _store = store;
         }
 
-        public string Create(SubscriptionCreationOptions criteria, string database = null)
+        public long Create(SubscriptionCreationOptions criteria, string database = null)
         {
             return AsyncHelpers.RunSync(() => CreateAsync(criteria, database));
         }
 
-        public string Create<T>(SubscriptionCreationOptions<T> criteria, string database = null)
+        public long Create<T>(SubscriptionCreationOptions<T> criteria, string database = null)
         {
             return AsyncHelpers.RunSync(() => CreateAsync(criteria, database));
         }
 
-        public Task<string> CreateAsync<T>(SubscriptionCreationOptions<T> subscriptionCreationOptions, string database = null)
+        public Task<long> CreateAsync<T>(SubscriptionCreationOptions<T> subscriptionCreationOptions, string database = null)
         {
             if (subscriptionCreationOptions == null)
                 throw new InvalidOperationException("Cannot create a subscription if criteria is null");
@@ -50,7 +50,7 @@ namespace Raven.Client.Documents.Subscriptions
             return CreateAsync(subscriptionCreationDto, database);
         }
 
-        public async Task<string> CreateAsync(SubscriptionCreationOptions subscriptionCreationOptions, string database = null)
+        public async Task<long> CreateAsync(SubscriptionCreationOptions subscriptionCreationOptions, string database = null)
         {
             if (subscriptionCreationOptions == null )
                 throw new InvalidOperationException("Cannot create a subscription if subscriptionCretiaonOptions is null");
@@ -99,7 +99,7 @@ namespace Raven.Client.Documents.Subscriptions
             return command.Result.ToList();
         }
 
-        public async Task DeleteAsync(string id, string database = null)
+        public async Task DeleteAsync(long id, string database = null)
         {
             JsonOperationContext jsonOperationContext;
             var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);

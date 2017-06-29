@@ -21,7 +21,7 @@ namespace Subscriptions.Benchmark
     public class SingleSubscriptionBenchmark : IDisposable
     {
         private int _batchSize;
-        private string _subscriptionId;
+        private long _subscriptionId;
         private readonly string _collectionName;
         private DocumentStore _store;
 
@@ -57,7 +57,7 @@ namespace Subscriptions.Benchmark
         {
             try
             {
-                if (string.IsNullOrEmpty(_subscriptionId))
+                if (_subscriptionId == 0)
                 {
                     var subscriptionCreationParams = new SubscriptionCreationOptions
                     {

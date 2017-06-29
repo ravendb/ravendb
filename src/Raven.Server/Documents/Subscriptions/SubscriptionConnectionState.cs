@@ -12,11 +12,11 @@ namespace Raven.Server.Documents.Subscriptions
 {
     public class SubscriptionConnectionState:IDisposable
     {
-        private readonly string _subscriptionId;
+        private readonly long _subscriptionId;
         private readonly SubscriptionStorage _storage;
         internal readonly AsyncManualResetEvent ConnectionInUse = new AsyncManualResetEvent();
 
-        public SubscriptionConnectionState(string subscriptionId, SubscriptionStorage storage)
+        public SubscriptionConnectionState(long subscriptionId, SubscriptionStorage storage)
         {
             _subscriptionId = subscriptionId;
             _storage = storage;

@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Json.Converters;
 using Raven.Client.Http;
@@ -11,6 +13,7 @@ using Raven.Client.Server;
 using Raven.Client.Server.ETL.SQL;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.PeriodicBackup;
+using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -63,7 +66,8 @@ namespace Raven.Server.Web.System
                 {
                     CollectExternalReplicationTasks(databaseRecord.ExternalReplication, dbTopology,clusterTopology, store),
                     CollectEtlTasks(databaseRecord, dbTopology, clusterTopology, store),
-                    CollectBackupTasks(databaseRecord, dbTopology, clusterTopology, store)
+                    CollectBackupTasks(databaseRecord, dbTopology, clusterTopology, store),
+                    CollectSubscriptionTasks(context, databaseRecord, clusterTopology, store)
                 })
                 {
                     ongoingTasksResult.OngoingTasksList.AddRange(tasks);
@@ -75,6 +79,28 @@ namespace Raven.Server.Web.System
                 }
 
                 return ongoingTasksResult;
+            }
+        }
+
+        private static IEnumerable<OngoingTask> CollectSubscriptionTasks(TransactionOperationContext context, DatabaseRecord databaseRecord, ClusterTopology clusterTopology, ServerStore store)
+        {
+            foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(databaseRecord.DatabaseName)))
+            {
+                var subscriptionState = JsonDeserializationClient.SubscriptionState(keyValue.Value);
+                var tag = databaseRecord.Topology.WhoseTaskIsIt(subscriptionState, store.IsPassive());
+                yield return new OngoingTaskSubscription
+                {
+                    ChangeVector = subscriptionState.ChangeVector,
+                    LastModificationTime = subscriptionState.TimeOfLastClientActivity,
+                    ResponsibleNode = new NodeId
+                    {
+                        NodeTag = tag,
+                        NodeUrl = clusterTopology.GetUrlFromTag(tag)
+                    },
+                    TaskName = subscriptionState.SubscriptionName,
+                    TaskState = subscriptionState.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
+                    TaskId = subscriptionState.SubscriptionId
+                };
             }
         }
 
@@ -560,6 +586,22 @@ namespace Raven.Server.Web.System
         }
     }
 
+    public class OngoingTaskSubscription : OngoingTask
+    {
+        public OngoingTaskSubscription()
+        {
+            TaskType = OngoingTaskType.Subscription;
+        }
+        
+        public ChangeVectorEntry[] ChangeVector { get; set; }
+      
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(ChangeVector)] = ChangeVector?.ToJson();
+            return json;
+        }
+    }
     public class OngoingTaskReplication : OngoingTask
     {
         public OngoingTaskReplication()

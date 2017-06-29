@@ -173,16 +173,16 @@ namespace Raven.Client.Documents.Subscriptions
         {
             _options = options;
             _logger = LoggingSource.Instance.GetLogger<Subscription<T>>(dbName);
-            if (string.IsNullOrEmpty(_options.SubscriptionId))
+            if (_options.SubscriptionId <= 0)
                 throw new ArgumentException(
-                    "SubscriptionConnectionOptions must specify the SubscriptionId, but was set to zero.",
+                    "SubscriptionConnectionOptions must specify the SubscriptionId, but was set to " + _options.SubscriptionId,
                     nameof(options));
             _store = documentStore;
             _dbName = dbName ?? documentStore.Database;
 
         }
 
-        public string SubscriptionId => _options.SubscriptionId;
+        public long SubscriptionId => _options.SubscriptionId;
 
         public void Dispose()
         {

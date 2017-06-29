@@ -16,21 +16,15 @@ namespace Raven.Client.Documents.Subscriptions
     {
         public SubscriptionCriteria Criteria { get; set; }
         public ChangeVectorEntry[] ChangeVector { get; set; }
-        public string SubscriptionId { get; set; }
+        public long SubscriptionId { get; set; }
+        public string SubscriptionName { get; set; }
         public DateTime TimeOfLastClientActivity { get; set; }
         public bool Disabled { get; set; }
         public Dictionary<string, long> LastEtagReachedInServer { get; set; }
-        private ulong? _taskKey;
 
         public ulong GetTaskKey()
         {
-            if (_taskKey.HasValue == false)
-            {
-                var lastSlashIndex = SubscriptionId.LastIndexOf("/", StringComparison.OrdinalIgnoreCase);
-                _taskKey = ulong.Parse(SubscriptionId.Substring(lastSlashIndex + 1));
-                return _taskKey.Value;
-            }
-            return _taskKey.Value;
+            return (ulong)SubscriptionId;
         }
 
 
@@ -46,11 +40,16 @@ namespace Raven.Client.Documents.Subscriptions
                 },
                 [nameof(ChangeVector)] = ChangeVector?.ToJson(),
                 [nameof(SubscriptionId)] = SubscriptionId,
+                [nameof(SubscriptionName)] = SubscriptionName,
                 [nameof(TimeOfLastClientActivity)] = TimeOfLastClientActivity
             };
         }
 
-        public static string GenerateSubscriptionItemName(string databaseName, long subscriptionId)
+        public static string GenerateSubscriptionItemKeyName(string databaseName, string subscriptionName)
+        {
+            return $"{SubscriptionPrefix(databaseName)}{subscriptionName}";
+        }
+        public static string GenerateSubscriptionItemNameFromId(string databaseName, long subscriptionId)
         {
             return $"{SubscriptionPrefix(databaseName)}{subscriptionId}";
         }

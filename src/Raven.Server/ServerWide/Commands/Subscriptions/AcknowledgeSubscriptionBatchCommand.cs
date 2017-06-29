@@ -12,7 +12,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
     public class AcknowledgeSubscriptionBatchCommand : UpdateValueForDatabaseCommand, IDatabaseTask
     {
         public ChangeVectorEntry[] ChangeVector;
-        public string SubscriptionId;
+        public long SubscriptionId;
         public string NodeTag;
         public Guid DbId;
         public long LastDocumentEtagAckedInNode;
@@ -24,9 +24,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
         }
 
-        public override string GetItemId() => SubscriptionId;
+        public override string GetItemId() => SubscriptionState.GenerateSubscriptionItemNameFromId(DatabaseName, SubscriptionId);
 
-        public override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
         {
             if (existingValue == null)
                 throw new InvalidOperationException($"Subscription with id {SubscriptionId} does not exist");
@@ -52,17 +52,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(NodeTag)] = NodeTag;
         }
 
-        private ulong? _taskKey;
-
         public ulong GetTaskKey()
         {
-            if (_taskKey.HasValue == false)
-            {
-                var lastSlashIndex = SubscriptionId.LastIndexOf("/", StringComparison.OrdinalIgnoreCase);
-                _taskKey = ulong.Parse(SubscriptionId.Substring(lastSlashIndex + 1));
-                return _taskKey.Value;
-            }
-            return _taskKey.Value;
+            return (ulong)SubscriptionId;
         }
     }
 }

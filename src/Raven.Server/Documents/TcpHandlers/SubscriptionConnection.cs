@@ -21,6 +21,7 @@ using Raven.Server.Documents.Versioning;
 using Raven.Server.Utils;
 using Sparrow.Utils;
 using System.Linq;
+using Voron;
 
 namespace Raven.Server.Documents.TcpHandlers
 {
@@ -51,7 +52,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private SubscriptionConnectionState _connectionState;
         private bool _isDisposed;
 
-        public string SubscriptionId => _options.SubscriptionId;
+        public long SubscriptionId => _options.SubscriptionId;
         public SubscriptionOpeningStrategy Strategy => _options.Strategy;
 
         public SubscriptionConnection(TcpConnectionOptions connectionOptions)
@@ -68,8 +69,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private async Task ParseSubscriptionOptionsAsync()
         {
-            JsonOperationContext context;
-            using (TcpConnection.ContextPool.AllocateOperationContext(out context))
+            TransactionOperationContext context;
+            using (TcpConnection.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out context))
             using (var subscriptionCommandOptions = await context.ParseToMemoryAsync(
                 TcpConnection.Stream,
                 "subscription options",
@@ -77,6 +78,22 @@ namespace Raven.Server.Documents.TcpHandlers
                 TcpConnection.PinnedBuffer))
             {
                 _options = JsonDeserializationServer.SubscriptionConnectionOptions(subscriptionCommandOptions);
+
+                if (string.IsNullOrEmpty(_options.SubscriptionName))
+                    return;
+                
+                var subscriptionItemKey = SubscriptionState.GenerateSubscriptionItemKeyName(TcpConnection.DocumentDatabase.Name, _options.SubscriptionName);
+                var translation = TcpConnection.DocumentDatabase.ServerStore.Cluster.Read(context, subscriptionItemKey);
+                if (translation == null)
+                    throw new SubscriptionClosedException("Cannot find any subscription with the name " + _options.SubscriptionName);
+
+                if (translation.TryGet(nameof(SubscriptionState.SubscriptionId), out long id) == false)
+                    throw new SubscriptionClosedException("Could not figure out the subscription id for subscription named " + _options.SubscriptionName);
+
+                if (_options.SubscriptionId > 0 && _options.SubscriptionId != id)
+                    throw new SubscriptionClosedException("Subscription named " + _options.SubscriptionName + " has id of " + id + " but the subscription expected " + _options.SubscriptionId);
+
+                _options.SubscriptionId = id;
             }
 
         }

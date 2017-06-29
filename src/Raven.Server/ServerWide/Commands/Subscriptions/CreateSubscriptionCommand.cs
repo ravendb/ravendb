@@ -6,8 +6,11 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Server;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron;
+using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
@@ -16,7 +19,8 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public SubscriptionCriteria Criteria;
         public ChangeVectorEntry[] InitialChangeVector;
 
-        private long? _subscriptionId;
+        public string SubscriptionName;
+        
         // for serialization
         private CreateSubscriptionCommand() : base(null) { }
 
@@ -24,26 +28,45 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
         }
 
-        public override string GetItemId()
+        public override void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive)
         {
-            if (_subscriptionId.HasValue)
-                return SubscriptionState.GenerateSubscriptionItemName(DatabaseName, _subscriptionId.Value);
-            return "does/not/exists/" + Guid.NewGuid(); // missing value
-        }
-
-        public override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
-        {
-            Debug.Assert(existingValue == null);
-
-            _subscriptionId = index;
-            var rafValue = new SubscriptionState
+            if (string.IsNullOrEmpty(SubscriptionName) == false)
+            {
+                var itemKey = SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, SubscriptionName);
+                using(var obj = context.ReadObject(new DynamicJsonValue
+                {
+                    ["SubscriptionId"] = index
+                }, SubscriptionName))
+                using (Slice.From(context.Allocator, itemKey, out Slice valueName))
+                using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
+                {
+                    if (items.ReadByKey(valueNameLowered, out TableValueReader _))
+                    {
+                        throw new InvalidOperationException("A subscription could not be created because the name '" + SubscriptionName + "' is already in use.");
+                    }
+                    ClusterStateMachine.UpdateValue(index, items, valueNameLowered, valueName, obj);
+                }
+            }
+            
+            var id = SubscriptionState.GenerateSubscriptionItemNameFromId(DatabaseName, index);
+            using(var obj = context.ReadObject(new SubscriptionState
             {
                 Criteria = Criteria,
                 ChangeVector = InitialChangeVector,
-                SubscriptionId = SubscriptionState.GenerateSubscriptionItemName(record.DatabaseName, index)
-            };
+                SubscriptionId = index,
+                SubscriptionName = SubscriptionName,
+                TimeOfLastClientActivity = DateTime.UtcNow
+            }.ToJson(), SubscriptionName))
+            using (Slice.From(context.Allocator, id, out Slice valueName))
+            using (Slice.From(context.Allocator, id.ToLowerInvariant(), out Slice valueNameLowered))
+            {
+                ClusterStateMachine.UpdateValue(index, items, valueNameLowered, valueName, obj);
+            }
+        }
 
-            return context.ReadObject(rafValue.ToJson(), GetItemId());
+        public override string GetItemId()
+        {
+            throw new NotImplementedException();
         }
 
         public override void FillJson(DynamicJsonValue json)

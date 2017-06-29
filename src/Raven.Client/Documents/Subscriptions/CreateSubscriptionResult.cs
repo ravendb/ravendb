@@ -2,6 +2,6 @@ namespace Raven.Client.Documents.Subscriptions
 {
     public class CreateSubscriptionResult
     {
-        public string Id { get; set; }
+        public long Id { get; set; }
     }
 }

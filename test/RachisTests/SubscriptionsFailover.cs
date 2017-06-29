@@ -137,7 +137,7 @@ namespace RachisTests
                     using (ravenServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        Assert.NotNull(ravenServer.ServerStore.Cluster.Read(context, subscriptionId));
+                        Assert.NotNull(ravenServer.ServerStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemNameFromId(defaultDatabase,subscriptionId)));
                     }
                 }
 
@@ -156,7 +156,7 @@ namespace RachisTests
                     using (ravenServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        Assert.Null(ravenServer.ServerStore.Cluster.Read(context, subscriptionId.ToLowerInvariant()));
+                        Assert.Null(ravenServer.ServerStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemNameFromId(defaultDatabase, subscriptionId)));
                     }
                 }
             }
@@ -437,8 +437,7 @@ namespace RachisTests
                 MaxId = 0
             };
             var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>()).ConfigureAwait(false);
-            var subscriptionEtag = long.Parse(subscriptionId.Substring(subscriptionId.LastIndexOf("/", StringComparison.OrdinalIgnoreCase) + 1));
-
+            
             var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
             {
                 TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
@@ -450,7 +449,7 @@ namespace RachisTests
 
             foreach (var server in Servers.Where(s => topology.RelevantFor(s.ServerStore.NodeTag)))
             {
-                await server.ServerStore.Cluster.WaitForIndexNotification(subscriptionEtag).ConfigureAwait(false);
+                await server.ServerStore.Cluster.WaitForIndexNotification(subscriptionId).ConfigureAwait(false);
             }
 
             var task = subscription.Run(a =>
@@ -496,7 +495,7 @@ namespace RachisTests
             return subscription;
         }
 
-        private async Task KillServerWhereSubscriptionWorks(string defaultDatabase, string subscriptionId)
+        private async Task KillServerWhereSubscriptionWorks(string defaultDatabase, long subscriptionId)
         {
             string tag = null;
             var someServer = Servers.First(x => x.Disposed == false);

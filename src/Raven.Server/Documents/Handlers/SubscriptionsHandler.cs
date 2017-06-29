@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/subscriptions", "DELETE", "/databases/{databaseName:string}/subscriptions?id={subscriptionId:long}")]
         public async Task Delete()
         {
-            var id = GetStringQueryString("id");
+            var id = GetLongQueryString("id");
 
             await Database.SubscriptionStorage.DeleteSubscription(id);
 
@@ -53,14 +53,14 @@ namespace Raven.Server.Documents.Handlers
             var pageSize = GetPageSize();
             var history = GetBoolValueQueryString("history", required: false) ?? false;
             var running = GetBoolValueQueryString("running", required: false) ?? false;
-            var id = GetStringQueryString("id", required: false);
+            var id = GetLongQueryString("id", required: false);
 
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))                
             using (context.OpenReadTransaction())
             {
                 IEnumerable<Subscriptions.SubscriptionStorage.SubscriptionGeneralDataAndStats> subscriptions;
-                if (string.IsNullOrEmpty(id))
+                if (id == null)
                 {
                     subscriptions = running
                         ? Database.SubscriptionStorage.GetAllRunningSubscriptions(context, history, start, pageSize)
@@ -71,10 +71,10 @@ namespace Raven.Server.Documents.Handlers
                     var subscription = running
                         ? Database
                             .SubscriptionStorage
-                            .GetRunningSubscription(context, id, history)
+                            .GetRunningSubscription(context, id.Value, history)
                         : Database
                             .SubscriptionStorage
-                            .GetSubscription(context, id, history);
+                            .GetSubscription(context, id.Value, history);
 
                     if (subscription == null)
                     {
@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/subscriptions/drop", "POST", "/databases/{databaseName:string}/subscriptions/drop?id={subscriptionId:long}")]
         public Task DropSubscriptionConnection()
         {
-            var subscriptionId = GetStringQueryString("id");
+            var subscriptionId = GetLongQueryString("id");
             
             if (Database.SubscriptionStorage.DropSubscriptionConnection(subscriptionId, new SubscriptionClosedException("Dropped by API request")) == false)
             {
