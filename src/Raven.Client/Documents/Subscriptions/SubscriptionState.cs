@@ -14,15 +14,11 @@ namespace Raven.Client.Documents.Subscriptions
 {
     public class SubscriptionState : IDatabaseTask
     {
-        public SubscriptionState()
-        {
-
-        }
-
         public SubscriptionCriteria Criteria { get; set; }
         public ChangeVectorEntry[] ChangeVector { get; set; }
         public string SubscriptionId { get; set; }
         public DateTime TimeOfLastClientActivity { get; set; }
+        public bool Disabled { get; set; }
         public Dictionary<string, long> LastEtagReachedInServer { get; set; }
         private ulong? _taskKey;
 
