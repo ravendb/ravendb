@@ -1,17 +1,19 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import versioningEntry = require("models/database/documents/versioningEntry");
+import revisionsConfigurationEntry = require("models/database/documents/revisionsConfigurationEntry");
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
-import saveVersioningCommand = require("commands/database/documents/saveVersioningCommand");
+import saveRevisionsConfigurationCommand = require("commands/database/documents/saveRevisionsConfigurationCommand");
 import eventsCollector = require("common/eventsCollector");
 import messagePublisher = require("common/messagePublisher");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
-import getVersioningCommand = require("commands/database/documents/getVersioningCommand");
+import getRevisionsConfigurationCommand = require("commands/database/documents/getRevisionsConfigurationCommand");
 
 class revisions extends viewModelBase {
 
-    static readonly versioningDocumentKey = "Raven/Versioning/Configuration";
+    defaultConfiguration = ko.observable<revisionsConfigurationEntry>(revisionsConfigurationEntry.defaultConfiguration());
 
+
+    /*
     defaultVersioning = ko.observable<versioningEntry>(versioningEntry.defaultConfiguration());
     versionings = ko.observableArray<versioningEntry>();
     isSaveEnabled: KnockoutComputed<boolean>;
@@ -169,7 +171,7 @@ class revisions extends viewModelBase {
             }
         });
     }
-
+    */
 }
 
 export = revisions;
