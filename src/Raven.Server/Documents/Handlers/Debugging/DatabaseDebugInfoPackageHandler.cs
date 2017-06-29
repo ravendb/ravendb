@@ -48,8 +48,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                 }
                             }
                             catch (Exception e)
-                            {                                
-                                WriteExceptionAsZipEntry(e,archive,entryName.Replace(".json", string.Empty));
+                            {
+                                DebugInfoPackageUtils.WriteExceptionAsZipEntry(e,archive,entryName.Replace(".json", string.Empty));
                             }
                         }
                     }
@@ -59,23 +59,5 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
             }
         }
-
-        private static void WriteExceptionAsZipEntry(Exception e, ZipArchive archive, string entryName)
-        {
-            if (entryName.EndsWith(".json"))
-            {
-                var index = entryName.LastIndexOf(".json", StringComparison.OrdinalIgnoreCase);
-                entryName = entryName.Substring(0, index);
-            }
-
-            var entry = archive.CreateEntry($"{entryName}.error");
-            using (var entryStream = entry.Open())
-            using (var sw = new StreamWriter(entryStream))
-            {
-                sw.Write(e);
-                sw.Flush();
-            }
-        }
-
     }
 }

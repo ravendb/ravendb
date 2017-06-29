@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using Raven.Server.Routing;
 
@@ -26,5 +28,17 @@ namespace Raven.Server.ServerWide
                 Path.Combine(prefix,$"{path}.json") :
                 $"{path}.json";
         }
+
+        public static void WriteExceptionAsZipEntry(Exception e, ZipArchive archive, string entryName)
+        {          
+            var entry = archive.CreateEntry($"{entryName}.error");
+            using (var entryStream = entry.Open())
+            using (var sw = new StreamWriter(entryStream))
+            {
+                sw.Write(e);
+                sw.Flush();
+            }
+        }
+
     }
 }
