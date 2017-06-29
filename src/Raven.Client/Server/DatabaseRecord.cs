@@ -8,7 +8,6 @@ using Raven.Client.Server.ETL;
 using Raven.Client.Server.Expiration;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Client.Server.Versioning;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Server
 {
@@ -121,8 +120,7 @@ namespace Raven.Client.Server
 
             var lockMode = IndexLockMode.Unlock;
 
-            AutoIndexDefinition existingDefinition;
-            if (AutoIndexes.TryGetValue(definition.Name, out existingDefinition))
+            if (AutoIndexes.TryGetValue(definition.Name, out AutoIndexDefinition existingDefinition))
             {
                 if (existingDefinition.LockMode != null)
                     lockMode = existingDefinition.LockMode.Value;
@@ -150,9 +148,8 @@ namespace Raven.Client.Server
                 throw new IndexOrTransformerAlreadyExistException($"Tried to create a transformer with a name of {definition.Name}, but an index under the same name exists");
             }
 
-            TransformerDefinition existingTransformer;
             var lockMode = TransformerLockMode.Unlock;
-            if (Transformers.TryGetValue(definition.Name, out existingTransformer))
+            if (Transformers.TryGetValue(definition.Name, out TransformerDefinition existingTransformer))
             {
                 lockMode = existingTransformer.LockMode;
 

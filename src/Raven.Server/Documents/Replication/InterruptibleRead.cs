@@ -55,8 +55,7 @@ namespace Raven.Server.Documents.Replication
                 return ReturnAndClearValue();
             }
 
-            Task<Task> task;
-            if (_previousWait.TryGetValue(interrupt, out task) == false)
+            if (_previousWait.TryGetValue(interrupt, out Task<Task> task) == false)
             {
                 _previousWait[interrupt] = task = Task.WhenAny(_prevCall, interrupt.WaitAsync());
             }
