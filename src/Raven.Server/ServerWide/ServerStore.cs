@@ -33,6 +33,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
+using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
@@ -749,14 +750,21 @@ namespace Raven.Server.ServerWide
 
         public Task<(long Etag, object Result)> DeleteOngoingTask(long taskId, OngoingTaskType taskType, string dbName)
         {
-            var deleteTaskCommand = new DeleteOngoingTaskCommand(taskId, taskType, dbName);
+            var deleteTaskCommand = 
+                taskType == OngoingTaskType.Subscription ? 
+                    (CommandBase)new DeleteSubscriptionCommand(dbName){SubscriptionId = taskId} : 
+                    new DeleteOngoingTaskCommand(taskId, taskType, dbName);
 
             return SendToLeaderAsync(deleteTaskCommand);
         }
 
         public Task<(long Etag, object Result)> ToggleTaskState(long taskId, OngoingTaskType type, bool disable, string dbName)
         {
-            var disableEnableCommand = new ToggleTaskStateCommand(taskId, type, disable, dbName);
+
+            var disableEnableCommand =
+                type == OngoingTaskType.Subscription
+                    ? (CommandBase)new ToggleSubscriptionStateCommand(taskId, disable, dbName)
+                    : new ToggleTaskStateCommand(taskId, type, disable, dbName);
 
             return SendToLeaderAsync(disableEnableCommand);
         }

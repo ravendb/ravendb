@@ -51,13 +51,14 @@ namespace Raven.Server.Documents.Subscriptions
 
         }
 
-        public async Task<long> CreateSubscription(SubscriptionCreationOptions options)
+        public async Task<long> PutSubscription(SubscriptionCreationOptions options, long? subscriptionId = null)
         {
-            var command = new CreateSubscriptionCommand(_db.Name)
+            var command = new PutSubscriptionCommand(_db.Name)
             {
                 Criteria = options.Criteria,
                 InitialChangeVector = options.ChangeVector,
-                SubscriptionName = options.Name
+                SubscriptionName = options.Name,
+                SubscriptionId = subscriptionId
             };
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
