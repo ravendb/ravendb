@@ -323,3 +323,8 @@ interface externalReplicationDataFromUI {
     DestinationURL: string;
 } 
 
+interface subscriptionDataFromUI {
+    TaskName: string;
+    //TODO:...
+} 
+

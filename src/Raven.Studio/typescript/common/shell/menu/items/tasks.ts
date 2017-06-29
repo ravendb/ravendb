@@ -11,7 +11,8 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
     const exportDatabaseUrl = ko.pureComputed(() => appUrl.forExportDatabase(activeDatabase()));
     const sampleDataUrl = ko.pureComputed(() => appUrl.forSampleData(activeDatabase()));
     const ongoingTasksUrl = ko.pureComputed(() => appUrl.forOngoingTasks(activeDatabase()));
-    const editExternalReplicationTasksUrl = ko.pureComputed(() => appUrl.forNewExternalReplication(activeDatabase()));
+    const editExternalReplicationTaskUrl = ko.pureComputed(() => appUrl.forNewExternalReplication(activeDatabase()));
+    const editSubscriptionTaskUrl = ko.pureComputed(() => appUrl.forNewSubscription(activeDatabase()));
     const csvImportUrl = ko.pureComputed(() => appUrl.forCsvImport(activeDatabase()));
 
     const submenu: leafMenuItem[] = [
@@ -55,9 +56,17 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/tasks/editExternalReplicationTask',
             title: 'Create External Replication Task',
             nav: false,
-            dynamicHash: editExternalReplicationTasksUrl,
+            dynamicHash: editExternalReplicationTaskUrl,
             itemRouteToHighlight: 'databases/tasks/ongoingTasks'
         }),
+        new leafMenuItem({
+            route: 'databases/tasks/editSubscriptionTask',
+            moduleId: 'viewmodels/database/tasks/editSubscriptionTask',
+            title: 'Create Subscription Task',
+            nav: false,
+            dynamicHash: editSubscriptionTaskUrl,
+            itemRouteToHighlight: 'databases/tasks/ongoingTasks'
+        })
         /* TODO:
         new leafMenuItem({
             route: 'databases/tasks/csvImport',

@@ -34,7 +34,6 @@ var paths = {
         'wwwroot/lib/bootstrap-multiselect/dist/css/bootstrap-multiselect.css',
         'wwwroot/lib/Durandal/css/durandal.css',
         'wwwroot/lib/animate.css/animate.css',
-        'wwwroot/lib/toastr/toastr.css',
         'wwwroot/lib/prism/themes/prism-dark.css',
         'wwwroot/Content/css/styles.css',
         'wwwroot/Content/css/legacy_styles.css'

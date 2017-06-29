@@ -1,77 +1,113 @@
-<div class="destinations flex-vertical absolute-fill content-margin">
-        <div class="row flex-row flex-grow flex-stretch-items">
-            <div class="col-sm-12 col-lg-6 flex-vertical">
-                <div class="flex-header flex-horizontal">
+<div class="destinations flex-vertical absolute-fill content-margin manage-ongoing-tasks">
+    <div class="row flex-row flex-grow flex-stretch-items">
+        <div class="col-sm-12 col-lg-6 flex-vertical">
+            <div class="flex-header flex-horizontal">
+                <div>
                     <button data-bind="click: addNewOngoingTask" class="btn btn-primary">
                         <i class="icon-plus"></i><span>Add Task</span>
                     </button>
-                    <div class="flex-separator"></div>
-                    <div data-bind="visible: existingTaskTypes().length > 1">
-                        Filter By Type:
-                        <div class="btn-group">
-                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                                <span data-bind="text: selectedTaskType"></span><span class="caret"></span>
-                            </button>
-                            <ul class="dropdown-menu" role="menu">
-                                <!-- ko foreach: existingTaskTypes() -->
-                                <li data-bind="click: $root.setSelectedTaskType.bind($root, $data)"><a data-bind="text: $data"></a></li>
-                                <!-- /ko -->
-                            </ul>
+                </div>
+                <div class="flex-separator"></div>
+                <div class="btn-group-label" data-label="Selection">
+                    <button class="btn btn-default btn-upcoming disabled">
+                        <i class="icon-import"></i><span>Import</span>
+                    </button>
+                    <button class="btn btn-default btn-upcoming disabled">
+                        <i class="icon-export"></i><span>Export</span>
+                    </button>
+                </div>
+            </div>
+            <div class="flex-horizontal">
+                <div class="checkbox checkbox-primary checkbox-inline align-checkboxes">
+                    <input type="checkbox" class="styled">
+                    <label></label>
+                </div>
+                <div>
+                    <div class="btn-group" data-bind="visible: existingTaskTypes().length > 1">
+                        <button type="button" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown" title="Filter by task type">
+                            <span data-bind="text: selectedTaskType"></span>&nbsp;&nbsp;
+                            <span class="caret"></span>
+                            <span class="sr-only">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu" role="menu">
+                            <!-- ko foreach: existingTaskTypes() -->
+                            <li data-bind="click: $root.setSelectedTaskType.bind($root, $data)"><a data-bind="text: $data"></a></li>
+                            <!-- /ko -->
+                            <li class="divider"></li>
+                            <li data-bind="click: $root.setSelectedTaskType('All tasks')"><a>All tasks</a></li>
+                        </ul>
+                    </div>
+                    <div class="btn-group" data-bind="visible: existingNodes().length > 1">
+                        <button type="button" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown" title="Filter by responsible nodes">
+                            <span data-bind="text: selectedNode"></span>&nbsp;&nbsp;
+                            <span class="caret"></span>
+                            <span class="sr-only">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <!-- ko foreach: existingNodes() -->
+                            <li data-bind="click: $root.setSelectedNode.bind($root, $data)"><a data-bind="text: $data"></a></li>
+                            <!-- /ko --> 
+                            <li class="divider"></li>
+                            <li data-bind="click: $root.setSelectedNode('All nodes')"><a>All nodes</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="flex-grow"><input type="text" class="form-control input-sm btn-upcoming" placeholder="Filter"></div>
+                <div><button class="btn btn-sm btn-default btn-upcoming disabled" type="button"><i class="icon-search"></i></button></div>
+            </div>
+           
+            <div class="scroll flex-grow">
+                <div data-bind="if: existingTaskTypes().length === 0">
+                    <div class="row">
+                        <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
+                            <i class="icon-xl icon-empty-set text-muted"></i>
+                            <h2 class="text-center">No tasks have been created for this Database Group.</h2>
                         </div>
                     </div>
                 </div>
-                <div class="scroll flex-grow">
-                    <div data-bind="if: existingTaskTypes().length === 0">
-                        <div class="row">
-                            <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
-                                <i class="icon-xl icon-empty-set text-muted"></i>
-                                <h2 class="text-center">No tasks have been created for this Database Group.</h2>
-                            </div>
-                        </div>
+
+                <!-- Replication -->
+
+                <div data-bind="if: replicationTasks().length > 0 && (selectedTaskType() === 'External Replication' || selectedTaskType() === 'All tasks' )">
+                    <div class="hr-title">
+                        <h5>EXTERNAL REPLICATION</h5><hr>
                     </div>
-
-                    <!-- Replication -->
-
-                    <div data-bind="if: replicationTasks().length > 0 && (selectedTaskType() === 'External Replication' || selectedTaskType() === 'All' )">
-                        <div class="hr-title">
-                            <h5>EXTERNAL REPLICATION</h5><hr>
-                        </div>
-                        <div data-bind="foreach: replicationTasks">
-                            <div class="panel destination-item external-replication">
-                                <h5 class="text-center" data-bind="text: taskName"></h5> <!-- TODO: this is a temporary place for the Task Name title - waiting for Rafal input.. -->
-                                <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
-                                <div class="padding padding-sm destination-info">
-                                    <div class="info-container flex-horizontal flex-grow">
-                                        <div class="destination flex-grow">
-                                            <h5>DESTINATION</h5>
-                                            <h3>
-                                                <a target="_blank" title="Destination Url" class="destination-name" data-bind="attr: { href: destinationURL }">
-                                                    <i class="icon-external-replication"></i><span data-bind="text: destinationURL"></span>
-                                                </a>
-                                                <span title="Destination database" class="location" data-bind="text: '(' + destinationDB() + ')'"></span>
-                                                <!-- Todo: change 'location' class name to 'destination db' ; change 'dest name' to 'dest url' ..... -->
-                                            </h3>
-                                        </div>
-                                        <div class="node">
-                                            <h5>RESPONSIBLE NODE</h5>
-                                            <h3 data-bind="text: responsibleNode().NodeTag"></h3> <!-- todo: add tooltips & move to template... -->
-                                        </div>
-                                        <div class="status" data-bind="template: { name: 'status-template' }"></div>
+                    <div data-bind="foreach: replicationTasks">
+                        <div class="panel destination-item external-replication" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
+                            <h5 class="text-center task-name" data-bind="text: taskName"></h5>
+                            <!-- TODO: this is a temporary place for the Task Name title - waiting for Rafal input.. -->
+                            <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
+                            <div class="padding padding-sm destination-info">
+                                <div class="info-container flex-horizontal flex-grow">
+                                    <div class="checkbox">
+                                        <input type="checkbox" class="styled">
+                                        <label></label>
                                     </div>
-                                    <div class="actions-container">
-                                        <div class="actions">
-                                            <button class="btn btn-default" data-bind="click: editTask" title="Edit task"><i class="icon-edit"></i></button>
-                                            <button class="btn btn-danger" data-bind="click: $root.confirmRemoveOngoingTask" title="Delete task"><i class="icon-trash"></i></button> 
-                                        </div>
+                                    <div class="destination flex-grow">
+                                        <h5>DESTINATION</h5>
+                                        <h3>
+                                            <a target="_blank" title="Destination Url" class="destination-name" data-bind="attr: { href: destinationURL }">
+                                                <i class="icon-external-replication"></i><span data-bind="text: destinationURL"></span>
+                                            </a>
+                                            <span title="Destination database" class="location" data-bind="text: '(' + destinationDB() + ')'"></span>
+                                            <!-- TODO: Change 'location' class name to 'destination db' ; change 'dest name' to 'dest url' ..... -->
+                                            <!-- TODO: If database name is very long than 'actions buttons' overflow to next line. Shorten db name and add '...' -->
+                                        </h3>
                                     </div>
+                                    <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
+                                    <div class="status" data-bind="template: { name: 'status-template' }"></div>
                                 </div>
+                                <div data-bind="template: { name: 'actions-template' }"></div>
                             </div>
                         </div>
+
                     </div>
+                </div>
 
-                    <!-- etl -->
+                <!-- etl -->
 
-                    <div data-bind="if: etlTasks().length > 0 && (selectedTaskType() === 'RavenDB ETL' || selectedTaskType() === 'All' )">
+                <!-- TODO... -->
+                <!--<div data-bind="if: etlTasks().length > 0 && (selectedTaskType() === 'RavenDB ETL' || selectedTaskType() === 'All tasks' )">
                         <div class="hr-title">
                             <h5>RAVENDB ETL</h5><hr>
                         </div>
@@ -80,34 +116,30 @@
                                 <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
                                 <div class="padding padding-sm destination-info">
                                     <div class="info-container flex-horizontal flex-grow">
+                                        <div class="checkbox">
+                                            <input type="checkbox" class="styled">
+                                            <label></label>
+                                        </div>
                                         <div class="destination flex-grow">
                                             <h5>DESTINATION</h5>
                                             <h3>
                                                 <a title="Destination Url" class="destination-name"><i class="icon-ravendb-etl"></i><span data-bind="text: destinationURL"></span></a>
-                                                <span title="Destination database" class="location" data-bind="text: destDBText"></span> 
+                                                <span title="Destination database" class="location" data-bind="text: destDBText"></span>
                                             </h3>
-                                        </div>
-                                        <div class="node">
-                                            <h5>RESPONSIBLE NODE</h5>
-                                            <h3 data-bind="text: responsibleNode().NodeTag"></h3>
-                                        </div>
-                                        <div data-bind="template: { name: 'status-template' }"></div>
+                                        </div>                                       
+                                        <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
+                                        <div class="status" data-bind="template: { name: 'status-template' }"></div>
                                     </div>
-                                    <div class="actions-container">
-                                        <div class="actions">
-                                            <button class="btn btn-default" data-bind="click: editTask"><i class="icon-edit"></i></button>
-                                            <button class="btn btn-danger" data-bind="click: removeTask"><i class="icon-trash"></i></button>
-                                        </div>
-                                    </div>
-
+                                    <div data-bind="template: { name: 'actions-template' }"></div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </div>-->
 
-                    <!-- sql -->
-
-                    <div data-bind="if: sqlTasks().length > 0 && (selectedTaskType() === 'SQL ETL' || selectedTaskType() === 'All' )">
+                <!-- sql -->
+                
+                <!-- TODO... -->
+                <!--<div data-bind="if: sqlTasks().length > 0 && (selectedTaskType() === 'SQL ETL' || selectedTaskType() === 'All tasks' )">
                         <div class="hr-title">
                             <h5>SQL ETL</h5><hr>
                         </div>
@@ -116,159 +148,200 @@
                                 <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
                                 <div class="padding padding-sm destination-info">
                                     <div class="info-container flex-horizontal flex-grow">
+                                        <div class="checkbox">
+                                            <input type="checkbox" class="styled">
+                                            <label></label>
+                                        </div>
                                         <div class="destination flex-grow">
                                             <h5>DESTINATION</h5>
                                             <h3>
                                                 <a title="SQL Server" class="destination-name"><i class="icon-sql-etl"></i><span data-bind="text: destinationServer"></span></a>
-                                                <span title="SQL Database" class="location" data-bind="text: destinationDatabaseText"></span> 
+                                                <span title="SQL Database" class="location" data-bind="text: destinationDatabaseText"></span>
                                             </h3>
                                         </div>
-                                        <div class="node">
-                                            <h5>RESPONSIBLE NODE</h5>
-                                            <h3 data-bind="text: responsibleNode().NodeTag"></h3>
-                                        </div>
-                                        <div data-bind="template: { name: 'status-template' }"></div>
+                                        <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
+                                        <div class="status" data-bind="template: { name: 'status-template' }"></div>
                                     </div>
-                                    <div class="actions-container">
-                                        <div class="actions">
-                                            <button class="btn btn-default" data-bind="click: editTask"><i class="icon-edit"></i></button>
-                                            <button class="btn btn-danger" data-bind="click: removeTask"><i class="icon-trash"></i></button>
-                                        </div>
-                                    </div>
+                                    <div data-bind="template: { name: 'actions-template' }"></div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </div>-->
 
-                    <!-- backup -->
-
-                    <div data-bind="if: backupTasks().length > 0 && (selectedTaskType() === 'Backup' || selectedTaskType() === 'All' )">
+                <!-- backup -->
+                
+                <!-- TODO... -->
+                <!--<div data-bind="if: backupTasks().length > 0 && (selectedTaskType() === 'Backup' || selectedTaskType() === 'All tasks' )">
                         <div class="hr-title">
                             <h5>BACKUP</h5><hr>
                         </div>
                         <div data-bind="foreach: backupTasks">
                             <div class="panel destination-item periodic-backup">
-                                <!-- Todo: change class name to just backup ...  -->
+                                 Todo: change class name to just backup ...  
                                 <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
                                 <div class="padding padding-sm destination-info">
                                     <div class="info-container flex-horizontal flex-grow">
+                                        <div class="checkbox">
+                                            <input type="checkbox" class="styled">
+                                            <label></label>
+                                        </div>
                                         <div class="destination flex-grow">
                                             <h5>DESTINATION</h5>
                                             <h3>
                                                 <a title="Backup destinations" class="destination-name"><i class="icon-backup"></i><span data-bind="text: backupDestinations"></span></a>
                                             </h3>
                                         </div>
-                                        <div class="node">
-                                            <h5>RESPONSIBLE NODE</h5>
-                                            <h3 data-bind="text: responsibleNode().NodeTag"></h3>
-                                        </div>
-                                        <div data-bind="template: { name: 'status-template' }"></div>
+                                        <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
+                                        <div class="status" data-bind="template: { name: 'status-template' }"></div>
                                     </div>
-                                    <div class="actions-container">
-                                        <div class="actions">
-                                            <button class="btn btn-default" data-bind="click: editTask"><i class="icon-edit"></i></button>
-                                            <button class="btn btn-danger" data-bind="click: removeTask"><i class="icon-trash"></i></button>
-                                        </div>
-                                    </div>
+                                    <div data-bind="template: { name: 'actions-template' }"></div>
                                 </div>
                             </div>
                         </div>
+                    </div>-->
+
+                <!-- subscription -->
+
+                <!-- TODO...Subscriptions work is in progress -->
+                <div data-bind="if: subscriptionTasks().length > 0 && (selectedTaskType() === 'Subscription' || selectedTaskType() === 'All tasks')">
+                    <div class="hr-title">
+                        <h5>SUBSCRIPTION</h5><hr>
                     </div>
-
-                    <!-- subscription -->
-
-                    <div data-bind="if: subscriptionsCount() > 0 && (selectedTaskType() === 'Subscription' || selectedTaskType() === 'All' )">
-                        <div class="hr-title">
-                            <h5>SUBSCRIPTION</h5><hr>
-                        </div>
-                        <div class="panel destination-item subscription">
-                            <div data-state-text="|||" class="state state-success"></div>
+                    <div data-bind="foreach: subscriptionTasks">
+                        <div class="panel destination-item subscription" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
+                            <h5 class="text-center task-name" data-bind="text: taskName"></h5>
+                            <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
                             <div class="padding padding-sm destination-info">
                                 <div class="info-container flex-horizontal flex-grow">
-                                    <div class="destination flex-grow">
+                                    <div class="checkbox">
+                                        <input type="checkbox" class="styled">
+                                        <label></label>
+                                    </div>
+                                    <div class="destination flex-grow">  todo... 
+                                        <h5>TASK NAME</h5>
                                         <h3>
-                                            <a data-bind="attr: { href: urlForSubscriptions() }" title="Click for details" class="destination-name"><i class="icon-subscription"></i><span>Subscriptions</span></a>
-                                            <span title="Number of subscriptions" class="location" data-bind="text: subsCountText"></span>
+                                            <i class="icon-subscription"></i>
+                                            <span title="Subscription task name" class="location" data-bind="text: taskName"></span>
                                         </h3>
                                     </div>
+                                    <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
+                                    <div class="status" data-bind="template: { name: 'status-template' }"></div>
                                 </div>
+
                                 <div class="actions-container">
                                     <div class="actions">
-                                        <button class="btn btn-default disabled"><i class="icon-edit"></i></button>
+                                        <button class="btn btn-default" data-toggle="collapse" data-target="#SubscriptionDetails" title="Click for details"><i class="icon-info"></i></button>
+                                        <button class="btn btn-default" data-bind="click: editTask" title="Edit task"><i class="icon-edit"></i></button>
+                                        <button class="btn btn-danger" data-bind="click: $root.confirmRemoveOngoingTask" title="Delete task"><i class="icon-trash"></i></button>
+                                    </div>
+                                </div>
+                                <div id="SubscriptionDetails" class="collapse flex-grow">
+                                    <hr/>
+                                    <div class="flex-horizontal">
+                                        <div class="flex-grow">
+                                            <ul class="properties">
+                                                <li><span>Collection:</span><strong data-bind="text: collection"></strong></li>
+                                                <li><span>Client address:</span><strong data-bind="text: clientAddress"></strong>
+                                                    <button class="btn btn-xs" data-bind="click: $root.disconnectClientFromSubscription" title="Disconnect client from this subscription (unsubscribe client)">
+                                                        <i class="icon-disconnected"></i><span>Disconnect</span>
+                                                    </button>
+                                                </li>
+                                                <li><span>Connected From:</span><strong data-bind="text: connectedFrom"></strong></li>
+                                            </ul>
+                                        </div>
+                                        <div>
+                                            <button class="btn btn-default" data-bind="click: $root.refreshOngoingTaskInfo" title="Refresh info"><i class="icon-refresh"></i></button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
+                        </div> 
+                    </div> 
                 </div>
             </div>
+        </div>
 
-            <div class="col-sm-12 col-lg-6 flex-vertical">
-                <div class="flex-horizontal flex-header">
-                    <div></div><h3>Topology <i class="icon-info text-info"></i></h3>
-                    <div class="flex-separator"></div>
-                    <div>
-                        <button class="btn btn-info btn-upcoming disabled"><i class="icon-topology"></i> <span>Retrieve live topology</span></button>
-                    </div>
-                    <div class="btn-group dropdown-right">
-                        <button class="btn btn-default dropdown-toggle btn-upcoming disabled" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                            <i class="icon-export"></i><span>Download topology</span>
-                            <span class="caret"></span>
-                        </button>
-                        <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-                            <li><a href="#">.zip</a></li>
-                        </ul>
+        <div class="col-sm-12 col-lg-6 flex-vertical">
+            <div class="flex-horizontal flex-header">
+                <div></div><h3>Topology <i class="icon-info text-info"></i></h3>
+                <div class="flex-separator"></div>
+                <div>
+                    <button class="btn btn-info btn-upcoming disabled"><i class="icon-topology"></i> <span>Retrieve live topology</span></button>
+                </div>
+                <div class="btn-group dropdown-right">
+                    <button class="btn btn-default dropdown-toggle btn-upcoming disabled" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                        <i class="icon-export"></i><span>Download topology</span>
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                        <li><a href="#">.zip</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="panel flex-grow">
+
+                <div class="row">
+                    <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
+                        <br /><br /><br />
+                        <i class="icon-xl icon-hammer-driver text-warning"></i>
+                        <h2 class="text-center text-warning">
+                            Graph is under development
+                        </h2>
                     </div>
                 </div>
-                <div class="panel flex-grow">
 
-                    <div class="row">
-                        <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
-                            <br /><br /><br />
-                            <i class="icon-xl icon-hammer-driver text-warning"></i>
-                            <h2 class="text-center text-warning">
-                                Graph is under development
-                            </h2>
+            </div>
+            <div class="legend">
+                <div class="row">
+                    <div class="col-sm-8">
+                        <h5>TASK TYPE</h5>
+                        <div class="row">
+                            <div class="col-xs-6"><i class="icon-circle-filled here"></i> <span>You Are Here</span></div>
+                            <div class="col-xs-6"><i class="icon-circle-filled db-group-node"></i> <span>Database Group Node</span></div>
+                            <div class="col-xs-6"><i class="icon-circle-filled external-replication"></i> <span>External Replication</span></div>
+                            <div class="col-xs-6"><i class="icon-circle-filled subscriptions"></i> <span>Subscription</span></div>
+                            <div class="col-xs-6"><i class="icon-circle-filled ravendb-etl"></i> <span>RavenDB ETL</span></div>
+                            <div class="col-xs-6"><i class="icon-circle-filled periodic-backup"></i> <span>Backup</span></div> <!-- todo: change class name to just backup ..-->
+                            <div class="col-xs-6"><i class="icon-circle-filled sql-etl"></i> <span>SQL ETL</span></div>
                         </div>
                     </div>
-
-                </div>
-                <div class="legend">
-                    <div class="row">
-                        <div class="col-sm-8">
-                            <h5>TASK TYPE</h5>
-                            <div class="row">
-                                <div class="col-xs-6"><i class="icon-circle-filled here"></i> <span>You Are Here</span></div>
-                                <div class="col-xs-6"><i class="icon-circle-filled db-group-node"></i> <span>Database Group Node</span></div>
-                                <div class="col-xs-6"><i class="icon-circle-filled external-replication"></i> <span>External Replication</span></div>
-                                <div class="col-xs-6"><i class="icon-circle-filled subscriptions"></i> <span>Subscription</span></div>
-                                <div class="col-xs-6"><i class="icon-circle-filled ravendb-etl"></i> <span>RavenDB ETL</span></div>
-                                <div class="col-xs-6"><i class="icon-circle-filled periodic-backup"></i> <span>Backup</span></div> <!-- todo: change class name to just backup ..-->
-                                <div class="col-xs-6"><i class="icon-circle-filled sql-etl"></i> <span>SQL ETL</span></div>
-                            </div>
-                        </div>
-                        <div class="col-sm-4">
-                            <h5>CONNECTION STATUS</h5>
-                            <div><i class="icon-arrow text-success"></i> <span>Connection</span></div>
-                            <div><i class="icon-arrow-dashed text-success"></i> <span>Partial Connection (ETL)</span></div>
-                            <div><i class="icon-arrow-dashed text-warning"></i> <span>Disabled Connection</span></div>
-                            <div><i class="icon-arrow-dashed text-danger"></i> <span>Broken Connection</span></div>
-                        </div>
+                    <div class="col-sm-4">
+                        <h5>CONNECTION STATUS</h5>
+                        <div><i class="icon-arrow text-success"></i> <span>Connection</span></div>
+                        <div><i class="icon-arrow-dashed text-success"></i> <span>Partial Connection (ETL)</span></div>
+                        <div><i class="icon-arrow-dashed text-warning"></i> <span>Disabled Connection</span></div>
+                        <div><i class="icon-arrow-dashed text-danger"></i> <span>Broken Connection</span></div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 </div>
 
 <script type="text/html" id="status-template">
-    <h5>STATUS</h5>   
-    <div class="btn-group"> 
-        <button type="button" class="btn dropdown-toggle" data-toggle="dropdown" aria-expanded="false"> <!--set-size-->           
+    <h5>STATUS</h5>
+    <div class="btn-group">
+        <button type="button" class="btn dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+            <!--set-size-->
             <span data-bind="text: badgeText"></span><span class="caret"></span>
         </button>
-        <ul class="dropdown-menu settings-menu">
+        <ul class="dropdown-menu">
             <li><a href="#" data-bind="click: $root.confirmEnableOngoingTask"><span>Enable</span></a></li>
             <li><a href="#" data-bind="click: $root.confirmDisableOngoingTask"><span>Disable</span></a></li>
         </ul>
+    </div>
+</script>
+
+<script type="text/html" id="responsible-node-template">      
+    <h5>RESPONSIBLE NODE</h5>
+    <h3 data-bind="text: responsibleNode().NodeTag" title="Cluster node that is responsible for this task"></h3>            
+</script>
+
+<script type="text/html" id="actions-template">  
+    <div class="actions-container">
+        <div class="actions">
+            <button class="btn btn-default" data-bind="click: editTask" title="Edit task"><i class="icon-edit"></i></button>
+            <button class="btn btn-danger" data-bind="click: $root.confirmRemoveOngoingTask" title="Delete task"><i class="icon-trash"></i></button>
+        </div>
     </div>
 </script>

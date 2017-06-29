@@ -233,6 +233,7 @@ namespace TypingsGenerator
             // ongoing tasks
             scripter.AddType(typeof(OngoingTasksResult));
             scripter.AddType(typeof(OngoingTask));
+            scripter.AddType(typeof(OngoingTaskSubscription));
             scripter.AddType(typeof(OngoingTaskReplication));
             scripter.AddType(typeof(OngoingRavenEtl));
             scripter.AddType(typeof(OngoingSqlEtl));
