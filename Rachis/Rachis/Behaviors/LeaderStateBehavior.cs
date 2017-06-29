@@ -534,6 +534,13 @@ namespace Rachis.Behaviors
         /// </summary>
         protected long GetMaxIndexOnQuorum()
         {
+            //this was moved to internal method so we could extract statistics about the followers
+            return GetMaxIndexOnQuorumInternal().MaxQuorumIndex;
+        }
+
+        public FollowerLastSentEntries GetMaxIndexOnQuorumInternal()
+        {
+            FollowerLastSentEntries fs = new FollowerLastSentEntries(_matchIndexes);
             var topology = Engine.CurrentTopology;
             var dic = new Dictionary<long, int>();
             foreach (var index in _matchIndexes)
@@ -552,10 +559,13 @@ namespace Rachis.Behaviors
                 var confirmationsForThisIndex = source.Value + boost;
                 boost += source.Value;
                 if (confirmationsForThisIndex >= topology.QuorumSize)
-                    return source.Key;
+                {
+                    fs.MaxQuorumIndex = source.Key;
+                    return fs;
+                }
             }
-
-            return -1;
+            fs.MaxQuorumIndex = -1;
+            return fs;
         }
 
         public void AppendCommand(Command command)

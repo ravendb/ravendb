@@ -496,11 +496,9 @@ namespace Rachis
             }
         }
 
-        public Topology CurrentTopology
-        {
-            get { return _currentTopology; }
-        }
+        public Topology CurrentTopology => _currentTopology;
 
+        public Topology PersistentStateCurrentTopology => PersistentState.GetCurrentTopology();
 
         internal bool LogIsUpToDate(long lastLogTerm, long lastLogIndex)
         {
@@ -998,6 +996,11 @@ namespace Rachis
             steppingDownCompletionSource.TrySetResult(null);
         }
 
+        public FollowerLastSentEntries GetFollowerStatistics()
+        {
+            var leader = StateBehavior as LeaderStateBehavior;
+            return leader?.GetMaxIndexOnQuorumInternal();
+        }
     }
 
     public class ProposingCandidacyResult : EventArgs
