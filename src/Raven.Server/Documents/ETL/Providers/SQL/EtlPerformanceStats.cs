@@ -8,7 +8,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         public TimeSpan Duration { get; set; }
         public DateTime Started { get; set; }
 
-        public double DurationMilliseconds => Math.Round(Duration.TotalMilliseconds, 2);
+        public double DurationInMs => Math.Round(Duration.TotalMilliseconds, 2);
 
         public override string ToString()
         {

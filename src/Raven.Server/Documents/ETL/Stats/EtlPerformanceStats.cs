@@ -6,7 +6,7 @@ namespace Raven.Server.Documents.ETL.Stats
     {
         public EtlPerformanceStats(TimeSpan duration)
         {
-            DurationInMilliseconds = Math.Round(duration.TotalMilliseconds, 2);
+            DurationInMs = Math.Round(duration.TotalMilliseconds, 2);
         }
 
         public int Id { get; set; }
@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public DateTime? Completed { get; set; }
 
-        public double DurationInMilliseconds { get; }
+        public double DurationInMs { get; }
 
         public EtlPerformanceOperation Details { get; set; }
 

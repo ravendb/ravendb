@@ -191,8 +191,8 @@ namespace Raven.Server.Documents.Indexes
                 options.OnRecoveryError += documentDatabase.HandleOnRecoveryError;
                 options.SchemaVersion = 1;
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
-                options.TimeToSyncAfterFlashInSeconds = documentDatabase.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
-                options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
+                options.TimeToSyncAfterFlashInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
+                options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumOfConcurrentSyncsPerPhysDrive;
                 Sodium.CloneKey(out options.MasterKey, documentDatabase.MasterKey);
 
                 environment = new StorageEnvironment(options);
@@ -308,8 +308,8 @@ namespace Raven.Server.Documents.Indexes
 
                 options.SchemaVersion = 1;
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
-                options.TimeToSyncAfterFlashInSeconds = documentDatabase.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
-                options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
+                options.TimeToSyncAfterFlashInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
+                options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumOfConcurrentSyncsPerPhysDrive;
                 Sodium.CloneKey(out options.MasterKey, documentDatabase.MasterKey);
 
                 try
@@ -449,7 +449,7 @@ namespace Raven.Server.Documents.Indexes
                 SetState(IndexState.Normal);
 
                 _cts = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown);
-                
+
                 _indexingThread = new Thread(ExecuteIndexing)
                 {
                     Name = IndexingThreadName,
@@ -622,7 +622,7 @@ namespace Raven.Server.Documents.Indexes
                 long lastEtag = 0;
                 foreach (var collection in Collections)
                 {
-                    lastEtag  = Math.Max(lastEtag , _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection));
+                    lastEtag = Math.Max(lastEtag, _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection));
                 }
 
                 return (false, lastEtag);
@@ -1048,7 +1048,7 @@ namespace Raven.Server.Documents.Indexes
                 State = IndexState.Error; // just in case it didn't took from the SetState call
             }
         }
-        
+
         private void HandleIndexFailureInformation(IndexFailureInformation failureInformation)
         {
             if (failureInformation.IsInvalidIndex(_indexValidationStalenessCheck) == false)
@@ -2335,8 +2335,8 @@ namespace Raven.Server.Documents.Indexes
                     srcOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                     srcOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
                     srcOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
-                    srcOptions.TimeToSyncAfterFlashInSeconds = DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
-                    srcOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
+                    srcOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
+                    srcOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumOfConcurrentSyncsPerPhysDrive;
                     Sodium.CloneKey(out srcOptions.MasterKey, DocumentDatabase.MasterKey);
 
                     var wasRunning = _indexingThread != null;
@@ -2352,8 +2352,8 @@ namespace Raven.Server.Documents.Indexes
                         compactOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
 
                         compactOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
-                        compactOptions.TimeToSyncAfterFlashInSeconds = DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
-                        compactOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
+                        compactOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
+                        compactOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumOfConcurrentSyncsPerPhysDrive;
                         Sodium.CloneKey(out srcOptions.MasterKey, DocumentDatabase.MasterKey);
 
                         StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
@@ -2510,7 +2510,7 @@ namespace Raven.Server.Documents.Indexes
 
                 _hasLock = true;
             }
-            
+
             private void ThrowLockTimeoutException()
             {
                 throw new TimeoutException($"Could not get the index read lock in a reasonable time, {_parent.Name} is probably undergoing maintenance now, try again later");

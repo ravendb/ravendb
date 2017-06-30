@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Session
     {
         public QueryStatistics()
         {
-            TimingsInMilliseconds = new Dictionary<string, double>();
+            TimingsInMs = new Dictionary<string, double>();
         }
 
         /// <summary>
@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// The duration of the query _server side_
         /// </summary>
-        public long DurationMilliseconds { get; set; }
+        public long DurationInMs { get; set; }
 
         /// <summary>
         /// What was the total count of the results that matched the query
@@ -64,9 +64,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Detailed timings for various parts of a query (Lucene search, loading documents, transforming results)
         /// </summary>
-        public Dictionary<string, double> TimingsInMilliseconds { get; set; }
-
-
+        public Dictionary<string, double> TimingsInMs { get; set; }
 
         public long? ResultEtag { get; set; }
 
@@ -82,13 +80,13 @@ namespace Raven.Client.Documents.Session
         internal void UpdateQueryStats(QueryResult qr)
         {
             IsStale = qr.IsStale;
-            DurationMilliseconds = qr.DurationMilliseconds;
+            DurationInMs = qr.DurationInMs;
             TotalResults = qr.TotalResults;
             SkippedResults = qr.SkippedResults;
             Timestamp = qr.IndexTimestamp;
             IndexName = qr.IndexName;
             IndexTimestamp = qr.IndexTimestamp;
-            TimingsInMilliseconds = qr.TimingsInMilliseconds;
+            TimingsInMs = qr.TimingsInMs;
             LastQueryTime = qr.LastQueryTime;
             ResultSize = qr.ResultSize;
             ResultEtag = qr.ResultEtag;

@@ -15,14 +15,15 @@ namespace Raven.Client.Server.Operations
     public class BackupInfo : IDynamicJson
     {
         public DateTime? LastBackup { get; set; }
-        public int IntervalUntilNextBackupInSeconds { get; set; }
+
+        public int IntervalUntilNextBackupInSec { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(LastBackup)] = LastBackup,
-                [nameof(IntervalUntilNextBackupInSeconds)] = IntervalUntilNextBackupInSeconds
+                [nameof(IntervalUntilNextBackupInSec)] = IntervalUntilNextBackupInSec
             };
         }
     }
@@ -34,7 +35,7 @@ namespace Raven.Client.Server.Operations
         public Size TotalSize { get; set; }
 
         public bool IsAdmin { get; set; }
-        public TimeSpan? UpTime { get; set; } 
+        public TimeSpan? UpTime { get; set; }
         public BackupInfo BackupInfo { get; set; }
 
         public long? Alerts { get; set; }

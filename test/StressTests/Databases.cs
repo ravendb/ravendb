@@ -82,12 +82,12 @@ namespace StressTests
                             }
                             //Not sure if reported result is worth anything...
                             onePart = (double)1 / (_totalQueryCount - _totalQueryUsedCachedResults + 1);
-                            if (queryStat.DurationMilliseconds > 0)
+                            if (queryStat.DurationInMs > 0)
                             {
-                                _reportedAvarageQueryTime = onePart * (_totalQueryCount - _totalQueryUsedCachedResults) * _reportedAvarageQueryTime + queryStat.DurationMilliseconds * onePart;
-                                if (_reportedMaxQueryTime < queryStat.DurationMilliseconds)
+                                _reportedAvarageQueryTime = onePart * (_totalQueryCount - _totalQueryUsedCachedResults) * _reportedAvarageQueryTime + queryStat.DurationInMs * onePart;
+                                if (_reportedMaxQueryTime < queryStat.DurationInMs)
                                 {
-                                    _reportedMaxQueryTime = queryStat.DurationMilliseconds;
+                                    _reportedMaxQueryTime = queryStat.DurationInMs;
                                 }
                             }
                             else

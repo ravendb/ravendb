@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
         private readonly List<Func<DbParameter, string, bool>> _stringParserList;
 
-        private const int LongStatementWarnThresholdInMilliseconds = 3000;
+        private const int LongStatementWarnThresholdInMs = 3000;
 
         public RelationalDatabaseWriter(SqlEtl etl, DocumentDatabase database)
             : base(etl.Configuration.FactoryName)
@@ -212,7 +212,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         var tableMetrics = _etl.SqlMetrics.GetTableMetrics(tableName);
                         tableMetrics.InsertActionsMeter.Mark(1);
 
-                        if (elapsedMilliseconds > LongStatementWarnThresholdInMilliseconds)
+                        if (elapsedMilliseconds > LongStatementWarnThresholdInMs)
                         {
                             HandleSlowSql(elapsedMilliseconds, stmt);
                         }
@@ -324,7 +324,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         var tableMetrics = _etl.SqlMetrics.GetTableMetrics(tableName);
                         tableMetrics.DeleteActionsMeter.Mark(1);
 
-                        if (elapsedMiliseconds > LongStatementWarnThresholdInMilliseconds)
+                        if (elapsedMiliseconds > LongStatementWarnThresholdInMs)
                         {
                             HandleSlowSql(elapsedMiliseconds, stmt);
                         }

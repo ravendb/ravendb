@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Queries
                 var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
 
                 result = await runner.Execute(indexName, query, existingResultEtag);
-                result.DurationMilliseconds = (long)sw.Elapsed.TotalMilliseconds;
+                result.DurationInMs = (long)sw.Elapsed.TotalMilliseconds;
                 return result;
             }
 
@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Queries
             }
 
             result = await index.Query(query, _documentsContext, token);
-            result.DurationMilliseconds = (long)sw.Elapsed.TotalMilliseconds;
+            result.DurationInMs = (long)sw.Elapsed.TotalMilliseconds;
             return result;
         }
 
@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Queries
             context.OpenReadTransaction();
 
             var result = index.MoreLikeThisQuery(query, context, token);
-            result.DurationMilliseconds = (int)sw.Elapsed.TotalMilliseconds;
+            result.DurationInMs = (int)sw.Elapsed.TotalMilliseconds;
             return result;
         }
 

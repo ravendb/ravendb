@@ -1023,7 +1023,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return new BackupInfo
             {
                 LastBackup = allBackupTicks.Count == 0 ? (DateTime?)null : new DateTime(allBackupTicks.Max()),
-                IntervalUntilNextBackupInSeconds = allNextBackupTimeSpanSeconds.Count == 0 ?
+                IntervalUntilNextBackupInSec = allNextBackupTimeSpanSeconds.Count == 0 ?
                     0 : allNextBackupTimeSpanSeconds.Min()
             };
         }

@@ -254,8 +254,8 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.SkippedResults);
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(result.DurationMilliseconds));
-            writer.WriteInteger(result.DurationMilliseconds);
+            writer.WritePropertyName(nameof(result.DurationInMs));
+            writer.WriteInteger(result.DurationInMs);
             writer.WriteComma();
 
             writer.WriteQueryResult(context, result, metadataOnly: false, numberOfResults: out int _, partial: true);
@@ -275,8 +275,8 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.SkippedResults);
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(result.DurationMilliseconds));
-            writer.WriteInteger(result.DurationMilliseconds);
+            writer.WritePropertyName(nameof(result.DurationInMs));
+            writer.WriteInteger(result.DurationInMs);
             writer.WriteComma();
 
             writer.WriteQueryResult(context, result, metadataOnly, out numberOfResults, partial: true);
@@ -288,8 +288,8 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName(nameof(result.DurationMilliseconds));
-            writer.WriteInteger(result.DurationMilliseconds);
+            writer.WritePropertyName(nameof(result.DurationInMs));
+            writer.WriteInteger(result.DurationInMs);
             writer.WriteComma();
 
             writer.WriteQueryResult(context, result, metadataOnly: false, numberOfResults: out numberOfResults, partial: true);

@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             if (Enum.TryParse(modeStr, true, out mode) == false)
                 throw new InvalidOperationException("Query string value 'mode' is not a valid mode: " + modeStr);
 
-            var configDuration = TimeSpan.FromMinutes(Database.Configuration.Storage.TransactionsModeDuration);
+            var configDuration = Database.Configuration.Storage.TransactionsModeDuration.AsTimeSpan;
             var duration = GetTimeSpanQueryString("duration", required: false) ?? configDuration;
             JsonOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))

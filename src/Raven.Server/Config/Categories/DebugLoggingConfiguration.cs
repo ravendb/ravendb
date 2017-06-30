@@ -17,7 +17,7 @@ namespace Raven.Server.Config.Categories
 
         [DefaultValue(3)]
         [TimeUnit(TimeUnit.Days)]
-        [ConfigurationEntry("Raven/DebugLog/RetentionTime")]
+        [ConfigurationEntry("Raven/DebugLog/RetentionTimeInDays")]
         public TimeSetting RetentionTime { get; set; }
 
     }

@@ -11,6 +11,6 @@ namespace Raven.Client.Documents.Queries.MoreLikeThis
         /// <summary>
         /// The duration of actually executing the query server side
         /// </summary>
-        public long DurationMilliseconds { get; set; }
+        public long DurationInMs { get; set; }
     }
 }

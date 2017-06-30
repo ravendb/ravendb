@@ -55,14 +55,14 @@ namespace Raven.Client.Documents.Replication
 
         protected ReplicationPerformanceBase(TimeSpan duration)
         {
-            DurationInMilliseconds = Math.Round(duration.TotalMilliseconds, 2);
+            DurationInMs = Math.Round(duration.TotalMilliseconds, 2);
         }
 
         public int Id { get; set; }
 
         public DateTime Started { get; set; }
 
-        public double DurationInMilliseconds { get; set; }
+        public double DurationInMs { get; set; }
 
         public DateTime? Completed { get; set; }
 

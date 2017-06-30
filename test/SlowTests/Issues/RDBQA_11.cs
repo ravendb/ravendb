@@ -169,7 +169,7 @@ namespace SlowTests.Issues
                 var config = new ExpirationConfiguration
                 {
                     Active = true,
-                    DeleteFrequencySeconds = 100,
+                    DeleteFrequencyInSec = 100,
                 };
                 store.Admin.Server.Send(new ConfigureExpirationOperation(config, store.Database));
                 session.SaveChanges();
