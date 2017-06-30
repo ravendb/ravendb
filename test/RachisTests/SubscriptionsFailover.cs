@@ -491,7 +491,9 @@ namespace RachisTests
                 }
                 
             };
-            await task.ConfigureAwait(false);
+
+            await Task.WhenAny(task, Task.Delay(_reasonableWaitTime)).ConfigureAwait(false);
+
             return subscription;
         }
 
