@@ -4,8 +4,6 @@
     <Version>4.0.0-custom-40</Version>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>netcoreapp1.1</TargetFramework>
-    <DefineConstants Condition="$(ARM) == ''">$(DefineConstants);PORTABLE</DefineConstants>
-    <DefineConstants Condition="$(ARM) == 'true'">$(DefineConstants);PORTABLE;ARM</DefineConstants>
     <WarningsAsErrors>true</WarningsAsErrors>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Server</AssemblyName>
@@ -22,6 +20,12 @@
     <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
     <GenerateNeutralResourcesLanguageAttribute>false</GenerateNeutralResourcesLanguageAttribute>
+  </PropertyGroup>
+  <PropertyGroup Condition="$(ARM) == ''">
+    <DefineConstants>$(DefineConstants);PORTABLE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="$(ARM) == 'true'">
+    <DefineConstants>$(DefineConstants);PORTABLE;ARM</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
