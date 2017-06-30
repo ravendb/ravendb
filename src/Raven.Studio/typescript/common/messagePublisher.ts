@@ -13,7 +13,7 @@ class messagePublisher {
             toastr.options.progressBar = true;
             toastr.options.positionClass = "toast-bottom-right";
             toastr.options.extendedTimeOut = 6000;
-            toastr.options.timeOut = 6000;
+            toastr.options.timeOut = 5000;
             toastr.options.showDuration = 100;
             toastr.options.hideDuration = 100;
             toastr.options.showEasing = "linear";
