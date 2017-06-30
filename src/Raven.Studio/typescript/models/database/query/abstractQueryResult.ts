@@ -24,7 +24,7 @@ class abstractQueryResult {
         this.resultEtag = dto.ResultEtag;
         this.highlightings = dto.Highlightings;
         this.lastQueryTime = new Date(dto.LastQueryTime);
-        this.durationMilliseconds = dto.DurationMilliseconds;
+        this.durationMilliseconds = dto.DurationInMs;
     }
 }
 

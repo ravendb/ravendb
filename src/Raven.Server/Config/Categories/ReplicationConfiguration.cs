@@ -9,7 +9,7 @@ namespace Raven.Server.Config.Categories
         [Description("Threshold under which an incoming replication connection is considered active. If an incoming connection receives messages within this time-span, new connection coming from the same source would be rejected (as the existing connection is considered active)")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Raven/Replication/ActiveConnectionTimeout")]
+        [ConfigurationEntry("Raven/Replication/ActiveConnectionTimeoutInSec")]
         public TimeSetting ActiveConnectionTimeout { get; set; }
         
         [Description("Number of seconds after which replication will stop reading documents from disk")]
@@ -17,7 +17,7 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Raven/Replication/FetchingFromDiskTimeoutInSec")]
         [LegacyConfigurationEntry("Raven/Replication/FetchingFromDiskTimeout")]
-        public TimeSetting FetchingFromDiskTimeoutInSeconds { get; set; }
+        public TimeSetting FetchingFromDiskTimeout { get; set; }
 
         [Description("Number of milliseconds before replication requests will timeout")]
         [DefaultValue(60 * 1000)]
@@ -27,9 +27,9 @@ namespace Raven.Server.Config.Categories
         public TimeSetting ReplicationRequestTimeout { get; set; }
 
         [Description("Minimal time in milliseconds before sending another heartbeat")]
-        [DefaultValue(15 * 1000)]
-        [TimeUnit(TimeUnit.Milliseconds)]
-        [ConfigurationEntry("Raven/Replication/ReplicationMinimalHeartbeat")]
+        [DefaultValue(15)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Raven/Replication/ReplicationMinimalHeartbeatInSec")]
         public TimeSetting ReplicationMinimalHeartbeat { get; set; }
 
         [Description("Number of seconds before replication topology discovery requests will timeout")]

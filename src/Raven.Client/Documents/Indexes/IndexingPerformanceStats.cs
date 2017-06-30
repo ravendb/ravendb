@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Indexes
 
         public IndexingPerformanceBasicStats(TimeSpan duration)
         {
-            DurationInMilliseconds = Math.Round(duration.TotalMilliseconds, 2);
+            DurationInMs = Math.Round(duration.TotalMilliseconds, 2);
         }
 
         public int InputCount { get; set; }
@@ -43,6 +43,6 @@ namespace Raven.Client.Documents.Indexes
 
         public DateTime Started { get; set; }
 
-        public double DurationInMilliseconds { get; }
+        public double DurationInMs { get; }
     }
 }

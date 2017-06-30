@@ -952,15 +952,15 @@ namespace Voron
             set => _numOfConcurrentSyncsPerPhysDrive = value;
         }
 
-        public int TimeToSyncAfterFlashInSeconds
+        public int TimeToSyncAfterFlashInSec
         {
             get
             {
-                if (_timeToSyncAfterFlashInSeconds < 1)
-                    _timeToSyncAfterFlashInSeconds = 30;
-                return _timeToSyncAfterFlashInSeconds;
+                if (_timeToSyncAfterFlashInSec < 1)
+                    _timeToSyncAfterFlashInSec = 30;
+                return _timeToSyncAfterFlashInSec;
             }
-            set => _timeToSyncAfterFlashInSeconds = value;
+            set => _timeToSyncAfterFlashInSec = value;
         }
 
         public byte[] MasterKey;
@@ -974,7 +974,7 @@ namespace Voron
             new SortedList<long, string>();
 
         private int _numOfConcurrentSyncsPerPhysDrive;
-        private int _timeToSyncAfterFlashInSeconds;
+        private int _timeToSyncAfterFlashInSec;
 
         public virtual void SetPosixOptions()
         {

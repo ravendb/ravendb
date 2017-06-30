@@ -52,7 +52,7 @@ namespace Raven.Server.Documents
 
         protected override async Task DoWork()
         {
-            await WaitOrThrowOperationCanceled(_documentDatabase.Configuration.Tombstones.Interval.AsTimeSpan);
+            await WaitOrThrowOperationCanceled(_documentDatabase.Configuration.Tombstones.CleanupInterval.AsTimeSpan);
 
             await ExecuteCleanup();
         }

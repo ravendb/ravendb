@@ -174,7 +174,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteDocumentQueryResult(context, result, metadataOnly, out numberOfResults);
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({indexName})", HttpContext, numberOfResults, indexQuery.PageSize, TimeSpan.FromMilliseconds(result.DurationMilliseconds));
+            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({indexName})", HttpContext, numberOfResults, indexQuery.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
         }
 
         private IndexQueryServerSide GetIndexQuery(DocumentsOperationContext context, HttpMethod method)
@@ -215,7 +215,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteMoreLikeThisQueryResult(context, result, out numberOfResults);
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(MoreLikeThis)} ({indexName})", HttpContext, numberOfResults, query.PageSize, TimeSpan.FromMilliseconds(result.DurationMilliseconds));
+            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(MoreLikeThis)} ({indexName})", HttpContext, numberOfResults, query.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
         }
 
         private void Explain(DocumentsOperationContext context, string indexName)

@@ -84,7 +84,7 @@ class databaseInfo {
             return "text-danger";
         }
 
-        return dto.IntervalUntilNextBackupInSeconds === 0 ? "text-warning" : "text-success";
+        return dto.IntervalUntilNextBackupInSec === 0 ? "text-warning" : "text-success";
     }
 
     private initializeObservables() {

@@ -72,24 +72,24 @@ namespace Raven.Server.Config.Categories
         [Description("How long transaction mode (Danger/Lazy) last before returning to Safe mode. Value in Minutes. Default one day. Zero for infinite time")]
         [DefaultValue(1440)]
         [TimeUnit(TimeUnit.Minutes)]
-        [ConfigurationEntry("Raven/Storage/TransactionsModeDuration")]
-        [LegacyConfigurationEntry("Raven/TransactionsModeDuration")]
-        public int TransactionsModeDuration { get; set; }
+        [ConfigurationEntry("Raven/Storage/TransactionsModeDurationInMin")]
+        public TimeSetting TransactionsModeDuration { get; set; }
 
         [Description("Maximum concurrent flushes")]
         [DefaultValue(10)]
         [ConfigurationEntry("Raven/Storage/MaxConcurrentFlushes")]
         public int MaxConcurrentFlushes { get; set; }
 
-        [Description("Time To Sync After Flash In Seconds")]
+        [Description("Time to sync after flash in seconds")]
         [DefaultValue(30)]
-        [ConfigurationEntry("Raven/Storage/TimeToSyncAfterFlashInSeconds")]
-        public int TimeToSyncAfterFlashInSeconds { get; set; }
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Raven/Storage/TimeToSyncAfterFlashInSec")]
+        public TimeSetting TimeToSyncAfterFlash { get; set; }
 
-        [Description("Num Of Cocurrent Syncs Per Physical Drive")]
+        [Description("Number of concurrent syncs per physical drive")]
         [DefaultValue(3)]
         [ConfigurationEntry("Raven/Storage/NumOfConcurrentSyncsPerPhysicalDrive")]
-        public int NumOfCocurrentSyncsPerPhysDrive { get; set; }
+        public int NumOfConcurrentSyncsPerPhysDrive { get; set; }
 
         public override void Initialize(IConfigurationRoot settings, IConfigurationRoot serverWideSettings, ResourceType type, string resourceName)
         {

@@ -10,31 +10,31 @@ namespace Raven.Server.ServerWide.Maintenance
         [Description("Timeout in which the node expects to receive a heartbeat from the leader")]
         [DefaultValue(300)]
         [TimeUnit(TimeUnit.Milliseconds)]
-        [ConfigurationEntry("Raven/Cluster/ElectionTimeout")]
+        [ConfigurationEntry("Raven/Cluster/ElectionTimeoutInMs")]
         public TimeSetting ElectionTimeout { get; set; }
 
         [Description("How frequently we sample the information about the databases and send it to the maintenance supervisor.")]
         [DefaultValue(250)]
         [TimeUnit(TimeUnit.Milliseconds)]
-        [ConfigurationEntry("Raven/Cluster/WorkerSamplePeriod")]
+        [ConfigurationEntry("Raven/Cluster/WorkerSamplePeriodInMs")]
         public TimeSetting WorkerSamplePeriod { get; set; }
 
         [Description("As the maintenance supervisor, how frequent we sample the information received from the nodes.")]
         [DefaultValue(500)]
         [TimeUnit(TimeUnit.Milliseconds)]
-        [ConfigurationEntry("Raven/Cluster/SupervisorSamplePeriod")]
+        [ConfigurationEntry("Raven/Cluster/SupervisorSamplePeriodInMs")]
         public TimeSetting SupervisorSamplePeriod { get; set; }
 
         [Description("As the maintenance supervisor, how long we wait to hear from a worker before it is time out.")]
         [DefaultValue(1000)]
         [TimeUnit(TimeUnit.Milliseconds)]
-        [ConfigurationEntry("Raven/Cluster/ReceiveFromWorkerTimeout")]
+        [ConfigurationEntry("Raven/Cluster/ReceiveFromWorkerTimeoutInMs")]
         public TimeSetting ReceiveFromWorkerTimeout { get; set; }
 
         [Description("As the maintenance supervisor, how long we wait after we received an exception from a worker. Before we retry.")]
         [DefaultValue(5000)]
         [TimeUnit(TimeUnit.Milliseconds)]
-        [ConfigurationEntry("Raven/Cluster/OnErrorDelayTime")]
+        [ConfigurationEntry("Raven/Cluster/OnErrorDelayTimeInMs")]
         public TimeSetting OnErrorDelayTime { get; set; }
 
         [Description("As a cluster node, how long it takes to timeout operation between two cluster nodes.")]
@@ -46,7 +46,7 @@ namespace Raven.Server.ServerWide.Maintenance
         [Description("The time we give to the cluster stats to stabilize after a database topology change.")]
         [DefaultValue(5)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Raven/Cluster/StatsStabilizationTime")]
+        [ConfigurationEntry("Raven/Cluster/StatsStabilizationTimeInSec")]
         public TimeSetting StabilizationTime { get; set; }
 
     }

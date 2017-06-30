@@ -91,7 +91,7 @@ namespace Voron
         private readonly Logger _log;
         public static int MaxConcurrentFlushes = 10; // RavenDB-5221
         public static int NumOfConcurrentSyncsPerPhysDrive;
-        public static int TimeToSyncAfterFlashInSeconds;
+        public static int TimeToSyncAfterFlashInSec;
 
         public Guid DbId { get; set; }
 
@@ -111,7 +111,7 @@ namespace Voron
                 _freeSpaceHandling = new FreeSpaceHandling();
                 _headerAccessor = new HeaderAccessor(this);
                 NumOfConcurrentSyncsPerPhysDrive = options.NumOfConcurrentSyncsPerPhysDrive;
-                TimeToSyncAfterFlashInSeconds = options.TimeToSyncAfterFlashInSeconds;
+                TimeToSyncAfterFlashInSec = options.TimeToSyncAfterFlashInSec;
 
                 Debug.Assert(_dataPager.NumberOfAllocatedPages != 0);
 

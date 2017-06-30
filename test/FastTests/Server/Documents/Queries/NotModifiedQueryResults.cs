@@ -41,7 +41,7 @@ namespace FastTests.Server.Documents.Queries
                         WaitForNonStaleResultsTimeout = TimeSpan.FromMinutes(1)
                     });
 
-                    Assert.Equal(-1, users.DurationMilliseconds); // taken from cache
+                    Assert.Equal(-1, users.DurationInMs); // taken from cache
                     Assert.Equal(2, users.Results.Length);
                 }
             }

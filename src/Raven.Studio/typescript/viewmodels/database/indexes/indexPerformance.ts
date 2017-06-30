@@ -768,7 +768,7 @@ class indexPerformance extends viewModelBase {
                 if (perfStat.Completed) {
                     end = perfStatsWithCache.CompletedAsDate;
                 } else {
-                    end = new Date(start.getTime() + perfStat.DurationInMilliseconds);
+                    end = new Date(start.getTime() + perfStat.DurationInMs);
                 }
                 result.push([start, end]);
             });
@@ -886,7 +886,7 @@ class indexPerformance extends viewModelBase {
 
                 const startDateAsInt = startDate.getTime();
 
-                const endDateAsInt = startDateAsInt + perf.DurationInMilliseconds;
+                const endDateAsInt = startDateAsInt + perf.DurationInMs;
                 if (endDateAsInt < visibleStartDateAsInt || visibleEndDateAsInt < startDateAsInt)
                     continue;
 
@@ -908,7 +908,7 @@ class indexPerformance extends viewModelBase {
             let currentX = xStart;
 
             perfs.forEach(op => {
-                const dx = extentFunc(op.DurationInMilliseconds);
+                const dx = extentFunc(op.DurationInMs);
 
                 this.inProgressAnimator.register([currentX, yStart, dx, indexPerformance.trackHeight]);
 
@@ -944,7 +944,7 @@ class indexPerformance extends viewModelBase {
             const op = operations[i];
             context.fillStyle = this.getColorForOperation(op.Name);
 
-            const dx = extentFunc(op.DurationInMilliseconds);
+            const dx = extentFunc(op.DurationInMs);
 
             context.fillRect(currentX, yStart, dx, indexPerformance.trackHeight);
 
@@ -1059,7 +1059,7 @@ class indexPerformance extends viewModelBase {
         const currentDatum = this.tooltip.datum();
 
         if (currentDatum !== element) {
-            let tooltipHtml = `${element.Name}<br/>Duration: ${generalUtils.formatMillis((element).DurationInMilliseconds)}`;
+            let tooltipHtml = `${element.Name}<br/>Duration: ${generalUtils.formatMillis((element).DurationInMs)}`;
 
             const opWithParent = element as IndexingPerformanceOperationWithParent;
 

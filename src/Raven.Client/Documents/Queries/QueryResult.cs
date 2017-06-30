@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Queries
         /// <summary>
         /// The duration of actually executing the query server side
         /// </summary>
-        public long DurationMilliseconds { get; set; }
+        public long DurationInMs { get; set; }
 
         /// <summary>
         /// Explanations of document scores (if requested).
@@ -43,7 +43,7 @@ namespace Raven.Client.Documents.Queries
         /// <summary>
         /// Detailed timings for various parts of a query (Lucene search, loading documents, transforming results) - if requested.
         /// </summary>
-        public Dictionary<string, double> TimingsInMilliseconds { get; set; }
+        public Dictionary<string, double> TimingsInMs { get; set; }
 
         /// <summary>
         /// The size of the request which were sent from the server.
@@ -87,9 +87,9 @@ namespace Raven.Client.Documents.Queries
                     pair => pair.Key,
                     x => new Dictionary<string, string[]>(x.Value)),
                 ScoreExplanations = ScoreExplanations?.ToDictionary(x => x.Key, x => x.Value),
-                TimingsInMilliseconds = TimingsInMilliseconds?.ToDictionary(x => x.Key, x => x.Value),
+                TimingsInMs = TimingsInMs?.ToDictionary(x => x.Key, x => x.Value),
                 LastQueryTime = LastQueryTime,
-                DurationMilliseconds = DurationMilliseconds,
+                DurationInMs = DurationInMs,
                 ResultEtag = ResultEtag
             };
         }

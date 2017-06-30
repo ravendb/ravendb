@@ -11,13 +11,13 @@ namespace Raven.Client.Documents.Replication
 
         public ReplicationPerformanceOperation(TimeSpan duration)
         {
-            DurationInMilliseconds = Math.Round(duration.TotalMilliseconds, 2);
+            DurationInMs = Math.Round(duration.TotalMilliseconds, 2);
             Operations = new ReplicationPerformanceOperation[0];
         }
 
         public string Name { get; set; }
 
-        public double DurationInMilliseconds { get; }
+        public double DurationInMs { get; }
 
         public ReplicationPerformanceOperation[] Operations { get; set; }
     }

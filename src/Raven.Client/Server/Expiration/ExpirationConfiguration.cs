@@ -4,13 +4,13 @@ namespace Raven.Client.Server.Expiration
     {
         public bool Active { get; set; }
 
-        public long? DeleteFrequencySeconds { get; set; }
+        public long? DeleteFrequencyInSec { get; set; }
 
         public override int GetHashCode()
         {
             unchecked
             {
-                return (Active.GetHashCode() * 397) ^ DeleteFrequencySeconds.GetHashCode();
+                return (Active.GetHashCode() * 397) ^ DeleteFrequencyInSec.GetHashCode();
             }
         }
 
@@ -24,7 +24,7 @@ namespace Raven.Client.Server.Expiration
 
         protected bool Equals(ExpirationConfiguration other)
         {
-            return Active == other.Active && DeleteFrequencySeconds == other.DeleteFrequencySeconds;
+            return Active == other.Active && DeleteFrequencyInSec == other.DeleteFrequencyInSec;
         }
     }
 }

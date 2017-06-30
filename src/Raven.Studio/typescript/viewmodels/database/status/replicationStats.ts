@@ -779,7 +779,7 @@ class replicationStats extends viewModelBase {
                 if (perfStat.Completed) {
                     end = perfStatsWithCache.CompletedAsDate;
                 } else {
-                    end = new Date(start.getTime() + perfStat.DurationInMilliseconds);
+                    end = new Date(start.getTime() + perfStat.DurationInMs);
                 }
                 result.push([start, end]);
             });
@@ -897,7 +897,7 @@ class replicationStats extends viewModelBase {
                 const x1 = xScale(startDate);
                 const startDateAsInt = startDate.getTime();
 
-                const endDateAsInt = startDateAsInt + perf.DurationInMilliseconds;
+                const endDateAsInt = startDateAsInt + perf.DurationInMs;
                 if (endDateAsInt < visibleStartDateAsInt || visibleEndDateAsInt < startDateAsInt)
                     continue;
 
@@ -945,7 +945,7 @@ class replicationStats extends viewModelBase {
         const length = operations.length;
         for (let i = 0; i < length; i++) {
             const op = operations[i];
-            const dx = extentFunc(op.DurationInMilliseconds);
+            const dx = extentFunc(op.DurationInMs);
 
             // 0. Draw item:
             context.fillStyle = this.getColorForOperation(op.Name);
@@ -1084,7 +1084,7 @@ class replicationStats extends viewModelBase {
         const baseElement = element as Raven.Client.Documents.Replication.ReplicationPerformanceBase;
 
         if (currentDatum !== element) {
-            const duration = (element.DurationInMilliseconds === 0) ? "0" : generalUtils.formatMillis(element.DurationInMilliseconds);
+            const duration = (element.DurationInMs === 0) ? "0" : generalUtils.formatMillis(element.DurationInMs);
             const direction = (element.Type === 'Outgoing') ? "Outgoing" : "Incoming";
 
             let tooltipHtml = `*** ${direction} Replication ***<br/>`;
@@ -1127,7 +1127,7 @@ class replicationStats extends viewModelBase {
 
         if (currentDatum !== element) {
             let tooltipHtml = `*** ${element.Name} ***<br/>`;
-            tooltipHtml += `Duration: ${generalUtils.formatMillis((element).DurationInMilliseconds)}<br/>`;
+            tooltipHtml += `Duration: ${generalUtils.formatMillis((element).DurationInMs)}<br/>`;
 
             this.handleTooltip(element, x, y, tooltipHtml); 
         }
