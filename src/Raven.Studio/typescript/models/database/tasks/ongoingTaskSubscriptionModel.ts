@@ -34,12 +34,14 @@ class ongoingTaskSubscriptionModel extends ongoingTask {
     update(dto: Raven.Server.Web.System.OngoingTaskSubscription) {
         super.update(dto);
 
+/*  TODO
         this.collection(dto.Collection);
         this.clientAddress(dto.ClientAddress);
         this.connectedFrom(dto.ConnectedFrom);
         this.sendDocumetnsFromChangeVector(dto.SendDocumetnsFromChangeVector);
         this.lastSentChangeVector(dto.LastSentChangeVector);
         this.script(dto.Script);
+*/        
     }
 
     editTask() {
