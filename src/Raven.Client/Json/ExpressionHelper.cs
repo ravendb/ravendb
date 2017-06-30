@@ -21,6 +21,10 @@ namespace Raven.Client.Json
         public static Action<TClass> CreateZeroFieldFunction<TClass>(string fieldName)
         {
             FieldInfo field = typeof(TClass).GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Instance);
+            if (field == null) {
+                throw new InvalidOperationException($"Field not found in { typeof(TClass).FullName }: { fieldName }.");
+            }
+
             var param = Expression.Parameter(typeof(TClass), "param");
             var fieldExpression = Expression.Field(param, field);
 

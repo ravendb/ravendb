@@ -16,7 +16,13 @@ namespace Raven.Server.Documents.Handlers
 {
     public class SecretKeyHandler : AdminRequestHandler
     {
-        private readonly Action<StreamReader> _zeroInternalBuffer = ExpressionHelper.CreateZeroFieldFunction<StreamReader>("byteBuffer");
+
+        private readonly Action<StreamReader> _zeroInternalBuffer =
+#if ARM
+            ExpressionHelper.CreateZeroFieldFunction<StreamReader>("_byteBuffer");
+#else
+            ExpressionHelper.CreateZeroFieldFunction<StreamReader>("byteBuffer");
+#endif
 
         [RavenAction("/admin/secrets", "GET", "/admin/secrets")]
         public Task GetKeys()
