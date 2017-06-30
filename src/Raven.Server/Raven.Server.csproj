@@ -4,7 +4,8 @@
     <Version>4.0.0-custom-40</Version>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>netcoreapp1.1</TargetFramework>
-    <DefineConstants>$(DefineConstants);PORTABLE</DefineConstants>
+    <DefineConstants Condition="$(ARM) == ''">$(DefineConstants);PORTABLE</DefineConstants>
+    <DefineConstants Condition="$(ARM) == 'true'">$(DefineConstants);PORTABLE;ARM</DefineConstants>
     <WarningsAsErrors>true</WarningsAsErrors>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Server</AssemblyName>

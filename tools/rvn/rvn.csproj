@@ -11,19 +11,19 @@
     <RuntimeIdentifiers>win7-x64;win8-x64;win81-x64;win10-x64;win7-x86;win8-x86;win81-x86;win10-x86;ubuntu.14.04-x64;ubuntu.16.04-x64</RuntimeIdentifiers>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="..\..\libs\libsodium\x64\libsodium.dll" Link="libsodium.dll" Condition="($(Platform) == 'x64' OR $(Platform) == 'AnyCPU') AND $(ARM) == ''">
+    <None Include="..\..\libs\libsodium\x64\libsodium.dll" Link="libsodium.x64.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\libs\libsodium\x86\libsodium.dll" Link="libsodium.dll" Condition="$(Platform) == 'x86'">
+    <None Include="..\..\libs\libsodium\x86\libsodium.dll" Link="libsodium.x86.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\libs\libsodium\x64\libsodium.so" Link="libsodium.so" Condition="$(Platform) == 'x64' OR $(Platform) == 'AnyCPU'">
+    <None Include="..\..\libs\libsodium\x64\libsodium.so" Link="libsodium.x64.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\libs\libsodium\x86\libsodium.so" Link="libsodium.so" Condition="$(Platform) == 'x86' AND $(ARM) == ''">
+    <None Include="..\..\libs\libsodium\x86\libsodium.so" Link="libsodium.x86.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\libs\libsodium\x86\libsodium.arm.so" Link="libsodium.so" Condition="$(Platform) == 'AnyCPU' AND $(ARM) == 'true'">
+    <None Include="..\..\libs\libsodium\x86\libsodium.arm.so" Link="libsodium.arm.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
