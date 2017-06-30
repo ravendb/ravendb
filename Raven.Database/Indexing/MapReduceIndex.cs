@@ -35,6 +35,7 @@ using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using Spatial4n.Core.Exceptions;
 using Sparrow.Collections;
+using Raven.Abstractions.Json;
 
 namespace Raven.Database.Indexing
 {
@@ -484,7 +485,7 @@ namespace Raven.Database.Indexing
             if (dynamicJsonObject != null)
                 return dynamicJsonObject.Inner.ToString(Formatting.None);
 
-            return RavenJToken.FromObject(reduceValue).ToString(Formatting.None);
+            return RavenJToken.FromObject(reduceValue).ToString(Formatting.None, JsonDateTimeISO8601Converter.Instance);
         }
 
         protected override IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, ScoreDoc score)
