@@ -233,7 +233,7 @@ namespace Voron.Impl.Journal
                 if (unusedScratchPage.IsFreedPageMarker)
                     continue;
 
-                _env.ScratchBufferPool.Free(unusedScratchPage.ScratchNumber, unusedScratchPage.ScratchPos, availableForAllocationAfterTx);
+                _env.ScratchBufferPool.Free(tx, unusedScratchPage.ScratchNumber, unusedScratchPage.ScratchPos, availableForAllocationAfterTx);
             }
 
             foreach (var page in unusedPages)
@@ -249,7 +249,7 @@ namespace Voron.Impl.Journal
                     continue;
                 }
 
-                _env.ScratchBufferPool.Free(page.ScratchNumber, page.ScratchPos, availableForAllocationAfterTx);
+                _env.ScratchBufferPool.Free(tx, page.ScratchNumber, page.ScratchPos, availableForAllocationAfterTx);
             }
         }
     }
