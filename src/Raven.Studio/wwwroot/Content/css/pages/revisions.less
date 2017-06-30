@@ -1,11 +1,16 @@
 ﻿.revisions {
 
     .align-checkboxes {
-        margin-left: 36px;
+        margin-left: 17px;
         margin-right: 0;
     }
 
-    .versioning-item {
+    .toolbar-actions {
+        display: inline-block;
+        margin-left: @grid-gutter-width / 2;
+    }
+
+    .revisions-item {
         & > .padding {
             min-height: 65px;
         }
@@ -30,5 +35,17 @@
 
     .toggle-margin {
         margin-left: 43px;
+    }
+
+    .edit-panel {
+        .dropdown {
+            display: block;
+
+            .caret {
+                position: absolute;
+                top: 16px;
+                right: 12px;
+            }
+        }
     }
 }

@@ -29,13 +29,13 @@ class collectionsTracker {
             .execute()
             .done(stats => this.collectionsLoaded(stats, db));
 
-        this.configureVersioning(db.hasVersioningConfiguration(), db);
+        this.configureRevisions(db.hasVersioningConfiguration(), db);
 
         return this.loadStatsTask;
     }
 
-    configureVersioning(hasVersioning: boolean, db: database) {
-        if (hasVersioning) {
+    configureRevisions(hasRevisionsEnabled: boolean, db: database) {
+        if (hasRevisionsEnabled) {
             this.revisionsBin(new collection(collection.revisionsBinCollectionName, db));
         } else {
             this.revisionsBin(null);
