@@ -10,24 +10,41 @@ import getRevisionsConfigurationCommand = require("commands/database/documents/g
 
 class revisions extends viewModelBase {
 
-    defaultConfiguration = ko.observable<revisionsConfigurationEntry>(revisionsConfigurationEntry.defaultConfiguration());
-
-
-    /*
-    defaultVersioning = ko.observable<versioningEntry>(versioningEntry.defaultConfiguration());
-    versionings = ko.observableArray<versioningEntry>();
+    defaultConfiguration = ko.observable<revisionsConfigurationEntry>();
+    perCollectionConfigurations = ko.observableArray<revisionsConfigurationEntry>([]);
     isSaveEnabled: KnockoutComputed<boolean>;
-    versioningEnabled = ko.observable<boolean>(false);
     collections = collectionsTracker.default.collections;
+    selectionState: KnockoutComputed<checkbox>;
+    selectedItems = ko.observableArray<revisionsConfigurationEntry>([]);
+
+    currentlyEditedItem = ko.observable<revisionsConfigurationEntry>(); // reference to cloned and currently being edited item
+    currentBackingItem: revisionsConfigurationEntry = null; // original item which is edited
+
+    spinners = {
+        save: ko.observable<boolean>(false)
+    }
 
     constructor() {
         super();
 
-        this.bindToCurrentInstance("removeVersioning", "createNewVersioning");
+        this.bindToCurrentInstance("createDefaultConfiguration", "saveChanges",
+            "deleteItem", "editItem", "applyChanges",
+            "exitEditMode", "enableConfiguration",
+            "disableConfiguration", "toggleSelectAll");
+
+        this.initObservables();
     }
 
-    spinners = {
-        save: ko.observable<boolean>(false)
+    private initObservables() {
+        this.selectionState = ko.pureComputed<checkbox>(() => {
+            const selectedCount = this.selectedItems().length;
+            const totalCount = this.perCollectionConfigurations().length + (this.defaultConfiguration() ? 1 : 0);
+            if (totalCount && selectedCount === totalCount)
+                return checkbox.Checked;
+            if (selectedCount > 0)
+                return checkbox.SomeChecked;
+            return checkbox.UnChecked;
+        });
     }
 
     canActivate(args: any) {
@@ -35,7 +52,7 @@ class revisions extends viewModelBase {
 
         const deferred = $.Deferred<canActivateResultDto>();
 
-        this.fetchVersioningEntries(this.activeDatabase())
+        this.fetchRevisionsConfiguration(this.activeDatabase())
             .done(() => deferred.resolve({ can: true }))
             .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseRecord(this.activeDatabase()) }));
 
@@ -46,7 +63,7 @@ class revisions extends viewModelBase {
         super.activate(args);
         this.updateHelpLink("1UZ5WL");
 
-        this.dirtyFlag = new ko.DirtyFlag([this.versionings, this.defaultVersioning, this.versioningEnabled]);
+        this.dirtyFlag = new ko.DirtyFlag([this.perCollectionConfigurations, this.defaultConfiguration]);
         this.isSaveEnabled = ko.pureComputed<boolean>(() => {
             const dirty = this.dirtyFlag().isDirty();
             const saving = this.spinners.save();
@@ -54,113 +71,39 @@ class revisions extends viewModelBase {
         });
     }
 
-    compositionComplete(): void {
-        super.compositionComplete();
-
-        this.setupDisableReasons();
-    }
-
-    private fetchVersioningEntries(db: database): JQueryPromise<Raven.Client.Server.Versioning.VersioningConfiguration> {
-        return new getVersioningCommand(db)
+    private fetchRevisionsConfiguration(db: database): JQueryPromise<Raven.Client.Server.Versioning.VersioningConfiguration> {
+        return new getRevisionsConfigurationCommand(db)
             .execute()
-            .done((versioningConfig: Raven.Client.Server.Versioning.VersioningConfiguration) => {
-                this.versioningsLoaded(versioningConfig);
+            .done((revisionsConfig: Raven.Client.Server.Versioning.VersioningConfiguration) => {
+                this.onRevisionsConfigurationLoaded(revisionsConfig);
             });
     }
 
-    toDto(): Raven.Client.Server.Versioning.VersioningConfiguration {
-        const collectionVersioning = this.versionings();
-
-        const collectionsDto = {} as { [key: string]: Raven.Client.Server.Versioning.VersioningCollectionConfiguration; }
-
-        collectionVersioning.forEach(config => {
-            collectionsDto[config.collection()] = config.toDto();
-        });
-
-        return {
-            Default: this.defaultVersioning().toDto(),
-            Collections: collectionsDto
-        }
-    }
-
-    saveChanges() {
-        //TODO: check if we have to handle etag here (after Raft is merged)
-        let isValid = true;
-
-        this.versionings().forEach(item => {
-            if (!this.isValid(item.validationGroup)) {
-                isValid = false;
-            }
-        });
-
-        if (isValid) {
-            this.spinners.save(true);
-
-            eventsCollector.default.reportEvent("versioning", "save");
-
-            const dto = this.toDto();
-            let disableVersioning = false;
-
-            if (!this.versioningEnabled()) {
-                dto.Default.Active = false;
-                disableVersioning = true;
-            }
-
-            const versioningStatus = disableVersioning ? "disabled" : "enabled";
-            new saveVersioningCommand(this.activeDatabase(), dto)
-                .execute()
-                .done(() => {
-                    this.dirtyFlag().reset();
-                    messagePublisher.reportSuccess(`Versioning has been ${versioningStatus}.`);
-                    
-                })
-                .always(() => {
-                    this.spinners.save(false);
-                    collectionsTracker.default.configureVersioning(!disableVersioning, this.activeDatabase());
-                });
-        }
-    }
-
-    createNewVersioning() {
-        eventsCollector.default.reportEvent("versioning", "create");
-
-        const newItem = versioningEntry.empty();
-        this.versionings.push(newItem);
-
-        // don't show validation errors for newly created items
-        newItem.validationGroup.errors.showAllMessages(false);
-    }
-
-    removeVersioning(entry: versioningEntry) {
-        eventsCollector.default.reportEvent("versioning", "remove");
-
-        this.versionings.remove(entry);
-    }
-
-    versioningsLoaded(data: Raven.Client.Server.Versioning.VersioningConfiguration) {
+    onRevisionsConfigurationLoaded(data: Raven.Client.Server.Versioning.VersioningConfiguration) {
         if (data) {
-            this.defaultVersioning(new versioningEntry(versioningEntry.DefaultConfiguration, data.Default));
+            if (data.Default) {
+                this.defaultConfiguration(new revisionsConfigurationEntry(revisionsConfigurationEntry.DefaultConfiguration, data.Default));
+            }
 
-            const versionings = _.map(data.Collections, (configuration, collection) => {
-                return new versioningEntry(collection, configuration);
-            });
-
-            this.versionings(versionings);
-            this.versioningEnabled(data.Default.Active);
+            if (data.Collections) {
+                this.perCollectionConfigurations(_.map(data.Collections, (configuration, collection) => {
+                    return new revisionsConfigurationEntry(collection, configuration);
+                }));
+            }
             this.dirtyFlag().reset();
         } else {
-            this.versioningEnabled(false);
-            this.defaultVersioning(versioningEntry.defaultConfiguration());
+            this.defaultConfiguration(null);
+            this.perCollectionConfigurations([]);
         }
     }
 
-    createCollectionNameAutocompleter(item: versioningEntry) {
+    createCollectionNameAutocompleter(item: revisionsConfigurationEntry) {
         return ko.pureComputed(() => {
             const key = item.collection();
             const options = this.collections()
                 .filter(x => !x.isAllDocuments && !x.isSystemDocuments && !x.name.startsWith("@"))
                 .map(x => x.name);
-            const usedOptions = this.versionings().filter(f => f !== item).map(x => x.collection());
+            const usedOptions = this.perCollectionConfigurations().filter(f => f !== item).map(x => x.collection());
 
             const filteredOptions = _.difference(options, usedOptions);
 
@@ -171,7 +114,157 @@ class revisions extends viewModelBase {
             }
         });
     }
-    */
+
+    createDefaultConfiguration() {
+        eventsCollector.default.reportEvent("revisions", "create");
+
+        this.editItem(revisionsConfigurationEntry.defaultConfiguration());
+    }
+
+    addCollectionSpecificConfiguration() {
+        eventsCollector.default.reportEvent("revisions", "create");
+
+        this.currentBackingItem = null;
+        this.currentlyEditedItem(revisionsConfigurationEntry.empty());
+
+        this.currentlyEditedItem().validationGroup.errors.showAllMessages(false);
+    }
+
+    removeConfiguration(entry: revisionsConfigurationEntry) {
+        eventsCollector.default.reportEvent("revisions", "remove");
+
+        if (entry.isDefault()) {
+            this.defaultConfiguration(null);
+        } else {
+            this.perCollectionConfigurations.remove(entry);
+        }
+    }
+
+
+    applyChanges() {
+        const itemToSave = this.currentlyEditedItem();
+        const isEdit = !!this.currentBackingItem;
+        if (!this.isValid(itemToSave.validationGroup)) {
+            return;
+        }
+
+        if (itemToSave.isDefault()) {
+            this.defaultConfiguration(itemToSave);
+        } else if (isEdit) {
+            this.currentBackingItem.copyFrom(itemToSave);
+        } else {
+            this.perCollectionConfigurations.push(itemToSave);
+        }
+
+        this.exitEditMode();
+    }
+
+    toDto(): Raven.Client.Server.Versioning.VersioningConfiguration {
+        const perCollectionConfigurations = this.perCollectionConfigurations();
+
+        const collectionsDto = {} as { [key: string]: Raven.Client.Server.Versioning.VersioningCollectionConfiguration; }
+
+        perCollectionConfigurations.forEach(config => {
+            collectionsDto[config.collection()] = config.toDto();
+        });
+
+        return {
+            Default: this.defaultConfiguration() ? this.defaultConfiguration().toDto() : null,
+            Collections: collectionsDto
+        }
+    }
+
+    saveChanges() {
+        // first apply current changes:
+        const itemBeingEdited = this.currentlyEditedItem();
+        if (itemBeingEdited) {
+            if (this.isValid(itemBeingEdited.validationGroup)) {
+                this.applyChanges();
+            } else {
+
+                // we have validation error - stop saving
+                return;
+            }
+        }
+
+        this.spinners.save(true);
+
+        eventsCollector.default.reportEvent("revisions", "save");
+
+        const dto = this.toDto();
+
+        new saveRevisionsConfigurationCommand(this.activeDatabase(), dto)
+            .execute()
+            .done(() => {
+                this.dirtyFlag().reset();
+                messagePublisher.reportSuccess(`Revisions configuration has been saved`);
+            })
+            .always(() => {
+                this.spinners.save(false);
+                collectionsTracker.default.configureRevisions(true, this.activeDatabase());
+            });
+    }
+
+    compositionComplete() {
+        super.compositionComplete();
+
+        this.setupDisableReasons();
+    }
+
+    editItem(entry: revisionsConfigurationEntry) {
+        this.currentBackingItem = entry;
+        const clone = revisionsConfigurationEntry.empty().copyFrom(entry);
+        this.currentlyEditedItem(clone);
+    }
+
+    deleteItem(entry: revisionsConfigurationEntry) {
+        this.selectedItems.remove(entry);
+
+        if (entry.isDefault()) {
+            this.defaultConfiguration(null);
+        } else {
+            this.perCollectionConfigurations.remove(entry);
+        }
+
+        this.exitEditMode();
+    }
+
+    exitEditMode() {
+        this.currentBackingItem = null;
+        this.currentlyEditedItem(null);
+    }
+
+    enableConfiguration(entry: revisionsConfigurationEntry) {
+        entry.disabled(false);
+    }
+
+    disableConfiguration(entry: revisionsConfigurationEntry) {
+        entry.disabled(true);
+    }
+
+    enableSelected() {
+        this.selectedItems().forEach(item => item.disabled(false));
+    }
+
+    disableSelected() {
+        this.selectedItems().forEach(item => item.disabled(true));
+    }
+
+    toggleSelectAll() {
+        eventsCollector.default.reportEvent("revisions", "toggle-select-all");
+        const selectedCount = this.selectedItems().length;
+
+        if (selectedCount > 0) {
+            this.selectedItems([]);
+        } else {
+            const selectedItems = this.perCollectionConfigurations().slice();
+            if (this.defaultConfiguration()) {
+                selectedItems.push(this.defaultConfiguration());
+            }
+
+            this.selectedItems(selectedItems);
+        }
+    }
 }
 
 export = revisions;

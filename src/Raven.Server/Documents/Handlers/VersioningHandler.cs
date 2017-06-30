@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         context.Write(writer, new DynamicJsonValue
                         {
-                            [nameof(versioningConfig.Default)] = versioningConfig.Default.ToJson(),
+                            [nameof(versioningConfig.Default)] = versioningConfig.Default?.ToJson(),
                             [nameof(versioningConfig.Collections)] = versioningCollection
                         });
                     }
