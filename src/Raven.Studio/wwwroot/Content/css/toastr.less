@@ -6,11 +6,6 @@
     &:before {
         color: lighten(@color, 15%);
     }
-    /*border-left: 5px solid @color;
-
-    &:before {
-        color: @color;
-    }*/
 }
 
 .borderRadius(@radius) {
@@ -49,7 +44,7 @@
 @orange: @brand-warning-dark;
 @default-container-opacity: 1;
 
-@padding: @grid-gutter-width/4*3 @grid-gutter-width/2 @grid-gutter-width/2;
+@padding: @grid-gutter-width/2 @grid-gutter-width/2 @grid-gutter-width/4*3;
 // Styles
 
 .toast-message {
@@ -68,7 +63,7 @@
 
 .toast-close-button {
     position: absolute;
-    right: @grid-gutter-width/4;
+    right: 4px;
     top: 0;
     float: right;
     font-size: 20px;
@@ -196,8 +191,8 @@ button.toast-close-button {
         .toast-progress {
             position: absolute;
             left: @grid-gutter-width/2;
-            top: @grid-gutter-width/3;
-            max-width: 300px - @grid-gutter-width - 20;
+            bottom: @grid-gutter-width/3;
+            max-width: 300px - @grid-gutter-width;
             height: 1px;
             background-color: @gray-lighter;
             opacity: .5;
