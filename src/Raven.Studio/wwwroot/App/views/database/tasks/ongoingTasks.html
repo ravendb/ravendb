@@ -86,9 +86,8 @@
                                     <div class="flex-grow">
                                         <div class="flex-horizontal margin-bottom">
                                             <div class="task-name flex-grow">
-                                                <h5>TASK NAME</h5>
                                                 <h3>
-                                                    <a target="_blank" title="Destination Url" data-bind="attr: { href: destinationURL }">
+                                                    <a href="#" data-bind="click: editTask" title="Edit task">
                                                         <i class="icon-external-replication"></i><span data-bind="text: taskName"></span>
                                                     </a>
                                                 </h3>
@@ -101,8 +100,11 @@
                                             <div class="destination">
                                                 <h5>DESTINATION</h5>
                                                 <h4>
-                                                    <span data-bind="text: destinationURL"></span>
-                                                    <span title="Destination database" class="location" data-bind="text: '(' + destinationDB() + ')'"></span>
+                                                    <span title="Destination database" class="location" data-bind="text: destinationDB() + ' @ '"></span>
+                                                    <a target="_blank" title="Destination Url" data-bind="attr: { href: destinationURL }">
+                                                        <span data-bind="text: destinationURL"></span>
+                                                    </a>
+                                                    
                                                     <!-- TODO: Change 'location' class name to 'destination db' ; change 'dest name' to 'dest url' ..... -->
                                                     <!-- TODO: If database name is very long than 'actions buttons' overflow to next line. Shorten db name and add '...' -->
                                                 </h4>
