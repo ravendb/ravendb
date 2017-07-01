@@ -296,7 +296,8 @@ namespace Voron.Impl.Journal
                 PagePosition value;
                 if (files[i].PageTranslationTable.TryGetValue(tx, pageNumber, out value))
                 {
-                    var page = _env.ScratchBufferPool.ReadPage(tx, value.ScratchNumber, value.ScratchPos, null);
+                    // ReSharper disable once RedundantArgumentDefaultValue
+                    var page = _env.ScratchBufferPool.ReadPage(tx, value.ScratchNumber, value.ScratchPos, pagerState: null);
 
                     Debug.Assert(page.PageNumber == pageNumber);
 
@@ -1109,7 +1110,7 @@ namespace Voron.Impl.Journal
 
                     lastReadTxHeader = *readTxHeader;
 
-                    var totalSize = readTxHeader->CompressedSize + sizeof(TransactionHeader);
+                    var totalSize = readTxHeader->CompressedSize != -1 ? readTxHeader->CompressedSize + sizeof(TransactionHeader) : readTxHeader->UncompressedSize + sizeof(TransactionHeader);
 
 
                     var roundTo4Kb = (totalSize / (4 * Constants.Size.Kilobyte)) +
@@ -1262,7 +1263,7 @@ namespace Voron.Impl.Journal
             }
         }
 
-        private CompressedPagesResult PrepareToWriteToJournal(LowLevelTransaction tx)
+       private CompressedPagesResult PrepareToWriteToJournal(LowLevelTransaction tx)
         {
             var txPages = tx.GetTransactionPages();
             var numberOfPages = txPages.Count;
@@ -1272,22 +1273,23 @@ namespace Voron.Impl.Journal
                 pagesCountIncludingAllOverflowPages += page.NumberOfPages;
             }
 
-            // We want to include the Transaction Header straight into the compression buffer.
+            bool performCompression = pagesCountIncludingAllOverflowPages > 200; // TODO : Make this variable and configurable
+
             var sizeOfPagesHeader = numberOfPages * sizeof(TransactionHeaderPageInfo);
             var overhead = sizeOfPagesHeader + (long)numberOfPages * sizeof(long);
             var overheadInPages = checked((int)(overhead / Constants.Storage.PageSize + (overhead % Constants.Storage.PageSize == 0 ? 0 : 1)));
 
-            // The pages required includes the intermediate pages and the required output pages. 
             const int transactionHeaderPageOverhead = 1;
             var pagesRequired = (transactionHeaderPageOverhead + pagesCountIncludingAllOverflowPages + overheadInPages);
             var pagerState = _compressionPager.EnsureContinuous(0, pagesRequired);
             tx.EnsurePagerStateReference(pagerState);
 
             _compressionPager.EnsureMapped(tx, 0, pagesRequired);
-            var outputBuffer = _compressionPager.AcquirePagePointer(tx, 0);
+            var txHeaderPtr = _compressionPager.AcquirePagePointer(tx, 0);
+            var txPageInfoPtr = txHeaderPtr + sizeof(TransactionHeader);
+            var pagesInfo = (TransactionHeaderPageInfo*)txPageInfoPtr;
 
-            var pagesInfo = (TransactionHeaderPageInfo*)outputBuffer;
-            var write = outputBuffer + sizeOfPagesHeader;
+            var write = txPageInfoPtr + sizeOfPagesHeader; 
             var pageSequencialNumber = 0;
             var pagesEncountered = 0;
             foreach (var txPage in txPages)
@@ -1306,7 +1308,7 @@ namespace Voron.Impl.Journal
                 *(long*)write = pageHeader->PageNumber;
                 write += sizeof(long);
 
-                if (_env.Options.EncryptionEnabled == false)
+                if (_env.Options.EncryptionEnabled == false && performCompression)
                 {
                     _diffPage.Output = write;
 
@@ -1345,83 +1347,94 @@ namespace Voron.Impl.Journal
                     pagesInfo[pageSequencialNumber].Size = size;
                     pagesInfo[pageSequencialNumber].DiffSize = 0;
                 }
-
                 ++pageSequencialNumber;
             }
-            var totalSizeWritten = write - outputBuffer;
 
-            var outputBufferSize = LZ4.MaximumOutputLength(totalSizeWritten);
+            var totalSizeWritten = write - txPageInfoPtr;
 
-            int outputBufferInPages = checked((int)((outputBufferSize + sizeof(TransactionHeader)) / Constants.Storage.PageSize +
-                                      ((outputBufferSize + sizeof(TransactionHeader)) % Constants.Storage.PageSize == 0 ? 0 : 1)));
+            long compressedLen = 0;
 
-
-            _maxNumberOfPagesRequiredForCompressionBuffer = Math.Max(pagesRequired + outputBufferInPages, _maxNumberOfPagesRequiredForCompressionBuffer);
-            var pagesWritten = (totalSizeWritten / Constants.Storage.PageSize) +
-                               (totalSizeWritten % Constants.Storage.PageSize == 0 ? 0 : 1);
-
-            pagerState = _compressionPager.EnsureContinuous(pagesWritten, outputBufferInPages);
-            tx.EnsurePagerStateReference(pagerState);
-
-            _compressionPager.EnsureMapped(tx, pagesWritten, outputBufferInPages);
-
-            var fullTxBuffer = _compressionPager.AcquirePagePointer(tx, pagesWritten);
-
-            var compressionBuffer = fullTxBuffer + sizeof(TransactionHeader);
-
-            long compressedLen;
-
-            var compressionDuration = Stopwatch.StartNew();
-            var path = CurrentFile?.JournalWriter?.FileName?.FullPath ?? _env.Options.GetJournalPath(Math.Max(0, _journalIndex))?.FullPath;
-            using (var metrics = _env.Options.IoMetrics.MeterIoRate(path, IoMetrics.MeterType.Compression, 0)) // Note that the last journal may be replaced if we switch journals, however it doesn't affect web graph
+            if (performCompression)
             {
-                var compressionAcceleration = _lastCompressionAccelerationInfo.LastAcceleration;
+                var outputBufferSize = LZ4.MaximumOutputLength(totalSizeWritten);
+                int outputBufferInPages = checked((int)((outputBufferSize + sizeof(TransactionHeader)) / Constants.Storage.PageSize +
+                                                        ((outputBufferSize + sizeof(TransactionHeader)) % Constants.Storage.PageSize == 0 ? 0 : 1)));
+                _maxNumberOfPagesRequiredForCompressionBuffer = Math.Max(pagesRequired + outputBufferInPages, _maxNumberOfPagesRequiredForCompressionBuffer);
 
-                compressedLen = LZ4.Encode64LongBuffer(
-                    outputBuffer,
-                    compressionBuffer,
-                    totalSizeWritten,
-                    outputBufferSize,
-                    compressionAcceleration);
+                var totalSizeWrittenPlusTxHeader = totalSizeWritten + sizeof(TransactionHeader);
+                var pagesWritten = (totalSizeWrittenPlusTxHeader / Constants.Storage.PageSize) +
+                                   (totalSizeWrittenPlusTxHeader % Constants.Storage.PageSize == 0 ? 0 : 1);
 
-                metrics.SetCompressionResults(totalSizeWritten, compressedLen, compressionAcceleration);
+                pagerState = _compressionPager.EnsureContinuous(pagesWritten, outputBufferInPages);
+                tx.EnsurePagerStateReference(pagerState);
+                _compressionPager.EnsureMapped(tx, pagesWritten, outputBufferInPages);
+
+                txHeaderPtr = _compressionPager.AcquirePagePointer(tx, pagesWritten);
+                var compressionBuffer = txHeaderPtr + sizeof(TransactionHeader);
+
+                var compressionDuration = Stopwatch.StartNew();
+                var path = CurrentFile?.JournalWriter?.FileName?.FullPath ?? _env.Options.GetJournalPath(Math.Max(0, _journalIndex))?.FullPath;
+                using (var metrics = _env.Options.IoMetrics.MeterIoRate(path, IoMetrics.MeterType.Compression, 0)) // Note that the last journal may be replaced if we switch journals, however it doesn't affect web graph
+                {
+                    var compressionAcceleration = _lastCompressionAccelerationInfo.LastAcceleration;
+
+                    compressedLen = LZ4.Encode64LongBuffer(
+                        txPageInfoPtr,
+                        compressionBuffer,
+                        totalSizeWritten,
+                        outputBufferSize,
+                        compressionAcceleration);
+
+                    metrics.SetCompressionResults(totalSizeWritten, compressedLen, compressionAcceleration);
+                }
+                compressionDuration.Stop();
+
+                _lastCompressionAccelerationInfo.CompressionDuration = compressionDuration.Elapsed;
             }
-            compressionDuration.Stop();
-
-            _lastCompressionAccelerationInfo.CompressionDuration = compressionDuration.Elapsed;
+            else
+            {
+                _maxNumberOfPagesRequiredForCompressionBuffer = Math.Max(pagesRequired, _maxNumberOfPagesRequiredForCompressionBuffer);
+            }
 
             // We need to account for the transaction header as part of the total length.
-            var totalLength = compressedLen + sizeof(TransactionHeader);
+            var totalSize = performCompression ? compressedLen : totalSizeWritten;
+            var totalLength = totalSize + sizeof(TransactionHeader);
             var remainder = totalLength % (4 * Constants.Size.Kilobyte);
-            int compressed4Kbs = checked((int)((totalLength / (4 * Constants.Size.Kilobyte)) + (remainder == 0 ? 0 : 1)));
+            int entireBuffer4Kbs = checked((int)((totalLength / (4 * Constants.Size.Kilobyte)) + (remainder == 0 ? 0 : 1)));
 
             if (remainder != 0)
             {
                 // zero the remainder of the page
-                UnmanagedMemory.Set(compressionBuffer + compressedLen, 0, 4 * Constants.Size.Kilobyte - remainder);
+                UnmanagedMemory.Set(txHeaderPtr + totalLength, 0, 4 * Constants.Size.Kilobyte - remainder);
             }
 
+            var reportedCompressionLength = performCompression ? compressedLen : -1;
+            
+            // Debug.Assert(txHeaderPtr != null);
 
             var txHeader = tx.GetTransactionHeader();
-            txHeader->CompressedSize = compressedLen;
+            txHeader->CompressedSize = reportedCompressionLength;
             txHeader->UncompressedSize = totalSizeWritten;
             txHeader->PageCount = numberOfPages;
-            txHeader->Hash = Hashing.XXHash64.Calculate(compressionBuffer, (ulong)compressedLen, (ulong)txHeader->TransactionId);
+            if (performCompression)
+                txHeader->Hash = Hashing.XXHash64.Calculate(txHeaderPtr + sizeof(TransactionHeader), (ulong)compressedLen, (ulong)txHeader->TransactionId);
+            else
+                txHeader->Hash = Hashing.XXHash64.Calculate(txPageInfoPtr, (ulong)totalSizeWritten, (ulong)txHeader->TransactionId);
 
             var prepreToWriteToJournal = new CompressedPagesResult
             {
-                Base = fullTxBuffer,
-                NumberOf4Kbs = compressed4Kbs,
+                Base = txHeaderPtr,
+                NumberOf4Kbs = entireBuffer4Kbs,
                 NumberOfUncompressedPages = pagesCountIncludingAllOverflowPages,
             };
             // Copy the transaction header to the output buffer. 
-            Memory.Copy(fullTxBuffer, (byte*)txHeader, sizeof(TransactionHeader));
-            Debug.Assert(((long)fullTxBuffer % (4 * Constants.Size.Kilobyte)) == 0, "Memory must be 4kb aligned");
+            Memory.Copy(txHeaderPtr, (byte*)txHeader, sizeof(TransactionHeader));
+            Debug.Assert(((long)txHeaderPtr % (4 * Constants.Size.Kilobyte)) == 0, "Memory must be 4kb aligned");
 
             if (_env.Options.EncryptionEnabled)
-                EncryptTransaction(fullTxBuffer);
+                EncryptTransaction(txHeaderPtr);
 
-            return prepreToWriteToJournal;
+            return prepreToWriteToJournal;            
         }
 
         private void EncryptTransaction(byte* fullTxBuffer)
@@ -1445,12 +1458,14 @@ namespace Voron.Impl.Journal
             else
                 (*(long*)npub)++;
 
+            var size = txHeader->CompressedSize != -1 ? txHeader->CompressedSize : txHeader->UncompressedSize;
+
             var rc = Sodium.crypto_aead_chacha20poly1305_encrypt_detached(
                 fullTxBuffer + TransactionHeader.SizeOf,
                 fullTxBuffer + TransactionHeader.SizeOf - macLen,
                 &macLen,
                 fullTxBuffer + TransactionHeader.SizeOf,
-                (ulong)txHeader->CompressedSize,
+                (ulong)size,
                 fullTxBuffer,
                 TransactionHeader.SizeOf - macLen - sizeof(long),
                 null,

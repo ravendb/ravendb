@@ -68,10 +68,13 @@ namespace Voron.Impl.Journal
                 _readAt4Kb = lastValid4Kb;
                 return false;
             }
+            bool performDecompression = current->CompressedSize != -1;
+
+            var size = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;
 
             var transactionSizeIn4Kb =
-                (current->CompressedSize + sizeof(TransactionHeader)) / (4*Constants.Size.Kilobyte) +
-                ((current->CompressedSize + sizeof(TransactionHeader)) % (4*Constants.Size.Kilobyte) == 0 ? 0 : 1);
+                (size + sizeof(TransactionHeader)) / (4*Constants.Size.Kilobyte) +
+                ((size + sizeof(TransactionHeader)) % (4*Constants.Size.Kilobyte) == 0 ? 0 : 1);
 
 
             if (current->TransactionId <= _lastSyncedTransactionId)
@@ -82,26 +85,42 @@ namespace Voron.Impl.Journal
             }
 
             _readAt4Kb += transactionSizeIn4Kb;
-            var numberOfPages = GetNumberOfPagesFor(current->UncompressedSize);
-            _recoveryPager.EnsureContinuous(0, numberOfPages);
-            _recoveryPager.EnsureMapped(this, 0, numberOfPages);
-            var outputPage = _recoveryPager.AcquirePagePointer(this, 0);
-            UnmanagedMemory.Set(outputPage, 0, (long)numberOfPages * Constants.Storage.PageSize);
-
-            try
+            
+            TransactionHeaderPageInfo* pageInfoPtr;
+            byte* outputPage;
+            if (performDecompression)
             {
-                LZ4.Decode64LongBuffers((byte*)current + sizeof(TransactionHeader), current->CompressedSize, outputPage,
-                    current->UncompressedSize, true);
+                var numberOfPages = GetNumberOfPagesFor(current->UncompressedSize);
+                _recoveryPager.EnsureContinuous(0, numberOfPages);
+                _recoveryPager.EnsureMapped(this, 0, numberOfPages);
+                outputPage = _recoveryPager.AcquirePagePointer(this, 0);
+                UnmanagedMemory.Set(outputPage, 0, (long)numberOfPages * Constants.Storage.PageSize);
+
+                try
+                {
+                    LZ4.Decode64LongBuffers((byte*)current + sizeof(TransactionHeader), current->CompressedSize, outputPage,
+                        current->UncompressedSize, true);
+                }
+                catch (Exception e)
+                {
+                    options.InvokeRecoveryError(this, "Could not de-compress, invalid data", e);
+                    RequireHeaderUpdate = true;
+
+                    return false;
+                }
+                pageInfoPtr = (TransactionHeaderPageInfo*)outputPage;
             }
-            catch (Exception e)
+            else
             {
-                options.InvokeRecoveryError(this, "Could not de-compress, invalid data", e);
-                RequireHeaderUpdate = true;
-
-                return false;
+                var numberOfPages = GetNumberOfPagesFor(current->UncompressedSize);
+                _recoveryPager.EnsureContinuous(0, numberOfPages);
+                _recoveryPager.EnsureMapped(this, 0, numberOfPages);
+                outputPage = _recoveryPager.AcquirePagePointer(this, 0);
+                UnmanagedMemory.Set(outputPage, 0, (long)numberOfPages * Constants.Storage.PageSize);
+                Memory.Copy(outputPage, (byte*)current + sizeof(TransactionHeader), current->UncompressedSize);
+                pageInfoPtr = (TransactionHeaderPageInfo*)outputPage;
             }
 
-            var pageInfoPtr = (TransactionHeaderPageInfo*)outputPage;
             long totalRead = sizeof(TransactionHeaderPageInfo) * current->PageCount;
             if (totalRead > current->UncompressedSize)
                 throw new InvalidDataException($"Attempted to read position {totalRead} from transaction data while the transaction is size {current->UncompressedSize}");
@@ -118,7 +137,8 @@ namespace Voron.Impl.Journal
                     throw new InvalidDataException($"Attempted to read position {totalRead} from transaction data while the transaction is size {current->UncompressedSize}");
 
                 Debug.Assert(_journalPager.Disposed == false);
-                Debug.Assert(_recoveryPager.Disposed == false);
+                if (performDecompression)
+                    Debug.Assert(_recoveryPager.Disposed == false);
 
                 var numberOfPagesOnDestination = GetNumberOfPagesFor(pageInfoPtr[i].Size);
                 _dataPager.EnsureContinuous(pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
@@ -196,11 +216,13 @@ namespace Voron.Impl.Journal
                     throw new InvalidOperationException("Unable to generate derived key");
             }
 
+            var size = txHeader->CompressedSize != -1 ? txHeader->CompressedSize : txHeader->UncompressedSize;
+
             var rc = Sodium.crypto_aead_chacha20poly1305_decrypt_detached(
                 page + TransactionHeader.SizeOf,
                 null,
                 page + TransactionHeader.SizeOf,
-                (ulong)txHeader->CompressedSize,
+                (ulong)size,
                 page + TransactionHeader.SizeOf - macLen,
                 page,
                 TransactionHeader.SizeOf - macLen - sizeof(long),
@@ -234,7 +256,7 @@ namespace Voron.Impl.Journal
             // * TxId >  current Id + 1  ::  if hash is invalid we can ignore reused/random, but if hash valid then we might missed TXs 
 
             if (current->HeaderMarker != Constants.TransactionHeaderMarker)
-            {
+            {  
                 // not a transaction page, 
 
                 // if the header marker is zero or garbage, we are probably in the area at the end of the log file, and have no additional log records
@@ -255,7 +277,8 @@ namespace Voron.Impl.Journal
             if (options.EncryptionEnabled)
             {
                 // We use temp buffers to hold the transaction before decrypting, and release the buffers afterwards.
-                var size = (4*Constants.Size.Kilobyte) * GetNumberOf4KbFor(sizeof(TransactionHeader) + current->CompressedSize);
+                var pagesSize = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;
+                var size = (4*Constants.Size.Kilobyte) * GetNumberOf4KbFor(sizeof(TransactionHeader) + pagesSize);
 
                 var ptr = NativeMemory.Allocate4KbAlignedMemory(size, out var thread);
                 var buffer = new EncryptionBuffer
@@ -322,7 +345,8 @@ namespace Voron.Impl.Journal
 
         private TransactionHeader* EnsureTransactionMapped(TransactionHeader* current, long pageNumber, long positionInsidePage)
         {
-            var numberOfPages = GetNumberOfPagesFor(positionInsidePage + sizeof(TransactionHeader) + current->CompressedSize);
+            var size = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;
+            var numberOfPages = GetNumberOfPagesFor(positionInsidePage + sizeof(TransactionHeader) + size);
             _journalPager.EnsureMapped(this, pageNumber, numberOfPages);
 
             var pageHeader = _journalPager.AcquirePagePointer(this, pageNumber)
@@ -335,23 +359,25 @@ namespace Voron.Impl.Journal
         {
             byte* dataPtr = (byte*)current + sizeof(TransactionHeader);
 
-            if (current->CompressedSize < 0)
+            var size = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;
+            if (size < 0)
             {
                 RequireHeaderUpdate = true;
                 // negative size is not supported
                 options.InvokeRecoveryError(this, $"Compresses size {current->CompressedSize} is negative", null);
                 return false;
             }
-            if (current->CompressedSize >
+            if (size >
                 (_journalPagerNumberOfAllocated4Kb - _readAt4Kb) * 4 * Constants.Size.Kilobyte)
             {
                 // we can't read past the end of the journal
                 RequireHeaderUpdate = true;
-                options.InvokeRecoveryError(this, $"Compresses size {current->CompressedSize} is too big for the journal size {_journalPagerNumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte}", null);
+                var compressLabel = (current->CompressedSize != -1) ? "Compressed" : "Uncompressed";
+                options.InvokeRecoveryError(this, $"Size {size} ({compressLabel}) is too big for the journal size {_journalPagerNumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte}", null);
                 return false;
             }
 
-            ulong hash = Hashing.XXHash64.Calculate(dataPtr, (ulong)current->CompressedSize, (ulong)current->TransactionId);
+            ulong hash = Hashing.XXHash64.Calculate(dataPtr, (ulong)size, (ulong)current->TransactionId);
             if (hash != current->Hash)
             {
                 RequireHeaderUpdate = true;
