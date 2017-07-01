@@ -9,6 +9,7 @@ using Raven.Client.Server.Commands;
 using Raven.Client.Server.ETL;
 using Raven.Client.Server.Expiration;
 using Raven.Client.Server.Operations.ApiKeys;
+using Raven.Client.Server.Operations.Configuration;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Client.Server.Tcp;
 using Raven.Client.Server.Versioning;
@@ -88,5 +89,7 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, ApiKeyDefinition> ApiKeyDefinition = GenerateJsonDeserializationRoutine<ApiKeyDefinition>();
 
         public static readonly Func<BlittableJsonReaderObject, RestoreSettings> RestoreSettings = GenerateJsonDeserializationRoutine<RestoreSettings>();
+
+        public static readonly Func<BlittableJsonReaderObject, ClientConfiguration> ClientConfiguration = GenerateJsonDeserializationRoutine<ClientConfiguration>();
     }
 }

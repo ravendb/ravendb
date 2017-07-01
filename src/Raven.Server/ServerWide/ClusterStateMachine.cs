@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
@@ -16,6 +17,7 @@ using Raven.Client.Exceptions.Security;
 using Raven.Client.Http.OAuth;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations.ApiKeys;
+using Raven.Client.Server.Operations.Configuration;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
@@ -71,9 +73,11 @@ namespace Raven.Server.ServerWide
             });
         }
 
-        public event EventHandler<(string dbName, long index, string type)> DatabaseChanged;
+        public event EventHandler<(string DatabaseName, long Index, string Type)> DatabaseChanged;
 
-        public event EventHandler<(string dbName, long index, string type)> DatabaseValueChanged;
+        public event EventHandler<(string DatabaseName, long Index, string Type)> DatabaseValueChanged;
+
+        public event EventHandler<(long Index, string Type)> ValueChanged; 
 
         protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
@@ -82,7 +86,7 @@ namespace Raven.Server.ServerWide
                 NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute command, wrong format"));
                 return;
             }
-                
+
 
             try
             {
@@ -97,7 +101,7 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(DeleteValueCommand):
-                        DeleteValue(context, cmd, index, leader);
+                        DeleteValue(context, type, cmd, index, leader);
                         break;
                     case nameof(IncrementClusterIdentityCommand):
                         if (!ValidatePropertyExistance(cmd,
@@ -165,13 +169,16 @@ namespace Raven.Server.ServerWide
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, leader);
                         break;
                     case nameof(PutApiKeyCommand):
-                        PutValue<ApiKeyDefinition>(context, cmd, index, leader);
+                        PutValue<ApiKeyDefinition>(context, type, cmd, index, leader);
+                        break;
+                    case nameof(PutClientConfigurationCommand):
+                        PutValue<ClientConfiguration>(context, type, cmd, index, leader);
                         break;
                     case nameof(AddDatabaseCommand):
                         AddDatabase(context, cmd, index, leader);
                         break;
                 }
-            }             
+            }
             catch (Exception e)
             {
                 NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute command of type {type}", e));
@@ -196,13 +203,13 @@ namespace Raven.Server.ServerWide
             errorMessage = null;
             if (cmd.TryGet(propertyName, out object _) == false)
             {
-                errorMessage = $"Expected to find {propertyTypeName}.{propertyName} property in the Raft command but didn't find it...";               
+                errorMessage = $"Expected to find {propertyTypeName}.{propertyName} property in the Raft command but didn't find it...";
                 return false;
             }
             return true;
         }
 
-        private unsafe void SetValueForTypedDatabaseCommand(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private void SetValueForTypedDatabaseCommand(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             UpdateValueForDatabaseCommand updateCommand = null;
             try
@@ -217,7 +224,7 @@ namespace Raven.Server.ServerWide
                     NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot set typed value of type {type} for database {updateCommand.DatabaseName}, because does not exist"));
                     return;
                 }
-                
+
                 try
                 {
                     updateCommand.Execute(context, items, index, record, _parent.CurrentState == RachisConsensus.State.Passive);
@@ -351,9 +358,9 @@ namespace Raven.Server.ServerWide
         }
 
         private static void SetDatabaseValues(
-            Dictionary<string, object> databaseValues, 
-            TransactionOperationContext context, 
-            long index, 
+            Dictionary<string, object> databaseValues,
+            TransactionOperationContext context,
+            long index,
             Table items)
         {
             if (databaseValues == null)
@@ -370,7 +377,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void DeleteValue(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private void DeleteValue(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             try
             {
@@ -388,41 +395,51 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                NotifyIndexProcessed(context, index);
+                NotifyValueChanged(context, type, index);
             }
         }
 
-        private void PutValue<T>(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private void PutValue<T>(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             try
             {
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-                var putVal = (PutValueCommand<T>)CommandBase.CreateFrom(cmd);
-                if (putVal.Name.StartsWith("db/"))
+                var command = (PutValueCommand<T>)CommandBase.CreateFrom(cmd);
+                if (command.Name.StartsWith(Constants.Documents.Prefix))
                 {
-                    NotifyLeaderAboutError(index, leader, new InvalidOperationException("Cannot set " + putVal.Name + " using PutValueCommand, only via dedicated Database calls"));
+                    NotifyLeaderAboutError(index, leader, new InvalidOperationException("Cannot set " + command.Name + " using PutValueCommand, only via dedicated Database calls"));
                     return;
                 }
 
-                using (Slice.From(context.Allocator, putVal.Name, out Slice valueName))
-                using (Slice.From(context.Allocator, putVal.Name.ToLowerInvariant(), out Slice valueNameLowered))
-                using (var rec = context.ReadObject(putVal.ValueToJson(), "inner-val"))
+                using (Slice.From(context.Allocator, command.Name, out Slice valueName))
+                using (Slice.From(context.Allocator, command.Name.ToLowerInvariant(), out Slice valueNameLowered))
+                using (var rec = context.ReadObject(command.ValueToJson(), "inner-val"))
                 {
                     UpdateValue(index, items, valueNameLowered, valueName, rec);
                 }
             }
             finally
             {
-                NotifyIndexProcessed(context, index);
+                NotifyValueChanged(context, type, index);
             }
         }
 
-        private void NotifyIndexProcessed(TransactionOperationContext context, long index)
+        private void NotifyValueChanged(TransactionOperationContext context, string type, long index)
         {
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
             {
                 if (transaction is LowLevelTransaction llt && llt.Committed)
-                    _rachisLogIndexNotifications.NotifyListenersAbout(index);
+                    TaskExecutor.Execute(_ =>
+                    {
+                        try
+                        {
+                            ValueChanged?.Invoke(this, (index, type));
+                        }
+                        finally
+                        {
+                            _rachisLogIndexNotifications.NotifyListenersAbout(index);
+                        }
+                    }, null);
             };
         }
 
@@ -530,7 +547,7 @@ namespace Raven.Server.ServerWide
             return databaseRecord;
         }
 
-       
+
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
         {
@@ -640,7 +657,7 @@ namespace Raven.Server.ServerWide
             Debug.Assert(size == sizeof(long));
 
             return doc;
-        }     
+        }
 
         public static IEnumerable<(Slice Key, BlittableJsonReaderObject Value)> ReadValuesStartingWith(
             TransactionOperationContext context, string startsWithKey)
@@ -782,7 +799,7 @@ namespace Raven.Server.ServerWide
         public void NotifyListenersAbout(long index)
         {
             var lastModified = _lastModifiedIndex;
-             while (index > lastModified)
+            while (index > lastModified)
             {
                 lastModified = Interlocked.CompareExchange(ref _lastModifiedIndex, index, lastModified);
             }

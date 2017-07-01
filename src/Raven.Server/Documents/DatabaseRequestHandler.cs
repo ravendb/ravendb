@@ -6,6 +6,7 @@ using Raven.Server.Web;
 using Sparrow.Json;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
+using Raven.Client;
 using Raven.Client.Documents.Transformers;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json.Parsing;
@@ -29,12 +30,13 @@ namespace Raven.Server.Documents
             IndexStore = context.Database.IndexStore;
             Logger = LoggingSource.Instance.GetLogger(Database.Name, GetType().FullName);
 
-            if (context.HttpContext.Request.Headers.TryGetValue("Topology-Etag", out var topologyEtag) &&
-                topologyEtag.Count == 1 && 
-                Database.DidTopologyChanged(topologyEtag[0]))
-            {
-                context.HttpContext.Response.Headers["Refresh-Topology"] = "true";
-            }
+            var topologyEtag = GetLongFromHeaders(Constants.Headers.TopologyEtag);
+            if (topologyEtag.HasValue && Database.HasTopologyChanged(topologyEtag.Value))
+                context.HttpContext.Response.Headers[Constants.Headers.RefreshTopology] = "true";
+
+            var clientConfigurationEtag = GetLongFromHeaders(Constants.Headers.ClientConfigurationEtag);
+            if (clientConfigurationEtag.HasValue && ServerStore.HasClientConfigurationChanged(clientConfigurationEtag.Value))
+                context.HttpContext.Response.Headers[Constants.Headers.RefreshClientConfiguration] = "true";
         }
 
         protected OperationCancelToken CreateTimeLimitedOperationToken()

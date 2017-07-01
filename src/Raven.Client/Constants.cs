@@ -32,6 +32,14 @@ namespace Raven.Client
 
             public const string RequestTime = "Raven-Request-Time";
 
+            public const string RefreshTopology = "Refresh-Topology";
+
+            public const string TopologyEtag = "Topology-Etag";
+
+            public const string ClientConfigurationEtag = "Client-Configuration-Etag";
+
+            public const string RefreshClientConfiguration = "Refresh-Client-Configuration";
+
             public const string Etag = "ETag";
         }
 
@@ -72,6 +80,15 @@ namespace Raven.Client
 
             public const string Prefix = "apikeys/";
             public const string ClusterApiKeyName = "Raven/Cluster";
+        }
+
+        public class Configuration
+        {
+            private Configuration()
+            {
+            }
+
+            public const string ClientId = "Configuration/Client";
         }
 
         public class Documents
@@ -115,15 +132,6 @@ namespace Raven.Client
                 public const string ChangeVector = "@change-vector";
 
                 public const string HasValue = "HasValue";
-            }
-
-            public class BulkInsert
-            {
-                private BulkInsert()
-                {
-                }
-
-                public const string Content = "Content";
             }
 
             public class Collections

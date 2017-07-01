@@ -191,11 +191,11 @@ namespace Raven.Server.Documents.Handlers.Admin
                         apiKey = clusterTopology.ApiKey;
                         topologyId = clusterTopology.TopologyId;
                     }
-                    using (var requestExecuter = ClusterRequestExecutor.CreateForSingleNode(serverUrl, apiKey))
+                    using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(serverUrl, apiKey))
                     {
-                        requestExecuter.ClusterToken = ServerStore.GetClusterTokenForNode(ctx);
+                        requestExecutor.ClusterToken = ServerStore.GetClusterTokenForNode(ctx);
                         var infoCmd = new GetNodeInfoCommand();
-                        await requestExecuter.ExecuteAsync(infoCmd, ctx);
+                        await requestExecutor.ExecuteAsync(infoCmd, ctx);
                         var nodeInfo = infoCmd.Result;
 
                         if (nodeInfo.TopologyId != null && topologyId != nodeInfo.TopologyId)

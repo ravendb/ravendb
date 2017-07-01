@@ -17,6 +17,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Raven.Client.Server.Operations.Configuration;
 
 namespace Raven.Client.Documents
 {
@@ -40,6 +41,8 @@ namespace Raven.Client.Documents
         private DatabaseSmuggler _smuggler;
 
         private string _identifier;
+
+        private long _lastClientConfigurationIndex;
 
         /// <summary>
         /// Gets or sets the identifier for this store.
@@ -168,35 +171,28 @@ namespace Raven.Client.Documents
             return session;
         }
 
-        public event Func<RequestExecutor, RequestExecutor> CustomizeRequestExecutor;
-        
+        public event EventHandler<RequestExecutor> RequestExecutorCreated;
+
         public override RequestExecutor GetRequestExecutor(string database = null)
         {
             if (database == null)
                 database = Database;
 
-            Lazy<RequestExecutor> lazy;
-            if (_requestExecutors.TryGetValue(database, out lazy))
-            {
+            if (_requestExecutors.TryGetValue(database, out Lazy<RequestExecutor> lazy))
                 return lazy.Value;
-            }
 
-            lazy = Conventions.DisableTopologyUpdates == false 
+            lazy = Conventions.DisableTopologyUpdates == false
                 ? new Lazy<RequestExecutor>(() =>
                 {
                     var requestExecutor = RequestExecutor.Create(Urls, database, ApiKey);
-                    var onCustomizeRequestExecutor = CustomizeRequestExecutor;
-                    if (onCustomizeRequestExecutor == null)
-                        return requestExecutor;
-                    return onCustomizeRequestExecutor(requestExecutor);
-                }) 
+                    RequestExecutorCreated?.Invoke(this, requestExecutor);
+                    return requestExecutor;
+                })
                 : new Lazy<RequestExecutor>(() =>
                 {
                     var forSingleNode = RequestExecutor.CreateForSingleNode(Urls[0], database, ApiKey);
-                    var onCustomizeRequestExecutor = CustomizeRequestExecutor;
-                    if (onCustomizeRequestExecutor == null)
-                        return forSingleNode;
-                    return onCustomizeRequestExecutor(forSingleNode);
+                    RequestExecutorCreated?.Invoke(this, forSingleNode);
+                    return forSingleNode;
                 });
 
             lazy = _requestExecutors.GetOrAdd(database, lazy);
@@ -238,6 +234,8 @@ namespace Raven.Client.Documents
                     Conventions.AsyncDocumentIdGenerator = (dbName, entity) => generator.GenerateDocumentIdAsync(dbName, entity);
                 }
 
+                RequestExecutorCreated += OnRequestExecutorCreated;
+
                 Initialized = true;
             }
             catch (Exception)
@@ -247,6 +245,27 @@ namespace Raven.Client.Documents
             }
 
             return this;
+        }
+
+        private void OnRequestExecutorCreated(object sender, RequestExecutor executor)
+        {
+            void OnClientConfigurationChanged(object s, (long RaftCommandIndex, ClientConfiguration Configuration) t)
+            {
+                _lastClientConfigurationIndex = t.RaftCommandIndex;
+
+                foreach (var re in _requestExecutors.Values)
+                {
+                    if (re.IsValueCreated == false)
+                        continue;
+
+                    re.Value.ClientConfigurationEtag = t.RaftCommandIndex;
+                }
+
+                Conventions.UpdateFrom(t.Configuration);
+            }
+
+            executor.ClientConfigurationEtag = _lastClientConfigurationIndex;
+            executor.ClientConfigurationChanged += OnClientConfigurationChanged;
         }
 
         /// <summary>

@@ -4,21 +4,18 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Replication;
 using Raven.Client.Http;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Expiration;
 using Raven.Server.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using DatabaseInfo = Raven.Client.Server.Operations.DatabaseInfo;
 
 namespace Raven.Server.Web.System
 {
@@ -139,16 +136,16 @@ namespace Raven.Server.Web.System
                         }
                         WriteDatabaseInfo(dbName, dbRecord, context, writer);
                     }
-                        return Task.CompletedTask;
-                    }
+                    return Task.CompletedTask;
                 }
             }
+        }
 
         private void WriteDatabaseInfo(string databaseName, BlittableJsonReaderObject dbRecordBlittable,
             TransactionOperationContext context, BlittableJsonTextWriter writer)
         {
             var online = ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out Task<DocumentDatabase> dbTask) &&
-                         dbTask != null && 
+                         dbTask != null &&
                          dbTask.IsCompleted;
 
             // Check for exceptions
@@ -157,15 +154,15 @@ namespace Raven.Server.Web.System
                 WriteFaultedDatabaseInfo(context, writer, dbTask, databaseName);
                 return;
             }
-           
+
             var dbRecord = JsonDeserializationCluster.DatabaseRecord(dbRecordBlittable);
             var db = online ? dbTask.Result : null;
 
             var indexingStatus = db?.IndexStore.Status ?? IndexRunningStatus.Running;
             // Looking for disabled indexing flag inside the database settings for offline database status
-            if (dbRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Indexing.Disabled),out var val) && val == "true")
+            if (dbRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Indexing.Disabled), out var val) && val == "true")
             {
-                 indexingStatus = IndexRunningStatus.Disabled;
+                indexingStatus = IndexRunningStatus.Disabled;
             }
             var disabled = dbRecord.Disabled;
             var topology = dbRecord.Topology;
@@ -195,8 +192,8 @@ namespace Raven.Server.Web.System
                         NodeTag = promotable,
                         Url = url
                     };
-                    var promotableTask = new PromotableTask(promotable,url,databaseName);
-                    nodesTopology.Promotables.Add(GetNodeId(node, topology.WhoseTaskIsIt(promotableTask,ServerStore.IsPassive())));
+                    var promotableTask = new PromotableTask(promotable, url, databaseName);
+                    nodesTopology.Promotables.Add(GetNodeId(node, topology.WhoseTaskIsIt(promotableTask, ServerStore.IsPassive())));
                 }
             }
 
@@ -253,7 +250,7 @@ namespace Raven.Server.Web.System
 
             context.Write(writer, doc);
         }
-        
+
         private static BackupInfo GetBackupInfo(DocumentDatabase db)
         {
             var periodicBackupRunner = db?.PeriodicBackupRunner;
@@ -274,7 +271,7 @@ namespace Raven.Server.Web.System
                 db.GetAllStoragesEnvironment().Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes);
         }
 
-        private NodeId GetNodeId(InternalReplication node,string responsible = null)
+        private NodeId GetNodeId(InternalReplication node, string responsible = null)
         {
             var nodeId = new NodeId
             {

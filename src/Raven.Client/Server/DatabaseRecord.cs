@@ -32,7 +32,7 @@ namespace Raven.Client.Server
         public Dictionary<string, DeletionInProgressStatus> DeletionInProgress;
 
         public string DataDirectory;
-        
+
         public DatabaseTopology Topology;
 
         // public OnGoingTasks tasks;  tasks for this node..
@@ -44,13 +44,13 @@ namespace Raven.Client.Server
 
         public Dictionary<string, AutoIndexDefinition> AutoIndexes;
 
-        //todo: see how we can protect this
         public Dictionary<string, TransformerDefinition> Transformers;
 
         public Dictionary<string, long> Identities;
 
         public Dictionary<string, string> Settings;
 
+        //todo: see how we can protect this
         public Dictionary<string, string> SecuredSettings { get; set; }
 
         public VersioningConfiguration Versioning { get; set; }
@@ -118,13 +118,8 @@ namespace Raven.Client.Server
                 throw new IndexOrTransformerAlreadyExistException($"Tried to create an index with a name of {definition.Name}, but a transformer under the same name exists");
             }
 
-            var lockMode = IndexLockMode.Unlock;
-
             if (AutoIndexes.TryGetValue(definition.Name, out AutoIndexDefinition existingDefinition))
             {
-                if (existingDefinition.LockMode != null)
-                    lockMode = existingDefinition.LockMode.Value;
-
                 var result = existingDefinition.Compare(definition);
                 result &= ~IndexDefinitionCompareDifferences.Etag;
 

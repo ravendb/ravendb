@@ -210,13 +210,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 writer.Flush();
                 ms.Flush();
 
-                var requestExecuter = ClusterRequestExecutor.CreateForSingleNode(url, apiKey);
-                requestExecuter.ClusterToken = token;
-                requestExecuter.DefaultTimeout = ServerStore.Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan;
+                var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, apiKey);
+                requestExecutor.ClusterToken = token;
+                requestExecutor.DefaultTimeout = ServerStore.Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan;
 
                 var rawStreamCommand = new GetRawStreamResultCommand("/debug/remote-cluster-info-package", ms);
 
-                await requestExecuter.ExecuteAsync(rawStreamCommand, jsonOperationContext);
+                await requestExecutor.ExecuteAsync(rawStreamCommand, jsonOperationContext);
                 return rawStreamCommand.Result;
             }
         }

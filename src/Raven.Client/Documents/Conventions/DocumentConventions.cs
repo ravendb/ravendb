@@ -12,6 +12,7 @@ using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Json.Converters;
+using Raven.Client.Server.Operations.Configuration;
 using Raven.Client.Util;
 using Sparrow.Json;
 
@@ -41,6 +42,7 @@ namespace Raven.Client.Documents.Conventions
         protected Dictionary<Type, MemberInfo> IdPropertyCache = new Dictionary<Type, MemberInfo>();
 
         public Action<object, StreamWriter> SerializeEntityToJsonStream;
+        private ClientConfiguration _originalConfiguration;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="DocumentConventions" /> class.
@@ -484,6 +486,37 @@ namespace Raven.Client.Documents.Conventions
             };
 
             return identityProperty;
+        }
+
+        internal void UpdateFrom(ClientConfiguration configuration)
+        {
+            if (configuration == null)
+                return;
+
+            lock (this)
+            {
+                if (configuration.Disabled && _originalConfiguration == null) // nothing to do
+                    return; 
+
+                if (configuration.Disabled && _originalConfiguration != null) // need to revert to original values
+                {
+                    MaxNumberOfRequestsPerSession = _originalConfiguration.MaxNumberOfRequestsPerSession.Value;
+
+                    _originalConfiguration = null;
+                    return;
+                }
+
+                if (_originalConfiguration == null)
+                {
+                    _originalConfiguration = new ClientConfiguration
+                    {
+                        MaxNumberOfRequestsPerSession = MaxNumberOfRequestsPerSession
+                    };
+                }
+
+                if (configuration.MaxNumberOfRequestsPerSession.HasValue)
+                    MaxNumberOfRequestsPerSession = configuration.MaxNumberOfRequestsPerSession.Value;
+            }
         }
 
         public static string DefaultTransformCollectionNameToDocumentIdPrefix(string collectionName)
