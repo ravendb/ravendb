@@ -15,7 +15,7 @@ namespace Raven.Client.Extensions
     {
         public static long GetRequiredEtagHeader(this HttpResponseMessage response)
         {
-            if (response.Headers.TryGetValues(Constants.Headers.Etag, out IEnumerable<string> values) == false || 
+            if (response.Headers.TryGetValues(Constants.Headers.Etag, out IEnumerable<string> values) == false ||
                 values == null)
                 throw new InvalidOperationException("Response didn't had an ETag header");
 
@@ -28,7 +28,7 @@ namespace Raven.Client.Extensions
 
         public static long? GetEtagHeader(this HttpResponseMessage response)
         {
-            if (response.Headers.TryGetValues(Constants.Headers.Etag, out IEnumerable<string> values) == false || 
+            if (response.Headers.TryGetValues(Constants.Headers.Etag, out IEnumerable<string> values) == false ||
                 values == null)
                 return null;
 
@@ -48,7 +48,19 @@ namespace Raven.Client.Extensions
             return EtagHeaderToEtag(value);
         }
 
-        internal static long EtagHeaderToEtag(string responseHeader)
+        public static bool? GetBoolHeader(this HttpResponseMessage response, string header)
+        {
+            if (response.Headers.TryGetValues(header, out IEnumerable<string> values) == false || values == null)
+                return null;
+
+            var value = values.FirstOrDefault();
+            if (value == null)
+                return null;
+
+            return bool.Parse(value);
+        }
+
+        private static long EtagHeaderToEtag(string responseHeader)
         {
             if (string.IsNullOrEmpty(responseHeader))
                 throw new InvalidOperationException("Response didn't had an ETag header");

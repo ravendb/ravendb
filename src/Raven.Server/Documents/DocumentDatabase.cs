@@ -56,7 +56,7 @@ namespace Raven.Server.Documents
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
         private long _lastIdleTicks = DateTime.UtcNow.Ticks;
-        private (long Etag, string EtagString) _lastTopologyEtag = (0, "0");
+        private long _lastTopologyEtag;
 
         public void ResetIdleTime()
         {
@@ -226,11 +226,10 @@ namespace Raven.Server.Documents
                 _transformerStoreTask = TransformerStore.InitializeAsync(record);
 
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore);
-                InitializeFromDatabaseRecord(record);
+                InitializeFromDatabaseRecord(record, index);
 
                 EtlLoader.Initialize(record);
                 Patcher.Initialize(record);
-
 
                 DocumentTombstoneCleaner.Start();
 
@@ -261,14 +260,14 @@ namespace Raven.Server.Documents
                 Dispose();
                 throw;
             }
-    }
+        }
 
         public DatabaseUsage DatabaseInUse(bool skipUsagesCount)
         {
             return new DatabaseUsage(this, skipUsagesCount);
         }
 
-        internal void ThrowDatabaseShutdown(Exception e= null)
+        internal void ThrowDatabaseShutdown(Exception e = null)
         {
             throw new DatabaseDisabledException("The database " + Name + " is shutting down", e);
         }
@@ -528,7 +527,7 @@ namespace Raven.Server.Documents
             // TODO :: more storage environments ?
             yield return
                 new StorageEnvironmentWithType(Name, StorageEnvironmentWithType.StorageEnvironmentType.Documents,
-                    DocumentsStorage.Environment);            
+                    DocumentsStorage.Environment);
             yield return
                 new StorageEnvironmentWithType("Configuration",
                     StorageEnvironmentWithType.StorageEnvironmentType.Configuration, ConfigurationStorage.Environment);
@@ -545,7 +544,7 @@ namespace Raven.Server.Documents
         }
 
         private IEnumerable<FullBackup.StorageEnvironmentInformation> GetAllStoragesEnvironmentInformation()
-        {           
+        {
             var i = 1;
             foreach (var index in IndexStore.GetIndexes())
             {
@@ -596,7 +595,7 @@ namespace Raven.Server.Documents
                     writer.WriteStartObject();
 
                     var first = true;
-                    foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, 
+                    foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context,
                         Helpers.ClusterStateMachineValuesPrefix(Name)))
                     {
                         if (first)
@@ -614,7 +613,7 @@ namespace Raven.Server.Documents
                     // end of dictionary
 
                     writer.WriteEndObject();
-                }                
+                }
 
                 BackupMethods.Full.ToFile(GetAllStoragesEnvironmentInformation(), package);
 
@@ -639,7 +638,8 @@ namespace Raven.Server.Documents
             {
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
-                DatabaseRecord record = null;
+
+                DatabaseRecord record;
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                 {
@@ -652,7 +652,7 @@ namespace Raven.Server.Documents
             {
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
-                
+
                 throw;
             }
             finally
@@ -668,21 +668,19 @@ namespace Raven.Server.Documents
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
 
-                DatabaseRecord record = null;
+                DatabaseRecord record;
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     record = _serverStore.Cluster.ReadDatabase(context, Name);
                 }
 
-                if (_lastTopologyEtag.Etag < record.Topology.Stamp.Index)
-                {
-                    _lastTopologyEtag = (record.Topology.Stamp.Index, record.Topology.Stamp.Index.ToString());
-                }
+                if (_lastTopologyEtag < record.Topology.Stamp.Index)
+                    _lastTopologyEtag = record.Topology.Stamp.Index;
 
-                NotifyFeaturesAboutStateChange(record,index);
+                NotifyFeaturesAboutStateChange(record, index);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown(e);
@@ -697,7 +695,7 @@ namespace Raven.Server.Documents
 
         private void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index)
         {
-            InitializeFromDatabaseRecord(record);
+            InitializeFromDatabaseRecord(record, index);
 
             TransformerStore.HandleDatabaseRecordChange(record);
             IndexStore.HandleDatabaseRecordChange(record, index);
@@ -716,27 +714,27 @@ namespace Raven.Server.Documents
             if (_databaseShutdown.IsCancellationRequested)
                 ThrowDatabaseShutdown();
 
-            DatabaseRecord record = null;
+            DatabaseRecord record;
             long index;
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                record = _serverStore.Cluster.ReadDatabase(context, Name,out index);
+                record = _serverStore.Cluster.ReadDatabase(context, Name, out index);
             }
             NotifyFeaturesAboutStateChange(record, index);
             NotifyFeaturesAboutValueChange(record, index);
         }
 
-        private void InitializeFromDatabaseRecord(DatabaseRecord dbRecord)
+        private void InitializeFromDatabaseRecord(DatabaseRecord databaseRecord, long index)
         {
             lock (this)
             {
-                if (dbRecord != null)
-                {
-                    DocumentsStorage.VersioningStorage.InitializeFromDatabaseRecord(dbRecord);
-                    ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, dbRecord, ExpiredDocumentsCleaner);
-                    PeriodicBackupRunner.UpdateConfigurations(dbRecord);
-                }
+                if (databaseRecord == null)
+                    return;
+
+                DocumentsStorage.VersioningStorage.InitializeFromDatabaseRecord(databaseRecord);
+                ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, databaseRecord, ExpiredDocumentsCleaner);
+                PeriodicBackupRunner.UpdateConfigurations(databaseRecord);
             }
         }
 
@@ -754,9 +752,9 @@ namespace Raven.Server.Documents
             DatabaseRecordChanged?.Invoke(record);
         }
 
-        public bool DidTopologyChanged(string topologyEtag)
+        public bool HasTopologyChanged(long topologyEtag)
         {
-            return _lastTopologyEtag.EtagString == topologyEtag;
+            return _lastTopologyEtag != topologyEtag;
         }
     }
 

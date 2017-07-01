@@ -303,7 +303,7 @@ namespace Raven.Server.Web
                 return result;
 
             ThrowInvalidDateTime(name, dataAsString);
-            return null; //unreacahble
+            return null; //unreachable
         }
 
         private static void ThrowInvalidDateTime(string name, string dataAsString)

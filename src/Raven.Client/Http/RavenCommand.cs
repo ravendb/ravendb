@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
@@ -36,7 +34,6 @@ namespace Raven.Client.Http
         public HttpStatusCode StatusCode;
 
         public RavenCommandResponseType ResponseType { get; protected set; }
-        public bool RefreshTopology { get; private set; }
 
         public TimeSpan? Timeout { get; protected set; }
 
@@ -88,26 +85,18 @@ namespace Raven.Client.Http
         public virtual async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
             using (response)
-            {               
+            {
                 if (ResponseType == RavenCommandResponseType.Empty || response.StatusCode == HttpStatusCode.NoContent)
                     return;
 
                 using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                 {
-                    if (response.Headers.TryGetValues("Refresh-Topology", out IEnumerable<string> values))
-                    {
-                        var value = values.FirstOrDefault();
-                        bool.TryParse(value, out bool refreshTopology);
-                        RefreshTopology = refreshTopology;
-                    }
-
-
                     if (ResponseType == RavenCommandResponseType.Object)
                     {
                         var contentLength = response.Content.Headers.ContentLength;
                         if (contentLength.HasValue && contentLength == 0)
                             return;
-                        
+
                         // we intentionally don't dispose the reader here, we'll be using it
                         // in the command, any associated memory will be released on context reset
                         var json = await context.ReadForMemoryAsync(stream, "response/object").ConfigureAwait(false);

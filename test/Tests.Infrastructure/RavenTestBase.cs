@@ -63,10 +63,10 @@ namespace FastTests
                 message += $"{Environment.NewLine}Url: {Servers[i].WebUrls[0]}. Applied: {tasks[i].IsCompleted}.";
                 if (tasks[i].IsCompleted == false)
                 {
-                    using (Servers[i].ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))                    
+                    using (Servers[i].ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {
                         context.OpenReadTransaction();
-                        message += $"{Environment.NewLine}Log state for non responsing server:{Environment.NewLine}{context.ReadObject(Servers[i].ServerStore.GetLogDetails(context),"LogSummary/"+i)}";
+                        message += $"{Environment.NewLine}Log state for non responsing server:{Environment.NewLine}{context.ReadObject(Servers[i].ServerStore.GetLogDetails(context), "LogSummary/" + i)}";
                     }
                 }
             }
@@ -135,9 +135,9 @@ namespace FastTests
                         Database = name,
                         ApiKey = apiKey
                     };
-                    ModifyStore(store);                    
+                    ModifyStore(store);
                     store.Initialize();
-                    
+
                     if (createDatabase)
                     {
                         foreach (var server in Servers)
@@ -229,10 +229,9 @@ namespace FastTests
 
         protected virtual void ModifyStore(DocumentStore store)
         {
-            store.CustomizeRequestExecutor += re =>
+            store.RequestExecutorCreated += (sender, executor) =>
             {
-                re.AdditionalErrorInformation += sb => sb.AppendLine().Append(GetLastStatesFromAllServersOrderedByTime());
-                return re;
+                executor.AdditionalErrorInformation += sb => sb.AppendLine().Append(GetLastStatesFromAllServersOrderedByTime());
             };
         }
 
@@ -329,7 +328,7 @@ namespace FastTests
         protected async Task<T> WaitForValueAsync<T>(Func<T> act, T expectedVal)
         {
             int timeout = 5000;// * (Debugger.IsAttached ? 100 : 1);
-            
+
             var sw = Stopwatch.StartNew();
             do
             {

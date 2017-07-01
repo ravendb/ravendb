@@ -30,35 +30,37 @@ namespace Raven.Client.Http
 
         public static ClusterRequestExecutor CreateForSingleNode(string url, string apiKey)
         {
+            var executor = new ClusterRequestExecutor(apiKey)
             {
-                var executor = new ClusterRequestExecutor(apiKey)
+                _nodeSelector = new NodeSelector(new Topology
                 {
-                    _nodeSelector = new NodeSelector(new Topology
-                    {
-                        Etag = -1,
-                        Nodes = new List<ServerNode>
+                    Etag = -1,
+                    Nodes = new List<ServerNode>
                         {
                             new ServerNode
                             {
                                 Url = url
                             }
                         }
-                    }),
-                    TopologyEtag = -2,
-                    _withoutTopology = true
-                };
-                return executor;
-            }
+                }),
+                TopologyEtag = -2,
+                _disableTopologyUpdates = true,
+                _disableClientConfigurationUpdates = true
+            };
+            return executor;
         }
 
         public static ClusterRequestExecutor Create(string[] urls, string apiKey)
         {
-            var executor = new ClusterRequestExecutor(apiKey);
+            var executor = new ClusterRequestExecutor(apiKey)
+            {
+                _disableClientConfigurationUpdates = true
+            };
+
             executor._firstTopologyUpdate = executor.FirstTopologyUpdate(urls);
             return executor;
         }
-        
-        
+
         protected override Task PerformHealthCheck(ServerNode serverNode, JsonOperationContext context)
         {
             return ExecuteAsync(serverNode, context, new GetTcpInfoCommand("health-check"), shouldRetry: false);
@@ -114,6 +116,11 @@ namespace Raven.Client.Http
                 _clusterTopologySemaphore.Release();
             }
             return true;
+        }
+
+        protected override Task UpdateClientConfigurationAsync()
+        {
+            return Task.CompletedTask;
         }
 
         public override void Dispose()

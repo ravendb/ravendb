@@ -37,7 +37,7 @@
       <PackagePath>lib/netstandard1.3/</PackagePath>
       <Pack>true</Pack>
     </Content>
-    <Content Include="..\..\libs\libsodium\x64\libsodium.dll" >
+    <Content Include="..\..\libs\libsodium\x64\libsodium.dll">
       <PackagePath>runtimes/win/native/libsodium.x64.dll</PackagePath>
       <Pack>true</Pack>
     </Content>
@@ -53,7 +53,7 @@
       <PackagePath>runtimes/linux/native/libsodium.x86.so</PackagePath>
       <Pack>true</Pack>
     </Content>
-    <Content Include="..\..\libs\libsodium\x86\libsodium.arm.so" >
+    <Content Include="..\..\libs\libsodium\x86\libsodium.arm.so">
       <PackagePath>runtimes/linux/native/libsodium.arm.so</PackagePath>
       <Pack>true</Pack>
     </Content>

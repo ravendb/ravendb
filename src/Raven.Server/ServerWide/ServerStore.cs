@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
-using System.ServiceModel;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -76,6 +75,8 @@ namespace Raven.Server.ServerWide
         public readonly FeedbackSender FeedbackSender;
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases;
+
+        private long _lastClientConfigurationIndex;
 
         public Operations Operations { get; }
 
@@ -193,7 +194,7 @@ namespace Raven.Server.ServerWide
                 }
                 catch (TaskCanceledException)
                 {
-// ServerStore dispose?
+                    // ServerStore dispose?
                     throw;
                 }
                 catch (Exception)
@@ -250,7 +251,7 @@ namespace Raven.Server.ServerWide
                     {
                         throw new FileLoadException($"The server store secret key is provided in {secretKey} but the server failed to read the file. Admin assistance required.", e);
                     }
-                    
+
                     var secret = new byte[buffer.Length - 32];
                     var entropy = new byte[32];
                     Array.Copy(buffer, 0, secret, 0, buffer.Length - 32);
@@ -277,7 +278,7 @@ namespace Raven.Server.ServerWide
                     AlertType.NonDurableFileSystem,
                     NotificationSeverity.Warning,
                     "NonDurable Error System",
-                    details: new MessageDetails {Message = e.Details});
+                    details: new MessageDetails { Message = e.Details });
                 if (NotificationCenter.IsInitialized)
                 {
                     NotificationCenter.Add(alert);
@@ -360,7 +361,6 @@ namespace Raven.Server.ServerWide
 
             ContextPool = new TransactionContextPool(_env);
 
-
             _engine = new RachisConsensus<ClusterStateMachine>();
 
             var myUrl = Configuration.Core.PublicServerUrl.HasValue ? Configuration.Core.PublicServerUrl.Value.UriValue : Configuration.Core.ServerUrl;
@@ -369,6 +369,7 @@ namespace Raven.Server.ServerWide
             _engine.StateMachine.DatabaseChanged += DatabasesLandlord.ClusterOnDatabaseChanged;
             _engine.StateMachine.DatabaseChanged += OnDatabaseChanged;
             _engine.StateMachine.DatabaseValueChanged += DatabasesLandlord.ClusterOnDatabaseValueChanged;
+            _engine.StateMachine.ValueChanged += OnValueChanged;
 
             _engine.TopologyChanged += OnTopologyChanged;
             _engine.StateChanged += OnStateChanged;
@@ -387,18 +388,21 @@ namespace Raven.Server.ServerWide
             LatestVersionCheck.Check(this);
 
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
             {
-                context.OpenReadTransaction();
                 foreach (var db in _engine.StateMachine.ItemsStartingWith(context, "db/", 0, int.MaxValue))
                 {
                     DatabasesLandlord.ClusterOnDatabaseChanged(this, (db.Item1, 0, "Init"));
                 }
+
+                if (_engine.StateMachine.Read(context, Constants.Configuration.ClientId, out long etag) != null)
+                    _lastClientConfigurationIndex = etag;
             }
 
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
                 if (TryLoadAuthenticationKeyPairs(ctx) == false)
-                    GenerateAuthenticationSignetureKeys(ctx);                
+                    GenerateAuthenticationSignetureKeys(ctx);
             }
             GenerateAuthenticationBoxKeys();
 
@@ -516,22 +520,32 @@ namespace Raven.Server.ServerWide
             NotificationCenter.Add(ClusterTopologyChanged.Create(topologyJson, LeaderTag, NodeTag));
         }
 
-        private void OnDatabaseChanged(object sender, (string dbName, long index, string type) t)
+        private void OnDatabaseChanged(object sender, (string DatabaseName, long Index, string Type) t)
         {
-            switch (t.type)
+            switch (t.Type)
             {
                 case nameof(DeleteDatabaseCommand):
-                    NotificationCenter.Add(DatabaseChanged.Create(t.dbName, DatabaseChangeType.Delete));
+                    NotificationCenter.Add(DatabaseChanged.Create(t.DatabaseName, DatabaseChangeType.Delete));
                     break;
                 case nameof(AddDatabaseCommand):
-                    NotificationCenter.Add(DatabaseChanged.Create(t.dbName, DatabaseChangeType.Put));
+                    NotificationCenter.Add(DatabaseChanged.Create(t.DatabaseName, DatabaseChangeType.Put));
                     break;
                 case nameof(UpdateTopologyCommand):
-                    NotificationCenter.Add(DatabaseChanged.Create(t.dbName, DatabaseChangeType.Update));
+                    NotificationCenter.Add(DatabaseChanged.Create(t.DatabaseName, DatabaseChangeType.Update));
                     break;
             }
 
             //TODO: send different commands to studio when necessary
+        }
+
+        private void OnValueChanged(object sender, (long Index, string Type) t)
+        {
+            switch (t.Type)
+            {
+                case nameof(PutClientConfigurationCommand):
+                    _lastClientConfigurationIndex = t.Index;
+                    break;
+            }
         }
 
         public IEnumerable<string> GetSecretKeysNames(TransactionOperationContext context)
@@ -596,8 +610,8 @@ namespace Raven.Server.ServerWide
                 Sodium.CloneKey(out key, secretKey);
             else
                 key = secretKey;
-            
-            
+
+
             byte[] existingKey;
             try
             {
@@ -750,9 +764,9 @@ namespace Raven.Server.ServerWide
 
         public Task<(long Etag, object Result)> DeleteOngoingTask(long taskId, OngoingTaskType taskType, string dbName)
         {
-            var deleteTaskCommand = 
-                taskType == OngoingTaskType.Subscription ? 
-                    (CommandBase)new DeleteSubscriptionCommand(dbName){SubscriptionId = taskId} : 
+            var deleteTaskCommand =
+                taskType == OngoingTaskType.Subscription ?
+                    (CommandBase)new DeleteSubscriptionCommand(dbName) { SubscriptionId = taskId } :
                     new DeleteOngoingTaskCommand(taskId, taskType, dbName);
 
             return SendToLeaderAsync(deleteTaskCommand);
@@ -868,7 +882,7 @@ namespace Raven.Server.ServerWide
                 throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
 
             UpdateDatabaseCommand command;
-            
+
             switch (connectionStringType)
             {
                 case ConnectionStringType.Raven:
@@ -1038,7 +1052,7 @@ namespace Raven.Server.ServerWide
             {
                 GenerateAuthenticationSignetureKeys(ctx);
             }
-            Engine.Bootstrap(NodeHttpServerUrl, SignPublicKey, forNewCluster:true);
+            Engine.Bootstrap(NodeHttpServerUrl, SignPublicKey, forNewCluster: true);
         }
 
         public Task<(long Etag, object Result)> WriteDatabaseRecordAsync(
@@ -1074,7 +1088,6 @@ namespace Raven.Server.ServerWide
                 _engine.Bootstrap(_ravenServer.ServerStore.NodeHttpServerUrl, SignPublicKey);
             }
         }
-
 
         public Task<(long Etag, object Result)> PutCommandAsync(CommandBase cmd)
         {
@@ -1343,6 +1356,14 @@ namespace Raven.Server.ServerWide
             };
             return json;
 
+        }
+
+        public bool HasClientConfigurationChanged(long index)
+        {
+            if (index < 0)
+                return false;
+
+            return _lastClientConfigurationIndex > index;
         }
     }
 }
