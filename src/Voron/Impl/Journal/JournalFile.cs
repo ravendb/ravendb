@@ -10,8 +10,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.ExceptionServices;
-using System.Threading;
-using Voron.Global;
+using Sparrow.Logging;
 using Voron.Util;
 
 namespace Voron.Impl.Journal
@@ -27,7 +26,7 @@ namespace Voron.Impl.Journal
         private readonly HashSet<PagePosition> _unusedPagesHashSetPool = new HashSet<PagePosition>(PagePositionEqualityComparer.Instance);
 
         private readonly List<PagePosition> _unusedPages;
-        private readonly object _locker = new object();
+        private readonly ContentionLoggingLocker _locker2;
 
         public JournalFile(StorageEnvironment env, IJournalWriter journalWriter, long journalNumber)
         {
@@ -36,7 +35,8 @@ namespace Voron.Impl.Journal
             _journalWriter = journalWriter;
             _writePosIn4Kb = 0;
             _unusedPages = new List<PagePosition>();
-
+            var logger = LoggingSource.Instance.GetLogger<JournalFile>(JournalWriter.FileName.FullPath);
+            _locker2 = new ContentionLoggingLocker(logger, JournalWriter.FileName.FullPath);
         }
 
         public override string ToString()
@@ -108,7 +108,7 @@ namespace Voron.Impl.Journal
 
             UpdatePageTranslationTable(tx, _unusedPagesHashSetPool, ptt);
 
-            lock (_locker)
+            using (_locker2.Lock())
             {
                 _writePosIn4Kb += pages.NumberOf4Kbs;
 
@@ -156,7 +156,7 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            lock (_locker)
+            using (_locker2.Lock())
             {
                 _pageTranslationTable.SetItems(tx, ptt);
             }
@@ -216,7 +216,7 @@ namespace Voron.Impl.Journal
 
             List<PagePosition> unusedAndFree;
 
-            lock (_locker)
+            using (_locker2.Lock())
             {
                 unusedAndFree = _unusedPages.FindAll(position => position.TransactionId <= lastSyncedTransactionId);
                 _unusedPages.RemoveAll(position => position.TransactionId <= lastSyncedTransactionId);
