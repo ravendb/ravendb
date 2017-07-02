@@ -38,13 +38,12 @@ namespace Raven.Server.ServerWide.Maintenance
             Config = server.Configuration.Cluster;
         }
 
-        public async Task AddToCluster(string clusterTag, string url)
+        public async Task AddToCluster(string clusterTag, string url,string apiKey)
         {
-            var connectionInfo = await ReplicationUtils.GetTcpInfoAsync(url, null, null, "Supervisor");
-
-            var clusterNode = new ClusterNode(clusterTag,url, connectionInfo, _contextPool, this, _cts.Token);
+            var connectionInfo = await ReplicationUtils.GetTcpInfoAsync(url, null, apiKey, "Supervisor");
+            var clusterNode = new ClusterNode(clusterTag, url, apiKey, _contextPool, this, _cts.Token);
             _clusterNodes[clusterTag] = clusterNode;
-            var task = clusterNode.StartListening();
+            var task = clusterNode.StartListening(connectionInfo);
             GC.KeepAlive(task); // we are explicitly not waiting on this task
         }
 
@@ -117,18 +116,19 @@ namespace Raven.Server.ServerWide.Maintenance
             private DateTime _lastSuccessfulUpdateDateTime;
             private bool _isDisposed;
             private readonly string _readStatusUpdateDebugString;
-            private TcpConnectionInfo _tcpConnection;
+            private readonly string _apiKey;
 
             public ClusterNode(
                 string clusterTag,
                 string url,
-                TcpConnectionInfo tcpConnectionConnectionInfo,
+                string apiKey,
                 JsonContextPool contextPool,
                 ClusterMaintenanceSupervisor parent,
                 CancellationToken token)
             {
                 ClusterTag = clusterTag;
                 Url = url;
+                _apiKey = apiKey;
                 _contextPool = contextPool;
                 _parent = parent;
                 _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -137,16 +137,14 @@ namespace Raven.Server.ServerWide.Maintenance
                 _tcpClient = new TcpClient();
 
                 _log = LoggingSource.Instance.GetLogger<ClusterNode>(clusterTag);
-                _tcpConnection = tcpConnectionConnectionInfo;
             }
 
-
-            public Task StartListening()
+            public Task StartListening(TcpConnectionInfo tcpConnection)
             {
-                return ListenToMaintenanceWorker();
+                return ListenToMaintenanceWorker(tcpConnection);
             }
 
-            private async Task ListenToMaintenanceWorker()
+            private async Task ListenToMaintenanceWorker(TcpConnectionInfo tcpConnection)
             {
                 bool needToWait = false;
                 var onErrorDelayTime = _parent.Config.OnErrorDelayTime.AsTimeSpan;
@@ -166,10 +164,10 @@ namespace Raven.Server.ServerWide.Maintenance
                             {
                                 _tcpClient?.Dispose();
                                 _tcpClient = new TcpClient();
-                                _tcpConnection = await ReplicationUtils.GetTcpInfoAsync(Url, null, null, "Supervisor");
+                                tcpConnection = await ReplicationUtils.GetTcpInfoAsync(Url, null, _apiKey, "Supervisor");
                             }
                         }
-                        using (var connection = await ConnectToClientNodeAsync(_tcpConnection))
+                        using (var connection = await ConnectToClientNodeAsync(tcpConnection))
                         {
                             while (_token.IsCancellationRequested == false)
                             {

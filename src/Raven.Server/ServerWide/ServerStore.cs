@@ -177,7 +177,7 @@ namespace Raven.Server.ServerWide
                             }
                             foreach (var node in nodesChanges.addedValues)
                             {
-                                var task = ClusterMaintenanceSupervisor.AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key)).ContinueWith(t =>
+                                var task = ClusterMaintenanceSupervisor.AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key), clusterTopology.ApiKey).ContinueWith(t =>
                                 {
                                     if (Logger.IsInfoEnabled)
                                         Logger.Info($"ClusterMaintenanceSupervisor() => Failed to add to cluster node key = {node.Key}", t.Exception);
