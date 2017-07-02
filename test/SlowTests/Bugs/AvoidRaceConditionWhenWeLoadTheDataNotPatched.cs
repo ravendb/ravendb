@@ -75,20 +75,20 @@ namespace SlowTests.Bugs
                 Values = new Dictionary<string, object>
                 {
                     {"relation", edge1},
-                    {"relationClrType", ClrType(edge1.GetType())},
+                    {"relationClrType", edge1.GetType().AssemblyQualifiedName},
                     {"otherSideRelationType", edgeN.Type},
                     {"otherSideRelationSubType", edgeN.SubType}
                 }
-            },null);
+            }, null);
 
             yield return new PatchCommandData(edgeNProfile.Id, null, new PatchRequest
             {
                 Script = "addRelation(relationClrType, relation);",
                 Values = new Dictionary<string, object>
-                    {
-                        {"relation", edgeN},
-                        {"relationClrType", ClrType(edgeN.GetType())}
-                    }
+                {
+                    {"relation", edgeN},
+                    {"relationClrType", edgeN.GetType().AssemblyQualifiedName}
+                }
             }, null);
         }
 
@@ -133,11 +133,6 @@ namespace SlowTests.Bugs
                 if (store.Operations.Send(patchCommandData) != PatchStatus.Patched)
                     throw new InvalidOperationException("Some patches failed");
             }
-        }
-
-        public static string ClrType(Type t)
-        {
-            return string.Concat(t.FullName, ", ", t.AssemblyQualifiedName);
         }
 
         public class UserProfileIndex : AbstractIndexCreationTask<UserProfile, UserProfileIndex.Result>
