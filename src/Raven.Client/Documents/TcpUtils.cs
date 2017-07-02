@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
@@ -15,12 +16,10 @@ namespace Raven.Client.Documents
         internal static async Task ConnectSocketAsync(TcpConnectionInfo connection, TcpClient tcpClient, Logger log)
         {
             var uri = new Uri(connection.Url);
-            var host = uri.Host;
-            var port = uri.Port;
 
             try
             {
-                await tcpClient.ConnectAsync(host, port).ConfigureAwait(false);
+                await tcpClient.ConnectAsync(GetTcpUrl(uri.Host), uri.Port).ConfigureAwait(false);
             }
             catch (AggregateException ae) when (ae.InnerException is SocketException)
             {
@@ -69,6 +68,13 @@ namespace Raven.Client.Documents
             await sslStream.AuthenticateAsClientAsync("RavenDB", null, SslProtocols.Tls12, false).ConfigureAwait(false);
             stream = sslStream;
             return stream;
+        }
+
+        public static string GetTcpUrl(string host)
+        {
+            if (host.IndexOf(".fiddler", StringComparison.OrdinalIgnoreCase) > 0)
+                return host.Replace(".fiddler", "");
+            return host;
         }
     }
 }
