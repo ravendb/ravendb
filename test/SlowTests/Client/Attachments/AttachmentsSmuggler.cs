@@ -244,7 +244,7 @@ namespace SlowTests.Client.Attachments
 
                     var stats = await store2.Admin.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(1, stats.CountOfDocuments);
-                    Assert.Equal(2, stats.CountOfRevisionDocuments);
+                    Assert.Equal(3, stats.CountOfRevisionDocuments);
                     Assert.Equal(2, stats.CountOfAttachments);
                     Assert.Equal(1, stats.CountOfUniqueAttachments);
 
