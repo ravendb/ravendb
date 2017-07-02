@@ -510,11 +510,15 @@ namespace Raven.Client.Documents.Conventions
                 {
                     _originalConfiguration = new ClientConfiguration
                     {
-                        MaxNumberOfRequestsPerSession = MaxNumberOfRequestsPerSession
+                        MaxNumberOfRequestsPerSession = MaxNumberOfRequestsPerSession,
+                        MaxLengthOfQueryUsingGetUrl = MaxLengthOfQueryUsingGetUrl,
+                        PrettifyGeneratedLinqExpressions = PrettifyGeneratedLinqExpressions
                     };
                 }
 
                 MaxNumberOfRequestsPerSession = configuration.MaxNumberOfRequestsPerSession ?? _originalConfiguration.MaxNumberOfRequestsPerSession.Value;
+                MaxLengthOfQueryUsingGetUrl = configuration.MaxLengthOfQueryUsingGetUrl ?? _originalConfiguration.MaxLengthOfQueryUsingGetUrl.Value;
+                PrettifyGeneratedLinqExpressions = configuration.PrettifyGeneratedLinqExpressions ?? _originalConfiguration.PrettifyGeneratedLinqExpressions.Value;
             }
         }
 
