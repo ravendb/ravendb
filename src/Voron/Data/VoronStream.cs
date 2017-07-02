@@ -49,6 +49,7 @@ namespace Voron.Data
             if (tx != null)
             {
                 _llt = tx.LowLevelTransaction;
+                _lastPage = default(Page);
                 return;
             }
 
