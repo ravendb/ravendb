@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
+using Raven.Server;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -114,6 +116,42 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(2, val);
                 val = await WaitForValueAsync(async () => await GetPromotableCount(store, databaseName), 1);
                 Assert.Equal(1, val);
+            }
+        }
+
+        [Fact]
+        public async Task PromoteDatabaseNodeBackAfterReconnection()
+        {
+            var clusterSize = 3;
+            var databaseName = "PromoteDatabaseNodeBackAfterReconnection";
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, 0);
+            using (var store = new DocumentStore
+            {
+                Urls = leader.WebUrls,
+                Database = databaseName
+            }.Initialize())
+            {
+                var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
+                var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+                Assert.Equal(clusterSize, databaseResult.Topology.Members.Count);
+                await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User());
+                    await session.SaveChangesAsync();
+                }
+                var urls = Servers[1].WebUrls;
+                Servers[1].Dispose();
+
+                var val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), clusterSize - 1);
+                Assert.Equal(clusterSize - 1, val);
+                val = await WaitForValueAsync(async () => await GetPromotableCount(store, databaseName), 1);
+                Assert.Equal(1, val);
+                Servers[1] = GetNewServer(new Dictionary<string, string> { { "Raven/ServerUrl", urls[0] } },runInMemory:false);
+                val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), 3, 30_000);
+                Assert.Equal(3, val);
+                val = await WaitForValueAsync(async () => await GetPromotableCount(store, databaseName), 0, 30_000);
+                Assert.Equal(0, val);
             }
         }
 
