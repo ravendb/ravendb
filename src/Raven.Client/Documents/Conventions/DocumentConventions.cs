@@ -514,8 +514,7 @@ namespace Raven.Client.Documents.Conventions
                     };
                 }
 
-                if (configuration.MaxNumberOfRequestsPerSession.HasValue)
-                    MaxNumberOfRequestsPerSession = configuration.MaxNumberOfRequestsPerSession.Value;
+                MaxNumberOfRequestsPerSession = configuration.MaxNumberOfRequestsPerSession ?? _originalConfiguration.MaxNumberOfRequestsPerSession.Value;
             }
         }
 
