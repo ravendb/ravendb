@@ -42,7 +42,7 @@ namespace Voron.Impl.Scratch
             this.PositionInScratchBuffer = positionInScratchBuffer;
             this.Size = size;
             this.NumberOfPages = numberOfPages;
-            this.ScratchFileNumber = -1;
+            this.ScratchPageNumber = -1;
         }
 
 
