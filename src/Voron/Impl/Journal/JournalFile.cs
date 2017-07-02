@@ -178,8 +178,13 @@ namespace Voron.Impl.Journal
             var txPages = tx.GetTransactionPages();
             foreach (var txPage in txPages)
             {
-                var scratchPage = scratchBufferPool.ReadPage(tx, txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
-                var pageNumber = scratchPage.PageNumber;
+                long pageNumber = txPage.ScratchPageNumber;
+                if (pageNumber == -1) // if we don't already have it from TX preparing then ReadPage
+                {
+                    var scratchPage = scratchBufferPool.ReadPage(tx, txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
+                    pageNumber = scratchPage.PageNumber;
+                }
+
                 Debug.Assert(pageNumber >= 0);
                 PagePosition value;
                 if (_pageTranslationTable.TryGetValue(tx, pageNumber, out value))

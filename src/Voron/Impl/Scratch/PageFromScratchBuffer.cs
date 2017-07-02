@@ -34,6 +34,7 @@ namespace Voron.Impl.Scratch
         public readonly long Size;
         public readonly int NumberOfPages;
         public Page? PreviousVersion;
+        public long ScratchPageNumber;
 
         public PageFromScratchBuffer( int scratchFileNumber, long positionInScratchBuffer, long size, int numberOfPages )
         {
@@ -41,7 +42,9 @@ namespace Voron.Impl.Scratch
             this.PositionInScratchBuffer = positionInScratchBuffer;
             this.Size = size;
             this.NumberOfPages = numberOfPages;
+            this.ScratchFileNumber = -1;
         }
+
 
         public override bool Equals(object obj)
         {
