@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
@@ -45,17 +46,13 @@ namespace SlowTests.Issues
                 });
 
                 var docs = new List<dynamic>();
-
-                GC.KeepAlive(subscription.Run(o => docs.Add(o)));
-
+                GC.KeepAlive(subscription.Run(batch => docs.AddRange(batch.Items.Select(item => item.Result))));
                 Assert.True(SpinWait.SpinUntil(() => docs.Count == 10, TimeSpan.FromSeconds(60)));
 
                 // all documents were fetched - time to delete subscription
-
                 store.Subscriptions.DeleteAsync(id).Wait();
 
                 // verify if we don't get new items
-
                 using (var session = store.OpenSession())
                 {
                     for (int i = 0; i < 2; i++)
