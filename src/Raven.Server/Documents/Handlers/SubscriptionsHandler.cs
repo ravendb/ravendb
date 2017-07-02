@@ -74,8 +74,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/subscriptions", "PUT", "/databases/{databaseName:string}/subscriptions")]
         public async Task Create()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
                 var options = JsonDeserializationServer.SubscriptionCreationParams(json);

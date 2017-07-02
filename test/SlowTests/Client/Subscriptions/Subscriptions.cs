@@ -31,42 +31,36 @@ namespace SlowTests.Client.Subscriptions
                 };
                 var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
 
-                using (
-                    var acceptedSubscription = store.Subscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
+                using (var acceptedSubscription = store.Subscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
                 {
-                    var acceptedSusbscriptionList = new BlockingCollection<Thing>();
+                    var acceptedSubscriptionList = new BlockingCollection<Thing>();
                     var takingOverSubscriptionList = new BlockingCollection<Thing>();
                     long counter = 0;
-                                        var batchProccessedByFirstSubscription = new AsyncManualResetEvent();
+                    var batchProcessedByFirstSubscription = new AsyncManualResetEvent();
 
-                    acceptedSubscription.AfterAcknowledgment +=
-                        b =>
-                        {
-                            if (Interlocked.Read(ref counter) == 5)
-                                batchProccessedByFirstSubscription.Set();
-                            return Task.CompletedTask;
-                        };
-
+                    acceptedSubscription.AfterAcknowledgment += b =>
+                    {
+                        if (Interlocked.Read(ref counter) == 5)
+                            batchProcessedByFirstSubscription.Set();
+                        return Task.CompletedTask;
+                    };
                     GC.KeepAlive(acceptedSubscription.Run(x =>
                     {
-                        Interlocked.Increment(ref counter);
-                         foreach (var item in x.Items)
+                        foreach (var item in x.Items)
                         {
-                            acceptedSusbscriptionList.Add(item.Result);
+                            Interlocked.Increment(ref counter);
+                            acceptedSubscriptionList.Add(item.Result);
                         }
                     }));
 
                     Thing thing;
-
                     // wait until we know that connection was established
                     for (var i = 0; i < 5; i++)
                     {
-                        Assert.True(acceptedSusbscriptionList.TryTake(out thing, 5000), "no doc");
+                        Assert.True(acceptedSubscriptionList.TryTake(out thing, 5000), "no doc");
                     }
-
-                    Assert.True(await batchProccessedByFirstSubscription.WaitAsync(TimeSpan.FromSeconds(15)), "no ack");
-
-                    Assert.False(acceptedSusbscriptionList.TryTake(out thing));
+                    Assert.True(await batchProcessedByFirstSubscription.WaitAsync(TimeSpan.FromSeconds(15)), "no ack");
+                    Assert.False(acceptedSubscriptionList.TryTake(out thing));
 
                     // open second subscription
                     using (var takingOverSubscription = store.Subscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)
