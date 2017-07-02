@@ -1302,6 +1302,7 @@ namespace Voron.Impl.Journal
                 }
 
                 pagesInfo[pageSequencialNumber].PageNumber = pageHeader->PageNumber;
+                txPage.ScratchPageNumber = pageHeader->PageNumber;
 
                 *(long*)write = pageHeader->PageNumber;
                 write += sizeof(long);
