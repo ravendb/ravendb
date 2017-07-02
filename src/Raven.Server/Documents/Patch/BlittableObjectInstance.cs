@@ -154,16 +154,8 @@ namespace Raven.Server.Documents.Patch
                 return returnedValue;
             }
 
-            
-
-
             private void SetValue(JsValue newVal)
             {
-                if (newVal.TryCast<FunctionInstance>() != null)
-                {
-                    throw new ArgumentException("Can't set a function to a blittable");
-                }
-
                 if (Self.Modifications == null)
                     Self.Modifications = new Dictionary<string, (bool, JsValue)>();
 
@@ -292,10 +284,6 @@ namespace Raven.Server.Documents.Patch
 
         public void SetValue(JsValue newVal)
         {
-            if (newVal.TryCast<FunctionInstance>() != null)
-            {
-                throw new ArgumentException("Can't set a function to a blittable");
-            }
             LastKnownValue = newVal;
         }
 
