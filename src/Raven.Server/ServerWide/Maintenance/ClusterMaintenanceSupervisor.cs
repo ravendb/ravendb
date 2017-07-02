@@ -42,7 +42,7 @@ namespace Raven.Server.ServerWide.Maintenance
         {
             var connectionInfo = await ReplicationUtils.GetTcpInfoAsync(url, null, null, "Supervisor");
 
-            var clusterNode = new ClusterNode(clusterTag, connectionInfo, _contextPool, this, _cts.Token);
+            var clusterNode = new ClusterNode(clusterTag,url, connectionInfo, _contextPool, this, _cts.Token);
             _clusterNodes[clusterTag] = clusterNode;
             var task = clusterNode.StartListening();
             GC.KeepAlive(task); // we are explicitly not waiting on this task
@@ -106,25 +106,29 @@ namespace Raven.Server.ServerWide.Maintenance
             private readonly Logger _log;
 
             public string ClusterTag { get; }
+            public string Url { get; }
 
             private TcpClient _tcpClient;
-
             public ClusterNodeStatusReport ReceivedReport = new ClusterNodeStatusReport(
                 new Dictionary<string, DatabaseStatusReport>(), ClusterNodeStatusReport.ReportStatus.WaitingForResponse,
                 null, DateTime.MinValue, DateTime.MinValue
                 );
+
             private DateTime _lastSuccessfulUpdateDateTime;
             private bool _isDisposed;
             private readonly string _readStatusUpdateDebugString;
-            private readonly TcpConnectionInfo _tcpConnection;
+            private TcpConnectionInfo _tcpConnection;
+
             public ClusterNode(
                 string clusterTag,
+                string url,
                 TcpConnectionInfo tcpConnectionConnectionInfo,
                 JsonContextPool contextPool,
                 ClusterMaintenanceSupervisor parent,
                 CancellationToken token)
             {
                 ClusterTag = clusterTag;
+                Url = url;
                 _contextPool = contextPool;
                 _parent = parent;
                 _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -135,6 +139,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 _log = LoggingSource.Instance.GetLogger<ClusterNode>(clusterTag);
                 _tcpConnection = tcpConnectionConnectionInfo;
             }
+
 
             public Task StartListening()
             {
@@ -149,6 +154,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 while (_token.IsCancellationRequested == false)
                 {
+                    var internalTaskCancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_token);
                     try
                     {
                         if (needToWait)
@@ -160,6 +166,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             {
                                 _tcpClient?.Dispose();
                                 _tcpClient = new TcpClient();
+                                _tcpConnection = await ReplicationUtils.GetTcpInfoAsync(Url, null, null, "Supervisor");
                             }
                         }
                         using (var connection = await ConnectToClientNodeAsync(_tcpConnection))
@@ -167,8 +174,8 @@ namespace Raven.Server.ServerWide.Maintenance
                             while (_token.IsCancellationRequested == false)
                             {
                                 using (_contextPool.AllocateOperationContext(out JsonOperationContext context))
-                                {                                    
-                                    var readResponseTask = context.ReadForMemoryAsync(connection, _readStatusUpdateDebugString, _token);
+                                {
+                                    var readResponseTask = context.ReadForMemoryAsync(connection, _readStatusUpdateDebugString, internalTaskCancellationToken.Token);
                                     var timeout = TimeoutManager.WaitFor(receiveFromWorkerTimeout, _token);
 
                                     if (await Task.WhenAny(readResponseTask, timeout) == timeout)
@@ -177,13 +184,13 @@ namespace Raven.Server.ServerWide.Maintenance
                                         {
                                             _log.Info($"Timeout occurred while collection info from {ClusterTag}");
                                         }
-                                        ReceivedReport = new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>(), 
+                                        ReceivedReport = new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>(),
                                             ClusterNodeStatusReport.ReportStatus.Timeout,
                                             null,
                                             DateTime.UtcNow,
                                             _lastSuccessfulUpdateDateTime);
-                                        await readResponseTask;
                                         needToWait = true;
+                                        internalTaskCancellationToken.Cancel();
                                         break;
                                     }
 
@@ -196,7 +203,7 @@ namespace Raven.Server.ServerWide.Maintenance
                                             report.Add(property, JsonDeserializationServer.DatabaseStatusReport(value));
                                         }
                                         _lastSuccessfulUpdateDateTime = DateTime.Now;
-                                        
+
                                         ReceivedReport = new ClusterNodeStatusReport(
                                             report,
                                             ClusterNodeStatusReport.ReportStatus.Ok,
@@ -214,12 +221,16 @@ namespace Raven.Server.ServerWide.Maintenance
                         {
                             _log.Info($"Exception was thrown while collection info from {ClusterTag}", e);
                         }
-                        ReceivedReport = new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>(), 
+                        ReceivedReport = new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>(),
                             ClusterNodeStatusReport.ReportStatus.Error,
                             e,
                             DateTime.UtcNow,
                             _lastSuccessfulUpdateDateTime);
                         needToWait = true;
+                    }
+                    finally
+                    {
+                        internalTaskCancellationToken.Dispose();
                     }
                 }
             }
