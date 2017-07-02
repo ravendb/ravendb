@@ -95,7 +95,6 @@ namespace Raven.Client.Http
         {
             _databaseName = databaseName;
             _apiKey = apiKey;
-            TopologyEtag = 0;
 
             _lastReturnedResponse = DateTime.UtcNow;
 
