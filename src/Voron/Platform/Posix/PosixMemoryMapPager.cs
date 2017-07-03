@@ -30,6 +30,9 @@ namespace Voron.Platform.Posix
 
             PosixHelper.EnsurePathExists(FileName.FullPath);
 
+            Console.WriteLine("opening " + FileName);
+            Console.Out.Flush();
+
             _fd = Syscall.open(file.FullPath, OpenFlags.O_RDWR | PerPlatformValues.OpenFlags.O_CREAT,
                               FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
             if (_fd == -1)
@@ -39,17 +42,22 @@ namespace Voron.Platform.Posix
             }
 
             SysPageSize = Syscall.sysconf(SysconfName._SC_PAGESIZE);
-
+            Console.WriteLine("SysPageSize= " + SysPageSize);
             _totalAllocationSize = GetFileSize();
+            Console.WriteLine("_totalAllocationSize= " + _totalAllocationSize);
 
             if (_totalAllocationSize == 0 && initialFileSize.HasValue)
             {
                 _totalAllocationSize = NearestSizeToPageSize(initialFileSize.Value);
+                Console.WriteLine("nearest= " + _totalAllocationSize);
+
             }
             if (_totalAllocationSize == 0 || _totalAllocationSize % SysPageSize != 0 ||
                 _totalAllocationSize != GetFileSize())
             {
                 _totalAllocationSize = NearestSizeToPageSize(_totalAllocationSize);
+                Console.WriteLine("_totalAllocationSize2= " + _totalAllocationSize);
+
                 PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize, file.FullPath);
             }
 
@@ -81,6 +89,8 @@ namespace Voron.Platform.Posix
         private long GetFileSize()
         {
             FileInfo fi = new FileInfo(FileName.FullPath);
+            Console.WriteLine("filesize=" + fi.Length + " for " + FileName.FullPath);
+            Console.Out.Flush();
             return fi.Length;
 
         }

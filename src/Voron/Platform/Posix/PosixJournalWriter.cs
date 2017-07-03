@@ -51,8 +51,13 @@ namespace Voron.Platform.Posix
             _filename = filename;
             _maxNumberOf4KbPerSingleWrite = int.MaxValue / (4 * Constants.Size.Kilobyte);
 
+            Console.WriteLine("file " + filename);
+
            _fd = Syscall.open(filename.FullPath, OpenFlags.O_WRONLY | options.PosixOpenFlags | PerPlatformValues.OpenFlags.O_CREAT,
                 FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
+
+            Console.WriteLine("Opened");
+            Console.Out.Flush();
 
             if (_fd == -1)
             {
@@ -62,6 +67,8 @@ namespace Voron.Platform.Posix
 
             if (RunningOnMacOsx)
             {
+                Console.WriteLine("fcntl-ing");
+                Console.Out.Flush();
                 // mac doesn't support O_DIRECT, we fcntl instead:
                 var rc = Syscall.fcntl(_fd, FcntlCommands.F_NOCACHE, (IntPtr)1);
                 if (rc != 0)
@@ -77,6 +84,8 @@ namespace Voron.Platform.Posix
                 length = journalSize;
                 try
                 {
+                    Console.WriteLine("Allocating");
+                    Console.Out.Flush();
                     PosixHelper.AllocateFileSpace(options, _fd, journalSize, filename.FullPath);
                 }
                 catch (Exception)
@@ -85,6 +94,8 @@ namespace Voron.Platform.Posix
                     throw;
                 }
             }
+            Console.WriteLine("Checking sync");
+            Console.Out.Flush();
 
             if (Syscall.CheckSyncDirectoryAllowed(_filename.FullPath) && Syscall.SyncDirectory(filename.FullPath) == -1)
             {

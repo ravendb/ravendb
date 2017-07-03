@@ -39,7 +39,7 @@ namespace Voron.Platform.Posix
 
         public static unsafe void WriteFileHeader(FileHeader* header, VoronPathSetting path)
         {
-            var fd = Syscall.open(path.FullPath, OpenFlags.O_WRONLY | OpenFlags.O_CREAT,
+            var fd = Syscall.open(path.FullPath, OpenFlags.O_WRONLY | PerPlatformValues.OpenFlags.O_CREAT,
                 FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
 
             try
