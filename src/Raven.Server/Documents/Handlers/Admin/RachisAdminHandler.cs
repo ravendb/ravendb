@@ -159,10 +159,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/cluster/add-node", "OPTIONS", "/admin/cluster/add-node?url={nodeUrl:string}")]
-        [RavenAction("/admin/cluster/remove-node", "OPTIONS", "/admin/cluster/remove-node?nodeTag={nodeTag:string}")]
-        [RavenAction("/admin/cluster/reelect", "OPTIONS", "/admin/cluster/reelect")]
-        public Task AllowPreflightReuqest()
+        private void SetupCORSHeaders()
         {
             // TODO: handle this properly when using https
             // https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS
@@ -170,6 +167,14 @@ namespace Raven.Server.Documents.Handlers.Admin
             HttpContext.Response.Headers.Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE");
             HttpContext.Response.Headers.Add("Access-Control-Allow-Headers", HttpContext.Request.Headers["Access-Control-Request-Headers"]);
             HttpContext.Response.Headers.Add("Access-Control-Max-Age", "86400");
+        }
+
+        [RavenAction("/admin/cluster/add-node", "OPTIONS", "/admin/cluster/add-node?url={nodeUrl:string}")]
+        [RavenAction("/admin/cluster/remove-node", "OPTIONS", "/admin/cluster/remove-node?nodeTag={nodeTag:string}")]
+        [RavenAction("/admin/cluster/reelect", "OPTIONS", "/admin/cluster/reelect")]
+        public Task AllowPreflightRequest()
+        {
+            SetupCORSHeaders();
             HttpContext.Response.Headers.Remove("Content-Type");
             return Task.CompletedTask;
         }
@@ -177,6 +182,8 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/admin/cluster/add-node", "POST", "/admin/cluster/add-node?url={nodeUrl:string}")]
         public async Task AddNode()
         {
+            SetupCORSHeaders();
+
             var serverUrl = GetStringQueryString("url");
             ServerStore.EnsureNotPassive();
             if (ServerStore.IsLeader())
@@ -218,6 +225,8 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/admin/cluster/remove-node", "DELETE", "/admin/cluster/remove-node?nodeTag={nodeTag:string}")]
         public async Task DeleteNode()
         {
+            SetupCORSHeaders();
+
             var nodeTag = GetStringQueryString("nodeTag");
             ServerStore.EnsureNotPassive();
             if (ServerStore.IsLeader())
@@ -232,6 +241,8 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/admin/cluster/reelect", "POST", "/admin/cluster/reelect")]
         public Task EnforceReelection()
         {
+            SetupCORSHeaders();
+
             if (ServerStore.IsLeader())
             {
                 ServerStore.Engine.CurrentLeader.StepDown();
