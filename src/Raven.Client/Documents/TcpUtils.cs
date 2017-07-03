@@ -19,7 +19,7 @@ namespace Raven.Client.Documents
 
             try
             {
-                await tcpClient.ConnectAsync(GetTcpUrl(uri.Host), uri.Port).ConfigureAwait(false);
+                await tcpClient.ConnectAsync(uri.Host, uri.Port).ConfigureAwait(false);
             }
             catch (AggregateException ae) when (ae.InnerException is SocketException)
             {
@@ -68,13 +68,6 @@ namespace Raven.Client.Documents
             await sslStream.AuthenticateAsClientAsync("RavenDB", null, SslProtocols.Tls12, false).ConfigureAwait(false);
             stream = sslStream;
             return stream;
-        }
-
-        public static string GetTcpUrl(string host)
-        {
-            if (host.IndexOf(".fiddler", StringComparison.OrdinalIgnoreCase) > 0)
-                return host.Replace(".fiddler", "");
-            return host;
         }
     }
 }
