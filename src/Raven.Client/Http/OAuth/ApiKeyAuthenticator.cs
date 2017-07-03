@@ -176,13 +176,7 @@ namespace Raven.Client.Http.OAuth
             var apiKeyParts = apiKey.Split(new[] { '/' }, StringSplitOptions.None);
             if (apiKeyParts.Length > 2)
             {
-                var secretIndex = 1;
-                if (apiKeyParts[0] == "Raven" && apiKeyParts.Length > 3)
-                {
-                    apiKeyParts[0] = $"{apiKeyParts[0]}/{apiKeyParts[1]}";
-                    secretIndex = 2;
-                }
-                apiKeyParts[1] = string.Join("/", apiKeyParts.Skip(secretIndex));
+                apiKeyParts[1] = string.Join("/", apiKeyParts.Skip(1));
             }
 
             if (apiKeyParts.Length < 2)

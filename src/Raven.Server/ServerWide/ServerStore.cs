@@ -1398,8 +1398,8 @@ namespace Raven.Server.ServerWide
 
         }
 
-        private const string SystemApiKey = "Raven/System";
-        public async Task<(string api_key, string public_key)> GetApiKeyAndPublicKey()
+        private const string SystemApiKey = "Raven:System";
+        public async Task<(string apiKey, string publicKey)> GetApiKeyAndPublicKey()
         {
             TransactionOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
