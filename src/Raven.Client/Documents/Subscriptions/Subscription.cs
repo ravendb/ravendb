@@ -262,7 +262,7 @@ namespace Raven.Client.Documents.Subscriptions
         }
 
         private ServerNode _redirectNode;
-        private RequestExecutor _subscriptionLocalRequestExecuter;
+        private RequestExecutor _subscriptionLocalRequestExecutor;
 
         public string CurrentNodeTag => _redirectNode?.ClusterTag;
 
@@ -338,8 +338,8 @@ namespace Raven.Client.Documents.Subscriptions
 
                 await _stream.FlushAsync().ConfigureAwait(false);
 
-                _subscriptionLocalRequestExecuter?.Dispose();
-                _subscriptionLocalRequestExecuter = RequestExecutor.CreateForSingleNode(command.RequestedNode.Url, _dbName, requestExecutor.ApiKey);
+                _subscriptionLocalRequestExecutor?.Dispose();
+                _subscriptionLocalRequestExecutor = RequestExecutor.CreateForSingleNode(command.RequestedNode.Url, _dbName, requestExecutor.ApiKey);
                 return _stream;
             }
         }
@@ -373,7 +373,7 @@ namespace Raven.Client.Documents.Subscriptions
                         $"Subscription With Id {_options.SubscriptionId} cannot be opened, because it does not exist. " + connectionStatus.Exception);
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Redirect:
                     throw new SubscriptionDoesNotBelongToNodeException(
-                        $"Subscription With Id {_options.SubscriptionId} cannot be proccessed by current node, it will be redirected to {connectionStatus.Data[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)]}"
+                        $"Subscription With Id {_options.SubscriptionId} cannot be processed by current node, it will be redirected to {connectionStatus.Data[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)]}"
                         )
                     {
                         AppropriateNode = connectionStatus.Data[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)].ToString()
@@ -413,7 +413,7 @@ namespace Raven.Client.Documents.Subscriptions
 
                         Task notifiedSubscriber = Task.CompletedTask;
                         
-                        var batch = new SubscriptionBatch<T>(_subscriptionLocalRequestExecuter, _store, _dbName, _logger);
+                        var batch = new SubscriptionBatch<T>(_subscriptionLocalRequestExecutor, _store, _dbName, _logger);
                         
                         while (_processingCts.IsCancellationRequested == false)
                         {
@@ -604,7 +604,7 @@ namespace Raven.Client.Documents.Subscriptions
                 }
                 catch (Exception ex)
                 {
-                    bool shouldRetrhow = false;
+                    bool shouldRethrow = false;
                     try
                     {
                         if (_processingCts.Token.IsCancellationRequested)
@@ -620,7 +620,7 @@ namespace Raven.Client.Documents.Subscriptions
                             if (_logger.IsInfoEnabled)
                                 _logger.Info($"Connection to subscription #{_options.SubscriptionId} have been shut down because of an error", ex);
 
-                            shouldRetrhow = true;
+                            shouldRethrow = true;
                         }
                         else
                         {
@@ -631,7 +631,7 @@ namespace Raven.Client.Documents.Subscriptions
                     {
                         throw new AggregateException(e, ex);
                     }
-                    if (shouldRetrhow)
+                    if (shouldRethrow)
                         throw;
                 }
             }
