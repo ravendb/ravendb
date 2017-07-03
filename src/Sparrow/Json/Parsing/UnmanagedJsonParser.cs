@@ -528,7 +528,14 @@ namespace Sparrow.Json.Parsing
                 if (b >= '0' && b <= '9')
                 {
                     // PERF: This is a fast loop for the most common characters found on numbers.
-                    value = (value * 10) + b - (byte)'0';
+                    var next = (value * 10) + b - (byte)'0';
+
+                    if (next < value) //overflow
+                        _isDouble = true;
+
+                    value = next; 
+                    
+
                     _unmanagedWriteBuffer.WriteByte(b);
 
                     continue;

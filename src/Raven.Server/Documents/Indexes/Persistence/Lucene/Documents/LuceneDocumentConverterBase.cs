@@ -372,7 +372,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (valueType == ValueType.Double)
             {
-                var ldv = value as LazyDoubleValue;
+                var ldv = value as LazyNumberValue;
                 if (ldv != null)
                 {
                     LazyStringValue doubleAsString;
@@ -455,7 +455,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (value is IEnumerable) return ValueType.Enumerable;
 
-            if (value is LazyDoubleValue || value is double || value is decimal || value is float) return ValueType.Double;
+            if (value is LazyNumberValue || value is double || value is decimal || value is float) return ValueType.Double;
 
             if (value is AbstractField) return ValueType.Lucene;
 
@@ -660,7 +660,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     || value is double;
         }
 
-        private static unsafe bool TryToTrimTrailingZeros(LazyDoubleValue ldv, JsonOperationContext context, out LazyStringValue dblAsString)
+        private static unsafe bool TryToTrimTrailingZeros(LazyNumberValue ldv, JsonOperationContext context, out LazyStringValue dblAsString)
         {
             var dotIndex = ldv.Inner.LastIndexOf(".");
             if (dotIndex <= 0)

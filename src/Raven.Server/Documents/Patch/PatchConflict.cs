@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Patch
                                 case BlittableJsonToken.Integer:
                                     writer.WriteValue((long)prop.Value);
                                     break;
-                                case BlittableJsonToken.Float:
+                                case BlittableJsonToken.LazyNumber:
                                     writer.WriteValue((double)prop.Value);
                                     break;
                                 case BlittableJsonToken.CompressedString:

@@ -411,7 +411,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         break;
                     case BlittableJsonToken.Boolean:
                     case BlittableJsonToken.Integer:
-                    case BlittableJsonToken.Float:
+                    case BlittableJsonToken.LazyNumber:
                         colParam.Value = column.Value;
                         break;
 

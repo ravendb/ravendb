@@ -32,7 +32,7 @@ namespace Raven.Client.Json
             if (type == typeof(int) || type == typeof(long) || type == typeof(double) || type == typeof(decimal) || type == typeof(float))
                 return value;
 
-            if (type == typeof(LazyDoubleValue))
+            if (type == typeof(LazyNumberValue))
                 return value;
 
             if (type == typeof(DateTime) || type == typeof(DateTimeOffset) || type == typeof(TimeSpan))

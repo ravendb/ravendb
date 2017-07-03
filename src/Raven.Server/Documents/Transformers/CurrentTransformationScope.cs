@@ -206,7 +206,7 @@ namespace Raven.Server.Documents.Transformers
             if (value is LazyStringValue || value is LazyCompressedStringValue)
                 return value;
 
-            if (value is LazyDoubleValue)
+            if (value is LazyNumberValue)
                 return value;
 
             var inner = new DynamicJsonValue();

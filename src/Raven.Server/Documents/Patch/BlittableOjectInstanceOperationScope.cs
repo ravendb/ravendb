@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Patch
                 var num = v.AsNumber();
                                 
                 if (originalValue!= null && token!= null && token.HasValue && (
-                    (token.Value & BlittableJsonToken.Float) == BlittableJsonToken.Float ||
+                    (token.Value & BlittableJsonToken.LazyNumber) == BlittableJsonToken.LazyNumber ||
                     (token.Value & BlittableJsonToken.Integer) == BlittableJsonToken.Integer))
                 {                
                     // If the current value is exactly as the original value, we can return the original value before we made the JS conversion, 

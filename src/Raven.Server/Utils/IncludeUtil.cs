@@ -101,7 +101,7 @@ namespace Raven.Server.Utils
 
         private static string HandleSuffixValue(object val, StringSegment suffixSegment)
         {
-            var doubleVal = val as LazyDoubleValue;
+            var doubleVal = val as LazyNumberValue;
             if (doubleVal != null)
                 val = doubleVal.Inner;
             var res = string.Format(suffixSegment, val).TrimEnd(']');
@@ -110,7 +110,7 @@ namespace Raven.Server.Utils
 
         private static string HandlePrefixValue(object val, StringSegment prefixSegment)
         {
-            var doubleVal = val as LazyDoubleValue;
+            var doubleVal = val as LazyNumberValue;
             if (doubleVal != null)
                 val = doubleVal.Inner;
 
@@ -133,7 +133,7 @@ namespace Raven.Server.Utils
             if (lazyCompressedStringValue != null)
                 return lazyCompressedStringValue.ToString();
 
-            var lazyDoubleVal = value as LazyDoubleValue;
+            var lazyDoubleVal = value as LazyNumberValue;
             if (lazyDoubleVal != null)
                 return lazyDoubleVal.Inner.ToString();
 

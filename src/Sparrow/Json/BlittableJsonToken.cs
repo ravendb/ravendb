@@ -8,7 +8,7 @@ namespace Sparrow.Json
         StartObject = 1,
         StartArray = 2,
         Integer = 3,
-        Float = 4,
+        LazyNumber = 4,
         String = 5,
         CompressedString = 6,
         Boolean = 7,

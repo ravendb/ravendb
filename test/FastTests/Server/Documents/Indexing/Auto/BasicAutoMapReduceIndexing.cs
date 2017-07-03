@@ -376,7 +376,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Assert.True(result.TryGet("ShipTo.Country", out location));
                     Assert.Equal("Poland", location);
 
-                    var price = result["Lines,Price"] as LazyDoubleValue;
+                    var price = result["Lines,Price"] as LazyNumberValue;
 
                     Assert.NotNull(price);
 

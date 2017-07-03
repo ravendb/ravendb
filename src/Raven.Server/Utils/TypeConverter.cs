@@ -51,7 +51,7 @@ namespace Raven.Server.Utils
             if (value is int || value is long || value is double || value is decimal || value is float)
                 return value;
 
-            if (value is LazyDoubleValue)
+            if (value is LazyNumberValue)
                 return value;
 
             if (value is DateTime || value is DateTimeOffset || value is TimeSpan)

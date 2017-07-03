@@ -250,7 +250,17 @@ namespace Sparrow.Json
             ConvertType(result, out obj);
             return true;
         }
-        
+
+        private static void ThrowFormatException(object value, string fromType, string toType)
+        {
+            throw new FormatException($"Could not convert {fromType} ('{value}') to {toType}");
+        }
+
+        private static void ThrowFormatException(object value, string fromType, string toType, Exception e)
+        {
+            throw new FormatException($"Could not convert {fromType} ('{value}') to {toType}",e);
+        }
+
         internal static void ConvertType<T>(object result, out T obj)
         {
             if (result == null)
@@ -263,6 +273,7 @@ namespace Sparrow.Json
             }
             else
             {
+                obj = default(T);
                 var type = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
                 try
                 {
@@ -272,45 +283,49 @@ namespace Sparrow.Json
                     }
                     else if (type == typeof(DateTime))
                     {
-                        string dateTimeString;
-                        if (ChangeTypeToString(result, out dateTimeString) == false)
-                            throw new FormatException($"Could not convert {result.GetType().FullName} ('{result}') to string");
-                        DateTime time;
-                        if (DateTime.TryParseExact(dateTimeString, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out time) == false)
-                            throw new FormatException($"Could not convert {result.GetType().FullName} ('{result}') to DateTime");
+                        if (ChangeTypeToString(result, out string dateTimeString) == false)
+                            ThrowFormatException(result, result.GetType().FullName, "string");
+                        if (DateTime.TryParseExact(dateTimeString, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime time) == false)
+                            ThrowFormatException(result, result.GetType().FullName, "DateTime");
+                        obj = (T)(object)time;
+                    }
+                    else if (type == typeof(DateTimeOffset))
+                    {
+                        if (ChangeTypeToString(result, out string dateTimeOffsetString) == false)
+                            ThrowFormatException(result, result.GetType().FullName, "string");
+                        if (DateTimeOffset.TryParseExact(dateTimeOffsetString, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTimeOffset time) == false)
+                            ThrowFormatException(result, result.GetType().FullName, "DateTimeOffset");
                         obj = (T)(object)time;
                     }
                     else if (type == typeof(TimeSpan))
                     {
-                        string timeSpanString;
-                        if (ChangeTypeToString(result, out timeSpanString) == false)
-                            throw new FormatException($"Could not convert {result.GetType().FullName} ('{result}') to string");
-                        TimeSpan timeSpan;
-                        if (TimeSpan.TryParseExact(timeSpanString, "c", CultureInfo.InvariantCulture, out timeSpan) == false)
-                            throw new FormatException($"Could not convert {result.GetType().FullName} ('{result}') to TimeSpan");
+                        if (ChangeTypeToString(result, out string timeSpanString) == false)
+                            ThrowFormatException(result, result.GetType().FullName, "string");
+                        if (TimeSpan.TryParseExact(timeSpanString, "c", CultureInfo.InvariantCulture, out TimeSpan timeSpan) == false) // todo: format might be problematic here
+                            ThrowFormatException(result, result.GetType().FullName, "TimeSpan");
                         obj = (T)(object)timeSpan;
                     }
                     else if (type == typeof(Guid))
                     {
-                        string guidString;
-                        if (ChangeTypeToString(result, out guidString) == false)
-                            throw new FormatException($"Could not convert {result.GetType().FullName} ('{result}') to string");
-                        Guid guid;
-                        if (Guid.TryParse(guidString, out guid) == false)
-                            throw new FormatException($"Could not convert {result.GetType().FullName} ('{result}') to Guid");
+                        if (ChangeTypeToString(result, out string guidString) == false)
+                            ThrowFormatException(result, result.GetType().FullName, "string");
+                        if (Guid.TryParse(guidString, out Guid guid) == false)
+                            ThrowFormatException(result, result.GetType().FullName, "Guid");
                         obj = (T)(object)guid;
                     }
                     else
                     {
-                        var lazyStringValue = result as LazyStringValue;
-                        if (lazyStringValue != null)
+                        if (result is LazyStringValue lazyStringValue && lazyStringValue != null)
                         {
                             obj = (T)Convert.ChangeType(lazyStringValue.ToString(), type);
+                        } 
+                        else if (result is LazyNumberValue lazyNumberValue && lazyNumberValue != null)
+                        {
+                            obj = (T)Convert.ChangeType(lazyNumberValue, type);
                         }
                         else
                         {
-                            var lazyCompressStringValue = result as LazyCompressedStringValue;
-                            if (lazyCompressStringValue != null)
+                            if (result is LazyCompressedStringValue lazyCompressStringValue && lazyCompressStringValue != null)
                             {
                                 if (typeof(T) == typeof(LazyStringValue))
                                 {
@@ -327,7 +342,7 @@ namespace Sparrow.Json
                 }
                 catch (Exception e)
                 {
-                    throw new FormatException($"Could not convert {result.GetType().FullName} to {type.FullName}", e);
+                    ThrowFormatException(result, result.GetType().FullName, type.FullName,e);
                 }
             }
         }
@@ -364,7 +379,7 @@ namespace Sparrow.Json
                 return false;
             }
 
-            var lazyDouble = result as LazyDoubleValue;
+            var lazyDouble = result as LazyNumberValue;
             if (lazyDouble != null)
             {
                 dbl = lazyDouble;
@@ -691,8 +706,8 @@ namespace Sparrow.Json
                     return ReadNumber(_mem + position, 1) == 1;
                 case BlittableJsonToken.Null:
                     return null;
-                case BlittableJsonToken.Float:
-                    return new LazyDoubleValue(ReadStringLazily(position));
+                case BlittableJsonToken.LazyNumber:
+                    return new LazyNumberValue(ReadStringLazily(position));
             }
 
             throw new ArgumentOutOfRangeException((type).ToString());
@@ -926,7 +941,7 @@ namespace Sparrow.Json
                     case BlittableJsonToken.Integer:
                         ReadVariableSizeLong(propValueOffset);
                         break;
-                    case BlittableJsonToken.Float:
+                    case BlittableJsonToken.LazyNumber:
                         var floatLen = ReadNumber(_mem + objStartOffset - propOffset, 1);
                         var floatStringBuffer = new string(' ', floatLen);
                         fixed (char* pChars = floatStringBuffer)

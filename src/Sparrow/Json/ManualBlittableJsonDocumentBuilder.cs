@@ -294,7 +294,7 @@ namespace Sparrow.Json
                 case BlittableJsonToken.Integer:
                     WriteValue((long)value);
                     break;
-                case BlittableJsonToken.Float:
+                case BlittableJsonToken.LazyNumber:
                     WriteValue((float)value);
                     break;
                 case BlittableJsonToken.String:
@@ -368,7 +368,24 @@ namespace Sparrow.Json
             _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
             {
                 ValuePos = valuePos,
-                WrittenToken = BlittableJsonToken.Float
+                WrittenToken = BlittableJsonToken.LazyNumber
+            };
+
+            if (currentState.FirstWrite == -1)
+                currentState.FirstWrite = valuePos;
+
+            currentState = FinishWritingScalarValue(currentState);
+            _continuationState.Push(currentState);
+        }
+
+        public void WriteValue(ulong value)
+        {
+            var currentState = _continuationState.Pop();
+            var valuePos = _writer.WriteValue(value);
+            _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
+            {
+                ValuePos = valuePos,
+                WrittenToken = BlittableJsonToken.LazyNumber
             };
 
             if (currentState.FirstWrite == -1)
@@ -385,7 +402,7 @@ namespace Sparrow.Json
             _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
             {
                 ValuePos = valuePos,
-                WrittenToken = BlittableJsonToken.Float
+                WrittenToken = BlittableJsonToken.LazyNumber
             };
 
             if (currentState.FirstWrite == -1)
@@ -402,7 +419,7 @@ namespace Sparrow.Json
             _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
             {
                 ValuePos = valuePos,
-                WrittenToken = BlittableJsonToken.Float
+                WrittenToken = BlittableJsonToken.LazyNumber
             };
 
             if (currentState.FirstWrite == -1)
@@ -412,14 +429,14 @@ namespace Sparrow.Json
             _continuationState.Push(currentState);
         }
 
-        public void WriteValue(LazyDoubleValue value)
+        public void WriteValue(LazyNumberValue value)
         {
             var currentState = _continuationState.Pop();
             var valuePos = _writer.WriteValue(value);
             _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
             {
                 ValuePos = valuePos,
-                WrittenToken = BlittableJsonToken.Float
+                WrittenToken = BlittableJsonToken.LazyNumber
             };
 
             if (currentState.FirstWrite == -1)

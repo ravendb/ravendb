@@ -134,8 +134,8 @@ namespace Sparrow.Json
                 case BlittableJsonToken.CompressedString:
                     WriteString((LazyCompressedStringValue)val);
                     break;
-                case BlittableJsonToken.Float:
-                    WriteDouble((LazyDoubleValue)val);
+                case BlittableJsonToken.LazyNumber:
+                    WriteDouble((LazyNumberValue)val);
                     break;
                 case BlittableJsonToken.Boolean:
                     WriteBool((bool)val);
@@ -466,7 +466,7 @@ namespace Sparrow.Json
             _pos += len;
         }
 
-        public void WriteDouble(LazyDoubleValue val)
+        public void WriteDouble(LazyNumberValue val)
         {
             if (val.IsNaN())
             {

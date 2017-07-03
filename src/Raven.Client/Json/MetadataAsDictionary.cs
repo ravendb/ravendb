@@ -49,7 +49,7 @@ namespace Raven.Client.Json
             if (value is bool)
                 return (bool)value;
 
-            var doubleValue = value as LazyDoubleValue;
+            var doubleValue = value as LazyNumberValue;
             if (doubleValue != null)
                 return (double)doubleValue;
 

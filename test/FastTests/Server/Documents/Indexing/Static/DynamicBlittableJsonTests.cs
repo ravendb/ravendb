@@ -38,7 +38,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                         ["City"] = "NYC"
                     },
                     ["NullField"] = null,
-                    ["Age"] = new LazyDoubleValue(lazyStringValue),
+                    ["Age"] = new LazyNumberValue(lazyStringValue),
                     ["LazyName"] = stringValue,
                     ["Friends"] = new DynamicJsonArray
                 {

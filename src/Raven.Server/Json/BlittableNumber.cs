@@ -41,7 +41,7 @@ namespace Raven.Server.Json
                 return NumberParseResult.Long;
             }
 
-            var lazyDouble = value as LazyDoubleValue;
+            var lazyDouble = value as LazyNumberValue;
             if (lazyDouble != null)
             {
                 doubleResult = lazyDouble;

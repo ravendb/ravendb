@@ -245,7 +245,7 @@ namespace Raven.Server.Web.Studio
                 case BlittableJsonToken.CompressedString:
                     var lazyCompressedString = (LazyCompressedStringValue) val;
                     return lazyCompressedString.UncompressedSize > StringLengthLimit ? ValueWriteStrategy.Trim : ValueWriteStrategy.Passthrough;
-                case BlittableJsonToken.Float:
+                case BlittableJsonToken.LazyNumber:
                 case BlittableJsonToken.Boolean:
                 case BlittableJsonToken.Null:
                     return ValueWriteStrategy.Passthrough;

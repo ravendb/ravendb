@@ -213,8 +213,8 @@ namespace Raven.Server.Documents.Patch
 
                 case BlittableJsonToken.Integer:
                     return new JsValue((long)propertyDetails.Value);
-                case BlittableJsonToken.Float:
-                    return new JsValue((double)(LazyDoubleValue)propertyDetails.Value);
+                case BlittableJsonToken.LazyNumber:
+                    return new JsValue((double)(LazyNumberValue)propertyDetails.Value);
                 case BlittableJsonToken.String:
                     return new JsValue(((LazyStringValue)propertyDetails.Value).ToString());
                 case BlittableJsonToken.CompressedString:
@@ -461,15 +461,15 @@ namespace Raven.Server.Documents.Patch
             {
                 var num = v.AsNumber();
 
-                if (originalValue != null && token.HasValue &&
-                    ((token.Value & BlittableJsonToken.Float) == BlittableJsonToken.Float ||
-                     (token.Value & BlittableJsonToken.Integer) == BlittableJsonToken.Integer))
+                if (originalValue != null && token.HasValue && (
+                    (token.Value & BlittableJsonToken.LazyNumber) == BlittableJsonToken.LazyNumber ||
+                    (token.Value & BlittableJsonToken.Integer) == BlittableJsonToken.Integer))
                 {
                     // If the current value is exactly as the original value, we can return the original value before we made the JS conversion, 
                     // which will convert a Int64 to jsFloat.
 
                     double originalDouble;
-                    if (originalValue is LazyDoubleValue ldv)
+                    if (originalValue is LazyNumberValue ldv)
                         originalDouble = ldv;
                     else
                         originalDouble = Convert.ToDouble(originalValue);

@@ -91,7 +91,7 @@ namespace Raven.Client.Json
                 {
                     case BlittableJsonToken.Integer:
                     case BlittableJsonToken.Boolean:
-                    case BlittableJsonToken.Float:
+                    case BlittableJsonToken.LazyNumber:
                     case BlittableJsonToken.CompressedString:
                     case BlittableJsonToken.String:
                         if (newProp.Value.Equals(oldProp.Value))
@@ -163,7 +163,7 @@ namespace Raven.Client.Json
                     }
                     break;
                 case BlittableJsonToken.Integer:
-                case BlittableJsonToken.Float:
+                case BlittableJsonToken.LazyNumber:
                 case BlittableJsonToken.String:
                 case BlittableJsonToken.CompressedString:
                 case BlittableJsonToken.Boolean:

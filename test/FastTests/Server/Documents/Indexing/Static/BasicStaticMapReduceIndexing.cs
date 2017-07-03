@@ -102,7 +102,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                         Assert.Equal(1, queryResult.Results.Count);
                         Assert.Equal("Poland", results[0].Data["Location"].ToString());
                         Assert.Equal(2L, results[0].Data["CountInteger"]);
-                        Assert.Equal(2.0, (LazyDoubleValue)results[0].Data["CountDouble"]);
+                        Assert.Equal(2.0, (LazyNumberValue)results[0].Data["CountDouble"]);
                         Assert.Equal(2L, results[0].Data["CastedInteger"]);
                     }
                 }
@@ -205,7 +205,7 @@ select new
                         Assert.Equal(1, queryResult.Results.Count);
                         Assert.Equal("Milk", queryResult.Results[0].Data["Product"].ToString());
                         Assert.Equal(2L, queryResult.Results[0].Data["Count"]);
-                        Assert.Equal(21.0, (LazyDoubleValue)queryResult.Results[0].Data["Total"]);
+                        Assert.Equal(21.0, (LazyNumberValue)queryResult.Results[0].Data["Total"]);
                     }
                 }
             }
