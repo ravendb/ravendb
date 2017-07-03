@@ -76,7 +76,7 @@ namespace Sparrow.Json
 
         public const BlittableJsonToken TypesMask =
                 BlittableJsonToken.Boolean |
-                BlittableJsonToken.Float |
+                BlittableJsonToken.LazyNumber |
                 BlittableJsonToken.Integer |
                 BlittableJsonToken.Null |
                 BlittableJsonToken.StartArray |
@@ -91,7 +91,7 @@ namespace Sparrow.Json
                 case BlittableJsonToken.StartObject:
                 case BlittableJsonToken.StartArray:
                 case BlittableJsonToken.Integer:
-                case BlittableJsonToken.Float:
+                case BlittableJsonToken.LazyNumber:
                 case BlittableJsonToken.String:
                 case BlittableJsonToken.CompressedString:
                 case BlittableJsonToken.Boolean:

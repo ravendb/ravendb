@@ -421,7 +421,7 @@ namespace Raven.Server.Documents
                 // base types
                 case BlittableJsonToken.Boolean:
                     return KnownTypes[typeof(bool)];
-                case BlittableJsonToken.Float:
+                case BlittableJsonToken.LazyNumber:
                     return KnownTypes[typeof(float)];
                 case BlittableJsonToken.Null:
                     return KnownTypes[typeof(object)];

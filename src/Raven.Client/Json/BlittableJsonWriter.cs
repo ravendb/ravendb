@@ -64,8 +64,8 @@ namespace Raven.Client.Json
                         _manualBlittableJsonDocumentBuilder.WriteValue((float)value);
                     else if (value is bool)
                         _manualBlittableJsonDocumentBuilder.WriteValue((bool)value);
-                    else if (value is LazyDoubleValue)
-                        _manualBlittableJsonDocumentBuilder.WriteValue((LazyDoubleValue) value);
+                    else if (value is LazyNumberValue)
+                        _manualBlittableJsonDocumentBuilder.WriteValue((LazyNumberValue) value);
                     else
                         throw new NotSupportedException($"The value type {value.GetType().FullName} of key {prop.Item1} is not supported in the metadata");
                 }
@@ -127,8 +127,8 @@ namespace Raven.Client.Json
                         case BlittableJsonToken.Integer:
                             _manualBlittableJsonDocumentBuilder.WriteValue((long) propertyDetails.Value);
                             break;
-                        case BlittableJsonToken.Float:
-                            if (propertyDetails.Value is LazyDoubleValue ldv)
+                        case BlittableJsonToken.LazyNumber:
+                            if (propertyDetails.Value is LazyNumberValue ldv)
                             {
                                 _manualBlittableJsonDocumentBuilder.WriteValue(ldv);
                             }
@@ -234,12 +234,6 @@ namespace Raven.Client.Json
 
         public override void WriteValue(double value)
         {
-            if (double.IsNaN(value))
-            {
-                _manualBlittableJsonDocumentBuilder.WriteValue("NaN");
-                return;
-            }
-
             _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
@@ -297,15 +291,11 @@ namespace Raven.Client.Json
         {
             if (value != null)
             {
-                if (double.IsNaN(value.Value))
-                {
-                    _manualBlittableJsonDocumentBuilder.WriteValue("NaN");
-                    return;
-                }
 
                 _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
             }
-            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
+            else
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(bool? value)
@@ -411,12 +401,12 @@ namespace Raven.Client.Json
 
         public override void WriteValue(ulong value)
         {
-            _manualBlittableJsonDocumentBuilder.WriteValue((long)value);
+            _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
         public override void WriteValue(ulong? value)
         {
-            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue((long)value.Value);
+            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
             else _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26228.10
+VisualStudioVersion = 15.0.26430.6
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{02838C57-DE0E-465D-9FBB-248DA87BEAAE}"
 EndProject
@@ -60,9 +60,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RachisTests", "test\RachisT
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SubscriptionFailover.Benchmark", "bench\SubscriptionFailover.Benchmark\SubscriptionFailover.Benchmark.csproj", "{FDEE0521-0CD9-4CCB-96A8-73C06CE19E72}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.TestDriver", "src\Raven.TestDriver\Raven.TestDriver.csproj", "{EFAA52C9-63F1-4DBA-BDD3-E2BFCF6D7968}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Raven.TestDriver", "src\Raven.TestDriver\Raven.TestDriver.csproj", "{EFAA52C9-63F1-4DBA-BDD3-E2BFCF6D7968}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "rvn", "tools\rvn\rvn.csproj", "{579E2927-4840-4E36-8D12-01878EFB53E4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "rvn", "tools\rvn\rvn.csproj", "{579E2927-4840-4E36-8D12-01878EFB53E4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

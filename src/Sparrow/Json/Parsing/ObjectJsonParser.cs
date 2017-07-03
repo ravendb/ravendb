@@ -375,7 +375,7 @@ namespace Sparrow.Json.Parsing
                     return true;
                 }
 
-                if (current is LazyDoubleValue ldv)
+                if (current is LazyNumberValue ldv)
                 {
                     _state.StringBuffer = ldv.Inner.Buffer;
                     _state.StringSize = ldv.Inner.Size;

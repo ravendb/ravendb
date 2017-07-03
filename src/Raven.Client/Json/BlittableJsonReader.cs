@@ -117,8 +117,8 @@ namespace Raven.Client.Json
                 return BlittableJsonToken.Null;
             if (val is int || val is long)
                 return BlittableJsonToken.Integer;
-            if (val is float || val is double || val is decimal || val is LazyDoubleValue)
-                return BlittableJsonToken.Float;
+            if (val is float || val is double || val is decimal || val is LazyNumberValue)
+                return BlittableJsonToken.LazyNumber;
             if (val is IEnumerable)
                 return BlittableJsonToken.StartArray;
             return BlittableJsonToken.StartObject;
@@ -149,8 +149,8 @@ namespace Raven.Client.Json
                 case BlittableJsonToken.Integer:
                     SetToken(JsonToken.Integer, (long)value);
                     return true;
-                case BlittableJsonToken.Float:
-                    SetToken(JsonToken.Float, (double)((LazyDoubleValue)value));
+                case BlittableJsonToken.LazyNumber:
+                    SetToken(JsonToken.Float, (double)((LazyNumberValue)value));
                     return true;
                 case BlittableJsonToken.String:
                 case BlittableJsonToken.CompressedString:

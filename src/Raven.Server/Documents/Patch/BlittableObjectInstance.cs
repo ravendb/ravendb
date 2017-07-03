@@ -124,8 +124,8 @@ namespace Raven.Server.Documents.Patch
                     case BlittableJsonToken.Integer:
                         returnedValue = new JsValue((long)propertyDetails.Value);
                         break;
-                    case BlittableJsonToken.Float:
-                        returnedValue = new JsValue((double)(LazyDoubleValue)propertyDetails.Value);
+                    case BlittableJsonToken.LazyNumber:
+                        returnedValue = new JsValue((double)(LazyNumberValue)propertyDetails.Value);
                         break;
                     case BlittableJsonToken.String:
                         returnedValue = new JsValue(((LazyStringValue)propertyDetails.Value).ToString());
@@ -263,8 +263,8 @@ namespace Raven.Server.Documents.Patch
 
                 case BlittableJsonToken.Integer:
                     return new JsValue((long)valueTuple.Item1);
-                case BlittableJsonToken.Float:
-                    return new JsValue((double)(LazyDoubleValue)valueTuple.Item1);
+                case BlittableJsonToken.LazyNumber:
+                    return new JsValue((double)(LazyNumberValue)valueTuple.Item1);
                 case BlittableJsonToken.String:
                     return new JsValue(((LazyStringValue)valueTuple.Item1).ToString());
                 case BlittableJsonToken.CompressedString:

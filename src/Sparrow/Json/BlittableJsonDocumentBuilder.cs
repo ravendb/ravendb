@@ -399,7 +399,7 @@ namespace Sparrow.Json
                     }
 
                     _state.CompressedSize = null;
-                    _writeToken = new WriteToken(start, BlittableJsonToken.Float);
+                    _writeToken = new WriteToken(start, BlittableJsonToken.LazyNumber);
                     return;
                 case JsonParserToken.True:
                 case JsonParserToken.False:

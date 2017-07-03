@@ -882,7 +882,7 @@ namespace Sparrow.Json
                     }
                     break;
                 case JsonParserToken.Float:
-                    writer.WriteDouble(new LazyDoubleValue(AllocateStringValue(null, state.StringBuffer, state.StringSize)));
+                    writer.WriteDouble(new LazyNumberValue(AllocateStringValue(null, state.StringBuffer, state.StringSize)));
                     break;
                 case JsonParserToken.Integer:
                     writer.WriteInteger(state.Long);

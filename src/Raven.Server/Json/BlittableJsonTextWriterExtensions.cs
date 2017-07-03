@@ -185,7 +185,7 @@ namespace Raven.Server.Json
                 if (value.Average.HasValue)
                 {
                     using (var lazyStringValue = context.GetLazyString(value.Average.ToInvariantString()))
-                        writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
+                        writer.WriteDouble(new LazyNumberValue(lazyStringValue));
                 }
                 else
                     writer.WriteNull();
@@ -206,7 +206,7 @@ namespace Raven.Server.Json
                 if (value.Max.HasValue)
                 {
                     using (var lazyStringValue = context.GetLazyString(value.Max.ToInvariantString()))
-                        writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
+                        writer.WriteDouble(new LazyNumberValue(lazyStringValue));
                 }
                 else
                     writer.WriteNull();
@@ -216,7 +216,7 @@ namespace Raven.Server.Json
                 if (value.Min.HasValue)
                 {
                     using (var lazyStringValue = context.GetLazyString(value.Min.ToInvariantString()))
-                        writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
+                        writer.WriteDouble(new LazyNumberValue(lazyStringValue));
                 }
                 else
                     writer.WriteNull();
@@ -230,7 +230,7 @@ namespace Raven.Server.Json
                 if (value.Sum.HasValue)
                 {
                     using (var lazyStringValue = context.GetLazyString(value.Sum.ToInvariantString()))
-                        writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
+                        writer.WriteDouble(new LazyNumberValue(lazyStringValue));
                 }
                 else
                     writer.WriteNull();
@@ -1033,22 +1033,22 @@ namespace Raven.Server.Json
                 writer.WritePropertyName(nameof(options.Spatial.MaxX));
                 LazyStringValue lazyStringValue;
                 using (lazyStringValue = context.GetLazyString(CharExtensions.ToInvariantString(options.Spatial.MaxX)))
-                    writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
+                    writer.WriteDouble(new LazyNumberValue(lazyStringValue));
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(options.Spatial.MaxY));
                 using (lazyStringValue = context.GetLazyString(CharExtensions.ToInvariantString(options.Spatial.MaxY)))
-                    writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
+                    writer.WriteDouble(new LazyNumberValue(lazyStringValue));
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(options.Spatial.MinX));
                 using (lazyStringValue = context.GetLazyString(CharExtensions.ToInvariantString(options.Spatial.MinX)))
-                    writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
+                    writer.WriteDouble(new LazyNumberValue(lazyStringValue));
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(options.Spatial.MinY));
                 using (lazyStringValue = context.GetLazyString(CharExtensions.ToInvariantString(options.Spatial.MinY)))
-                    writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
+                    writer.WriteDouble(new LazyNumberValue(lazyStringValue));
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(options.Spatial.Strategy));

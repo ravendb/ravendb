@@ -68,6 +68,14 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int WriteValue(ulong value)
+        {
+            // todo: write something more performant here..
+            var s = value.ToString("G", CultureInfo.InvariantCulture);
+            return WriteValue(s, out BlittableJsonToken token);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int WriteValue(bool value)
         {
             var startPos = _position;
@@ -92,7 +100,9 @@ namespace Sparrow.Json
 
         public int WriteValue(decimal value)
         {
-            return WriteValue((double)value);
+            var s = EnsureDecimalPlace(value, value.ToString("G", CultureInfo.InvariantCulture));
+            BlittableJsonToken token;
+            return WriteValue(s, out token);
         }
 
         public int WriteValue(float value)
@@ -101,7 +111,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int WriteValue(LazyDoubleValue value)
+        public int WriteValue(LazyNumberValue value)
         {
             return WriteValue(value.Inner);
         }
@@ -117,7 +127,16 @@ namespace Sparrow.Json
 
         private static string EnsureDecimalPlace(double value, string text)
         {
-            if (double.IsNaN(value) || double.IsInfinity(value) || text.IndexOf('.') != -1 || text.IndexOf('E') != -1 || text.IndexOf('e') != -1)
+            if (double.IsNaN(value) || double.IsInfinity(value) || double.IsNegativeInfinity(value) || text.IndexOf('.') != -1 || text.IndexOf('E') != -1 || text.IndexOf('e') != -1)
+                return text;
+
+            return text + ".0";
+        }
+
+
+        private static string EnsureDecimalPlace(decimal value, string text)
+        {
+            if (text.IndexOf('.') != -1)
                 return text;
 
             return text + ".0";
