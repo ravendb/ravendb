@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;
@@ -21,7 +22,7 @@ namespace Raven.Server.Rachis
             ContextPoolForReadOnlyOperations = _parent.ContextPool;
         }
 
-        public void Apply(TransactionOperationContext context, long uptoInclusive, Leader leader)
+        public void Apply(TransactionOperationContext context, long uptoInclusive, Leader leader, ServerStore serverStore)
         {
             Debug.Assert(context.Transaction != null);
 
@@ -35,14 +36,14 @@ namespace Raven.Server.Rachis
                 if(flags != RachisEntryFlags.StateMachineCommand)
                     continue;
 
-                Apply(context, cmd, index, leader);
+                Apply(context, cmd, index, leader, serverStore);
             }
             var term = _parent.GetTermForKnownExisting(context, uptoInclusive);
 
             _parent.SetLastCommitIndex(context, uptoInclusive, term);
         }
 
-        protected abstract void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader);
+        protected abstract void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore);
 
         public void Dispose()
         {
