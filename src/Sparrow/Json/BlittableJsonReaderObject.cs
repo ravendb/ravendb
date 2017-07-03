@@ -286,7 +286,7 @@ namespace Sparrow.Json
                         if (ChangeTypeToString(result, out timeSpanString) == false)
                             throw new FormatException($"Could not convert {result.GetType().FullName} ('{result}') to string");
                         TimeSpan timeSpan;
-                        if (TimeSpan.TryParseExact(timeSpanString, "g", CultureInfo.InvariantCulture, out timeSpan) == false) // todo: format might be problematic here
+                        if (TimeSpan.TryParseExact(timeSpanString, "c", CultureInfo.InvariantCulture, out timeSpan) == false)
                             throw new FormatException($"Could not convert {result.GetType().FullName} ('{result}') to TimeSpan");
                         obj = (T)(object)timeSpan;
                     }

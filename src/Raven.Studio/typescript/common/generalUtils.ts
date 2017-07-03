@@ -1,5 +1,7 @@
 ﻿/// <reference path="../../typings/tsd.d.ts" />
 
+import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
+
 class genUtils {
 
     static debounceAndFunnel<T>(func: (val: T, params: any, callback: (currentValue: T, result: boolean) => void) => void) {
@@ -41,16 +43,27 @@ class genUtils {
         return moment.duration("-" + input).humanize(withSuffix);
     }
 
-    static formatDuration(duration: moment.Duration) {
+    static formatDuration(duration: moment.Duration, longFormat = false) {
         let timeStr = "";
-        if (duration.asHours() >= 1) {
-            timeStr = Math.floor(duration.asHours()) + " h ";
+        if (duration.asDays() >= 1) {
+            timeStr += longFormat ?
+                pluralizeHelpers.pluralize(Math.floor(duration.asDays()), " day ", " days ") :
+                Math.floor(duration.asDays()) + " d ";
+        }
+        if (duration.hours() > 0) {
+            timeStr += longFormat ?
+                pluralizeHelpers.pluralize(duration.hours(), " hour ", " hours ") :
+                duration.hours() + " h ";
         }
         if (duration.minutes() > 0) {
-            timeStr += duration.minutes() + " m ";
+            timeStr += longFormat ?
+                pluralizeHelpers.pluralize(duration.minutes(), " minute ", " minutes ") :
+                duration.minutes() + " m ";
         }
         if (duration.seconds() > 0) {
-            timeStr += duration.seconds() + " s ";
+            timeStr += longFormat ?
+                pluralizeHelpers.pluralize(duration.seconds(), " second ", " seconds ") :
+                duration.seconds() + " s ";
         }
         if (duration.milliseconds() > 0) {
             const millis = duration.milliseconds();
@@ -73,8 +86,12 @@ class genUtils {
         return '"' + input.replace(/[\r\n]/g, "").replace(/(["\\])/g, '\\$1') + '"';
     }
 
-    static formatTimeSpan(input: string) {
-        return genUtils.formatDuration(moment.duration(input));
+    static formatTimeSpan(input: string | number, longFormat = false) {
+        return genUtils.formatDuration(moment.duration(input), longFormat);
+    }
+
+    static timeSpanToSeconds(input: string) {
+        return moment.duration(input).asSeconds();
     }
 
     static formatAsTimeSpan(millis: number) {
@@ -83,6 +100,10 @@ class genUtils {
         });
 
         const formatNumber = (input: number) => _.padStart(input.toString(), 2, '0');
+
+        if (duration.days()) {
+            return `${duration.days()}.${formatNumber(duration.hours())}:${formatNumber(duration.minutes())}:${formatNumber(duration.seconds())}`;
+        }
 
         return `${formatNumber(Math.floor(duration.asHours()))}:${formatNumber(duration.minutes())}:${formatNumber(duration.seconds())}`;
     }

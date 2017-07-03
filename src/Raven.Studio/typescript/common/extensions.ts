@@ -7,7 +7,6 @@ class extensions {
         extensions.installObservableExtensions();
         extensions.installStorageExtension();
         extensions.installBindingHandlers();
-        extensions.installJqueryExtensions();
         extensions.configureValidation();
 
         virtualGrid.install();
@@ -266,13 +265,6 @@ class extensions {
             update: ko.bindingHandlers.textInput.update
         };
 
-        ko.bindingHandlers["customValidity"] = { //TODO: remove it and use knockout validation
-            update: (element, valueAccessor) => {
-                var errorMessage = ko.unwrap(valueAccessor()); //unwrap to get subscription
-                element.setCustomValidity(errorMessage);
-            }
-        };
-
         ko.bindingHandlers["dropdownPanel"] = {
             init: (element) => {
                 extensions.interceptModalsInDropdownPanels(element);
@@ -305,24 +297,6 @@ class extensions {
             }
         }
 
-        var key = "_my_init_key_";
-        ko.bindingHandlers["updateHighlighting"] = {
-            init: (element) => {
-                ko.utils.domData.set(element, key, true);
-            },
-            update(element, valueAccessor, allBindings, viewModel, bindingContext) {
-                const value = valueAccessor();
-                const isInit = ko.utils.domData.get(element, key);
-                const data = ko.dataFor(element);
-                const skip = !!data.isAllDocuments || !!data.isSystemDocuments || !!data.isAllGroupsGroup;
-                if (skip === false && isInit === false) {
-                    $($(element).parents("li")).highlight();
-                } else {
-                    ko.utils.domData.set(element, key, false);
-                }
-            }
-        };
-
         ko.bindingHandlers["checkboxTriple"] = {
             update(element, valueAccessor, allBindings, viewModel, bindingContext) {
                 const checkboxValue: checkbox = ko.unwrap(valueAccessor());
@@ -345,26 +319,39 @@ class extensions {
                 }
             }
         };
-    }
 
-    static installJqueryExtensions() {
-        //TODO do we need it?
-        jQuery.fn.highlight = function() {
-            $(this).each(function() {
-                const el = $(this);
-                el.before("<div/>");
-                el.prev()
-                    .width(el.width())
-                    .height(el.height())
-                    .css({
-                        "position": "absolute",
-                        "background-color": "#ffff99",
-                        "opacity": ".9"
-                    })
-                    .fadeOut(1500);
-            });
+        ko.bindingHandlers["durationPicker"] = {
+            init: (element, valueAccessor: () => KnockoutObservable<number>, allBindings) => {
+                const $element = $(element);
+                const bindings = allBindings();
+
+                const showDays = bindings.durationPickerOptions ? bindings.durationPickerOptions.showDays : false;
+                const showSeconds = bindings.durationPickerOptions ? bindings.durationPickerOptions.showSeconds : false;
+
+                $element.durationPicker({
+                    showDays: showDays,
+                    showSeconds: showSeconds,
+                    onChanged: (value: string, isInit: boolean) => {
+                        if (!isInit) {
+                            const underlyingObservable = valueAccessor();
+                            underlyingObservable(parseInt(value, 10));
+                        }
+                    }
+                });
+                const value = ko.unwrap(valueAccessor());
+                $(element).data('durationPicker').setValue(value);
+
+                ko.utils.domNodeDisposal.addDisposeCallback(element, () => {
+                    $element.data('durationPicker').destroy();
+                });
+            },
+            update: (element, valueAccessor) => {
+                const value = ko.unwrap(valueAccessor());
+                $(element).data('durationPicker').setValue(value);
+            }
         }
     }
+
 }
 
 export = extensions;

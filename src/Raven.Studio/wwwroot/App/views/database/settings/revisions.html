@@ -103,7 +103,7 @@
                 </div>
                 <div class="toggle-margin" data-bind="collapse: limitRevisions, validationElement: minimumRevisionsToKeep">
                     <small>Minimum revisions to keep</small>
-                    <input type="number" value="3" class="form-control" placeholder="0" data-bind="numericInput: minimumRevisionsToKeep" />
+                    <input type="number" class="form-control" placeholder="0" data-bind="numericInput: minimumRevisionsToKeep" />
                 </div>
                 <div class="toggle toggle-primary">
                     <input id="limitRevisionsByAge" class="styled" type="checkbox" data-bind="checked: limitRevisionsByAge">
@@ -113,7 +113,7 @@
                 </div>
                 <div id="limitRevisionsParametersByAge" class="toggle-margin collapse" data-bind="collapse: limitRevisionsByAge, validationElement: minimumRevisionAgeToKeep">
                     <small>Minimum retention time</small>
-                    <input type="text" value="3" class="form-control" data-bind="textInput: minimumRevisionAgeToKeep" />
+                    <input type="text" class="form-control" data-bind="durationPicker: minimumRevisionAgeToKeep, durationPickerOptions: { showDays: true, showSeconds: true }" />
                 </div>
                 <div class="bg-info padding padding-sm small flex-horizontal margin-top" data-bind="visible: humaneRetentionDescription">
                     <div><i class="icon-info"></i></div>
@@ -143,7 +143,7 @@
             <ul class="properties">
                 <li data-bind="visible: purgeOnDelete"><i class="icon-empty-set"></i><span>Purge on delete</span></li>
                 <li data-bind="visible: limitRevisions"><i class="icon-documents"></i><span>Min revisions to keep: <span data-bind="text: minimumRevisionsToKeep"></span></span></li>
-                <li data-bind="visible: limitRevisionsByAge"><i class="icon-clock"></i><span>Min retention time: <span data-bind="text: minimumRevisionAgeToKeep"></span></span></li>
+                <li data-bind="visible: limitRevisionsByAge"><i class="icon-clock"></i><span>Min retention time: <span data-bind="text: $root.formatedDurationObservable(minimumRevisionAgeToKeep)"></span></span></li>
             </ul>
         </div>
         <div class="actions-container">
