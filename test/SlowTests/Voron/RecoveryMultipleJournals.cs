@@ -192,7 +192,7 @@ namespace SlowTests.Voron
                 tx.Commit();
             }
 
-            for (int i = 0; i < 1000; i++)
+            for (int i = 0; i < 1001; i++)
             {
 
                 var buffer = new byte[100];
@@ -225,7 +225,7 @@ namespace SlowTests.Voron
                 tx.Commit();
             }
 
-            for (int i = 0; i < 990; i++)
+            for (int i = 0; i < 991; i++)
             {
 
                 var buffer = new byte[100];

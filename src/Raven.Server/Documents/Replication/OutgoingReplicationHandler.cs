@@ -621,7 +621,10 @@ namespace Raven.Server.Documents.Replication
             {
                 _tcpClient?.Dispose();
             }
-            catch (Exception) { }
+            catch (Exception)
+            {
+                // nothing we can do here
+            }
 
             _connectionDisposed.Set();
 

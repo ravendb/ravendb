@@ -299,6 +299,7 @@ namespace Raven.Server.Documents.Replication
             }
             catch (ObjectDisposedException)
             {
+                // nothing we can do here
             }
         }
 

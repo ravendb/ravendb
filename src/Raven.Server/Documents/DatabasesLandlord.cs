@@ -423,6 +423,7 @@ namespace Raven.Server.Documents
                 }
                 catch (ObjectDisposedException)
                 {
+                    // nothing to do
                 }
 
                 if(_disposing.IsReadLockHeld)
