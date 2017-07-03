@@ -10,24 +10,24 @@ namespace Raven.Server.Config.Categories
     {
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Raven/Server/MaxTimeForTaskToWaitForDatabaseToLoadInSec")]
+        [ConfigurationEntry("Server.MaxTimeForTaskToWaitForDatabaseToLoadInSec")]
         [LegacyConfigurationEntry("Raven/MaxSecondsForTaskToWaitForDatabaseToLoad")]
         public TimeSetting MaxTimeForTaskToWaitForDatabaseToLoad { get; set; }
 
         [Description("The server name")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Raven/Server/Name")]
+        [ConfigurationEntry("Server.Name")]
         [LegacyConfigurationEntry("Raven/ServerName")]
         public string Name { get; set; }
 
         [Description("Prevent unsafe access to the server")]
         [DefaultValue(AnonymousUserAccessModeValues.Admin)]
-        [ConfigurationEntry("Raven/AnonymousUserAccessMode")]
+        [ConfigurationEntry("AnonymousUserAccessMode")]
         public AnonymousUserAccessModeValues AnonymousUserAccessMode { get; internal set; }
 
         [Description("When set to true, exposes the database to the world.")]
         [DefaultValue(false)]
-        [ConfigurationEntry("Raven/AllowAnonymousUserToAccessTheServer")]
+        [ConfigurationEntry("AllowAnonymousUserToAccessTheServer")]
         public bool AllowAnonymousUserToAccessTheServer { get; internal set; }
     }
 }

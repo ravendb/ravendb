@@ -5,18 +5,18 @@ namespace Raven.Server.Config.Categories
 {
     public class LicenseConfiguration : ConfigurationCategory
     {
-        [Description("The full license string for RavenDB. If Raven/License is specified, it overrides the Raven/LicensePath configuration.")]
+        [Description("The full license string for RavenDB. If License is specified, it overrides the License.Path configuration.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Raven/License")]
+        [ConfigurationEntry("License")]
         public string License { get; set; }
 
         [Description("The path to the license file for RavenDB, default for ~\\license.xml")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Raven/LicensePath")]
+        [ConfigurationEntry("License.Path")]
         public string LicensePath { get; set; }
 
         [DefaultValue(false)]
-        [ConfigurationEntry("Raven/Licensing/AllowAdminAnonymousAccessForCommercialUse")]
+        [ConfigurationEntry("License.AllowAdminAnonymousAccessForCommercialUse")]
         public bool AllowAdminAnonymousAccessForCommercialUse { get; set; }
     }
 }

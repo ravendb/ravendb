@@ -8,6 +8,7 @@ using Jint.Parser;
 using Jint.Runtime;
 using Raven.Client.Documents.Exceptions.Patching;
 using Raven.Client.Documents.Operations;
+using Raven.Server.Config;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -133,7 +134,7 @@ namespace Raven.Server.Documents.Patch
             jintEngine.SetValue("IncreaseNumberOfAllowedStepsBy", (Action<int>)(number =>
             {
                 if (_allowScriptsToAdjustNumberOfSteps == false)
-                    throw new InvalidOperationException("Cannot use 'IncreaseNumberOfAllowedStepsBy' method, because `Raven/AllowScriptsToAdjustNumberOfSteps` is set to false.");
+                    throw new InvalidOperationException($"Cannot use 'IncreaseNumberOfAllowedStepsBy' method, because `{RavenConfiguration.GetKey(x => x.Patching.AllowScriptsToAdjustNumberOfSteps)}` is set to false.");
 
                 scope.MaxSteps += number;
                 scope.TotalScriptSteps += number;

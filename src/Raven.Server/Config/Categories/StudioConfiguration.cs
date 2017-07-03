@@ -5,10 +5,9 @@ namespace Raven.Server.Config.Categories
 {
     public class StudioConfiguration : ConfigurationCategory
     {
-        [Description("Control whether the Studio default indexes will be created or not. These default indexes are only used by the UI, and are not required for RavenDB to operate.")]
-        [DefaultValue(false)]
-        [ConfigurationEntry("Raven/Studio/SkipCreatingIndexes")]
-        [LegacyConfigurationEntry("Raven/SkipCreatingStudioIndexes")]
-        public bool SkipCreatingIndexes { get; set; }
+        [Description("The directory into which RavenDB will search the studio files, defaults to the base directory")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Studio.Path")]
+        public string Path { get; set; }
     }
 }

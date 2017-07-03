@@ -7,10 +7,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
@@ -23,8 +21,7 @@ using Voron.Data;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Raven.Client.Http;
-using Raven.Client.Server;
-using Raven.Server.ServerWide;
+using Raven.Server.Config.Categories;
 using Raven.Server.ServerWide.Commands;
 
 namespace Raven.Server.Rachis
@@ -282,7 +279,7 @@ namespace Raven.Server.Rachis
                             SwitchToSingleLeader(ctx);
                             ctx.Transaction.Commit();
                         }
-                        
+
                     }
                 }
                 else
@@ -451,7 +448,7 @@ namespace Raven.Server.Rachis
             PrevStates.LimitedSizeEnqueue(transition, 5);
 
             CurrentState = state;
-            
+
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
                 if (tx is LowLevelTransaction llt && llt.Committed)
@@ -1300,7 +1297,7 @@ namespace Raven.Server.Rachis
                     new Dictionary<string, string>
                     {
                         [_tag] = Convert.ToBase64String(publicKey)
-                    }, 
+                    },
                     "A"
                 );
 

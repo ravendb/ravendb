@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations.Transformers;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Exceptions;
+using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
 using Xunit;
 
@@ -16,7 +17,7 @@ namespace FastTests.Server.Documents.Transformers
         public async Task CanPersist()
         {
             using (var server = GetNewServer(runInMemory: false, partialPath: "CanPersist"))
-            using (var store = GetDocumentStore(modifyName: x => "CanPersistDB", defaultServer: server, deleteDatabaseWhenDisposed: false, modifyDatabaseRecord: x => x.Settings["Raven/RunInMemory"] = "False"))
+            using (var store = GetDocumentStore(modifyName: x => "CanPersistDB", defaultServer: server, deleteDatabaseWhenDisposed: false, modifyDatabaseRecord: x => x.Settings[RavenConfiguration.GetKey(c => c.Core.RunInMemory)] = "False"))
             {
                 var task1 = store.Admin.SendAsync(new PutTransformerOperation(new TransformerDefinition
                 {

@@ -9,6 +9,7 @@ using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Client.Server.Commands;
 using Raven.Client.Server.Tcp;
+using Raven.Server.Config.Categories;
 using Raven.Server.Json;
 using Raven.Server.Utils;
 using Sparrow.Json;

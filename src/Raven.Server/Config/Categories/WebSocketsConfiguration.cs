@@ -6,9 +6,9 @@ namespace Raven.Server.Config.Categories
 {
     public class WebSocketsConfiguration
     {
-        [DefaultValue(128 * 1024)]
-        [SizeUnit(SizeUnit.Bytes)]
-        [ConfigurationEntry("Raven/WebSockets/InitialBufferPoolSize")]
+        [DefaultValue(128)]
+        [SizeUnit(SizeUnit.Kilobytes)]
+        [ConfigurationEntry("WebSockets.InitialBufferPoolSizeInKb")]
         public Size InitialBufferPoolSize { get; set; }
     }
 }
