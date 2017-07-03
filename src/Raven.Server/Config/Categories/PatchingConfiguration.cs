@@ -6,7 +6,7 @@ namespace Raven.Server.Config.Categories
     public class PatchingConfiguration : ConfigurationCategory
     {
         [DefaultValue(false)]
-        [ConfigurationEntry("Raven/Patching/AllowScriptsToAdjustNumberOfSteps")]
+        [ConfigurationEntry("Patching.AllowScriptsToAdjustNumberOfSteps")]
         [LegacyConfigurationEntry("Raven/AllowScriptsToAdjustNumberOfSteps")]
         public bool AllowScriptsToAdjustNumberOfSteps { get; set; }
 
@@ -15,17 +15,17 @@ namespace Raven.Server.Config.Categories
         /// Default: 10,000
         /// </summary>
         [DefaultValue(10 * 1000)]
-        [ConfigurationEntry("Raven/Patching/MaxStepsForScript")]
+        [ConfigurationEntry("Patching.MaxStepsForScript")]
         [LegacyConfigurationEntry("Raven/MaxStepsForScript")]
         public int MaxStepsForScript { get; set; }
 
         /// <summary>
         /// The number of additional steps to add to a given script based on the processed document's quota.
-        /// Set to 0 to give use a fixed size quota. This value is multiplied with the doucment size.
+        /// Set to 0 to give use a fixed size quota. This value is multiplied with the document size.
         /// Default: 5
         /// </summary>
         [DefaultValue(5)]
-        [ConfigurationEntry("Raven/Patching/AdditionalStepsForScriptBasedOnDocumentSize")]
+        [ConfigurationEntry("Patching.AdditionalStepsForScriptBasedOnDocumentSize")]
         [LegacyConfigurationEntry("Raven/AdditionalStepsForScriptBasedOnDocumentSize")]
         public int AdditionalStepsForScriptBasedOnDocumentSize { get; set; }
     }

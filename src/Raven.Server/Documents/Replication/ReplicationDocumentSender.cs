@@ -188,7 +188,7 @@ namespace Raven.Server.Documents.Replication
                                 if ((item.Type == ReplicationBatchItem.ReplicationItemType.Document ||
                                      item.Type == ReplicationBatchItem.ReplicationItemType.DocumentTombstone) &&
                                     // We want to limit batch sizes to reasonable limits.
-                                    ((maxSizeToSend.HasValue && size > maxSizeToSend.Value) ||
+                                    ((maxSizeToSend.HasValue && size > maxSizeToSend.Value.GetValue(SizeUnit.Bytes)) ||
                                      (batchSize.HasValue && numberOfItemsSent > batchSize.Value)))
                                     break;
                             }

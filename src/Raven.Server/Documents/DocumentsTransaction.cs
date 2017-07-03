@@ -69,9 +69,11 @@ namespace Raven.Server.Documents
                 _context.Transaction = null;
             }
 
+            var committed = InnerTransaction.LowLevelTransaction.Committed;
+
             base.Dispose();
 
-            if (InnerTransaction.LowLevelTransaction.Committed)
+            if (committed)
                 AfterCommit();
         }
 

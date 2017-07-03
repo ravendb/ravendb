@@ -46,31 +46,29 @@ namespace Raven.Server.Web.System
             var ongoingTasksResult = new OngoingTasksResult();
             using (store.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                DatabaseRecord databaseRecord;
-                DatabaseTopology dbTopology;
-                ClusterTopology clusterTopology;
                 using (context.OpenReadTransaction())
                 {
-                    databaseRecord = store.Cluster.ReadDatabase(context, dbName);
+                    var databaseRecord = store.Cluster.ReadDatabase(context, dbName);
                 
                     if (databaseRecord == null)
                     {
                         return ongoingTasksResult;
                     }
 
-                    dbTopology = databaseRecord.Topology;
-                    clusterTopology = store.GetClusterTopology(context);
-                }
+                    var dbTopology = databaseRecord.Topology;
+                    var clusterTopology = store.GetClusterTopology(context);
 
-                foreach (var tasks in new []
-                {
-                    CollectExternalReplicationTasks(databaseRecord.ExternalReplication, dbTopology,clusterTopology, store),
-                    CollectEtlTasks(databaseRecord, dbTopology, clusterTopology, store),
-                    CollectBackupTasks(databaseRecord, dbTopology, clusterTopology, store),
-                    CollectSubscriptionTasks(context, databaseRecord, clusterTopology, store)
-                })
-                {
-                    ongoingTasksResult.OngoingTasksList.AddRange(tasks);
+
+                    foreach (var tasks in new[]
+                    {
+                        CollectExternalReplicationTasks(databaseRecord.ExternalReplication, dbTopology, clusterTopology, store),
+                        CollectEtlTasks(databaseRecord, dbTopology, clusterTopology, store),
+                        CollectBackupTasks(databaseRecord, dbTopology, clusterTopology, store),
+                        CollectSubscriptionTasks(context, databaseRecord, clusterTopology, store)
+                    })
+                    {
+                        ongoingTasksResult.OngoingTasksList.AddRange(tasks);
+                    }
                 }
 
                 if (store.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var database) && database.Status == TaskStatus.RanToCompletion)

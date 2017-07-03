@@ -1,6 +1,6 @@
 ﻿{
-  "Raven/ServerUrl": "http://0.0.0.0:8080",
-  "Raven/RunInMemory": false,
-  "Raven/Storage/TempPath": "/tmp/RavenDB/Storage",
-  "Raven/Indexing/TempPath": "/tmp/RavenDB/Indexing"
+  "ServerUrl": "http://0.0.0.0:8080",
+  "RunInMemory": false,
+  "Storage.TempPath": "/tmp/RavenDB/Storage",
+  "Indexing.TempPath": "/tmp/RavenDB/Indexing"
 }

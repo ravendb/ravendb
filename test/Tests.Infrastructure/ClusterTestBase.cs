@@ -7,7 +7,6 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using Lucene.Net.Support;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
@@ -17,6 +16,7 @@ using Raven.Client.Server.Commands;
 using Raven.Client.Server.Operations;
 using Raven.Client.Util;
 using Raven.Server;
+using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
@@ -189,7 +189,7 @@ namespace Tests.Infrastructure
             return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores);
         }
 
-        protected async Task<bool> WaitForDocumentInClusterAsync<T>(DatabaseTopology topology,string db, string docId, Func<T, bool> predicate, TimeSpan timeout)
+        protected async Task<bool> WaitForDocumentInClusterAsync<T>(DatabaseTopology topology, string db, string docId, Func<T, bool> predicate, TimeSpan timeout)
         {
             var allNodes = topology.AllNodes;
             var serversTopology = Servers.Where(s => allNodes.Contains(s.ServerStore.NodeTag));
@@ -378,15 +378,18 @@ namespace Tests.Infrastructure
             {
                 var serverUrl = UseFiddler($"http://127.0.0.1:{GetPort()}");
 
-                var customSettings = new Dictionary<string, string> { { "Raven/ServerUrl", serverUrl } };
+                var customSettings = new Dictionary<string, string>
+                {
+                    { RavenConfiguration.GetKey(x => x.Core.ServerUrl), serverUrl }
+                };
 
                 if (useSsl)
                 {
                     var certificatePath = GenerateAndSaveSelfSignedCertificate();
                     serverUrl = serverUrl.Replace("http:", "https:");
 
-                    customSettings["Raven/Certificate/Path"] = certificatePath;
-                    customSettings["Raven/ServerUrl"] = serverUrl;
+                    customSettings[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = certificatePath;
+                    customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = serverUrl;
                 }
 
                 var server = GetNewServer(customSettings, runInMemory: shouldRunInMemory);
@@ -474,11 +477,11 @@ namespace Tests.Infrastructure
         public async Task<(long, List<RavenServer>)> CreateDatabaseInCluster(string databaseName, int replicationFactor, string leadersUrl)
         {
             var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
-            return await CreateDatabaseInCluster(doc, replicationFactor, leadersUrl);  
+            return await CreateDatabaseInCluster(doc, replicationFactor, leadersUrl);
         }
 
         public override void Dispose()
-        {           
+        {
             foreach (var disposable in _toDispose)
                 disposable.Dispose();
 
@@ -488,8 +491,8 @@ namespace Tests.Infrastructure
                     continue; // must not dispose the global server
                 server?.Dispose();
             }
-            
-            base.Dispose();            
+
+            base.Dispose();
         }
     }
 }

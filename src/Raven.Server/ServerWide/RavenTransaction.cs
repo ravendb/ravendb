@@ -5,7 +5,7 @@ namespace Raven.Server.ServerWide
 {
     public class RavenTransaction : IDisposable
     {
-        public readonly Transaction InnerTransaction;
+        public Transaction InnerTransaction;
 
         public RavenTransaction(Transaction transaction)
         {
@@ -31,6 +31,7 @@ namespace Raven.Server.ServerWide
             Disposed = true;
 
             InnerTransaction?.Dispose();
+            InnerTransaction = null;
         }
     }
 }

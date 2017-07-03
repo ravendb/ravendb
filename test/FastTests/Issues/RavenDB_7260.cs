@@ -20,7 +20,7 @@ namespace FastTests.Issues
             database.SetSetting(RavenConfiguration.GetKey(x => x.Storage.ForceUsing32BitsPager), "true");
 
             var e = Assert.Throws<InvalidOperationException>(() => database.Initialize());
-            Assert.Equal("Configuration 'Raven/Storage/ForceUsing32BitsPager' can only be set at server level.", e.Message);
+            Assert.Equal($"Configuration '{RavenConfiguration.GetKey(x => x.Storage.ForceUsing32BitsPager)}' can only be set at server level.", e.Message);
         }
     }
 }

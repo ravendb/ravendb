@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -21,8 +22,8 @@ namespace SlowTests.Server.Replication
                 var tempPath = GenerateAndSaveSelfSignedCertificate();
                 DoNotReuseServer(new ConcurrentDictionary<string, string>
                 {
-                    ["Raven/Certificate/Path"] = tempPath,
-                    ["Raven/ServerUrl"] = "https://127.0.0.1:0"
+                    [RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = tempPath,
+                    [RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = "https://127.0.0.1:0"
                 });
             }
 

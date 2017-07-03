@@ -126,7 +126,7 @@ namespace Raven.Server
             {
                 Action<KestrelServerOptions> kestrelOptions = options => options.ShutdownTimeout = TimeSpan.FromSeconds(1);
 
-                if (Configuration.Security.CertificateFilePath != null)
+                if (Configuration.Security.CertificatePath != null)
                 {
                     ServerCertificate = LoadCertificate(Configuration.Security);
                     
@@ -134,7 +134,7 @@ namespace Raven.Server
                     
                     // Enforce https in all network activities
                     if (Configuration.Core.ServerUrl.StartsWith("http:", StringComparison.OrdinalIgnoreCase))
-                        throw new InvalidOperationException("When the `Raven/Certificate/Path` is specified, the `Raven/ServerUrl` must be using https, but was " + Configuration.Core.ServerUrl);
+                        throw new InvalidOperationException($"When the `{RavenConfiguration.GetKey(x => x.Security.CertificatePath)}` is specified, the `{RavenConfiguration.GetKey(x => x.Core.ServerUrl)}` must be using https, but was " + Configuration.Core.ServerUrl);
                 }
 
                 _webHost = new WebHostBuilder()
@@ -201,8 +201,8 @@ namespace Raven.Server
             try
             {
                 var loadedCertificate = config.CertificatePassword == null
-                    ? new X509Certificate2(File.ReadAllBytes(config.CertificateFilePath))
-                    : new X509Certificate2(File.ReadAllBytes(config.CertificateFilePath), config.CertificatePassword);
+                    ? new X509Certificate2(File.ReadAllBytes(config.CertificatePath))
+                    : new X509Certificate2(File.ReadAllBytes(config.CertificatePath), config.CertificatePassword);
 
                 return new CertificateHolder
                 {
@@ -212,7 +212,7 @@ namespace Raven.Server
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Could not load certificate file {config.CertificateFilePath}, please check the path and password", e);
+                throw new InvalidOperationException($"Could not load certificate file {config.CertificatePath}, please check the path and password", e);
             }
         }
         
@@ -534,6 +534,11 @@ namespace Raven.Server
             }
 
             tcp.DocumentDatabase = await databaseLoadingTask;
+            if(tcp.DocumentDatabase == null)
+                DatabaseDoesNotExistException.Throw(header.DatabaseName);
+
+            Debug.Assert(tcp.DocumentDatabase != null);
+
             if (tcp.DocumentDatabase.DatabaseShutdown.IsCancellationRequested)
                 ThrowDatabaseShutdown(tcp.DocumentDatabase);
 

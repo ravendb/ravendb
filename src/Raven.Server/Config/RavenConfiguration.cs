@@ -7,15 +7,15 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using Lucene.Net.Util;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
 using Raven.Client.Documents.Conventions;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Maintenance;
-using ExpressionExtensions = Raven.Server.Extensions.ExpressionExtensions;
 using Sparrow.Platform;
 
 namespace Raven.Server.Config
@@ -48,8 +48,6 @@ namespace Raven.Server.Config
 
         public PatchingConfiguration Patching { get; }
 
-        public BulkInsertConfiguration BulkInsert { get; }
-
         public ServerConfiguration Server { get; }
 
         public MemoryConfiguration Memory { get; }
@@ -61,8 +59,6 @@ namespace Raven.Server.Config
         public PerformanceHintsConfiguration PerformanceHints { get; }
 
         public LicenseConfiguration Licensing { get; }
-
-        public QuotasConfiguration Quotas { get; }
 
         public TombstoneConfiguration Tombstones { get; }
 
@@ -94,14 +90,12 @@ namespace Raven.Server.Config
             Monitoring = new MonitoringConfiguration();
             Queries = new QueryConfiguration();
             Patching = new PatchingConfiguration();
-            DebugLog = new DebugLoggingConfiguration();
-            BulkInsert = new BulkInsertConfiguration();
+            Logs = new LogsConfiguration();
             Server = new ServerConfiguration();
             Databases = new DatabaseConfiguration();
             Memory = new MemoryConfiguration();
             Studio = new StudioConfiguration();
             Licensing = new LicenseConfiguration();
-            Quotas = new QuotasConfiguration();
             Tombstones = new TombstoneConfiguration();
         }
 
@@ -118,24 +112,26 @@ namespace Raven.Server.Config
                 platformPostfix = "posix";
 
             _configBuilder.AddJsonFile($"settings_{platformPostfix}.json", optional: true);
-            _configBuilder.AddJsonFile($"settings.json", optional: true);
+            _configBuilder.AddJsonFile("settings.json", optional: true);
         }
 
         private void AddEnvironmentVariables()
         {
+            const string prefix = "RAVEN.";
+
             foreach (DictionaryEntry de in Environment.GetEnvironmentVariables())
             {
                 var s = de.Key as string;
                 if (s == null)
                     continue;
-                if (s.StartsWith("RAVEN_") == false)
+                if (s.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) == false)
                     continue;
 
-                _configBuilder.Properties[s.Replace("RAVEN_", "Raven/")] = de.Value;
+                _configBuilder.Properties[s.Substring(prefix.Length)] = de.Value;
             }
         }
 
-        public DebugLoggingConfiguration DebugLog { get; set; }
+        public LogsConfiguration Logs { get; set; }
 
         public string ResourceName { get; }
 
@@ -150,8 +146,7 @@ namespace Raven.Server.Config
             Etl.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Queries.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Patching.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            DebugLog.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            BulkInsert.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Logs.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Memory.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Storage.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Security.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
@@ -161,7 +156,6 @@ namespace Raven.Server.Config
             Databases.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             PerformanceHints.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Licensing.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Quotas.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Tombstones.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
 
             PostInit();
@@ -194,15 +188,44 @@ namespace Raven.Server.Config
             return ServerWideSettings?[key];
         }
 
+        private static readonly Lazy<HashSet<string>> AllConfigurationKeys = new Lazy<HashSet<string>>(() =>
+        {
+            var results = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            var type = typeof(RavenConfiguration);
+            foreach (var configurationProperty in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+            {
+                var propertyType = configurationProperty.PropertyType;
+                if (propertyType.GetTypeInfo().IsSubclassOf(typeof(ConfigurationCategory)) == false)
+                    continue;
+
+                foreach (var property in propertyType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+                {
+                    var attribute = property.GetCustomAttribute<ConfigurationEntryAttribute>();
+                    if (attribute == null)
+                        continue;
+
+                    results.Add(attribute.Key);
+                }
+            }
+
+            return results;
+        });
+
+        public static bool ContainsKey(string key)
+        {
+            return AllConfigurationKeys.Value.Contains(key, StringComparer.OrdinalIgnoreCase);
+        }
+
         public static string GetKey<T>(Expression<Func<RavenConfiguration, T>> getKey)
         {
-            var prop = ExpressionExtensions.ToProperty(getKey);
+            var prop = getKey.ToProperty();
             return prop.GetCustomAttributes<ConfigurationEntryAttribute>().OrderBy(x => x.Order).First().Key;
         }
 
         public static object GetDefaultValue<T>(Expression<Func<RavenConfiguration, T>> getKey)
         {
-            var prop = ExpressionExtensions.ToProperty(getKey);
+            var prop = getKey.ToProperty();
             return prop.GetCustomAttributes<DefaultValueAttribute>().FirstOrDefault()?.Value;
         }
 

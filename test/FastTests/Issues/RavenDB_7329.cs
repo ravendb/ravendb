@@ -59,7 +59,7 @@ namespace FastTests.Issues
             }
             catch (ArgumentException argException)
             {
-                Assert.Equal($"Invalid host value in Raven/PublicServerUrl configuration option: 0.0.0.0", argException.Message);
+                Assert.Equal($"Invalid host value in {RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)} configuration option: 0.0.0.0", argException.Message);
             }
         }
 
@@ -73,7 +73,7 @@ namespace FastTests.Issues
             }
             catch (ArgumentException argException)
             {
-                Assert.Equal($"Invalid port value in Raven/PublicServerUrl configuration option: 0.", argException.Message);
+                Assert.Equal($"Invalid port value in {RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)} configuration option: 0.", argException.Message);
             }
         }
 
@@ -88,7 +88,7 @@ namespace FastTests.Issues
             }
             catch (ArgumentException argException)
             {
-                Assert.Equal($"Invalid host value in Raven/PublicServerUrl/Tcp configuration option: 0.0.0.0", argException.Message);
+                Assert.Equal($"Invalid host value in {RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl)} configuration option: 0.0.0.0", argException.Message);
             }
         }
 
@@ -102,7 +102,7 @@ namespace FastTests.Issues
             }
             catch (ArgumentException argException)
             {
-                Assert.Equal($"Invalid port value in Raven/PublicServerUrl/Tcp configuration option: 0.", argException.Message);
+                Assert.Equal($"Invalid port value in {RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl)} configuration option: 0.", argException.Message);
             }
         }
 

@@ -69,11 +69,7 @@ namespace Raven.Server
 
             configuration.Initialize();
 
-            LogMode mode;
-            if (Enum.TryParse(configuration.Core.LogLevel, out mode) == false)
-                mode = LogMode.Operations;
-
-            LoggingSource.Instance.SetupLogMode(mode, Path.Combine(AppContext.BaseDirectory, configuration.Core.LogsDirectory));
+            LoggingSource.Instance.SetupLogMode(configuration.Logs.Mode, Path.Combine(AppContext.BaseDirectory, configuration.Logs.Path));
 
             if (RavenWindowsServiceController.ShouldRunAsWindowsService(configuration))
             {
@@ -100,7 +96,7 @@ namespace Raven.Server
 
                             if (CommandLineSwitches.PrintServerId)
                                 Console.WriteLine($"Server ID is {server.ServerStore.GetServerId()}.");
-                            
+
                             if (CommandLineSwitches.LaunchBrowser)
                                 BrowserHelper.OpenStudioInBrowser(server.ServerStore.NodeHttpServerUrl);
 
@@ -137,7 +133,7 @@ namespace Raven.Server
                             if (Logger.IsOperationsEnabled)
                                 Logger.Operations("Failed to initialize the server", e);
                             Console.WriteLine(e);
-                            
+
                             return -1;
                         }
                     }
@@ -185,7 +181,7 @@ namespace Raven.Server
             //stop dumping logs
             LoggingSource.Instance.DisableConsoleLogging();
             LoggingSource.Instance.SetupLogMode(LogMode.None,
-                Path.Combine(AppContext.BaseDirectory, configuration.Core.LogsDirectory));
+                Path.Combine(AppContext.BaseDirectory, configuration.Logs.Path));
 
             while (true)
             {
@@ -221,7 +217,7 @@ namespace Raven.Server
 
                         LoggingSource.Instance.EnableConsoleLogging();
                         LoggingSource.Instance.SetupLogMode(LogMode.Information,
-                            Path.Combine(AppContext.BaseDirectory, configuration.Core.LogsDirectory));
+                            Path.Combine(AppContext.BaseDirectory, configuration.Logs.Path));
                         break;
 
                     case "no-log":
@@ -229,24 +225,24 @@ namespace Raven.Server
                     case "nologs":
                         LoggingSource.Instance.DisableConsoleLogging();
                         LoggingSource.Instance.SetupLogMode(LogMode.None,
-                            Path.Combine(AppContext.BaseDirectory, configuration.Core.LogsDirectory));
+                            Path.Combine(AppContext.BaseDirectory, configuration.Logs.Path));
                         break;
 
                     case "stats":
                         //stop dumping logs
                         LoggingSource.Instance.DisableConsoleLogging();
                         LoggingSource.Instance.SetupLogMode(LogMode.None,
-                            Path.Combine(AppContext.BaseDirectory, configuration.Core.LogsDirectory));
+                            Path.Combine(AppContext.BaseDirectory, configuration.Logs.Path));
 
                         WriteServerStatsAndWaitForEsc(server);
 
                         break;
 
                     case "info":
-                        var meminfo = MemoryInformation.GetMemoryInfo();
+                        var memoryInfo = MemoryInformation.GetMemoryInfo();
                         Console.WriteLine(" Build {0}, Version {1}, SemVer {2}, Commit {3}\r\n PID {4}, {5} bits, {6} Cores\r\n {7} Physical Memory, {8} Available Memory",
                             ServerVersion.Build, ServerVersion.Version, ServerVersion.FullVersion, ServerVersion.CommitHash, Process.GetCurrentProcess().Id,
-                            IntPtr.Size * 8, ProcessorInfo.ProcessorCount, meminfo.TotalPhysicalMemory, meminfo.AvailableMemory);
+                            IntPtr.Size * 8, ProcessorInfo.ProcessorCount, memoryInfo.TotalPhysicalMemory, memoryInfo.AvailableMemory);
                         break;
 
                     case "gc2":

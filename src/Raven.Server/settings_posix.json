@@ -1,6 +1,6 @@
 ﻿{
-  "Raven/ServerUrl": "http://localhost:8080",
-  "Raven/AllowAnonymousUserToAccessTheServer": false,
-  "Raven/AnonymousUserAccessMode": "Admin",
-  "Raven/RunInMemory": false
+  "ServerUrl": "http://localhost:8080",
+  "AllowAnonymousUserToAccessTheServer": false,
+  "AnonymousUserAccessMode": "Admin",
+  "RunInMemory": false
 }

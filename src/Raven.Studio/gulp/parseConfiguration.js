@@ -131,7 +131,7 @@ var CONFIGURATION_ENTRY_REGEX = /\[ConfigurationEntry\(\"?([^"]+)\"?\)\]/;
 var VALUE_ENTRY_REGEX = /public\s(static\s)?(virtual\s)?([\w\]\[]+\s)?(\w+)/;
 
 function extractSettings(contents) {
-    // line format: [ConfigurationEntry("Raven/Databases/ConcurrentResourceLoadTimeoutInSec")]
+    // line format: [ConfigurationEntry("Databases/ConcurrentResourceLoadTimeoutInSec")]
     var annotationRegexp = new RegExp("(" + CONFIGURATION_ENTRY_REGEX.source + ")|(" + VALUE_ENTRY_REGEX.source + ")", 'g');
     var match;
     var matches = new Map();
