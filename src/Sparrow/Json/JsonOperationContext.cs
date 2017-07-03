@@ -655,7 +655,9 @@ namespace Sparrow.Json
                 return await ParseToMemoryAsync(stream, documentId, mode, bytes, token);
         }
 
-        public async Task<BlittableJsonReaderObject> ParseToMemoryAsync(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode, ManagedPinnedBuffer bytes, CancellationToken? token = null)
+        public async Task<BlittableJsonReaderObject> ParseToMemoryAsync(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode, ManagedPinnedBuffer bytes,
+            CancellationToken? token = null,
+            int maxSize = int.MaxValue)
         {
             if (_disposed)
                 ThrowObjectDisposed();
@@ -683,6 +685,9 @@ namespace Sparrow.Json
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
                         bytes.Valid = read;
                         bytes.Used = 0;
+                        maxSize -= read;
+                        if(maxSize < 0)
+                            throw new ArgumentException($"The maximum size allowed for {documentId} ({maxSize}) has been exceeded, aborting");
                     }
                     parser.SetBuffer(bytes);
                     var result = builder.Read();
