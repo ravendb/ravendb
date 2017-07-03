@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Http
@@ -153,5 +154,26 @@ namespace Raven.Client.Http
         public Dictionary<string,string> Promotables { get; protected set; }
         public Dictionary<string,string> Watchers { get; protected set; }
         public Dictionary<string,string> PublicKeys  { get; protected set; }
+    }
+
+    public class NodeStatus : IDynamicJson
+    {
+        public string ConnectionStatus { get; set; }
+        public DateTime LastSent { get; set; }
+        public DateTime LastReply { get; set; }
+        public string LastSentMessage { get; set; }
+        public long LastMatchingIndex { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(ConnectionStatus)] = ConnectionStatus,
+                [nameof(LastSent)] = LastSent,
+                [nameof(LastReply)] = LastReply,
+                [nameof(LastSentMessage)] = LastSentMessage,
+                [nameof(LastMatchingIndex)] = LastMatchingIndex,
+            };
+        }
     }
 }

@@ -22,6 +22,7 @@ namespace Raven.Server.Rachis
         private bool _disposed;
         public long TrialElectionWonAtTerm { get; set; }
         public long ReadlElectionWonAtTerm { get; set; }
+        public string Tag => _tag;
 
         public CandidateAmbassador(RachisConsensus engine, Candidate candidate, string tag, string url, string apiKey)
         {
