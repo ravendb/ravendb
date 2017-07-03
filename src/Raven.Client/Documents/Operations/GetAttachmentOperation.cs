@@ -114,7 +114,7 @@ namespace Raven.Client.Documents.Operations
                 return request;
             }
 
-            public override async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+            public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
             {
                 var contentType = response.Content.Headers.TryGetValues("Content-Type", out IEnumerable<string> contentTypeVale) ? contentTypeVale.First() : null;
                 var etag = response.GetRequiredEtagHeader();
@@ -140,6 +140,8 @@ namespace Raven.Client.Documents.Operations
                     Stream = stream,
                     Details = attachmentDetails,
                 };
+
+                return ResponseDisposeHandling.Manually;
             }
 
             public override bool IsReadRequest => true;

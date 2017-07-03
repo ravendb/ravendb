@@ -29,13 +29,15 @@ namespace Raven.Client.Documents.Commands
             return request;
         }
 
-        public override async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+        public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
             Result = new StreamResult
             {
                 Response = response,
                 Stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false)
             };
+
+            return ResponseDisposeHandling.Manually;
         }
 
         public override bool IsReadRequest => true;

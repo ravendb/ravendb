@@ -374,6 +374,11 @@ namespace Raven.Server.ServerWide
             _engine.TopologyChanged += OnTopologyChanged;
             _engine.StateChanged += OnStateChanged;
 
+            if (IsLeader())
+            {
+                _engine.CurrentLeader.OnNodeStatusChange += OnTopologyChanged;
+            }
+
             _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
             _notificationsStorage.Initialize(_env, ContextPool);
             _operationsStorage.Initialize(_env, ContextPool);
@@ -474,11 +479,15 @@ namespace Raven.Server.ServerWide
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                NotificationCenter.Add(ClusterTopologyChanged.Create(GetClusterTopology(context), LeaderTag, NodeTag));
+                NotificationCenter.Add(ClusterTopologyChanged.Create(GetClusterTopology(context), LeaderTag, NodeTag , GetNodesStatuses()));
                 // If we are in passive state, we prevent from tasks to be performed by this node.
                 if (state.From == RachisConsensus.State.Passive || state.To == RachisConsensus.State.Passive)
                 {
                     RefreshOutgoingTasks();
+                }
+                if (state.To == RachisConsensus.State.Leader)
+                {
+                    _engine.CurrentLeader.OnNodeStatusChange += OnTopologyChanged;
                 }
             }
         }
@@ -515,9 +524,34 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public Dictionary<string, NodeStatus> GetNodesStatuses()
+        {
+            var nodesStatuses = new Dictionary<string, NodeStatus>();
+
+            switch (CurrentState)
+            {
+                case RachisConsensus.State.Leader:
+                    nodesStatuses = _engine.CurrentLeader.GetStatus();
+                    break;
+                case RachisConsensus.State.Candidate:
+                    nodesStatuses = _engine.Candidate.GetStatus();
+                    break;
+                case RachisConsensus.State.Follower:
+                    var status = new NodeStatus { ConnectionStatus = "Connected" };
+                    nodesStatuses[_engine.Tag] = status;
+                    if (_engine.LeaderTag != null)
+                    {
+                        nodesStatuses[_engine.LeaderTag] = status;
+                    }
+                    break;
+            }
+
+            return nodesStatuses;
+        }
+
         private void OnTopologyChanged(object sender, ClusterTopology topologyJson)
         {
-            NotificationCenter.Add(ClusterTopologyChanged.Create(topologyJson, LeaderTag, NodeTag));
+            NotificationCenter.Add(ClusterTopologyChanged.Create(topologyJson, LeaderTag, NodeTag , GetNodesStatuses()));
         }
 
         private void OnDatabaseChanged(object sender, (string DatabaseName, long Index, string Type) t)

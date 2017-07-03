@@ -1,4 +1,5 @@
-﻿using Raven.Client.Http;
+﻿using System.Collections.Generic;
+using Raven.Client.Http;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications.Server
@@ -12,6 +13,8 @@ namespace Raven.Server.NotificationCenter.Notifications.Server
         public override string Id => $"{Type}";
 
         public ClusterTopology Topology { get; private set; }
+
+        public Dictionary<string, NodeStatus> Status { get; private set; }
 
         public string Leader { get; private set; }
 
@@ -28,13 +31,14 @@ namespace Raven.Server.NotificationCenter.Notifications.Server
             return json;
         }
 
-        public static ClusterTopologyChanged Create(ClusterTopology clusterTopology, string leaderTag, string nodeTag)
+        public static ClusterTopologyChanged Create(ClusterTopology clusterTopology, string leaderTag, string nodeTag , Dictionary<string, NodeStatus> status)
         {
             return new ClusterTopologyChanged
             {
                 Topology = clusterTopology,
                 Leader = leaderTag,
-                NodeTag = nodeTag
+                NodeTag = nodeTag,
+                Status = status
             };
         }
     }

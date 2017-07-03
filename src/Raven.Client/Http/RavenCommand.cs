@@ -22,6 +22,12 @@ namespace Raven.Client.Http
         public override bool IsReadRequest { get; } = false;
     }
 
+    public enum ResponseDisposeHandling
+    {
+        Manually,
+        Automatic
+    }
+
     public abstract class RavenCommand<TResult>
     {
         public CancellationToken CancellationToken = CancellationToken.None;
@@ -82,37 +88,35 @@ namespace Raven.Client.Http
             return FailedNodes != null && FailedNodes.ContainsKey(node);
         }
 
-        public virtual async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+        public virtual async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
-            using (response)
+            if (ResponseType == RavenCommandResponseType.Empty || response.StatusCode == HttpStatusCode.NoContent)
+                return ResponseDisposeHandling.Automatic;
+
+            using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
             {
-                if (ResponseType == RavenCommandResponseType.Empty || response.StatusCode == HttpStatusCode.NoContent)
-                    return;
-
-                using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                if (ResponseType == RavenCommandResponseType.Object)
                 {
-                    if (ResponseType == RavenCommandResponseType.Object)
+                    var contentLength = response.Content.Headers.ContentLength;
+                    if (contentLength.HasValue && contentLength == 0)
+                        return ResponseDisposeHandling.Automatic;
+
+                    // we intentionally don't dispose the reader here, we'll be using it
+                    // in the command, any associated memory will be released on context reset
+                    var json = await context.ReadForMemoryAsync(stream, "response/object").ConfigureAwait(false);
+                    if (cache != null) //precaution
                     {
-                        var contentLength = response.Content.Headers.ContentLength;
-                        if (contentLength.HasValue && contentLength == 0)
-                            return;
-
-                        // we intentionally don't dispose the reader here, we'll be using it
-                        // in the command, any associated memory will be released on context reset
-                        var json = await context.ReadForMemoryAsync(stream, "response/object").ConfigureAwait(false);
-                        if (cache != null) //precaution
-                        {
-                            CacheResponse(cache, url, response, json);
-                        }
-                        SetResponse(json, fromCache: false);
-                        return;
+                        CacheResponse(cache, url, response, json);
                     }
-
-                    // We do not cache the stream response.
-                    using (var uncompressedStream = await RequestExecutor.ReadAsStreamUncompressedAsync(response).ConfigureAwait(false))
-                        SetResponseRaw(response, uncompressedStream, context);
+                    SetResponse(json, fromCache: false);
+                    return ResponseDisposeHandling.Automatic;
                 }
+
+                // We do not cache the stream response.
+                using (var uncompressedStream = await RequestExecutor.ReadAsStreamUncompressedAsync(response).ConfigureAwait(false))
+                    SetResponseRaw(response, uncompressedStream, context);
             }
+            return ResponseDisposeHandling.Automatic;
         }
 
         protected virtual void CacheResponse(HttpCache cache, string url, HttpResponseMessage response, BlittableJsonReaderObject responseJson)

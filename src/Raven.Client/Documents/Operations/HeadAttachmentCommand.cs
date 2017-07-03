@@ -47,22 +47,22 @@ namespace Raven.Client.Documents.Operations
             return request;
         }
 
-        public override Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+        public override Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
             if (response.StatusCode == HttpStatusCode.NotModified)
             {
                 Result = _etag;
-                return Task.CompletedTask;
+                return Task.FromResult(ResponseDisposeHandling.Automatic);
             }
 
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 Result = null;
-                return Task.CompletedTask;
+                return Task.FromResult(ResponseDisposeHandling.Automatic);
             }
 
             Result = response.GetRequiredEtagHeader();
-            return Task.CompletedTask;
+            return Task.FromResult(ResponseDisposeHandling.Automatic);
         }
 
         public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)

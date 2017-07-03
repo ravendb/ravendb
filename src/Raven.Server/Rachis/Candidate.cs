@@ -190,6 +190,26 @@ namespace Raven.Server.Rachis
 
         public bool IsForcedElection { get; set; }
 
+        public Dictionary<string, NodeStatus> GetStatus()
+        {
+            var dic = new Dictionary<string, NodeStatus>();
+
+            foreach (var voter in _voters)
+            {
+                dic[voter.Tag] = new NodeStatus
+                {
+                    ConnectionStatus = voter.Status
+                };
+            }
+            
+            dic[_engine.Tag] = new NodeStatus
+            {
+                ConnectionStatus = "Connected"
+            };
+
+            return dic;
+        }
+
         private void StateChange()
         {
             var tcs = Interlocked.Exchange(ref _stateChange, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
@@ -225,6 +245,5 @@ namespace Raven.Server.Rachis
             if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
                 _thread.Join();
         }
-
     }
 }
