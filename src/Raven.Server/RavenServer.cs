@@ -57,7 +57,7 @@ namespace Raven.Server
 
         public readonly RavenConfiguration Configuration;
 
-        public ConcurrentDictionary<string, AccessToken> AccessTokenCache = new ConcurrentDictionary<string, AccessToken>();
+        public readonly ConcurrentDictionary<string, AccessToken> AccessTokenCache = new ConcurrentDictionary<string, AccessToken>();
 
         public Timer ServerMaintenanceTimer;
 

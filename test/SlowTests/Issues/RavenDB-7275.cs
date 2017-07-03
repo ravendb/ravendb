@@ -29,7 +29,7 @@ namespace SlowTests.Issues
 
 
         [Fact]
-        public void ValidateSubscriptionAuthorizationRejectOnCreation()
+        public async Task ValidateSubscriptionAuthorizationRejectOnCreationAsync()
         {
             DoNotReuseServer();
             Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
@@ -47,8 +47,7 @@ namespace SlowTests.Issues
 
                     Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
 
-                    Assert.Throws<AuthorizationException>(() => AsyncHelpers.RunSync(() => store.Subscriptions.CreateAsync(
-                        new SubscriptionCreationOptions<User>())));
+                    await Assert.ThrowsAsync<AuthorizationException>(async () => await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>()));
                 }
             }
         }
@@ -112,13 +111,11 @@ namespace SlowTests.Issues
                     Assert.NotNull(doc);
 
                     Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
-
                     var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
                     {
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(200)
                     });
-                    
-                    Assert.Throws<AuthorizationException>(() => AsyncHelpers.RunSync(() => subscription.Run(user => {})));
+                    await Assert.ThrowsAsync<AuthorizationException>(async () => await subscription.Run(user => { }));
                 }
             }
         }

@@ -130,7 +130,7 @@ namespace Raven.Server.Routing
         static readonly FromBase64_DecodeDelegate _fromBase64_Decode = (FromBase64_DecodeDelegate)typeof(Convert).GetTypeInfo().GetMethod("FromBase64_Decode", BindingFlags.Static | BindingFlags.NonPublic)
             .CreateDelegate(typeof(FromBase64_DecodeDelegate));
 
-        private unsafe bool TryAuthorize(HttpContext context, RavenConfiguration configuration,
+        private bool TryAuthorize(HttpContext context, RavenConfiguration configuration,
             DocumentDatabase database)
         {
             var authHeaderValues = context.Request.Headers["Raven-Authorization"];
@@ -140,8 +140,8 @@ namespace Raven.Server.Routing
             {
                 token = context.Request.Cookies["Raven-Authorization"];
             }
-            if (configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.Admin
-                && token == null)
+            if (configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.Admin &&
+                token == null)
                 return true;
             var sigBase64Size = Sparrow.Utils.Base64.CalculateAndValidateOutputLength(Sodium.crypto_sign_bytes());
             if (token == null || token.Length < sigBase64Size + 8 /* sig length + prefix */)
@@ -162,8 +162,7 @@ namespace Raven.Server.Routing
                 return false;
             }
 
-            AccessToken accessToken;
-            if (!TryGetAccessToken(_ravenServer, token, sigBase64Size, out accessToken))
+            if (TryGetAccessToken(_ravenServer, token, sigBase64Size, out AccessToken accessToken) == false)
             {
                 context.Response.StatusCode = (int)HttpStatusCode.PreconditionFailed;
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -182,15 +181,11 @@ namespace Raven.Server.Routing
             }
 
             var resourceName = database?.Name;
-
             if (resourceName == null)
                 return true;
 
-            AccessModes mode;
-            var hasValue =
-                accessToken.AuthorizedDatabases.TryGetValue(resourceName, out mode) ||
-                accessToken.AuthorizedDatabases.TryGetValue("*", out mode);
-
+            var hasValue = accessToken.AuthorizedDatabases.TryGetValue(resourceName, out AccessModes mode) ||
+                           accessToken.AuthorizedDatabases.TryGetValue("*", out mode);
             if (hasValue == false)
                 mode = AccessModes.None;
 

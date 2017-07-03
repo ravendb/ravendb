@@ -28,8 +28,7 @@ namespace Raven.Server.Rachis
             var lastAppliedIndex = _parent.GetLastCommitIndex(context);
             for (var index = lastAppliedIndex+1; index <= uptoInclusive; index++)
             {
-                RachisEntryFlags flags;
-                var cmd = _parent.GetEntry(context, index,out flags);
+                var cmd = _parent.GetEntry(context, index, out RachisEntryFlags flags);
                 if (cmd == null || flags == RachisEntryFlags.Invalid)
                     throw new InvalidOperationException("Expected to apply entry " + index + " but it isn't stored");
 
