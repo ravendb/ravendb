@@ -11,9 +11,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {   
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Issues.RavenDB_7136())   
+                using (var test = new SlowTests.Server.Replication.ReplicationResolveConflictsOnConfigurationChange())   
                 {
-                    test.IfOneOfTheMultiMapFunctionsIsFailingWeNeedToResetTheEnumeratorToAvoidApplyingWrongFunctionOnPreviousDocument();
+                    test.ResolveWhenSettingDatabaseResolver().Wait();
                 }
             }
         }
