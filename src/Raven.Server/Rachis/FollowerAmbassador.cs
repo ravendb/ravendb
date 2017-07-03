@@ -93,6 +93,7 @@ namespace Raven.Server.Rachis
                 while (_leader.Running && _dispose == false)
                 {
                     Stream stream = null;
+                    string preveiousStatus;
                     try
                     {
                         try
@@ -105,7 +106,13 @@ namespace Raven.Server.Rachis
                         }
                         catch (Exception e)
                         {
+                            preveiousStatus = Status;
                             Status = "Failed - " + e.Message;
+                            if (preveiousStatus != Status)
+                            {
+                                _leader.NotifyAboutNodeStatusChange();
+                            }
+
                             if (_engine.Log.IsInfoEnabled)
                             {
                                 _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: Failed to connect to remote follower: {_tag} {_url}", e);
@@ -114,7 +121,12 @@ namespace Raven.Server.Rachis
                             _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
                             continue; // we'll retry connecting
                         }
+                        preveiousStatus = Status;
                         Status = "Connected";
+                        if (preveiousStatus != Status)
+                        {
+                            _leader.NotifyAboutNodeStatusChange();
+                        }
                         _connection = new RemoteConnection(_tag, _engine.Tag, stream);
                         using (_connection)
                         {
@@ -232,6 +244,7 @@ namespace Raven.Server.Rachis
                     }
                     catch (Exception e)
                     {
+                        preveiousStatus = Status;
                         Status = "Failed - " + e.Message;
                         if (_engine.Log.IsInfoEnabled)
                         {
@@ -239,13 +252,20 @@ namespace Raven.Server.Rachis
                         }
                         // notify leader about an error
                         _leader?.NotifyAboutException(this, e);
+                        if (preveiousStatus != Status)
+                        {
+                            _leader?.NotifyAboutNodeStatusChange();
+                        }
                         _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
                     }
                     finally
                     {
                         stream?.Dispose();
                         if (Status == "Connected")
+                        {
                             Status = "Disconnected";
+                            _leader?.NotifyAboutNodeStatusChange();
+                        }
                         else
                             Status = "Disconnected " + Status;
                     }
@@ -266,10 +286,15 @@ namespace Raven.Server.Rachis
             }
             catch (Exception e)
             {
+                var preveiousStatus = Status;
                 Status = "Failed - " + e.Message;
                 if (_engine.Log.IsInfoEnabled)
                 {
                     _engine.Log.Info("Failed to talk to remote follower: " + _tag, e);
+                }
+                if (preveiousStatus != Status)
+                {
+                    _leader.NotifyAboutNodeStatusChange();
                 }
             }
             finally

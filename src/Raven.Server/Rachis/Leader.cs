@@ -113,6 +113,37 @@ namespace Raven.Server.Rachis
             old.TrySetResult(null);
         }
 
+        
+
+        public Dictionary<string, NodeStatus> GetStatus()
+        {
+            var dict = new Dictionary<string, NodeStatus>();
+
+            foreach (var peers in new[] { _nonVoters , _voters , _promotables })
+            {
+                foreach (var kvp in peers)
+                {
+                    var status = new NodeStatus
+                    {
+                        ConnectionStatus = kvp.Value.Status,
+                        LastMatchingIndex = kvp.Value.FollowerMatchIndex,
+                        LastReply = kvp.Value.LastReplyFromFollower,
+                        LastSent = kvp.Value.LastSendToFollower,
+                        LastSentMessage = kvp.Value.LastSendMsg
+                    };
+
+                    dict[kvp.Key] = status;
+                }
+            }
+
+            dict[_engine.Tag] = new NodeStatus
+            {
+                ConnectionStatus = "Connected"
+            };
+
+            return dict;
+        }
+
         private void RefreshAmbassadors(ClusterTopology clusterTopology)
         {
             bool lockTaken = false;
@@ -571,6 +602,18 @@ namespace Raven.Server.Rachis
             ErrorsList.Enqueue((node.Tag, alert));
             ErrorsList.Reduce(25);
         }
+
+        public void NotifyAboutNodeStatusChange()
+        {
+            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var clusterTopology = _engine.GetTopology(context);
+                OnNodeStatusChange?.Invoke(this, clusterTopology);
+            }
+        }
+
+        public event EventHandler<ClusterTopology> OnNodeStatusChange;
 
         public void Dispose()
         {

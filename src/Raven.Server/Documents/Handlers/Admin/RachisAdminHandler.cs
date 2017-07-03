@@ -130,6 +130,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                     if (clusterErrors.Count > 0)
                         json["Errors"] = clusterErrors;
 
+                    var nodesStatues = ServerStore.GetNodesStatuses();
+                    json["Status"] = DynamicJsonValue.Convert(nodesStatues);
+
                     context.Write(writer, json);
                     writer.Flush();
                 }

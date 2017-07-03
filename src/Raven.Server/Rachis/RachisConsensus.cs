@@ -191,6 +191,7 @@ namespace Raven.Server.Rachis
         private readonly ManualResetEventSlim _disposeEvent = new ManualResetEventSlim();
         private readonly Random _rand;
         private string _lastStateChangeReason;
+        public Candidate Candidate { get; private set; }
 
         protected RachisConsensus(int? seed = null)
         {
@@ -306,6 +307,7 @@ namespace Raven.Server.Rachis
             var leader = new Leader(this);
             SetNewStateInTx(context, State.LeaderElect, leader, electionTerm, "I'm the only one in the cluster, so I'm the leader");
             _currentLeader = leader;
+            Candidate = null;
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
                 if (tx is LowLevelTransaction llt && llt.Committed)
@@ -574,6 +576,7 @@ namespace Raven.Server.Rachis
 
             SetNewState(State.Candidate, candidate, CurrentTerm, reason);
             candidate.Start();
+            Candidate = candidate;
         }
 
         public void DeleteTopology(TransactionOperationContext context)
