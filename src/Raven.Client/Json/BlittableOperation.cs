@@ -143,6 +143,8 @@ namespace Raven.Client.Json
         {
             if (newArray.Length != oldArray.Length)
                 return true;
+            if (newArray.Length == 0)
+                return false;
             var type = newArray.GetArrayType();
             switch (type)
             {

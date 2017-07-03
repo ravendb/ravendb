@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow.Collections;
 using Sparrow.Json.Parsing;
@@ -39,7 +40,9 @@ namespace Sparrow.Json
 
         public BlittableJsonToken GetArrayType()
         {
-            return (BlittableJsonToken)(*(_metadataPtr + _currentOffsetSize)) & BlittableJsonReaderBase.TypesMask;
+            var blittableJsonToken = (BlittableJsonToken)(*(_metadataPtr + _currentOffsetSize)) & TypesMask;
+            Debug.Assert(blittableJsonToken != 0);
+            return blittableJsonToken;
         }
 
         public object this[int index] => GetValueTokenTupleByIndex(index).Item1;
