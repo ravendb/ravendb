@@ -361,7 +361,7 @@ namespace Raven.Server.ServerWide
 
             ContextPool = new TransactionContextPool(_env);
 
-            _engine = new RachisConsensus<ClusterStateMachine>();
+            _engine = new RachisConsensus<ClusterStateMachine>(this);
 
             var myUrl = Configuration.Core.PublicServerUrl.HasValue ? Configuration.Core.PublicServerUrl.Value.UriValue : Configuration.Core.ServerUrl;
             _engine.Initialize(_env, Configuration.Cluster, myUrl);

@@ -40,11 +40,11 @@ namespace Tests.Infrastructure
 
         protected bool PredictableSeeds;
 
-        protected Logger Log = LoggingSource.Instance.GetLogger<RachisConsensusTestBase>("RachisConsensusTest");
+        protected readonly Logger Log = LoggingSource.Instance.GetLogger<RachisConsensusTestBase>("RachisConsensusTest");
 
         protected int LongWaitTime = 15000; //under stress the thread pool may take time to schedule the task to complete the set of the TCS
 
-        protected byte[] DummyPublicKey = new byte[0]; // Only used in tests when there is no instance of a RavenServer (the server generates and stores the keys)
+        protected readonly byte[] DummyPublicKey = new byte[0]; // Only used in tests when there is no instance of a RavenServer (the server generates and stores the keys)
 
         protected async Task<RachisConsensus<CountingStateMachine>> CreateNetworkAndGetLeader(int nodeCount, [CallerMemberName] string caller = null)
         {
@@ -108,9 +108,9 @@ namespace Tests.Infrastructure
         {
             var waitingTasks = new List<Task>();
 
-            foreach (var ndoe in nodes)
+            foreach (var node in nodes)
             {
-                waitingTasks.Add(ndoe.WaitForState(RachisConsensus.State.Leader));
+                waitingTasks.Add(node.WaitForState(RachisConsensus.State.Leader));
             }
             Assert.True(Task.WhenAny(waitingTasks).Wait(3000 * nodes.Count()), "Waited too long for a node to become a leader but no leader was elected.");
             return nodes.FirstOrDefault(x => x.CurrentState == RachisConsensus.State.Leader);
@@ -132,10 +132,11 @@ namespace Tests.Infrastructure
             var server = StorageEnvironmentOptions.CreateMemoryOnly();
 
             int seed = PredictableSeeds ? _random.Next(int.MaxValue) : _count;
-            var rachis = new RachisConsensus<CountingStateMachine>(seed);
-            var storageEnvironment = new StorageEnvironment(server);
             var configuration = new RavenConfiguration(caller, ResourceType.Server);
             configuration.Initialize();
+
+            var rachis = new RachisConsensus<CountingStateMachine>(new RavenServer(configuration).ServerStore, seed);
+            var storageEnvironment = new StorageEnvironment(server);
             rachis.Initialize(storageEnvironment, configuration.Cluster,configuration.Core.ServerUrl);
             rachis.OnDispose += (sender, args) =>
             {
@@ -291,7 +292,7 @@ namespace Tests.Infrastructure
                 return read.Reader.ReadLittleEndianInt64();
             }
 
-            protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+            protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
             {
                 int val;
                 string name;

@@ -29,8 +29,11 @@ namespace Raven.Server.Rachis
     public class RachisConsensus<TStateMachine> : RachisConsensus
         where TStateMachine : RachisStateMachine, new()
     {
-        public RachisConsensus(int? seed = null) : base(seed)
+        private readonly ServerStore _serverStore;
+
+        public RachisConsensus(ServerStore serverStore, int? seed = null) : base(seed)
         {
+            _serverStore = serverStore;
         }
 
         public TStateMachine StateMachine;
@@ -50,7 +53,7 @@ namespace Raven.Server.Rachis
 
         public override void Apply(TransactionOperationContext context, long uptoInclusive, Leader leader)
         {
-            StateMachine.Apply(context, uptoInclusive, leader);
+            StateMachine.Apply(context, uptoInclusive, leader, _serverStore);
         }
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)

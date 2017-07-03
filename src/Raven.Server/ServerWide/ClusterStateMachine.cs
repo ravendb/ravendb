@@ -77,9 +77,9 @@ namespace Raven.Server.ServerWide
 
         public event EventHandler<(string DatabaseName, long Index, string Type)> DatabaseValueChanged;
 
-        public event EventHandler<(long Index, string Type)> ValueChanged; 
+        public event EventHandler<(long Index, string Type)> ValueChanged;
 
-        protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
         {
             if (cmd.TryGet("Type", out string type) == false)
             {
@@ -170,6 +170,8 @@ namespace Raven.Server.ServerWide
                         break;
                     case nameof(PutApiKeyCommand):
                         PutValue<ApiKeyDefinition>(context, type, cmd, index, leader);
+                        context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented +=
+                            () => serverStore.RavenServer.AccessTokenCache.Clear();
                         break;
                     case nameof(PutClientConfigurationCommand):
                         PutValue<ClientConfiguration>(context, type, cmd, index, leader);
