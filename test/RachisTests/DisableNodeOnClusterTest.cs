@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Http;
+using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -56,8 +57,8 @@ namespace RachisTests
             Assert.NotEqual(re.Url, firstNodeUrl);
             var customSettings = new Dictionary<string, string>
             {
-                { "Raven/ServerUrl", firstNodeUrl },
-                {"Raven/DataDir",nodePath.FullPath }
+                { RavenConfiguration.GetKey(x => x.Core.ServerUrl), firstNodeUrl },
+                { RavenConfiguration.GetKey(x => x.Core.DataDirectory), nodePath.FullPath }
             };
             GetNewServer(customSettings, runInMemory: false);
 

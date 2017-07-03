@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 using Xunit;
@@ -20,8 +21,8 @@ namespace FastTests.Client.Subscriptions
                 var tempPath = GenerateAndSaveSelfSignedCertificate();
                 DoNotReuseServer(new ConcurrentDictionary<string, string>
                 {
-                    ["Raven/Certificate/Path"] = tempPath,
-                    ["Raven/ServerUrl"] = "https://127.0.0.1:0"
+                    [RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = tempPath,
+                    [RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = "https://127.0.0.1:0"
                 });
             }
             using (var store = GetDocumentStore())
@@ -69,8 +70,8 @@ namespace FastTests.Client.Subscriptions
                 var tempPath = GenerateAndSaveSelfSignedCertificate();
                 DoNotReuseServer(new ConcurrentDictionary<string, string>
                 {
-                    ["Raven/Certificate/Path"] = tempPath,
-                    ["Raven/ServerUrl"] = "https://127.0.0.1:0"
+                    [RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = tempPath,
+                    [RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = "https://127.0.0.1:0"
                 });
             }
 

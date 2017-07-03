@@ -218,7 +218,7 @@ namespace Raven.Server.Documents
             options.GenerateNewDatabaseId = generateNewDatabaseId;
             options.ForceUsing32BitsPager = _documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
             options.TimeToSyncAfterFlashInSec = (int)_documentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
-            options.NumOfConcurrentSyncsPerPhysDrive = _documentDatabase.Configuration.Storage.NumOfConcurrentSyncsPerPhysDrive;
+            options.NumOfConcurrentSyncsPerPhysDrive = _documentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
             Sodium.CloneKey(out options.MasterKey, _documentDatabase.MasterKey);
 
             try

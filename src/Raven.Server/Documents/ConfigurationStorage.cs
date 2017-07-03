@@ -31,7 +31,7 @@ namespace Raven.Server.Documents
             options.SchemaVersion = 1;
             options.ForceUsing32BitsPager = db.Configuration.Storage.ForceUsing32BitsPager;
             options.TimeToSyncAfterFlashInSec = (int)db.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
-            options.NumOfConcurrentSyncsPerPhysDrive = db.Configuration.Storage.NumOfConcurrentSyncsPerPhysDrive;
+            options.NumOfConcurrentSyncsPerPhysDrive = db.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
             Sodium.CloneKey(out options.MasterKey, db.MasterKey);
 
             Environment = new StorageEnvironment(options);

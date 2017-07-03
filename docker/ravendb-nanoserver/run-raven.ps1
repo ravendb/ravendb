@@ -24,9 +24,9 @@ Push-Location $ServerDir
 $command = './Raven.Server.exe'
 $commandArgs = @()
 
-$commandArgs += "/Raven/ServerUrl=http://0.0.0.0:8080"
-$commandArgs += "/Raven/ServerUrl/Tcp=tcp://0.0.0.0:38888"
-$commandArgs += "/Raven/DataDir=$($env:DataDir)"
+$commandArgs += "/ServerUrl=http://0.0.0.0:8080"
+$commandArgs += "/ServerUrl.Tcp=tcp://0.0.0.0:38888"
+$commandArgs += "/DataDir=$($env:DataDir)"
 $commandArgs += "--print-id"
 $commandArgs += "--register-service"
 
@@ -36,15 +36,15 @@ if ([string]::IsNullOrEmpty($env:CustomConfigFilename) -eq $False) {
 }
 
 if ([string]::IsNullOrEmpty($env:AllowAnonymousUserToAccessTheServer) -eq $False) {
-    $commandArgs += "/Raven/AllowAnonymousUserToAccessTheServer=$($env:AllowAnonymousUserToAccessTheServer)"
+    $commandArgs += "/AllowAnonymousUserToAccessTheServer=$($env:AllowAnonymousUserToAccessTheServer)"
 }
 
 if ([string]::IsNullOrEmpty($env:PublicServerUrl) -eq $False) {
-    $commandArgs += "/Raven/PublicServerUrl=$($env:PublicServerUrl)"
+    $commandArgs += "/PublicServerUrl=$($env:PublicServerUrl)"
 }
 
 if ([string]::IsNullOrEmpty($env:PublicTcpServerUrl) -eq $False) {
-    $commandArgs += "/Raven/PublicServerUrl/Tcp=$($env:PublicTcpServerUrl)"
+    $commandArgs += "/PublicServerUrl.Tcp=$($env:PublicTcpServerUrl)"
 }
 
 write-host "Registering Windows Service: $command $commandArgs"

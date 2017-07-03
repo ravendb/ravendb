@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.CommandLineUtils;
+using Raven.Server.Config;
 using Sparrow.Platform;
 
 namespace Raven.Server.Utils
@@ -24,7 +23,7 @@ namespace Raven.Server.Utils
 
         public const string DefaultServiceName = "RavenDB";
 
-        public static string ServiceName => 
+        public static string ServiceName =>
             _serviceNameOption.Values.FirstOrDefault() ?? DefaultServiceName;
 
         public static string CustomConfigPath =>
@@ -62,9 +61,16 @@ namespace Raven.Server.Utils
             if (args == null)
                 return null;
 
-            var nonConfigurationSwitches = args
-                .Where(x => Regex.IsMatch(x, @"^(--|\/)[rR]aven") == false)
-                .ToArray();
+            var nonConfigurationSwitches = new List<string>();
+            foreach (var a in args)
+            {
+                var match = Regex.Match(a, @"[\w\.]+");
+
+                if (match.Success && RavenConfiguration.ContainsKey(match.Value))
+                    continue;
+
+                nonConfigurationSwitches.Add(a);
+            }
 
             _app = new CommandLineApplication();
             _helpOption = _app.Option(
@@ -76,8 +82,8 @@ namespace Raven.Server.Utils
                 "Displays version and exits",
                 CommandOptionType.NoValue);
             _printIdOption = _app.Option(
-                "--print-id", 
-                "Prints server ID upon server start", 
+                "--print-id",
+                "Prints server ID upon server start",
                 CommandOptionType.NoValue);
             _registerServiceOption = _app.Option(
                 "--register-service",
@@ -100,11 +106,11 @@ namespace Raven.Server.Utils
                 "Sets custom configuration file path",
                 CommandOptionType.SingleValue);
             _browserOption = _app.Option(
-                "--browser", 
-                "Attempts to open RavenDB Studio in the browser", 
+                "--browser",
+                "Attempts to open RavenDB Studio in the browser",
                 CommandOptionType.NoValue);
 
-            _app.Execute(nonConfigurationSwitches);
+            _app.Execute(nonConfigurationSwitches.ToArray());
 
             Validate();
 

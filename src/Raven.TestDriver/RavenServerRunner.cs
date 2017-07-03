@@ -35,8 +35,8 @@ namespace Raven.TestDriver
             var commandArguments = new List<string>()
                 {
                     locator.CommandArguments,
-                    "--Raven/ServerUrl=http://127.0.0.1:0",
-                    "--Raven/RunInMemory=true"
+                    "--ServerUrl=http://127.0.0.1:0",
+                    "--RunInMemory=true"
                 };
 
             var argumentsString = string.Join(" ", commandArguments); 

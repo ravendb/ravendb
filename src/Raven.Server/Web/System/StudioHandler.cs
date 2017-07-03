@@ -132,7 +132,7 @@ namespace Raven.Server.Web.System
 
             var env = (IHostingEnvironment)HttpContext.RequestServices.GetService(typeof(IHostingEnvironment));
 
-            var basePath = Server.Configuration.Core.StudioDirectory ?? env.ContentRootPath;
+            var basePath = Server.Configuration.Studio.Path ?? env.ContentRootPath;
 
             var file = TryGetFileName(basePath, fileName);
             if (file != null)
