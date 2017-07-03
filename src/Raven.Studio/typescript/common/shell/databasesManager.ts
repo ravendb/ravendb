@@ -71,12 +71,12 @@ class databasesManager {
         const dbUrl = appUrl.getDatabaseNameFromUrl();
         if (dbUrl) {
             const db = this.getDatabaseByName(dbUrl);
-            return this.activateIfDifferent(db, dbUrl, appUrl.forDatabases);
+            return this.activateIfDifferent(db, dbUrl);
         }
         return true;
     }
 
-    private activateIfDifferent(db: database, dbName: string, urlIfNotFound: () => string): JQueryPromise<canActivateResultDto> {
+    private activateIfDifferent(db: database, dbName: string): JQueryPromise<canActivateResultDto> {
         const task = $.Deferred<canActivateResultDto>();
 
         const incomingDatabaseName = db ? db.name : undefined;
@@ -96,16 +96,16 @@ class databasesManager {
             } else if (db && db.disabled()) {
                 messagePublisher.reportError(`${db.fullTypeName} '${db.name}' is disabled!`,
                     `You can't access any section of the ${db.fullTypeName.toLowerCase()} while it's disabled.`, null, false);
-                router.navigate(urlIfNotFound());
+                router.navigate(appUrl.forDatabases());
                 task.reject();
             } else if (db && !db.relevant()) {
                 messagePublisher.reportError(`${db.fullTypeName} '${db.name}' is not relevant on this node!`,
                     `You can't access any section of the ${db.fullTypeName.toLowerCase()} while it's not relevant.`, null, false);
-                router.navigate(urlIfNotFound());
+                router.navigate(appUrl.forDatabases());
                 task.reject();
             } else {
                 messagePublisher.reportError("The database " + dbName + " doesn't exist!", null, null, false);
-                router.navigate(urlIfNotFound());
+                router.navigate(appUrl.forDatabases());
                 task.reject();
             }
         });
@@ -173,6 +173,9 @@ class databasesManager {
         });
 
         existingDatabase.removeAll(toDelete);
+
+        // we also get information about deletion over websocket, so if we are not connected, then notification might be missed, so let's call it here as well
+        toDelete.forEach(db => this.onDatabaseDeleted(db));
     }
 
     private updateDatabase(incomingDatabase: Raven.Client.Server.Operations.DatabaseInfo, existingDatabaseFinder: (name: string) => database): database {
