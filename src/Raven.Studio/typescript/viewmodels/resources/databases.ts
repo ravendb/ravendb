@@ -103,6 +103,7 @@ class databases extends viewModelBase {
                 this.updateDatabaseInfo(e.DatabaseName);
                 break;
 
+            case "RemoveNode":
             case "Delete":
                 // since we don't know if database was removed from current node, let's fetch databaseInfo first
                 this.updateDatabaseInfo(e.DatabaseName)
