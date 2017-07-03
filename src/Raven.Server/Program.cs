@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Diagnostics;
+using System.IO.Pipes;
 using System.Linq;
 using System.Runtime.Loader;
 using System.Threading;
@@ -76,7 +77,7 @@ namespace Raven.Server
             LoggingSource.Instance.SetupLogMode(mode, Path.Combine(AppContext.BaseDirectory, configuration.Core.LogsDirectory));
 
             if (RavenWindowsServiceController.ShouldRunAsWindowsService(configuration))
-            {
+            {                
                 RavenWindowsServiceController.Run(configuration);
                 return 0;
             }
@@ -96,8 +97,9 @@ namespace Raven.Server
                     {
                         try
                         {
+                            server.OpenPipe();
                             server.Initialize();
-
+                            
                             if (CommandLineSwitches.PrintServerId)
                                 Console.WriteLine($"Server ID is {server.ServerStore.GetServerId()}.");
                             
@@ -118,8 +120,7 @@ namespace Raven.Server
                                         Console.Error.WriteLine($"Tcp listen failure (see {server.ServerStore.NodeHttpServerUrl}/info/tcp for details) {tcp.Exception.Message}");
                                     }
                                 });
-                            Console.WriteLine("Server started, listening to requests...");
-
+                            Console.WriteLine("Server started, listening to requests...");                            
                             if (CommandLineSwitches.Daemon)
                             {
                                 RunAsService();

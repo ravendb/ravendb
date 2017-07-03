@@ -1,5 +1,10 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
+using System.IO.Pipes;
+using Jint;
+using Org.BouncyCastle.Pkix;
+using Raven.Server;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow;
@@ -12,17 +17,13 @@ namespace rvn
     {
         static void Main(string[] args)
         {
-            if (args.Length != 3)
-            {
-                PrintUsage($"Expected 3 arguments but got {args.Length}");
-                return;
-            }
+            //TODO: Need proper error messages
 
             var command = args[1].ToLowerInvariant();
             var path = args[2];
 
-            ValidatePath(path);
-            
+            //ValidatePath(path);
+
             switch (command)
             {
                 case "encrypt":
@@ -39,6 +40,12 @@ namespace rvn
                     ValidateKey(key);
                     InstallServerStoreKey(path, key);
                     break;
+                case "init":
+                    PrintFirstApiKeyAndPublicKey(path);
+                    break;
+                case "trust":
+                    Trust(args[2], args[3], args[4]);
+                    break;
                 case "decrypt":
                     DecryptServerStore(path);
                     break;
@@ -48,6 +55,84 @@ namespace rvn
             }
 
             Console.WriteLine("Done.");
+        }
+
+        /// <summary>
+        /// Request Raven to trust the provided public key for provided server tag
+        /// </summary>
+        /// <param name="pid">Raven server process id</param>
+        /// <param name="key">The public key you wish to install</param>
+        /// <param name="tag">The tag of the server you wish to install the public key to</param>
+        private static void Trust(string pid, string key, string tag)
+        {
+            try
+            {
+                var pipeName = RavenServer.PipePrefix + pid;
+                using (var client = new NamedPipeClientStream(pipeName))
+                {
+                    var writer = new StreamWriter(client);
+                    var reader = new StreamReader(client);
+                    client.Connect(3000);
+                    writer.WriteLine($"trust {key} {tag}");
+                    writer.Flush();
+                    ReadResponseFromServer(reader);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Extract the system api key and public key of the leader of the cluster (or passive that will become leader)
+        /// </summary>
+        /// <param name="pid">Raven server process id</param>
+        private static void PrintFirstApiKeyAndPublicKey(string pid)
+        {
+            try
+            {
+                var pipeName = RavenServer.PipePrefix + pid;
+                using (var client = new NamedPipeClientStream(pipeName))
+                {
+                    var reader = new StreamReader(client);
+                    var writer = new StreamWriter(client);
+                    client.Connect(3000);
+                    writer.WriteLine("init");
+                    writer.Flush();
+
+                    ReadResponseFromServer(reader);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+        }
+
+        private static void ReadResponseFromServer(StreamReader reader)
+        {
+            bool hasInput = false;
+            while (true)
+            {
+                string line;
+                try
+                {
+                    line = reader.ReadLine();
+                    if (line == null)
+                        break;
+                }
+                catch (IOException)
+                {
+                    if (hasInput == false)
+                        throw;
+                    break;
+                }
+                Console.WriteLine(line);
+                hasInput = true;
+            }
         }
 
         private static void ValidatePath(string dirPath)
