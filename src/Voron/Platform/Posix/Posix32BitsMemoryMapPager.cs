@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -47,7 +48,9 @@ namespace Voron.Platform.Posix
 
             PosixHelper.EnsurePathExists(FileName.FullPath);
 
-            _fd = Syscall.open(file.FullPath, OpenFlags.O_RDWR | OpenFlags.O_CREAT | PerPlatformValues.OpenFlags.O_LARGEFILE,
+            Debug.Assert(RuntimeInformation.IsOSPlatform(OSPlatform.OSX) == false); // O_LARGEFILE not exists in mac and supported by default (however we do not run on mac 32bit..)
+
+            _fd = Syscall.open(file.FullPath, OpenFlags.O_RDWR | PerPlatformValues.OpenFlags.O_CREAT | PerPlatformValues.OpenFlags.O_LARGEFILE,
                               FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
             if (_fd == -1)
             {

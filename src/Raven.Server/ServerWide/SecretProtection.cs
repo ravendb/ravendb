@@ -27,7 +27,7 @@ namespace Raven.Server.ServerWide
                     if (Directory.Exists(dirpath) == false)
                         Directory.CreateDirectory(dirpath);
 
-                    var fd = Syscall.open(filepath, OpenFlags.O_CREAT | OpenFlags.O_RDWR,
+                    var fd = Syscall.open(filepath, PerPlatformValues.OpenFlags.O_CREAT | OpenFlags.O_RDWR,
                         // octal 01600 - Sticky and only user can read it
                         FilePermissions.S_ISVTX | FilePermissions.S_IRUSR | FilePermissions.S_IWUSR);
                     if (fd == -1)

@@ -36,7 +36,7 @@ namespace Sparrow.Platform.Posix
                 return 0; // TODO : Implement for OSX, note gettid is problematic in OSX. Ref : https://github.com/dotnet/coreclr/issues/12444
 
             return (int) syscall0(PerPlatformValues.SyscallNumbers.SYS_gettid);
-        }
+        }        
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int setpriority(int which, int who, int prio);
@@ -125,13 +125,13 @@ namespace Sparrow.Platform.Posix
             [MarshalAs(UnmanagedType.U2)] FilePermissions mode);
 
         [DllImport(LIBC_6, SetLastError = true)]
-        private static extern int fcntl(int fd, FcntlCommands cmd, IntPtr args = new IntPtr());
+        public static extern int fcntl(int fd, FcntlCommands cmd, IntPtr args);
 
         public static int FSync(int fd)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                return fcntl(fd, FcntlCommands.F_FULLFSYNC); // F_FULLFSYNC ignores args
+                return fcntl(fd, FcntlCommands.F_FULLFSYNC, IntPtr.Zero); // F_FULLFSYNC ignores args
             }
             return fsync(fd);
         }
@@ -300,6 +300,7 @@ namespace Sparrow.Platform.Posix
     [Flags]
     public enum FcntlCommands
     {
+        F_NOCACHE = 0x00000030,
         F_FULLFSYNC = 0x00000033
     }
 }

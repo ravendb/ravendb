@@ -30,7 +30,7 @@ namespace Voron.Platform.Posix
 
             PosixHelper.EnsurePathExists(FileName.FullPath);
 
-            _fd = Syscall.open(file.FullPath, OpenFlags.O_RDWR | OpenFlags.O_CREAT,
+            _fd = Syscall.open(file.FullPath, OpenFlags.O_RDWR | PerPlatformValues.OpenFlags.O_CREAT,
                               FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
             if (_fd == -1)
             {
