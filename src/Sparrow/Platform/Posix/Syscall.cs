@@ -9,7 +9,7 @@ namespace Sparrow.Platform.Posix
 {
     public static unsafe class Syscall
     {
-        internal const string LIBC_6 = "libc.so.6";
+        internal const string LIBC_6 = "libc";
 
         [DllImport(LIBC_6, EntryPoint = "memcpy", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode, SetLastError = false)]
         [SecurityCritical]
