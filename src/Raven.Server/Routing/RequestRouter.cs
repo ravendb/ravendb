@@ -244,7 +244,6 @@ namespace Raven.Server.Routing
             {
                 var tokenBytes = Encodings.Utf8.GetBytes(token);
                 var signature = new byte[Sodium.crypto_sign_bytes()];
-                TransactionOperationContext txContext;
                 fixed (byte* sig = signature)
                 fixed (byte* msg = tokenBytes)
                 fixed (char* pToken = token)
@@ -252,6 +251,7 @@ namespace Raven.Server.Routing
                     _fromBase64_Decode(pToken + 8, sigBase64Size, sig, Sodium.crypto_sign_bytes());
                     Memory.Set(msg + 8, (byte)' ', sigBase64Size);
 
+                    TransactionOperationContext txContext;
                     using (ravenServer.ServerStore.ContextPool.AllocateOperationContext(out txContext))
                     using (txContext.OpenReadTransaction())
                     using (var tokenJson = txContext.ParseBuffer(msg, tokenBytes.Length, "auth token", BlittableJsonDocumentBuilder.UsageMode.None))
