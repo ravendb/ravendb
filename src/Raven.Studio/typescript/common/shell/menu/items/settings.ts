@@ -68,7 +68,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/settings/revisions',
             moduleId: 'viewmodels/database/settings/revisions',
-            title: 'Revisions',
+            title: 'Document Revisions',
             nav: true,
             css: 'icon-versioning', //TODO: rename icon 
             dynamicHash: appUrls.revisions

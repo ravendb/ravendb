@@ -4,6 +4,7 @@ import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import saveRevisionsConfigurationCommand = require("commands/database/documents/saveRevisionsConfigurationCommand");
 import eventsCollector = require("common/eventsCollector");
+import generalUtils = require("common/generalUtils");
 import messagePublisher = require("common/messagePublisher");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import getRevisionsConfigurationCommand = require("commands/database/documents/getRevisionsConfigurationCommand");
@@ -264,6 +265,10 @@ class revisions extends viewModelBase {
 
             this.selectedItems(selectedItems);
         }
+    }
+
+    formatedDurationObservable(observable: KnockoutObservable<number>) {
+        return ko.pureComputed(() => generalUtils.formatTimeSpan(observable() * 1000));
     }
 }
 

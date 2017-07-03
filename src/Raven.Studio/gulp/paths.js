@@ -30,6 +30,7 @@ var paths = {
     bowerSource: './wwwroot/lib/',
     cssToMerge: [
         'wwwroot/lib/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.css',
+        "wwwroot/lib/bootstrap-duration-picker/dist/bootstrap-duration-picker.css",
         'wwwroot/lib/bootstrap-select/dist/css/bootstrap-select.css',
         'wwwroot/lib/bootstrap-multiselect/dist/css/bootstrap-multiselect.css',
         'wwwroot/lib/Durandal/css/durandal.css',
@@ -54,6 +55,7 @@ var paths = {
         "moment/moment.js",
         "bootstrap/dist/js/bootstrap.js",
         "eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js",
+        "lib/bootstrap-duration-picker/dist/bootstrap-duration-picker.js",
         "bootstrap-contextmenu/bootstrap-contextmenu.js",
         "bootstrap-multiselect/dist/js/bootstrap-multiselect.js",
         "bootstrap-select/dist/js/bootstrap-select.js",

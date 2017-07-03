@@ -1,5 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
+import generalUtils = require("common/generalUtils");
+
 class revisionsConfigurationEntry {
 
     static readonly DefaultConfiguration = "DefaultConfiguration";
@@ -12,7 +14,7 @@ class revisionsConfigurationEntry {
     minimumRevisionsToKeep = ko.observable<number>();
 
     limitRevisionsByAge = ko.observable<boolean>(false);
-    minimumRevisionAgeToKeep = ko.observable<string>();
+    minimumRevisionAgeToKeep = ko.observable<number>();
 
     isDefault: KnockoutComputed<boolean>;
     humaneRetentionDescription: KnockoutComputed<string>;
@@ -30,7 +32,7 @@ class revisionsConfigurationEntry {
         this.minimumRevisionsToKeep(dto.MinimumRevisionsToKeep);
 
         this.limitRevisionsByAge(dto.MinimumRevisionAgeToKeep != null);
-        this.minimumRevisionAgeToKeep(dto.MinimumRevisionAgeToKeep);
+        this.minimumRevisionAgeToKeep(dto.MinimumRevisionAgeToKeep ? generalUtils.timeSpanToSeconds(dto.MinimumRevisionAgeToKeep) : null);
 
         this.disabled(!dto.Active);
         this.purgeOnDelete(dto.PurgeOnDelete);
@@ -41,17 +43,17 @@ class revisionsConfigurationEntry {
     }
     private initObservables() {
         this.humaneRetentionDescription = ko.pureComputed(() => {
-            const retentionTimeHumane = this.minimumRevisionAgeToKeep(); //TODO: format me!
-            const agePart = this.limitRevisionsByAge() && this.minimumRevisionAgeToKeep.isValid() ? `Revisions are going to be removed on next revision creation once they exceed retention time of <strong>${retentionTimeHumane}</strong>. ` : "";
+            const retentionTimeHumane = generalUtils.formatTimeSpan(this.minimumRevisionAgeToKeep() * 1000, true);
+            const agePart = this.limitRevisionsByAge() && this.minimumRevisionAgeToKeep.isValid() ? `Revisions are going to be removed on next revision creation or document deletion once they exceed retention time of <strong>${retentionTimeHumane}</strong>. ` : "";
             const countPart = this.limitRevisions() && this.minimumRevisionsToKeep.isValid() ? `At least <strong>${this.minimumRevisionsToKeep()}</strong> revisions are going to be kept. ` : "";
             return agePart + countPart;
         });
 
-        this.limitRevisions.subscribe(v => {
+        this.limitRevisions.subscribe(() => {
             this.minimumRevisionsToKeep.clearError();
         });
 
-        this.limitRevisionsByAge.subscribe(v => {
+        this.limitRevisionsByAge.subscribe(() => {
             this.minimumRevisionAgeToKeep.clearError();
         });
     }
@@ -71,7 +73,8 @@ class revisionsConfigurationEntry {
         this.minimumRevisionAgeToKeep.extend({
             required: {
                 onlyIf: () => this.limitRevisionsByAge()
-            }
+            },
+            min: 0
         });
     }
 
@@ -93,7 +96,7 @@ class revisionsConfigurationEntry {
         return {
             Active: !this.disabled(),
             MinimumRevisionsToKeep: this.limitRevisions() ? this.minimumRevisionsToKeep() : null,
-            MinimumRevisionAgeToKeep: this.limitRevisionsByAge() ? this.minimumRevisionAgeToKeep() : null,
+            MinimumRevisionAgeToKeep: this.limitRevisionsByAge() ? generalUtils.formatAsTimeSpan(this.minimumRevisionAgeToKeep() * 1000) : null,
             PurgeOnDelete: this.purgeOnDelete()
         };
     }
