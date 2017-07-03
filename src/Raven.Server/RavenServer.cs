@@ -534,6 +534,11 @@ namespace Raven.Server
             }
 
             tcp.DocumentDatabase = await databaseLoadingTask;
+            if(tcp.DocumentDatabase == null)
+                DatabaseDoesNotExistException.Throw(header.DatabaseName);
+
+            Debug.Assert(tcp.DocumentDatabase != null);
+
             if (tcp.DocumentDatabase.DatabaseShutdown.IsCancellationRequested)
                 ThrowDatabaseShutdown(tcp.DocumentDatabase);
 
