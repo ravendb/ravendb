@@ -533,6 +533,9 @@ namespace Raven.Server.ServerWide
                 case nameof(UpdateTopologyCommand):
                     NotificationCenter.Add(DatabaseChanged.Create(t.DatabaseName, DatabaseChangeType.Update));
                     break;
+                case nameof(RemoveNodeFromDatabaseCommand):
+                    NotificationCenter.Add(DatabaseChanged.Create(t.DatabaseName, DatabaseChangeType.RemoveNode));
+                    break;
             }
 
             //TODO: send different commands to studio when necessary

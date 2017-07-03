@@ -204,7 +204,7 @@ class databasesManager {
 
     private onDatabaseUpdateReceivedViaChangesApi(event: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) {
         const db = this.getDatabaseByName(event.DatabaseName);
-        if (event.ChangeType === "Delete" && db) {
+        if ((event.ChangeType === "Delete" || event.ChangeType === "RemoveNode" ) && db) {
             // fetch latest database info since we don't know at this point if database was removed from current node
             this.updateDatabaseInfo(db, event.DatabaseName)
                 .fail((xhr: JQueryXHR) => {

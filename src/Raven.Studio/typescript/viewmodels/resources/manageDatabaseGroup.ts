@@ -51,6 +51,10 @@ class manageDatabaseGroup extends viewModelBase {
     activate(args: any) {
         super.activate(args);
 
+        this.addNotification(this.changesContext.serverNotifications()
+            .watchAllDatabaseChanges((e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) => this.fetchDatabaseInfo()));
+        this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.fetchDatabaseInfo()));
+
         return this.fetchDatabaseInfo();
     }
 
@@ -79,9 +83,6 @@ class manageDatabaseGroup extends viewModelBase {
             .execute()
             .done(() => {
                 this.selectedClusterNode(null);
-
-                //TODO: delete me and simply use live view
-                setTimeout(() => this.refresh(), 300);
             })
             .always(() => this.spinners.addNode(false));
     }
@@ -93,8 +94,7 @@ class manageDatabaseGroup extends viewModelBase {
             .done(result => {
                 if (result.can) {
                     new deleteDatabaseFromNodeCommand(db, [nodeTag], hardDelete)
-                        .execute()
-                        .done(() => this.refresh());
+                        .execute();
                 }
             });
     }
