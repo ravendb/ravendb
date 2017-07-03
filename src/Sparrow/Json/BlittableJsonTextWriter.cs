@@ -17,6 +17,7 @@ namespace Sparrow.Json
         private const byte Comma = (byte)',';
         private const byte Quote = (byte)'"';
         private const byte Colon = (byte)':';
+        public static readonly byte[] NaNBuffer = { (byte)'N', (byte)'a', (byte)'N', };
         public static readonly byte[] NullBuffer = { (byte)'n', (byte)'u', (byte)'l', (byte)'l', };
         public static readonly byte[] TrueBuffer = { (byte)'t', (byte)'r', (byte)'u', (byte)'e', };
         public static readonly byte[] FalseBuffer = { (byte)'f', (byte)'a', (byte)'l', (byte)'s', (byte)'e', };
@@ -470,7 +471,7 @@ namespace Sparrow.Json
         {
             if (val.IsNaN())
             {
-                WriteString("NaN");
+                WriteNaN();
                 return;
             }
 
@@ -478,11 +479,21 @@ namespace Sparrow.Json
             WriteRawString(lazyStringValue.Buffer, lazyStringValue.Size);
         }
 
+        public void WriteNaN()
+        {
+            EnsureBuffer(3);
+            var buffer = NaNBuffer;
+            for (int i = 0; i < buffer.Length; i++)
+            {
+                _buffer[_pos++] = buffer[i];
+            }
+        }
+
         public void WriteDouble(double val)
         {
             if (double.IsNaN(val))
             {
-                WriteString("NaN");
+                WriteNaN();
                 return;
             }
 

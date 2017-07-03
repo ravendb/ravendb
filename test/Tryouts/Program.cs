@@ -11,9 +11,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {   
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Voron.RecoveryMultipleJournals())   
+                using (var test = new SlowTests.MailingList.ValerioBorioni())   
                 {
-                    test.CorruptingAllLastTransactionsConsideredAsEndOfJournal();
+                    test.RavenJValue_recognize_NAN_Float_isEqual_to_NAN_String();
                 }
             }
         }
