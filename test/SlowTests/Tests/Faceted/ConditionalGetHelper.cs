@@ -95,14 +95,14 @@ namespace SlowTests.Tests.Faceted
                 };
             }
 
-            public override Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+            public override Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
             {
                 Result = new StatusCodeAndEtag
                 {
                     StatusCode = response.StatusCode,
                     Etag = response.GetEtagHeader()
                 };
-                return Task.CompletedTask;
+                return Task.FromResult(ResponseDisposeHandling.Automatic);
             }
         }
     }
