@@ -165,13 +165,13 @@ namespace Raven.Client.Documents.Smuggler
                 };
             }
 
-            public override async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+            public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
             {
-                using(response)
                 using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                 {
                     await _handleStreamResponse(stream).ConfigureAwait(false);
                 }
+                return ResponseDisposeHandling.Automatic;
             }
         }
 

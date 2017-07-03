@@ -388,6 +388,7 @@ namespace Raven.Client.Http
 
                 var sp = Stopwatch.StartNew();
                 HttpResponseMessage response = null;
+                ResponseDisposeHandling responseDispose = ResponseDisposeHandling.Automatic;
                 try
                 {
                     var client = GetHttpClientForCommand(command);
@@ -440,8 +441,6 @@ namespace Raven.Client.Http
                         if (command.ResponseType == RavenCommandResponseType.Object)
                             command.SetResponse(cachedValue, fromCache: true);
 
-                        response.Dispose();
-
                         return;
                     }
 
@@ -464,12 +463,16 @@ namespace Raven.Client.Http
                         return; // we either handled this already in the unsuccessful response or we are throwing
                     }
 
-                    await command.ProcessResponse(context, Cache, response, url).ConfigureAwait(false);
+                    responseDispose = await command.ProcessResponse(context, Cache, response, url).ConfigureAwait(false);
                     _lastReturnedResponse = DateTime.UtcNow;
 
                 }
                 finally
                 {
+                    if (responseDispose == ResponseDisposeHandling.Automatic)
+                    {
+                        response.Dispose();
+                    }
                     if (refreshTopology || refreshClientConfiguration)
                     {
                         var tasks = new Task[2];
