@@ -95,10 +95,10 @@ namespace SlowTests.Issues
         {
             DoNotReuseServer();
             Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
-            AccessModes[] modes = { AccessModes.None, AccessModes.ReadOnly };
-            using (var store = GetDocumentStore(apiKey: "super/" + _apiKey.Secret))
+            AccessModes[] modes = {AccessModes.None, AccessModes.ReadOnly};
+            foreach (var accessMode in modes)
             {
-                foreach (var accessMode in modes)
+                using (var store = GetDocumentStore(apiKey: "super/" + _apiKey.Secret))
                 {
                     Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
                     _apiKey.ResourcesAccessMode[store.Database] = accessMode;
