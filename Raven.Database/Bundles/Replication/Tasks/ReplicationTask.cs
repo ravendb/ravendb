@@ -858,7 +858,7 @@ namespace Raven.Bundles.Replication.Tasks
 
                     using (var scope = stats.StartRecording("Attachments"))
                     {
-                        if (destination.IsETL == false)
+                        if (destination.IsETL == false || destination.ReplicateAttachmentsInEtl)
                         {
                             switch (ReplicateAttachments(destination,
                                 destinationsReplicationInformationForSource,
@@ -1894,6 +1894,8 @@ namespace Raven.Bundles.Replication.Tasks
             {
                 replicationStrategy.SpecifiedCollections = new Dictionary<string, string>(destination.SpecifiedCollections, StringComparer.OrdinalIgnoreCase);
             }
+
+            replicationStrategy.ReplicateAttachmentsInEtl = destination.ReplicateAttachmentsInEtl;
 
             if (string.IsNullOrEmpty(destination.Username) == false)
             {
