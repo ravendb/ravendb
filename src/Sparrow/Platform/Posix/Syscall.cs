@@ -32,6 +32,9 @@ namespace Sparrow.Platform.Posix
 
         public static int gettid()
         {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                return 0; // TODO : Implement for OSX, note gettid is problematic in OSX. Ref : https://github.com/dotnet/coreclr/issues/12444
+
             return (int) syscall0(PerPlatformValues.SyscallNumbers.SYS_gettid);
         }
 
@@ -122,7 +125,20 @@ namespace Sparrow.Platform.Posix
             [MarshalAs(UnmanagedType.U2)] FilePermissions mode);
 
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int fsync(int fd);
+        private static extern int fcntl(int fd, FcntlCommands cmd, IntPtr args = new IntPtr());
+
+        public static int FSync(int fd)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                return fcntl(fd, FcntlCommands.F_FULLFSYNC); // F_FULLFSYNC ignores args
+            }
+            return fsync(fd);
+        }
+
+
+        [DllImport(LIBC_6, SetLastError = true)]
+        private static extern int fsync(int fd);
 
 
         // read(2)
@@ -187,8 +203,9 @@ namespace Sparrow.Platform.Posix
             while (true)
             {
                 var len = new FileInfo(file).Length;
-
-                result = posix_fallocate64(fd, len, (size - len));
+                result = (int)Errno.EINVAL;
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) == false)
+                    result = posix_fallocate64(fd, len, (size - len));
                 switch (result)
                 {
                     case (int)Errno.EINVAL:
@@ -232,7 +249,7 @@ namespace Sparrow.Platform.Posix
             if (CheckSyncDirectoryAllowed(file) && SyncDirectory(file) == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                Syscall.ThrowLastError(err, "fsync dir " + file);
+                Syscall.ThrowLastError(err, "FSync dir " + file);
             }
         }
 
@@ -274,10 +291,15 @@ namespace Sparrow.Platform.Posix
             var fd = Syscall.open(dir, 0, 0);
             if (fd == -1)
                 return -1;
-            var fsyncRc = Syscall.fsync(fd);
+            var fsyncRc = Syscall.FSync(fd);
             if (fsyncRc == -1)
                 return -1;
             return Syscall.close(fd);
         }
+    }
+    [Flags]
+    public enum FcntlCommands
+    {
+        F_FULLFSYNC = 0x00000033
     }
 }

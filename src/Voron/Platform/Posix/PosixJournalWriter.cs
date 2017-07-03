@@ -214,7 +214,7 @@ namespace Voron.Platform.Posix
                 var err = Marshal.GetLastWin32Error();
                 Syscall.ThrowLastError(err, "when truncating " + _filename);
             }
-            result = Syscall.fsync(_fd);
+            result = Syscall.FSync(_fd);
             if (result == -1)
             {
                 var err = Marshal.GetLastWin32Error();

@@ -466,10 +466,10 @@ namespace Voron.Platform.Posix
                 metric.IncrementSize(totalUnsynced);
                 metric.IncrementFileSize(_totalAllocationSize);
 
-                if (Syscall.fsync(_fd) == -1)
+                if (Syscall.FSync(_fd) == -1)
                 {
                     var err = Marshal.GetLastWin32Error();
-                    Syscall.ThrowLastError(err, "fsync " + FileName);
+                    Syscall.ThrowLastError(err, "FSync " + FileName);
                 }
             }
         }

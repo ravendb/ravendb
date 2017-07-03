@@ -94,10 +94,10 @@ namespace Raven.Server.ServerWide
                                 Syscall.ThrowLastError(err, $"Failed to write {buffer.Length} bytes into {filepath}, only wrote {writeAmount}");
                             }
 
-                            if (Syscall.fsync(fd) != 0)
+                            if (Syscall.FSync(fd) != 0)
                             {
                                 var err = Marshal.GetLastWin32Error();
-                                Syscall.ThrowLastError(err, $"Failed to fsync {filepath}");
+                                Syscall.ThrowLastError(err, $"Failed to FSync {filepath}");
                             }
 
                             Syscall.FsyncDirectoryFor(filepath);
