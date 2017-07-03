@@ -95,16 +95,16 @@ class databasesManager {
 
             } else if (db && db.disabled()) {
                 messagePublisher.reportError(`${db.fullTypeName} '${db.name}' is disabled!`,
-                    `You can't access any section of the ${db.fullTypeName.toLowerCase()} while it's disabled.`);
+                    `You can't access any section of the ${db.fullTypeName.toLowerCase()} while it's disabled.`, null, false);
                 router.navigate(urlIfNotFound());
                 task.reject();
             } else if (db && !db.relevant()) {
                 messagePublisher.reportError(`${db.fullTypeName} '${db.name}' is not relevant on this node!`,
-                    `You can't access any section of the ${db.fullTypeName.toLowerCase()} while it's not relevant.`);
+                    `You can't access any section of the ${db.fullTypeName.toLowerCase()} while it's not relevant.`, null, false);
                 router.navigate(urlIfNotFound());
                 task.reject();
             } else {
-                messagePublisher.reportError("The database " + dbName + " doesn't exist!");
+                messagePublisher.reportError("The database " + dbName + " doesn't exist!", null, null, false);
                 router.navigate(urlIfNotFound());
                 task.reject();
             }
