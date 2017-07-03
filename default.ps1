@@ -396,10 +396,10 @@ function SignFile($filePath){
     }
     }
 
-    $installerCert = "$base_dir\..\BuildsInfo\RavenDB\certs\installer.pfx"
+    $installerCert = "$base_dir\..\BuildsInfo\RavenDB\certs\installer.spc"
     if (!(Test-Path $installerCert))
     {
-        throw "Could not find pfx file under the path $installerCert to sign the installer"
+        throw "Could not find spc file under the path $installerCert to sign the installer"
     }
 
     $certPasswordPath = "$base_dir\..\BuildsInfo\RavenDB\certs\installerCertPassword.txt"
