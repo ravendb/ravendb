@@ -605,12 +605,24 @@ namespace Raven.Server.Rachis
 
         public void NotifyAboutNodeStatusChange()
         {
-            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
+            ClusterTopology clusterTopology;
+            try
             {
-                var clusterTopology = _engine.GetTopology(context);
-                OnNodeStatusChange?.Invoke(this, clusterTopology);
+                using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    clusterTopology = _engine.GetTopology(context);
+                }
             }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            catch (ObjectDisposedException)
+            {
+                return;
+            }
+            OnNodeStatusChange?.Invoke(this, clusterTopology);
         }
 
         public event EventHandler<ClusterTopology> OnNodeStatusChange;
