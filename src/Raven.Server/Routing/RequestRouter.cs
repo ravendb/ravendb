@@ -125,7 +125,7 @@ namespace Raven.Server.Routing
             return reqCtx.Database?.Name;
         }
 
-        private unsafe delegate Int32 FromBase64_DecodeDelegate(Char* startInputPtr, Int32 inputLength, Byte* startDestPtr, Int32 destLength);
+        private unsafe delegate int FromBase64_DecodeDelegate(char* startInputPtr, int inputLength, byte* startDestPtr, int destLength);
 
         static readonly FromBase64_DecodeDelegate _fromBase64_Decode = (FromBase64_DecodeDelegate)typeof(Convert).GetTypeInfo().GetMethod("FromBase64_Decode", BindingFlags.Static | BindingFlags.NonPublic)
             .CreateDelegate(typeof(FromBase64_DecodeDelegate));
@@ -246,8 +246,7 @@ namespace Raven.Server.Routing
                     _fromBase64_Decode(pToken + 8, sigBase64Size, sig, Sodium.crypto_sign_bytes());
                     Memory.Set(msg + 8, (byte)' ', sigBase64Size);
 
-                    TransactionOperationContext txContext;
-                    using (ravenServer.ServerStore.ContextPool.AllocateOperationContext(out txContext))
+                    using (ravenServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
                     using (txContext.OpenReadTransaction())
                     using (var tokenJson = txContext.ParseBuffer(msg, tokenBytes.Length, "auth token", BlittableJsonDocumentBuilder.UsageMode.None))
                     {
@@ -263,7 +262,7 @@ namespace Raven.Server.Routing
                         var publicKey = clusterTopology.GetPublicKeyFromTag(tag);
                         //This is the case where we don't know the server but the admin had injected the server's 
                         //public key into our server store using an external tool.
-                        bool unknownPublicKey = false;
+                        var unknownPublicKey = false;
                         if (publicKey == null)
                         {
                             //If we are not a part of a cluster we won't have our public key in the topology so we will 
@@ -316,26 +315,21 @@ namespace Raven.Server.Routing
 
             }
 
-            return !accessToken.IsExpired;
+            return accessToken.IsExpired == false;
         }
 
         public static Dictionary<string, AccessModes> GetAuthorizedDatabases(TransactionOperationContext txContext, RavenServer ravenServer, string apiKeyName)
         {
-            BlittableJsonReaderObject resourcesAccessMode;
             if (apiKeyName.StartsWith("Raven"))
-            {
-                return new Dictionary<string, AccessModes> { { "*", AccessModes.Admin } };
-            }
-            var apiDoc = ravenServer.ServerStore.Cluster.Read(txContext, Constants.ApiKeys.Prefix + apiKeyName);
+                return new Dictionary<string, AccessModes> {{"*", AccessModes.Admin}};
 
+            var apiDoc = ravenServer.ServerStore.Cluster.Read(txContext, Constants.ApiKeys.Prefix + apiKeyName);
             if (apiDoc == null)
-            {
                 throw new AuthenticationException($"Could not find api key: {apiKeyName}");
-            }
-            if (apiDoc.TryGet("ResourcesAccessMode", out resourcesAccessMode) == false)
-            {
+
+            if (apiDoc.TryGet("ResourcesAccessMode", out BlittableJsonReaderObject resourcesAccessMode) == false)
                 throw new InvalidOperationException($"Missing 'ResourcesAccessMode' property in api key: {apiKeyName}");
-            }
+
             var prop = new BlittableJsonReaderObject.PropertyDetails();
 
             var databases = new Dictionary<string, AccessModes>(StringComparer.OrdinalIgnoreCase);
@@ -343,13 +337,11 @@ namespace Raven.Server.Routing
             {
                 resourcesAccessMode.GetPropertyByIndex(i, ref prop);
 
-                string accessMode;
-                if (resourcesAccessMode.TryGet(prop.Name, out accessMode) == false)
+                if (resourcesAccessMode.TryGet(prop.Name, out string accessMode) == false)
                 {
                     throw new InvalidOperationException($"Missing value of dbName -'{prop.Name}' property in api key: {apiKeyName}");
                 }
-                AccessModes value;
-                if (Enum.TryParse(accessMode, out value) == false)
+                if (Enum.TryParse(accessMode, out AccessModes value) == false)
                 {
                     throw new InvalidOperationException(
                         $"Invalid value of dbName -'{prop.Name}' property in api key: {apiKeyName}, cannot understand: {accessMode}");
@@ -361,12 +353,10 @@ namespace Raven.Server.Routing
 
         private void DrainRequest(JsonOperationContext ctx, HttpContext context)
         {
-            StringValues value;
-            if (context.Response.Headers.TryGetValue("Connection", out value) && value == "close")
+            if (context.Response.Headers.TryGetValue("Connection", out StringValues value) && value == "close")
                 return; // don't need to drain it, the connection will close 
 
-            JsonOperationContext.ManagedPinnedBuffer buffer;
-            using (ctx.GetManagedBuffer(out buffer))
+            using (ctx.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
             {
                 var requestBody = context.Request.Body;
                 while (true)
