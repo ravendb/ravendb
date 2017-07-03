@@ -1,17 +1,18 @@
 // Contextual backgrounds
 
 .bg-variant(@color, @bg-text-color) {
-  background-color: fadeout(@color, 70%);
-  color: @bg-text-color;
-  strong {
-      color:@gray-lighter;
-  }
+    background-color: fadeout(@color, 70%);
+    color: @bg-text-color;
 
-  a {
-      color:#FFF;
+    strong {
+        color: lighten(@bg-text-color, 12%);
+    }
 
-      &:hover, &:focus {
-        text-decoration:underline !important;
-      }
-  }
+    a {
+        color: #FFF;
+
+        &:hover, &:focus {
+            text-decoration: underline !important;
+        }
+    }
 }
