@@ -54,8 +54,6 @@ namespace Raven.Server.Config
 
         public MemoryConfiguration Memory { get; }
 
-        public ExpirationConfiguration Expiration { get; }
-
         public StudioConfiguration Studio { get; }
 
         public DatabaseConfiguration Databases { get; }
@@ -101,7 +99,6 @@ namespace Raven.Server.Config
             Server = new ServerConfiguration();
             Databases = new DatabaseConfiguration();
             Memory = new MemoryConfiguration();
-            Expiration = new ExpirationConfiguration();
             Studio = new StudioConfiguration();
             Licensing = new LicenseConfiguration();
             Quotas = new QuotasConfiguration();
@@ -160,7 +157,6 @@ namespace Raven.Server.Config
             Security.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Indexing.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Monitoring.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Expiration.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Studio.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Databases.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             PerformanceHints.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
