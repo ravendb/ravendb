@@ -544,6 +544,7 @@ interface replicationDestinationDto {
     ClientVisibleUrl: string;
     SkipIndexReplication: boolean;
     SpecifiedCollections: dictionary<string>;
+    ReplicateAttachmentsInEtl: boolean;
     HasGlobal?: boolean;
     HasLocal?: boolean;
 }

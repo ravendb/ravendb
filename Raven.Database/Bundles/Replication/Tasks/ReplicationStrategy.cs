@@ -123,11 +123,13 @@ namespace Raven.Bundles.Replication.Tasks
 
         public bool IsETL => SpecifiedCollections != null && SpecifiedCollections.Count > 0;
 
+        public bool ReplicateAttachmentsInEtl { get; set; }
+
         public string CurrentDatabaseId { get; set; }
 
         public TransitiveReplicationOptions ReplicationOptionsBehavior { get; set; }
         public RavenConnectionStringOptions ConnectionStringOptions { get; set; }
-
+        
         public override string ToString()
         {
             return string.Join(" ", new[]
@@ -137,6 +139,5 @@ namespace Raven.Bundles.Replication.Tasks
                 ConnectionStringOptions.ApiKey
             }.Where(x => x != null));
         }
-
     }
 }
