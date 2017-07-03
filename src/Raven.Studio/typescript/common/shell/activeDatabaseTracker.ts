@@ -26,10 +26,10 @@ class activeDatabaseTracker {
             if (!this.onDatabasesPage()) {
                 if (e.cause === "DatabaseDeleted") {
                     messagePublisher.reportWarning(e.database.fullTypeName + " " + e.database.name + " was deleted");
-                    router.navigate(appUrl.forDatabases());
+                    router.navigate("#databases"); // don't use appUrl since it will create dependecy cycle
                 } else if (e.cause === "DatabaseDisabled") {
                     messagePublisher.reportWarning(e.database.fullTypeName + " " + e.database.name + " was disabled");
-                    router.navigate(appUrl.forDatabases());
+                    router.navigate("#databases"); // don't use appUrl since it will create dependecy cycle
                 }
             }
         });
