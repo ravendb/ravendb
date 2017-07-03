@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client.Subscriptions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Subscriptions;
-using FastTests;
 using Sparrow;
 using Xunit;
 
@@ -17,6 +17,8 @@ namespace SlowTests.Client.Subscriptions
         [Fact]
         public async Task SubscriptionSimpleTakeOverStrategy()
         {
+            var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(5);
+
             using (var store = GetDocumentStore())
             {
                 await CreateDocuments(store, 1);
@@ -31,10 +33,10 @@ namespace SlowTests.Client.Subscriptions
                 };
                 var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
 
+                Task firstSubscription;
                 using (var acceptedSubscription = store.Subscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
                 {
                     var acceptedSubscriptionList = new BlockingCollection<Thing>();
-                    var takingOverSubscriptionList = new BlockingCollection<Thing>();
                     long counter = 0;
                     var batchProcessedByFirstSubscription = new AsyncManualResetEvent();
 
@@ -44,47 +46,51 @@ namespace SlowTests.Client.Subscriptions
                             batchProcessedByFirstSubscription.Set();
                         return Task.CompletedTask;
                     };
-                    GC.KeepAlive(acceptedSubscription.Run(x =>
+
+                    firstSubscription = acceptedSubscription.Run(x =>
                     {
                         foreach (var item in x.Items)
                         {
                             Interlocked.Increment(ref counter);
                             acceptedSubscriptionList.Add(item.Result);
                         }
-                    }));
+                    });
 
-                    Thing thing;
                     // wait until we know that connection was established
                     for (var i = 0; i < 5; i++)
                     {
-                        Assert.True(acceptedSubscriptionList.TryTake(out thing, 5000), "no doc");
+                        Assert.True(acceptedSubscriptionList.TryTake(out _, timeout), "no doc");
                     }
                     Assert.True(await batchProcessedByFirstSubscription.WaitAsync(TimeSpan.FromSeconds(15)), "no ack");
-                    Assert.False(acceptedSubscriptionList.TryTake(out thing));
+                    Assert.False(acceptedSubscriptionList.TryTake(out _));
+                }
 
-                    // open second subscription
-                    using (var takingOverSubscription = store.Subscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)
+                // open second subscription
+                using (var takingOverSubscription = store.Subscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)
+                {
+                    Strategy = SubscriptionOpeningStrategy.TakeOver
+                }))
+                {
+                    var takingOverSubscriptionList = new BlockingCollection<Thing>();
+
+                    GC.KeepAlive(takingOverSubscription.Run(x =>
                     {
-                        Strategy = SubscriptionOpeningStrategy.TakeOver
-                    }))
-                    {
-                        GC.KeepAlive(takingOverSubscription.Run(x =>
+                        foreach (var item in x.Items)
                         {
-                            foreach (var item in x.Items)
-                            {
-                                takingOverSubscriptionList.Add(item.Result);
-                            }
-                        }));
-
-                        await CreateDocuments(store, 5);
-
-                        // wait until we know that connection was established
-                        for (var i = 0; i < 5; i++)
-                        {
-                            Assert.True(takingOverSubscriptionList.TryTake(out thing, 5000), "no doc takeover");
+                            takingOverSubscriptionList.Add(item.Result);
                         }
-                        Assert.False(takingOverSubscriptionList.TryTake(out thing));
+                    }));
+
+                    // Wait for the first subscription to finish before creating the documents.
+                    await firstSubscription;
+                    await CreateDocuments(store, 5);
+
+                    // wait until we know that connection was established
+                    for (var i = 0; i < 5; i++)
+                    {
+                        Assert.True(takingOverSubscriptionList.TryTake(out _, timeout), "no doc takeover");
                     }
+                    Assert.False(takingOverSubscriptionList.TryTake(out _));
                 }
             }
         }
