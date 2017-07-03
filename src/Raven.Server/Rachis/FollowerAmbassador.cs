@@ -104,7 +104,6 @@ namespace Raven.Server.Rachis
                 while (_leader.Running && _dispose == false)
                 {
                     Stream stream = null;
-                    string preveiousStatus;
                     try
                     {
                         try
