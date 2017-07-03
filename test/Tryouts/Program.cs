@@ -11,9 +11,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {   
                 Console.WriteLine(i);
-                using (var test = new SlowTests.MailingList.ValerioBorioni())   
+                using (var test = new SlowTests.Issues.RavenDB_7136())   
                 {
-                    test.RavenJValue_recognize_NAN_Float_isEqual_to_NAN_String();
+                    test.IfOneOfTheMultiMapFunctionsIsFailingWeNeedToResetTheEnumeratorToAvoidApplyingWrongFunctionOnPreviousDocument();
                 }
             }
         }
