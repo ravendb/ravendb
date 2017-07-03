@@ -104,7 +104,7 @@ namespace Raven.Server.ServerWide
                         DeleteValue(context, type, cmd, index, leader);
                         break;
                     case nameof(IncrementClusterIdentityCommand):
-                        if (!ValidatePropertyExistance(cmd,
+                        if (!ValidatePropertyExistence(cmd,
                             nameof(IncrementClusterIdentityCommand),
                             nameof(IncrementClusterIdentityCommand.Prefix),
                             out errorMessage))
@@ -123,7 +123,7 @@ namespace Raven.Server.ServerWide
                         leader?.SetStateOf(index, updatedDatabaseRecord.Identities[prefix]);
                         break;
                     case nameof(UpdateClusterIdentityCommand):
-                        if (!ValidatePropertyExistance(cmd,
+                        if (!ValidatePropertyExistence(cmd,
                             nameof(UpdateClusterIdentityCommand),
                             nameof(UpdateClusterIdentityCommand.Identities),
                             out errorMessage))
@@ -198,7 +198,7 @@ namespace Raven.Server.ServerWide
             });
         }
 
-        private static bool ValidatePropertyExistance(BlittableJsonReaderObject cmd, string propertyTypeName, string propertyName, out string errorMessage)
+        private static bool ValidatePropertyExistence(BlittableJsonReaderObject cmd, string propertyTypeName, string propertyName, out string errorMessage)
         {
             errorMessage = null;
             if (cmd.TryGet(propertyName, out object _) == false)
@@ -764,7 +764,6 @@ namespace Raven.Server.ServerWide
 
     public class RachisLogIndexNotifications
     {
-
         private long _lastModifiedIndex;
         private readonly AsyncManualResetEvent _notifiedListeners;
 

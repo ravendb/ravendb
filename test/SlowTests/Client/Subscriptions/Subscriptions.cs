@@ -13,7 +13,6 @@ namespace SlowTests.Client.Subscriptions
 {
     public class SubscriptionsSlow : SubscriptionTestBase
     {
-
         [Fact]
         public async Task SubscriptionSimpleTakeOverStrategy()
         {
