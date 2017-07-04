@@ -519,7 +519,7 @@ namespace Sparrow.Platform.Posix
                     if (File.Exists(LIB_SODIUM))
                     {
                         throw new IncorrectDllException(
-                            $"{LIB_SODIUM} probably contains the wrong version or not usable on the current platform.",
+                            $"{LIB_SODIUM} probably contains the wrong version or not usable on the current platform. Try installing libsodium from https://download.libsodium.org/libsodium/releases",
                             dllNotFoundEx);
 
                     }
@@ -796,7 +796,7 @@ namespace Sparrow.Platform.Posix
                     if (File.Exists(LIB_SODIUM))
                     {
                         throw new IncorrectDllException(
-                            $"{LIB_SODIUM} probably contains the wrong version or not usable on the current platform.",
+                            $"{LIB_SODIUM} probably contains the wrong version or not usable on the current platform. Try installing libsodium from https://download.libsodium.org/libsodium/releases",
                             dllNotFoundEx);
 
                     }
@@ -1073,7 +1073,7 @@ namespace Sparrow.Platform.Posix
                     if (File.Exists(LIB_SODIUM))
                     {
                         throw new IncorrectDllException(
-                            $"{LIB_SODIUM} probably contains the wrong version or not usable on the current platform.",
+                            $"{LIB_SODIUM} probably contains the wrong version or not usable on the current platform. Try installing package libsodium or libsodium-12 or libsodium-18",
                             dllNotFoundEx);
 
                     }
@@ -1350,7 +1350,7 @@ namespace Sparrow.Platform.Posix
                     if (File.Exists(LIB_SODIUM))
                     {
                         throw new IncorrectDllException(
-                            $"{LIB_SODIUM} probably contains the wrong version or not usable on the current platform.",
+                            $"{LIB_SODIUM} probably contains the wrong version or not usable on the current platform. Try `brew install libsodium` and re-run server.",
                             dllNotFoundEx);
 
                     }
