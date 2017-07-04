@@ -781,7 +781,7 @@ namespace Voron.Impl.Journal
                 }
 
                 // now the sync lock is in progress, but it can't complete because we are holding the flush lock
-                // we'll first give the flush lock and then wait on the fsync lock until the sync is completed
+                // we'll first give the flush lock and then wait on the FSync lock until the sync is completed
                 // then we'll re-aqcuire the flush lock
 
                 Monitor.Exit(_flushingLock);

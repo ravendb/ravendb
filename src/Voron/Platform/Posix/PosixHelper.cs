@@ -39,7 +39,7 @@ namespace Voron.Platform.Posix
 
         public static unsafe void WriteFileHeader(FileHeader* header, VoronPathSetting path)
         {
-            var fd = Syscall.open(path.FullPath, OpenFlags.O_WRONLY | OpenFlags.O_CREAT,
+            var fd = Syscall.open(path.FullPath, OpenFlags.O_WRONLY | PerPlatformValues.OpenFlags.O_CREAT,
                 FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
 
             try
@@ -64,10 +64,10 @@ namespace Voron.Platform.Posix
                     remaining -= (int) written;
                     ptr += written;
                 }
-                if (Syscall.fsync(fd) == -1)
+                if (Syscall.FSync(fd) == -1)
                 {
                     var err = Marshal.GetLastWin32Error();
-                    Syscall.ThrowLastError(err, "fsync " + path);
+                    Syscall.ThrowLastError(err, "FSync " + path);
                 }
                 Syscall.FsyncDirectoryFor(path.FullPath);
             }

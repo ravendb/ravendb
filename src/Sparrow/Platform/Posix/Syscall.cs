@@ -32,8 +32,11 @@ namespace Sparrow.Platform.Posix
 
         public static int gettid()
         {
+            if (PlatformDetails.RunningOnMacOsx)
+                return 0; // TODO : Implement for OSX, note gettid is problematic in OSX. Ref : https://github.com/dotnet/coreclr/issues/12444
+
             return (int) syscall0(PerPlatformValues.SyscallNumbers.SYS_gettid);
-        }
+        }        
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int setpriority(int which, int who, int prio);
@@ -71,9 +74,21 @@ namespace Sparrow.Platform.Posix
         public static extern int msync(IntPtr start, UIntPtr len, MsyncFlags flags);
 
 
-        [DllImport(LIBC_6, SetLastError = true)]
-        public static extern IntPtr mmap64(IntPtr start, UIntPtr length,
+        [DllImport(LIBC_6, EntryPoint = "mmap64", SetLastError = true)]
+        private static extern IntPtr mmap64_posix(IntPtr start, UIntPtr length,
             MmapProts prot, MmapFlags flags, int fd, long offset);
+
+        [DllImport(LIBC_6, EntryPoint = "mmap", SetLastError = true)]
+        private static extern IntPtr mmap64_mac(IntPtr start, UIntPtr length,
+            MmapProts prot, MmapFlags flags, int fd, long offset);
+
+        public static IntPtr mmap64(IntPtr start, UIntPtr length,
+            MmapProts prot, MmapFlags flags, int fd, long offset)
+        {
+            if (PlatformDetails.RunningOnMacOsx)
+                return mmap64_mac(start, length, prot, flags, fd, offset);
+            return mmap64_posix(start, length, prot, flags, fd, offset);
+        }
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int munmap(IntPtr start, UIntPtr length);
@@ -122,7 +137,20 @@ namespace Sparrow.Platform.Posix
             [MarshalAs(UnmanagedType.U2)] FilePermissions mode);
 
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int fsync(int fd);
+        public static extern int fcntl(int fd, FcntlCommands cmd, IntPtr args);
+
+        public static int FSync(int fd)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                return fcntl(fd, FcntlCommands.F_FULLFSYNC, IntPtr.Zero); // F_FULLFSYNC ignores args
+            }
+            return fsync(fd);
+        }
+
+
+        [DllImport(LIBC_6, SetLastError = true)]
+        private static extern int fsync(int fd);
 
 
         // read(2)
@@ -159,9 +187,9 @@ namespace Sparrow.Platform.Posix
 
 
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern long sysconf(SysconfName name, Errno defaultError);
+        public static extern long sysconf(int name, Errno defaultError);
 
-        public static long sysconf(SysconfName name)
+        public static long sysconf(int name)
         {
             return sysconf(name, (Errno) 0);
         }
@@ -173,8 +201,18 @@ namespace Sparrow.Platform.Posix
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int ftruncate(int fd, IntPtr size);
 
-        [DllImport(LIBC_6, SetLastError = true)]
-        public static extern long lseek64(int fd, long offset, WhenceFlags whence);
+        [DllImport(LIBC_6, EntryPoint = "lseek64", SetLastError = true)]
+        public static extern long lseek64_posix(int fd, long offset, WhenceFlags whence);
+
+        [DllImport(LIBC_6, EntryPoint = "lseek", SetLastError = true)]
+        public static extern long lseek64_mac(int fd, long offset, WhenceFlags whence);
+
+        public static long lseek64(int fd, long offset, WhenceFlags whence)
+        {
+            if (PlatformDetails.RunningOnMacOsx)
+                return lseek64_mac(fd, offset, whence);
+            return lseek64_posix(fd, offset, whence);
+        }
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int mprotect(IntPtr start, ulong size, ProtFlag protFlag);
@@ -187,8 +225,9 @@ namespace Sparrow.Platform.Posix
             while (true)
             {
                 var len = new FileInfo(file).Length;
-
-                result = posix_fallocate64(fd, len, (size - len));
+                result = (int)Errno.EINVAL;
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) == false)
+                    result = posix_fallocate64(fd, len, (size - len));
                 switch (result)
                 {
                     case (int)Errno.EINVAL:
@@ -197,7 +236,8 @@ namespace Sparrow.Platform.Posix
                         byte b = 0;
                         if (pwrite(fd, &b, 1, size - 1) != 1)
                         {
-                            return Marshal.GetLastWin32Error();
+                            var err = Marshal.GetLastWin32Error();
+                            Syscall.ThrowLastError(err, "Failed to pwrite in order to fallocate where fallocate is not supported for " + file);
                         }
                         return 0;
                 }
@@ -232,7 +272,7 @@ namespace Sparrow.Platform.Posix
             if (CheckSyncDirectoryAllowed(file) && SyncDirectory(file) == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                Syscall.ThrowLastError(err, "fsync dir " + file);
+                Syscall.ThrowLastError(err, "FSync dir " + file);
             }
         }
 
@@ -274,10 +314,16 @@ namespace Sparrow.Platform.Posix
             var fd = Syscall.open(dir, 0, 0);
             if (fd == -1)
                 return -1;
-            var fsyncRc = Syscall.fsync(fd);
+            var fsyncRc = Syscall.FSync(fd);
             if (fsyncRc == -1)
                 return -1;
             return Syscall.close(fd);
         }
+    }
+    [Flags]
+    public enum FcntlCommands
+    {
+        F_NOCACHE = 0x00000030,
+        F_FULLFSYNC = 0x00000033
     }
 }

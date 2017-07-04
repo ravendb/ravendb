@@ -14,6 +14,7 @@ using Sparrow;
 using Sparrow.Platform.Posix;
 using Voron.Global;
 using Voron.Util.Settings;
+using static Sparrow.Platform.PlatformDetails;
 
 namespace Voron.Platform.Posix
 {
@@ -50,13 +51,24 @@ namespace Voron.Platform.Posix
             _filename = filename;
             _maxNumberOf4KbPerSingleWrite = int.MaxValue / (4 * Constants.Size.Kilobyte);
 
-            _fd = Syscall.open(filename.FullPath, OpenFlags.O_WRONLY | options.PosixOpenFlags | OpenFlags.O_CREAT,
+           _fd = Syscall.open(filename.FullPath, OpenFlags.O_WRONLY | options.PosixOpenFlags | PerPlatformValues.OpenFlags.O_CREAT,
                 FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
 
             if (_fd == -1)
             {
                 var err = Marshal.GetLastWin32Error();
                 Syscall.ThrowLastError(err, "when opening " + filename);
+            }
+
+            if (RunningOnMacOsx)
+            {
+                // mac doesn't support O_DIRECT, we fcntl instead:
+                var rc = Syscall.fcntl(_fd, FcntlCommands.F_NOCACHE, (IntPtr)1);
+                if (rc != 0)
+                {
+                    var err = Marshal.GetLastWin32Error();
+                    Syscall.ThrowLastError(err, "when fcntl F_NOCACHE for " + filename);
+                }
             }
 
             var length = new FileInfo(filename.FullPath).Length;
@@ -73,7 +85,6 @@ namespace Voron.Platform.Posix
                     throw;
                 }
             }
-
             if (Syscall.CheckSyncDirectoryAllowed(_filename.FullPath) && Syscall.SyncDirectory(filename.FullPath) == -1)
             {
                 var err = Marshal.GetLastWin32Error();
@@ -214,7 +225,7 @@ namespace Voron.Platform.Posix
                 var err = Marshal.GetLastWin32Error();
                 Syscall.ThrowLastError(err, "when truncating " + _filename);
             }
-            result = Syscall.fsync(_fd);
+            result = Syscall.FSync(_fd);
             if (result == -1)
             {
                 var err = Marshal.GetLastWin32Error();
