@@ -50,7 +50,7 @@ namespace SlowTests.Issues
 
         private void PutApiKey(RavenServer leader, ApiKeyDefinition apiKey, string database, AccessMode accessMode)
         {
-            leader.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
+            leader.Configuration.Security.AuthenticationEnabled = false;
 
             using (var store = GetDocumentStore(defaultServer: leader,
                 createDatabase: false,
@@ -60,7 +60,7 @@ namespace SlowTests.Issues
                 store.Admin.Server.Send(new PutApiKeyOperation("super", apiKey));
             }
 
-            leader.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
+            leader.Configuration.Security.AuthenticationEnabled = true;
         }
     }
 }
