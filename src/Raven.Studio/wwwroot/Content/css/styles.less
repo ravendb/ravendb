@@ -749,11 +749,19 @@ input[type=file] + .form-control {
 }
 
 .margin-bottom {
-    margin-bottom: @line-height-computed / 2;
+    margin-bottom: @grid-gutter-width / 2;
+
+    &.margin-bottom-sm {
+        margin-bottom: @grid-gutter-width / 4;
+    }
 }
 
 .margin-top {
-    margin-top: @line-height-computed / 2;
+    margin-top: @grid-gutter-width / 2;
+
+    &.margin-top-sm {
+        margin-top: @grid-gutter-width / 4;
+    }
 }
 
 .margin-center {
