@@ -537,11 +537,12 @@ namespace Raven.Server.ServerWide
                     nodesStatuses = _engine.Candidate?.GetStatus();
                     break;
                 case RachisConsensus.State.Follower:
-                    if (_engine.LeaderTag != null)
+                    var leaderTag = _engine.LeaderTag;
+                    if (leaderTag != null)
                     {
                         nodesStatuses = new Dictionary<string, NodeStatus>
                         {
-                            [_engine.LeaderTag] = new NodeStatus {ConnectionStatus = "Connected"}
+                            [leaderTag] = new NodeStatus {ConnectionStatus = "Connected"}
                         };
                     }
                     break;
