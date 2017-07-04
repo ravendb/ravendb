@@ -485,6 +485,10 @@
     <Compile Include="Server\Controllers\ConfigurationController.cs" />
     <Compile Include="Indexing\Sorting\DocumentIdSet.cs" />
     <Compile Include="Server\Connections\WebSocketBufferPool.cs" />
+    <Compile Include="Server\Migrator\DatabaseMigrator.cs" />
+    <Compile Include="Server\Migrator\MigrationDetails.cs" />
+    <Compile Include="Server\Migrator\MigrationState.cs" />
+    <Compile Include="Server\Migrator\MigrationStatus.cs" />
     <Compile Include="Server\Security\AccountVerifier.cs" />
     <Compile Include="Server\Tenancy\TimeSeriesLandlord.cs" />
     <Compile Include="Server\Controllers\DebugVoronController.cs" />
