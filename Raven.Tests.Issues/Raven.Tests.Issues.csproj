@@ -140,7 +140,6 @@
     <Compile Include="ActualValueInJsonReaderException.cs" />
     <Compile Include="RavenDB-7406.cs" />
     <Compile Include="RavenDB-6755.cs" />
-    <Compile Include="RavenDB_7674.cs" />
     <Compile Include="RavenDB-6313.cs" />
     <Compile Include="RavenDB-6312.cs" />
     <Compile Include="RavenDB-5632.cs" />
@@ -550,6 +549,7 @@
     <Compile Include="RavenDB_752.cs" />
     <Compile Include="RavenDB_757.cs" />
     <Compile Include="RavenDB_766.cs" />
+    <Compile Include="RavenDB_7674.cs" />
     <Compile Include="RavenDB_772.cs" />
     <Compile Include="RavenDb_783.cs" />
     <Compile Include="RavenDB_784.cs" />
