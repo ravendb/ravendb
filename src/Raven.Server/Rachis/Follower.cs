@@ -39,9 +39,7 @@ namespace Raven.Server.Rachis
 
                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
-
                     var appendEntries = _connection.Read<AppendEntries>(context);
-
 
                     if (appendEntries.Term != _engine.CurrentTerm)
                     {
@@ -452,7 +450,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private bool ReadInstallSnapshotAndIgnoreContent(TransactionOperationContext context)
+        private void ReadInstallSnapshotAndIgnoreContent(TransactionOperationContext context)
         {
             var sp = Stopwatch.StartNew();
             var reader = _connection.CreateReader();
@@ -460,14 +458,14 @@ namespace Raven.Server.Rachis
             {
                 var type = reader.ReadInt32();
                 if (type == -1)
-                    return false;
+                    return;
 
                 int size;
                 long entries;
                 switch ((RootObjectType)type)
                 {
                     case RootObjectType.None:
-                        return true;
+                        return;
                     case RootObjectType.VariableSizeTree:
 
                         size = reader.ReadInt32();
@@ -510,7 +508,7 @@ namespace Raven.Server.Rachis
                 return;
 
             sp.Restart();
-
+            _engine.Timeout.Defer(_connection.Source);
             _connection.Send(context, new InstallSnapshotResponse
             {
                 Done = false,
@@ -589,7 +587,7 @@ namespace Raven.Server.Rachis
                         CurrentTerm = _engine.CurrentTerm,
                         LastLogIndex = 0
                     });
-                    break;
+                    return;
                 }
                 using (context.OpenReadTransaction())
                 {
@@ -627,7 +625,6 @@ namespace Raven.Server.Rachis
                 _connection.Dispose();
                 return; // did not accept connection
             }
-
             // if leader / candidate, this remove them from play and revert to follower mode
             var engineCurrentTerm = _engine.CurrentTerm;
             _engine.SetNewState(RachisConsensus.State.Follower, this, engineCurrentTerm,
@@ -647,8 +644,6 @@ namespace Raven.Server.Rachis
         {
             try
             {
-                _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
-
                 using (this)
                 {
                     try
@@ -658,7 +653,6 @@ namespace Raven.Server.Rachis
                         {
                             NegotiateWithLeader(context, (LogLengthNegotiation)obj);
                         }
-
                         FollowerSteadyState();
                     }
                     catch (OperationCanceledException)

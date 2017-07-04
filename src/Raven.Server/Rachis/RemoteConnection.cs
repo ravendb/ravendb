@@ -85,6 +85,7 @@ namespace Raven.Server.Rachis
             Send(context, new DynamicJsonValue
             {
                 ["Type"] = nameof(RequestVoteResponse),
+                [nameof(RequestVoteResponse.NotInTopology)] = rvr.NotInTopology,
                 [nameof(RequestVoteResponse.Term)] = rvr.Term,
                 [nameof(RequestVoteResponse.VoteGranted)] = rvr.VoteGranted,
                 [nameof(RequestVoteResponse.Message)] = rvr.Message,
