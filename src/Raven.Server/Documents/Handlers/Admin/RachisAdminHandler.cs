@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using Jint.Native;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
@@ -14,7 +13,6 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
@@ -113,6 +111,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
+                topology.Members[ServerStore.NodeTag] = ServerStore.NodeHttpServerUrl;
                 var blit = EntityToBlittable.ConvertEntityToBlittable(topology, DocumentConventions.Default, context);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
