@@ -196,6 +196,10 @@ namespace Raven.Server.Web.System
             {
                 context.OpenReadTransaction();
 
+                var existingDatabaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out long _);
+                if (existingDatabaseRecord != null)
+                    throw new ConcurrencyException($"Database '{name}' already exists!");
+
                 var index = GetLongFromHeaders("ETag");
 
                 var json = context.ReadForDisk(RequestBodyStream(), name);
