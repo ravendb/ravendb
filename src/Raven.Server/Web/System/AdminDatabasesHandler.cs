@@ -10,7 +10,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Conventions;
@@ -31,7 +30,6 @@ using Sparrow.Json.Parsing;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
-using Sparrow;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Web.System
@@ -473,13 +471,11 @@ namespace Raven.Server.Web.System
             Action<DynamicJsonValue, BlittableJsonReaderObject, long> fillJson = null)
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            string errorMessage;
-            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
             ServerStore.EnsureNotPassive();
-            TransactionOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var configurationJson = await context.ReadForMemoryAsync(RequestBodyStream(), debug);
                 beforeSetupConfiguration?.Invoke(configurationJson);
@@ -527,8 +523,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-modify-custom-functions");
-                string functions;
-                if (updateJson.TryGet(nameof(CustomFunctions.Functions), out functions) == false)
+                if (updateJson.TryGet(nameof(CustomFunctions.Functions), out string functions) == false)
                 {
                     throw new InvalidDataException("Functions property was not found.");
                 }
