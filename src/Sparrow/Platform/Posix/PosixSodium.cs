@@ -43,6 +43,22 @@ namespace Sparrow.Platform.Posix
                 else
                     X64.Initialize();
             }
+
+            // test for existance of libsodium:
+            try
+            {
+                crypto_sign_publickeybytes();
+            }
+            catch (Exception e)
+            {
+                if (_isMac64)
+                    throw new Exception("Make sure libsodium is installed on your Mac Osx. Use `brew install libsodium`", e);
+
+                if (PlatformDetails.RunningOnPosix)
+                        throw new Exception("Make sure libsodium is installed on your Linux OS. (install package `libsodium` or `libsodium-18`", e);
+
+                throw new Exception("Make sure libsodium is installed on your Windows OS.", e);
+            }
         }
 
         // ReSharper disable once InconsistentNaming
