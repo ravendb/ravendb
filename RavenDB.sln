@@ -1,13 +1,14 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.6
+VisualStudioVersion = 15.0.26430.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{02838C57-DE0E-465D-9FBB-248DA87BEAAE}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7C0225BB-6184-4859-8ED1-2251A492A449}"
 	ProjectSection(SolutionItems) = preProject
 		src\CommonAssemblyInfo.cs = src\CommonAssemblyInfo.cs
+		RavenDB.ruleset = RavenDB.ruleset
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{764C36EA-83A0-4BA3-BA36-53A6808C13A9}"

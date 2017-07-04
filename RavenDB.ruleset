@@ -38,4 +38,11 @@
     <Rule Id="xUnit2009" Action="None" />
     <Rule Id="xUnit2010" Action="None" />
   </Rules>
+  <Rules AnalyzerId="Raven.CodeAnalysis" RuleNamespace="Raven.CodeAnalysis">
+    <Rule Id="RDB0001" Action="None" />
+    <Rule Id="RDB0002" Action="None" />
+    <Rule Id="RDB0003" Action="None" />
+    <Rule Id="RDB0004" Action="None" />
+    <Rule Id="RDB0005" Action="None" />
+  </Rules>
 </RuleSet>
