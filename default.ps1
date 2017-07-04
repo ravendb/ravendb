@@ -396,10 +396,10 @@ function SignFile($filePath){
     }
     }
 
-    $installerCert = "$base_dir\..\BuildsInfo\RavenDB\certs\installer.spc"
+    $installerCert = "$base_dir\..\BuildsInfo\RavenDB\certs\code-sign.pfx"
     if (!(Test-Path $installerCert))
     {
-        throw "Could not find spc file under the path $installerCert to sign the installer"
+        throw "Could not find pfx file under the path $installerCert to sign the installer"
     }
 
     $certPasswordPath = "$base_dir\..\BuildsInfo\RavenDB\certs\installerCertPassword.txt"
@@ -419,7 +419,7 @@ function SignFile($filePath){
     $timeservers = @("http://tsa.starfieldtech.com", "http://timestamp.globalsign.com/scripts/timstamp.dll", "http://timestamp.comodoca.com/authenticode", "http://www.startssl.com/timestamp", "http://timestamp.verisign.com/scripts/timstamp.dll")
     foreach ($time in $timeservers) {
         try {
-            Exec { &$signTool sign /f "$installerCert" /p "$certPassword" /d "RavenDB" /du "http://ravendb.net" /t "$time" "$filePath" }
+            Exec { &$signTool sign /f "$installerCert" /p "$certPassword" /d "RavenDB" /du "http://ravendb.net" /t "$time" /v /debug "$filePath" }
             return
         }
         catch {
