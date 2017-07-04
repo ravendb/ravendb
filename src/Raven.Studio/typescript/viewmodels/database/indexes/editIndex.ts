@@ -313,9 +313,11 @@ class editIndex extends viewModelBase {
 
     addReduce() {
         eventsCollector.default.reportEvent("index", "add-reduce");
-        if (!this.editedIndex().hasReduce()) {
-            this.editedIndex().hasReduce(true);
-            this.editedIndex().reduce("");
+        const editedIndex = this.editedIndex();
+        if (!editedIndex.hasReduce()) {
+            editedIndex.hasReduce(true);
+            editedIndex.reduce("");
+            editedIndex.reduce.clearError();
         }
     }
 
