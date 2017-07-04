@@ -364,7 +364,7 @@ namespace Raven.Server.ServerWide
 
             ContextPool = new TransactionContextPool(_env);
 
-            _engine = new RachisConsensus<ClusterStateMachine>();
+            _engine = new RachisConsensus<ClusterStateMachine>(this);
 
             var myUrl = Configuration.Core.PublicServerUrl.HasValue ? Configuration.Core.PublicServerUrl.Value.UriValue : Configuration.Core.ServerUrl;
             _engine.Initialize(_env, Configuration.Cluster, myUrl);
@@ -521,7 +521,7 @@ namespace Raven.Server.ServerWide
                 {
                     if (Logger.IsInfoEnabled)
                     {
-                        Logger.Info($"An error occured while disabling outgoing tasks on the database {name}", e);
+                        Logger.Info($"An error occurred while disabling outgoing tasks on the database {name}", e);
                     }
                 }
             }
@@ -534,10 +534,14 @@ namespace Raven.Server.ServerWide
             switch (CurrentState)
             {
                 case RachisConsensus.State.Leader:
-                    nodesStatuses = _engine.CurrentLeader.GetStatus();
+                    var leader = _engine.CurrentLeader;
+                    if(leader != null)
+                        nodesStatuses = _engine.CurrentLeader.GetStatus();
                     break;
                 case RachisConsensus.State.Candidate:
-                    nodesStatuses = _engine.Candidate.GetStatus();
+                    var candidate = _engine.Candidate;
+                    if (candidate != null)
+                        nodesStatuses = candidate.GetStatus();
                     break;
                 case RachisConsensus.State.Follower:
                     var status = new NodeStatus { ConnectionStatus = "Connected" };
@@ -1424,7 +1428,7 @@ namespace Raven.Server.ServerWide
                     var defintions = new ApiKeyDefinition
                     {
                         Enabled = true,
-                        ResourcesAccessMode = new Dictionary<string, AccessModes> { { "*",AccessModes.Admin} },
+                        ResourcesAccessMode = new Dictionary<string, AccessMode> { { "*",AccessMode.Admin} },
                         Secret = secret,
                         ServerAdmin = true
                     };

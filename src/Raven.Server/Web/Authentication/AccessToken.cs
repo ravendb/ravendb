@@ -11,7 +11,7 @@ namespace Raven.Server.Web.Authentication
         public string Token { get; set; }
         public DateTime Expires { get; set; }
 
-        public Dictionary<string, AccessModes> AuthorizedDatabases { get; set; }
+        public Dictionary<string, AccessMode> AuthorizedDatabases { get; set; }
 
         public bool IsExpired => Expires.CompareTo(DateTime.UtcNow) <= 0;
     }

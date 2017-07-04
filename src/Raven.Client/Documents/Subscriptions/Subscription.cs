@@ -299,7 +299,7 @@ namespace Raven.Client.Documents.Subscriptions
                 var uri = new Uri(command.Result.Url);
 
                 _tcpClient = new TcpClient();
-                await _tcpClient.ConnectAsync(TcpUtils.GetTcpUrl(uri.Host), uri.Port).ConfigureAwait(false);
+                await _tcpClient.ConnectAsync(uri.Host, uri.Port).ConfigureAwait(false);
 
                 _tcpClient.NoDelay = true;
                 _tcpClient.SendBufferSize = 32 * 1024;

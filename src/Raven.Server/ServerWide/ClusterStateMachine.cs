@@ -77,9 +77,9 @@ namespace Raven.Server.ServerWide
 
         public event EventHandler<(string DatabaseName, long Index, string Type)> DatabaseValueChanged;
 
-        public event EventHandler<(long Index, string Type)> ValueChanged; 
+        public event EventHandler<(long Index, string Type)> ValueChanged;
 
-        protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
         {
             if (cmd.TryGet("Type", out string type) == false)
             {
@@ -104,7 +104,7 @@ namespace Raven.Server.ServerWide
                         DeleteValue(context, type, cmd, index, leader);
                         break;
                     case nameof(IncrementClusterIdentityCommand):
-                        if (!ValidatePropertyExistance(cmd,
+                        if (!ValidatePropertyExistence(cmd,
                             nameof(IncrementClusterIdentityCommand),
                             nameof(IncrementClusterIdentityCommand.Prefix),
                             out errorMessage))
@@ -123,7 +123,7 @@ namespace Raven.Server.ServerWide
                         leader?.SetStateOf(index, updatedDatabaseRecord.Identities[prefix]);
                         break;
                     case nameof(UpdateClusterIdentityCommand):
-                        if (!ValidatePropertyExistance(cmd,
+                        if (!ValidatePropertyExistence(cmd,
                             nameof(UpdateClusterIdentityCommand),
                             nameof(UpdateClusterIdentityCommand.Identities),
                             out errorMessage))
@@ -170,6 +170,8 @@ namespace Raven.Server.ServerWide
                         break;
                     case nameof(PutApiKeyCommand):
                         PutValue<ApiKeyDefinition>(context, type, cmd, index, leader);
+                        context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented +=
+                            () => serverStore.RavenServer.AccessTokenCache.Clear();
                         break;
                     case nameof(PutClientConfigurationCommand):
                         PutValue<ClientConfiguration>(context, type, cmd, index, leader);
@@ -198,7 +200,7 @@ namespace Raven.Server.ServerWide
             });
         }
 
-        private static bool ValidatePropertyExistance(BlittableJsonReaderObject cmd, string propertyTypeName, string propertyName, out string errorMessage)
+        private static bool ValidatePropertyExistence(BlittableJsonReaderObject cmd, string propertyTypeName, string propertyName, out string errorMessage)
         {
             errorMessage = null;
             if (cmd.TryGet(propertyName, out object _) == false)
@@ -764,7 +766,6 @@ namespace Raven.Server.ServerWide
 
     public class RachisLogIndexNotifications
     {
-
         private long _lastModifiedIndex;
         private readonly AsyncManualResetEvent _notifiedListeners;
 

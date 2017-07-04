@@ -22,18 +22,18 @@ namespace SlowTests.Issues
             Secret = "secret",
             ResourcesAccessMode =
             {
-                ["db/CanGetDocWithValidToken"] = AccessModes.ReadWrite,
-                ["db/CanGetTokenFromServer"] = AccessModes.Admin
+                ["db/CanGetDocWithValidToken"] = AccessMode.ReadWrite,
+                ["db/CanGetTokenFromServer"] = AccessMode.Admin
             }
         };
 
 
         [Fact]
-        public void ValidateSubscriptionAuthorizationRejectOnCreation()
+        public async Task ValidateSubscriptionAuthorizationRejectOnCreationAsync()
         {
             DoNotReuseServer();
             Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
-            AccessModes[] modes = { AccessModes.None, AccessModes.ReadOnly };
+            AccessMode[] modes = { AccessMode.None, AccessMode.ReadOnly };
             using (var store = GetDocumentStore(apiKey: "super/" + _apiKey.Secret))
             {
                 foreach (var accessMode in modes)
@@ -47,8 +47,7 @@ namespace SlowTests.Issues
 
                     Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
 
-                    Assert.Throws<AuthorizationException>(() => AsyncHelpers.RunSync(() => store.Subscriptions.CreateAsync(
-                        new SubscriptionCreationOptions<User>())));
+                    await Assert.ThrowsAsync<AuthorizationException>(async () => await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>()));
                 }
             }
         }
@@ -58,7 +57,7 @@ namespace SlowTests.Issues
         {
             DoNotReuseServer();
             Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
-            AccessModes[] modes = { AccessModes.ReadWrite, AccessModes.Admin };
+            AccessMode[] modes = { AccessMode.ReadWrite, AccessMode.Admin };
             using (var store = GetDocumentStore(apiKey: "super/" + _apiKey.Secret))
             {
                 foreach (var accessMode in modes)
@@ -96,10 +95,10 @@ namespace SlowTests.Issues
         {
             DoNotReuseServer();
             Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
-            AccessModes[] modes = { AccessModes.None, AccessModes.ReadOnly };
-            using (var store = GetDocumentStore(apiKey: "super/" + _apiKey.Secret))
+            AccessMode[] modes = {AccessMode.None, AccessMode.ReadOnly};
+            foreach (var accessMode in modes)
             {
-                foreach (var accessMode in modes)
+                using (var store = GetDocumentStore(apiKey: "super/" + _apiKey.Secret))
                 {
                     Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
                     _apiKey.ResourcesAccessMode[store.Database] = accessMode;
@@ -112,13 +111,11 @@ namespace SlowTests.Issues
                     Assert.NotNull(doc);
 
                     Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
-
                     var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
                     {
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(200)
                     });
-                    
-                    Assert.Throws<AuthorizationException>(() => AsyncHelpers.RunSync(() => subscription.Run(user => {})));
+                    await Assert.ThrowsAsync<AuthorizationException>(async () => await subscription.Run(user => { }));
                 }
             }
         }
@@ -128,7 +125,7 @@ namespace SlowTests.Issues
         {
             DoNotReuseServer();
             Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
-            AccessModes[] modes = { AccessModes.ReadWrite, AccessModes.Admin };
+            AccessMode[] modes = { AccessMode.ReadWrite, AccessMode.Admin };
             using (var store = GetDocumentStore(apiKey: "super/" + _apiKey.Secret))
             {
                 foreach (var accessMode in modes)

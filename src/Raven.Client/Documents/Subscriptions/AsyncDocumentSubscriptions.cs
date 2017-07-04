@@ -54,7 +54,7 @@ namespace Raven.Client.Documents.Subscriptions
         public async Task<long> CreateAsync(SubscriptionCreationOptions subscriptionCreationOptions, string database = null)
         {
             if (subscriptionCreationOptions == null )
-                throw new InvalidOperationException("Cannot create a subscription if subscriptionCretiaonOptions is null");
+                throw new InvalidOperationException("Cannot create a subscription if subscriptionCreationOptions is null");
 
             if (subscriptionCreationOptions.Criteria == null)
                 throw new InvalidOperationException("Cannot create a subscription if criteria is null");

@@ -16,6 +16,9 @@ namespace Raven.Server.Web.System
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var tcpServerUrl = Server.ServerStore.NodeTcpServerUrl;
+                if (tcpServerUrl.StartsWith("tcp://localhost.fiddler:", StringComparison.OrdinalIgnoreCase))
+                    tcpServerUrl = tcpServerUrl.Remove(15, 8);
+
                 var output = new DynamicJsonValue
                 {
                     [nameof(TcpConnectionInfo.Url)] = tcpServerUrl,
