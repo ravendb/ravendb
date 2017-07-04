@@ -17,7 +17,7 @@ namespace Voron.Platform.Posix
         public class OpenFlags
         {
             public static Posix.OpenFlags O_DIRECT = (Posix.OpenFlags) (
-                RunningOnMacOsx ? 0 :
+                RunningOnMacOsx ? 0 : // O_DIRECT is not supported in MacOsx, we use fncnlt(F_NOCACHE) instead
             (RuntimeInformation.OSArchitecture == Architecture.Arm ||
              RuntimeInformation.OSArchitecture == Architecture.Arm64)
                 ? 65536 // value directly from printf("%d", O_DIRECT) on the pi
@@ -30,7 +30,7 @@ namespace Voron.Platform.Posix
                 : 65536); // value directly from printf("%d", O_DIRECTORY) on the pi
 
             public static Posix.OpenFlags O_LARGEFILE = (Posix.OpenFlags)(
-                RunningOnMacOsx ? 0 :
+                RunningOnMacOsx ? 0 : // O_LARGEFILE is supported by default in MacOsx and this flag doesn't exists in mac
            (RuntimeInformation.OSArchitecture == Architecture.Arm ||
             RuntimeInformation.OSArchitecture == Architecture.Arm64)
                ? 131072 // value directly from printf("%d", O_DIRECT) on the pi
