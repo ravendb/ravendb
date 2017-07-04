@@ -11,9 +11,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {   
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Server.Replication.ReplicationResolveConflictsOnConfigurationChange())   
+                using (var test = new SlowTests.Core.Subscriptions.RavenDB_3193())   
                 {
-                    test.ResolveWhenSettingDatabaseResolver().Wait();
+                    test.ShouldRespectCollectionCriteria().Wait();
                 }
             }
         }

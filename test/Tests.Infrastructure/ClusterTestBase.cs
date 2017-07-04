@@ -416,7 +416,7 @@ namespace Tests.Infrastructure
             }
             // ReSharper disable once PossibleNullReferenceException
             var condition = await leader.ServerStore.WaitForState(RachisConsensus.State.Leader).WaitAsync(numberOfNodes * ElectionTimeoutInMs * 5);
-            string states = string.Empty;
+            var states = string.Empty;
             if (condition == false)
             {
                 states = GetLastStatesFromAllServersOrderedByTime();

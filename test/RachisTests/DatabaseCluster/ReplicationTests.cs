@@ -7,7 +7,6 @@ using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.Operations.ApiKeys;
-using Raven.Server.Config.Attributes;
 using Raven.Server.Web.System;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -210,7 +209,7 @@ namespace RachisTests.DatabaseCluster
 
                 await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
             }
-            
+
             var tasks = OngoingTasksHandler.GetOngoingTasksFor(databaseName, leader.ServerStore);
             Assert.Equal(1, tasks.OngoingTasksList.Count);
             var repTask = tasks.OngoingTasksList[0] as OngoingTaskReplication;
@@ -429,16 +428,16 @@ namespace RachisTests.DatabaseCluster
         {
             //DoNotReuseServer();
 
-            Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
+            Server.Configuration.Security.AuthenticationEnabled = false;
             using (var store1 = GetDocumentStore(apiKey: "super/" + _apiKey.Secret))
             using (var store2 = GetDocumentStore(apiKey: "super/" + _apiKey.Secret))
             {
-                _apiKey.ResourcesAccessMode[store1.Database] = AccessModes.Admin;
-                _apiKey.ResourcesAccessMode[store2.Database] = AccessModes.ReadWrite;
+                _apiKey.ResourcesAccessMode[store1.Database] = AccessMode.Admin;
+                _apiKey.ResourcesAccessMode[store2.Database] = AccessMode.ReadWrite;
                 store2.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
                 var doc = store2.Admin.Server.Send(new GetApiKeyOperation("super"));
                 Assert.NotNull(doc);
-                Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
+                Server.Configuration.Security.AuthenticationEnabled = true;
 
                 var watcher = new ExternalReplication
                 {
@@ -446,7 +445,7 @@ namespace RachisTests.DatabaseCluster
                     Url = store2.Urls.First(),
                     ApiKey = "super/" + api
                 };
-                
+
                 await AddWatcherToReplicationTopology(store1, watcher);
 
                 using (var session = store1.OpenAsyncSession())

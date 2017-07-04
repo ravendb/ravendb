@@ -162,7 +162,12 @@ namespace Raven.TestDriver
 
                 if (line == null)
                 {
-                    process.Kill();
+                    try
+                    {
+                        process.Kill();
+
+                    }
+                    catch {}
                     throw new InvalidOperationException("Unable to start server, log is: " + Environment.NewLine + sb);
                 }
                 const string prefix = "Server available on: ";
@@ -175,7 +180,11 @@ namespace Raven.TestDriver
 
             if (url == null)
             {
-                process.Kill();
+                try
+                {
+                    process.Kill();
+                }
+                catch{}
                 throw new InvalidOperationException("Unable to start server, log is: " + Environment.NewLine + sb);
             }
             

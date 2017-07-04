@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Pipes;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
@@ -20,7 +21,6 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Config;
-using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.TcpHandlers;
@@ -34,11 +34,13 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using AccessModes = Raven.Client.Server.Operations.ApiKeys.AccessModes;
 using AccessToken = Raven.Server.Web.Authentication.AccessToken;
 using System.Reflection;
+using Raven.Client.Extensions;
+using Raven.Client.Server.Operations.ApiKeys;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Platform;
 
 namespace Raven.Server
 {
@@ -57,7 +59,7 @@ namespace Raven.Server
 
         public readonly RavenConfiguration Configuration;
 
-        public ConcurrentDictionary<string, AccessToken> AccessTokenCache = new ConcurrentDictionary<string, AccessToken>();
+        public readonly ConcurrentDictionary<string, AccessToken> AccessTokenCache = new ConcurrentDictionary<string, AccessToken>();
 
         public Timer ServerMaintenanceTimer;
 
@@ -119,7 +121,7 @@ namespace Raven.Server
                 _logger.Info(string.Format("Server store started took {0:#,#;;0} ms", sp.ElapsedMilliseconds));
 
             sp.Restart();
-
+            ListenToPipe().IgnoreUnobservedExceptions();
             Router = new RequestRouter(RouteScanner.Scan(), this);
 
             try
@@ -181,6 +183,111 @@ namespace Raven.Server
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations("Could not start server", e);
                 throw;
+            }
+        }
+
+        private async Task ListenToPipe()
+        {
+            // We start the server pipe only when running as a server
+            // so we won't generate one per server in our test environment 
+            if (Pipe == null)
+                return;
+            
+            while (true)
+            {
+                try
+                {
+                    await Pipe.WaitForConnectionAsync();
+                    using (var reader = new StreamReader(Pipe))
+                    using (var writer = new StreamWriter(Pipe))
+                    {
+                        try
+                        {
+                            var msg = reader.ReadLine();
+                            var tokens = msg.Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries);
+
+                            if (tokens.Length < 1)
+                            {
+                                var reply = "Unknown command";
+                                PipeLogAndReply(writer, reply);
+                                continue;
+                            }
+
+                            switch (tokens[0])
+                            {
+                                case "trust":
+                                    if (tokens.Length < 3)
+                                    {
+                                        PipeLogAndReply(writer, "Expected 'trust' followed by public key and tag but didn't get both of them");
+                                    }
+                                    else
+                                    {
+                                        var k = $"Raven/Sign/Public/{tokens[2]}";
+                                        ServerStore.PutSecretKey(tokens[1], k, true);
+                                        PipeLogAndReply(writer, $"Server {tokens[2]} public key {tokens[1]} was installed successfully");
+                                    }
+                                    break;
+                                case "init":
+                                    var (apiKey, pubKey) = await ServerStore.GetApiKeyAndPublicKey();
+                                    PipeLogAndReply(writer, $"ApiKey: {apiKey}{Environment.NewLine}PublicKe: {pubKey}");
+                                    writer.Flush();
+                                    break;
+                                default:
+                                    PipeLogAndReply(writer, $"Provided command {tokens[0]} isn't supported");
+                                    continue;
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            var msg = "Failed to process pipe command";
+                            if (_logger.IsInfoEnabled)
+                            {
+                                _logger.Info(msg, e);
+                            }
+                            PipeLogAndReply(writer, $"{msg}{Environment.NewLine}{e}");
+                            continue;
+                        }
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
+                    //Server shutting down
+                    return;
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info("Got an exception trying to connect to server pipe", e);
+                    }
+                }
+                try
+                {
+                    // reopen the pipe after every use, since we need to close it properly
+                    Pipe.Dispose();
+                    OpenPipe();
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsOperationsEnabled)
+                    {
+                        _logger.Operations("Got an exception trying to re-connect to server pipe", e);
+                    }
+                    return;
+                }
+            }
+        }
+
+        private static void PipeLogAndReply(StreamWriter writer, string reply)
+        {
+            try
+            {
+                writer.Write(reply);
+                writer.Flush();
+            }
+            catch (Exception)
+            {
+                // nothing we can do here
             }
         }
 
@@ -586,7 +693,7 @@ namespace Raven.Server
         {
             using (var writer = new BlittableJsonTextWriter(context, stream))
             {
-                if (configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.Admin
+                if (configuration.Security.AuthenticationEnabled == false
                     && header.AuthorizationToken == null)
                 {
                     ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.Success));
@@ -612,24 +719,24 @@ namespace Raven.Server
                     return false;
                 }
 
-                AccessModes mode;
+                AccessMode mode;
                 var hasValue =
                     accessToken.AuthorizedDatabases.TryGetValue(header.DatabaseName, out mode) ||
                     accessToken.AuthorizedDatabases.TryGetValue("*", out mode);
 
                 if (hasValue == false)
-                    mode = AccessModes.None;
+                    mode = AccessMode.None;
 
                 switch (mode)
                 {
-                    case AccessModes.None:
+                    case AccessMode.None:
                         ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.Forbidden));
                         return false;
-                    case AccessModes.ReadOnly:
+                    case AccessMode.ReadOnly:
                         ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.ForbiddenReadOnly));
                         return false;
-                    case AccessModes.ReadWrite:
-                    case AccessModes.Admin:
+                    case AccessMode.ReadWrite:
+                    case AccessMode.Admin:
                         ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.Success));
                         return true;
                     default:
@@ -663,6 +770,7 @@ namespace Raven.Server
         public MetricsCountersManager Metrics { get; private set; }
 
         public bool Disposed { get; private set; }
+        internal NamedPipeServerStream Pipe { get; set; }
 
         public void Dispose()
         {
@@ -674,6 +782,7 @@ namespace Raven.Server
                     return;
 
                 Disposed = true;
+                Pipe?.Dispose();
                 Metrics?.Dispose();
                 _webHost?.Dispose();
                 if (_tcpListenerTask != null)
@@ -721,6 +830,15 @@ namespace Raven.Server
                 }
             }
 
+        }
+
+        public const string PipePrefix = "raven-control-pipe-";
+        public void OpenPipe()
+        {
+            var pipeName = PipePrefix + Process.GetCurrentProcess().Id;
+
+            Pipe = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte,
+                PipeOptions.None, 1024, 1024);
         }
     }
 }

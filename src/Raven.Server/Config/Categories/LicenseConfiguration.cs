@@ -14,9 +14,5 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(null)]
         [ConfigurationEntry("License.Path")]
         public string LicensePath { get; set; }
-
-        [DefaultValue(false)]
-        [ConfigurationEntry("License.AllowAdminAnonymousAccessForCommercialUse")]
-        public bool AllowAdminAnonymousAccessForCommercialUse { get; set; }
     }
 }

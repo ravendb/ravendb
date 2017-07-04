@@ -57,26 +57,22 @@ namespace Raven.Client.Http.OAuth
                     throw new AuthenticationException("Bad response from server " + response.StatusCode);
                 }
 
-                JsonOperationContext.ManagedPinnedBuffer pinnedBuffer;
                 using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
-                using (context.GetManagedBuffer(out pinnedBuffer))
-                using (var tokenJson = context.ParseToMemory(stream, "apikey", BlittableJsonDocumentBuilder.UsageMode.None, pinnedBuffer))
+                using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer pinnedBuffer))
+                using (var tokenJson = context.ParseToMemory(stream, "api-key", BlittableJsonDocumentBuilder.UsageMode.None, pinnedBuffer))
                 {
                     tokenJson.BlittableValidation();
 
-                    object errorString;
-                    if (tokenJson.TryGetMember("Error", out errorString) == true)
+                    if (tokenJson.TryGetMember("Error", out object errorString))
                         throw new AuthenticationException((LazyStringValue)errorString);
 
-                    string cryptedToken;
-                    if (tokenJson.TryGet("Token", out cryptedToken) == false)
+                    if (tokenJson.TryGet("Token", out string token) == false)
                         throw new InvalidDataException("Missing 'Token' property in the POST request body");
 
-                    string serverNonce;
-                    if (tokenJson.TryGet("Nonce", out serverNonce) == false)
+                    if (tokenJson.TryGet("Nonce", out string serverNonce) == false)
                         throw new InvalidDataException("Missing 'Nonce' property in the POST request body");
 
-                    var cryptTokenBytes = Convert.FromBase64String(cryptedToken);
+                    var cryptTokenBytes = Convert.FromBase64String(token);
                     var nonceBytes = Convert.FromBase64String(serverNonce);
 
                     unsafe
@@ -158,9 +154,8 @@ namespace Raven.Client.Http.OAuth
             byte[] serverPk;
             var message = await Client.GetAsync(serverUrl + "/api-key/public-key").ConfigureAwait(false);
             message.EnsureSuccessStatusCode();
-            JsonOperationContext.ManagedPinnedBuffer pinnedBuffer;
             using (var stream = await message.Content.ReadAsStreamAsync().ConfigureAwait(false))
-            using (context.GetManagedBuffer(out pinnedBuffer))
+            using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer pinnedBuffer))
             using (var pkJson = context.ParseToMemory(stream, "publicKey", BlittableJsonDocumentBuilder.UsageMode.None, pinnedBuffer))
             {
                 if (pkJson.TryGet("PublicKey", out string pkStr) == false)

@@ -148,8 +148,8 @@ namespace Voron
         {
             var filename = Path.Combine(path, "test-" + Guid.NewGuid() + ".tmp");
             var fd = Syscall.open(filename,
-                OpenFlags.O_WRONLY | OpenFlags.O_DSYNC | PerPlatformValues.OpenFlags.O_DIRECT |
-                OpenFlags.O_CREAT, FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
+                OpenFlags.O_WRONLY | PerPlatformValues.OpenFlags.O_DSYNC | PerPlatformValues.OpenFlags.O_DIRECT |
+                PerPlatformValues.OpenFlags.O_CREAT, FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
 
             int result;
 

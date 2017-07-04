@@ -12,13 +12,11 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Exceptions.Compilation;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.Config;
-using Raven.Server.Config.Attributes;
 using Raven.Server.Routing;
 using Raven.Server.TrafficWatch;
 using Sparrow.Json;
@@ -40,7 +38,7 @@ namespace Raven.Server
         {
             app.UseWebSockets(new WebSocketOptions
             {
-                // TODO: KeepAlive causes "Unexpect reserved bit set" (we are sending our own hearbeats, so we do not need this)
+                // TODO: KeepAlive causes "Unexpect reserved bit set" (we are sending our own heartbeats, so we do not need this)
                 //KeepAliveInterval = Debugger.IsAttached ? 
                 //    TimeSpan.FromHours(24) : TimeSpan.FromSeconds(30), 
                 KeepAliveInterval = TimeSpan.FromHours(24),
@@ -49,7 +47,7 @@ namespace Raven.Server
 
             _router = app.ApplicationServices.GetService<RequestRouter>();
             _server = app.ApplicationServices.GetService<RavenServer>();
-            if (IsServerRuningInASafeManner() == false)
+            if (IsServerRunningInASafeManner() == false)
             {
                 app.Run(UnsafeRequestHandler);
                 return;
@@ -57,11 +55,11 @@ namespace Raven.Server
             app.Run(RequestHandler);
         }
 
-        private bool IsServerRuningInASafeManner()
+        private bool IsServerRunningInASafeManner()
         {
-            if (_server.Configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.None)
+            if (_server.Configuration.Security.AuthenticationEnabled)
                 return true;
-            if (_server.Configuration.Server.AllowAnonymousUserToAccessTheServer)
+            if (_server.Configuration.Security.AuthenticationRequiredForPublicNetworks == false)
                 return true;
             var url = _server.Configuration.Core.ServerUrl.ToLowerInvariant();
             var uri = new Uri(url);
@@ -143,9 +141,9 @@ namespace Raven.Server
 
         private static readonly string[] UnsafeWarning = {
             "Running in a potentially unsafe mode.",
-            $"Server is exposed to the world and the security option { RavenConfiguration.GetKey(x => x.Server.AnonymousUserAccessMode) } is set to { nameof(AnonymousUserAccessModeValues.Admin) }.",
-            "Please find the RavenDB settings file settings.json in the server directory and set this option to None to prevent unauthorized access. In order to gain administrative access to the server please access it through localhost.",
-            $"If you intended to grant administrative access to the server for anonymous users set { RavenConfiguration.GetKey(x => x.Server.AllowAnonymousUserToAccessTheServer) } security option to true."
+            $"Server is exposed to the world and the security option { RavenConfiguration.GetKey(x => x.Security.AuthenticationEnabled) } is set to false.",
+            "Please find the RavenDB settings file settings.json in the server directory and set this option to true to prevent unauthorized access. In order to gain administrative access to the server please access it through localhost.",
+            $"If you intended to grant administrative access to the server for anonymous users set { RavenConfiguration.GetKey(x => x.Security.AuthenticationRequiredForPublicNetworks) } security option to false."
         };
 
         private async Task RequestHandler(HttpContext context)
@@ -192,7 +190,7 @@ namespace Raven.Server
                     return;
 
                 //TODO: special handling for argument exception (400 bad request)
-                //TODO: operaton cancelled (timeout)
+                //TODO: operation canceled (timeout)
                 //TODO: Invalid data exception 422
 
 

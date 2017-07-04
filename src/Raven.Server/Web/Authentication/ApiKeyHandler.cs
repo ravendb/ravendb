@@ -1,19 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Net;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Exceptions.Security;
-using Raven.Client.Server.Operations.ApiKeys;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 
 namespace Raven.Server.Web.Authentication
 {
@@ -41,42 +35,37 @@ namespace Raven.Server.Web.Authentication
         public unsafe Task OauthGetApiKey()
         {
             var apiKeyName = GetStringQueryString("apiKey");
-            byte[] remoteCryptedSecret;
-            byte[] clientPublicKey;
-            byte[] serverKey;
-            byte[] remoteNonce;
-
-            JsonOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                JsonOperationContext.ManagedPinnedBuffer pinnedBuffer;
-                using (context.GetManagedBuffer(out pinnedBuffer))
-                using (var hashJson = context.ParseToMemory(RequestBodyStream(), "apikey", BlittableJsonDocumentBuilder.UsageMode.None, pinnedBuffer))
+                byte[] remoteCryptedSecret;
+                byte[] clientPublicKey;
+                byte[] serverKey;
+                byte[] remoteNonce;
+
+                using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer pinnedBuffer))
+                using (var hashJson = context.ParseToMemory(RequestBodyStream(), "api-key", BlittableJsonDocumentBuilder.UsageMode.None, pinnedBuffer))
                 {
                     hashJson.BlittableValidation();
 
-                    string secretString;
-                    if (hashJson.TryGet("Secret", out secretString) == false)
+                    if (hashJson.TryGet("Secret", out string secretString) == false)
                     {
                         GenerateError("Missing 'Secret' property", context, (int)HttpStatusCode.BadRequest);
                         return Task.CompletedTask;
                     }
 
-                    string nonceString;
-                    if (hashJson.TryGet("Nonce", out nonceString) == false)
+                    if (hashJson.TryGet("Nonce", out string nonceString) == false)
                     {
                         GenerateError("Missing 'Nonce' property", context, (int)HttpStatusCode.BadRequest);
                         return Task.CompletedTask;
                     }
 
-                    string pkString;
-                    if (hashJson.TryGet("PublicKey", out pkString) == false)
+                    if (hashJson.TryGet("PublicKey", out string pkString) == false)
                     {
                         GenerateError("Missing 'PublicKey' property", context, (int)HttpStatusCode.BadRequest);
                         return Task.CompletedTask;
                     }
-                    string serverKeyString;
-                    if (hashJson.TryGet("ServerKey", out serverKeyString) == false)
+                    if (hashJson.TryGet("ServerKey", out string serverKeyString) == false)
                     {
                         GenerateError("Missing 'ServerKey' property", context, (int)HttpStatusCode.BadRequest);
                         return Task.CompletedTask;

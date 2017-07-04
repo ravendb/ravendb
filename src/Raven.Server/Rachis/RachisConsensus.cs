@@ -22,6 +22,7 @@ using Voron.Data.Tables;
 using Voron.Impl;
 using Raven.Client.Http;
 using Raven.Server.Config.Categories;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 
 namespace Raven.Server.Rachis
@@ -29,8 +30,11 @@ namespace Raven.Server.Rachis
     public class RachisConsensus<TStateMachine> : RachisConsensus
         where TStateMachine : RachisStateMachine, new()
     {
-        public RachisConsensus(int? seed = null) : base(seed)
+        private readonly ServerStore _serverStore;
+
+        public RachisConsensus(ServerStore serverStore, int? seed = null) : base(seed)
         {
+            _serverStore = serverStore;
         }
 
         public TStateMachine StateMachine;
@@ -50,7 +54,7 @@ namespace Raven.Server.Rachis
 
         public override void Apply(TransactionOperationContext context, long uptoInclusive, Leader leader)
         {
-            StateMachine.Apply(context, uptoInclusive, leader);
+            StateMachine.Apply(context, uptoInclusive, leader, _serverStore);
         }
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
@@ -571,9 +575,9 @@ namespace Raven.Server.Rachis
                 IsForcedElection = forced
             };
 
+            Candidate = candidate;
             SetNewState(State.Candidate, candidate, CurrentTerm, reason);
             candidate.Start();
-            Candidate = candidate;
         }
 
         public void DeleteTopology(TransactionOperationContext context)
