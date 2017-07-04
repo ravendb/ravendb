@@ -1273,7 +1273,7 @@ namespace Voron.Impl.Journal
                 pagesCountIncludingAllOverflowPages += page.NumberOfPages;
             }
 
-            bool performCompression = pagesCountIncludingAllOverflowPages > 200; // TODO : Make this variable and configurable
+            bool performCompression = pagesCountIncludingAllOverflowPages > _env.Options.CompressTxAboveSizeInKb * 1024 / Constants.Storage.PageSize;
 
             var sizeOfPagesHeader = numberOfPages * sizeof(TransactionHeaderPageInfo);
             var overhead = sizeOfPagesHeader + (long)numberOfPages * sizeof(long);
