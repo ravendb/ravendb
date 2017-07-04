@@ -531,17 +531,15 @@ namespace Raven.Server.ServerWide
             switch (CurrentState)
             {
                 case RachisConsensus.State.Leader:
-                    nodesStatuses = _engine.CurrentLeader.GetStatus();
+                    nodesStatuses = _engine.CurrentLeader?.GetStatus();
                     break;
                 case RachisConsensus.State.Candidate:
-                    nodesStatuses = _engine.Candidate.GetStatus();
+                    nodesStatuses = _engine.Candidate?.GetStatus();
                     break;
                 case RachisConsensus.State.Follower:
-                    var status = new NodeStatus { ConnectionStatus = "Connected" };
-                    nodesStatuses[_engine.Tag] = status;
                     if (_engine.LeaderTag != null)
                     {
-                        nodesStatuses[_engine.LeaderTag] = status;
+                        nodesStatuses[_engine.LeaderTag] = new NodeStatus { ConnectionStatus = "Connected" };
                     }
                     break;
             }
