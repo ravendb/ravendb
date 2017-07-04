@@ -201,8 +201,18 @@ namespace Sparrow.Platform.Posix
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int ftruncate(int fd, IntPtr size);
 
-        [DllImport(LIBC_6, SetLastError = true)]
-        public static extern long lseek64(int fd, long offset, WhenceFlags whence);
+        [DllImport(LIBC_6, EntryPoint = "lseek64", SetLastError = true)]
+        public static extern long lseek64_posix(int fd, long offset, WhenceFlags whence);
+
+        [DllImport(LIBC_6, EntryPoint = "lseek", SetLastError = true)]
+        public static extern long lseek64_mac(int fd, long offset, WhenceFlags whence);
+
+        public static long lseek64(int fd, long offset, WhenceFlags whence)
+        {
+            if (PlatformDetails.RunningOnMacOsx)
+                return lseek64_mac(fd, offset, whence);
+            return lseek64_posix(fd, offset, whence);
+        }
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int mprotect(IntPtr start, ulong size, ProtFlag protFlag);
