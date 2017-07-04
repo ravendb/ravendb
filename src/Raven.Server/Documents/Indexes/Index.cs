@@ -189,6 +189,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
                 options.OnRecoveryError += documentDatabase.HandleOnRecoveryError;
+                options.CompressTxAboveSizeInKb = documentDatabase.Configuration.Storage.CompressTxAboveSizeInKb;
                 options.SchemaVersion = 1;
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                 options.TimeToSyncAfterFlashInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
@@ -307,6 +308,7 @@ namespace Raven.Server.Documents.Indexes
                 options.OnRecoveryError += documentDatabase.HandleOnRecoveryError;
 
                 options.SchemaVersion = 1;
+                options.CompressTxAboveSizeInKb = documentDatabase.Configuration.Storage.CompressTxAboveSizeInKb;
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                 options.TimeToSyncAfterFlashInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
                 options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
@@ -2335,6 +2337,7 @@ namespace Raven.Server.Documents.Indexes
                     srcOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                     srcOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
                     srcOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
+                    srcOptions.CompressTxAboveSizeInKb = DocumentDatabase.Configuration.Storage.CompressTxAboveSizeInKb;
                     srcOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
                     srcOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
                     Sodium.CloneKey(out srcOptions.MasterKey, DocumentDatabase.MasterKey);
@@ -2350,7 +2353,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         compactOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
                         compactOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
-
+                        compactOptions.CompressTxAboveSizeInKb = DocumentDatabase.Configuration.Storage.CompressTxAboveSizeInKb;
                         compactOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                         compactOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
                         compactOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;

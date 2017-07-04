@@ -43,5 +43,10 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(3)]
         [ConfigurationEntry("Storage.NumberOfConcurrentSyncsPerPhysicalDrive")]
         public int NumberOfConcurrentSyncsPerPhysicalDrive { get; set; }
+
+        [Description("Compress Transactions above size (value in KB)")]
+        [DefaultValue(512)]
+        [ConfigurationEntry("Storage.CompressTxAboveSizeInKB")]
+        public int CompressTxAboveSizeInKb { get; set; }
     }
 }

@@ -975,6 +975,7 @@ namespace Voron
 
         private int _numOfConcurrentSyncsPerPhysDrive;
         private int _timeToSyncAfterFlashInSec;
+        public int CompressTxAboveSizeInKb;
 
         public virtual void SetPosixOptions()
         {
