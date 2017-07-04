@@ -433,8 +433,8 @@ namespace RachisTests.DatabaseCluster
             using (var store1 = GetDocumentStore(apiKey: "super/" + _apiKey.Secret))
             using (var store2 = GetDocumentStore(apiKey: "super/" + _apiKey.Secret))
             {
-                _apiKey.ResourcesAccessMode[store1.Database] = AccessModes.Admin;
-                _apiKey.ResourcesAccessMode[store2.Database] = AccessModes.ReadWrite;
+                _apiKey.ResourcesAccessMode[store1.Database] = AccessMode.Admin;
+                _apiKey.ResourcesAccessMode[store2.Database] = AccessMode.ReadWrite;
                 store2.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
                 var doc = store2.Admin.Server.Send(new GetApiKeyOperation("super"));
                 Assert.NotNull(doc);

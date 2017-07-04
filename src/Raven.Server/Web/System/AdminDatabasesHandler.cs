@@ -186,7 +186,7 @@ namespace Raven.Server.Web.System
         public async Task Put()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var nodesAddedTo = new List<string>();
+            var nodeUrlsAddedTo = new List<string>();
 
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
@@ -219,11 +219,16 @@ namespace Raven.Server.Web.System
                 {
                     topology = databaseRecord.Topology;
                     ValidateClusterMembers(context, topology, databaseRecord);
+                    var clusterTopology = ServerStore.GetClusterTopology(context);
+                    foreach (var member in topology.Members)
+                    {
+                        nodeUrlsAddedTo.Add(clusterTopology.GetUrlFromTag(member));
+                    }
                 }
                 else
                 {
                     var factor = Math.Max(1, GetIntValueQueryString("replication-factor", required: false) ?? 0);
-                    databaseRecord.Topology = topology = AssignNodesToDatabase(context, factor, name, databaseRecord.Encrypted, out nodesAddedTo);
+                    databaseRecord.Topology = topology = AssignNodesToDatabase(context, factor, name, databaseRecord.Encrypted, out nodeUrlsAddedTo);
                 }
 
                 var (newIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
@@ -238,7 +243,7 @@ namespace Raven.Server.Web.System
                         [nameof(DatabasePutResult.RaftCommandIndex)] = newIndex,
                         [nameof(DatabasePutResult.Key)] = name,
                         [nameof(DatabasePutResult.Topology)] = topology.ToJson(),
-                        [nameof(DatabasePutResult.NodesAddedTo)] = nodesAddedTo
+                        [nameof(DatabasePutResult.NodesAddedTo)] = nodeUrlsAddedTo
                     });
                     writer.Flush();
                 }
@@ -250,7 +255,7 @@ namespace Raven.Server.Web.System
             int factor, 
             string name, 
             bool isEncrypted,
-            out List<string> nodesAddedTo)
+            out List<string> nodeUrlsAddedTo)
         {
             var topology = new DatabaseTopology();
 
@@ -269,14 +274,14 @@ namespace Raven.Server.Web.System
             }
 
             var offset = new Random().Next();
-            nodesAddedTo = new List<string>();
+            nodeUrlsAddedTo = new List<string>();
 
             for (int i = 0; i < Math.Min(allNodes.Count, factor); i++)
             {
                 var selectedNode = allNodes[(i + offset) % allNodes.Count];
                 var url = clusterTopology.GetUrlFromTag(selectedNode);
                 topology.Members.Add(selectedNode);
-                nodesAddedTo.Add(url);
+                nodeUrlsAddedTo.Add(url);
             }
 
             return topology;

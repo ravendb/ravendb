@@ -184,14 +184,14 @@ namespace Raven.Server.Routing
             if (resourceName == null)
                 return true;
 
-            var hasValue = accessToken.AuthorizedDatabases.TryGetValue(resourceName, out AccessModes mode) ||
+            var hasValue = accessToken.AuthorizedDatabases.TryGetValue(resourceName, out AccessMode mode) ||
                            accessToken.AuthorizedDatabases.TryGetValue("*", out mode);
             if (hasValue == false)
-                mode = AccessModes.None;
+                mode = AccessMode.None;
 
             switch (mode)
             {
-                case AccessModes.None:
+                case AccessMode.None:
                     context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                     using (var ctx = JsonOperationContext.ShortTermSingleUse())
                     using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
@@ -206,7 +206,7 @@ namespace Raven.Server.Routing
                             });
                     }
                     return false;
-                case AccessModes.ReadOnly:
+                case AccessMode.ReadOnly:
                     if (context.Request.Method != "GET")
                     {
                         context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
@@ -225,8 +225,8 @@ namespace Raven.Server.Routing
                         return false;
                     }
                     return true;
-                case AccessModes.ReadWrite:
-                case AccessModes.Admin:
+                case AccessMode.ReadWrite:
+                case AccessMode.Admin:
                     return true;
                 default:
                     throw new ArgumentOutOfRangeException("Unknown access mode: " + mode);
@@ -318,10 +318,10 @@ namespace Raven.Server.Routing
             return accessToken.IsExpired == false;
         }
 
-        public static Dictionary<string, AccessModes> GetAuthorizedDatabases(TransactionOperationContext txContext, RavenServer ravenServer, string apiKeyName)
+        public static Dictionary<string, AccessMode> GetAuthorizedDatabases(TransactionOperationContext txContext, RavenServer ravenServer, string apiKeyName)
         {
             if (apiKeyName.StartsWith("Raven"))
-                return new Dictionary<string, AccessModes> {{"*", AccessModes.Admin}};
+                return new Dictionary<string, AccessMode> {{"*", AccessMode.Admin}};
 
             var apiDoc = ravenServer.ServerStore.Cluster.Read(txContext, Constants.ApiKeys.Prefix + apiKeyName);
             if (apiDoc == null)
@@ -332,7 +332,7 @@ namespace Raven.Server.Routing
 
             var prop = new BlittableJsonReaderObject.PropertyDetails();
 
-            var databases = new Dictionary<string, AccessModes>(StringComparer.OrdinalIgnoreCase);
+            var databases = new Dictionary<string, AccessMode>(StringComparer.OrdinalIgnoreCase);
             for (var i = 0; i < resourcesAccessMode.Count; i++)
             {
                 resourcesAccessMode.GetPropertyByIndex(i, ref prop);
@@ -341,7 +341,7 @@ namespace Raven.Server.Routing
                 {
                     throw new InvalidOperationException($"Missing value of dbName -'{prop.Name}' property in api key: {apiKeyName}");
                 }
-                if (Enum.TryParse(accessMode, out AccessModes value) == false)
+                if (Enum.TryParse(accessMode, out AccessMode value) == false)
                 {
                     throw new InvalidOperationException(
                         $"Invalid value of dbName -'{prop.Name}' property in api key: {apiKeyName}, cannot understand: {accessMode}");

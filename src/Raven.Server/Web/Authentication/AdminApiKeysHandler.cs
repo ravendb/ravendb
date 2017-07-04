@@ -30,8 +30,7 @@ namespace Raven.Server.Web.Authentication
             // us also use that to indicate that we are the seed node
             ServerStore.EnsureNotPassive();
 
-            TransactionOperationContext ctx;
-            using (ServerStore.ContextPool.AllocateOperationContext(out ctx))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
                 var apiKeyJson = ctx.ReadForDisk(RequestBodyStream(), name);
 
@@ -45,7 +44,6 @@ namespace Raven.Server.Web.Authentication
                 var apiKey = JsonDeserializationServer.ApiKeyDefinition(apiKeyJson);
                 var res = await ServerStore.PutValueInClusterAsync(new PutApiKeyCommand(Constants.ApiKeys.Prefix + name, apiKey));
                 await ServerStore.Cluster.WaitForIndexNotification(res.Etag);
-                Server.AccessTokenCache.Clear();
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
             }
@@ -57,12 +55,10 @@ namespace Raven.Server.Web.Authentication
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             if (name.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException($"Can't delete api key named {name}, api keys starting with 'Raven/' are protected");
-            TransactionOperationContext ctx;
-            using (ServerStore.ContextPool.AllocateOperationContext(out ctx))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
                 var res = await ServerStore.DeleteValueInClusterAsync(Constants.ApiKeys.Prefix + name);
                 await ServerStore.Cluster.WaitForIndexNotification(res.Etag);
-                Server.AccessTokenCache.Clear();
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             }
@@ -200,7 +196,7 @@ namespace Raven.Server.Web.Authentication
                     return HttpContext.Response.WriteAsync("'ApiKey' must include non-empty 'AccessMode' DB Name' property");
                 }
 
-                AccessModes mode;
+                AccessMode mode;
                 if (Enum.TryParse(accessValue, out mode) == false)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
