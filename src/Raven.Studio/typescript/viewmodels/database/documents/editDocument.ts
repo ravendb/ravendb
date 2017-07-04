@@ -634,8 +634,8 @@ class editDocument extends viewModelBase {
                 } else {
                     this.dirtyFlag().reset();
                     messagePublisher.reportError("Could not find document: " + id);
-                    router.navigate(appUrl.forDocuments(null, this.activeDatabase()));
                     this.isBusy(false);
+                    loadTask.reject();
                 }
             });
 
