@@ -7,14 +7,12 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 
 using Raven.Server.Config;
-using Raven.Server.Config.Attributes;
 using Raven.Server.Documents;
 using System.Threading;
 using Microsoft.Extensions.Primitives;
@@ -140,8 +138,8 @@ namespace Raven.Server.Routing
             {
                 token = context.Request.Cookies["Raven-Authorization"];
             }
-            if (configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.Admin &&
-                token == null)
+        
+            if (configuration.Security.AuthenticationEnabled == false && token == null)
                 return true;
             var sigBase64Size = Sparrow.Utils.Base64.CalculateAndValidateOutputLength(Sodium.crypto_sign_bytes());
             if (token == null || token.Length < sigBase64Size + 8 /* sig length + prefix */)
@@ -162,6 +160,7 @@ namespace Raven.Server.Routing
                 return false;
             }
 
+           
             if (TryGetAccessToken(_ravenServer, token, sigBase64Size, out AccessToken accessToken) == false)
             {
                 context.Response.StatusCode = (int)HttpStatusCode.PreconditionFailed;
@@ -184,6 +183,7 @@ namespace Raven.Server.Routing
             if (resourceName == null)
                 return true;
 
+            
             var hasValue = accessToken.AuthorizedDatabases.TryGetValue(resourceName, out AccessMode mode) ||
                            accessToken.AuthorizedDatabases.TryGetValue("*", out mode);
             if (hasValue == false)
@@ -205,7 +205,7 @@ namespace Raven.Server.Routing
                                 ["Message"] = $"Api Key {accessToken.Name} does not have access to {resourceName}"
                             });
                     }
-                    return false;
+                    return false;:
                 case AccessMode.ReadOnly:
                     if (context.Request.Method != "GET")
                     {
@@ -288,8 +288,7 @@ namespace Raven.Server.Routing
                         {
                             if (Sodium.crypto_sign_verify_detached(sig, msg, (ulong)tokenBytes.Length, pk) != 0)
                             {
-                                if (unknownPublicKey == false ||
-                                    ravenServer.Configuration.Server.AnonymousUserAccessMode != AnonymousUserAccessModeValues.Admin)
+                                if (unknownPublicKey == false || ravenServer.Configuration.Security.AuthenticationEnabled)
                                     return false;
 
                                 // if the key failed to validate, but we aren't familiar with the public key AND
@@ -320,16 +319,17 @@ namespace Raven.Server.Routing
 
         public static Dictionary<string, AccessMode> GetAuthorizedDatabases(TransactionOperationContext txContext, RavenServer ravenServer, string apiKeyName)
         {
-            if (apiKeyName.StartsWith("Raven"))
+           if (apiKeyName.StartsWith("Raven"))
                 return new Dictionary<string, AccessMode> {{"*", AccessMode.Admin}};
 
             var apiDoc = ravenServer.ServerStore.Cluster.Read(txContext, Constants.ApiKeys.Prefix + apiKeyName);
             if (apiDoc == null)
                 throw new AuthenticationException($"Could not find api key: {apiKeyName}");
+           
 
             if (apiDoc.TryGet("ResourcesAccessMode", out BlittableJsonReaderObject resourcesAccessMode) == false)
                 throw new InvalidOperationException($"Missing 'ResourcesAccessMode' property in api key: {apiKeyName}");
-
+        
             var prop = new BlittableJsonReaderObject.PropertyDetails();
 
             var databases = new Dictionary<string, AccessMode>(StringComparer.OrdinalIgnoreCase);
@@ -341,7 +341,7 @@ namespace Raven.Server.Routing
                 {
                     throw new InvalidOperationException($"Missing value of dbName -'{prop.Name}' property in api key: {apiKeyName}");
                 }
-                if (Enum.TryParse(accessMode, out AccessMode value) == false)
+                  if (Enum.TryParse(accessMode, out AccessMode value) == false)
                 {
                     throw new InvalidOperationException(
                         $"Invalid value of dbName -'{prop.Name}' property in api key: {apiKeyName}, cannot understand: {accessMode}");
@@ -356,7 +356,7 @@ namespace Raven.Server.Routing
             if (context.Response.Headers.TryGetValue("Connection", out StringValues value) && value == "close")
                 return; // don't need to drain it, the connection will close 
 
-            using (ctx.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
+              using (ctx.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
             {
                 var requestBody = context.Request.Body;
                 while (true)

@@ -146,9 +146,9 @@
         </div>
         <h2 class="text-warning">Running in a potentially unsafe mode </h2>
     </div>
-    <p>Server is exposed to the world and the security option <span class="text-file long-word">Raven/AnonymousUserAccessMode</span> is set to <strong class="text-file text-warning">Admin</strong>. </p>
-    <p>Please find the RavenDB settings file <strong class="text-file long-word">settings.json</strong> in the server directory and set this option to <strong class="text-success text-file">None</strong> to prevent unauthorized access. In order to gain administrative access to the server please access it through <strong class="text-file">localhost</strong>.</p>
-    <p>If you intended to grant administrative access to the server for anonymous users set <span class="text-file long-word">Raven/AllowAnonymousUserToAccessTheServer</span> security option to <strong class="text-warning text-file">true</strong>. </p>
+    <p>Server is exposed to the world and the security option <span class="text-file long-word">Security.Authentication.Enabled</span> is set to <strong class="text-file text-warning">false</strong>. </p>
+    <p>Please find the RavenDB settings file <strong class="text-file long-word">settings.json</strong> in the server directory and set this option to <strong class="text-success text-file">true</strong> to prevent unauthorized access. In order to gain administrative access to the server please access it through <strong class="text-file">localhost</strong>.</p>
+    <p>If you intended to grant administrative access to the server for anonymous users set <span class="text-file long-word">Security.Authentication.RequiredForPublicNetworks</span> security option to <strong class="text-warning text-file">false</strong>. </p>
 </div>
 </body>
 </html>

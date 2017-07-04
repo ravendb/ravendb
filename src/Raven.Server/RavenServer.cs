@@ -21,7 +21,6 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Config;
-using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.TcpHandlers;
@@ -694,7 +693,7 @@ namespace Raven.Server
         {
             using (var writer = new BlittableJsonTextWriter(context, stream))
             {
-                if (configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.Admin
+                if (configuration.Security.AuthenticationEnabled == false
                     && header.AuthorizationToken == null)
                 {
                     ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.Success));

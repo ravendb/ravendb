@@ -10,10 +10,8 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions.Security;
-using Raven.Client.Http;
 using Raven.Client.Http.OAuth;
 using Raven.Client.Server.Operations.ApiKeys;
-using Raven.Server.Config.Attributes;
 using Xunit;
 
 namespace FastTests.Server.OAuth
@@ -30,7 +28,7 @@ namespace FastTests.Server.OAuth
         public void CanGetDocWithValidToken()
         {
             DoNotReuseServer();
-            Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
+            Server.Configuration.Security.AuthenticationEnabled = false;
 
             using (var store = GetDocumentStore(apiKey: "super/" + _apiKey.Secret))
             {
@@ -40,7 +38,7 @@ namespace FastTests.Server.OAuth
                 var doc = store.Admin.Server.Send(new GetApiKeyOperation("super"));
                 Assert.NotNull(doc);
 
-                Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
+                Server.Configuration.Security.AuthenticationEnabled = true;
 
                 StoreSampleDoc(store, "test/1");
 
@@ -57,18 +55,18 @@ namespace FastTests.Server.OAuth
         {
             DoNotReuseServer();
 
-            Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
+           Server.Configuration.Security.AuthenticationEnabled = false;
             using (var store = GetDocumentStore(apiKey: "super/" + "bad secret"))
             {
                 store.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
                 var doc = store.Admin.Server.Send(new GetApiKeyOperation("super"));
                 Assert.NotNull(doc);
 
-                Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
+                Server.Configuration.Security.AuthenticationEnabled = true;
 
                 var exception = Assert.Throws<AuthenticationException>(() => StoreSampleDoc(store, "test/1"));
                 Assert.Contains("Unable to authenticate api key", exception.Message);
-                Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
+                Server.Configuration.Security.AuthenticationEnabled = false;
             }
         }
 
@@ -106,7 +104,7 @@ namespace FastTests.Server.OAuth
                 StoreSampleDoc(store, "test/1");
 
                 // Should get PreconditionFailed on Get without token
-                Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
+                Server.Configuration.Security.AuthenticationEnabled = true;
                 var client = new HttpClient();
 
                 var baseUrl = $"{store.Urls.First()}/databases/{store.Database}";
@@ -123,8 +121,8 @@ namespace FastTests.Server.OAuth
                 }
 
                 // Admin should be able to save apiKey
-                Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
-                _apiKey.ResourcesAccessMode[store.Database] = AccessMode.ReadWrite;
+                Server.Configuration.Security.AuthenticationEnabled = false;
+                 _apiKey.ResourcesAccessMode[store.Database] = AccessMode.ReadWrite;
                 store.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
                 var doc = store.Admin.Server.Send(new GetApiKeyOperation("super"));
                 Assert.NotNull(doc);
@@ -133,7 +131,7 @@ namespace FastTests.Server.OAuth
                 string token;
                 using (var commands = store.Commands())
                 {
-                    Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
+                   Server.Configuration.Security.AuthenticationEnabled = true;
                     var apiKeyAuthenticator = new ApiKeyAuthenticator();
                     token = await apiKeyAuthenticator.GetAuthenticationTokenAsync("super/secret", store.Urls.First(), commands.Context);
                     Assert.NotNull(token);
@@ -145,7 +143,7 @@ namespace FastTests.Server.OAuth
                 authenticatedClient.DefaultRequestHeaders.TryAddWithoutValidation("Raven-Authorization", token);
                 result = await authenticatedClient.GetAsync(baseUrl + "/docs?id=test/1");
                 Assert.Equal(HttpStatusCode.OK, result.StatusCode);
-                Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
+                Server.Configuration.Security.AuthenticationEnabled = false;
             }
         }
 
@@ -154,14 +152,14 @@ namespace FastTests.Server.OAuth
         {
             DoNotReuseServer();
 
-            Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
+            Server.Configuration.Security.AuthenticationEnabled = false;
             using (var store = GetDocumentStore(apiKey: "super/" + "secret"))
             {
                 store.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
                 var doc = store.Admin.Server.Send(new GetApiKeyOperation("super"));
                 Assert.NotNull(doc);
 
-                Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
+                 Server.Configuration.Security.AuthenticationEnabled = true;
 
                 Assert.Throws<AuthorizationException>(() => StoreSampleDoc(store, "test/1"));
             }
