@@ -10,6 +10,7 @@ class databaseStatistics {
     errorsCountText = ko.observable<string>();
     alertsCountText = ko.observable<string>();
     tasksCountText = ko.observable<string>();
+    hasAttachments = ko.observable<boolean>();
     countOfAttachmentsText = ko.observable<string>();
     
     fromDto(dto: reducedDatabaseStatisticsDto) {
@@ -25,7 +26,8 @@ class databaseStatistics {
         this.alertsCountText(this.getItemCountText(dto.CountOfAlerts, "alert", "s"));
 
         this.tasksCountText(this.getItemCountText(dto.ApproximateTaskCount, "task", "s"));
-        this.countOfAttachmentsText(this.getItemCountText(dto.CountOfAttachments, "task", "s"));
+        this.hasAttachments(dto.CountOfAttachments > 0);
+        this.countOfAttachmentsText(this.getItemCountText(dto.CountOfAttachments, "attachment", "s"));
     }
 
     private getItemCountText(itemCount: number, singularText: string, suffix: string): string {
