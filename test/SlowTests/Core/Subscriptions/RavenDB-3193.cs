@@ -43,7 +43,13 @@ namespace SlowTests.Core.Subscriptions
                 {
                     var docs = new List<dynamic>();
 
-                    GC.KeepAlive(subscription.Run(a => docs.Add(a)));
+                    GC.KeepAlive(subscription.Run(batch =>
+                    {
+                        foreach (var item in batch.Items)
+                        {
+                            docs.Add(item);
+                        }
+                    }));
                     
                     SpinWait.SpinUntil(() => docs.Count >= 100, TimeSpan.FromSeconds(60));
                     Assert.Equal(100, docs.Count);
