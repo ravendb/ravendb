@@ -103,6 +103,7 @@ h6 {
 .hr-title {
     display: flex;
     align-items: center;
+    margin-bottom: @grid-gutter-width/4;
 
     h1, h2, h3, h4, h5 {
         margin: 0 6px 1px 0;
@@ -111,6 +112,11 @@ h6 {
 
     hr {
         flex-grow: 1;
+        margin: 0;
+
+        + .btn {
+            margin-left: 6px;
+        }
     }
 }
 
