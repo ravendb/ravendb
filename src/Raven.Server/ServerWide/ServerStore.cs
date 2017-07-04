@@ -526,7 +526,7 @@ namespace Raven.Server.ServerWide
 
         public Dictionary<string, NodeStatus> GetNodesStatuses()
         {
-            var nodesStatuses = new Dictionary<string, NodeStatus>();
+            Dictionary<string, NodeStatus> nodesStatuses = null;
 
             switch (CurrentState)
             {
@@ -539,12 +539,15 @@ namespace Raven.Server.ServerWide
                 case RachisConsensus.State.Follower:
                     if (_engine.LeaderTag != null)
                     {
-                        nodesStatuses[_engine.LeaderTag] = new NodeStatus { ConnectionStatus = "Connected" };
+                        nodesStatuses = new Dictionary<string, NodeStatus>
+                        {
+                            [_engine.LeaderTag] = new NodeStatus {ConnectionStatus = "Connected"}
+                        };
                     }
                     break;
             }
 
-            return nodesStatuses;
+            return nodesStatuses?? new Dictionary<string, NodeStatus>();
         }
 
         private void OnTopologyChanged(object sender, ClusterTopology topologyJson)
