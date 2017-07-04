@@ -518,7 +518,7 @@ namespace Raven.Server.ServerWide
                 {
                     if (Logger.IsInfoEnabled)
                     {
-                        Logger.Info($"An error occured while disabling outgoing tasks on the database {name}", e);
+                        Logger.Info($"An error occurred while disabling outgoing tasks on the database {name}", e);
                     }
                 }
             }
@@ -531,10 +531,14 @@ namespace Raven.Server.ServerWide
             switch (CurrentState)
             {
                 case RachisConsensus.State.Leader:
-                    nodesStatuses = _engine.CurrentLeader.GetStatus();
+                    var leader = _engine.CurrentLeader;
+                    if(leader != null)
+                        nodesStatuses = _engine.CurrentLeader.GetStatus();
                     break;
                 case RachisConsensus.State.Candidate:
-                    nodesStatuses = _engine.Candidate.GetStatus();
+                    var candidate = _engine.Candidate;
+                    if (candidate != null)
+                        nodesStatuses = candidate.GetStatus();
                     break;
                 case RachisConsensus.State.Follower:
                     var status = new NodeStatus { ConnectionStatus = "Connected" };

@@ -34,9 +34,9 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using AccessModes = Raven.Client.Server.Operations.ApiKeys.AccessModes;
 using AccessToken = Raven.Server.Web.Authentication.AccessToken;
 using System.Reflection;
+using Raven.Client.Server.Operations.ApiKeys;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 
@@ -612,24 +612,24 @@ namespace Raven.Server
                     return false;
                 }
 
-                AccessModes mode;
+                AccessMode mode;
                 var hasValue =
                     accessToken.AuthorizedDatabases.TryGetValue(header.DatabaseName, out mode) ||
                     accessToken.AuthorizedDatabases.TryGetValue("*", out mode);
 
                 if (hasValue == false)
-                    mode = AccessModes.None;
+                    mode = AccessMode.None;
 
                 switch (mode)
                 {
-                    case AccessModes.None:
+                    case AccessMode.None:
                         ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.Forbidden));
                         return false;
-                    case AccessModes.ReadOnly:
+                    case AccessMode.ReadOnly:
                         ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.ForbiddenReadOnly));
                         return false;
-                    case AccessModes.ReadWrite:
-                    case AccessModes.Admin:
+                    case AccessMode.ReadWrite:
+                    case AccessMode.Admin:
                         ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.Success));
                         return true;
                     default:

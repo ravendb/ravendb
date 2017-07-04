@@ -9,7 +9,7 @@ namespace Raven.Client.Server.Operations.ApiKeys
         public bool Enabled;
         public string Secret;
         public bool ServerAdmin;
-        public Dictionary<string, AccessModes> ResourcesAccessMode = new Dictionary<string, AccessModes>(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, AccessMode> ResourcesAccessMode = new Dictionary<string, AccessMode>(StringComparer.OrdinalIgnoreCase);
 
         public virtual DynamicJsonValue ToJson()
         {
@@ -29,7 +29,7 @@ namespace Raven.Client.Server.Operations.ApiKeys
     }
 
 
-    public enum AccessModes
+    public enum AccessMode
     {
         None,
         ReadOnly,

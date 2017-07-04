@@ -22,6 +22,7 @@ using Voron.Data.Tables;
 using Voron.Impl;
 using Raven.Client.Http;
 using Raven.Server.Config.Categories;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 
 namespace Raven.Server.Rachis

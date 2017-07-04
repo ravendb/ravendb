@@ -1,19 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Net;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Exceptions.Security;
-using Raven.Client.Server.Operations.ApiKeys;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 
 namespace Raven.Server.Web.Authentication
 {
