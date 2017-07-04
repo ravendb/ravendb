@@ -529,31 +529,31 @@ namespace Raven.Server.ServerWide
 
         public Dictionary<string, NodeStatus> GetNodesStatuses()
         {
-            var nodesStatuses = new Dictionary<string, NodeStatus>();
+             Dictionary<string, NodeStatus> nodesStatuses = null;
 
             switch (CurrentState)
             {
                 case RachisConsensus.State.Leader:
-                    var leader = _engine.CurrentLeader;
-                    if(leader != null)
-                        nodesStatuses = _engine.CurrentLeader.GetStatus();
+                    nodesStatuses = _engine.CurrentLeader?.GetStatus();
+
                     break;
                 case RachisConsensus.State.Candidate:
-                    var candidate = _engine.Candidate;
-                    if (candidate != null)
-                        nodesStatuses = candidate.GetStatus();
+                    nodesStatuses = _engine.Candidate?.GetStatus();
+
                     break;
                 case RachisConsensus.State.Follower:
-                    var status = new NodeStatus { ConnectionStatus = "Connected" };
-                    nodesStatuses[_engine.Tag] = status;
-                    if (_engine.LeaderTag != null)
+                    var leaderTag = _engine.LeaderTag;
+                    if (leaderTag != null)
                     {
-                        nodesStatuses[_engine.LeaderTag] = status;
+                        nodesStatuses = new Dictionary<string, NodeStatus>
+                        {
+                            [leaderTag] = new NodeStatus {ConnectionStatus = "Connected"}
+                        };
                     }
                     break;
             }
 
-            return nodesStatuses;
+            return nodesStatuses?? new Dictionary<string, NodeStatus>();
         }
 
         private void OnTopologyChanged(object sender, ClusterTopology topologyJson)

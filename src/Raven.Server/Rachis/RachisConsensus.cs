@@ -575,9 +575,9 @@ namespace Raven.Server.Rachis
                 IsForcedElection = forced
             };
 
+            Candidate = candidate;
             SetNewState(State.Candidate, candidate, CurrentTerm, reason);
             candidate.Start();
-            Candidate = candidate;
         }
 
         public void DeleteTopology(TransactionOperationContext context)

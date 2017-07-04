@@ -201,12 +201,7 @@ namespace Raven.Server.Rachis
                     ConnectionStatus = voter.Status
                 };
             }
-            
-            dic[_engine.Tag] = new NodeStatus
-            {
-                ConnectionStatus = "Connected"
-            };
-
+           
             return dic;
         }
 

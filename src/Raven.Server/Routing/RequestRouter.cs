@@ -205,7 +205,7 @@ namespace Raven.Server.Routing
                                 ["Message"] = $"Api Key {accessToken.Name} does not have access to {resourceName}"
                             });
                     }
-                    return false;:
+                    return false;
                 case AccessMode.ReadOnly:
                     if (context.Request.Method != "GET")
                     {
