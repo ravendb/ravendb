@@ -68,14 +68,7 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        [RavenAction("/admin/server/reset-pipe", "GET", "/admin/server/reset-pipe")]
-        public async Task ResetServerPipe()
-        {
-            Server.Pipe?.Dispose();
-            Server.OpenPipe();
-            await Server.ListenToPipe();
-        }
-
+    
         [RavenAction("/admin/api-keys", "GET", "/admin/api-keys")]
         public Task GetAll()
         {

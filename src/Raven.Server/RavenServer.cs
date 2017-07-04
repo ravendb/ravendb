@@ -38,6 +38,7 @@ using Sparrow.Logging;
 using AccessModes = Raven.Client.Server.Operations.ApiKeys.AccessModes;
 using AccessToken = Raven.Server.Web.Authentication.AccessToken;
 using System.Reflection;
+using Raven.Client.Extensions;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Platform;
@@ -121,11 +122,7 @@ namespace Raven.Server
                 _logger.Info(string.Format("Server store started took {0:#,#;;0} ms", sp.ElapsedMilliseconds));
 
             sp.Restart();
-            //We start the server pipe from program.cs so we won't generate one per server in our test environment 
-            if (Pipe != null)
-            {
-                Task.Factory.StartNew(ListenToPipe);
-            }
+            ListenToPipe().IgnoreUnobservedExceptions();
             Router = new RequestRouter(RouteScanner.Scan(), this);
 
             try
@@ -190,106 +187,108 @@ namespace Raven.Server
             }
         }
 
-        internal async Task ListenToPipe()
+        private async Task ListenToPipe()
         {
-            lock (this)
+            // We start the server pipe only when running as a server
+            // so we won't generate one per server in our test environment 
+            if (Pipe == null)
+                return;
+            
+            while (true)
             {
-                while (true)
+                try
                 {
-                    try
+                    await Pipe.WaitForConnectionAsync();
+                    using (var reader = new StreamReader(Pipe))
+                    using (var writer = new StreamWriter(Pipe))
                     {
-                        await Pipe.WaitForConnectionAsync();
-                        using (var reader = new StreamReader(Pipe))
-                        using (var writer = new StreamWriter(Pipe))
+                        try
                         {
-                            try
+                            var msg = reader.ReadLine();
+                            var tokens = msg.Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries);
+
+                            if (tokens.Length < 1)
                             {
-                                var msg = reader.ReadLine();
-                                var tokens = msg.Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries);
-
-                                if (tokens.Length < 1)
-                                {
-                                    var reply = "Expected 'trust' or 'init' but got nothing";
-                                    PipeLogAndReply(writer, reply);
-                                    continue;
-                                }
-
-                                switch (tokens[0])
-                                {
-                                    case "trust":
-                                        if (tokens.Length < 3)
-                                        {
-                                            msg = $"Expected 'trust' followed by public key and tag but didn't get both of them";
-                                            PipeLogAndReply(writer, msg);
-                                            continue;
-                                        }
-                                        var k = $"Raven/Sign/Public/{tokens[2]}";
-                                        ServerStore.PutSecretKey(tokens[1], k, true);
-                                        writer.WriteLine($"Server {tokens[2]} public key {tokens[1]} was installed successfully");
-                                        writer.Flush();
-                                        break;
-                                    case "init":
-                                        var (api_key, pub_key) = await ServerStore.GetApiKeyAndPublicKey();
-                                        writer.WriteLine($"{api_key} public key={pub_key}");
-                                        writer.Flush();
-                                        break;
-                                    default:
-                                        var reply = $"Provided command {tokens[0]} isn't supported";
-                                        PipeLogAndReply(writer, reply);
-                                        continue;
-
-                                }
-                            }
-                            catch (Exception e)
-                            {
-                                var msg = "Got an exception trying to communicate through the pipe";
-                                if (_logger.IsInfoEnabled)
-                                {
-                                    _logger.Info(msg, e);
-                                }
-                                PipeLogAndReply(writer, $"{msg}{Environment.NewLine}{e}");
+                                var reply = "Unknown command";
+                                PipeLogAndReply(writer, reply);
                                 continue;
                             }
-                        }
 
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                        //Server shutting down
-                        return;
-                    }
-                    catch (Exception e)
-                    {
-                        if (_logger.IsInfoEnabled)
+                            switch (tokens[0])
+                            {
+                                case "trust":
+                                    if (tokens.Length < 3)
+                                    {
+                                        PipeLogAndReply(writer, "Expected 'trust' followed by public key and tag but didn't get both of them");
+                                    }
+                                    else
+                                    {
+                                        var k = $"Raven/Sign/Public/{tokens[2]}";
+                                        ServerStore.PutSecretKey(tokens[1], k, true);
+                                        PipeLogAndReply(writer, $"Server {tokens[2]} public key {tokens[1]} was installed successfully");
+                                    }
+                                    break;
+                                case "init":
+                                    var (apiKey, pubKey) = await ServerStore.GetApiKeyAndPublicKey();
+                                    PipeLogAndReply(writer, $"ApiKey: {apiKey}{Environment.NewLine}PublicKe: {pubKey}");
+                                    writer.Flush();
+                                    break;
+                                default:
+                                    PipeLogAndReply(writer, $"Provided command {tokens[0]} isn't supported");
+                                    continue;
+                            }
+                        }
+                        catch (Exception e)
                         {
-                            _logger.Info("Got an exception trying to connect to server pipe", e);
+                            var msg = "Failed to process pipe command";
+                            if (_logger.IsInfoEnabled)
+                            {
+                                _logger.Info(msg, e);
+                            }
+                            PipeLogAndReply(writer, $"{msg}{Environment.NewLine}{e}");
+                            continue;
                         }
                     }
-                    try
+                }
+                catch (ObjectDisposedException)
+                {
+                    //Server shutting down
+                    return;
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
                     {
-                        //From what i read we should not re-use a pipe.
-                        Pipe.Dispose();
-                        OpenPipe();
+                        _logger.Info("Got an exception trying to connect to server pipe", e);
                     }
-                    catch (Exception e)
+                }
+                try
+                {
+                    // reopen the pipe after every use, since we need to close it properly
+                    Pipe.Dispose();
+                    OpenPipe();
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsOperationsEnabled)
                     {
-                        if (_logger.IsInfoEnabled)
-                        {
-                            _logger.Info("Got an exception trying to re-connect to server pipe", e);
-                        }
-                        break;
+                        _logger.Operations("Got an exception trying to re-connect to server pipe", e);
                     }
+                    return;
                 }
             }
         }
 
         private static void PipeLogAndReply(StreamWriter writer, string reply)
         {
-            writer.Write(reply);
-            writer.Flush();
-            if (_logger.IsInfoEnabled)
+            try
             {
-                _logger.Info(reply);
+                writer.Write(reply);
+                writer.Flush();
+            }
+            catch (Exception)
+            {
+                // nothing we can do here
             }
         }
 
