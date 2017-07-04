@@ -32,7 +32,7 @@ namespace Sparrow.Platform.Posix
 
         public static int gettid()
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            if (PlatformDetails.RunningOnMacOsx)
                 return 0; // TODO : Implement for OSX, note gettid is problematic in OSX. Ref : https://github.com/dotnet/coreclr/issues/12444
 
             return (int) syscall0(PerPlatformValues.SyscallNumbers.SYS_gettid);
@@ -74,9 +74,21 @@ namespace Sparrow.Platform.Posix
         public static extern int msync(IntPtr start, UIntPtr len, MsyncFlags flags);
 
 
-        [DllImport(LIBC_6, SetLastError = true)]
-        public static extern IntPtr mmap64(IntPtr start, UIntPtr length,
+        [DllImport(LIBC_6, EntryPoint = "mmap64", SetLastError = true)]
+        private static extern IntPtr mmap64_posix(IntPtr start, UIntPtr length,
             MmapProts prot, MmapFlags flags, int fd, long offset);
+
+        [DllImport(LIBC_6, EntryPoint = "mmap", SetLastError = true)]
+        private static extern IntPtr mmap64_mac(IntPtr start, UIntPtr length,
+            MmapProts prot, MmapFlags flags, int fd, long offset);
+
+        public static IntPtr mmap64(IntPtr start, UIntPtr length,
+            MmapProts prot, MmapFlags flags, int fd, long offset)
+        {
+            if (PlatformDetails.RunningOnMacOsx)
+                return mmap64_mac(start, length, prot, flags, fd, offset);
+            return mmap64_posix(start, length, prot, flags, fd, offset);
+        }
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int munmap(IntPtr start, UIntPtr length);
