@@ -6,8 +6,9 @@ namespace StressTests.Client.Attachments
 {
     public class AttachmentsSessionStress
     {
-        [Fact]
-        public void PutLotOfAttachments()
+        [Theory]
+        [InlineData(1000)]
+        public void PutLotOfAttachments(int count)
         {
             using (var stress = new AttachmentsSession())
             {
@@ -18,7 +19,7 @@ namespace StressTests.Client.Attachments
         [NightlyBuildTheory]
         [InlineData(100_000)]
         [InlineData(1_000_000)]
-        public void PutLotOfAttachments(int count)
+        public void PutLotOfAttachmentsStress(int count)
         {
             using (var stress = new AttachmentsSession())
             {
