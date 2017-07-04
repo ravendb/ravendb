@@ -20,7 +20,6 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Config;
-using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.TcpHandlers;
@@ -37,8 +36,6 @@ using Sparrow.Logging;
 using AccessModes = Raven.Client.Server.Operations.ApiKeys.AccessModes;
 using AccessToken = Raven.Server.Web.Authentication.AccessToken;
 using System.Reflection;
-using Raven.Server.ServerWide.Commands;
-using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server
 {
@@ -84,7 +81,7 @@ namespace Raven.Server
 
             _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("<TcpServer>");
         }
-        
+
         public Task<TcpListenerStatus> GetTcpServerStatusAsync()
         {
             return _tcpListenerTask;
@@ -129,9 +126,9 @@ namespace Raven.Server
                 if (Configuration.Security.CertificatePath != null)
                 {
                     ServerCertificate = LoadCertificate(Configuration.Security);
-                    
+
                     kestrelOptions += options => options.UseHttps(ServerCertificate.Certificate);
-                    
+
                     // Enforce https in all network activities
                     if (Configuration.Core.ServerUrl.StartsWith("http:", StringComparison.OrdinalIgnoreCase))
                         throw new InvalidOperationException($"When the `{RavenConfiguration.GetKey(x => x.Security.CertificatePath)}` is specified, the `{RavenConfiguration.GetKey(x => x.Core.ServerUrl)}` must be using https, but was " + Configuration.Core.ServerUrl);
@@ -173,7 +170,7 @@ namespace Raven.Server
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Initialized Server... {string.Join(", ", WebUrls)}");
-                
+
                 _tcpListenerTask = StartTcpListener();
             }
             catch (Exception e)
@@ -187,7 +184,7 @@ namespace Raven.Server
         public string[] WebUrls { get; set; }
 
         private readonly JsonContextPool _tcpContextPool = new JsonContextPool();
-        
+
         internal CertificateHolder ServerCertificate;
 
         public class CertificateHolder
@@ -215,7 +212,7 @@ namespace Raven.Server
                 throw new InvalidOperationException($"Could not load certificate file {config.CertificatePath}, please check the path and password", e);
             }
         }
-        
+
         public class TcpListenerStatus
         {
             public readonly List<TcpListener> Listeners = new List<TcpListener>();
@@ -279,7 +276,7 @@ namespace Raven.Server
                     }
                 }
 
-                if(successfullyBoundToAtLeastOne == false)
+                if (successfullyBoundToAtLeastOne == false)
                 {
                     if (errors.Count == 1)
                         throw errors[0];
@@ -391,7 +388,7 @@ namespace Raven.Server
                                 // we don't want to allow external (and anonymous) users to send us unlimited data
                                 // a maximum of 2 KB for the header is big enough to include any valid header that
                                 // we can currently think of
-                                maxSize: 1024*2
+                                maxSize: 1024 * 2
                                 ))
                             {
                                 header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
@@ -487,9 +484,9 @@ namespace Raven.Server
                     tcp.PinnedBuffer
                 ))
                 {
-                    
+
                     var maintenanceHeader = JsonDeserializationRachis<ClusterMaintenanceSupervisor.ClusterMaintenanceConnectionHeader>.Deserialize(headerJson);
-                    
+
                     if (_clusterMaintenanceWorker?.CurrentTerm > maintenanceHeader.Term)
                     {
                         if (_tcpLogger.IsInfoEnabled)
@@ -508,7 +505,7 @@ namespace Raven.Server
                     }
                     return true;
                 }
-                
+
             }
             return false;
         }
@@ -534,7 +531,7 @@ namespace Raven.Server
             }
 
             tcp.DocumentDatabase = await databaseLoadingTask;
-            if(tcp.DocumentDatabase == null)
+            if (tcp.DocumentDatabase == null)
                 DatabaseDoesNotExistException.Throw(header.DatabaseName);
 
             Debug.Assert(tcp.DocumentDatabase != null);
@@ -586,13 +583,13 @@ namespace Raven.Server
         {
             using (var writer = new BlittableJsonTextWriter(context, stream))
             {
-                if (configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.Admin
+                if (configuration.Security.AuthenticationEnabled == false
                     && header.AuthorizationToken == null)
                 {
                     ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.Success));
                     return true;
                 }
-                
+
                 var sigBase64Size = Sparrow.Utils.Base64.CalculateAndValidateOutputLength(Sodium.crypto_sign_bytes());
                 if (header.AuthorizationToken == null || header.AuthorizationToken.Length < sigBase64Size + 8 /* sig length + prefix */)
                 {

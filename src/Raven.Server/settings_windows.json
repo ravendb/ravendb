@@ -1,7 +1,5 @@
 ﻿{
   "ServerUrl": "http://localhost:8080",
   "DataDir": "APPDRIVE:/Raven",
-  "AllowAnonymousUserToAccessTheServer": false,
-  "AnonymousUserAccessMode": "Admin",
   "RunInMemory": false
 }

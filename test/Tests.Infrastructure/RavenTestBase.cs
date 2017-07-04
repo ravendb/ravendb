@@ -183,7 +183,7 @@ namespace FastTests
                                 continue;
                             }
 
-                            server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
+                            server.Configuration.Security.AuthenticationEnabled = false;
                             if (deleteDatabaseWhenDisposed)
                             {
                                 DeleteDatabaseResult result;

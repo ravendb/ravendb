@@ -7,14 +7,12 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 
 using Raven.Server.Config;
-using Raven.Server.Config.Attributes;
 using Raven.Server.Documents;
 using System.Threading;
 using Microsoft.Extensions.Primitives;
@@ -130,7 +128,7 @@ namespace Raven.Server.Routing
         static readonly FromBase64_DecodeDelegate _fromBase64_Decode = (FromBase64_DecodeDelegate)typeof(Convert).GetTypeInfo().GetMethod("FromBase64_Decode", BindingFlags.Static | BindingFlags.NonPublic)
             .CreateDelegate(typeof(FromBase64_DecodeDelegate));
 
-        private unsafe bool TryAuthorize(HttpContext context, RavenConfiguration configuration,
+        private bool TryAuthorize(HttpContext context, RavenConfiguration configuration,
             DocumentDatabase database)
         {
             var authHeaderValues = context.Request.Headers["Raven-Authorization"];
@@ -140,8 +138,7 @@ namespace Raven.Server.Routing
             {
                 token = context.Request.Cookies["Raven-Authorization"];
             }
-            if (configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.Admin
-                && token == null)
+            if (configuration.Security.AuthenticationEnabled == false && token == null)
                 return true;
             var sigBase64Size = Sparrow.Utils.Base64.CalculateAndValidateOutputLength(Sodium.crypto_sign_bytes());
             if (token == null || token.Length < sigBase64Size + 8 /* sig length + prefix */)
@@ -294,8 +291,7 @@ namespace Raven.Server.Routing
                         {
                             if (Sodium.crypto_sign_verify_detached(sig, msg, (ulong)tokenBytes.Length, pk) != 0)
                             {
-                                if (unknownPublicKey == false ||
-                                    ravenServer.Configuration.Server.AnonymousUserAccessMode != AnonymousUserAccessModeValues.Admin)
+                                if (unknownPublicKey == false || ravenServer.Configuration.Security.AuthenticationEnabled)
                                     return false;
 
                                 // if the key failed to validate, but we aren't familiar with the public key AND

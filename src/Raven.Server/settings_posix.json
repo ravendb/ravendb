@@ -1,6 +1,4 @@
 ﻿{
   "ServerUrl": "http://localhost:8080",
-  "AllowAnonymousUserToAccessTheServer": false,
-  "AnonymousUserAccessMode": "Admin",
   "RunInMemory": false
 }
