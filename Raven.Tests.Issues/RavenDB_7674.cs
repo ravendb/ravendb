@@ -42,7 +42,7 @@ namespace Raven.Tests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User() { Name = "Doe" }, null, "users/1");
+                    session.Store(new User() { Name = "Doe" }, "users/1");
                     session.SaveChanges();
                 }
                 
