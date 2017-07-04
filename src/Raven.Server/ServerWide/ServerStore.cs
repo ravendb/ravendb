@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
+using System.ServiceModel;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,10 +19,12 @@ using Raven.Client.Json;
 using Raven.Client.Server;
 using Raven.Client.Server.ETL;
 using Raven.Client.Server.Operations;
+using Raven.Client.Server.Operations.ApiKeys;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
+using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Rachis;
 using Raven.Server.NotificationCenter.Notifications;
@@ -1395,12 +1398,78 @@ namespace Raven.Server.ServerWide
 
         }
 
+        private const string SystemApiKey = "Raven:System";
+        public async Task<(string apiKey, string publicKey)> GetApiKeyAndPublicKey()
+        {
+            TransactionOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
+            {
+                var key = Cluster.Read(context, SystemApiKey);
+                string keyFullName;
+                if (key == null)
+                {
+                    EnsureNotPassive();
+                    //making sure we are leaders, we might be followers and fail but that is okay.                    
+                    if (await Engine.WaitForState(RachisConsensus.State.Leader).WaitWithTimeout(TimeSpan.FromSeconds(5)) == false)
+                    {
+                        var msg = "Was requested to get api key and public key but i haven't became leader after 5 seconds";
+                        if (Logger.IsInfoEnabled)
+                        {
+                            Logger.Info(msg);
+                        }
+                        throw new TimeoutException(msg);
+                    }
+                    var secret = GenerateRandomSecret();
+                    var defintions = new ApiKeyDefinition
+                    {
+                        Enabled = true,
+                        ResourcesAccessMode = new Dictionary<string, AccessModes> { { "*",AccessModes.Admin} },
+                        Secret = secret,
+                        ServerAdmin = true
+                    };
+                    var createApiKey = new PutApiKeyCommand(SystemApiKey, defintions);
+                    var index = (await Engine.PutAsync(createApiKey)).Etag;
+                    if (await Engine.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index).WaitWithTimeout(TimeSpan.FromSeconds(5)) == false)
+                    {
+                        var msg = "Waited for 5 seconds for Raven/System to be commited but it wasn't";
+                        if (Logger.IsInfoEnabled)
+                        {
+                            Logger.Info(msg);
+                        }
+                        throw new TimeoutException(msg);
+                    }
+                    keyFullName = $"Key={SystemApiKey}/{secret}";
+                }
+                else
+                {
+                    var desKey = JsonDeserializationServer.ApiKeyDefinition(key);
+                    keyFullName = $"Key={SystemApiKey}/{desKey.Secret}";
+                }
+                return (keyFullName, Convert.ToBase64String(SignPublicKey));
+            }            
+        }
+
+        private const string secretCharacters = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        private string GenerateRandomSecret()
+        {
+            var rand = new Random();
+            var secretLength = (int)(22 * rand.NextDouble()) + 10;
+            var sb = new StringBuilder();
+            for (int i = 0; i < secretLength; i++)
+            {
+                sb.Append(secretCharacters[rand.Next(secretCharacters.Length)]);
+            }
+            return sb.ToString();
+        }
+		
         public bool HasClientConfigurationChanged(long index)
         {
             if (index < 0)
                 return false;
 
             return _lastClientConfigurationIndex > index;
-        }
+        }		
+
     }
 }

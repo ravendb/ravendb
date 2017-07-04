@@ -81,6 +81,7 @@
     <PackageReference Include="Portable.BouncyCastle" Version="1.8.1.2" />
     <PackageReference Include="System.ComponentModel" Version="4.3.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.3.1" />
+    <PackageReference Include="System.IO.Pipes" Version="4.3.0" />
     <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
     <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
     <PackageReference Include="System.Security.Cryptography.Csp" Version="4.3.0" />
