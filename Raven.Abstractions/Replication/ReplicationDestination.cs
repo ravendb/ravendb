@@ -131,7 +131,7 @@ namespace Raven.Abstractions.Replication
                    IgnoredClient.Equals(other.IgnoredClient) && Disabled.Equals(other.Disabled) &&
                    ((string.Equals(Url, other.Url, StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(ClientVisibleUrl)) ||
                    (!string.IsNullOrWhiteSpace(ClientVisibleUrl) && string.Equals(ClientVisibleUrl, other.ClientVisibleUrl, StringComparison.OrdinalIgnoreCase))) &&
-                   ReplicateAttachmentsInEtl.Equals(other.ReplicateAttachmentsInEtl) || 
+                   ReplicateAttachmentsInEtl.Equals(other.ReplicateAttachmentsInEtl) && 
                    Extensions.DictionaryExtensions.ContentEquals(SpecifiedCollections, other.SpecifiedCollections);
         }
 
