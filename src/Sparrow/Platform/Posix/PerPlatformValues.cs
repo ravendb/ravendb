@@ -54,8 +54,15 @@ namespace Voron.Platform.Posix
             public static Posix.OpenFlags O_DSYNC = (Posix.OpenFlags)(
                 RunningOnMacOsx
                     ? 0x00400000
-                    : 4096);
+                    : 4096);            
+        }
 
+        public class SysconfNames
+        {
+            public static int _SC_PAGESIZE =
+                RunningOnMacOsx
+                    ? 0x1d
+                    : 0x1e;
         }
     }
 }

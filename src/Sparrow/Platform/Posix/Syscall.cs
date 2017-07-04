@@ -175,9 +175,9 @@ namespace Sparrow.Platform.Posix
 
 
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern long sysconf(SysconfName name, Errno defaultError);
+        public static extern long sysconf(int name, Errno defaultError);
 
-        public static long sysconf(SysconfName name)
+        public static long sysconf(int name)
         {
             return sysconf(name, (Errno) 0);
         }
@@ -197,7 +197,6 @@ namespace Sparrow.Platform.Posix
 
         public static int AllocateFileSpace(int fd, long size, string file, out bool usingWrite)
         {
-            Console.WriteLine("AllocateFileSpace " + size + " to " + file);
             usingWrite = false;
             int result;
             int retries = 1024;
@@ -210,16 +209,13 @@ namespace Sparrow.Platform.Posix
                 switch (result)
                 {
                     case (int)Errno.EINVAL:
-                        Console.WriteLine("EINVAL");
-                        Console.Out.Flush();
                         // fallocate is not supported, we'll use lseek instead
                         usingWrite = true;
                         byte b = 0;
                         if (pwrite(fd, &b, 1, size - 1) != 1)
                         {
-                            Console.WriteLine("hah?");
-                            Console.Out.Flush();
-                            return Marshal.GetLastWin32Error();
+                            var err = Marshal.GetLastWin32Error();
+                            Syscall.ThrowLastError(err, "Failed to pwrite in order to fallocate where fallocate is not supported for " + file);
                         }
                         return 0;
                 }
@@ -228,8 +224,6 @@ namespace Sparrow.Platform.Posix
                     break;
                 if (retries-- > 0)
                     throw new IOException($"Tried too many times to call posix_fallocate {file}, but always got EINTR, cannot retry again");
-                Console.WriteLine("once again");
-                Console.Out.Flush();
             }
             
             return result;

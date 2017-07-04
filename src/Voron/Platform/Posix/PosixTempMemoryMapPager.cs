@@ -42,11 +42,17 @@ namespace Voron.Platform.Posix
             if (_fd == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                Syscall.ThrowLastError(err);
+                Syscall.ThrowLastError(err, "Cannot open " + FileName);
             }
             DeleteOnClose = true;
 
-            SysPageSize = Syscall.sysconf(SysconfName._SC_PAGESIZE);
+            SysPageSize = Syscall.sysconf(PerPlatformValues.SysconfNames._SC_PAGESIZE);
+
+            if (SysPageSize <= 0) // i.e. -1 because _SC_PAGESIZE defined differently on various platforms
+            {
+                var err = Marshal.GetLastWin32Error();
+                Syscall.ThrowLastError(err, "Got SysPageSize <= 0 for " + FileName);
+            }
 
             _totalAllocationSize = NearestSizeToPageSize(initialFileSize ?? _totalAllocationSize);
             PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize, FileName.FullPath);
