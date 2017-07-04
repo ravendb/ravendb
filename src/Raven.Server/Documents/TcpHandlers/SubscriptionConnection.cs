@@ -19,6 +19,8 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Utils;
 using Sparrow.Utils;
 using System.Linq;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using Voron;
 
 namespace Raven.Server.Documents.TcpHandlers
@@ -26,6 +28,7 @@ namespace Raven.Server.Documents.TcpHandlers
     public class SubscriptionConnection : IDisposable
     {
         private static readonly StringSegment DataSegment = new StringSegment("Data");
+        private static readonly StringSegment ExceptionSegment = new StringSegment("Exception");
         private static readonly StringSegment TypeSegment = new StringSegment("Type");
 
 
@@ -375,12 +378,12 @@ namespace Raven.Server.Documents.TcpHandlers
                         using (TcpConnection.ContextPool.AllocateOperationContext(out context))
                         using (var writer = new BlittableJsonTextWriter(context, _buffer))
                         {
-                            foreach (var doc in fetcher.GetDataToSend(docsContext, subscription, startEtag, patch))
+                            foreach (var result in fetcher.GetDataToSend(docsContext, subscription, startEtag, patch))
                             {
-                                startEtag = doc.Etag;
-                                lastChangeVector = ChangeVectorUtils.MergeVectors(doc.ChangeVector, subscription.ChangeVector);
-                                                                
-                                if (doc.Data == null)
+                                startEtag = result.doc.Etag;
+                                lastChangeVector = ChangeVectorUtils.MergeVectors(result.doc.ChangeVector, subscription.ChangeVector);
+                                
+                                if (result.doc.Data == null)
                                 {
                                     if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
                                     {
@@ -390,20 +393,33 @@ namespace Raven.Server.Documents.TcpHandlers
                                         
                                     continue;
                                 }
-
                                 
                                 anyDocumentsSentInCurrentIteration = true;
-                                
-
                                 writer.WriteStartObject();
+                                
                                 writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(TypeSegment));
                                 writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching(DataSegment));
                                 writer.WriteComma();
                                 writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(DataSegment));
-
-                                doc.EnsureMetadata();
-                                writer.WriteDocument(docsContext, doc);
-                                doc.Data.Dispose();
+                                result.doc.EnsureMetadata();
+                                
+                                if (result.exception != null)
+                                {
+                                    writer.WriteValue(BlittableJsonToken.StartObject, 
+                                        docsContext.ReadObject(new DynamicJsonValue()
+                                        {
+                                            [Raven.Client.Constants.Documents.Metadata.Key] = result.doc.Data[Raven.Client.Constants.Documents.Metadata.Key]
+                                        }, result.doc.Id)
+                                    );
+                                    writer.WriteComma();
+                                    writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(ExceptionSegment));
+                                    writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching(result.exception.ToString()));
+                                }
+                                else
+                                {
+                                    writer.WriteDocument(docsContext, result.doc);
+                                    result.doc.Data.Dispose();
+                                }
 
                                 writer.WriteEndObject();
                                 docsToFlush++;

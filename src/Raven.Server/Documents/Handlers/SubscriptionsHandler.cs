@@ -10,6 +10,7 @@ using Sparrow.Json;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Conventions;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions;
@@ -57,14 +58,33 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
 
+                    
+                    
                     using (context.OpenReadTransaction())
                     {
-                        writer.WriteDocuments(context, 
+                        // todo: return excepitons alongside witht the documents
+                        var dataToSend = fetcher.GetDataToSend(context, state, etag, patch);
+                        writer.WriteDocuments(context,
+                            dataToSend
+                                .Where(x=>x.exception == null).Select(x=>x.doc), false, out int _);
+                        
+                        writer.WriteComma();
+                        writer.WritePropertyName("Exceptions");
+                        writer.WriteStartArray();
 
-                            fetcher.GetDataToSend(context, state, etag, patch)
-                                .Where(x=>x.Data != null)
+                        var first = true;
+                        
+                        foreach (var exceptionDetails in dataToSend.Where(x=>x.exception != null).Select(x=> 
+                            new DynamicJsonValue(){["Id"]=x.doc.Id, ["Exception"] = x.exception}))
+                        {
+                            if (first == false)
+                                writer.WriteComma();
                             
-                            , false, out int _);
+                            writer.WriteValue(BlittableJsonToken.StartObject, exceptionDetails);
+                            first = false;
+                        }
+                        
+                        writer.WriteEndArray();
                     }
                     writer.WriteEndObject();
                 }
