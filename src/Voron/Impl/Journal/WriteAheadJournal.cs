@@ -781,7 +781,7 @@ namespace Voron.Impl.Journal
                 }
 
                 // now the sync lock is in progress, but it can't complete because we are holding the flush lock
-                // we'll first give the flush lock and then wait on the fsync lock until the sync is completed
+                // we'll first give the flush lock and then wait on the FSync lock until the sync is completed
                 // then we'll re-aqcuire the flush lock
 
                 Monitor.Exit(_flushingLock);
@@ -1263,7 +1263,7 @@ namespace Voron.Impl.Journal
             }
         }
 
-       private CompressedPagesResult PrepareToWriteToJournal(LowLevelTransaction tx)
+        private CompressedPagesResult PrepareToWriteToJournal(LowLevelTransaction tx)
         {
             var txPages = tx.GetTransactionPages();
             var numberOfPages = txPages.Count;
@@ -1273,7 +1273,7 @@ namespace Voron.Impl.Journal
                 pagesCountIncludingAllOverflowPages += page.NumberOfPages;
             }
 
-            bool performCompression = pagesCountIncludingAllOverflowPages > 200; // TODO : Make this variable and configurable
+            var performCompression = pagesCountIncludingAllOverflowPages > _env.Options.CompressTxAboveSizeInBytes / Constants.Storage.PageSize;
 
             var sizeOfPagesHeader = numberOfPages * sizeof(TransactionHeaderPageInfo);
             var overhead = sizeOfPagesHeader + (long)numberOfPages * sizeof(long);
@@ -1289,8 +1289,8 @@ namespace Voron.Impl.Journal
             var txPageInfoPtr = txHeaderPtr + sizeof(TransactionHeader);
             var pagesInfo = (TransactionHeaderPageInfo*)txPageInfoPtr;
 
-            var write = txPageInfoPtr + sizeOfPagesHeader; 
-            var pageSequencialNumber = 0;
+            var write = txPageInfoPtr + sizeOfPagesHeader;
+            var pageSequentialNumber = 0;
             var pagesEncountered = 0;
             foreach (var txPage in txPages)
             {
@@ -1303,7 +1303,7 @@ namespace Voron.Impl.Journal
                     pageHeader->Checksum = StorageEnvironment.CalculatePageChecksum(scratchPage, pageHeader->PageNumber, pageHeader->Flags, pageHeader->OverflowSize);
                 }
 
-                pagesInfo[pageSequencialNumber].PageNumber = pageHeader->PageNumber;
+                pagesInfo[pageSequentialNumber].PageNumber = pageHeader->PageNumber;
                 txPage.ScratchPageNumber = pageHeader->PageNumber;
 
                 *(long*)write = pageHeader->PageNumber;
@@ -1326,10 +1326,10 @@ namespace Voron.Impl.Journal
                     }
 
                     write += _diffPage.OutputSize;
-                    pagesInfo[pageSequencialNumber].Size = _diffPage.OutputSize == 0 ? 0 : diffPageSize;
-                    pagesInfo[pageSequencialNumber].IsNewDiff = txPage.PreviousVersion == null;
-                    pagesInfo[pageSequencialNumber].DiffSize = _diffPage.IsDiff ? _diffPage.OutputSize : 0;
-                    Debug.Assert(Math.Max(pagesInfo[pageSequencialNumber].Size, pagesInfo[pageSequencialNumber].DiffSize) <= diffPageSize);
+                    pagesInfo[pageSequentialNumber].Size = _diffPage.OutputSize == 0 ? 0 : diffPageSize;
+                    pagesInfo[pageSequentialNumber].IsNewDiff = txPage.PreviousVersion == null;
+                    pagesInfo[pageSequentialNumber].DiffSize = _diffPage.IsDiff ? _diffPage.OutputSize : 0;
+                    Debug.Assert(Math.Max(pagesInfo[pageSequentialNumber].Size, pagesInfo[pageSequentialNumber].DiffSize) <= diffPageSize);
                 }
                 else
                 {
@@ -1345,10 +1345,10 @@ namespace Voron.Impl.Journal
                     Memory.Copy(write, scratchPage, size);
 
                     write += size;
-                    pagesInfo[pageSequencialNumber].Size = size;
-                    pagesInfo[pageSequencialNumber].DiffSize = 0;
+                    pagesInfo[pageSequentialNumber].Size = size;
+                    pagesInfo[pageSequentialNumber].DiffSize = 0;
                 }
-                ++pageSequencialNumber;
+                ++pageSequentialNumber;
             }
 
             var totalSizeWritten = write - txPageInfoPtr;
@@ -1410,7 +1410,7 @@ namespace Voron.Impl.Journal
             }
 
             var reportedCompressionLength = performCompression ? compressedLen : -1;
-            
+
             // Debug.Assert(txHeaderPtr != null);
 
             var txHeader = tx.GetTransactionHeader();
@@ -1435,7 +1435,7 @@ namespace Voron.Impl.Journal
             if (_env.Options.EncryptionEnabled)
                 EncryptTransaction(txHeaderPtr);
 
-            return prepreToWriteToJournal;            
+            return prepreToWriteToJournal;
         }
 
         private void EncryptTransaction(byte* fullTxBuffer)

@@ -189,6 +189,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
                 options.OnRecoveryError += documentDatabase.HandleOnRecoveryError;
+                options.CompressTxAboveSizeInBytes = documentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
                 options.SchemaVersion = 1;
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                 options.TimeToSyncAfterFlashInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
@@ -307,6 +308,7 @@ namespace Raven.Server.Documents.Indexes
                 options.OnRecoveryError += documentDatabase.HandleOnRecoveryError;
 
                 options.SchemaVersion = 1;
+                options.CompressTxAboveSizeInBytes = documentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                 options.TimeToSyncAfterFlashInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
                 options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
@@ -450,7 +452,20 @@ namespace Raven.Server.Documents.Indexes
 
                 _cts = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown);
 
-                _indexingThread = new Thread(ExecuteIndexing)
+                _indexingThread = new Thread(() =>
+                {
+                    try
+                    {
+                        ExecuteIndexing();
+                    }
+                    catch (Exception e)
+                    {
+                        if (_logger.IsInfoEnabled)
+                        {
+                            _logger.Info("Failed to execute indexing in " + IndexingThreadName, e);
+                        }
+                    }
+                })
                 {
                     Name = IndexingThreadName,
                     IsBackground = true
@@ -713,12 +728,15 @@ namespace Raven.Server.Documents.Indexes
                 // we need to reset errors to give it a chance
                 ResetErrors();
 
+                var storageEnvironment = _environment;
+                if (storageEnvironment == null)
+                    return; // can be null if we disposed immediately
                 try
                 {
                     _contextPool.SetMostWorkInGoingToHappenonThisThread();
 
                     DocumentDatabase.Changes.OnDocumentChange += HandleDocumentChange;
-                    _environment.OnLogsApplied += HandleLogsApplied;
+                    storageEnvironment.OnLogsApplied += HandleLogsApplied;
 
                     while (true)
                     {
@@ -885,7 +903,7 @@ namespace Raven.Server.Documents.Indexes
                                 if (numberOfSetEvents == 1 && _logsAppliedEvent.IsSet)
                                 {
                                     _hadRealIndexingWorkToDo = false;
-                                    _environment.Cleanup();
+                                    storageEnvironment.Cleanup();
                                     _logsAppliedEvent.Reset();
                                 }
                             }
@@ -898,8 +916,9 @@ namespace Raven.Server.Documents.Indexes
                 }
                 finally
                 {
-                    _environment.OnLogsApplied -= HandleLogsApplied;
-                    DocumentDatabase.Changes.OnDocumentChange -= HandleDocumentChange;
+                    storageEnvironment.OnLogsApplied -= HandleLogsApplied;
+                    if (DocumentDatabase != null)
+                        DocumentDatabase.Changes.OnDocumentChange -= HandleDocumentChange;
                 }
             }
         }
@@ -2335,6 +2354,7 @@ namespace Raven.Server.Documents.Indexes
                     srcOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                     srcOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
                     srcOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
+                    srcOptions.CompressTxAboveSizeInBytes = DocumentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
                     srcOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
                     srcOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
                     Sodium.CloneKey(out srcOptions.MasterKey, DocumentDatabase.MasterKey);
@@ -2350,7 +2370,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         compactOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
                         compactOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
-
+                        compactOptions.CompressTxAboveSizeInBytes = DocumentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
                         compactOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                         compactOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
                         compactOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;

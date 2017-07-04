@@ -136,11 +136,6 @@ namespace Raven.Server.Rachis
                 }
             }
 
-            dict[_engine.Tag] = new NodeStatus
-            {
-                ConnectionStatus = "Connected"
-            };
-
             return dict;
         }
 

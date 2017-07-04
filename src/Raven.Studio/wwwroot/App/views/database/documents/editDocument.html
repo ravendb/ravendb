@@ -151,7 +151,9 @@
                 </div>
                 <div class="search-documents" data-bind="visible: searchInputVisible">
                     <input type="search" class="form-control" data-bind="textInput: searchInput" placeholder="search" /><span class="icon-search"></span>
-                </div>                
+                </div>
+                <div class="flex-window-head" data-bind="visible: isUploaderActive, template: { name: 'uploader-template' }">
+                </div>
             </div>
             <div class="flex-window-scroll">
                 <div class="objects-list-container">
@@ -160,8 +162,6 @@
             </div>
             <div class="bg-warning padding padding-xs text-center" data-bind="visible: showUploadNotAvailable">
                 <small><i class="icon-info"></i> <span>File editing is not available in revisions.</span></small>
-            </div>
-            <div class="flex-window-head" data-bind="visible: isUploaderActive, template: { name: 'uploader-template' }">
             </div>
         </div>
     </div>
@@ -175,11 +175,11 @@
 </div>
 
 <script type="text/html" id="uploader-template">
-    <div class="padding padding-xs margin-bottom" data-bind="with: uploader">
+    <div class="padding padding-xs margin-top margin-top-sm" data-bind="with: uploader">
         <div class="input-group file-input">
             <input type="file" id="uploadAttachmentFilePicker" data-bind="event: { change: _.partial(fileSelected, $element.value) }" tabindex="-1">
-            <label for="uploadAttachmentFilePicker" class="btn btn-sm btn-block btn-primary" data-bind="css: { 'btn-spinner': spinners.upload }, disable: spinners.upload">
-                <i class="icon-upload"></i> <span>Add attachment</span>
+            <label for="uploadAttachmentFilePicker" class="btn btn-sm btn-primary btn-block" data-bind="css: { 'btn-spinner': spinners.upload }, disable: spinners.upload">
+                <i class="icon-attachment"></i> <span>Add attachment</span>
             </label>
         </div>
     </div>

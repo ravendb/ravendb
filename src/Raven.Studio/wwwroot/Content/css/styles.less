@@ -103,6 +103,7 @@ h6 {
 .hr-title {
     display: flex;
     align-items: center;
+    margin-bottom: @grid-gutter-width/4;
 
     h1, h2, h3, h4, h5 {
         margin: 0 6px 1px 0;
@@ -111,6 +112,11 @@ h6 {
 
     hr {
         flex-grow: 1;
+        margin: 0;
+
+        + .btn {
+            margin-left: 6px;
+        }
     }
 }
 
@@ -743,11 +749,19 @@ input[type=file] + .form-control {
 }
 
 .margin-bottom {
-    margin-bottom: @line-height-computed / 2;
+    margin-bottom: @grid-gutter-width / 2;
+
+    &.margin-bottom-sm {
+        margin-bottom: @grid-gutter-width / 4;
+    }
 }
 
 .margin-top {
-    margin-top: @line-height-computed / 2;
+    margin-top: @grid-gutter-width / 2;
+
+    &.margin-top-sm {
+        margin-top: @grid-gutter-width / 4;
+    }
 }
 
 .margin-center {
@@ -1315,6 +1329,8 @@ pre {
     }
 
     &.active {
+        box-shadow: 0 0 0 1px @brand-primary-dark inset;
+
         &.state-primary {
             box-shadow: 0 0 0 1px @brand-primary-dark inset;
         }

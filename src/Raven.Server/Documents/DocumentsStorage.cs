@@ -216,6 +216,7 @@ namespace Raven.Server.Documents
             options.OnNonDurableFileSystemError += _documentDatabase.HandleNonDurableFileSystemError;
 
             options.GenerateNewDatabaseId = generateNewDatabaseId;
+            options.CompressTxAboveSizeInBytes = _documentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
             options.ForceUsing32BitsPager = _documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
             options.TimeToSyncAfterFlashInSec = (int)_documentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
             options.NumOfConcurrentSyncsPerPhysDrive = _documentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;

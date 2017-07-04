@@ -7,14 +7,12 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 
 using Raven.Server.Config;
-using Raven.Server.Config.Attributes;
 using Raven.Server.Documents;
 using System.Threading;
 using Microsoft.Extensions.Primitives;
@@ -125,12 +123,12 @@ namespace Raven.Server.Routing
             return reqCtx.Database?.Name;
         }
 
-        private unsafe delegate Int32 FromBase64_DecodeDelegate(Char* startInputPtr, Int32 inputLength, Byte* startDestPtr, Int32 destLength);
+        private unsafe delegate int FromBase64_DecodeDelegate(char* startInputPtr, int inputLength, byte* startDestPtr, int destLength);
 
         static readonly FromBase64_DecodeDelegate _fromBase64_Decode = (FromBase64_DecodeDelegate)typeof(Convert).GetTypeInfo().GetMethod("FromBase64_Decode", BindingFlags.Static | BindingFlags.NonPublic)
             .CreateDelegate(typeof(FromBase64_DecodeDelegate));
 
-        private unsafe bool TryAuthorize(HttpContext context, RavenConfiguration configuration,
+        private bool TryAuthorize(HttpContext context, RavenConfiguration configuration,
             DocumentDatabase database)
         {
             var authHeaderValues = context.Request.Headers["Raven-Authorization"];
@@ -140,8 +138,8 @@ namespace Raven.Server.Routing
             {
                 token = context.Request.Cookies["Raven-Authorization"];
             }
-            if (configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.Admin
-                && token == null)
+        
+            if (configuration.Security.AuthenticationEnabled == false && token == null)
                 return true;
             var sigBase64Size = Sparrow.Utils.Base64.CalculateAndValidateOutputLength(Sodium.crypto_sign_bytes());
             if (token == null || token.Length < sigBase64Size + 8 /* sig length + prefix */)
@@ -162,8 +160,8 @@ namespace Raven.Server.Routing
                 return false;
             }
 
-            AccessToken accessToken;
-            if (!TryGetAccessToken(_ravenServer, token, sigBase64Size, out accessToken))
+           
+            if (TryGetAccessToken(_ravenServer, token, sigBase64Size, out AccessToken accessToken) == false)
             {
                 context.Response.StatusCode = (int)HttpStatusCode.PreconditionFailed;
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -182,21 +180,18 @@ namespace Raven.Server.Routing
             }
 
             var resourceName = database?.Name;
-
             if (resourceName == null)
                 return true;
 
-            AccessModes mode;
-            var hasValue =
-                accessToken.AuthorizedDatabases.TryGetValue(resourceName, out mode) ||
-                accessToken.AuthorizedDatabases.TryGetValue("*", out mode);
-
+            
+            var hasValue = accessToken.AuthorizedDatabases.TryGetValue(resourceName, out AccessMode mode) ||
+                           accessToken.AuthorizedDatabases.TryGetValue("*", out mode);
             if (hasValue == false)
-                mode = AccessModes.None;
+                mode = AccessMode.None;
 
             switch (mode)
             {
-                case AccessModes.None:
+                case AccessMode.None:
                     context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                     using (var ctx = JsonOperationContext.ShortTermSingleUse())
                     using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
@@ -211,7 +206,7 @@ namespace Raven.Server.Routing
                             });
                     }
                     return false;
-                case AccessModes.ReadOnly:
+                case AccessMode.ReadOnly:
                     if (context.Request.Method != "GET")
                     {
                         context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
@@ -230,8 +225,8 @@ namespace Raven.Server.Routing
                         return false;
                     }
                     return true;
-                case AccessModes.ReadWrite:
-                case AccessModes.Admin:
+                case AccessMode.ReadWrite:
+                case AccessMode.Admin:
                     return true;
                 default:
                     throw new ArgumentOutOfRangeException("Unknown access mode: " + mode);
@@ -251,8 +246,7 @@ namespace Raven.Server.Routing
                     _fromBase64_Decode(pToken + 8, sigBase64Size, sig, Sodium.crypto_sign_bytes());
                     Memory.Set(msg + 8, (byte)' ', sigBase64Size);
 
-                    TransactionOperationContext txContext;
-                    using (ravenServer.ServerStore.ContextPool.AllocateOperationContext(out txContext))
+                    using (ravenServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
                     using (txContext.OpenReadTransaction())
                     using (var tokenJson = txContext.ParseBuffer(msg, tokenBytes.Length, "auth token", BlittableJsonDocumentBuilder.UsageMode.None))
                     {
@@ -268,7 +262,7 @@ namespace Raven.Server.Routing
                         var publicKey = clusterTopology.GetPublicKeyFromTag(tag);
                         //This is the case where we don't know the server but the admin had injected the server's 
                         //public key into our server store using an external tool.
-                        bool unknownPublicKey = false;
+                        var unknownPublicKey = false;
                         if (publicKey == null)
                         {
                             //If we are not a part of a cluster we won't have our public key in the topology so we will 
@@ -294,8 +288,7 @@ namespace Raven.Server.Routing
                         {
                             if (Sodium.crypto_sign_verify_detached(sig, msg, (ulong)tokenBytes.Length, pk) != 0)
                             {
-                                if (unknownPublicKey == false ||
-                                    ravenServer.Configuration.Server.AnonymousUserAccessMode != AnonymousUserAccessModeValues.Admin)
+                                if (unknownPublicKey == false || ravenServer.Configuration.Security.AuthenticationEnabled)
                                     return false;
 
                                 // if the key failed to validate, but we aren't familiar with the public key AND
@@ -321,40 +314,34 @@ namespace Raven.Server.Routing
 
             }
 
-            return !accessToken.IsExpired;
+            return accessToken.IsExpired == false;
         }
 
-        public static Dictionary<string, AccessModes> GetAuthorizedDatabases(TransactionOperationContext txContext, RavenServer ravenServer, string apiKeyName)
+        public static Dictionary<string, AccessMode> GetAuthorizedDatabases(TransactionOperationContext txContext, RavenServer ravenServer, string apiKeyName)
         {
-            BlittableJsonReaderObject resourcesAccessMode;
-            if (apiKeyName.StartsWith("Raven"))
-            {
-                return new Dictionary<string, AccessModes> { { "*", AccessModes.Admin } };
-            }
-            var apiDoc = ravenServer.ServerStore.Cluster.Read(txContext, Constants.ApiKeys.Prefix + apiKeyName);
+           if (apiKeyName.StartsWith("Raven"))
+                return new Dictionary<string, AccessMode> {{"*", AccessMode.Admin}};
 
+            var apiDoc = ravenServer.ServerStore.Cluster.Read(txContext, Constants.ApiKeys.Prefix + apiKeyName);
             if (apiDoc == null)
-            {
                 throw new AuthenticationException($"Could not find api key: {apiKeyName}");
-            }
-            if (apiDoc.TryGet("ResourcesAccessMode", out resourcesAccessMode) == false)
-            {
+           
+
+            if (apiDoc.TryGet("ResourcesAccessMode", out BlittableJsonReaderObject resourcesAccessMode) == false)
                 throw new InvalidOperationException($"Missing 'ResourcesAccessMode' property in api key: {apiKeyName}");
-            }
+        
             var prop = new BlittableJsonReaderObject.PropertyDetails();
 
-            var databases = new Dictionary<string, AccessModes>(StringComparer.OrdinalIgnoreCase);
+            var databases = new Dictionary<string, AccessMode>(StringComparer.OrdinalIgnoreCase);
             for (var i = 0; i < resourcesAccessMode.Count; i++)
             {
                 resourcesAccessMode.GetPropertyByIndex(i, ref prop);
 
-                string accessMode;
-                if (resourcesAccessMode.TryGet(prop.Name, out accessMode) == false)
+                if (resourcesAccessMode.TryGet(prop.Name, out string accessMode) == false)
                 {
                     throw new InvalidOperationException($"Missing value of dbName -'{prop.Name}' property in api key: {apiKeyName}");
                 }
-                AccessModes value;
-                if (Enum.TryParse(accessMode, out value) == false)
+                  if (Enum.TryParse(accessMode, out AccessMode value) == false)
                 {
                     throw new InvalidOperationException(
                         $"Invalid value of dbName -'{prop.Name}' property in api key: {apiKeyName}, cannot understand: {accessMode}");
@@ -366,12 +353,10 @@ namespace Raven.Server.Routing
 
         private void DrainRequest(JsonOperationContext ctx, HttpContext context)
         {
-            StringValues value;
-            if (context.Response.Headers.TryGetValue("Connection", out value) && value == "close")
+            if (context.Response.Headers.TryGetValue("Connection", out StringValues value) && value == "close")
                 return; // don't need to drain it, the connection will close 
 
-            JsonOperationContext.ManagedPinnedBuffer buffer;
-            using (ctx.GetManagedBuffer(out buffer))
+              using (ctx.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
             {
                 var requestBody = context.Request.Body;
                 while (true)

@@ -1,95 +1,102 @@
-<div id="admin-js-console-container" class="flex-window stretch content-margin">
-    <div class="flex-window-head">
-        
-        <div class="clearfix">
-            <h3 class="pull-left-sm">Script target</h3>
-            <div class="pull-right-sm form-inline">
+<div id="admin-js-console-container" class="content-margin">
+    <div class="toolbar">
+        <div class="row">
+            <div class="col-sm-offset-3 col-sm-9 col-lg-offset-2 col-lg-10 flex-horizontal">
+                <div class="bg-warning inline-block padding padding-xs small"><i class="icon-warning"></i>The execution of the admin script <strong>might crash you server</strong>, unless you know what you are doing</div>
+                <div class="flex-separator"></div>
                 <div class="dropdown dropdown-right loadpatch" data-bind="template: { name: 'predefined-scripts-dialog' }">
                 </div>
             </div>
         </div>
 
-        <div class="form-horizontal">
-            <div class="row">
-                <div class="col-sm-9 col-lg-10 col-sm-offset-3 col-lg-offset-2">
-                    <p class="bg-danger inline-block padding padding-xs small"><i class="icon-warning"></i> Note: The execution of the admin script might crash you server, unless you know what you are doing.</p>
-                </div>
-            </div>
-
-            <div class="row">
-                <label class="control-label col-sm-3 col-lg-2">Type</label>
-
-                <div class="col-sm-9 col-lg-4 margin-bottom">
-                    <div class="dropdown btn-block">
-                        <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
-                            <span data-bind="text: model().patchOption"></span>
-                            <span class="caret"></span>
-                        </button>
-                        <ul class="dropdown-menu" data-bind="foreach: $root.constructor.allPatchOptions">
-                            <li><a href="#" data-bind="text: $data, click: _.partial($parent.usePatchOption, $data)"></a></li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="col-lg-4 col-sm-12">
-                    <span data-bind="visible: model().patchOption() === 'Server'">
-                        Accessible within the script under <code>server</code> variable
-                    </span>
-                    <span data-bind="visible: model().patchOption() === 'Database'">
-                        Accessible within the script under <code>database</code> variable
-                    </span>
-                </div>
-            </div>
-
-            <div class="row" data-bind="visible: model().patchOption() === 'Database'">
-                <label class="control-label col-sm-3 col-lg-2">Database</label>
-
-                <div class="col-sm-9 col-lg-4 margin-bottom" data-bind="validationElement: model().selectedDatabase">
-                    <div class="dropdown btn-block">
-                        <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
-                            <span data-bind="text: model().selectedDatabase() || 'Select database...'"></span>
-                            <span class="caret"></span>
-                        </button>
-                        <ul class="dropdown-menu" data-bind="foreach: databaseNames">
-                            <li><a href="#" data-bind="text: $data, click: _.partial($parent.useDatabase, $data)"></a></li>
-                        </ul>
-                    </div>
-                    <span class="help-block" data-bind="validationMessage: model().selectedDatabase"></span>
-                </div>
-            </div>
-            
-            <div class="row form-horizontal margin-bottom">
-                <div class="col-sm-3 col-lg-2">
-                    <h3>Script</h3>
-                </div>
-                <div class="col-sm-9 col-lg-10">
-                    <div class="patch-container">
-                        <div class="patch-main">
-                            <pre class="form-control" data-bind="aceEditor: { code: model().script, lang:'ace/mode/javascript' }, validationElement: model().script" style="height: 160px;"></pre>
-
-                            <div data-bind="validationElement: model().script">
-                                <div class="help-block" data-bind="validationMessage: model().script"></div>
+    </div>
+    <div class="row margin-bottom">
+        <div class="col-sm-3 col-lg-2">
+            <h3 class="pull-left-sm">Script target</h3>
+        </div>
+        <div class="col-sm-9 col-lg-10">
+            <div class="panel padding margin-bottom">
+                <div class="row">
+                    <div class="col-lg-6">
+                        <div class="row">
+                            <label class="control-label col-sm-4 col-lg-3 col-xl-2">Type</label>
+                            <div class="col-sm-8 col-lg-9 col-xl-10">
+                                <div class="dropdown btn-block">
+                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
+                                        <span data-bind="text: model().patchOption"></span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" data-bind="foreach: $root.constructor.allPatchOptions">
+                                        <li><a href="#" data-bind="text: $data, click: _.partial($parent.usePatchOption, $data)"></a></li>
+                                    </ul>
+                                </div>
+                                <div class="bg-info padding padding-xs small">
+                                    <span data-bind="visible: model().patchOption() === 'Server'">
+                                        Accessible within the script under <strong>server</strong> variable
+                                    </span>
+                                    <span data-bind="visible: model().patchOption() === 'Database'">
+                                        Accessible within the script under <strong>database</strong> variable
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                        <div class="patch-controls">
-                            <button class="btn btn-primary btn-block btn-lg text-center" 
-                                    data-bind="click: runScript, css: { 'btn-spinner': spinners.execute }, disable: spinners.execute">
-                                <i class="icon-play2 icon-lg"></i><br />
-                                <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
-                            </button>
-                            <div class="flex-separator"></div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="row" data-bind="visible: model().patchOption() === 'Database'">
+                            <label class="control-label col-sm-4 col-lg-3 col-xl-2">Database</label>
+
+                            <div class="col-sm-8 col-lg-9 col-xl-10" data-bind="validationElement: model().selectedDatabase">
+                                <div class="dropdown btn-block">
+                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
+                                        <span data-bind="text: model().selectedDatabase() || 'Select database...'"></span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" data-bind="foreach: databaseNames">
+                                        <li><a href="#" data-bind="text: $data, click: _.partial($parent.useDatabase, $data)"></a></li>
+                                    </ul>
+                                </div>
+                                <span class="help-block" data-bind="validationMessage: model().selectedDatabase"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
+
+
+
             </div>
-            
-            <div class="row form-horizontal">
-                <div class="col-sm-3 col-lg-2">
-                    <h3>Results</h3>
+        </div>
+    </div>
+    <div class="row form-horizontal margin-bottom">
+        <div class="col-sm-3 col-lg-2">
+            <h3>Script</h3>
+        </div>
+        <div class="col-sm-9 col-lg-10">
+            <div class="patch-container">
+                <div class="patch-main">
+                    <pre class="form-control" data-bind="aceEditor: { code: model().script, lang:'ace/mode/javascript' }, validationElement: model().script" style="height: 160px;"></pre>
+
+                    <div data-bind="validationElement: model().script">
+                        <div class="help-block" data-bind="validationMessage: model().script"></div>
+                    </div>
                 </div>
-                <div class="col-sm-9 col-lg-10">
-                    <pre class="form-control patch-source" data-bind="aceEditor: { code: executionResult, lang:'ace/mode/javascript', readOnly: true }" style="height: 260px;"></pre>
+                <div class="patch-controls">
+                    <button class="btn btn-primary btn-block btn-lg text-center"
+                            data-bind="click: runScript, css: { 'btn-spinner': spinners.execute }, disable: spinners.execute">
+                        <i class="icon-play2 icon-lg"></i><br />
+                        <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
+                    </button>
+                    <div class="flex-separator"></div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div class="row form-horizontal">
+        <div class="col-sm-3 col-lg-2">
+            <h3>Results</h3>
+        </div>
+        <div class="col-sm-9 col-lg-10">
+            <pre class="form-control patch-source" data-bind="aceEditor: { code: executionResult, lang:'ace/mode/javascript', readOnly: true }" style="height: 260px;"></pre>
         </div>
     </div>
 </div>

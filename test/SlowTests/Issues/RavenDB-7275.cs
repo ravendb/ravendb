@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Client.Attachments;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Server.Operations.ApiKeys;
 using Raven.Client.Util;
-using Raven.Server.Config.Attributes;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Server.Documents.Notifications;
 using Sparrow;
 using Xunit;
 
@@ -22,33 +19,32 @@ namespace SlowTests.Issues
             Secret = "secret",
             ResourcesAccessMode =
             {
-                ["db/CanGetDocWithValidToken"] = AccessModes.ReadWrite,
-                ["db/CanGetTokenFromServer"] = AccessModes.Admin
+                  ["db/CanGetDocWithValidToken"] = AccessMode.ReadWrite,
+                ["db/CanGetTokenFromServer"] = AccessMode.Admin
             }
         };
 
 
         [Fact]
-        public void ValidateSubscriptionAuthorizationRejectOnCreation()
+       public async Task ValidateSubscriptionAuthorizationRejectOnCreationAsync()
         {
             DoNotReuseServer();
-            Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
-            AccessModes[] modes = { AccessModes.None, AccessModes.ReadOnly };
+             Server.Configuration.Security.AuthenticationEnabled = false;
+             AccessMode[] modes = { AccessMode.None, AccessMode.ReadOnly };
             using (var store = GetDocumentStore(apiKey: "super/" + _apiKey.Secret))
             {
                 foreach (var accessMode in modes)
                 {
-                    Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
+                    Server.Configuration.Security.AuthenticationEnabled = false;
                     _apiKey.ResourcesAccessMode[store.Database] = accessMode;
 
                     store.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
                     var doc = store.Admin.Server.Send(new GetApiKeyOperation("super"));
                     Assert.NotNull(doc);
 
-                    Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
+                    Server.Configuration.Security.AuthenticationEnabled = true;
 
-                    Assert.Throws<AuthorizationException>(() => AsyncHelpers.RunSync(() => store.Subscriptions.CreateAsync(
-                        new SubscriptionCreationOptions<User>())));
+                    await Assert.ThrowsAsync<AuthorizationException>(async () => await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>()));
                 }
             }
         }
@@ -57,20 +53,20 @@ namespace SlowTests.Issues
         public async Task ValidateSubscriptionAuthorizationAcceptOnCreation()
         {
             DoNotReuseServer();
-            Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
-            AccessModes[] modes = { AccessModes.ReadWrite, AccessModes.Admin };
+            Server.Configuration.Security.AuthenticationEnabled = false;
+            AccessMode[] modes = { AccessMode.ReadWrite, AccessMode.Admin };
             using (var store = GetDocumentStore(apiKey: "super/" + _apiKey.Secret))
             {
                 foreach (var accessMode in modes)
                 {
-                    Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
+                    Server.Configuration.Security.AuthenticationEnabled = false;
                     _apiKey.ResourcesAccessMode[store.Database] = accessMode;
 
                     store.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
                     var doc = store.Admin.Server.Send(new GetApiKeyOperation("super"));
                     Assert.NotNull(doc);
 
-                    Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
+                   Server.Configuration.Security.AuthenticationEnabled = true;
 
                     var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
 
@@ -95,13 +91,13 @@ namespace SlowTests.Issues
         public async Task ValidateSubscriptionAuthorizationRejectOnOpening()
         {
             DoNotReuseServer();
-            Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
-            AccessModes[] modes = { AccessModes.None, AccessModes.ReadOnly };
-            using (var store = GetDocumentStore(apiKey: "super/" + _apiKey.Secret))
+           Server.Configuration.Security.AuthenticationEnabled = false;
+            AccessMode[] modes = {AccessMode.None, AccessMode.ReadOnly};
+            foreach (var accessMode in modes)
             {
-                foreach (var accessMode in modes)
+                using (var store = GetDocumentStore(apiKey: "super/" + _apiKey.Secret))
                 {
-                    Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
+                    Server.Configuration.Security.AuthenticationEnabled = false;
                     _apiKey.ResourcesAccessMode[store.Database] = accessMode;
 
                     var subscriptionId = await store.Subscriptions.CreateAsync(
@@ -111,14 +107,12 @@ namespace SlowTests.Issues
                     var doc = store.Admin.Server.Send(new GetApiKeyOperation("super"));
                     Assert.NotNull(doc);
 
-                    Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
-
+                     Server.Configuration.Security.AuthenticationEnabled = true;
                     var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
                     {
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(200)
                     });
-                    
-                    Assert.Throws<AuthorizationException>(() => AsyncHelpers.RunSync(() => subscription.Run(user => {})));
+                    await Assert.ThrowsAsync<AuthorizationException>(async () => await subscription.Run(user => { }));
                 }
             }
         }
@@ -127,13 +121,13 @@ namespace SlowTests.Issues
         public async Task ValidateSubscriptionAuthorizationAcceptOnOpening()
         {
             DoNotReuseServer();
-            Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
-            AccessModes[] modes = { AccessModes.ReadWrite, AccessModes.Admin };
+            Server.Configuration.Security.AuthenticationEnabled = false;
+             AccessMode[] modes = { AccessMode.ReadWrite, AccessMode.Admin };
             using (var store = GetDocumentStore(apiKey: "super/" + _apiKey.Secret))
             {
                 foreach (var accessMode in modes)
                 {
-                    Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
+                    Server.Configuration.Security.AuthenticationEnabled = false;
                     _apiKey.ResourcesAccessMode[store.Database] = accessMode;
 
                     var subscriptionId = await store.Subscriptions.CreateAsync(
@@ -143,7 +137,7 @@ namespace SlowTests.Issues
                     var doc = store.Admin.Server.Send(new GetApiKeyOperation("super"));
                     Assert.NotNull(doc);
 
-                    Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
+                    Server.Configuration.Security.AuthenticationEnabled = true;
 
                     var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
                     {

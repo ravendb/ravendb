@@ -30,7 +30,7 @@ namespace Voron.Platform.Posix
 
             PosixHelper.EnsurePathExists(FileName.FullPath);
 
-            _fd = Syscall.open(file.FullPath, OpenFlags.O_RDWR | OpenFlags.O_CREAT,
+            _fd = Syscall.open(file.FullPath, OpenFlags.O_RDWR | PerPlatformValues.OpenFlags.O_CREAT,
                               FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
             if (_fd == -1)
             {
@@ -38,7 +38,13 @@ namespace Voron.Platform.Posix
                 Syscall.ThrowLastError(err, "when opening " + file);
             }
 
-            SysPageSize = Syscall.sysconf(SysconfName._SC_PAGESIZE);
+            SysPageSize = Syscall.sysconf(PerPlatformValues.SysconfNames._SC_PAGESIZE);
+
+            if (SysPageSize <= 0) // i.e. -1 because _SC_PAGESIZE defined differently on various platforms
+            {
+                var err = Marshal.GetLastWin32Error();
+                Syscall.ThrowLastError(err, "Got SysPageSize <= 0 for " + FileName);
+            }
 
             _totalAllocationSize = GetFileSize();
 
@@ -46,6 +52,7 @@ namespace Voron.Platform.Posix
             {
                 _totalAllocationSize = NearestSizeToPageSize(initialFileSize.Value);
             }
+
             if (_totalAllocationSize == 0 || _totalAllocationSize % SysPageSize != 0 ||
                 _totalAllocationSize != GetFileSize())
             {

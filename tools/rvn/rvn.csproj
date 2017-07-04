@@ -29,6 +29,9 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="System.IO.Pipes" Version="4.3.0" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />
     <ProjectReference Include="..\..\src\Sparrow\Sparrow.csproj" />
   </ItemGroup>

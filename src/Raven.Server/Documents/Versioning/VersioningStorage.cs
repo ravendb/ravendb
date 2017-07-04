@@ -124,16 +124,18 @@ namespace Raven.Server.Documents.Versioning
         {
             try
             {
-                if (dbRecord.Versioning == null)
+                var versioning = dbRecord.Versioning;
+                if (versioning == null ||
+                    (versioning.Default == null && versioning.Collections.Count == 0))
                 {
                     Configuration = null;
                     return;
                 }
 
-                if (dbRecord.Versioning.Equals(Configuration))
+                if (versioning.Equals(Configuration))
                     return;
 
-                Configuration = dbRecord.Versioning;
+                Configuration = versioning;
 
                 using (var tx = _database.DocumentsStorage.Environment.WriteTransaction())
                 {

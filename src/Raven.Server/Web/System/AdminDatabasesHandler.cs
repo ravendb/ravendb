@@ -10,7 +10,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Conventions;
@@ -31,7 +30,6 @@ using Sparrow.Json.Parsing;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
-using Sparrow;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Web.System
@@ -186,7 +184,7 @@ namespace Raven.Server.Web.System
         public async Task Put()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var nodesAddedTo = new List<string>();
+            var nodeUrlsAddedTo = new List<string>();
 
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
@@ -195,6 +193,10 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 context.OpenReadTransaction();
+
+                var existingDatabaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out long _);
+                if (existingDatabaseRecord != null)
+                    throw new ConcurrencyException($"Database '{name}' already exists!");
 
                 var index = GetLongFromHeaders("ETag");
 
@@ -215,11 +217,16 @@ namespace Raven.Server.Web.System
                 {
                     topology = databaseRecord.Topology;
                     ValidateClusterMembers(context, topology, databaseRecord);
+                    var clusterTopology = ServerStore.GetClusterTopology(context);
+                    foreach (var member in topology.Members)
+                    {
+                        nodeUrlsAddedTo.Add(clusterTopology.GetUrlFromTag(member));
+                    }
                 }
                 else
                 {
                     var factor = Math.Max(1, GetIntValueQueryString("replication-factor", required: false) ?? 0);
-                    databaseRecord.Topology = topology = AssignNodesToDatabase(context, factor, name, databaseRecord.Encrypted, out nodesAddedTo);
+                    databaseRecord.Topology = topology = AssignNodesToDatabase(context, factor, name, databaseRecord.Encrypted, out nodeUrlsAddedTo);
                 }
 
                 var (newIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
@@ -234,7 +241,7 @@ namespace Raven.Server.Web.System
                         [nameof(DatabasePutResult.RaftCommandIndex)] = newIndex,
                         [nameof(DatabasePutResult.Key)] = name,
                         [nameof(DatabasePutResult.Topology)] = topology.ToJson(),
-                        [nameof(DatabasePutResult.NodesAddedTo)] = nodesAddedTo
+                        [nameof(DatabasePutResult.NodesAddedTo)] = nodeUrlsAddedTo
                     });
                     writer.Flush();
                 }
@@ -246,7 +253,7 @@ namespace Raven.Server.Web.System
             int factor, 
             string name, 
             bool isEncrypted,
-            out List<string> nodesAddedTo)
+            out List<string> nodeUrlsAddedTo)
         {
             var topology = new DatabaseTopology();
 
@@ -265,14 +272,14 @@ namespace Raven.Server.Web.System
             }
 
             var offset = new Random().Next();
-            nodesAddedTo = new List<string>();
+            nodeUrlsAddedTo = new List<string>();
 
             for (int i = 0; i < Math.Min(allNodes.Count, factor); i++)
             {
                 var selectedNode = allNodes[(i + offset) % allNodes.Count];
                 var url = clusterTopology.GetUrlFromTag(selectedNode);
                 topology.Members.Add(selectedNode);
-                nodesAddedTo.Add(url);
+                nodeUrlsAddedTo.Add(url);
             }
 
             return topology;
@@ -464,13 +471,11 @@ namespace Raven.Server.Web.System
             Action<DynamicJsonValue, BlittableJsonReaderObject, long> fillJson = null)
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            string errorMessage;
-            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
             ServerStore.EnsureNotPassive();
-            TransactionOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var configurationJson = await context.ReadForMemoryAsync(RequestBodyStream(), debug);
                 beforeSetupConfiguration?.Invoke(configurationJson);
@@ -518,8 +523,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-modify-custom-functions");
-                string functions;
-                if (updateJson.TryGet(nameof(CustomFunctions.Functions), out functions) == false)
+                if (updateJson.TryGet(nameof(CustomFunctions.Functions), out string functions) == false)
                 {
                     throw new InvalidDataException("Functions property was not found.");
                 }
@@ -541,7 +545,7 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/update-resolver", "POST", "/admin/update-resolver?name={databaseName:string}")]
-        public async Task ChangeConflictResolver()
+        public async Task UpdateConflictResolver()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)

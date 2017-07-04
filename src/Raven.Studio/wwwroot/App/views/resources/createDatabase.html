@@ -102,7 +102,7 @@
 <script type="text/html" id="create-db-replication">
     <h3>Replication configuration</h3>
     <div data-bind="with: databaseModel.replication">
-        <div class="form-group">
+        <div class="form-group" style="min-height: 62px">
             <div class="input-group" data-bind="css: {'has-warning' : $root.showReplicationFactorWarning}, validationElement: replicationFactor">
                 <span class="input-group-addon">Replication factor</span>
                 <input type="number" min="0" data-bind="numericInput: replicationFactor, disable: $root.disableReplicationFactorInput" class="form-control">

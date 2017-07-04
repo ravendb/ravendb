@@ -9,6 +9,8 @@ class recentError extends abstractNotification {
     details = ko.observable<string>();
     httpStatus = ko.observable<string>();
 
+    shortMessage: KnockoutComputed<string>;
+
     constructor(dto: recentErrorDto) {
         super(null, dto);
 
@@ -27,6 +29,7 @@ class recentError extends abstractNotification {
 
     private initObservables() {
         this.hasDetails = ko.pureComputed(() => !!this.details());
+        this.shortMessage = ko.pureComputed(() => recentError.trimMessage(this.message()));
     }
 
     static tryExtractMessageAndException(details: string): { message: string, error: string } {
@@ -44,6 +47,22 @@ class recentError extends abstractNotification {
         } catch (e) {
             return { message: details, error: null };
         }
+    }
+
+    static trimMessage(message: string) {
+        if (!message) {
+            return message;
+        }
+        const lineBreakIdx = Math.min(message.indexOf("\r"), message.indexOf("\r"));
+        if (lineBreakIdx !== -1 && lineBreakIdx < 256) {
+            return message.substr(0, lineBreakIdx);
+        }
+
+        if (message.length < 256) {
+            return message;
+        }
+
+        return message.substr(0, 256) + "...";
     }
 
     static create(severity: Raven.Server.NotificationCenter.Notifications.NotificationSeverity, title: string, details: string, httpStatus: string) {

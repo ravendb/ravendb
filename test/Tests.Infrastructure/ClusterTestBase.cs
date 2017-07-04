@@ -416,13 +416,12 @@ namespace Tests.Infrastructure
             }
             // ReSharper disable once PossibleNullReferenceException
             var condition = await leader.ServerStore.WaitForState(RachisConsensus.State.Leader).WaitAsync(numberOfNodes * ElectionTimeoutInMs * 5);
-            string states = string.Empty;
+            var states = string.Empty;
             if (condition == false)
             {
                 states = GetLastStatesFromAllServersOrderedByTime();
             }
-            Assert.True(condition,
-                "The leader has changed while waiting for cluster to become stable. All nodes status: " + states);
+            Assert.True(condition, "The leader has changed while waiting for cluster to become stable. All nodes status: " + states);
             return leader;
         }
 
