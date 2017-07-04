@@ -5,11 +5,12 @@ namespace Raven.Server.Config.Categories
 {
     public class SecurityConfiguration : ConfigurationCategory
     {
-        [Description("TODO")]
+        [Description("Enables or disables the authentication for the server.")]
         [DefaultValue(false)]
         [ConfigurationEntry("Security.Authentication.Enabled")]
         public bool AuthenticationEnabled { get; set; }
-
+        
+        [Description("If server is binded to non-localhost e.g. 'http://0.0.0.0:8080' then we require authentication to be enabled unless this setting is set to false.")]
         [DefaultValue(true)]
         [ConfigurationEntry("Security.Authentication.RequiredForPublicNetworks")]
         public bool AuthenticationRequiredForPublicNetworks { get; set; }
