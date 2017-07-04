@@ -141,7 +141,6 @@ namespace Raven.TestDriver
             var startupDuration = Stopwatch.StartNew();
 
             Task<string> readLineTask = null;
-            
             while (true)
             {
                 if (readLineTask == null)
@@ -160,6 +159,12 @@ namespace Raven.TestDriver
                 readLineTask = null;
                 
                 sb.AppendLine(line);
+
+                if (line == null)
+                {
+                    process.Kill();
+                    throw new InvalidOperationException("Unable to start server, log is: " + Environment.NewLine + sb);
+                }
                 const string prefix = "Server available on: ";
                 if (line.StartsWith(prefix))
                 {

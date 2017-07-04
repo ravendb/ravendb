@@ -221,6 +221,7 @@ namespace Raven.Server.Documents.Replication
             }
             catch (OperationCanceledException)
             {
+                // nothing we can do here
             }
 
             _cts?.Dispose();

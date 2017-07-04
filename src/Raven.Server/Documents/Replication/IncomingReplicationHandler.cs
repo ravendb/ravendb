@@ -798,7 +798,8 @@ namespace Raven.Server.Documents.Replication
                     var database = _incoming._database;
 
                     var maxReceivedChangeVectorByDatabase = new Dictionary<Guid, long>();
-                    var list = context.LastDatabaseChangeVector ?? database.DocumentsStorage.GetDatabaseChangeVector(context);
+                    var list = context.LastDatabaseChangeVector ?? 
+                        (context.LastDatabaseChangeVector = database.DocumentsStorage.GetDatabaseChangeVector(context));
                     foreach (var changeVectorEntry in list)
                     {
                         maxReceivedChangeVectorByDatabase[changeVectorEntry.DbId] = changeVectorEntry.Etag;
