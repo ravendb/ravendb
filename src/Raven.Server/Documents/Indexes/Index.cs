@@ -450,7 +450,20 @@ namespace Raven.Server.Documents.Indexes
 
                 _cts = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown);
 
-                _indexingThread = new Thread(ExecuteIndexing)
+                _indexingThread = new Thread(() =>
+                {
+                    try
+                    {
+                        ExecuteIndexing();
+                    }
+                    catch (Exception e)
+                    {
+                        if (_logger.IsInfoEnabled)
+                        {
+                            _logger.Info("Failed to execute indexing in " + IndexingThreadName, e);
+                        }
+                    }
+                })
                 {
                     Name = IndexingThreadName,
                     IsBackground = true
@@ -713,12 +726,15 @@ namespace Raven.Server.Documents.Indexes
                 // we need to reset errors to give it a chance
                 ResetErrors();
 
+                var storageEnvironment = _environment;
+                if (storageEnvironment == null)
+                    return; // can be null if we disposed immediately
                 try
                 {
                     _contextPool.SetMostWorkInGoingToHappenonThisThread();
 
                     DocumentDatabase.Changes.OnDocumentChange += HandleDocumentChange;
-                    _environment.OnLogsApplied += HandleLogsApplied;
+                    storageEnvironment.OnLogsApplied += HandleLogsApplied;
 
                     while (true)
                     {
@@ -885,7 +901,7 @@ namespace Raven.Server.Documents.Indexes
                                 if (numberOfSetEvents == 1 && _logsAppliedEvent.IsSet)
                                 {
                                     _hadRealIndexingWorkToDo = false;
-                                    _environment.Cleanup();
+                                    storageEnvironment.Cleanup();
                                     _logsAppliedEvent.Reset();
                                 }
                             }
@@ -898,8 +914,9 @@ namespace Raven.Server.Documents.Indexes
                 }
                 finally
                 {
-                    _environment.OnLogsApplied -= HandleLogsApplied;
-                    DocumentDatabase.Changes.OnDocumentChange -= HandleDocumentChange;
+                    storageEnvironment.OnLogsApplied -= HandleLogsApplied;
+                    if (DocumentDatabase != null)
+                        DocumentDatabase.Changes.OnDocumentChange -= HandleDocumentChange;
                 }
             }
         }
