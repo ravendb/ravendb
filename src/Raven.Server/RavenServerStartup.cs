@@ -59,7 +59,7 @@ namespace Raven.Server
         {
             if (_server.Configuration.Security.AuthenticationEnabled)
                 return true;
-            if (_server.Configuration.Security.AuthenticationRequiredForPublicNetworks)
+            if (_server.Configuration.Security.AuthenticationRequiredForPublicNetworks == false)
                 return true;
             var url = _server.Configuration.Core.ServerUrl.ToLowerInvariant();
             var uri = new Uri(url);
