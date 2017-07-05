@@ -43,7 +43,7 @@ namespace Raven.Client.Documents.Subscriptions
 
             private void ThrowItemProcessException()
             {
-                throw new Exception(ExceptionMessage);
+                throw new InvalidOperationException($"Failed to process document {Id} with Etag {Etag} because:{Environment.NewLine}{ExceptionMessage}");
             }
 
             public T Result
@@ -55,7 +55,7 @@ namespace Raven.Client.Documents.Subscriptions
 
                     return _result;
                 }
-                internal set { _result = value; }
+                internal set => _result = value;
             }
 
             public BlittableJsonReaderObject RawResult { get; internal set; }
