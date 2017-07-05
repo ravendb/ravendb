@@ -66,11 +66,9 @@ namespace FastTests.Client.Subscriptions
 
                 Assert.True(mre.WaitOne(_reasonableWaitTime));
                 Assert.NotNull(receivedItem);
-                Assert.Throws<Exception>(() => receivedItem.Result);
+                Assert.Throws<InvalidOperationException>(() => receivedItem.Result);
                 Assert.NotNull(receivedItem.Metadata);
                 Assert.Equal(receivedItem.Id, userId);
-                Assert.True(receivedItem.ExceptionMessage.StartsWith($"System.Exception: Error processing document: {userId}"));
-
             }
         }
 
@@ -153,11 +151,9 @@ namespace FastTests.Client.Subscriptions
 
                 Assert.True(mre.WaitOne(_reasonableWaitTime));
                 Assert.NotNull(receivedItem);
-                Assert.Throws<Exception>(() => receivedItem.Result);
+                Assert.Throws<InvalidOperationException>(() => receivedItem.Result);
                 Assert.NotNull(receivedItem.Metadata);
                 Assert.Equal(receivedItem.Id, userId);
-                Assert.True(receivedItem.ExceptionMessage.StartsWith($"System.Exception: Error processing document: {userId}"));
-
             }
         }
     }

@@ -57,35 +57,37 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
-
-                    
+                    writer.WriteStartArray();
                     
                     using (context.OpenReadTransaction())
                     {
-                        // todo: return excepitons alongside witht the documents
-                        var dataToSend = fetcher.GetDataToSend(context, state, etag, patch);
-                        writer.WriteDocuments(context,
-                            dataToSend
-                                .Where(x=>x.exception == null).Select(x=>x.doc), false, out int _);
-                        
-                        writer.WriteComma();
-                        writer.WritePropertyName("Exceptions");
-                        writer.WriteStartArray();
-
                         var first = true;
                         
-                        foreach (var exceptionDetails in dataToSend.Where(x=>x.exception != null).Select(x=> 
-                            new DynamicJsonValue(){["Id"]=x.doc.Id, ["Exception"] = x.exception}))
+                        foreach (var itemDetails in fetcher.GetDataToSend(context, state, etag, patch))
                         {
                             if (first == false)
                                 writer.WriteComma();
-                            
-                            writer.WriteValue(BlittableJsonToken.StartObject, exceptionDetails);
+
+                            if (itemDetails.Exception == null)
+                            {
+                                writer.WriteDocument(context, itemDetails.Doc);
+                            }
+                            else
+                            {
+                                writer.WriteObject(context.ReadObject(
+                                    new DynamicJsonValue
+                                    {
+                                        ["Id"] = itemDetails.Doc.Id,
+                                        ["Exception"] = itemDetails.Exception.ToString()
+                                    }, "Subscription process exception"
+                                ));
+                            }
+
                             first = false;
                         }
-                        
-                        writer.WriteEndArray();
                     }
+                    
+                    writer.WriteEndArray();
                     writer.WriteEndObject();
                 }
             }
