@@ -2,6 +2,7 @@
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Server.Commands;
@@ -147,9 +148,9 @@ namespace Raven.Server.Documents.Handlers
             HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
         }
        
-        private async Task SendKeyToNodeAsync(string name, string base64, TransactionOperationContext ctx, ClusterTopology clusterTopology, string node, string url)
+        private static async Task SendKeyToNodeAsync(string name, string base64, TransactionOperationContext ctx, ClusterTopology clusterTopology, string node, string url)
         {
-            using (var shortLived = RequestExecutor.CreateForSingleNode(url, name, clusterTopology.ApiKey))
+            using (var shortLived = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, name, clusterTopology.ApiKey, DocumentConventions.Default))
             {
                 var command = new PutSecretKeyCommand(name, base64);
                 try

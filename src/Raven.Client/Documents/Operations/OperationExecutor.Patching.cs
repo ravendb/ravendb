@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Operations
             JsonOperationContext context;
             using (GetContext(out context))
             {
-                var command = operation.GetCommand(_store, context, _requestExecutor.Cache);
+                var command = operation.GetCommand(_store, _requestExecutor.Conventions, context, _requestExecutor.Cache);
 
                 await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
 
@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Operations
             JsonOperationContext context;
             using (GetContext(out context))
             {
-                var command = operation.GetCommand(_store, context, _requestExecutor.Cache);
+                var command = operation.GetCommand(_store, _requestExecutor.Conventions, context, _requestExecutor.Cache);
 
                 await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
 
@@ -61,7 +61,7 @@ namespace Raven.Client.Documents.Operations
                 }
 
                 result.Status = command.Result.Status;
-                result.Document = (TEntity)_store.Conventions.DeserializeEntityFromBlittable(typeof(TEntity), command.Result.ModifiedDocument);
+                result.Document = (TEntity)_requestExecutor.Conventions.DeserializeEntityFromBlittable(typeof(TEntity), command.Result.ModifiedDocument);
                 return result;
             }
         }

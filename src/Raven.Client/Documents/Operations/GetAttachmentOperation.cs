@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Operations
             _changeVector = changeVector;
         }
 
-        public RavenCommand<AttachmentResult> GetCommand(IDocumentStore store, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<AttachmentResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
             return new GetAttachmentCommand(context, _documentId, _name, _type, _changeVector);
         }

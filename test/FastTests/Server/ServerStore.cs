@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -30,12 +31,12 @@ namespace FastTests.Server
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
                 {
                     var getCommand = new GetDatabaseDocumentTestCommand();
-                    using (var requestExecuter = RequestExecutor.Create(store.Urls, store.Database, null))
+                    using (var requestExecutor = RequestExecutor.Create(store.Urls, store.Database, null, DocumentConventions.Default))
                     {
-                        requestExecuter.Execute(getCommand, context);
+                        requestExecutor.Execute(getCommand, context);
                         using (var putCommand = new PutDatabaseDocumentTestCommand(getCommand.Result))
                         {
-                            Assert.Throws<ConcurrencyException>(() => requestExecuter.Execute(putCommand, context));
+                            Assert.Throws<ConcurrencyException>(() => requestExecutor.Execute(putCommand, context));
                         }
                     }
                 }
@@ -51,9 +52,9 @@ namespace FastTests.Server
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
                 {
                     var command = new GetDatabaseDocumentTestCommand();
-                    using (var requestExecuter = RequestExecutor.Create(store.Urls, store.Database, null))
+                    using (var requestExecutor = RequestExecutor.Create(store.Urls, store.Database, null, DocumentConventions.Default))
                     {
-                        requestExecuter.Execute(command, context);
+                        requestExecutor.Execute(command, context);
                     }
 
                     var result = command.Result;

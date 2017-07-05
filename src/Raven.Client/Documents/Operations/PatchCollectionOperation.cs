@@ -21,9 +21,9 @@ namespace Raven.Client.Documents.Operations
             _patch = patch ?? throw new ArgumentNullException(nameof(patch));
         }
 
-        public RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new PatchCollectionCommand(store.Conventions, context, _collectionName, _patch);
+            return new PatchCollectionCommand(conventions, context, _collectionName, _patch);
         }
 
         private class PatchCollectionCommand : RavenCommand<OperationIdResult>

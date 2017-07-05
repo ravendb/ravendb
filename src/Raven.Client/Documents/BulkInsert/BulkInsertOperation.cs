@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Exceptions.BulkInsert;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
@@ -139,18 +138,15 @@ namespace Raven.Client.Documents.BulkInsert
 
         private bool _first = true;
         private long _operationId = -1;
-        private readonly DocumentConventions _conventions;
 
         public BulkInsertOperation(string database, IDocumentStore store, CancellationToken token = default(CancellationToken))
         {
             _token = token;
-            _conventions = store.Conventions;
             _requestExecutor = store.GetRequestExecutor(database);
             _resetContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);
             _streamExposerContent = new StreamExposerContent();
 
-            _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(store.Conventions, entity =>
-                AsyncHelpers.RunSync(() => store.Conventions.GenerateDocumentIdAsync(database, entity)));
+            _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, entity => AsyncHelpers.RunSync(() => _requestExecutor.Conventions.GenerateDocumentIdAsync(database, entity)));
         }
 
         private async Task WaitForId()
@@ -192,9 +188,9 @@ namespace Raven.Client.Documents.BulkInsert
 
             JsonOperationContext tempContext;
             using (_requestExecutor.ContextPool.AllocateOperationContext(out tempContext))
-            using (var doc = EntityToBlittable.ConvertEntityToBlittable(entity, _conventions, tempContext, new DocumentInfo
+            using (var doc = EntityToBlittable.ConvertEntityToBlittable(entity, _requestExecutor.Conventions, tempContext, new DocumentInfo
             {
-                Collection = _conventions.GetCollectionName(entity)
+                Collection = _requestExecutor.Conventions.GetCollectionName(entity)
             }))
             {
                 if (_first == false)
@@ -241,7 +237,7 @@ namespace Raven.Client.Documents.BulkInsert
 
         private async Task<BulkInsertAbortedException> GetExceptionFromOperation()
         {
-            var stateRequest = new GetOperationStateCommand(_conventions, _operationId);
+            var stateRequest = new GetOperationStateCommand(_requestExecutor.Conventions, _operationId);
             await _requestExecutor.ExecuteAsync(stateRequest, _context, _token).ConfigureAwait(false);
             var error = stateRequest.Result.Result as OperationExceptionResult;
 

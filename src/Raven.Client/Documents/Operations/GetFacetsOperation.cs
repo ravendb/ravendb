@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Http;
 using Sparrow.Json;
@@ -18,7 +19,7 @@ namespace Raven.Client.Documents.Operations
             _query = query;
         }
 
-        public RavenCommand<FacetedQueryResult> GetCommand(IDocumentStore store, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<FacetedQueryResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
             return new GetFacetsCommand(context, _query);
         }

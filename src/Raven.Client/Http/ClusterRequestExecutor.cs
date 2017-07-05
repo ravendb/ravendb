@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Server.Commands;
 using Sparrow.Json;
 
@@ -12,25 +13,31 @@ namespace Raven.Client.Http
     {
         private readonly SemaphoreSlim _clusterTopologySemaphore = new SemaphoreSlim(1, 1);
 
-        protected ClusterRequestExecutor(string apiKey) : base(null, apiKey)
+        protected ClusterRequestExecutor(string apiKey, DocumentConventions conventions) : base(null, apiKey, conventions)
         {
         }
 
         [Obsolete("Not supported", error: true)]
-        public new static ClusterRequestExecutor Create(string[] urls, string databaseName, string apiKey)
+        public new static ClusterRequestExecutor Create(string[] urls, string databaseName, string apiKey, DocumentConventions conventions)
         {
             throw new NotSupportedException();
         }
 
         [Obsolete("Not supported", error: true)]
-        public new static ClusterRequestExecutor CreateForSingleNode(string url, string databaseName, string apiKey)
+        public new static ClusterRequestExecutor CreateForSingleNodeWithConfigurationUpdates(string url, string databaseName, string apiKey, DocumentConventions conventions)
+        {
+            throw new NotSupportedException();
+        }
+
+        [Obsolete("Not supported", error: true)]
+        public new static ClusterRequestExecutor CreateForSingleNodeWithoutConfigurationUpdates(string url, string databaseName, string apiKey, DocumentConventions conventions)
         {
             throw new NotSupportedException();
         }
 
         public static ClusterRequestExecutor CreateForSingleNode(string url, string apiKey)
         {
-            var executor = new ClusterRequestExecutor(apiKey)
+            var executor = new ClusterRequestExecutor(apiKey, DocumentConventions.Default)
             {
                 _nodeSelector = new NodeSelector(new Topology
                 {
@@ -52,7 +59,7 @@ namespace Raven.Client.Http
 
         public static ClusterRequestExecutor Create(string[] urls, string apiKey)
         {
-            var executor = new ClusterRequestExecutor(apiKey)
+            var executor = new ClusterRequestExecutor(apiKey, DocumentConventions.Default)
             {
                 _disableClientConfigurationUpdates = true
             };

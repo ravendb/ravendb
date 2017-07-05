@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Subscriptions
             var subscriptionCreationDto = new SubscriptionCreationOptions
             {
                 Name = subscriptionCreationOptions.Name,
-                Criteria =  subscriptionCreationOptions.CreateOptions(_store.Conventions),
+                Criteria =  subscriptionCreationOptions.CreateOptions(_store.GetRequestExecutor(database).Conventions),
                 ChangeVector = subscriptionCreationOptions.ChangeVector,
             };
 

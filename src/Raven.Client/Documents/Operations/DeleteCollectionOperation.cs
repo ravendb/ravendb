@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
@@ -15,7 +16,7 @@ namespace Raven.Client.Documents.Operations
             _collectionName = collectionName ?? throw new ArgumentNullException(nameof(collectionName));
         }
 
-        public RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
             return new DeleteCollectionCommand(_collectionName);
         }

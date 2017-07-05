@@ -15,13 +15,15 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
 using Raven.Client.Http.OAuth;
 using Raven.Client.Json.Converters;
+using Raven.Client.Server;
 using Raven.Client.Server.Commands;
-using Raven.Client.Server.Operations.Configuration;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -75,6 +77,8 @@ namespace Raven.Client.Http
 
         public long ClientConfigurationEtag { get; internal set; }
 
+        public readonly DocumentConventions Conventions;
+
         protected bool _disableTopologyUpdates;
 
         protected bool _disableClientConfigurationUpdates;
@@ -93,7 +97,7 @@ namespace Raven.Client.Http
 
         public event EventHandler<(long RaftCommandIndex, ClientConfiguration Configuration)> ClientConfigurationChanged;
 
-        protected RequestExecutor(string databaseName, string apiKey)
+        protected RequestExecutor(string databaseName, string apiKey, DocumentConventions conventions)
         {
             _databaseName = databaseName;
             _apiKey = apiKey;
@@ -101,20 +105,29 @@ namespace Raven.Client.Http
             _lastReturnedResponse = DateTime.UtcNow;
 
             ContextPool = new JsonContextPool();
+            Conventions = conventions.Clone();
         }
 
         public string ApiKey => _apiKey;
 
-        public static RequestExecutor Create(string[] urls, string databaseName, string apiKey)
+        public static RequestExecutor Create(string[] urls, string databaseName, string apiKey, DocumentConventions conventions)
         {
-            var executor = new RequestExecutor(databaseName, apiKey);
+            var executor = new RequestExecutor(databaseName, apiKey, conventions);
             executor._firstTopologyUpdate = executor.FirstTopologyUpdate(urls);
             return executor;
         }
 
-        public static RequestExecutor CreateForSingleNode(string url, string databaseName, string apiKey)
+        public static RequestExecutor CreateForSingleNodeWithConfigurationUpdates(string url, string databaseName, string apiKey, DocumentConventions conventions)
         {
-            var executor = new RequestExecutor(databaseName, apiKey)
+            var executor = CreateForSingleNodeWithoutConfigurationUpdates(url, databaseName, apiKey, conventions);
+            executor._disableClientConfigurationUpdates = false;
+
+            return executor;
+        }
+
+        public static RequestExecutor CreateForSingleNodeWithoutConfigurationUpdates(string url, string databaseName, string apiKey, DocumentConventions conventions)
+        {
+            var executor = new RequestExecutor(databaseName, apiKey, conventions)
             {
                 _nodeSelector = new NodeSelector(new Topology
                 {
@@ -129,7 +142,8 @@ namespace Raven.Client.Http
                     }
                 }),
                 TopologyEtag = -2,
-                _disableTopologyUpdates = true
+                _disableTopologyUpdates = true,
+                _disableClientConfigurationUpdates = true
             };
             return executor;
         }
@@ -140,6 +154,9 @@ namespace Raven.Client.Http
                 return;
 
             await _updateClientConfigurationSemaphore.WaitAsync().ConfigureAwait(false);
+
+            var oldDisableClientConfigurationUpdates = _disableClientConfigurationUpdates;
+            _disableClientConfigurationUpdates = true;
 
             try
             {
@@ -156,12 +173,14 @@ namespace Raven.Client.Http
                     if (result == null)
                         return;
 
+                    Conventions.UpdateFrom(result.Configuration);
                     ClientConfigurationEtag = result.RaftCommandIndex;
                     ClientConfigurationChanged?.Invoke(this, (result.RaftCommandIndex, result.Configuration));
                 }
             }
             finally
             {
+                _disableClientConfigurationUpdates = oldDisableClientConfigurationUpdates;
                 _updateClientConfigurationSemaphore.Release();
             }
         }
@@ -789,8 +808,8 @@ namespace Raven.Client.Http
             if (PlatformDetails.RunningOnMacOsx)
             {
                 var callback = ServerCertificateCustomValidationCallback;
-                if(callback != null)
-                    throw new PlatformNotSupportedException("On Mac OSX, is it not possible to register to ServerCertificateCustomValidationCallback because of https://github.com/dotnet/corefx/issues/9728"); 
+                if (callback != null)
+                    throw new PlatformNotSupportedException("On Mac OSX, is it not possible to register to ServerCertificateCustomValidationCallback because of https://github.com/dotnet/corefx/issues/9728");
             }
             else
             {
