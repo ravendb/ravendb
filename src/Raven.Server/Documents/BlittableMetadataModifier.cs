@@ -203,7 +203,437 @@ namespace Raven.Server.Documents
                 _readingMetadataObject = false;
         }
 
-        public unsafe bool AboutToReadPropertyName(IJsonParser reader, JsonParserState state)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool AboutToReadPropertyName(IJsonParser reader, JsonParserState state)
+        {
+            if (reader is UnmanagedJsonParser)
+                return AboutToReadPropertyNameInternal((UnmanagedJsonParser)reader, state);
+            if (reader is ObjectJsonParser)
+                return AboutToReadPropertyNameInternal((ObjectJsonParser)reader, state);
+
+            return AboutToReadPropertyNameInternal(reader, state);
+        }
+
+        // TODO: When we hit CoreCLR 2.0 see if we can devirtualize this code with some generics shenanigans
+        private unsafe bool AboutToReadPropertyNameInternal(UnmanagedJsonParser reader, JsonParserState state)
+        {
+            if (_state != State.None)
+            {
+                if (!AboutToReadWithStateUnlikely(reader, state))
+                    return false;
+            }
+
+            _state = State.None;
+
+            while (true)
+            {
+                if (reader.Read() == false)
+                    return false;
+
+                if (state.CurrentTokenType != JsonParserToken.String)
+                    return true; // let the caller handle that
+
+                if (_readingMetadataObject == false)
+                {
+                    if (state.StringSize == 9 && state.StringBuffer[0] == (byte)'@' && *(long*)(state.StringBuffer + 1) == 7022344802737087853)
+                        _readingMetadataObject = true;
+
+                    return true;
+                }
+
+                bool aboutToReadPropertyName;
+                if (AboutToReadPropertyNameInMetadataUnlikely(reader, state, out aboutToReadPropertyName))
+                    return aboutToReadPropertyName;
+            }
+        }
+
+        // TODO: When we hit CoreCLR 2.0 see if we can devirtualize this code with some generics shenanigans
+        private unsafe bool AboutToReadPropertyNameInternal(ObjectJsonParser reader, JsonParserState state)
+        {
+            if (_state != State.None)
+            {
+                if (!AboutToReadWithStateUnlikely(reader, state))
+                    return false;
+            }
+
+            _state = State.None;
+
+            while (true)
+            {
+                if (reader.Read() == false)
+                    return false;
+
+                if (state.CurrentTokenType != JsonParserToken.String)
+                    return true; // let the caller handle that
+
+                if (_readingMetadataObject == false)
+                {
+                    if (state.StringSize == 9 && state.StringBuffer[0] == (byte)'@' && *(long*)(state.StringBuffer + 1) == 7022344802737087853)
+                        _readingMetadataObject = true;
+
+                    return true;
+                }
+
+                bool aboutToReadPropertyName;
+                if (AboutToReadPropertyNameInMetadataUnlikely(reader, state, out aboutToReadPropertyName))
+                    return aboutToReadPropertyName;
+            }
+        }
+
+        // TODO: When we hit CoreCLR 2.0 see if we can devirtualize this code with some generics shenanigans
+        private unsafe bool AboutToReadPropertyNameInternal(IJsonParser reader, JsonParserState state)
+        {
+            if (_state != State.None)
+            {
+                if (!AboutToReadWithStateUnlikely(reader, state))
+                    return false;
+            }
+
+            _state = State.None;
+
+            while (true)
+            {
+                if (reader.Read() == false)
+                    return false;
+
+                if (state.CurrentTokenType != JsonParserToken.String)
+                    return true; // let the caller handle that
+
+                if (_readingMetadataObject == false)
+                {
+                    if (state.StringSize == 9 && state.StringBuffer[0] == (byte)'@' && *(long*)(state.StringBuffer + 1) == 7022344802737087853)
+                        _readingMetadataObject = true;
+
+                    return true;
+                }
+
+                bool aboutToReadPropertyName;
+                if (AboutToReadPropertyNameInMetadataUnlikely(reader, state, out aboutToReadPropertyName))
+                    return aboutToReadPropertyName;
+            }
+        }
+
+        private unsafe bool AboutToReadPropertyNameInMetadataUnlikely(IJsonParser reader, JsonParserState state, out bool aboutToReadPropertyName)
+        {
+            aboutToReadPropertyName = true;
+            
+            switch (state.StringSize)
+            {
+                default: // accept this property
+                {
+                    return true;
+                }
+
+                case -1: // IgnoreProperty
+                {
+                    if (reader.Read() == false)
+                    {
+                        _state = State.IgnoreProperty;
+                        {
+                            aboutToReadPropertyName = false;
+                            return true;
+                        }
+                    }
+                    if (state.CurrentTokenType == JsonParserToken.StartArray ||
+                        state.CurrentTokenType == JsonParserToken.StartObject)
+                        ThrowInvalidMetadataProperty(state);
+                    break;
+                }
+
+                case 3: // @id
+                    if (state.StringBuffer[0] != (byte)'@' ||
+                        *(short*)(state.StringBuffer + 1) != 25705)
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
+
+                    if (reader.Read() == false)
+                    {
+                        _state = State.ReadingId;
+                        {
+                            aboutToReadPropertyName = false;
+                            return true;
+                        }
+                    }
+                    if (state.CurrentTokenType != JsonParserToken.String)
+                        ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.Id, state);
+                    Id = CreateLazyStringValueFromParserState(state);
+                    break;
+                case 5: // @etag
+                    if (state.StringBuffer[0] != (byte)'@' ||
+                        *(int*)(state.StringBuffer + 1) != 1734440037)
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
+
+                    goto case -1;
+
+                case 6: // @flags
+                    if (state.StringBuffer[0] != (byte)'@' ||
+                        *(int*)(state.StringBuffer + 1) != 1734437990 ||
+                        state.StringBuffer[1 + sizeof(int)] != (byte)'s')
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
+
+                    if (reader.Read() == false)
+                    {
+                        _state = State.ReadingFlags;
+                        {
+                            aboutToReadPropertyName = false;
+                            return true;
+                        }
+                    }
+                    if (state.CurrentTokenType != JsonParserToken.String)
+                        ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.Flags, state);
+                    Flags = ReadFlags(state);
+                    break;
+
+                case 12: // @index-score
+                    if (state.StringBuffer[0] != (byte)'@' ||
+                        *(long*)(state.StringBuffer + 1) != 7166121427196997225 ||
+                        *(short*)(state.StringBuffer + 1 + sizeof(long)) != 29295 ||
+                        state.StringBuffer[1 + sizeof(long) + sizeof(short)] != (byte)'e')
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
+
+                    goto case -1;
+                case 13: //Last-Modified
+                    if (*(long*)state.StringBuffer != 7237087983830262092 ||
+                        *(int*)(state.StringBuffer + sizeof(long)) != 1701406313 ||
+                        state.StringBuffer[12] != (byte)'d')
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
+
+                    goto case -1;
+
+                case 14:
+                    if (state.StringBuffer[0] == (byte)'@')
+                    {
+                        // @change-vector
+                        if (*(long*)(state.StringBuffer + 1) == 8515573965335390307 &&
+                            *(int*)(state.StringBuffer + 1 + sizeof(long)) == 1869898597 &&
+                            state.StringBuffer[1 + sizeof(long) + sizeof(int)] == (byte)'r')
+                        {
+                            if (ReadChangeVector(reader, state) == false)
+                            {
+                                _state = State.ReadingChangeVector;
+                                {
+                                    aboutToReadPropertyName = false;
+                                    return true;
+                                }
+                            }
+                            break;
+                        }
+
+                        // @last-modified
+                        if (*(long*)(state.StringBuffer + 1) == 7237123168202350956 &&
+                            *(int*)(state.StringBuffer + 1 + sizeof(long)) == 1701406313 &&
+                            state.StringBuffer[1 + sizeof(long) + sizeof(int)] == (byte)'d')
+                        {
+                            goto case -1;
+                        }
+                    }
+
+                {
+                    aboutToReadPropertyName = true;
+                    return true;
+                }
+                case 15: //Raven-Read-Only
+                    if (*(long*)state.StringBuffer != 7300947898092904786 ||
+                        *(int*)(state.StringBuffer + sizeof(long)) != 1328374881 ||
+                        *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) != 27758 ||
+                        state.StringBuffer[14] != (byte)'y')
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
+
+                    goto case -1;
+
+                case 17: //Raven-Entity-Name --> @collection
+                    if (*(long*)state.StringBuffer != 7945807069737017682 ||
+                        *(long*)(state.StringBuffer + sizeof(long)) != 7881666780093245812 ||
+                        state.StringBuffer[16] != (byte)'e')
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
+
+                    var collection = _metadataCollections;
+                    state.StringBuffer = collection.AllocatedMemoryData.Address;
+                    state.StringSize = collection.Size;
+                {
+                    aboutToReadPropertyName = true;
+                    return true;
+                }
+                case 19: //Raven-Last-Modified
+                    if (*(long*)state.StringBuffer != 7011028672080929106 ||
+                        *(long*)(state.StringBuffer + sizeof(long)) != 7379539893622240371 ||
+                        *(short*)(state.StringBuffer + sizeof(long) + sizeof(long)) != 25961 ||
+                        state.StringBuffer[18] != (byte)'d')
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
+
+                    goto case -1;
+                case 23: //Raven-Document-Revision
+                    if (*(long*)state.StringBuffer != 8017583188798234962 ||
+                        *(long*)(state.StringBuffer + sizeof(long)) != 5921517102558967139 ||
+                        *(int*)(state.StringBuffer + sizeof(long) + sizeof(long)) != 1936291429 ||
+                        *(short*)(state.StringBuffer + sizeof(long) + sizeof(long) + sizeof(int)) != 28521 ||
+                        state.StringBuffer[22] != (byte)'n')
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
+
+                    goto case -1;
+                case 24: //Raven-Replication-Source
+                    if (*(long*)state.StringBuffer != 7300947898092904786 ||
+                        *(long*)(state.StringBuffer + sizeof(long)) != 8028075772393122928 ||
+                        *(long*)(state.StringBuffer + sizeof(long) + sizeof(long)) != 7305808869229538670)
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
+
+                    goto case -1;
+                case 25: //Raven-Replication-Version OR Raven-Replication-History
+                    if (*(long*)state.StringBuffer != 7300947898092904786 ||
+                        *(long*)(state.StringBuffer + sizeof(long)) != 8028075772393122928)
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
+
+                    var value = *(long*)(state.StringBuffer + sizeof(long) + sizeof(long));
+                    var lastByte = state.StringBuffer[24];
+                    if ((value != 8028074745928232302 || lastByte != (byte)'n') &&
+                        (value != 8245937481775066478 || lastByte != (byte)'y'))
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
+
+                    var isReplicationHistory = lastByte == (byte)'y';
+                    if (reader.Read() == false)
+                    {
+                        _verifyStartArray = isReplicationHistory;
+                        _state = isReplicationHistory ? State.IgnoreArray : State.IgnoreProperty;
+                        {
+                            aboutToReadPropertyName = false;
+                            return true;
+                        }
+                    }
+
+                    // Raven-Replication-History is an array
+                    if (isReplicationHistory)
+                    {
+                        if (state.CurrentTokenType != JsonParserToken.StartArray)
+                            ThrowInvalidReplicationHistoryType(state);
+
+                        do
+                        {
+                            if (reader.Read() == false)
+                            {
+                                _state = State.IgnoreArray;
+                                {
+                                    aboutToReadPropertyName = false;
+                                    return true;
+                                }
+                            }
+                        } while (state.CurrentTokenType != JsonParserToken.EndArray);
+                    }
+                    else if (state.CurrentTokenType == JsonParserToken.StartArray ||
+                             state.CurrentTokenType == JsonParserToken.StartObject)
+                        ThrowInvalidMetadataProperty(state);
+                    break;
+                case 29: //Non-Authoritative-Information
+                    if (*(long*)state.StringBuffer != 7526769800038477646 ||
+                        *(long*)(state.StringBuffer + sizeof(long)) != 8532478930943832687 ||
+                        *(long*)(state.StringBuffer + sizeof(long) + sizeof(long)) != 7886488383206796645 ||
+                        *(int*)(state.StringBuffer + sizeof(long) + sizeof(long) + sizeof(long)) != 1869182049 ||
+                        state.StringBuffer[28] != (byte)'n')
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
+
+                    goto case -1;
+
+                case 30: //Raven-Document-Parent-Revision OR Raven-Document-Revision-Status
+                    if (*(long*)state.StringBuffer != 8017583188798234962)
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
+
+                    if ((*(long*)(state.StringBuffer + sizeof(long)) != 5777401914483111267 ||
+                         *(long*)(state.StringBuffer + sizeof(long) + sizeof(long)) != 7300947924012593761 ||
+                         *(int*)(state.StringBuffer + sizeof(long) + sizeof(long) + sizeof(long)) != 1769171318 ||
+                         *(short*)(state.StringBuffer + sizeof(long) + sizeof(long) + sizeof(long) + sizeof(int)) != 28271) &&
+                        (*(long*)(state.StringBuffer + sizeof(long)) != 5921517102558967139 ||
+                         *(long*)(state.StringBuffer + sizeof(long) + sizeof(long)) != 3273676477843469925 ||
+                         *(int*)(state.StringBuffer + sizeof(long) + sizeof(long) + sizeof(long)) != 1952543827 ||
+                         *(short*)(state.StringBuffer + sizeof(long) + sizeof(long) + sizeof(long) + sizeof(int)) != 29557))
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
+
+                    var isRevisionStatusProperty = state.StringBuffer[29] == 's';
+                    if (reader.Read() == false)
+                    {
+                        _state = isRevisionStatusProperty ? State.IgnoreRevisionStatusProperty : State.IgnoreProperty;
+                        {
+                            aboutToReadPropertyName = false;
+                            return true;
+                        }
+                    }
+
+                    if (state.CurrentTokenType == JsonParserToken.StartArray ||
+                        state.CurrentTokenType == JsonParserToken.StartObject)
+                        ThrowInvalidMetadataProperty(state);
+
+                    if (isRevisionStatusProperty)
+                    {
+                        switch (CreateLazyStringValueFromParserState(state))
+                        {
+                            case VersionedDocumentState:
+                                NonPersistentFlags |= NonPersistentDocumentFlags.LegacyVersioned;
+                                break;
+                            case HistoricalRevisionState:
+                                NonPersistentFlags |= NonPersistentDocumentFlags.LegacyRevision;
+                                break;
+                        }
+                    }
+
+                    break;
+                case 32: //Raven-Replication-Merged-History
+                    if (*(long*)state.StringBuffer != 7300947898092904786 ||
+                        *(long*)(state.StringBuffer + sizeof(long)) != 8028075772393122928 ||
+                        *(long*)(state.StringBuffer + sizeof(long) + sizeof(long)) != 7234302117464059246 ||
+                        *(long*)(state.StringBuffer + sizeof(long) + sizeof(long) + sizeof(long)) != 8751179571877464109)
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
+
+                    goto case -1;
+            }
+            return false;
+        }
+
+        private bool AboutToReadWithStateUnlikely(IJsonParser reader, JsonParserState state)
         {
             switch (_state)
             {
@@ -276,264 +706,7 @@ namespace Raven.Server.Documents
 
                     break;
             }
-
-            _state = State.None;
-
-            while (true)
-            {
-                if (reader.Read() == false)
-                    return false;
-
-                if (state.CurrentTokenType != JsonParserToken.String)
-                    return true; // let the caller handle that
-
-                if (_readingMetadataObject == false)
-                {
-                    if (state.StringSize == 9 && state.StringBuffer[0] == (byte)'@' &&
-                        *(long*)(state.StringBuffer + 1) == 7022344802737087853)
-                    {
-                        _readingMetadataObject = true;
-                    }
-                    return true;
-                }
-
-                switch (state.StringSize)
-                {
-                    case 3: // @id
-                        if (state.StringBuffer[0] != (byte)'@' ||
-                            *(short*)(state.StringBuffer + 1) != 25705)
-                            return true;
-
-                        if (reader.Read() == false)
-                        {
-                            _state = State.ReadingId;
-                            return false;
-                        }
-                        if (state.CurrentTokenType != JsonParserToken.String)
-                            ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.Id, state);
-                        Id = CreateLazyStringValueFromParserState(state);
-                        break;
-                    case 5: // @etag
-                        if (state.StringBuffer[0] != (byte)'@' ||
-                            *(int*)(state.StringBuffer + 1) != 1734440037)
-                            return true;
-
-                        goto case -1;
-
-                    case 6: // @flags
-                        if (state.StringBuffer[0] != (byte)'@' ||
-                            *(int*)(state.StringBuffer + 1) != 1734437990 ||
-                            state.StringBuffer[1 + sizeof(int)] != (byte)'s')
-                            return true;
-
-                        if (reader.Read() == false)
-                        {
-                            _state = State.ReadingFlags;
-                            return false;
-                        }
-                        if (state.CurrentTokenType != JsonParserToken.String)
-                            ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.Flags, state);
-                        Flags = ReadFlags(state);
-                        break;
-
-                    case 12: // @index-score
-                        if (state.StringBuffer[0] != (byte)'@' ||
-                            *(long*)(state.StringBuffer + 1) != 7166121427196997225 ||
-                            *(short*)(state.StringBuffer + 1 + sizeof(long)) != 29295 ||
-                            state.StringBuffer[1 + sizeof(long) + sizeof(short)] != (byte)'e')
-                            return true;
-
-                        goto case -1;
-                    case 13: //Last-Modified
-                        if (*(long*)state.StringBuffer != 7237087983830262092 ||
-                            *(int*)(state.StringBuffer + sizeof(long)) != 1701406313 ||
-                            state.StringBuffer[12] != (byte)'d')
-                            return true;
-
-                        goto case -1;
-
-                    case 14:
-                        if (state.StringBuffer[0] == (byte)'@')
-                        {
-                            // @change-vector
-                            if (*(long*)(state.StringBuffer + 1) == 8515573965335390307 &&
-                                *(int*)(state.StringBuffer + 1 + sizeof(long)) == 1869898597 &&
-                                state.StringBuffer[1 + sizeof(long) + sizeof(int)] == (byte)'r')
-                            {
-                                if (ReadChangeVector(reader, state) == false)
-                                {
-                                    _state = State.ReadingChangeVector;
-                                    return false;
-                                }
-                                break;
-                            }
-
-                            // @last-modified
-                            if (*(long*)(state.StringBuffer + 1) == 7237123168202350956 &&
-                                *(int*)(state.StringBuffer + 1 + sizeof(long)) == 1701406313 &&
-                                state.StringBuffer[1 + sizeof(long) + sizeof(int)] == (byte)'d')
-                            {
-                                goto case -1;
-                            }
-                        }
-
-                        return true;
-                    case 15: //Raven-Read-Only
-                        if (*(long*)state.StringBuffer != 7300947898092904786 ||
-                            *(int*)(state.StringBuffer + sizeof(long)) != 1328374881 ||
-                            *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) != 27758 ||
-                            state.StringBuffer[14] != (byte)'y')
-                            return true;
-
-                        goto case -1;
-
-                    case 17: //Raven-Entity-Name --> @collection
-                        if (*(long*)state.StringBuffer != 7945807069737017682 ||
-                            *(long*)(state.StringBuffer + sizeof(long)) != 7881666780093245812 ||
-                            state.StringBuffer[16] != (byte)'e')
-                            return true;
-
-                        var collection = _metadataCollections;
-                        state.StringBuffer = collection.AllocatedMemoryData.Address;
-                        state.StringSize = collection.Size;
-                        return true;
-                    case 19: //Raven-Last-Modified
-                        if (*(long*)state.StringBuffer != 7011028672080929106 ||
-                            *(long*)(state.StringBuffer + sizeof(long)) != 7379539893622240371 ||
-                            *(short*)(state.StringBuffer + sizeof(long) + sizeof(long)) != 25961 ||
-                            state.StringBuffer[18] != (byte)'d')
-                            return true;
-
-                        goto case -1;
-                    case 23: //Raven-Document-Revision
-                        if (*(long*)state.StringBuffer != 8017583188798234962 ||
-                            *(long*)(state.StringBuffer + sizeof(long)) != 5921517102558967139 ||
-                            *(int*)(state.StringBuffer + sizeof(long) + sizeof(long)) != 1936291429 ||
-                            *(short*)(state.StringBuffer + sizeof(long) + sizeof(long) + sizeof(int)) != 28521 ||
-                            state.StringBuffer[22] != (byte)'n')
-                            return true;
-
-                        goto case -1;
-                    case 24: //Raven-Replication-Source
-                        if (*(long*)state.StringBuffer != 7300947898092904786 ||
-                            *(long*)(state.StringBuffer + sizeof(long)) != 8028075772393122928 ||
-                            *(long*)(state.StringBuffer + sizeof(long) + sizeof(long)) != 7305808869229538670)
-                            return true;
-
-                        goto case -1;
-                    case 25: //Raven-Replication-Version OR Raven-Replication-History
-                        if (*(long*)state.StringBuffer != 7300947898092904786 ||
-                            *(long*)(state.StringBuffer + sizeof(long)) != 8028075772393122928)
-                            return true;
-
-                        var value = *(long*)(state.StringBuffer + sizeof(long) + sizeof(long));
-                        var lastByte = state.StringBuffer[24];
-                        if ((value != 8028074745928232302 || lastByte != (byte)'n') &&
-                            (value != 8245937481775066478 || lastByte != (byte)'y'))
-                            return true;
-
-                        var isReplicationHistory = lastByte == (byte)'y';
-                        if (reader.Read() == false)
-                        {
-                            _verifyStartArray = isReplicationHistory;
-                            _state = isReplicationHistory ? State.IgnoreArray : State.IgnoreProperty;
-                            return false;
-                        }
-
-                        // Raven-Replication-History is an array
-                        if (isReplicationHistory)
-                        {
-                            if (state.CurrentTokenType != JsonParserToken.StartArray)
-                                ThrowInvalidReplicationHistoryType(state);
-
-                            do
-                            {
-                                if (reader.Read() == false)
-                                {
-                                    _state = State.IgnoreArray;
-                                    return false;
-                                }
-                            } while (state.CurrentTokenType != JsonParserToken.EndArray);
-                        }
-                        else if (state.CurrentTokenType == JsonParserToken.StartArray ||
-                                 state.CurrentTokenType == JsonParserToken.StartObject)
-                            ThrowInvalidMetadataProperty(state);
-                        break;
-                    case 29: //Non-Authoritative-Information
-                        if (*(long*)state.StringBuffer != 7526769800038477646 ||
-                            *(long*)(state.StringBuffer + sizeof(long)) != 8532478930943832687 ||
-                            *(long*)(state.StringBuffer + sizeof(long) + sizeof(long)) != 7886488383206796645 ||
-                            *(int*)(state.StringBuffer + sizeof(long) + sizeof(long) + sizeof(long)) != 1869182049 ||
-                            state.StringBuffer[28] != (byte)'n')
-                            return true;
-
-                        goto case -1;
-
-                    case 30: //Raven-Document-Parent-Revision OR Raven-Document-Revision-Status
-                        if (*(long*)state.StringBuffer != 8017583188798234962)
-                            return true;
-
-                        if ((*(long*)(state.StringBuffer + sizeof(long)) != 5777401914483111267 ||
-                             *(long*)(state.StringBuffer + sizeof(long) + sizeof(long)) != 7300947924012593761 ||
-                             *(int*)(state.StringBuffer + sizeof(long) + sizeof(long) + sizeof(long)) != 1769171318 ||
-                             *(short*)(state.StringBuffer + sizeof(long) + sizeof(long) + sizeof(long) + sizeof(int)) != 28271) &&
-                            (*(long*)(state.StringBuffer + sizeof(long)) != 5921517102558967139 ||
-                             *(long*)(state.StringBuffer + sizeof(long) + sizeof(long)) != 3273676477843469925 ||
-                             *(int*)(state.StringBuffer + sizeof(long) + sizeof(long) + sizeof(long)) != 1952543827 ||
-                             *(short*)(state.StringBuffer + sizeof(long) + sizeof(long) + sizeof(long) + sizeof(int)) != 29557))
-                            return true;
-
-                        var isRevisionStatusProperty = state.StringBuffer[29] == 's';
-                        if (reader.Read() == false)
-                        {
-                            _state = isRevisionStatusProperty ? State.IgnoreRevisionStatusProperty : State.IgnoreProperty;
-                            return false;
-                        }
-
-                        if (state.CurrentTokenType == JsonParserToken.StartArray ||
-                            state.CurrentTokenType == JsonParserToken.StartObject)
-                            ThrowInvalidMetadataProperty(state);
-
-                        if (isRevisionStatusProperty)
-                        {
-                            switch (CreateLazyStringValueFromParserState(state))
-                            {
-                                case VersionedDocumentState:
-                                    NonPersistentFlags |= NonPersistentDocumentFlags.LegacyVersioned;
-                                    break;
-                                case HistoricalRevisionState:
-                                    NonPersistentFlags |= NonPersistentDocumentFlags.LegacyRevision;
-                                    break;
-                            }
-                        }
-
-                        break;
-                    case 32: //Raven-Replication-Merged-History
-                        if (*(long*)state.StringBuffer != 7300947898092904786 ||
-                            *(long*)(state.StringBuffer + sizeof(long)) != 8028075772393122928 ||
-                            *(long*)(state.StringBuffer + sizeof(long) + sizeof(long)) != 7234302117464059246 ||
-                            *(long*)(state.StringBuffer + sizeof(long) + sizeof(long) + sizeof(long)) != 8751179571877464109)
-                            return true;
-
-                        goto case -1;
-
-                    case -1: // IgnoreProperty
-                    {
-                        if (reader.Read() == false)
-                        {
-                            _state = State.IgnoreProperty;
-                            return false;
-                        }
-                        if (state.CurrentTokenType == JsonParserToken.StartArray ||
-                            state.CurrentTokenType == JsonParserToken.StartObject)
-                            ThrowInvalidMetadataProperty(state);
-                        break;
-                    }
-
-                    default: // accept this property
-                        return true;
-                }
-            }
+            return true;
         }
 
         private static void ThrowInvalidMetadataProperty(JsonParserState state)
