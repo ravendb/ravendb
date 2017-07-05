@@ -78,7 +78,9 @@ namespace Raven.Server.Documents.Handlers
                                     new DynamicJsonValue
                                     {
                                         ["Id"] = itemDetails.Doc.Id,
-                                        ["Exception"] = itemDetails.Exception.ToString()
+                                        ["Etag"] = itemDetails.Doc.Etag,
+                                        ["Exception"] = itemDetails.Exception.ToString(),
+                                        ["Document"] = itemDetails.Doc.Data
                                     }, "Subscription process exception"
                                 ));
                             }
