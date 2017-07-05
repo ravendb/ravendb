@@ -1,8 +1,9 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Sparrow.Collections;
+using Sparrow.Collections.LockFree;
 using Voron.Impl;
 
 namespace Voron.Util
@@ -56,7 +57,8 @@ namespace Voron.Util
                 PagePositions[End++] = p;
             }
 
-            public void RemoveBefore(long lastSyncedTransactionId, List<PagePosition> unusedPages)
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void RemoveBefore(long lastSyncedTransactionId, FastList<PagePosition> unusedPages)
             {
                 while (
                     Start < PagePositions.Length &&
@@ -108,7 +110,7 @@ namespace Voron.Util
             _maxSeenTransaction = tx.Id;
         }
 
-        public void RemoveKeysWhereAllPagesOlderThan(long lastSyncedTransactionId, List<PagePosition> unusedPages)
+        public void RemoveKeysWhereAllPagesOlderThan(long lastSyncedTransactionId, FastList<PagePosition> unusedPages)
         {
             foreach (var kvp in _values)
             {

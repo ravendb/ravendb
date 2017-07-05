@@ -5,13 +5,13 @@ namespace Voron.Data
     /// <summary>
     /// The PageHeader is the base information we can find in any voron allocated page. It is important to note 
     /// that specific data structures may add data to this structure and therefore every time we modify this,
-    /// we should check every struct that ends with "PageHeader" to ensure no colisions happen in structures
+    /// we should check every struct that ends with "PageHeader" to ensure no collisions happen in structures
     /// that share this layout.
     /// </summary>
     [StructLayout(LayoutKind.Explicit, Size = SizeOf, Pack = 1)]
     public unsafe struct PageHeader
     {
-        // Checksum field must be 32 bits alligned.
+        // Checksum field must be 32 bits aligned.
         // Everything before the nonce/checksum offset is considered "additional data" in the encryption algorithm and must be contiguous
         // It's important for validation, so any addition to the header should come before NonceOffset
         public static int ChecksumOffset = (int)Marshal.OffsetOf<PageHeader>(nameof(Checksum));
