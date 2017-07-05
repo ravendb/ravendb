@@ -59,8 +59,7 @@ namespace Raven.Server.Documents.Replication
         {
             try
             {
-                DocumentsOperationContext context;
-                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
                     using (context.OpenReadTransaction())
                     {
@@ -124,7 +123,7 @@ namespace Raven.Server.Documents.Replication
                         {
                             var cmd = new PutResolvedConflictsCommand(_database.DocumentsStorage.ConflictsStorage, resolvedConflicts, this);
                             await _database.TxMerger.Enqueue(cmd);
-                            if(cmd.RequiresRetry)
+                            if (cmd.RequiresRetry)
                                 RunConflictResolversOnce();
                         }
                     }
@@ -162,7 +161,7 @@ namespace Raven.Server.Documents.Replication
                     using (Slice.External(context.Allocator, item.ResolvedConflict.LowerId, out var slice))
                     {
                         // let's check if nothing has changed since we resolved the conflict in the read tx
-                        // in particulal the conflict could be resolved externally before the tx merger opened this write tx
+                        // in particular the conflict could be resolved externally before the tx merger opened this write tx
 
                         if (_conflictsStorage.ShouldThrowConcurrencyExceptionOnConflict(context, slice, item.MaxConflictEtag, out var _))
                             continue;
