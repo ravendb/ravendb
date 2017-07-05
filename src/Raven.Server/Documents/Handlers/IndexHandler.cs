@@ -197,9 +197,9 @@ namespace Raven.Server.Documents.Handlers
                         return Task.CompletedTask;
                     }
 
-                    var docId = GetStringQueryString("docId", required: false);
+                    var docIds = GetStringValuesQueryString("docId", required: false);
 
-                    using (index.GetReduceTree(docId, out IEnumerable<ReduceTree> trees))
+                    using (index.GetReduceTree(docIds.ToArray(), out IEnumerable<ReduceTree> trees))
                     {
                         writer.WriteReduceTrees(trees);
                     }
