@@ -416,6 +416,51 @@ namespace Raven.Server.Documents.Replication
             UpdateDestinationChangeVectorHeartbeat(replicationBatchReply);
         }
 
+        private class UpdateSiblingCurrentEtag : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            private readonly DocumentDatabase _database;
+            private readonly ReplicationMessageReply _replicationBatchReply;
+            private readonly Guid _dbid;
+
+            public UpdateSiblingCurrentEtag(DocumentDatabase database,ReplicationMessageReply replicationBatchReply)
+            {
+                _database = database;
+                _replicationBatchReply = replicationBatchReply;
+                _dbid = new Guid(_replicationBatchReply.DatabaseId);
+            }
+
+            public override int Execute(DocumentsOperationContext context)
+            {
+                if (context.LastDatabaseChangeVector == null)
+                    context.LastDatabaseChangeVector = _database.DocumentsStorage.GetDatabaseChangeVector(context);
+
+                var status = ConflictsStorage.GetConflictStatus(_replicationBatchReply.ChangeVector,
+                    context.LastDatabaseChangeVector);
+
+                if (status != ConflictsStorage.ConflictStatus.AlreadyMerged)
+                    return 0;
+                    
+
+                var length = context.LastDatabaseChangeVector.Length;
+                for (var i = 0; i < length; i++)
+                {
+                    if(_dbid  != context.LastDatabaseChangeVector[i].DbId)
+                        continue;
+
+                    context.LastDatabaseChangeVector[i].Etag = Math.Max(context.LastDatabaseChangeVector[i].Etag, _replicationBatchReply.CurrentEtag);
+                    return 1;
+                }
+
+                Array.Resize(ref context.LastDatabaseChangeVector, length + 1);
+                context.LastDatabaseChangeVector[length] = new ChangeVectorEntry
+                {
+                    DbId = _dbid,
+                    Etag = _replicationBatchReply.CurrentEtag
+                };
+                return 1;
+            }
+        }
+        
         private void UpdateDestinationChangeVectorHeartbeat(ReplicationMessageReply replicationBatchReply)
         {
             _lastSentDocumentEtag = Math.Max(_lastSentDocumentEtag, replicationBatchReply.LastEtagAccepted);
@@ -426,6 +471,14 @@ namespace Raven.Server.Documents.Replication
             foreach (var changeVectorEntry in replicationBatchReply.ChangeVector)
             {
                 _destinationLastKnownChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
+            }
+
+            // we intentionally not waiting here, there is nothing that depends on the timing on this, since this 
+            // is purely adviosry. We just want to have the information up to date at some point, and we won't 
+            // miss anything much if this isn't there.
+            if (replicationBatchReply.DatabaseId != null && replicationBatchReply.CurrentEtag != 0)
+            {
+                _database.TxMerger.Enqueue(new UpdateSiblingCurrentEtag(_database, replicationBatchReply)).IgnoreUnobservedExceptions();
             }
 
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))

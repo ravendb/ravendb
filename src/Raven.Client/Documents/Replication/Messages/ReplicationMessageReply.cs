@@ -15,6 +15,8 @@ namespace Raven.Client.Documents.Replication.Messages
         public ReplyType Type { get; set; }
 
         public long LastEtagAccepted { get; set; }
+        
+        public long CurrentEtag { get; set; }
 
         public string Exception { get; set; }
 

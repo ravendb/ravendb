@@ -135,14 +135,11 @@ namespace Raven.Server.Documents.Replication
                                 _connectionOptions.PinnedBuffer,
                                 _database.DatabaseShutdown))
                             {
-                                TransactionOperationContext configurationContext;
                                 if (msg.Document != null)
                                 {
                                     using (var writer = new BlittableJsonTextWriter(msg.Context, _stream))
-                                    using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(
-                                            out configurationContext))
                                     {
-                                        HandleSingleReplicationBatch(msg.Context, configurationContext,
+                                        HandleSingleReplicationBatch(msg.Context,
                                             msg.Document,
                                             writer);
                                     }
@@ -150,15 +147,12 @@ namespace Raven.Server.Documents.Replication
                                 else // notify peer about new change vector
                                 {
 
-                                    using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(
-                                        out configurationContext))
                                     using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(
                                             out DocumentsOperationContext documentsContext))
                                     using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
                                     {
                                         SendHeartbeatStatusToSource(
                                             documentsContext,
-                                            configurationContext,
                                             writer,
                                             _lastDocumentEtag,
                                             "Notify");
@@ -204,7 +198,6 @@ namespace Raven.Server.Documents.Replication
 
         private void HandleSingleReplicationBatch(
             DocumentsOperationContext documentsContext,
-            TransactionOperationContext configurationContext,
             BlittableJsonReaderObject message,
             BlittableJsonTextWriter writer)
         {
@@ -258,7 +251,7 @@ namespace Raven.Server.Documents.Replication
                     default:
                         throw new ArgumentOutOfRangeException("Unknown message type: " + messageType);
                 }
-                SendHeartbeatStatusToSource(documentsContext, configurationContext, writer, _lastDocumentEtag,  messageType);
+                SendHeartbeatStatusToSource(documentsContext, writer, _lastDocumentEtag,  messageType);
             }
             catch (ObjectDisposedException)
             {
@@ -480,14 +473,21 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void SendHeartbeatStatusToSource(DocumentsOperationContext documentsContext, TransactionOperationContext configurationContext, BlittableJsonTextWriter writer, long lastDocumentEtag, string handledMessageType)
+        private void SendHeartbeatStatusToSource(DocumentsOperationContext documentsContext, BlittableJsonTextWriter writer, long lastDocumentEtag, string handledMessageType)
         {
             var changeVectorAsDynamicJson = new DynamicJsonArray();
             ChangeVectorEntry[] databaseChangeVector;
 
+            long currentLastEtagMatchingChangeVector;
+
             using (documentsContext.OpenReadTransaction())
             {
+                // we need to get both of them in a transaction, the other side will check if its known change vector
+                // is the same or higher then ours, and if so, we'll update the change vector on the sibling to reflect
+                // our own latest etag. This allows us to have effective syncronzation points, since each change will
+                // be able to tell (roughly) where it is at on the entire cluster. 
                 databaseChangeVector = _database.DocumentsStorage.GetDatabaseChangeVector(documentsContext);
+                currentLastEtagMatchingChangeVector = DocumentsStorage.ReadLastEtag(documentsContext.Transaction.InnerTransaction);
             }
 
             foreach (var changeVectorEntry in databaseChangeVector)
@@ -512,6 +512,7 @@ namespace Raven.Server.Documents.Replication
                 
                 [nameof(ReplicationMessageReply.Exception)] = null,
                 [nameof(ReplicationMessageReply.ChangeVector)] = changeVectorAsDynamicJson,
+                [nameof(ReplicationMessageReply.CurrentEtag)] = currentLastEtagMatchingChangeVector,
                 [nameof(ReplicationMessageReply.DatabaseId)] = _database.DbId.ToString(),
             };
 
