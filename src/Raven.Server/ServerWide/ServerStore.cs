@@ -488,7 +488,7 @@ namespace Raven.Server.ServerWide
                 {
                     RefreshOutgoingTasks();
                 }
-                if (state.To == RachisConsensus.State.Leader)
+                if (state.To == RachisConsensus.State.LeaderElect)
                 {
                     _engine.CurrentLeader.OnNodeStatusChange += OnTopologyChanged;
                 }
