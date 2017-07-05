@@ -11,9 +11,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {   
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Core.Subscriptions.RavenDB_3193())   
+                using (var test = new RachisTests.DatabaseCluster.ClusterDatabaseMaintenance())   
                 {
-                    test.ShouldRespectCollectionCriteria().Wait();
+                    test.MoveToPassiveWhenRefusedConnectionFromAllNodes().Wait();
                 }
             }
         }

@@ -130,17 +130,8 @@ namespace Raven.Server.Rachis
                                 _engine.Log.Info($"Candidate {_engine.Tag}: A leader node has indicated that I'm not in their topology, I was probably kicked out. Moving to passive mode");
                             }
                             var engineCurrentTerm = _engine.CurrentTerm;
-                            using (_engine.ContextPool.AllocateOperationContext(out context))
-                            using (context.OpenWriteTransaction())
-                            {
-                                if (_engine.CurrentTerm == engineCurrentTerm)
-                                {
-                                    _engine.SetNewState(RachisConsensus.State.Passive, null, engineCurrentTerm,
-                                        $"I just learned from the leader that I\'m not in their topology, moving to passive state");
-                                    _engine.DeleteTopology(context);
-                                }
-                                context.Transaction.Commit();
-                            }
+                            _engine.SetNewState(RachisConsensus.State.Passive, this, engineCurrentTerm,
+                                $"I just learned from the leader that I\'m not in their topology, moving to passive state");
                             break;
                         }
 

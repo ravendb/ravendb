@@ -424,7 +424,7 @@ namespace Raven.Client.Http
                     if (shouldRetry == false)
                         throw;
                     if (await HandleServerDown(chosenNode, nodeIndex, context, command, request, response, e).ConfigureAwait(false) == false)
-                        throw new AllTopologyNodesDownException("Tried to send request to all configured nodes in the topology, all of them seem to be down or not responding.", _nodeSelector.Topology, e);
+                        throw new AllTopologyNodesDownException($"Tried to send {command.GetType().Name} request to all configured nodes in the topology, all of them seem to be down or not responding.", _nodeSelector.Topology, e);
 
                     return;
                 }

@@ -403,7 +403,6 @@ namespace Raven.Server.Rachis
             using (context.OpenWriteTransaction()) // we use the write transaction lock here
             {
                 SetNewStateInTx(context, state, disposable, expectedTerm, stateChangedReason , beforeStateChangedEvent);
-
                 context.Transaction.Commit();
             }
         }
@@ -436,8 +435,11 @@ namespace Raven.Server.Rachis
 
             if (disposable != null)
                 _disposables.Add(disposable);
-            else if (state != State.Passive) // if we are back to null state, wait to become candidate if no one talks to us
+            else if (state != State.Passive)
+            {
+                // if we are back to null state, wait to become candidate if no one talks to us
                 Timeout.Start(SwitchToCandidateStateOnTimeout);
+            } 
 
             if (state == State.Passive)
             {
