@@ -380,10 +380,10 @@ namespace Raven.Server.Documents.TcpHandlers
                         {
                             foreach (var result in fetcher.GetDataToSend(docsContext, subscription, startEtag, patch))
                             {
-                                startEtag = result.doc.Etag;
-                                lastChangeVector = ChangeVectorUtils.MergeVectors(result.doc.ChangeVector, subscription.ChangeVector);
+                                startEtag = result.Doc.Etag;
+                                lastChangeVector = ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, subscription.ChangeVector);
                                 
-                                if (result.doc.Data == null)
+                                if (result.Doc.Data == null)
                                 {
                                     if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
                                     {
@@ -401,24 +401,24 @@ namespace Raven.Server.Documents.TcpHandlers
                                 writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching(DataSegment));
                                 writer.WriteComma();
                                 writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(DataSegment));
-                                result.doc.EnsureMetadata();
+                                result.Doc.EnsureMetadata();
                                 
-                                if (result.exception != null)
+                                if (result.Exception != null)
                                 {
                                     writer.WriteValue(BlittableJsonToken.StartObject, 
                                         docsContext.ReadObject(new DynamicJsonValue()
                                         {
-                                            [Raven.Client.Constants.Documents.Metadata.Key] = result.doc.Data[Raven.Client.Constants.Documents.Metadata.Key]
-                                        }, result.doc.Id)
+                                            [Raven.Client.Constants.Documents.Metadata.Key] = result.Doc.Data[Raven.Client.Constants.Documents.Metadata.Key]
+                                        }, result.Doc.Id)
                                     );
                                     writer.WriteComma();
                                     writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(ExceptionSegment));
-                                    writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching(result.exception.ToString()));
+                                    writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching(result.Exception.ToString()));
                                 }
                                 else
                                 {
-                                    writer.WriteDocument(docsContext, result.doc);
-                                    result.doc.Data.Dispose();
+                                    writer.WriteDocument(docsContext, result.Doc);
+                                    result.Doc.Data.Dispose();
                                 }
 
                                 writer.WriteEndObject();
