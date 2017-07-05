@@ -377,7 +377,7 @@ namespace Raven.Server.Web.System
             try
             {
                 var restoreConfiguration = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore");
-                var restoreConfigurationJson = JsonDeserializationCluster.RestoreBackupConfiguraionConfiguration(restoreConfiguration);
+                var restoreConfigurationJson = JsonDeserializationCluster.RestoreBackupConfiguration(restoreConfiguration);
 
                 var databaseName = restoreConfigurationJson.DatabaseName;
                 if (string.IsNullOrWhiteSpace(databaseName))

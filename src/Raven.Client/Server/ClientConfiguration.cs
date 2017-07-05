@@ -1,6 +1,6 @@
 ﻿using Sparrow.Json.Parsing;
 
-namespace Raven.Client.Server.Operations.Configuration
+namespace Raven.Client.Server
 {
     public class ClientConfiguration
     {

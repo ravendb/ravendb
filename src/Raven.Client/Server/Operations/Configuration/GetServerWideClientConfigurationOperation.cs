@@ -6,20 +6,20 @@ using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations.Configuration
 {
-    public class GetClientConfigurationOperation : IServerOperation<GetClientConfigurationOperation.Result>
+    public class GetServerWideClientConfigurationOperation : IServerOperation<ClientConfiguration>
     {
-        public RavenCommand<Result> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<ClientConfiguration> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetClientConfigurationCommand();
+            return new GetServerWideClientConfigurationCommand();
         }
 
-        internal class GetClientConfigurationCommand : RavenCommand<Result>
+        private class GetServerWideClientConfigurationCommand : RavenCommand<ClientConfiguration>
         {
             public override bool IsReadRequest => false;
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/configuration/client";
+                url = $"{node.Url}/admin/configuration/client";
 
                 var request = new HttpRequestMessage
                 {
@@ -34,15 +34,8 @@ namespace Raven.Client.Server.Operations.Configuration
                 if (response == null)
                     return;
 
-                Result = JsonDeserializationClient.ClientConfigurationResult(response);
+                Result = JsonDeserializationClient.ClientConfiguration(response);
             }
-        }
-
-        public class Result
-        {
-            public long RaftCommandIndex { get; set; }
-
-            public ClientConfiguration Configuration { get; set; }
         }
     }
 }

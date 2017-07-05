@@ -17,7 +17,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.Client.Server.Operations.Configuration;
 
 namespace Raven.Client.Documents
 {
@@ -184,13 +183,13 @@ namespace Raven.Client.Documents
             lazy = Conventions.DisableTopologyUpdates == false
                 ? new Lazy<RequestExecutor>(() =>
                 {
-                    var requestExecutor = RequestExecutor.Create(Urls, database, ApiKey);
+                    var requestExecutor = RequestExecutor.Create(Urls, database, ApiKey, Conventions);
                     RequestExecutorCreated?.Invoke(this, requestExecutor);
                     return requestExecutor;
                 })
                 : new Lazy<RequestExecutor>(() =>
                 {
-                    var forSingleNode = RequestExecutor.CreateForSingleNode(Urls[0], database, ApiKey);
+                    var forSingleNode = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(Urls[0], database, ApiKey, Conventions);
                     RequestExecutorCreated?.Invoke(this, forSingleNode);
                     return forSingleNode;
                 });
@@ -234,8 +233,6 @@ namespace Raven.Client.Documents
                     Conventions.AsyncDocumentIdGenerator = (dbName, entity) => generator.GenerateDocumentIdAsync(dbName, entity);
                 }
 
-                RequestExecutorCreated += OnRequestExecutorCreated;
-
                 Initialized = true;
             }
             catch (Exception)
@@ -245,27 +242,6 @@ namespace Raven.Client.Documents
             }
 
             return this;
-        }
-
-        private void OnRequestExecutorCreated(object sender, RequestExecutor executor)
-        {
-            void OnClientConfigurationChanged(object s, (long RaftCommandIndex, ClientConfiguration Configuration) t)
-            {
-                _lastClientConfigurationIndex = t.RaftCommandIndex;
-
-                foreach (var re in _requestExecutors.Values)
-                {
-                    if (re.IsValueCreated == false)
-                        continue;
-
-                    re.Value.ClientConfigurationEtag = t.RaftCommandIndex;
-                }
-
-                Conventions.UpdateFrom(t.Configuration);
-            }
-
-            executor.ClientConfigurationEtag = _lastClientConfigurationIndex;
-            executor.ClientConfigurationChanged += OnClientConfigurationChanged;
         }
 
         /// <summary>
@@ -313,7 +289,7 @@ namespace Raven.Client.Documents
 
         protected virtual IDatabaseChanges CreateDatabaseChanges(string database)
         {
-            return new DatabaseChanges(GetRequestExecutor(database), Conventions, database, () => _databaseChanges.Remove(database));
+            return new DatabaseChanges(GetRequestExecutor(database), database, () => _databaseChanges.Remove(database));
         }
 
         /// <summary>

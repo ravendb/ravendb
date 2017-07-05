@@ -35,7 +35,7 @@ namespace Raven.Server.Documents
                 context.HttpContext.Response.Headers[Constants.Headers.RefreshTopology] = "true";
 
             var clientConfigurationEtag = GetLongFromHeaders(Constants.Headers.ClientConfigurationEtag);
-            if (clientConfigurationEtag.HasValue && ServerStore.HasClientConfigurationChanged(clientConfigurationEtag.Value))
+            if (clientConfigurationEtag.HasValue && Database.HasClientConfigurationChanged(clientConfigurationEtag.Value))
                 context.HttpContext.Response.Headers[Constants.Headers.RefreshClientConfiguration] = "true";
         }
 

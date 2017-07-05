@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Sparrow.Json;
@@ -19,7 +20,7 @@ namespace Raven.Client.Documents.Operations
             _etag = etag;
         }
 
-        public RavenCommand GetCommand(IDocumentStore store, JsonOperationContext context, HttpCache cache)
+        public RavenCommand GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
             return new DeleteAttachmentCommand(_documentId, _name, _etag);
         }
