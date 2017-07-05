@@ -421,8 +421,7 @@ namespace Tests.Infrastructure
             {
                 states = GetLastStatesFromAllServersOrderedByTime();
             }
-            Assert.True(condition,
-                "The leader has changed while waiting for cluster to become stable. All nodes status: " + states);
+            Assert.True(condition, "The leader has changed while waiting for cluster to become stable. All nodes status: " + states);
             return leader;
         }
 

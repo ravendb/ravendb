@@ -118,7 +118,7 @@ namespace FastTests
                     }
 
                     var doc = MultiDatabase.CreateDatabaseDocument(name);
-                    doc.Settings[RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "100";
+                    doc.Settings[RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "1";
                     doc.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString();
                     doc.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = path;
                     doc.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "true";
