@@ -28,15 +28,16 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private readonly ConcurrentDictionary<string, ClusterNode> _clusterNodes = new ConcurrentDictionary<string, ClusterNode>();
 
-        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+        private readonly CancellationTokenSource _cts;
         private readonly JsonContextPool _contextPool = new JsonContextPool();
 
         internal readonly ClusterConfiguration Config;
-        public ClusterMaintenanceSupervisor(ServerStore server,string leaderClusterTag, long term)
+        public ClusterMaintenanceSupervisor(ServerStore server, string leaderClusterTag, long term, CancellationToken shutdownToken)
         {
             _leaderClusterTag = leaderClusterTag;
             _term = term;
             Config = server.Configuration.Cluster;
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(shutdownToken);
         }
 
         public async Task AddToCluster(string clusterTag, string url,string apiKey)
@@ -168,6 +169,12 @@ namespace Raven.Server.ServerWide.Maintenance
                                 tcpConnection = await ReplicationUtils.GetTcpInfoAsync(Url, null, _apiKey, "Supervisor");
                             }
                         }
+
+                        if (_token.IsCancellationRequested) //prevent trying to connect if we are shutting down
+                        {                                   //(_cts is linked to ServerShutdown cancellation token in ServerStore)
+                            return;
+                        }
+
                         using (var connection = await ConnectToClientNodeAsync(tcpConnection))
                         {
                             while (_token.IsCancellationRequested == false)
@@ -242,29 +249,39 @@ namespace Raven.Server.ServerWide.Maintenance
 
             private async Task<Stream> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo)
             {
-                var connection = await ConnectAndGetNetworkStreamAsync(tcpConnectionInfo);
-                using (_contextPool.AllocateOperationContext(out JsonOperationContext ctx))
-                using (var writer = new BlittableJsonTextWriter(ctx, connection))
+                try
                 {
-                    WriteOperationHeaderToRemote(writer);
-                    using (var responseJson = await ctx.ReadForMemoryAsync(connection, _readStatusUpdateDebugString + "/Read-Handshake-Response", _token))
+                    var connection = await ConnectAndGetNetworkStreamAsync(tcpConnectionInfo);
+                    using (_contextPool.AllocateOperationContext(out JsonOperationContext ctx))
+                    using (var writer = new BlittableJsonTextWriter(ctx, connection))
                     {
-                        var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(responseJson);
-                        switch (headerResponse.Status)
+                        WriteOperationHeaderToRemote(writer);
+                        using (var responseJson = await ctx.ReadForMemoryAsync(connection, _readStatusUpdateDebugString + "/Read-Handshake-Response", _token))
                         {
-                            case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
-                                //All good nothing to do
-                                break;
-                            default:
-                                throw new UnauthorizedAccessException(
-                                    $"Node with ClusterTag = {ClusterTag} replied to initial handshake with authorization failure {headerResponse.Status}");
+                            var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(responseJson);
+                            switch (headerResponse.Status)
+                            {
+                                case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
+                                    //All good nothing to do
+                                    break;
+                                default:
+                                    throw new UnauthorizedAccessException(
+                                        $"Node with ClusterTag = {ClusterTag} replied to initial handshake with authorization failure {headerResponse.Status}");
+                            }
                         }
+
+                        WriteClusterMaintenanceConnectionHeader(writer);
                     }
 
-                    WriteClusterMaintenanceConnectionHeader(writer);
+                    return connection;
                 }
+                catch (Exception)
+                {
+                    if (_cts.IsCancellationRequested) //don't care because the server is disposing
+                        return Stream.Null;
 
-                return connection;
+                    throw;
+                }
             }
 
             private void WriteOperationHeaderToRemote(BlittableJsonTextWriter writer)

@@ -78,6 +78,9 @@ namespace RachisTests
                 }
 
                 var requestExecutor = store.GetRequestExecutor();
+
+                Assert.NotNull(requestExecutor.TopologyNodes); //sanity check
+
                 var serverToDispose = Servers.FirstOrDefault(
                     srv => srv.ServerStore.NodeTag.Equals(requestExecutor.TopologyNodes[0].ClusterTag, StringComparison.OrdinalIgnoreCase));
                 Assert.NotNull(serverToDispose); //precaution

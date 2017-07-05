@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server.Operations.Configuration;
 using Raven.Client.Util;
@@ -44,6 +45,8 @@ namespace Raven.Client.Documents.Conventions
         public Action<object, StreamWriter> SerializeEntityToJsonStream;
         private ClientConfiguration _originalConfiguration;
 
+        public ClusterMode ClusterMode;
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="DocumentConventions" /> class.
         /// </summary>
@@ -52,6 +55,7 @@ namespace Raven.Client.Documents.Conventions
             FindIdentityProperty = q => q.Name == "Id";
             IdentityPartsSeparator = "/";
             FindIdentityPropertyNameFromEntityName = entityName => "Id";
+            ClusterMode = ClusterMode.Failover;
 
             FindClrType = (id, doc) =>
             {

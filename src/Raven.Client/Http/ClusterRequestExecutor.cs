@@ -12,12 +12,12 @@ namespace Raven.Client.Http
     {
         private readonly SemaphoreSlim _clusterTopologySemaphore = new SemaphoreSlim(1, 1);
 
-        protected ClusterRequestExecutor(string apiKey) : base(null, apiKey)
+        protected ClusterRequestExecutor(string apiKey, bool isSingleNode) : base(null, apiKey,isSingleNode)
         {
         }
 
         [Obsolete("Not supported", error: true)]
-        public new static ClusterRequestExecutor Create(string[] urls, string databaseName, string apiKey)
+        public new static ClusterRequestExecutor Create(string[] urls, string databaseName, string apiKey, ClusterMode clusterMode = ClusterMode.Failover)
         {
             throw new NotSupportedException();
         }
@@ -30,9 +30,9 @@ namespace Raven.Client.Http
 
         public static ClusterRequestExecutor CreateForSingleNode(string url, string apiKey)
         {
-            var executor = new ClusterRequestExecutor(apiKey)
+            var executor = new ClusterRequestExecutor(apiKey,true)
             {
-                _nodeSelector = new NodeSelector(new Topology
+                _nodeSelector = new FailoverNodeSelector(new Topology
                 {
                     Etag = -1,
                     Nodes = new List<ServerNode>
@@ -52,12 +52,21 @@ namespace Raven.Client.Http
 
         public static ClusterRequestExecutor Create(string[] urls, string apiKey)
         {
-            var executor = new ClusterRequestExecutor(apiKey)
+            var executor = new ClusterRequestExecutor(apiKey,false)
             {
                 _disableClientConfigurationUpdates = true
             };
 
-            executor._firstTopologyUpdate = executor.FirstTopologyUpdate(urls);
+            executor._firstTopologyUpdate = 
+                executor.FirstTopologyUpdate(urls)
+                        .ContinueWith(_ =>
+                        {
+                            executor._nodeSelector = executor.GetNodeSelector(new Topology
+                            {
+                                Nodes = executor.TopologyNodes?.ToList() ?? new List<ServerNode>(),
+                                Etag = executor.TopologyEtag
+                            });
+                        });
             return executor;
         }
 
@@ -102,7 +111,7 @@ namespace Raven.Client.Http
                     };
                     if (_nodeSelector == null)
                     {
-                        _nodeSelector = new NodeSelector(newTopology);
+                        _nodeSelector = new FailoverNodeSelector(newTopology);
                     }
                     else if (_nodeSelector.OnUpdateTopology(newTopology))
                     {
@@ -137,7 +146,7 @@ namespace Raven.Client.Http
             if (cachedTopology == null)
                 return false;
 
-            _nodeSelector = new NodeSelector(new Topology
+            _nodeSelector = new FailoverNodeSelector(new Topology
             {
                 Nodes = new List<ServerNode>(
                     from member in cachedTopology.Topology.Members

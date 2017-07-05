@@ -69,15 +69,16 @@ namespace RachisTests
 
         private static async Task WaitForDatabaseTopology(IDocumentStore store, string databaseName, int replicationFactor)
         {
+            var requestExecutor = store.GetRequestExecutor();
             do
             {
-                await store.GetRequestExecutor()
-                    .UpdateTopologyAsync(new ServerNode
+                await requestExecutor
+                       .UpdateTopologyAsync(new ServerNode
                     {
                         Url = store.Urls[0],
                         Database = databaseName,
                     }, Timeout.Infinite);
-            } while (store.GetRequestExecutor().TopologyNodes.Count != replicationFactor);
+            } while (requestExecutor.TopologyNodes != null && requestExecutor.TopologyNodes.Count != replicationFactor);
         }
     }
 }
