@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO.Compression;
+using System.Net.Http.Headers;
 
 namespace Raven.Abstractions.Connection
 {
@@ -12,7 +13,7 @@ namespace Raven.Abstractions.Connection
         private readonly string data;
         private readonly bool disableRequestCompression;
 
-        public CompressedStringContent(string data, bool disableRequestCompression)
+        public CompressedStringContent(string data, bool disableRequestCompression, string contentType = null)
         {
             this.data = data;
             this.disableRequestCompression = disableRequestCompression;
@@ -21,6 +22,9 @@ namespace Raven.Abstractions.Connection
             {
                 Headers.ContentEncoding.Add("gzip");
             }
+
+            if(string.IsNullOrWhiteSpace(contentType) == false)
+                Headers.ContentType = new MediaTypeHeaderValue(contentType);
         }
 
         protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)

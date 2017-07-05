@@ -838,9 +838,9 @@ namespace Raven.Client.Connection.Implementation
             return ExecuteRawResponseInternalAsync(new JsonContent(token));
         }
 
-        public Task<HttpResponseMessage> ExecuteRawResponseAsync(string data)
+        public Task<HttpResponseMessage> ExecuteRawResponseAsync(string data, string contentType = null)
         {
-            return ExecuteRawResponseInternalAsync(new CompressedStringContent(data, factory.DisableRequestCompression));
+            return ExecuteRawResponseInternalAsync(new CompressedStringContent(data, factory.DisableRequestCompression, contentType));
         }
 
         public Task<HttpResponseMessage> ExecuteRawResponseAsync()
