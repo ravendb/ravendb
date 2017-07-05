@@ -36,7 +36,7 @@ namespace Raven.Client.Http
         private static readonly TimeSpan GlobalHttpClientTimeout = TimeSpan.FromHours(12);
 
         private static readonly Lazy<HttpClient> GlobalHttpClient = new Lazy<HttpClient>(() => CreateClient(GlobalHttpClientTimeout));
-
+        protected readonly bool _isSingleNode;
         private readonly SemaphoreSlim _updateTopologySemaphore = new SemaphoreSlim(1, 1);
         private readonly SemaphoreSlim _updateClientConfigurationSemaphore = new SemaphoreSlim(1, 1);
 
@@ -56,13 +56,15 @@ namespace Raven.Client.Http
 
         public readonly HttpCache Cache = new HttpCache();
 
-        public IReadOnlyList<ServerNode> TopologyNodes => _nodeSelector.Topology.Nodes;
+        public IReadOnlyList<ServerNode> TopologyNodes => _nodeSelector?.Topology?.Nodes;
 
         private Timer _updateTopologyTimer;
 
         private Timer _updateCurrentTokenTimer;
 
-        protected NodeSelector _nodeSelector;
+        protected INodeSelector _nodeSelector;
+
+        protected readonly ClusterMode _clusterMode;
 
         private TimeSpan? _defaultTimeout;
 
@@ -93,30 +95,58 @@ namespace Raven.Client.Http
 
         public event EventHandler<(long RaftCommandIndex, ClientConfiguration Configuration)> ClientConfigurationChanged;
 
-        protected RequestExecutor(string databaseName, string apiKey)
+        protected RequestExecutor(string databaseName, string apiKey, bool isSingleNode, ClusterMode clusterMode = ClusterMode.Failover)
         {
+            _clusterMode = clusterMode;
+
             _databaseName = databaseName;
             _apiKey = apiKey;
+            _isSingleNode = isSingleNode;
 
             _lastReturnedResponse = DateTime.UtcNow;
 
             ContextPool = new JsonContextPool();
         }
 
+        protected INodeSelector GetNodeSelector(Topology initialTopology)
+        {
+            switch (_clusterMode)
+            {
+                case ClusterMode.Failover:
+                    return new FailoverNodeSelector(initialTopology);
+                case ClusterMode.LoadBalancingRoundRobin:
+                    return new LoadBalancingRoundRobinNodeSelector(initialTopology);
+                case ClusterMode.LoadBalancingSla:
+                //TODO : add here init of SLA load balancing node selector when it is implemented
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(_clusterMode), _clusterMode, null);
+            }
+        }
+
         public string ApiKey => _apiKey;
 
-        public static RequestExecutor Create(string[] urls, string databaseName, string apiKey)
+        public static RequestExecutor Create(string[] urls, string databaseName, string apiKey, ClusterMode clusterMode = ClusterMode.Failover)
         {
-            var executor = new RequestExecutor(databaseName, apiKey);
-            executor._firstTopologyUpdate = executor.FirstTopologyUpdate(urls);
+            var executor = new RequestExecutor(databaseName, apiKey, false, clusterMode);
+            executor._firstTopologyUpdate = 
+                executor.FirstTopologyUpdate(urls)
+                        .ContinueWith(_ =>
+                        {
+                            executor._nodeSelector = executor.GetNodeSelector(new Topology
+                            {
+                                Nodes = executor.TopologyNodes?.ToList() ?? new List<ServerNode>(),
+                                Etag = executor.TopologyEtag
+                            });
+                        });
+
             return executor;
         }
 
         public static RequestExecutor CreateForSingleNode(string url, string databaseName, string apiKey)
         {
-            var executor = new RequestExecutor(databaseName, apiKey)
+            var executor = new RequestExecutor(databaseName, apiKey, true)
             {
-                _nodeSelector = new NodeSelector(new Topology
+                _nodeSelector = new FailoverNodeSelector(new Topology
                 {
                     Etag = -1,
                     Nodes = new List<ServerNode>
@@ -171,6 +201,9 @@ namespace Raven.Client.Http
             if (_disposed)
                 return false;
 
+            if (_isSingleNode) //precaution - if we are single node, no need to update topology
+                return true;
+
             //prevent double topology updates if execution takes too much time
             // --> in cases with transient issues
             var lockTaken = await _updateTopologySemaphore.WaitAsync(timeout).ConfigureAwait(false);
@@ -182,24 +215,39 @@ namespace Raven.Client.Http
                 if (_disposed)
                     return false;
 
+                if (_isSingleNode) //precaution - if we are single node, no need to update topology
+                    return true;
+
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     var command = new GetTopologyCommand();
 
                     await ExecuteAsync(node, context, command, shouldRetry: false).ConfigureAwait(false);
-
                     var serverHash = ServerHash.GetServerHash(node.Url, _databaseName);
 
                     TopologyLocalCache.TrySavingTopologyToLocalCache(serverHash, command.Result, context);
 
                     if (_nodeSelector == null)
-                        _nodeSelector = new NodeSelector(command.Result);
-
+                        _nodeSelector = GetNodeSelector(command.Result);
                     else if (_nodeSelector.OnUpdateTopology(command.Result))
                         DisposeAllFailedNodesTimers();
 
                     TopologyEtag = _nodeSelector.Topology.Etag;
                 }
+            }
+            catch (Exception)
+            {
+                //since we failed to fetch topology, setup single-node temporary topology
+                //until we can retry fetching topology
+                if (_nodeSelector == null)
+                {
+                    _nodeSelector = GetNodeSelector(new Topology
+                    {
+                        Etag = -1,
+                        Nodes = new List<ServerNode> {node}
+                    });
+                }
+                throw;
             }
             finally
             {
@@ -227,10 +275,15 @@ namespace Raven.Client.Http
 
         public Task ExecuteAsync<TResult>(RavenCommand<TResult> command, JsonOperationContext context, CancellationToken token = default(CancellationToken))
         {
+            if(_isSingleNode)
+                return ExecuteAsync(_nodeSelector.GetCurrentNode(), context, command, token);
+
             var topologyUpdate = _firstTopologyUpdate;
 
             if (topologyUpdate != null && topologyUpdate.Status == TaskStatus.RanToCompletion || _disableTopologyUpdates)
+            {            
                 return ExecuteAsync(_nodeSelector.GetCurrentNode(), context, command, token);
+            }
 
             return UnlikelyExecuteAsync(command, context, token, topologyUpdate);
         }
@@ -357,7 +410,7 @@ namespace Raven.Client.Http
             if (cachedTopology == null)
                 return false;
 
-            _nodeSelector = new NodeSelector(cachedTopology);
+            _nodeSelector = GetNodeSelector(cachedTopology);
             TopologyEtag = -2;
             return true;
         }
@@ -365,7 +418,6 @@ namespace Raven.Client.Http
         public async Task ExecuteAsync<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, CancellationToken token = default(CancellationToken), bool shouldRetry = true)
         {
             var request = CreateRequest(chosenNode, command, out string url);
-
             var nodeIndex = _nodeSelector?.GetCurrentNodeIndex() ?? 0;
 
             using (var cachedItem = GetFromCache(context, command, request, url, out long cachedEtag, out BlittableJsonReaderObject cachedValue))
@@ -390,7 +442,7 @@ namespace Raven.Client.Http
 
                 var sp = Stopwatch.StartNew();
                 HttpResponseMessage response = null;
-                ResponseDisposeHandling responseDispose = ResponseDisposeHandling.Automatic;
+                var responseDispose = ResponseDisposeHandling.Automatic;
                 try
                 {
                     var client = GetHttpClientForCommand(command);
@@ -465,9 +517,10 @@ namespace Raven.Client.Http
                         return; // we either handled this already in the unsuccessful response or we are throwing
                     }
 
+                    _nodeSelector?.OnSucceededRequest();
                     responseDispose = await command.ProcessResponse(context, Cache, response, url).ConfigureAwait(false);
-                    _lastReturnedResponse = DateTime.UtcNow;
 
+                    _lastReturnedResponse = DateTime.UtcNow;
                 }
                 finally
                 {
@@ -628,6 +681,9 @@ namespace Raven.Client.Http
 
         private async Task CheckNodeStatusCallback(NodeStatus nodeStatus)
         {
+            if (TopologyNodes == null)
+                return; //nothing to do yet...
+
             var copy = TopologyNodes;
             if (nodeStatus.NodeIndex >= copy.Count)
                 return; // topology index changed / removed
@@ -713,7 +769,7 @@ namespace Raven.Client.Http
             });
         }
 
-        private static void ThrowEmptyTopology()
+        public static void ThrowEmptyTopology()
         {
             throw new InvalidOperationException("Empty database topology, this shouldn't happen.");
         }
@@ -869,80 +925,19 @@ namespace Raven.Client.Http
             }
         }
 
-        public class NodeSelector
-        {
-            private Topology _topology;
-
-            public Topology Topology => _topology;
-
-            private int _currentNodeIndex;
-
-            public NodeSelector(Topology topology)
-            {
-                _topology = topology;
-            }
-
-            public int GetCurrentNodeIndex()
-            {
-                return _currentNodeIndex;
-            }
-
-            public void OnFailedRequest(int nodeIndex)
-            {
-                if (Topology.Nodes.Count == 0)
-                    ThrowEmptyTopology();
-
-                var nextNodeIndex = nodeIndex < Topology.Nodes.Count - 1 ? nodeIndex + 1 : 0;
-                Interlocked.CompareExchange(ref _currentNodeIndex, nextNodeIndex, nodeIndex);
-            }
-
-            public bool OnUpdateTopology(Topology topology, bool forceUpdate = false)
-            {
-                if (topology == null)
-                    return false;
-
-                var oldTopology = _topology;
-                do
-                {
-                    if (oldTopology.Etag >= topology.Etag && forceUpdate == false)
-                        return false;
-
-                    if (forceUpdate == false)
-                    {
-                        Interlocked.Exchange(ref _currentNodeIndex, 0);
-                    }
-
-                    var changed = Interlocked.CompareExchange(ref _topology, topology, oldTopology);
-                    if (changed == oldTopology)
-                        return true;
-                    oldTopology = changed;
-                } while (true);
-            }
-
-            public ServerNode GetCurrentNode()
-            {
-                if (Topology.Nodes.Count == 0)
-                    ThrowEmptyTopology();
-                return Topology.Nodes[_currentNodeIndex];
-            }
-
-            public void RestoreNodeIndex(int nodeIndex)
-            {
-                var currentNodeIndex = _currentNodeIndex;
-                while (currentNodeIndex > nodeIndex)
-                {
-                    var result = Interlocked.CompareExchange(ref _currentNodeIndex, nodeIndex, currentNodeIndex);
-                    if (result == currentNodeIndex)
-                        return;
-                    currentNodeIndex = result;
-                }
-            }
-        }
-
         public async Task<ServerNode> GetCurrentNode()
         {
             if (_firstTopologyUpdate.Status != TaskStatus.RanToCompletion)
                 await _firstTopologyUpdate.ConfigureAwait(false);
+
+            if (_nodeSelector == null)
+            {
+                _nodeSelector = GetNodeSelector(new Topology
+                                                {
+                                                    Nodes = TopologyNodes.ToList(),
+                                                    Etag = TopologyEtag
+                                                });
+            }
 
             return _nodeSelector.GetCurrentNode();
         }

@@ -184,13 +184,15 @@ namespace Tests.Infrastructure
 
         protected async Task<bool> WaitForDocumentInClusterAsync<T>(DocumentSession session, string docId, Func<T, bool> predicate, TimeSpan timeout)
         {
+            Assert.NotNull(session.RequestExecutor.TopologyNodes); //if this is null here, this means we are likely doing something wrong...
+
             var nodes = session.RequestExecutor.TopologyNodes;
             var stores = GetDocumentStores(nodes, disableTopologyUpdates: true);
             return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores);
         }
 
         protected async Task<bool> WaitForDocumentInClusterAsync<T>(DatabaseTopology topology, string db, string docId, Func<T, bool> predicate, TimeSpan timeout)
-        {
+        {            
             var allNodes = topology.AllNodes;
             var serversTopology = Servers.Where(s => allNodes.Contains(s.ServerStore.NodeTag));
             var nodes = serversTopology.Select(x => new ServerNode

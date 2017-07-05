@@ -326,6 +326,7 @@ namespace Raven.Server.Rachis
                 }
                 try
                 {
+                    //TODO: add here "error state" to prevent NRE in ServerStore::GetStatuses()  (line #538)
                     _engine.SwitchToCandidateState("An error occured during leadership - " + e);
                 }
                 catch (Exception e2)

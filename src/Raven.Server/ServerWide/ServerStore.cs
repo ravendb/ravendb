@@ -158,7 +158,8 @@ namespace Raven.Server.ServerWide
                             .WithCancellation(_shutdownNotification.Token);
                         continue;
                     }
-                    using (ClusterMaintenanceSupervisor = new ClusterMaintenanceSupervisor(this, _engine.Tag, _engine.CurrentTerm))
+                    
+                    using (ClusterMaintenanceSupervisor = new ClusterMaintenanceSupervisor(this, _engine.Tag, _engine.CurrentTerm, ServerShutdown))
                     using (new ClusterObserver(this, ClusterMaintenanceSupervisor, _engine, ContextPool, ServerShutdown))
                     {
                         var oldNodes = new Dictionary<string, string>();

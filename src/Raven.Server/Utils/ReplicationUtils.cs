@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Documents.Replication;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
 using Raven.Client.Server.Commands;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Replication;
 using Sparrow.Json;
 
 namespace Raven.Server.Utils
@@ -16,9 +12,8 @@ namespace Raven.Server.Utils
     {
         public static TcpConnectionInfo GetTcpInfo(string url, string databaseName, string apiKey, string tag)
         {
-            JsonOperationContext context;
             using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, apiKey))
-            using (requestExecutor.ContextPool.AllocateOperationContext(out context))
+            using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var getTcpInfoCommand = new GetTcpInfoCommand(tag + "/" + databaseName);
                 requestExecutor.Execute(getTcpInfoCommand, context);

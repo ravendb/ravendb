@@ -184,7 +184,7 @@ namespace Raven.Client.Documents
             lazy = Conventions.DisableTopologyUpdates == false
                 ? new Lazy<RequestExecutor>(() =>
                 {
-                    var requestExecutor = RequestExecutor.Create(Urls, database, ApiKey);
+                    var requestExecutor = RequestExecutor.Create(Urls, database, ApiKey, Conventions.ClusterMode);
                     RequestExecutorCreated?.Invoke(this, requestExecutor);
                     return requestExecutor;
                 })

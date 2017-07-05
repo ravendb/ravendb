@@ -8,6 +8,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Exceptions;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Identity
@@ -75,7 +76,7 @@ namespace Raven.Client.Documents.Identity
         /// <returns></returns>
         public Task<string> GenerateDocumentIdAsync(object entity)
         {
-            return NextIdAsync().ContinueWith(task => GetDocumentIdFromId(task.Result));
+            return NextIdAsync().ContinueWith(task => GetDocumentIdFromId(task.Result), TaskContinuationOptions.OnlyOnRanToCompletion);
         }
 
         public async Task<long> NextIdAsync()
@@ -108,18 +109,29 @@ namespace Raven.Client.Documents.Identity
         {
             var hiloCommand = new NextHiLoCommand(_tag, _lastBatchSize, _lastRangeDate, _identityPartsSeparator, Range.Max);
 
-            var re = _store.GetRequestExecutor(_dbName);
-            JsonOperationContext context;
-            using (re.ContextPool.AllocateOperationContext(out context))
+            try
             {
-                await re.ExecuteAsync(hiloCommand, context).ConfigureAwait(false);
+                var re = _store.GetRequestExecutor(_dbName);
+                using (re.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    await re.ExecuteAsync(hiloCommand, context).ConfigureAwait(false);
+                }
             }
-
+            catch (Exception e)
+            {
+                ThrowFailedToFetchNextHiLoRange(e);
+            }
             _prefix = hiloCommand.Result.Prefix;
             _serverTag = hiloCommand.Result.ServerTag;
             _lastRangeDate = hiloCommand.Result.LastRangeAt;
             _lastBatchSize = hiloCommand.Result.LastSize;
+
             Range = new RangeValue(hiloCommand.Result.Low, hiloCommand.Result.High);
+        }
+
+        private static void ThrowFailedToFetchNextHiLoRange(Exception e)
+        {
+            throw new FailedToFetchNextHiLoRangeException("Failed to fetch next HiLo range. See Inner Exception for details.", e);
         }
 
         public async Task ReturnUnusedRangeAsync()
