@@ -69,6 +69,8 @@ namespace Raven.Client.Server
 
         public List<SqlEtlConfiguration> SqlEtls;
 
+        public ClientConfiguration Client { get; set; }
+
         public string CustomFunctions { get; set; }
 
         public void AddIndex(IndexDefinition definition)

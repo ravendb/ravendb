@@ -43,7 +43,7 @@ namespace Raven.Client.Documents.Operations
         {
         }
 
-        public override RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, JsonOperationContext context, HttpCache cache)
+        public override RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
             if (_queryToUpdate == DummyQuery)
             {
@@ -57,7 +57,7 @@ namespace Raven.Client.Documents.Operations
                 }
             }
 
-            return base.GetCommand(store, context, cache);
+            return base.GetCommand(store, conventions, context, cache);
         }
     }
 
@@ -78,9 +78,9 @@ namespace Raven.Client.Documents.Operations
             _options = options;
         }
 
-        public virtual RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, JsonOperationContext context, HttpCache cache)
+        public virtual RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new PatchByIndexCommand(store.Conventions, context, _indexName, _queryToUpdate, _patch, _options);
+            return new PatchByIndexCommand(conventions, context, _indexName, _queryToUpdate, _patch, _options);
         }
 
         private class PatchByIndexCommand : RavenCommand<OperationIdResult>

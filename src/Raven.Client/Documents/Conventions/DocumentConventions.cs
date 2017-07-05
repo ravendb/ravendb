@@ -12,7 +12,7 @@ using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Json.Converters;
-using Raven.Client.Server.Operations.Configuration;
+using Raven.Client.Server;
 using Raven.Client.Util;
 using Sparrow.Json;
 

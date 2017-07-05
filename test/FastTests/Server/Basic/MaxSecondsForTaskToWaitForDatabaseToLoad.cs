@@ -66,7 +66,7 @@ namespace FastTests.Server.Basic
                 Assert.Throws<DatabaseLoadTimeoutException>(() =>
                 {
                     using (var ctx = JsonOperationContext.ShortTermSingleUse())
-                    using (var requestExecutor = RequestExecutor.CreateForSingleNode(url, name, null))
+                    using (var requestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, name, null, DocumentConventions.Default))
                     {
                         requestExecutor.Execute(
                             new CreateDatabaseOperation(doc).GetCommand(new DocumentConventions(), ctx), ctx);

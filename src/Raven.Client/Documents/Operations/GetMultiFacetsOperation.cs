@@ -4,6 +4,7 @@ using System.IO;
 using System.Net.Http;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.MultiGet;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
@@ -23,7 +24,7 @@ namespace Raven.Client.Documents.Operations
             _queries = queries;
         }
 
-        public RavenCommand<FacetedQueryResult[]> GetCommand(IDocumentStore store, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<FacetedQueryResult[]> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
             return new GetMultiFacetsCommand(context, cache, _queries);
         }

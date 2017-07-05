@@ -8,26 +8,26 @@ using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations.Configuration
 {
-    public class PutClientConfigurationOperation : IServerOperation
+    public class PutServerWideClientConfigurationOperation : IServerOperation
     {
         private readonly ClientConfiguration _configuration;
 
-        public PutClientConfigurationOperation(ClientConfiguration configuration)
+        public PutServerWideClientConfigurationOperation(ClientConfiguration configuration)
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         }
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new PutClientConfigurationCommand(conventions, context, _configuration);
+            return new PutServerWideClientConfigurationCommand(conventions, context, _configuration);
         }
 
-        private class PutClientConfigurationCommand : RavenCommand
+        private class PutServerWideClientConfigurationCommand : RavenCommand
         {
             private readonly JsonOperationContext _context;
             private readonly BlittableJsonReaderObject _configuration;
 
-            public PutClientConfigurationCommand(DocumentConventions conventions, JsonOperationContext context, ClientConfiguration configuration)
+            public PutServerWideClientConfigurationCommand(DocumentConventions conventions, JsonOperationContext context, ClientConfiguration configuration)
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));

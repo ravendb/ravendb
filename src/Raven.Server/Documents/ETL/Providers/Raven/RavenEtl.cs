@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         public RavenEtl(Transformation transformation, RavenEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore) : base(transformation, configuration, database, serverStore, RavenEtlTag)
         {
             Metrics = new EtlMetricsCountersManager();
-            _requestExecutor = RequestExecutor.CreateForSingleNode(configuration.Connection.Url, configuration.Connection.Database, configuration.Connection.ApiKey);
+            _requestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(configuration.Connection.Url, configuration.Connection.Database, configuration.Connection.ApiKey, DocumentConventions.Default);
             _script = new RavenEtlDocumentTransformer.ScriptInput(transformation);
         }
 

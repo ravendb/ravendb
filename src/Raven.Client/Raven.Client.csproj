@@ -109,7 +109,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Server\ETL\SQL" />
-    <Folder Include="Server\Operations\Configuration" />
     <Folder Include="Server\Operations\ETL" />
   </ItemGroup>
 </Project>

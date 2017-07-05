@@ -17,10 +17,10 @@ namespace Raven.Client.Documents.Operations
             JsonOperationContext context;
             using (GetContext(out context))
             {
-                var command = operation.GetCommand(_store, context, _requestExecutor.Cache);
+                var command = operation.GetCommand(_store, _requestExecutor.Conventions, context, _requestExecutor.Cache);
 
                 await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
-                return new Operation(_requestExecutor, () => _store.Changes(_databaseName), _store.Conventions, command.Result.OperationId);
+                return new Operation(_requestExecutor, () => _store.Changes(_databaseName), _requestExecutor.Conventions, command.Result.OperationId);
             }
         }
     }

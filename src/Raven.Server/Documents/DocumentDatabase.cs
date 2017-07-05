@@ -56,7 +56,7 @@ namespace Raven.Server.Documents
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
         private long _lastIdleTicks = DateTime.UtcNow.Ticks;
-        private long _lastTopologyEtag;
+        private long _lastTopologyIndex;
 
         public void ResetIdleTime()
         {
@@ -199,6 +199,14 @@ namespace Raven.Server.Documents
         public readonly ConcurrentSet<TcpConnectionOptions> RunningTcpConnections = new ConcurrentSet<TcpConnectionOptions>();
 
         public DateTime StartTime { get; }
+
+        public readonly RachisLogIndexNotifications RachisLogIndexNotifications;
+
+        public readonly byte[] MasterKey;
+
+        public ClientConfiguration ClientConfiguration { get; private set; }
+
+        public long LastDatabaseRecordIndex { get; private set; }
 
         public void Initialize(InitializeOptions options = InitializeOptions.None)
         {
@@ -675,8 +683,8 @@ namespace Raven.Server.Documents
                     record = _serverStore.Cluster.ReadDatabase(context, Name);
                 }
 
-                if (_lastTopologyEtag < record.Topology.Stamp.Index)
-                    _lastTopologyEtag = record.Topology.Stamp.Index;
+                if (_lastTopologyIndex < record.Topology.Stamp.Index)
+                    _lastTopologyIndex = record.Topology.Stamp.Index;
 
                 NotifyFeaturesAboutStateChange(record, index);
             }
@@ -725,21 +733,21 @@ namespace Raven.Server.Documents
             NotifyFeaturesAboutValueChange(record, index);
         }
 
-        private void InitializeFromDatabaseRecord(DatabaseRecord databaseRecord, long index)
+        private void InitializeFromDatabaseRecord(DatabaseRecord record, long index)
         {
             lock (this)
             {
-                if (databaseRecord == null)
+                if (record == null)
                     return;
 
-                DocumentsStorage.VersioningStorage.InitializeFromDatabaseRecord(databaseRecord);
-                ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, databaseRecord, ExpiredDocumentsCleaner);
-                PeriodicBackupRunner.UpdateConfigurations(databaseRecord);
+                ClientConfiguration = record.Client;
+                DocumentsStorage.VersioningStorage.InitializeFromDatabaseRecord(record);
+                ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, record, ExpiredDocumentsCleaner);
+                PeriodicBackupRunner.UpdateConfigurations(record);
+
+                LastDatabaseRecordIndex = index;
             }
         }
-
-        public readonly RachisLogIndexNotifications RachisLogIndexNotifications;
-        public byte[] MasterKey;
 
         public IEnumerable<DatabasePerformanceMetrics> GetAllPerformanceMetrics()
         {
@@ -752,9 +760,17 @@ namespace Raven.Server.Documents
             DatabaseRecordChanged?.Invoke(record);
         }
 
-        public bool HasTopologyChanged(long topologyEtag)
+        public bool HasTopologyChanged(long index)
         {
-            return _lastTopologyEtag != topologyEtag;
+            return _lastTopologyIndex != index;
+        }
+
+        public bool HasClientConfigurationChanged(long index)
+        {
+            if (index < 0)
+                return false;
+
+            return LastDatabaseRecordIndex > index || ServerStore.HasClientConfigurationChanged(index);
         }
     }
 
