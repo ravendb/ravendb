@@ -9,6 +9,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Security;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -24,6 +25,7 @@ using Raven.Client.Server.Operations.Configuration;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Platform;
 
 namespace Raven.Client.Http
 {
@@ -784,7 +786,16 @@ namespace Raven.Client.Http
         private static HttpClient CreateClient(TimeSpan timeout)
         {
             var httpMessageHandler = new HttpClientHandler();
-            httpMessageHandler.ServerCertificateCustomValidationCallback += OnServerCertificateCustomValidationCallback;
+            if (PlatformDetails.RunningOnMacOsx)
+            {
+                var callback = ServerCertificateCustomValidationCallback;
+                if(callback != null)
+                    throw new PlatformNotSupportedException("On Mac OSX, is it not possible to register to ServerCertificateCustomValidationCallback because of https://github.com/dotnet/corefx/issues/9728"); 
+            }
+            else
+            {
+                httpMessageHandler.ServerCertificateCustomValidationCallback += OnServerCertificateCustomValidationCallback;
+            }
 
             return new HttpClient(httpMessageHandler)
             {
