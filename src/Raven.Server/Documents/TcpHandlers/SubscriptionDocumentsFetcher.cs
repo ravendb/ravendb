@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.TcpHandlers
             _remoteEndpoint = remoteEndpoint;
         }
 
-        public IEnumerable<(Document doc,Exception exception)> GetDataToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch)
+        public IEnumerable<(Document Doc,Exception Exception)> GetDataToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch)
         {
             if (string.IsNullOrEmpty(subscription.Criteria?.Collection))
                 throw new ArgumentException("The collection name must be specified");
@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.TcpHandlers
             return GetDocumentsToSend(docsContext, subscription, startEtag, patch, _db);
         }
 
-        private IEnumerable<(Document, Exception)> GetDocumentsToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch,
+        private IEnumerable<(Document Doc, Exception Exception)> GetDocumentsToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch,
             DocumentDatabase db)
         {
             foreach (var doc in db.DocumentsStorage.GetDocumentsFrom(
@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        private IEnumerable<(Document, Exception)> GetVerionTuplesToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch,
+        private IEnumerable<(Document Doc, Exception Exception)> GetVerionTuplesToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch,
             VersioningStorage revisions)
         {
             foreach (var versionedDocs in revisions.GetRevisionsFrom(docsContext, new CollectionName(subscription.Criteria.Collection), startEtag + 1, _maxBatchSize))
@@ -183,7 +183,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         $"Criteria script threw exception for subscription {_subscriptionId} connected to {_remoteEndpoint} for document id {doc.Id}",
                         ex);
                 }
-                exception = new Exception($"Error processing document: {doc.Id}", ex);
+                exception = ex;
                 return false;
             }
         }
@@ -227,7 +227,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         $"Criteria script threw exception for subscription {_subscriptionId} connected to {_remoteEndpoint} for document id {item.Id}",
                         ex);
                 }
-                exception = new Exception($"Error processing document: {item.Id}",ex);
+                exception = ex;
                 return false;
             }
         }
