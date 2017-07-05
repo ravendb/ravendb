@@ -352,7 +352,7 @@ namespace Raven.Database.FileSystem.Controllers
             if (Log.IsDebugEnabled)
                 Log.Debug("File '{0}' was copied to '{1}'", name, targetFilename);
 
-            FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
+            SynchronizationTask.Context.NotifyAboutWork();
 
             return GetEmptyMessage(HttpStatusCode.NoContent);
         }

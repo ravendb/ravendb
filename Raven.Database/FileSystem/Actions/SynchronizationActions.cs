@@ -30,11 +30,6 @@ namespace Raven.Database.FileSystem.Actions
         {
         }
 
-        public void StartSynchronizeDestinationsInBackground()
-        {
-            Task.Factory.StartNew(() => SynchronizationTask.Execute(false), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
-        }
-
         public void AssertFileIsNotBeingSynced(string fileName)
         {
             Storage.Batch(accessor =>
