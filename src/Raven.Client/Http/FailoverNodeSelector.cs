@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 
 namespace Raven.Client.Http
@@ -20,18 +21,19 @@ namespace Raven.Client.Http
             return _currentNodeIndex;
         }
 
-        public virtual void OnSucceededRequest()
+        public virtual void OnSucceededRequest(int nodeIndex)
         {
             //in failover mode nothing to do
         }
 
-        public void OnFailedRequest(int nodeIndex)
+        public virtual void OnFailedRequest(int nodeIndex)
         {
             if (Topology.Nodes.Count == 0)
                 RequestExecutor.ThrowEmptyTopology();
 
             var nextNodeIndex = nodeIndex < Topology.Nodes.Count - 1 ? nodeIndex + 1 : 0;
             Interlocked.CompareExchange(ref _currentNodeIndex, nextNodeIndex, nodeIndex);
+            OnNodeSwitch(nextNodeIndex);
         }
 
         public bool OnUpdateTopology(Topology topology, bool forceUpdate = false)
@@ -74,6 +76,13 @@ namespace Raven.Client.Http
                     return;
                 currentNodeIndex = result;
             }
+        }
+
+        public event Action<int> NodeSwitch;
+
+        protected virtual void OnNodeSwitch(int newNodeIndex)
+        {
+            NodeSwitch?.Invoke(newNodeIndex);
         }
     }
 }

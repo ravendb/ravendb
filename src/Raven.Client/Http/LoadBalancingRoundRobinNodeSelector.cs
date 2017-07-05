@@ -11,7 +11,7 @@ namespace Raven.Client.Http
             _syncFlag = 0;
         }
 
-        public override void OnSucceededRequest()
+        public override void OnSucceededRequest(int nodeIndex)
         {
             if (Interlocked.CompareExchange(ref _syncFlag, 1, 0) == 1)
                 return;
@@ -24,6 +24,7 @@ namespace Raven.Client.Http
             var nextNodeIndex = _currentNodeIndex < topology.Nodes.Count - 1 ? current + 1 : 0;
             Interlocked.CompareExchange(ref _currentNodeIndex, nextNodeIndex, current);
 
+            OnNodeSwitch(nextNodeIndex);
             Interlocked.Exchange(ref _syncFlag, 0);
         }
     }

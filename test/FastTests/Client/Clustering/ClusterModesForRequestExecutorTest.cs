@@ -120,7 +120,7 @@ namespace FastTests.Client.Clustering
         public async Task Round_robin_load_balancing_with_failing_node_should_work()
         {
             var databaseName = "Round_robin_load_balancing_should_work" + Guid.NewGuid();
-            var leader = await CreateRaftClusterAndGetLeader(4);
+            var leader = await CreateRaftClusterAndGetLeader(3);
             var followers = Servers.Where(x => x.ServerStore.IsLeader() == false).ToArray();
 
             var conventionsForLoadBalancing = new DocumentConventions
@@ -146,20 +146,13 @@ namespace FastTests.Client.Clustering
                 Database = databaseName,
                 Conventions = conventionsForLoadBalancing
             })
-            using (var follower3 = new DocumentStore
-            {
-                Urls = followers[2].WebUrls,
-                Database = databaseName,
-                Conventions = conventionsForLoadBalancing
-            })
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 leaderStore.Initialize();
                 follower1.Initialize();
                 follower2.Initialize();
-                follower3.Initialize();
 
-                var (index, _) = await CreateDatabaseInCluster(databaseName, 4, leader.WebUrls[0]);
+                var (index, _) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrls[0]);
                 await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
                 var leaderRequestExecutor = leaderStore.GetRequestExecutor();
 
@@ -174,7 +167,7 @@ namespace FastTests.Client.Clustering
                 //wait until all nodes in database cluster are members (and not promotables)
                 //GetTopologyCommand -> does not retrieve promotables
                 var topology = new Topology();
-                while (topology.Nodes?.Count != 4)
+                while (topology.Nodes?.Count != 3)
                 {
                     var topologyGetCommand = new GetTopologyCommand();
                     await leaderRequestExecutor.ExecuteAsync(topologyGetCommand, context);
@@ -187,20 +180,23 @@ namespace FastTests.Client.Clustering
 
                 using (var session = leaderStore.OpenSession())
                 {
-                    session.Store(new User { Name = "John Dow" });
-                    session.Store(new User { Name = "Jack Dow" });
-                    session.Store(new User { Name = "Jane Dow" });
-                    session.Store(new User { Name = "FooBar" }, "marker");
+                    session.Store(new User {Name = "John Dow"});
+                    session.Store(new User {Name = "Jack Dow"});
+                    session.Store(new User {Name = "Jane Dow"});
+                    session.Store(new User {Name = "FooBar"}, "marker");
                     session.SaveChanges();
 
-                    await WaitForDocumentInClusterAsync<User>(session as DocumentSession, 
-                        "marker", x => true, 
+                    await WaitForDocumentInClusterAsync<User>(session as DocumentSession,
+                        "marker", x => true,
                         leader.ServerStore.Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan);
-                }                
+                }
 
                 DisposeServerAndWaitForFinishOfDisposal(followers[0]);
 
-                var usedUrls = new List<string>();
+                var succeededRequests = new HashSet<string>();
+                var failedRequests = new HashSet<string>();
+                leaderRequestExecutor.SucceededRequest += url => succeededRequests.Add(url);
+                leaderRequestExecutor.FailedRequest += url => failedRequests.Add(url);
 
                 for (var i = 0; i < 3; i++)
                 {
@@ -208,16 +204,13 @@ namespace FastTests.Client.Clustering
                     {
                         // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
                         session.Query<User>().Where(u => u.Name.StartsWith("Ja")).ToList();
-                        usedUrls.Add((await leaderRequestExecutor.GetCurrentNode()).Url.ToLower());
                     }
                 }
 
-                var urlAppearanceCounts = usedUrls.GroupBy(url => url)
-                                                  .ToDictionary(g => g.Key, g => g.Count());
+                //count only query requests -> discard requests such as update topology
+                Assert.Equal(2, succeededRequests.Count(url => url.Contains("/databases/")));
+                Assert.Equal(1, failedRequests.Count(url => url.Contains("/databases/")));
 
-                Assert.Equal(2,urlAppearanceCounts.Count);                
-                Assert.Contains(urlAppearanceCounts, kvp => kvp.Value == 1);
-                Assert.Contains(urlAppearanceCounts, kvp => kvp.Value == 2);
             }
         }
     }

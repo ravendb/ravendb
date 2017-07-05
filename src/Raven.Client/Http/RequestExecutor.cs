@@ -95,6 +95,18 @@ namespace Raven.Client.Http
 
         public event EventHandler<(long RaftCommandIndex, ClientConfiguration Configuration)> ClientConfigurationChanged;
 
+        public event Action<string> SucceededRequest;
+        public event Action<string> FailedRequest;
+
+        /// <summary>
+        /// Fires an event when RequestExecuter switches to another topology node. Event parameter - new node index
+        /// </summary>
+        public event Action<int> NodeSwitch
+        {
+            add => _nodeSelector.NodeSwitch += value;
+            remove => _nodeSelector.NodeSwitch -= value;
+        }
+
         protected RequestExecutor(string databaseName, string apiKey, bool isSingleNode, ClusterMode clusterMode = ClusterMode.Failover)
         {
             _clusterMode = clusterMode;
@@ -475,7 +487,7 @@ namespace Raven.Client.Http
                     sp.Stop();
                     if (shouldRetry == false)
                         throw;
-                    if (await HandleServerDown(chosenNode, nodeIndex, context, command, request, response, e).ConfigureAwait(false) == false)
+                    if (await HandleServerDown(chosenNode, nodeIndex, context, command, request, response, e, url).ConfigureAwait(false) == false)
                         throw new AllTopologyNodesDownException("Tried to send request to all configured nodes in the topology, all of them seem to be down or not responding.", _nodeSelector.Topology, e);
 
                     return;
@@ -517,7 +529,10 @@ namespace Raven.Client.Http
                         return; // we either handled this already in the unsuccessful response or we are throwing
                     }
 
-                    _nodeSelector?.OnSucceededRequest();
+                    _nodeSelector?.OnSucceededRequest(nodeIndex);
+                    OnSucceededRequest(url);
+
+
                     responseDispose = await command.ProcessResponse(context, Cache, response, url).ConfigureAwait(false);
 
                     _lastReturnedResponse = DateTime.UtcNow;
@@ -617,7 +632,7 @@ namespace Raven.Client.Http
                 case HttpStatusCode.RequestTimeout:
                 case HttpStatusCode.BadGateway:
                 case HttpStatusCode.ServiceUnavailable:
-                    await HandleServerDown(chosenNode, nodeIndex, context, command, request, response, null).ConfigureAwait(false);
+                    await HandleServerDown(chosenNode, nodeIndex, context, command, request, response, null, url).ConfigureAwait(false);
                     break;
                 case HttpStatusCode.Conflict:
                     await HandleConflict(context, response).ConfigureAwait(false);
@@ -650,7 +665,7 @@ namespace Raven.Client.Http
             return serverStream;
         }
 
-        private async Task<bool> HandleServerDown<TResult>(ServerNode chosenNode, int nodeIndex, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, HttpRequestException e)
+        private async Task<bool> HandleServerDown<TResult>(ServerNode chosenNode, int nodeIndex, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, HttpRequestException e, string url)
         {
             if (command.FailedNodes == null)
                 command.FailedNodes = new Dictionary<ServerNode, ExceptionDispatcher.ExceptionSchema>();
@@ -662,6 +677,8 @@ namespace Raven.Client.Http
             SpawnHealthChecks(chosenNode, nodeIndex);
 
             nodeSelector?.OnFailedRequest(nodeIndex);
+            OnFailedRequest(url);
+
             var currentNode = nodeSelector?.GetCurrentNode();
 
             if (nodeSelector == null || command.FailedNodes.ContainsKey(currentNode))
@@ -940,6 +957,16 @@ namespace Raven.Client.Http
             }
 
             return _nodeSelector.GetCurrentNode();
+        }
+
+        protected virtual void OnSucceededRequest(string url)
+        {
+            SucceededRequest?.Invoke(url);
+        }
+
+        protected virtual void OnFailedRequest(string url)
+        {
+            FailedRequest?.Invoke(url);
         }
     }
 }
