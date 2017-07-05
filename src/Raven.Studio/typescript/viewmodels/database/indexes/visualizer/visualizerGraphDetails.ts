@@ -518,15 +518,27 @@ class visualizerGraphDetails {
     private viewActive = ko.observable<boolean>(false);
     private gotoMasterViewCallback: () => void;
 
-    private trees: Raven.Server.Documents.Indexes.Debugging.ReduceTree[];
-    private currentTreeIndex = 0;
+    private trees: Raven.Server.Documents.Indexes.Debugging.ReduceTree[] = [];
+    private currentTreeIndex = ko.observable<number>();
     private currentTree = ko.observable<reduceTreeItem>();
 
     private currentLineOffset = 0;
     private connectionsBaseY = 0;
 
+    private canNavigateToNextTree: KnockoutComputed<boolean>;
+    private canNavigateToPreviousTree: KnockoutComputed<boolean>;
+
     constructor() {
-        _.bindAll(this, "goToMasterView" as keyof this);
+        _.bindAll(this, ["goToMasterView", "goToNextTree", "goToPreviousTree"] as Array<keyof this>);
+
+        this.initObservables();
+    }
+
+    private initObservables() {
+        this.canNavigateToNextTree = ko.pureComputed(() => {
+            return this.currentTreeIndex() < this.trees.length - 1;
+        });
+        this.canNavigateToPreviousTree = ko.pureComputed(() => this.currentTreeIndex() > 0);
     }
 
     init(goToMasterViewCallback: () => void, trees: Raven.Server.Documents.Indexes.Debugging.ReduceTree[]) {
@@ -597,6 +609,7 @@ class visualizerGraphDetails {
     }
 
     private restoreView() {
+        this.currentTreeIndex.notifySubscribers(); // sync tree index
         this.zoom.translate([0, 0]).scale(1).event(this.canvas);
         this.documents.forEach(doc => doc.reset());
     }
@@ -624,8 +637,8 @@ class visualizerGraphDetails {
         this.toggleUiElements(true);
 
         const treeIdx = this.trees.findIndex(x => x.Name === treeName);
-        this.currentTreeIndex = treeIdx;
-        this.currentTree(new reduceTreeItem(this.trees[this.currentTreeIndex])); //TODO: consider moving this to layout?
+        this.currentTreeIndex(treeIdx);
+        this.currentTree(new reduceTreeItem(this.trees[treeIdx]));
 
         this.layout();
 
@@ -900,6 +913,20 @@ class visualizerGraphDetails {
     private toggleUiElements(show: boolean) {
         this.svg.style("display", show ? "block" : "none");
         this.canvas.style("display", show ? "block" : "none");
+    }
+
+    goToPreviousTree() {
+        if (this.canNavigateToPreviousTree()) {
+            const previousTree = this.trees[this.currentTreeIndex() - 1];
+            this.openFor(previousTree.Name);
+        }
+    }
+
+    goToNextTree() {
+        if (this.canNavigateToNextTree()) {
+            const nextTree = this.trees[this.currentTreeIndex() + 1];
+            this.openFor(nextTree.Name);
+        }
     }
 }
 
