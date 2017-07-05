@@ -166,6 +166,9 @@ namespace Raven.Server.Documents.Versioning
 
         public bool IsVersioned(string collection)
         {
+            if (Configuration == null)
+                return false;
+
             if (Configuration.Collections != null && Configuration.Collections.TryGetValue(collection, out var configuration))
             {
                 return configuration.Active;

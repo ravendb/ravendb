@@ -36,9 +36,28 @@ namespace Raven.Client.Documents.Subscriptions
     {
         public struct Item
         {
+            private T _result;
+            public string ExceptionMessage { get; internal set; }
             public string Id { get; internal set; }
             public long Etag { get; internal set; }
-            public T Result { get; internal set; }
+
+            private void ThrowItemProcessException()
+            {
+                throw new Exception(ExceptionMessage);
+            }
+
+            public T Result
+            {
+                get
+                {
+                    if (ExceptionMessage != null)
+                        ThrowItemProcessException();
+
+                    return _result;
+                }
+                internal set { _result = value; }
+            }
+
             public BlittableJsonReaderObject RawResult { get; internal set; }
             public BlittableJsonReaderObject RawMetadata { get; internal set; }
             
@@ -115,21 +134,23 @@ namespace Raven.Client.Documents.Subscriptions
                     _logger.Info($"Got {id} (change vector: [{string.Join(",", lastReceivedChangeVector.Select(x => $"{x.DbId.ToString()}:{x.Etag}"))}], size {curDoc.Size}");
                 }
 
+                var instance = default(T);
                 
-                T instance;
-
-                if (typeof(T) == typeof(BlittableJsonReaderObject))
+                if (item.Exception == null)
                 {
-                    instance = (T)(object)curDoc;
+                    if (typeof(T) == typeof(BlittableJsonReaderObject))
+                    {
+                        instance = (T)(object)curDoc;
+                    }
+                    else
+                    {
+                        instance = (T)EntityToBlittable.ConvertToEntity(typeof(T), id, curDoc, _store.Conventions);
+                    }
+                
+                    if (string.IsNullOrEmpty(id) == false)
+                        _generateEntityIdOnTheClient.TrySetIdentity(instance, id);
                 }
-                else
-                {
-                    instance = (T)EntityToBlittable.ConvertToEntity(typeof(T), id, curDoc, _store.Conventions);
-                }
-
-                if (string.IsNullOrEmpty(id) == false)
-                    _generateEntityIdOnTheClient.TrySetIdentity(instance, id);
-
+                
                 Items.Add(new Item
                 {
                     Etag = etag,
@@ -137,6 +158,7 @@ namespace Raven.Client.Documents.Subscriptions
                     RawResult = curDoc,
                     RawMetadata = metadata,
                     Result = instance,
+                    ExceptionMessage = item.Exception
                 });
             }
             return lastReceivedChangeVector;
