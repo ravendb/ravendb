@@ -98,7 +98,7 @@
             </button>
             <h3 class="text-warning" data-bind="text: title"></h3>
             <div class="time" data-bind="text: displayDate().format('LLL')"></div>
-            <p data-bind="text: message"></p>
+            <p data-bind="text: shortMessage"></p>
             <div class="flex-horizontal">
                 <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
                         class="btn btn-sm">
