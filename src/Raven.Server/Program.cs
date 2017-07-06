@@ -93,7 +93,7 @@ namespace Raven.Server
                     {
                         try
                         {
-                            server.OpenPipe();
+                            server.OpenPipe(); // TODO: although server should dispose the pipe - it is not.. after resetserver
                             server.Initialize();
                             
                             if (CommandLineSwitches.PrintServerId)
@@ -152,7 +152,7 @@ namespace Raven.Server
             return 0;
         }
 
-        private static void RunAsService()
+        public static void RunAsService()
         {
             ManualResetEvent mre = new ManualResetEvent(false);
 
@@ -173,145 +173,16 @@ namespace Raven.Server
         {
             var configuration = server.Configuration;
 
-            var ctrlCPressed = false;
-            Console.CancelKeyPress += (sender, args) =>
-            {
-                ctrlCPressed = true;
-            };
-
             //stop dumping logs
             LoggingSource.Instance.DisableConsoleLogging();
             LoggingSource.Instance.SetupLogMode(LogMode.None,
                 Path.Combine(AppContext.BaseDirectory, configuration.Logs.Path));
 
-            while (true)
-            {
-                var lower = Console.ReadLine()?.ToLower();
-                switch (lower)
-                {
-                    case null:
-                        Thread.Sleep(75);//waiting for Ctrl+C 
-                        if (ctrlCPressed)
-                            break;
-                        Console.WriteLine("End of standard input detected, switching to server mode...");
-                        RunAsService();
-                        return false;
 
-                    case "q":
-                        return false;
-
-                    case "cls":
-                        Console.Clear();
-                        break;
-
-                    case "reset":
-                        return true;
-
-                    case "log -n":
-                    case "log no http":
-                    case "log-no-http":
-                        RavenServerStartup.SkipHttpLogging = true;
-                        goto case "log";
-
-                    case "log":
-                    case "logs":
-
-                        LoggingSource.Instance.EnableConsoleLogging();
-                        LoggingSource.Instance.SetupLogMode(LogMode.Information,
-                            Path.Combine(AppContext.BaseDirectory, configuration.Logs.Path));
-                        break;
-
-                    case "no-log":
-                    case "nolog":
-                    case "nologs":
-                        LoggingSource.Instance.DisableConsoleLogging();
-                        LoggingSource.Instance.SetupLogMode(LogMode.None,
-                            Path.Combine(AppContext.BaseDirectory, configuration.Logs.Path));
-                        break;
-
-                    case "stats":
-                        //stop dumping logs
-                        LoggingSource.Instance.DisableConsoleLogging();
-                        LoggingSource.Instance.SetupLogMode(LogMode.None,
-                            Path.Combine(AppContext.BaseDirectory, configuration.Logs.Path));
-
-                        WriteServerStatsAndWaitForEsc(server);
-
-                        break;
-
-                    case "info":
-                        var memoryInfo = MemoryInformation.GetMemoryInfo();
-                        Console.WriteLine(" Build {0}, Version {1}, SemVer {2}, Commit {3}\r\n PID {4}, {5} bits, {6} Cores\r\n {7} Physical Memory, {8} Available Memory",
-                            ServerVersion.Build, ServerVersion.Version, ServerVersion.FullVersion, ServerVersion.CommitHash, Process.GetCurrentProcess().Id,
-                            IntPtr.Size * 8, ProcessorInfo.ProcessorCount, memoryInfo.TotalPhysicalMemory, memoryInfo.AvailableMemory);
-                        break;
-
-                    case "gc2":
-                        GC.Collect(GC.MaxGeneration);
-                        GC.WaitForPendingFinalizers();
-                        break;
-
-                    case "oom":
-                    case "low-mem":
-                    case "low-memory":
-                        LowMemoryNotification.Instance.SimulateLowMemoryNotification();
-                        break;
-
-                    case "help":
-                    case "�help":
-                    case "-help":
-                    case "--help":
-                    case "/?":
-                    case "--?":
-                        WriteListOfAvailableCommands();
-                        break;
-
-                    default:
-                        Console.WriteLine("Unknown command...");
-                        goto case "help";
-                }
-            }
+            return RavenCli.Start(server);
         }
 
-        private static void WriteListOfAvailableCommands()
-        {
-            Console.WriteLine("Available Commands:");
-
-            var description = "clear screen";
-            Console.WriteLine($"    cls {description,23}");
-
-            description = "dump logs to console";
-            Console.WriteLine($"    log [-n] {description,26}");
-
-            description = "-n to dump logs without outputting http request logs";
-            Console.WriteLine($"    {description,67}");
-
-            description = "stop dumping logs to console";
-            Console.WriteLine($"    no-log {description,36}");
-
-            description = "simulate low memory";
-            Console.WriteLine($"    low-mem {description,26}");
-
-            description = "dump statistical information";
-            Console.WriteLine($"    stats {description,37}");
-
-            description = "print info (core count, memory, pid, etc)";
-            Console.WriteLine($"    info {description,51}");
-
-            description = "collect gc max generation";
-            Console.WriteLine($"    gc2 {description,36}");
-
-            description = "reset the server";
-            Console.WriteLine($"    reset {description,25}");
-
-            description = "quit";
-            Console.WriteLine($"    q {description,17}");
-
-            Console.WriteLine();
-
-        }
-
-        private static void WriteServerStatsAndWaitForEsc(RavenServer server)
+        public static void WriteServerStatsAndWaitForEsc(RavenServer server)
         {
             Console.WriteLine("Showing stats, press any key to close...");
             Console.WriteLine("    working set     | native mem      | managed mem     | mmap size         | reqs/sec       | docs (all dbs)");
