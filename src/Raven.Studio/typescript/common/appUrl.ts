@@ -135,36 +135,8 @@ class appUrl {
         return "#admin/settings/cluster";
     }
 
-    static forGlobalConfig(): string {
-        return '#admin/settings/globalConfig';
-    }
-
     static forServerSmugging(): string {
         return "#admin/settings/serverSmuggling";
-    }
-
-    static forGlobalConfigPeriodicExport(): string {
-        return '#admin/settings/globalConfig';
-    }
-
-    static forGlobalConfigDatabaseSettings(): string {
-        return '#admin/settings/globalConfigDatabaseSettings';
-    }
-
-    static forGlobalConfigReplication(): string {
-        return '#admin/settings/globalConfigReplication';
-    }
-
-    static forGlobalConfigSqlReplication(): string {
-        return "#admin/settings/globalConfigSqlReplication";
-    }
-
-    static forGlobalConfigQuotas(): string {
-        return '#admin/settings/globalConfigQuotas';
-    }
-
-    static forGlobalConfigVersioning(): string {
-        return "#admin/settings/globalConfigVersioning";
     }
 
     static forBackup(): string {
