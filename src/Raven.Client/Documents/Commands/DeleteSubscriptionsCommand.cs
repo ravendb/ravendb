@@ -5,16 +5,16 @@ namespace Raven.Client.Documents.Commands
 {
     public class DeleteSubscriptionCommand : RavenCommand
     {
-        private readonly long _id;
+        private readonly string _name;
 
-        public DeleteSubscriptionCommand(long id)
+        public DeleteSubscriptionCommand(string name)
         {
-            _id = id;
+            _name = name;
         }
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/subscriptions?id={_id}";
+            url = $"{node.Url}/databases/{node.Database}/subscriptions?taskName={_name}";
 
             var request = new HttpRequestMessage
             {

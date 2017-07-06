@@ -106,10 +106,10 @@ class ongoingTasks extends viewModelBase {
                     this.sqlTasks.push(new ongoingTaskSql(task as Raven.Server.Web.System.OngoingSqlEtl));
                     taskTypesSet.add("SQL ETL");
                     break;
-                //case 'Subscription': 
-                //    this.subscriptionTasks.push(new ongoingTaskSubscription(task as Raven.Server.Web.System.OngoingTaskSubscription)); 
-                //    taskTypesSet.add("Subscription");
-                //    break;
+                case 'Subscription': 
+                    this.subscriptionTasks.push(new ongoingTaskSubscription(task as Raven.Server.Web.System.OngoingTaskSubscription)); 
+                    taskTypesSet.add("Subscription");
+                    break;
             };
         });
 
@@ -134,9 +134,11 @@ class ongoingTasks extends viewModelBase {
         app.showBootstrapDialog(confirmEnableViewModel);
         confirmEnableViewModel.result.done(result => {
             if (result.can) {
-                new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, false)
+                new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName(), false)
                     .execute()
-                    .done(() => model.taskState('Disabled'))
+                    .done(() => {
+                        return model.taskState('Enabled');
+                    })
                     .always(() => this.fetchOngoingTasks());
             }
         });
@@ -149,9 +151,11 @@ class ongoingTasks extends viewModelBase {
         app.showBootstrapDialog(confirmDisableViewModel);
         confirmDisableViewModel.result.done(result => {
             if (result.can) {
-                new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, true)
+                new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName(), true)
                     .execute()
-                    .done(() => model.taskState('Enabled'))
+                    .done(() => {
+                        return model.taskState('Disabled');
+                    })
                     .always(() => this.fetchOngoingTasks());
             }
         });
@@ -170,7 +174,7 @@ class ongoingTasks extends viewModelBase {
     }
 
     private deleteOngoingTask(db: database, model: ongoingTaskModel) {
-        new deleteOngoingTaskCommand(db, model.taskType(), model.taskId)
+        new deleteOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName())
             .execute()
             .done(() => this.fetchOngoingTasks());
     }

@@ -22,6 +22,7 @@ namespace FastTests.Client.Subscriptions
                     Name = "get-users",
                     Criteria = new SubscriptionCriteria<User>()
                 };
+
                 var subscriptionId = store.Subscriptions.Create(subscriptionCreationParams);
 
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions("get-users"));
@@ -128,8 +129,7 @@ namespace FastTests.Client.Subscriptions
                     throw threadException;
             }
         }
-
-
+        
         [Fact]
         public void WaitOnSubscriptionTaskWhenSubscriptionIsDeleted()
         {
@@ -159,9 +159,6 @@ namespace FastTests.Client.Subscriptions
                 }
 
                 Assert.True(users.TryTake(out var _, _reasonableWaitTime));
-
-
-
 
                 store.Subscriptions.DeleteAsync(subscriptionId).Wait();
                 beforeAckMre.Set();

@@ -69,7 +69,7 @@ namespace RachisTests
                 usersCount.Clear();
                 reachedMaxDocCountMre.Reset();
 
-                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId);
+                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId.ToString());
 
                 await GenerateDocuments(store);
                 Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime));
@@ -80,7 +80,7 @@ namespace RachisTests
                 usersCount.Clear();
                 reachedMaxDocCountMre.Reset();
 
-                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId);
+                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId.ToString());
 
                 await GenerateDocuments(store);
 
@@ -137,7 +137,7 @@ namespace RachisTests
                     using (ravenServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        Assert.NotNull(ravenServer.ServerStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemNameFromId(defaultDatabase,subscriptionId)));
+                        Assert.NotNull(ravenServer.ServerStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(defaultDatabase,subscriptionId.ToString())));
                     }
                 }
 
@@ -156,7 +156,7 @@ namespace RachisTests
                     using (ravenServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        Assert.Null(ravenServer.ServerStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemNameFromId(defaultDatabase, subscriptionId)));
+                        Assert.Null(ravenServer.ServerStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(defaultDatabase, subscriptionId.ToString())));
                     }
                 }
             }
@@ -309,7 +309,7 @@ namespace RachisTests
                 Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false));
                 ackSent.Reset(true);
 
-                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId).ConfigureAwait(false);
+                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId.ToString()).ConfigureAwait(false);
                 continueMre.Set();
                 expectedVersionsCount += 2;
 
@@ -320,7 +320,7 @@ namespace RachisTests
 
 
                 if (nodesAmount == 5)
-                    await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId);
+                    await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId.ToString());
 
                 Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime).ConfigureAwait(false));
 
@@ -497,7 +497,7 @@ namespace RachisTests
             return subscription;
         }
 
-        private async Task KillServerWhereSubscriptionWorks(string defaultDatabase, long subscriptionId)
+        private async Task KillServerWhereSubscriptionWorks(string defaultDatabase, string subscriptionName)
         {
             string tag = null;
             var someServer = Servers.First(x => x.Disposed == false);
@@ -506,7 +506,7 @@ namespace RachisTests
             {
                 var databaseRecord = someServer.ServerStore.Cluster.ReadDatabase(context, defaultDatabase);
                 var db = await someServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(defaultDatabase).ConfigureAwait(false);
-                var subscriptionState = db.SubscriptionStorage.GetSubscriptionFromServerStore(subscriptionId);
+                var subscriptionState = db.SubscriptionStorage.GetSubscriptionFromServerStore(subscriptionName);
                 tag = databaseRecord.Topology.WhoseTaskIsIt(subscriptionState,Server.ServerStore.IsPassive());
             }
             Servers.FirstOrDefault(x => x.ServerStore.NodeTag == tag).Dispose();

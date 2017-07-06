@@ -806,23 +806,22 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(addWatcherCommand);
         }
 
-        public Task<(long Etag, object Result)> DeleteOngoingTask(long taskId, OngoingTaskType taskType, string dbName)
+        public Task<(long Etag, object Result)> DeleteOngoingTask(long taskId, string taskName, OngoingTaskType taskType, string dbName)
         {
-            var deleteTaskCommand =
-                taskType == OngoingTaskType.Subscription ?
-                    (CommandBase)new DeleteSubscriptionCommand(dbName) { SubscriptionId = taskId } :
+            var deleteTaskCommand = 
+                taskType == OngoingTaskType.Subscription ? 
+                    (CommandBase)new DeleteSubscriptionCommand(dbName){SubscriptionName = taskName } : 
                     new DeleteOngoingTaskCommand(taskId, taskType, dbName);
 
             return SendToLeaderAsync(deleteTaskCommand);
         }
 
-        public Task<(long Etag, object Result)> ToggleTaskState(long taskId, OngoingTaskType type, bool disable, string dbName)
+        public Task<(long Etag, object Result)> ToggleTaskState(long taskId, string taskName, OngoingTaskType type, bool disable, string dbName)
         {
-
             var disableEnableCommand =
-                type == OngoingTaskType.Subscription
-                    ? (CommandBase)new ToggleSubscriptionStateCommand(taskId, disable, dbName)
-                    : new ToggleTaskStateCommand(taskId, type, disable, dbName);
+                type == OngoingTaskType.Subscription ?
+                    (CommandBase)new ToggleSubscriptionStateCommand(taskName, disable, dbName) :
+                    new ToggleTaskStateCommand(taskId, type, disable, dbName);
 
             return SendToLeaderAsync(disableEnableCommand);
         }
@@ -998,8 +997,6 @@ namespace Raven.Server.ServerWide
                     _disposed = true;
                 }
             }
-
-
         }
 
         public void IdleOperations(object state)

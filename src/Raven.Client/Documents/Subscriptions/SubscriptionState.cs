@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Server;
+using Raven.Client.Server.Operations;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Subscriptions
@@ -41,17 +42,14 @@ namespace Raven.Client.Documents.Subscriptions
                 [nameof(ChangeVector)] = ChangeVector?.ToJson(),
                 [nameof(SubscriptionId)] = SubscriptionId,
                 [nameof(SubscriptionName)] = SubscriptionName,
-                [nameof(TimeOfLastClientActivity)] = TimeOfLastClientActivity
+                [nameof(TimeOfLastClientActivity)] = TimeOfLastClientActivity,
+                [nameof(Disabled)] = Disabled
             };
         }
 
         public static string GenerateSubscriptionItemKeyName(string databaseName, string subscriptionName)
         {
             return $"{SubscriptionPrefix(databaseName)}{subscriptionName}";
-        }
-        public static string GenerateSubscriptionItemNameFromId(string databaseName, long subscriptionId)
-        {
-            return $"{SubscriptionPrefix(databaseName)}{subscriptionId}";
         }
 
         public static string SubscriptionPrefix(string databaseName)

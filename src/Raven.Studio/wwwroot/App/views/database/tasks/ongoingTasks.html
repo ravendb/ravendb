@@ -119,6 +119,7 @@
                 </div>
 
                 <!-- etl -->
+            
                 <!-- TODO... -->
                 <!--<div data-bind="if: etlTasks().length > 0 && (selectedTaskType() === 'RavenDB ETL' || selectedTaskType() === 'All tasks' )">
                         <div class="hr-title">
@@ -148,7 +149,9 @@
                             </div>
                         </div>
                     </div>-->
+            
                 <!-- sql -->
+            
                 <!-- TODO... -->
                 <!--<div data-bind="if: sqlTasks().length > 0 && (selectedTaskType() === 'SQL ETL' || selectedTaskType() === 'All tasks' )">
                         <div class="hr-title">
@@ -178,7 +181,9 @@
                             </div>
                         </div>
                     </div>-->
+            
                 <!-- backup -->
+            
                 <!-- TODO... -->
                 <!--<div data-bind="if: backupTasks().length > 0 && (selectedTaskType() === 'Backup' || selectedTaskType() === 'All tasks' )">
                         <div class="hr-title">
@@ -208,7 +213,9 @@
                             </div>
                         </div>
                     </div>-->
+            
                 <!-- subscription -->
+            
                 <!-- TODO...Subscriptions work is in progress -->
                 <div data-bind="if: subscriptionTasks().length > 0 && (selectedTaskType() === 'Subscription' || selectedTaskType() === 'All tasks')">
                     <div class="hr-title">
@@ -216,16 +223,14 @@
                     </div>
                     <div data-bind="foreach: subscriptionTasks">
                         <div class="panel destination-item subscription" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
-                            <h5 class="text-center task-name" data-bind="text: taskName"></h5>
                             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
                             <div class="padding padding-sm destination-info">
-                                <div class="info-container flex-horizontal flex-grow">
+                                <div class="info-container flex-horizontal">
                                     <div class="checkbox">
                                         <input type="checkbox" class="styled">
                                         <label></label>
                                     </div>
                                     <div class="destination flex-grow">
-                                        todo...
                                         <h5>TASK NAME</h5>
                                         <h3>
                                             <i class="icon-subscription"></i>
@@ -235,27 +240,24 @@
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
                                     <div class="status" data-bind="template: { name: 'status-template' }"></div>
                                 </div>
-
                                 <div class="actions-container">
-                                    <div class="actions">
-                                        <button class="btn btn-default" data-toggle="collapse" data-target="#SubscriptionDetails" title="Click for details"><i class="icon-info"></i></button>
+                                    <div class="actions">  
+                                        <button class="btn btn-default" data-bind="click: showSubscriptionDetails.toggle.bind(showSubscriptionDetails)" title="Click for details"><i class="icon-info"></i></button>
                                         <button class="btn btn-default" data-bind="click: editTask" title="Edit task"><i class="icon-edit"></i></button>
                                         <button class="btn btn-danger" data-bind="click: $root.confirmRemoveOngoingTask" title="Delete task"><i class="icon-trash"></i></button>
                                     </div>
                                 </div>
-                                <div id="SubscriptionDetails" class="collapse flex-grow">
-                                    <hr />
+                                <div class="collapse flex-grow" data-bind="collapse: showSubscriptionDetails">
+                                    <hr/>
                                     <div class="flex-horizontal">
                                         <div class="flex-grow">
                                             <ul class="properties">
                                                 <li><span>Collection:</span><strong data-bind="text: collection"></strong></li>
-                                                <li>
-                                                    <span>Client address:</span><strong data-bind="text: clientAddress"></strong>
-                                                    <button class="btn btn-xs" data-bind="click: $root.disconnectClientFromSubscription" title="Disconnect client from this subscription (unsubscribe client)">
+                                                <li><span>Last Client Activity:</span><strong data-bind="text: timeOfLastClientActivity"></strong>
+                                                    <button class="btn btn-xs btn-upcoming" data-bind="click: $root.disconnectClientFromSubscription" title="Disconnect client from this subscription (unsubscribe client)">
                                                         <i class="icon-disconnected"></i><span>Disconnect</span>
                                                     </button>
                                                 </li>
-                                                <li><span>Connected From:</span><strong data-bind="text: connectedFrom"></strong></li>
                                             </ul>
                                         </div>
                                         <div>
