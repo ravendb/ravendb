@@ -15,7 +15,7 @@ class saveReplicationDocumentCommand extends commandBase {
     }
 
     private saveSetup(): JQueryPromise<any> {
-        var id = this.globalConfig ? "Raven/Global/Replication/Destinations" : documentReplicationConfiguration;
+        var id = this.globalConfig ? "Raven/Global/Replication/Destinations" : documentReplicationConfiguration; //TODO: obsolete
         var url = "/docs?id=" + id;//TODO: use endpoints
         var putArgs = JSON.stringify(this.dto);
         return this.put(url, putArgs, this.db);

@@ -10,7 +10,7 @@ class startRestoreCommand extends commandBase {
     execute(): JQueryPromise<any> {
         var result = $.Deferred();
 
-        new deleteDocumentCommand('Raven/Restore/Status', null)//TODO: use endpoints
+        new deleteDocumentCommand('Raven/Restore/Status', null)//TODO: use endpoints, obsolete
             .execute()
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to delete restore status document!", response.responseText, response.statusText);
