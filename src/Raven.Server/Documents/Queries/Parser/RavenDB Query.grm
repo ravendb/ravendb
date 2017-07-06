@@ -1,0 +1,169 @@
+
+"Start Symbol" = <Query>
+
+! =============================================================================
+! Comments
+! =============================================================================
+
+Comment Line  = '--'
+
+! =============================================================================
+! Terminals
+! =============================================================================
+
+{String Chars}      = {Printable} + {CR} + {LF} - ["]
+{Id Chars}   = {Alphanumeric} + [_]
+
+StringLiteral1   = ('"' ( {String  Chars} | '""' )*  '"') 
+! we support single quote, but GOLD doesn't make it easy, so we aren't showing it here
+!StringLiteral2   = ("'" ( {String  Chars} | "''" )*  "'") 
+IntegerLiteral  = '-'?{Digit}+
+RealLiteral     = '-'?{Digit}+'.'{Digit}+
+
+
+Id             = {Letter}{Id Chars}* 
+
+! =============================================================================
+! Rules
+! =============================================================================
+
+<Query>       ::= <Select> <From Or Group> <Where> 
+               | <From Or Group> <Where>
+               | <From Or Group> <Order By>
+               | <From Or Group>
+               
+<Select> ::=  'SELECT' <Named Identifier List> <With Select>
+          | 'SELECT' <Named Identifier List>
+          
+<With Select> ::= 'WITH' <Named Identifier List>
+
+<Where> ::= 'WHERE' <Expression> <Order By>
+         |'WHERE' <Expression>
+         
+<Order By> ::= 'ORDER BY' <Sorted Identifier List>
+
+<Group> ::= 'GROUP BY' <Identifiers List>
+
+<From Or Group> ::= <From> <Group>
+                 | <From> 
+            
+<From> ::= 'FROM''('<Simple Field> ','  <Expression> ')' !filtered
+        | 'FROM''('<Simple Field> ','  <Expression> ')' 'AS' <Simple Field>
+        | 'FROM INDEX' <From Source>
+        | 'FROM' <From Source>
+               
+! ============================================================================= 
+! Expressions
+! =============================================================================
+
+<From Source> ::= <Simple Field> 'AS' <Simple Field> 
+               | <Simple Field>
+
+<Expression>  ::=  <Or Expression>
+
+<Or Expression> ::= <And Expression> OR <Expression>
+                 | <And Expression> OR NOT <Expression>
+                 | <And Expression>
+
+<And Expression> ::= <Parenthesis Expr> AND  <Expression>
+                 | <Parenthesis Expr> AND NOT <Expression>
+                 | <Parenthesis Expr>
+
+
+<Parenthesis Expr> ::= '(' <Expression> ')' 
+                    | <Simple Expr>
+
+<Simple Expr> ::= <Between Expr> 
+               | <In Expr>
+               | <Method Expr>
+               | <Operator Expr>
+               
+<Method Expr> ::= <Field> '(' <Method Args> ')'
+               
+<Method Args> ::= <Argument> ',' <Method Args>
+             | <Argument>
+             
+<Argument> ::= <Field>
+            | <Expression> 
+            | IntegerLiteral
+            | RealLiteral
+            
+
+<Between Expr> ::= <Field> BETWEEN IntegerLiteral AND IntegerLiteral 
+                | <Field> BETWEEN RealLiteral AND RealLiteral 
+                | <Field> BETWEEN StringLiteral1  AND StringLiteral1
+                | <Field> BETWEEN StringLiteral2  AND StringLiteral3
+                
+<In Expr>     ::= <Field> IN <Int List>
+               | <Field> IN <Real List>
+               | <Field> IN <String List>
+                
+<Operator Expr> ::= <Field> '='  <Value>
+         ! Intentionally not supporting these, we force the use of AND NOT instead
+         !       |  <Field> '<>' <Value>
+         !       |  <Field> '!=' <Value>
+                |  <Field> '>'  <Value>
+                |  <Field> '>=' <Value>
+                |  <Field> '<'  <Value>
+                |  <Field> '<=' <Value>
+
+<Field>  ::= <Dotted Field> 
+         | <Simple Field>
+
+<Simple Field> ::=  ID 
+         | StringLiteral1
+         | StringLiteral2
+         | ID <Array Indexer>
+         
+<Array Indexer> ::= '[' IntegerLiteral ']' | '[]'
+
+<Dotted Field> ::=  <Simple Field> '.' <Field>
+ 
+        
+<Value>       ::=  IntegerLiteral
+                | RealLiteral
+                | StringLiteral1
+                | StringLiteral2
+                | <Parameter>
+                | 'true'
+                | 'false'
+                | 'null'
+                
+<Parameter> ::= ':' ID
+             
+<Sorted Identifier List> ::= <Sorted Identifier> ',' <Sorted Identifier List>
+                | <Sorted Identifier>
+
+<Sorted Identifier> ::= <Field> 'asc' 
+                     | <Field> 'desc' 
+                     | <Field> 'ascending' 
+                     | <Field> 'descending' 
+                     | <Field>
+
+<Named Identifier List> ::= <Named Identifier> ',' <Named Identifier List> | <Named Identifier>
+             
+<Named Identifier> ::= <Field> 'as' <Simple Field> 
+                    | <Field> 
+                    | <Method Expr> 'as'  <Simple Field>
+                    | <Method Expr> 
+                    
+<Identifiers List> ::= <Field> ',' <Identifiers List>
+                    | <Field> 
+
+<Int List>       ::= '(' <Int Expr List> ')'
+
+<Int Expr List>  ::= IntegerLiteral ',' <Int Expr List> 
+               | IntegerLiteral
+
+<Real List>       ::= '(' <Real Expr List> ')'
+
+<Real Expr List>  ::= RealLiteral ',' <Real Expr List>
+               | RealLiteral
+
+<String List>       ::= '(' <String Expr List> ')'
+
+<String Expr List>  ::= StringLiteral1 ',' <String Expr List>
+               | StringLiteral2 ',' <String Expr List>
+               | StringLiteral1
+               | StringLiteral2
+
