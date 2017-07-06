@@ -87,10 +87,7 @@ namespace Raven.Server.Utils
             Console.Out.Flush();
 
             Console.WriteLine();
-            if (k.KeyChar.Equals('Y') ||
-                k.KeyChar.Equals('y'))
-                return true;
-            return false;
+            return char.ToLower(k.KeyChar).Equals('y');
         }
 
         private static bool CommandResetServer(List<string> args)
@@ -104,10 +101,7 @@ namespace Raven.Server.Utils
             Console.Out.Flush();
 
             Console.WriteLine();
-            if (k.KeyChar.Equals('Y') ||
-                k.KeyChar.Equals('y'))
-                return true;
-            return false;
+            return char.ToLower(k.KeyChar).Equals('y');
         }
 
         private static bool CommandStats(List<string> args)
@@ -173,6 +167,7 @@ namespace Raven.Server.Utils
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine(new Size(GC.GetTotalMemory(false), SizeUnit.Bytes));
             Console.ResetColor();
+            var startTime = DateTime.UtcNow;
             Console.Write("Garbage Collecting... ");
             Console.Out.Flush();
 
@@ -193,12 +188,18 @@ namespace Raven.Server.Utils
             }
 
             GC.WaitForPendingFinalizers();
+            var actionTime = DateTime.UtcNow - startTime;
+
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("Collected.");
             Console.ResetColor();
             Console.Write("After collecting, managed memory used:  ");
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine(new Size(GC.GetTotalMemory(false), SizeUnit.Bytes));
+            Console.Write(new Size(GC.GetTotalMemory(false), SizeUnit.Bytes));
+            Console.ResetColor();
+            Console.Write(" at ");
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine(actionTime.TotalSeconds + " Seconds");
             Console.ResetColor();
             Console.Out.Flush();
 
@@ -276,7 +277,36 @@ namespace Raven.Server.Utils
         private static bool CommandLowMem(List<string> args)
         {
             Console.ResetColor();
-            Console.Write("Sendin Low Memory simulation signal... ");
+            Console.Write("Before simulating low-mem, memory stats: ");
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            var json = MemoryStatsHandler.MemoryStatsInternal();
+            var humaneProp = (json["Humane"] as DynamicJsonValue);
+
+            StringBuilder msg = new StringBuilder();
+            msg.Append($"Working Set:{humaneProp?["WorkingSet"]}");
+            msg.Append($" Unmamanged Memory:{humaneProp?["TotalUnmanagedAllocations"]}");
+            msg.Append($" Managed Memory:{humaneProp?["ManagedAllocations"]}");
+            Console.WriteLine(msg);
+            Console.ResetColor();
+            Console.Write("Sending Low Memory simulation signal... ");
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("Sent.");
+            Console.ResetColor();
+            Console.Write("After sending low mem simulation event, memory stats: ");
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            msg.Clear();
+            msg.Append($"Working Set:{humaneProp?["WorkingSet"]}");
+            msg.Append($" Unmamanged Memory:{humaneProp?["TotalUnmanagedAllocations"]}");
+            msg.Append($" Managed Memory:{humaneProp?["ManagedAllocations"]}");
+            Console.WriteLine(msg);
+            Console.ResetColor();
+            Console.Out.Flush();
+
+
+
+
+            Console.ResetColor();
+            
             Console.Out.Flush();
             LowMemoryNotification.Instance.SimulateLowMemoryNotification();
             Console.ForegroundColor = ConsoleColor.Green;
@@ -582,8 +612,8 @@ namespace Raven.Server.Utils
                             Console.Out.Flush();
 
                             Console.WriteLine();
-                            if (!(k.KeyChar.Equals('Y') ||
-                                  k.KeyChar.Equals('y')))
+                            if (char.ToLower(k.KeyChar).Equals('y') == false)
+
                             {
                                 lastRc = false;
                                 continue;
