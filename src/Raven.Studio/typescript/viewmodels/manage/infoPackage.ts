@@ -197,7 +197,7 @@ class infoPackage extends viewModelBase {/*
         var maxBoxHeightOnDepth = d3.nest()
             .key(d => d.depth)
             .sortKeys(d3.ascending)
-            .rollup((leaves: any[]) => d3.max(leaves, l => l.boxHeight()))
+            .rollup((leafs: any[]) => d3.max(leafs, l => l.boxHeight()))
             .entries(this.nodes)
             .map(v => v.values);
 
