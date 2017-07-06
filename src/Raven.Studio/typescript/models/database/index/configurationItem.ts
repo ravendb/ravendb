@@ -1,12 +1,13 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
+import configuration = require("configuration");
+
 class configurationItem {
     static readonly ConfigurationOptions = [
-        "Raven/Indexing/RunInMemory",
-        "Raven/Indexing/MaxTimeForDocumentTransactionToRemainOpenInSec",
-        "Raven/Indexing/MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory",
-        "Raven/Indexing/MapTimeoutInSec",
-        "Raven/Indexing/MapTimeoutAfterEtagReachedInMin"
+        configuration.indexing.maxTimeForDocumentTransactionToRemainOpen,
+        configuration.indexing.minNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory,
+        configuration.indexing.mapTimeout,
+        configuration.indexing.mapTimeoutAfterEtagReached
     ];
 
     key = ko.observable<string>();

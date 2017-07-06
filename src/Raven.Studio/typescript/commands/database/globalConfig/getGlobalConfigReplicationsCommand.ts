@@ -4,7 +4,7 @@ import database = require("models/resources/database");
 class getGlobalConfigReplicationsCommand extends getDocumentWithMetadataCommand {
 
     constructor(db: database) {
-        super("Raven/Global/Replication/Destinations", db);
+        super("Raven/Global/Replication/Destinations", db); //TODO: obsolete?
     }
 
     execute(): JQueryPromise<replicationsDto> {
