@@ -16,8 +16,6 @@ namespace Raven.Client.Documents.Replication.Messages
 
         public long LastEtagAccepted { get; set; }
         
-        public long CurrentEtag { get; set; }
-
         public string Exception { get; set; }
 
         public string Message { get; set; }
