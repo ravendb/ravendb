@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server;
-using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -16,7 +12,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
     public class DeleteSubscriptionCommand:UpdateValueForDatabaseCommand
     {
-        public long SubscriptionId;
+        public string SubscriptionName;
 
         // for serialization
         private DeleteSubscriptionCommand():base(null){}
@@ -33,7 +29,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         public override unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive)
         {
-            var itemKey = SubscriptionState.GenerateSubscriptionItemNameFromId(DatabaseName, SubscriptionId);
+            var itemKey = SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, SubscriptionName);
             using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
             {
                 if (items.ReadByKey(valueNameLowered, out TableValueReader tvr) == false)
@@ -61,7 +57,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         public override void FillJson(DynamicJsonValue json)
         {
-            json[nameof(SubscriptionId)] = SubscriptionId;
+            json[nameof(SubscriptionName)] = SubscriptionName;
         }
     }
 }

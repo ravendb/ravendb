@@ -13,6 +13,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
     {
         public ChangeVectorEntry[] ChangeVector;
         public long SubscriptionId;
+        public string SubscriptionName;
         public string NodeTag;
         public Guid DbId;
         public long LastDocumentEtagAckedInNode;
@@ -24,7 +25,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
         }
 
-        public override string GetItemId() => SubscriptionState.GenerateSubscriptionItemNameFromId(DatabaseName, SubscriptionId);
+        public override string GetItemId() => SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, SubscriptionName);
 
         protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
         {
@@ -49,6 +50,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
             json[nameof(ChangeVector)] = ChangeVector?.ToJson();
             json[nameof(SubscriptionId)] = SubscriptionId;
+            json[nameof(SubscriptionName)] = SubscriptionName;
             json[nameof(NodeTag)] = NodeTag;
         }
 

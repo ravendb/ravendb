@@ -42,7 +42,7 @@ class appUrl {
         newIndex: ko.pureComputed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
         editIndex: (indexName?: string) => ko.pureComputed(() => appUrl.forEditIndex(indexName, appUrl.currentDatabase())),
         editExternalReplication: (taskId?: number) => ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase(), taskId)),
-        editSubscription: (taskId?: number) => ko.pureComputed(() => appUrl.forEditSubscription(appUrl.currentDatabase(), taskId)),
+        editSubscription: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditSubscription(appUrl.currentDatabase(), taskId, taskName)),
         newTransformer: ko.pureComputed(() => appUrl.forNewTransformer(appUrl.currentDatabase())),
         editTransformer: (transformerName?: string) => ko.pureComputed(() => appUrl.forEditTransformer(transformerName, appUrl.currentDatabase())),
         query: (indexName?: string) => ko.pureComputed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
@@ -596,24 +596,17 @@ class appUrl {
         return "#databases/tasks/ongoingTasks?" + databasePart;
     }
 
-    static forNewExternalReplication(db: database | databaseInfo): string {
+    static forEditExternalReplication(db: database | databaseInfo, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks/editExternalReplicationTask?" + databasePart; 
+        const taskPart = taskId ? "&taskId=" + taskId : "";
+        return "#databases/tasks/editExternalReplicationTask?" + databasePart + taskPart;
     }
 
-    static forEditExternalReplication(db: database | databaseInfo, taskId: number): string {
+    static forEditSubscription(db: database | databaseInfo, taskId?: number, taskName?: string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks/editExternalReplicationTask?" + databasePart + "&taskId=" + taskId;
-    }
-
-    static forNewSubscription(db: database | databaseInfo): string {
-        const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks/editSubscriptionTask?" + databasePart;
-    }
-
-    static forEditSubscription(db: database | databaseInfo, taskId: number): string {
-        const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks/editSubscriptionTask?" + databasePart + "&taskId=" + taskId;
+        const taskPart = taskId ? "&taskId=" + taskId : "";
+        const taskNamePart = taskName ? "&taskName=" + taskName : ""; 
+        return "#databases/tasks/editSubscriptionTask?" + databasePart + taskPart + taskNamePart;
     }
 
     static forSampleData(db: database | databaseInfo): string {

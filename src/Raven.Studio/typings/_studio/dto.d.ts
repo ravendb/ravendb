@@ -325,6 +325,9 @@ interface externalReplicationDataFromUI {
 
 interface subscriptionDataFromUI {
     TaskName: string;
-    //TODO:...
+    Script: string;
+    Collection: string;
+    ChangeVectorEntry: Array<Raven.Client.Documents.Replication.Messages.ChangeVectorEntry>;
+    IsVersioned: boolean;
 } 
 

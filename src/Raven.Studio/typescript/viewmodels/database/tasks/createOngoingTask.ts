@@ -12,14 +12,14 @@ class createOngoingTask extends dialogViewModelBase {
 
     newReplicationTask(task: createOngoingTask) {
         eventsCollector.default.reportEvent("ExternalReplication", "new");
-        const url = appUrl.forNewExternalReplication(this.activeDatabase());
+        const url = appUrl.forEditExternalReplication(this.activeDatabase());
         router.navigate(url);
         this.close();
     }
 
     newSubscriptionTask(task: createOngoingTask) {
         eventsCollector.default.reportEvent("Subscription", "new");
-        const url = appUrl.forNewSubscription(this.activeDatabase());
+        const url = appUrl.forEditSubscription(this.activeDatabase());
         router.navigate(url);
         this.close();
     }

@@ -4,12 +4,12 @@ import endpoints = require("endpoints");
 
 class toggleOngoingTaskCommand extends commandBase {
 
-    constructor(private db: database, private taskType: Raven.Client.Server.Operations.OngoingTaskType, private taskId: number, private disable: boolean) {
+    constructor(private db: database, private taskType: Raven.Client.Server.Operations.OngoingTaskType, private taskId: number, private taskName: string, private disable: boolean) {
         super();
     }
 
     execute(): JQueryPromise<Raven.Client.Server.Operations.ModifyOngoingTaskResult> {
-        const args = { name: this.db.name, key: this.taskId, type: this.taskType, disable: this.disable };
+        const args = { name: this.db.name, key: this.taskId, type: this.taskType, disable: this.disable, taskName: this.taskName };
         const url = endpoints.global.ongoingTasks.adminTasksState + this.urlEncodeArgs(args);
         const operationText = this.disable ? "disable" : "enable";
      

@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Json.Converters;
@@ -13,8 +12,6 @@ using Raven.Client.Server;
 using Raven.Client.Server.ETL.SQL;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.PeriodicBackup;
-using Raven.Server.Documents.Subscriptions;
-using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -46,29 +43,33 @@ namespace Raven.Server.Web.System
             var ongoingTasksResult = new OngoingTasksResult();
             using (store.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
+                DatabaseTopology dbTopology;
+                ClusterTopology clusterTopology;
+                DatabaseRecord databaseRecord;
+
                 using (context.OpenReadTransaction())
                 {
-                    var databaseRecord = store.Cluster.ReadDatabase(context, dbName);
+                    databaseRecord = store.Cluster.ReadDatabase(context, dbName);
                 
                     if (databaseRecord == null)
                     {
                         return ongoingTasksResult;
                     }
 
-                    var dbTopology = databaseRecord.Topology;
-                    var clusterTopology = store.GetClusterTopology(context);
+                    dbTopology = databaseRecord.Topology;
+                    clusterTopology = store.GetClusterTopology(context);
 
+                    ongoingTasksResult.OngoingTasksList.AddRange(CollectSubscriptionTasks(context, databaseRecord, clusterTopology, store));
+                }
 
-                    foreach (var tasks in new[]
-                    {
-                        CollectExternalReplicationTasks(databaseRecord.ExternalReplication, dbTopology, clusterTopology, store),
-                        CollectEtlTasks(databaseRecord, dbTopology, clusterTopology, store),
-                        CollectBackupTasks(databaseRecord, dbTopology, clusterTopology, store),
-                        CollectSubscriptionTasks(context, databaseRecord, clusterTopology, store)
-                    })
-                    {
-                        ongoingTasksResult.OngoingTasksList.AddRange(tasks);
-                    }
+                foreach (var tasks in new []
+                {
+                    CollectExternalReplicationTasks(databaseRecord.ExternalReplication, dbTopology,clusterTopology, store),
+                    CollectEtlTasks(databaseRecord, dbTopology, clusterTopology, store),
+                    CollectBackupTasks(databaseRecord, dbTopology, clusterTopology, store),
+                })
+                {
+                    ongoingTasksResult.OngoingTasksList.AddRange(tasks);
                 }
 
                 if (store.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var database) && database.Status == TaskStatus.RanToCompletion)
@@ -88,8 +89,7 @@ namespace Raven.Server.Web.System
                 var tag = databaseRecord.Topology.WhoseTaskIsIt(subscriptionState, store.IsPassive());
                 yield return new OngoingTaskSubscription
                 {
-                    ChangeVector = subscriptionState.ChangeVector,
-                    LastModificationTime = subscriptionState.TimeOfLastClientActivity,
+                    // Supply only needed fields for List View  
                     ResponsibleNode = new NodeId
                     {
                         NodeTag = tag,
@@ -97,7 +97,9 @@ namespace Raven.Server.Web.System
                     },
                     TaskName = subscriptionState.SubscriptionName,
                     TaskState = subscriptionState.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
-                    TaskId = subscriptionState.SubscriptionId
+                    TaskId = subscriptionState.SubscriptionId,
+                    Collection = subscriptionState.Criteria.Collection,
+                    TimeOfLastClientActivity = subscriptionState.TimeOfLastClientActivity
                 };
             }
         }
@@ -243,7 +245,9 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/get-task", "GET", "/admin/get-task?name={databaseName:string}&key={taskId:string}&type={taskType:string}")]
+        // Get Info about a sepcific task - For Edit View in studio
+        // Note: Each task should return its own specific object and Not 'GetTaskInfoResult' - see RavenDB-7712
+        [RavenAction("/admin/get-task", "GET", "/admin/get-task?name={databaseName:string}&key={taskId:string}&type={taskType:string}&taskName={taskName:string}")]
         public Task GetOngoingTaskInfo()
         {
             var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -410,7 +414,8 @@ namespace Raven.Server.Web.System
                             
                         case OngoingTaskType.Subscription:
 
-                            var itemKey = SubscriptionState.GenerateSubscriptionItemNameFromId(record.DatabaseName, key);
+                            var nameKey = GetQueryStringValueAndAssertIfSingleAndNotEmpty("taskName"); 
+                            var itemKey = SubscriptionState.GenerateSubscriptionItemKeyName(record.DatabaseName, nameKey);
                             var doc = ServerStore.Cluster.Read(context, itemKey);
                             if (doc == null)
                             {
@@ -418,23 +423,8 @@ namespace Raven.Server.Web.System
                                 break;
                             }
 
-                            var sub = JsonDeserializationClient.SubscriptionState(doc);
-                            
-                            tag = dbTopology?.WhoseTaskIsIt(sub, ServerStore.IsPassive());
-                             
-                            WriteResult(context, new OngoingTaskSubscription
-                            {
-                                ChangeVector = sub.ChangeVector,
-                                LastModificationTime = sub.TimeOfLastClientActivity,
-                                ResponsibleNode= new NodeId
-                                {
-                                    NodeTag = tag,
-                                    NodeUrl = clusterTopology.GetUrlFromTag(tag)
-                                },
-                                TaskId = sub.SubscriptionId,
-                                TaskName = sub.SubscriptionName,
-                                TaskState = sub.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled
-                            });
+                            var subscriptionState = JsonDeserializationClient.SubscriptionState(doc);
+                            WriteResult(context, subscriptionState.ToJson());
                             
                             break;
 
@@ -459,7 +449,18 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/tasks/state", "POST", "/admin/tasks/status?name={databaseName:string}&key={taskId:string}&type={taskType:string}&disable={disable:true|false}")]
+        private void WriteResult(TransactionOperationContext context, DynamicJsonValue dynamicJsonValue)
+        {
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, dynamicJsonValue);
+                writer.Flush();
+            }
+        }
+
+        [RavenAction("/admin/tasks/state", "POST", "/admin/tasks/status?name={databaseName:string}&key={taskId:string}&type={taskType:string}&taskName={taskName:string}&disable={disable:true|false}")]
         public async Task ToggleTaskState()
         {
             var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -470,14 +471,15 @@ namespace Raven.Server.Web.System
             var key = GetLongQueryString("key");
             var typeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
             var disable = GetBoolValueQueryString("disable");
+            var taskName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("taskName");
 
             if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
                 throw new ArgumentException($"Unknown task type: {type}", "type");
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var (index, _) = await ServerStore.ToggleTaskState(key, type, disable.Value, dbName);
-                await ServerStore.Cluster.WaitForIndexNotification(index);
+                var (index, _) = await ServerStore.ToggleTaskState(key, taskName, type, disable.Value, dbName);
+                await ServerStore.Cluster.WaitForIndexNotification(index); 
                 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK; 
 
@@ -535,7 +537,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/tasks/delete", "POST", "/admin/tasks/delete?name={databaseName:string}&id={taskId:long}&type={taskType:string}")]
+        [RavenAction("/admin/tasks/delete", "POST", "/admin/tasks/delete?name={databaseName:string}&id={taskId:long}&type={taskType:string}&taskName={taskName:string}")]
         public async Task DeleteOngoingTask()
         {
             var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -545,13 +547,14 @@ namespace Raven.Server.Web.System
 
             var id = GetLongQueryString("id");
             var typeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+            var taskName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("taskName");
 
             if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
                 throw new ArgumentException($"Unknown task type: {type}", "type");
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var (index, _) = await ServerStore.DeleteOngoingTask(id, type, dbName);
+                var (index, _) = await ServerStore.DeleteOngoingTask(id, taskName, type, dbName);
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
@@ -589,13 +592,12 @@ namespace Raven.Server.Web.System
         }
     }
 
-    public abstract class OngoingTask : IDynamicJson // Single task info - Common to all tasks types
+    public abstract class OngoingTask : IDynamicJson // Common info for all tasks types - used for Ongoing Tasks List View in studio
     {
         public long TaskId { get; set; }
         public OngoingTaskType TaskType { get; protected set; }
         public NodeId ResponsibleNode { get; set; }
         public OngoingTaskState TaskState { get; set; }
-        public DateTime LastModificationTime { get; set; }
         public OngoingTaskConnectionStatus TaskConnectionStatus { get; set; }
         public string TaskName { get; set; }
 
@@ -607,29 +609,32 @@ namespace Raven.Server.Web.System
                 [nameof(TaskType)] = TaskType,
                 [nameof(ResponsibleNode)] = ResponsibleNode?.ToJson(),
                 [nameof(TaskState)] = TaskState,
-                [nameof(LastModificationTime)] = LastModificationTime,
                 [nameof(TaskConnectionStatus)] = TaskConnectionStatus,
                 [nameof(TaskName)] = TaskName
         };
         }
     }
-
-    public class OngoingTaskSubscription : OngoingTask
+    
+    public class OngoingTaskSubscription : OngoingTask 
     {
         public OngoingTaskSubscription()
         {
             TaskType = OngoingTaskType.Subscription;
         }
-        
-        public ChangeVectorEntry[] ChangeVector { get; set; }
-      
+       
+        public string Collection { get; set; }
+        public DateTime TimeOfLastClientActivity { get; set; }
+
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
-            json[nameof(ChangeVector)] = ChangeVector?.ToJson();
+            json[nameof(Collection)] = Collection;
+            json[nameof(TimeOfLastClientActivity)] = TimeOfLastClientActivity;
             return json;
         }
     }
+
     public class OngoingTaskReplication : OngoingTask
     {
         public OngoingTaskReplication()

@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -18,9 +15,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
     {
         public SubscriptionCriteria Criteria;
         public ChangeVectorEntry[] InitialChangeVector;
-        public long? SubscriptionId;
-
+        public long? SubscriptionId; 
         public string SubscriptionName;
+        public bool Disabled;
         
         // for serialization
         private PutSubscriptionCommand() : base(null) { }
@@ -29,40 +26,39 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
         }
 
-        public override void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive)
+        public unsafe override void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive)
         {
             var subscriptionId = SubscriptionId ?? index;
-            if (string.IsNullOrEmpty(SubscriptionName) == false)
+            SubscriptionName = string.IsNullOrEmpty(SubscriptionName) ? subscriptionId.ToString() : SubscriptionName;
+            var obj = context.ReadObject(new SubscriptionState {
+                                Criteria = Criteria,
+                                ChangeVector = InitialChangeVector,
+                                SubscriptionId = subscriptionId,
+                                SubscriptionName = SubscriptionName,
+                                TimeOfLastClientActivity = DateTime.UtcNow,
+                                Disabled = Disabled
+            }.ToJson(), SubscriptionName);
+            using (obj)
             {
-                var itemKey = SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, SubscriptionName);
-                using(var obj = context.ReadObject(new DynamicJsonValue
+                string subscriptionItemName = SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, SubscriptionName);
+
+                using (Slice.From(context.Allocator, subscriptionItemName, out Slice valueName))
+                using (Slice.From(context.Allocator, subscriptionItemName.ToLowerInvariant(), out Slice valueNameLowered))
                 {
-                    ["SubscriptionId"] = subscriptionId
-                }, SubscriptionName))
-                using (Slice.From(context.Allocator, itemKey, out Slice valueName))
-                using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
-                {
-                    if (items.ReadByKey(valueNameLowered, out TableValueReader _))
+                    if (items.ReadByKey(valueNameLowered, out TableValueReader tvr))
                     {
-                        throw new InvalidOperationException("A subscription could not be created because the name '" + SubscriptionName + "' is already in use.");
+                        var ptr = tvr.Read(2, out int size);
+                        var doc = new BlittableJsonReaderObject(ptr, size, context);
+
+                        var subscriptionState = JsonDeserializationClient.SubscriptionState(doc);
+
+                        if (SubscriptionId != subscriptionState.SubscriptionId)
+                            throw new InvalidOperationException("A subscription could not be modified because the name '" + subscriptionItemName + "' is already in use in a subscription with different Id.");
+                        
                     }
+
                     ClusterStateMachine.UpdateValue(subscriptionId, items, valueNameLowered, valueName, obj);
                 }
-            }
-            
-            var id = SubscriptionState.GenerateSubscriptionItemNameFromId(DatabaseName, subscriptionId);
-            using(var obj = context.ReadObject(new SubscriptionState
-            {
-                Criteria = Criteria,
-                ChangeVector = InitialChangeVector,
-                SubscriptionId = subscriptionId,
-                SubscriptionName = SubscriptionName,
-                TimeOfLastClientActivity = DateTime.UtcNow
-            }.ToJson(), SubscriptionName))
-            using (Slice.From(context.Allocator, id, out Slice valueName))
-            using (Slice.From(context.Allocator, id.ToLowerInvariant(), out Slice valueNameLowered))
-            {
-                ClusterStateMachine.UpdateValue(subscriptionId, items, valueNameLowered, valueName, obj);
             }
         }
 
@@ -81,6 +77,8 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             };
             json[nameof(InitialChangeVector)] = InitialChangeVector?.ToJson();
             json[nameof(SubscriptionName)] = SubscriptionName;
+            json[nameof(SubscriptionId)] = SubscriptionId;
+            json[nameof(Disabled)] = Disabled;
 
         }
     }

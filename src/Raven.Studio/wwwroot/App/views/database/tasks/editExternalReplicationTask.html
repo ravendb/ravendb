@@ -2,9 +2,7 @@
     <div class="row flex-row absolute-fill">
         <div class="col-xs-12 col-lg-6 flex-vertical">
             <div class="flex-header">
-                <button data-bind="click: saveExternalReplication" class="btn btn-primary"><i class="icon-save"></i> 
-                    <span>Save</span>
-                </button>
+                <button data-bind="click: saveExternalReplication" class="btn btn-primary"><i class="icon-save"></i><span>Save</span></button>
                 <button data-bind="click: cancelOperation" class="btn btn-default" title="Return to Ongoing Tasks View"><i class="icon-cancel"></i><span>Cancel</span></button>
             </div>
             <div class="panel">
@@ -12,10 +10,10 @@
                     <div class="panel-body" data-bind="with: editedExternalReplication">
                         <h2 data-bind="visible: $parent.isAddingNewReplicationTask">New External Replication</h2>
                         <h2 data-bind="visible: !$parent.isAddingNewReplicationTask()">Edit External Replication</h2>
-                        <div class="form-group" data-bind="validationElement: taskName">
+                        <div class="form-group">
                             <label for="taskName" class="control-label">Task Name</label>
-                            <div class="flex-grow">
-                                <input type="text" class="form-control" data-bind="value: taskName" id="taskName" placeholder="Enter a task name of your choice">
+                            <div class="flex-grow" data-bind="validationElement: taskName">
+                                <input type="text" class="form-control" data-bind="value: taskName" id="taskName" placeholder="Enter a descriptive name for the replication task">
                             </div>
                         </div>
                         <div class="form-group" data-bind="validationElement: destinationURL">
@@ -24,9 +22,9 @@
                                 <input type="text" class="form-control" data-bind="value: destinationURL" id="url">     
                             </div>
                         </div>
-                        <div class="form-group" data-bind="validationElement: destinationDB">
+                        <div class="form-group">
                             <label for="databaseName" class="control-label">Destination DB</label>
-                            <div class="flex-grow">
+                            <div class="flex-grow" data-bind="validationElement: destinationDB">
                                 <input type="text" class="form-control" data-bind="value: destinationDB" id="databaseName">
                             </div>
                         </div>
