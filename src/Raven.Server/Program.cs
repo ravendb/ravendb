@@ -1,7 +1,5 @@
 using System;
 using System.IO;
-using System.Diagnostics;
-using System.IO.Pipes;
 using System.Linq;
 using System.Runtime.Loader;
 using System.Threading;
@@ -13,9 +11,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Sparrow.LowMemory;
-using Sparrow.Platform;
-using Sparrow.Utils;
 
 namespace Raven.Server
 {
