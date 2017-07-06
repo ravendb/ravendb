@@ -1,6 +1,5 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import saveDatabaseSettingsCommand = require("commands/resources/saveDatabaseSettingsCommand");
-import getConfigurationSettingsCommand = require("commands/database/globalConfig/getConfigurationSettingsCommand");
 import document = require("models/database/documents/document");
 import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
@@ -19,8 +18,6 @@ class quotas extends viewModelBase {
     warningThresholdForDocs: configurationSetting;
  
     isSaveEnabled: KnockoutComputed<boolean>;
-    usingGlobal = ko.observable<boolean>(false);
-    hasGlobalValues = ko.observable<boolean>(false);
     isForbidden = ko.observable<boolean>(false);
     
 
@@ -59,6 +56,7 @@ class quotas extends viewModelBase {
             .execute()
             .done((doc: document) => this.settingsDocument(doc));
 
+        /* TODO
         var configTask = new getConfigurationSettingsCommand(db,
             ["Raven/Quotas/Size/HardLimitInKB", "Raven/Quotas/Size/SoftMarginInKB", "Raven/Quotas/Documents/HardLimit", "Raven/Quotas/Documents/SoftLimit"])
             .execute()
@@ -67,9 +65,6 @@ class quotas extends viewModelBase {
                 this.warningLimitThreshold = result.results["Raven/Quotas/Size/SoftMarginInKB"];
                 this.maxNumberOfDocs = result.results["Raven/Quotas/Documents/HardLimit"];
                 this.warningThresholdForDocs = result.results["Raven/Quotas/Documents/SoftLimit"];
-
-                this.usingGlobal(this.maximumSize.isUsingGlobal());
-                this.hasGlobalValues(this.maximumSize.globalExists());
 
                 var divideBy1024 = (x: KnockoutObservable<any>) => {
                     if (x()) {
@@ -82,8 +77,10 @@ class quotas extends viewModelBase {
                 divideBy1024(this.warningLimitThreshold.effectiveValue);
                 divideBy1024(this.warningLimitThreshold.globalValue);
             });
+        
+        return $.when<any>(dbSettingsTask, configTask);*/
 
-        return $.when<any>(dbSettingsTask, configTask);
+        return null; //TODO: delete me!
     }
 
     initializeDirtyFlag() {
@@ -91,8 +88,7 @@ class quotas extends viewModelBase {
             this.maximumSize.effectiveValue, this.maximumSize.localExists,
             this.warningLimitThreshold.effectiveValue, this.warningLimitThreshold.localExists,
             this.maxNumberOfDocs.effectiveValue, this.maxNumberOfDocs.localExists,
-            this.warningThresholdForDocs.effectiveValue, this.warningThresholdForDocs.localExists,
-            this.usingGlobal
+            this.warningThresholdForDocs.effectiveValue, this.warningThresholdForDocs.localExists
         ]);
     }
 
@@ -105,17 +101,10 @@ class quotas extends viewModelBase {
             settingsDocument["@metadata"] = this.settingsDocument().__metadata;
             settingsDocument["@metadata"]["@etag"] = (<any>this.settingsDocument()).__metadata["@etag"];
             var doc: any = new document(settingsDocument.toDto(true));
-            if (this.usingGlobal()) {
-                delete doc["Settings"]["Raven/Quotas/Size/HardLimitInKB"]; 
-                delete doc["Settings"]["Raven/Quotas/Size/SoftMarginInKB"];
-                delete doc["Settings"]["Raven/Quotas/Documents/HardLimit"];
-                delete doc["Settings"]["Raven/Quotas/Documents/SoftLimit"];
-            } else {
-                doc["Settings"]["Raven/Quotas/Size/HardLimitInKB"] = <any>this.maximumSize.effectiveValue() * 1024;
-                doc["Settings"]["Raven/Quotas/Size/SoftMarginInKB"] = <any>this.warningLimitThreshold.effectiveValue() * 1024;
-                doc["Settings"]["Raven/Quotas/Documents/HardLimit"] = this.maxNumberOfDocs.effectiveValue();
-                doc["Settings"]["Raven/Quotas/Documents/SoftLimit"] = this.warningThresholdForDocs.effectiveValue();
-            }
+            doc["Settings"]["Raven/Quotas/Size/HardLimitInKB"] = <any>this.maximumSize.effectiveValue() * 1024;
+            doc["Settings"]["Raven/Quotas/Size/SoftMarginInKB"] = <any>this.warningLimitThreshold.effectiveValue() * 1024;
+            doc["Settings"]["Raven/Quotas/Documents/HardLimit"] = this.maxNumberOfDocs.effectiveValue();
+            doc["Settings"]["Raven/Quotas/Documents/SoftLimit"] = this.warningThresholdForDocs.effectiveValue();
             
             var saveTask = new saveDatabaseSettingsCommand(db, doc).execute();
             saveTask.done((saveResult: databaseDocumentSaveDto) => {
@@ -123,20 +112,6 @@ class quotas extends viewModelBase {
                 this.dirtyFlag().reset(); //Resync Changes
             });
         }
-    }
-
-    useLocal() {
-        eventsCollector.default.reportEvent("quotas", "use-local");
-        this.usingGlobal(false);
-    }
-
-    useGlobal() {
-        eventsCollector.default.reportEvent("quotas", "use-global");
-        this.usingGlobal(true);
-        this.maximumSize.copyFromGlobal();
-        this.warningLimitThreshold.copyFromGlobal();
-        this.maxNumberOfDocs.copyFromGlobal();
-        this.warningThresholdForDocs.copyFromGlobal();
     }
 }
 

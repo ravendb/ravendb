@@ -7,7 +7,6 @@ import getReplicationsCommand = require("commands/database/replication/getReplic
 import saveReplicationDocumentCommand = require("commands/database/replication/saveReplicationDocumentCommand");
 import saveAutomaticConflictResolutionDocumentCommand = require("commands/database/replication/saveAutomaticConflictResolutionDocumentCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import getEffectiveConflictResolutionCommand = require("commands/database/globalConfig/getEffectiveConflictResolutionCommand");
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import resolveAllConflictsCommand = require("commands/database/replication/resolveAllConflictsCommand");

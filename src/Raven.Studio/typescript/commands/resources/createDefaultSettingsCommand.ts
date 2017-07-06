@@ -3,8 +3,6 @@ import document = require("models/database/documents/document");
 import commandBase = require("commands/commandBase");
 import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
 import saveDatabaseSettingsCommand = require("commands/resources/saveDatabaseSettingsCommand");
-import getConfigurationSettingsCommand = require("commands/database/globalConfig/getConfigurationSettingsCommand");
-import configurationSettings = require("models/database/globalConfig/configurationSettings");
 
 class createDefaultSettingsCommand extends commandBase {
     constructor(private db: database, private bundles: string[]) {
@@ -46,22 +44,14 @@ class createDefaultSettingsCommand extends commandBase {
 
     private updateQuotasSettings(): JQueryPromise<any> {
         var taskDone = $.Deferred();
-        this.hasGlobalQuotaSettings().fail(() => taskDone.fail())
-            .done((has: boolean) => {
-                if (has) {
-                    // use global settings - nothing to do
-                    taskDone.resolve();
-                } else {
-                    new getDatabaseSettingsCommand(this.db, false)
-                        .execute()
-                        .fail(() => taskDone.fail())
-                        .then(this.fillDefaultQuotasSettings)
-                        .then((doc) => this.saveDatabaseSettings(doc))
-                        .fail(() => taskDone.fail())
-                        .then(() => taskDone.resolve());
-                }
-            });
 
+        new getDatabaseSettingsCommand(this.db, false)
+            .execute()
+            .fail(() => taskDone.fail())
+            .then(this.fillDefaultQuotasSettings)
+            .then((doc) => this.saveDatabaseSettings(doc))
+            .fail(() => taskDone.fail())
+            .then(() => taskDone.resolve());
       
         return taskDone;
     }
@@ -99,34 +89,7 @@ class createDefaultSettingsCommand extends commandBase {
         return saveTask;
     }*/
 
-    /* TODO
 
-    private hasGlobalVersioningSettings(): JQueryPromise<boolean> {
-        var hasGlobal = $.Deferred();
-        new getEffectiveVersioningsCommand(this.db)
-            .execute()
-            .done((data: configurationDocument<versioningEntry>[]) => {
-                hasGlobal.resolve(!!data.first(config => config.globalExists()));
-            })
-            .fail(() => hasGlobal.reject());
-
-        return hasGlobal.promise();
-    }*/
-
-    private hasGlobalQuotaSettings(): JQueryPromise<boolean> {
-        var hasGlobal = $.Deferred();
-        new getConfigurationSettingsCommand(this.db,
-            ["Raven/Quotas/Size/HardLimitInKB"])
-            .execute()
-            .done((result: configurationSettings) => {
-                // note: we detect presence of global config based on single property!
-                var hardLimit = result.results["Raven/Quotas/Size/HardLimitInKB"];
-                hasGlobal.resolve(hardLimit.globalExists());
-            })
-            .fail(() => hasGlobal.reject());
-
-        return hasGlobal.promise();
-    }
 }
 
 export = createDefaultSettingsCommand;
