@@ -10,6 +10,11 @@ namespace SlowTests.Tests.Bugs.TransformResults
 {
     public class SortHintTester : RavenTestBase
     {
+        protected override void ModifyStore(DocumentStore store)
+        {
+            store.Conventions.MaxNumberOfRequestsPerSession = 1000000; // 1 Million
+        }
+
         [Fact]
         public void will_fail_with_request_headers_too_long()
         {
@@ -18,7 +23,6 @@ namespace SlowTests.Tests.Bugs.TransformResults
                 new Answers_ByAnswerEntity().Execute(store);
                 new Answers_ByAnswerEntityTransformer().Execute(store);
 
-                store.Conventions.MaxNumberOfRequestsPerSession = 1000000; // 1 Million
                 CreateEntities(store);
 
                 const string content = "This is doable";

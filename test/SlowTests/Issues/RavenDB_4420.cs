@@ -15,6 +15,10 @@ namespace SlowTests.Issues
 {
     public class RavenDB_4420 : RavenTestBase
     {
+        protected override void ModifyStore(DocumentStore store)
+        {
+            store.Conventions.SaveEnumsAsIntegers = true;
+        }
 
         [Fact]
         public void CanQueryProperlyWhenSaveEnumAsIntegerIsSetToTrue()
@@ -24,7 +28,6 @@ namespace SlowTests.Issues
                 // arrange
                 store.ExecuteIndex(new MyIndex());
 
-                store.Conventions.SaveEnumsAsIntegers = true;
                 InsertTwoDocuments(store);
 
                 var values = new[] { MyEnum.Value1, MyEnum.Value2 };

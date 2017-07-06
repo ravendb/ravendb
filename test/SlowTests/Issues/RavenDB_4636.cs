@@ -11,6 +11,7 @@ namespace SlowTests.Issues
         [Fact]
         public void CanInjectConfigurationFromServer()
         {
+            DoNotReuseServer();// we modify global server configuration, and it impacts other tests
             using (var store = GetDocumentStore())
             {
                 var requestExecutor = store.GetRequestExecutor();
