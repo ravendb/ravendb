@@ -8,7 +8,7 @@ class getReplicationSourcesCommand extends commandBase {
 
     execute(): JQueryPromise<dictionary<string>> {
         var args = {
-            startsWith: "Raven/Replication/Sources",
+            startsWith: "Raven/Replication/Sources", //TODO: obsolete?
             exclude: <string> null,
             start: 0,
             pageSize: 1024

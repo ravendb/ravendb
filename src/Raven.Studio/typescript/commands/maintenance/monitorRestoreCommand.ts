@@ -7,7 +7,7 @@ class monitorRestoreCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        new getDocumentWithMetadataCommand("Raven/Restore/Status", null)
+        new getDocumentWithMetadataCommand("Raven/Restore/Status", null) //TODO: obsolete
             .execute()
             .fail((response: JQueryXHR) => {
                 setTimeout(() => this.execute(), 1000);

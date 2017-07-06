@@ -10,7 +10,6 @@ import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBinding
 import getEffectiveConflictResolutionCommand = require("commands/database/globalConfig/getEffectiveConflictResolutionCommand");
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
-import enableReplicationCommand = require("commands/database/replication/enableReplicationCommand");
 import resolveAllConflictsCommand = require("commands/database/replication/resolveAllConflictsCommand");
 import eventsCollector = require("common/eventsCollector");
 
@@ -206,19 +205,7 @@ class replications extends viewModelBase {
         }
     }
 
-    enableReplication() {
-        eventsCollector.default.reportEvent("replications", "enable-replication");
-
-        new enableReplicationCommand(this.activeDatabase())
-            .execute()
-            .done((bundles) => {
-                var db = this.activeDatabase();
-                db.activeBundles(bundles);
-                this.replicationEnabled(true);
-                this.fetchAutomaticConflictResolution(db);
-                this.fetchReplications(db);
-            });
-    }*/
+   */
 
 }
 
