@@ -174,7 +174,7 @@ namespace Raven.Server
                 Path.Combine(AppContext.BaseDirectory, configuration.Logs.Path));
 
 
-            return RavenCli.Start(server);
+            return RavenCli.Start(server, Console.Out, Console.In, true);
         }
 
         public static void WriteServerStatsAndWaitForEsc(RavenServer server)

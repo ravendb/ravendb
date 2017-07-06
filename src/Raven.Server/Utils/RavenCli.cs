@@ -64,9 +64,12 @@ namespace Raven.Server.Utils
                 }
             }
             if (test == false)
-                Console.Write(msg);
+                _writer.Write(msg);
         };
+
         private static List<string> _promptArgs = new List<string> { "ravendb" };
+        private static TextWriter _writer;
+        private static TextReader _reader;
 
 
         private class SingleAction
@@ -78,30 +81,48 @@ namespace Raven.Server.Utils
 
         private static bool CommandQuit(List<string> args)
         {
-            Console.ResetColor();
-            Console.WriteLine();
-            Console.Write("Are you sure you want to quit the server ? [y/N] : ");
-            Console.Out.Flush();
+            ResetColor();
+            _writer.WriteLine();
+            _writer.Write("Are you sure you want to quit the server ? [y/N] : ");
+            _writer.Flush();
 
-            var k = Console.ReadKey();
-            Console.Out.Flush();
+            var k = ReadKey();
+            _writer.Flush();
 
-            Console.WriteLine();
-            return char.ToLower(k.KeyChar).Equals('y');
+            _writer.WriteLine();
+            return char.ToLower(k).Equals('y');
+        }
+
+        private static char ReadKey()
+        {
+            if (_consoleColoring)
+                return Console.ReadKey().KeyChar;
+
+            var c = new char[1];
+            while (_reader.Read(c, 0, 1) < 1)
+            {
+                
+            }
+            return c[0];
+        }
+
+        private static string ReadLine()
+        {
+            return _consoleColoring ? Console.ReadLine() : _reader.ReadLine();
         }
 
         private static bool CommandResetServer(List<string> args)
         {
-            Console.ResetColor();
-            Console.WriteLine();
-            Console.Write("Are you sure you want to reset the server ? [y/N] : ");
-            Console.Out.Flush();
+            ResetColor();
+            _writer.WriteLine();
+            _writer.Write("Are you sure you want to reset the server ? [y/N] : ");
+            _writer.Flush();
 
-            var k = Console.ReadKey();
-            Console.Out.Flush();
+            var k = ReadKey();
+            _writer.Flush();
 
-            Console.WriteLine();
-            return char.ToLower(k.KeyChar).Equals('y');
+            _writer.WriteLine();
+            return char.ToLower(k).Equals('y');
         }
 
         private static bool CommandStats(List<string> args)
@@ -140,36 +161,36 @@ namespace Raven.Server.Utils
                 new[] {"label", "any label"},
             };
 
-            Console.ResetColor();
+            ResetColor();
             var msg = new StringBuilder();
             msg.Append("Usage: prompt <[label] | [ %D | %T | %M ] | ...>" + Environment.NewLine + Environment.NewLine);
             msg.Append("Options:" + Environment.NewLine);
-            Console.WriteLine(msg);
+            _writer.WriteLine(msg);
 
             foreach (var cmd in commandDescription)
             {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.Write("\t" + cmd[0]);
-                Console.ForegroundColor = ConsoleColor.DarkYellow;
-                Console.WriteLine(new string(' ', 25 - cmd[0].Length) + cmd[1]);
+                ForegroundColor(ConsoleColor.Yellow);
+                _writer.Write("\t" + cmd[0]);
+                ForegroundColor(ConsoleColor.DarkYellow);
+                _writer.WriteLine(new string(' ', 25 - cmd[0].Length) + cmd[1]);
             }
-            Console.ResetColor();
-            Console.WriteLine();
-            Console.Out.Flush();
+            ResetColor();
+            _writer.WriteLine();
+            _writer.Flush();
             return true;
         }
 
         private static bool CommandGc(List<string> args)
         {
             var genNum = Convert.ToInt32(args.First());
-            Console.ResetColor();
-            Console.Write("Before collecting, managed memory used: ");
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine(new Size(GC.GetTotalMemory(false), SizeUnit.Bytes));
-            Console.ResetColor();
+            ResetColor();
+            _writer.Write("Before collecting, managed memory used: ");
+            ForegroundColor(ConsoleColor.Cyan);
+            _writer.WriteLine(new Size(GC.GetTotalMemory(false), SizeUnit.Bytes));
+            ResetColor();
             var startTime = DateTime.UtcNow;
-            Console.Write("Garbage Collecting... ");
-            Console.Out.Flush();
+            _writer.Write("Garbage Collecting... ");
+            _writer.Flush();
 
             switch (genNum)
             {
@@ -190,18 +211,18 @@ namespace Raven.Server.Utils
             GC.WaitForPendingFinalizers();
             var actionTime = DateTime.UtcNow - startTime;
 
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("Collected.");
-            Console.ResetColor();
-            Console.Write("After collecting, managed memory used:  ");
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.Write(new Size(GC.GetTotalMemory(false), SizeUnit.Bytes));
-            Console.ResetColor();
-            Console.Write(" at ");
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine(actionTime.TotalSeconds + " Seconds");
-            Console.ResetColor();
-            Console.Out.Flush();
+            ForegroundColor(ConsoleColor.Green);
+            _writer.WriteLine("Collected.");
+            ResetColor();
+            _writer.Write("After collecting, managed memory used:  ");
+            ForegroundColor(ConsoleColor.Cyan);
+            _writer.Write(new Size(GC.GetTotalMemory(false), SizeUnit.Bytes));
+            ResetColor();
+            _writer.Write(" at ");
+            ForegroundColor(ConsoleColor.Cyan);
+            _writer.WriteLine(actionTime.TotalSeconds + " Seconds");
+            ResetColor();
+            _writer.Flush();
 
             return true;
         }
@@ -228,34 +249,36 @@ namespace Raven.Server.Utils
 
         private static bool CommandClear(List<string> args)
         {
-            Console.Clear();
-            Console.Out.Flush();
+            if (_consoleColoring)
+                Console.Clear();
+            _writer.Flush();
             return true;
         }
 
         private static bool CommandInfo(List<string> args)
         {
             var memoryInfo = MemoryInformation.GetMemoryInfo();
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine(" Build {0}, Version {1}, SemVer {2}, Commit {3}\r\n PID {4}, {5} bits, {6} Cores, Arch: {9}\r\n {7} Physical Memory, {8} Available Memory",
+            ForegroundColor(ConsoleColor.Cyan);
+            _writer.WriteLine(" Build {0}, Version {1}, SemVer {2}, Commit {3}\r\n PID {4}, {5} bits, {6} Cores, Arch: {9}\r\n {7} Physical Memory, {8} Available Memory",
                 ServerVersion.Build, ServerVersion.Version, ServerVersion.FullVersion, ServerVersion.CommitHash, Process.GetCurrentProcess().Id,
                 IntPtr.Size * 8, ProcessorInfo.ProcessorCount, memoryInfo.TotalPhysicalMemory, memoryInfo.AvailableMemory, RuntimeInformation.OSArchitecture);
 
             var bitsNum = IntPtr.Size * 8;
             if (bitsNum == 64 && _server.Configuration.Storage.ForceUsing32BitsPager)
             {
-                Console.WriteLine(" Running in 32 bits mode");
+                _writer.WriteLine(" Running in 32 bits mode");
             }
 
-            Console.ResetColor();
-            Console.Out.Flush();
+            ResetColor();
+            _writer.Flush();
             return true;
         }
 
         private static bool CommandLogo(List<string> args)
         {
             if (args == null || args.First().Equals("no-clear") == false)
-                Console.Clear();
+                if (_consoleColoring)
+                    Console.Clear();
             WelcomeMessage.Print();
             return true;
         }
@@ -276,9 +299,9 @@ namespace Raven.Server.Utils
 
         private static bool CommandLowMem(List<string> args)
         {
-            Console.ResetColor();
-            Console.Write("Before simulating low-mem, memory stats: ");
-            Console.ForegroundColor = ConsoleColor.Cyan;
+            ResetColor();
+            _writer.Write("Before simulating low-mem, memory stats: ");
+            ForegroundColor(ConsoleColor.Cyan);
             var json = MemoryStatsHandler.MemoryStatsInternal();
             var humaneProp = (json["Humane"] as DynamicJsonValue);
 
@@ -286,33 +309,33 @@ namespace Raven.Server.Utils
             msg.Append($"Working Set:{humaneProp?["WorkingSet"]}");
             msg.Append($" Unmamanged Memory:{humaneProp?["TotalUnmanagedAllocations"]}");
             msg.Append($" Managed Memory:{humaneProp?["ManagedAllocations"]}");
-            Console.WriteLine(msg);
-            Console.ResetColor();
-            Console.Write("Sending Low Memory simulation signal... ");
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("Sent.");
-            Console.ResetColor();
-            Console.Write("After sending low mem simulation event, memory stats: ");
-            Console.ForegroundColor = ConsoleColor.Cyan;
+            _writer.WriteLine(msg);
+            ResetColor();
+            _writer.Write("Sending Low Memory simulation signal... ");
+            ForegroundColor(ConsoleColor.Green);
+            _writer.WriteLine("Sent.");
+            ResetColor();
+            _writer.Write("After sending low mem simulation event, memory stats: ");
+            ForegroundColor(ConsoleColor.Cyan);
             msg.Clear();
             msg.Append($"Working Set:{humaneProp?["WorkingSet"]}");
             msg.Append($" Unmamanged Memory:{humaneProp?["TotalUnmanagedAllocations"]}");
             msg.Append($" Managed Memory:{humaneProp?["ManagedAllocations"]}");
-            Console.WriteLine(msg);
-            Console.ResetColor();
-            Console.Out.Flush();
+            _writer.WriteLine(msg);
+            ResetColor();
+            _writer.Flush();
 
 
 
 
-            Console.ResetColor();
+            ResetColor();
             
-            Console.Out.Flush();
+            _writer.Flush();
             LowMemoryNotification.Instance.SimulateLowMemoryNotification();
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("Sent.");
-            Console.ResetColor();
-            Console.Out.Flush();
+            ForegroundColor(ConsoleColor.Green);
+            _writer.WriteLine("Sent.");
+            ResetColor();
+            _writer.Flush();
 
             return true;
         }
@@ -334,23 +357,23 @@ namespace Raven.Server.Utils
                 new[] {"help", "This help screen"}
             };
 
-            Console.ResetColor();
+            ResetColor();
             var msg = "RavenDB CLI Help" + Environment.NewLine;
             msg += "================" + Environment.NewLine;
             msg += "Usage: <command> [args] [ && | || <command> [args] ] ..." + Environment.NewLine + Environment.NewLine;
             msg += "Commands:" + Environment.NewLine;
-            Console.WriteLine(msg);
+            _writer.WriteLine(msg);
 
             foreach (var cmd in commandDescription)
             {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.Write("\t" + cmd[0]);
-                Console.ForegroundColor = ConsoleColor.DarkYellow;
-                Console.WriteLine(new string(' ', 26 - cmd[0].Length) + cmd[1]);
+                ForegroundColor(ConsoleColor.Yellow);
+                _writer.Write("\t" + cmd[0]);
+                ForegroundColor(ConsoleColor.DarkYellow);
+                _writer.WriteLine(new string(' ', 26 - cmd[0].Length) + cmd[1]);
             }
-            Console.ResetColor();
-            Console.WriteLine();
-            Console.Out.Flush();
+            ResetColor();
+            _writer.WriteLine();
+            _writer.Flush();
 
             return true;
         }
@@ -358,32 +381,32 @@ namespace Raven.Server.Utils
         private static bool CommandImportDir(List<string> args)
         {
             // ImportDir <databaseName> <path-to-dir>
-            Console.ForegroundColor = ConsoleColor.Yellow;
+            ForegroundColor(ConsoleColor.Yellow);
             var serverUrl = _server.WebUrls[0];
-            Console.WriteLine($"ImportDir for database {args[0]} from dir `{args[1]}` to {serverUrl}");
-            Console.Out.Flush();
+            _writer.WriteLine($"ImportDir for database {args[0]} from dir `{args[1]}` to {serverUrl}");
+            _writer.Flush();
 
             var port = new Uri(serverUrl).Port;
 
             var url = $@"http://127.0.0.1:{port}/databases/{args[0]}/smuggler/import-dir?dir={args[1]}";
             using (var client = new HttpClient())
             {
-                Console.WriteLine("Sending at " + DateTime.UtcNow);
-                Console.Out.Flush();
+                _writer.WriteLine("Sending at " + DateTime.UtcNow);
+                _writer.Flush();
                 var result = client.GetAsync(url).Result;
-                Console.WriteLine("At " + DateTime.UtcNow + " : Http Status Code = " + result.StatusCode);
+                _writer.WriteLine("At " + DateTime.UtcNow + " : Http Status Code = " + result.StatusCode);
             }
-            Console.WriteLine("Http client closed.");
-            Console.Out.Flush();
+            _writer.WriteLine("Http client closed.");
+            _writer.Flush();
             return true;
         }
 
         private static bool CommandCreateDb(List<string> args)
         {
             // CreateDb <databaseName> <DataDir>
-            Console.ForegroundColor = ConsoleColor.Yellow;            
-            Console.WriteLine($"Create database {args[0]} with DataDir `{args[1]}`");
-            Console.Out.Flush();
+            ForegroundColor(ConsoleColor.Yellow);            
+            _writer.WriteLine($"Create database {args[0]} with DataDir `{args[1]}`");
+            _writer.Flush();
 
             var serverUrl = _server.WebUrls[0];
             var port = new Uri(serverUrl).Port;
@@ -397,9 +420,9 @@ namespace Raven.Server.Utils
                 var doc = MultiDatabase.CreateDatabaseDocument(args[0]);
                 doc.Settings["DataDir"] = args[1];
                 var res = store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc)).Result;
-                Console.WriteLine("Database creation results = " + res.Key);
+                _writer.WriteLine("Database creation results = " + res.Key);
             }
-            Console.Out.Flush();
+            _writer.Flush();
             return true;
         }
 
@@ -426,6 +449,7 @@ namespace Raven.Server.Utils
 
         private static RavenServer _server;
         private static bool _experimental;
+        private static bool _consoleColoring;
 
         private enum Command
         {
@@ -442,11 +466,12 @@ namespace Raven.Server.Utils
             Gc,
             LowMem,
             Help,
-            UnknownCommand,
             Logo,
             Experimental,
             ImportDir,
-            CreateDb
+            CreateDb,
+
+            UnknownCommand
         }
 
         private enum LineState
@@ -482,9 +507,25 @@ namespace Raven.Server.Utils
         }
 
 
-        public static bool Start(RavenServer server)
+        private static void ResetColor()
+        {
+            if (_consoleColoring)
+                Console.ResetColor();
+        }
+
+        private static void ForegroundColor(ConsoleColor color)
+        {
+            if (_consoleColoring)
+                Console.ForegroundColor = color;
+        }
+
+        public static bool Start(RavenServer server, TextWriter textWriter, TextReader textReader, bool consoleColoring)
         {
             _server = server;
+
+            _writer = textWriter;
+            _reader = textReader;
+            _consoleColoring = consoleColoring;
 
             try
             {
@@ -493,14 +534,14 @@ namespace Raven.Server.Utils
             catch (Exception ex)
             {
                 // incase of cli failure - prevent server from going down, and switch to a (very) simple fallback cli
-                Console.WriteLine("\nERROR in CLI:" + ex);
-                Console.WriteLine("\n\nSwitching to simple cli...");
+                _writer.WriteLine("\nERROR in CLI:" + ex);
+                _writer.WriteLine("\n\nSwitching to simple cli...");
 
                 while (true)
                 {
-                    Console.Write("(simple cli)>");
-                    Console.Out.Flush();
-                    var line = Console.ReadLine();
+                    _writer.Write("(simple cli)>");
+                    _writer.Flush();
+                    var line = ReadLine();
                     if (line == null)
                         continue;
                     switch (line)
@@ -520,8 +561,8 @@ namespace Raven.Server.Utils
                             break;
                         case "h":
                         case "help":
-                            Console.WriteLine("Available commands: quit, reset, log, logoff");
-                            Console.Out.Flush();
+                            _writer.WriteLine("Available commands: quit, reset, log, logoff");
+                            _writer.Flush();
                             break;
                     }
                 }
@@ -531,24 +572,25 @@ namespace Raven.Server.Utils
         public static bool StartCli()
         {
             var ctrlCPressed = false;
-            Console.CancelKeyPress += (sender, args) =>
-            {
-                ctrlCPressed = true;
-            };
+            if (_consoleColoring)
+                Console.CancelKeyPress += (sender, args) =>
+                {
+                    ctrlCPressed = true;
+                };
 
             while (true)
             {
                 PrintCliHeader();
-                var line = Console.ReadLine();
-                Console.Out.Flush();
+                var line = ReadLine();
+                _writer.Flush();
 
                 if (line == null)
                 {
                     Thread.Sleep(75); //waiting for Ctrl+C 
                     if (ctrlCPressed)
                         break;
-                    Console.WriteLine("End of standard input detected, switching to server mode...");
-                    Console.Out.Flush();
+                    _writer.WriteLine("End of standard input detected, switching to server mode...");
+                    _writer.Flush();
 
                     Program.RunAsService();
                     return false;
@@ -571,20 +613,20 @@ namespace Raven.Server.Utils
                 {
                     if (lastRc == false)
                     {
-                        Console.ForegroundColor = WarningColor;
+                        ForegroundColor(WarningColor);
                         if (parsedCommand.PrevConcatAction == ConcatAction.And)
                         {
-                            Console.WriteLine($"Warning: Will not execute command `{parsedCommand.Command}` as previous command return non-successful return code");
+                            _writer.WriteLine($"Warning: Will not execute command `{parsedCommand.Command}` as previous command return non-successful return code");
                             break;
                         }
-                        Console.WriteLine($"Warning: Will execute command `{parsedCommand.Command}` after previous command return non-successful return code");
+                        _writer.WriteLine($"Warning: Will execute command `{parsedCommand.Command}` after previous command return non-successful return code");
                     }
 
                     if (Actions.ContainsKey(parsedCommand.Command) == false)
                     {
-                        Console.ForegroundColor = ErrorColor;
-                        Console.WriteLine($"CLI Internal Error (missing definition for the command: {parsedCommand.Command})");
-                        Console.WriteLine();
+                        ForegroundColor(ErrorColor);
+                        _writer.WriteLine($"CLI Internal Error (missing definition for the command: {parsedCommand.Command})");
+                        _writer.WriteLine();
                         lastRc = false;
                         continue;
                     }
@@ -597,22 +639,22 @@ namespace Raven.Server.Utils
                         {
                             if (_experimental == false)
                             {
-                                Console.ForegroundColor = ErrorColor;
-                                Console.WriteLine($"{parsedCommand.Command} is experimental, and can be executed only if expermintal option set to on");
-                                Console.WriteLine();
+                                ForegroundColor(ErrorColor);
+                                _writer.WriteLine($"{parsedCommand.Command} is experimental, and can be executed only if expermintal option set to on");
+                                _writer.WriteLine();
                                 lastRc = false;
                                 continue;
                             }
-                            Console.ForegroundColor = WarningColor;
-                            Console.WriteLine();
-                            Console.Write("Are you sure you want to run experimental command : " + parsedCommand.Command + " ? [y/N] ");
-                            Console.Out.Flush();
+                            ForegroundColor(WarningColor);
+                            _writer.WriteLine();
+                            _writer.Write("Are you sure you want to run experimental command : " + parsedCommand.Command + " ? [y/N] ");
+                            _writer.Flush();
 
-                            var k = Console.ReadKey();
-                            Console.Out.Flush();
+                            var k = ReadKey();
+                            _writer.Flush();
 
-                            Console.WriteLine();
-                            if (char.ToLower(k.KeyChar).Equals('y') == false)
+                            _writer.WriteLine();
+                            if (char.ToLower(k).Equals('y') == false)
 
                             {
                                 lastRc = false;
@@ -623,15 +665,15 @@ namespace Raven.Server.Utils
                     }
                     catch (Exception ex)
                     {
-                        Console.ForegroundColor = ErrorColor;
-                        Console.WriteLine(ex);
-                        Console.WriteLine();
-                        Console.ResetColor();
+                        ForegroundColor(ErrorColor);
+                        _writer.WriteLine(ex);
+                        _writer.WriteLine();
+                        ResetColor();
                         break;
                     }
                     if (lastRc)
                     {
-                        Console.Out.Flush();
+                        _writer.Flush();
 
                         if (parsedCommand.Command == Command.ResetServer)
                             return true;
@@ -642,13 +684,13 @@ namespace Raven.Server.Utils
 
                 if (lastRc == false)
                 {
-                    Console.ForegroundColor = NonSuccessColor;
-                    Console.WriteLine("Command Failed");
-                    Console.WriteLine();
+                    ForegroundColor(NonSuccessColor);
+                    _writer.WriteLine("Command Failed");
+                    _writer.WriteLine();
                 }
-                Console.Out.Flush();
+                _writer.Flush();
             }
-            Console.Out.Flush();
+            _writer.Flush();
             return false; // cannot reach here
         }
 
@@ -661,6 +703,9 @@ namespace Raven.Server.Utils
 
         private static Command GetCommand(string fromWord)
         {
+            if (char.IsNumber(fromWord[0]))
+                return Command.UnknownCommand; // TryParse of enum returns true for numbers
+
             Command cmd = Command.UnknownCommand;
             var txt = fromWord.ToLower();
             Command outText;
@@ -809,28 +854,28 @@ namespace Raven.Server.Utils
 
         private static void PrintCliHeader()
         {
-            Console.ForegroundColor = PromptHeaderColor;
+            ForegroundColor(PromptHeaderColor);
             try
             {
                 Prompt.Invoke(_promptArgs, false);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("PromptError:" + ex.Message);
+                _writer.WriteLine("PromptError:" + ex.Message);
             }
-            Console.ForegroundColor = PromptArrowColor;
-            Console.Write("> ");
-            Console.ForegroundColor = UserInputColor;
-            Console.Out.Flush();
+            ForegroundColor(PromptArrowColor);
+            _writer.Write("> ");
+            ForegroundColor(UserInputColor);
+            _writer.Flush();
         }
 
         private static void WriteError(string err)
         {
-            Console.ForegroundColor = ErrorColor;
-            Console.Write($"ERROR: {err}");
-            Console.WriteLine();
-            Console.ResetColor();
-            Console.Out.Flush();
+            ForegroundColor(ErrorColor);
+            _writer.Write($"ERROR: {err}");
+            _writer.WriteLine();
+            ResetColor();
+            _writer.Flush();
         }
     }
 }
