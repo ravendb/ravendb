@@ -3,9 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using Raven.Client.Documents;
+using Raven.Client.Server;
+using Raven.Client.Server.Operations;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.ServerWide;
 using Sparrow;
@@ -69,6 +73,7 @@ namespace Raven.Server.Utils
         {
             public int NumOfArgs;
             public Func<List<string>, bool> DelegateFync;
+            public bool Experimental { get; set; }
         }
 
         private static bool CommandQuit(List<string> args)
@@ -254,6 +259,20 @@ namespace Raven.Server.Utils
             return true;
         }
 
+        private static bool CommandExperimental(List<string> args)
+        {
+            var isOn = args.First().Equals("on");
+            var isOff = args.First().Equals("off");
+            if (!isOff && !isOn)
+            {
+                WriteError("Experimental cli commands can be set to only on or off");
+                return false;
+            }
+
+            _experimental = isOn;
+            return true;
+        }
+
         private static bool CommandLowMem(List<string> args)
         {
             Console.ResetColor();
@@ -280,6 +299,7 @@ namespace Raven.Server.Utils
                 new[] {"log <on | off | http-off>", "set log on or off. http-off can be selected to filter log output"},
                 new[] {"info", "Print system info and current stats"},
                 new[] {"logo [no-clear]", "Clear screen and print initial logo"},
+                new[] {"experimental <on | off>", "Set if to allow experimental cli commands"},
                 new[] {"quit", "Quit server"},
                 new[] {"help", "This help screen"}
             };
@@ -305,26 +325,77 @@ namespace Raven.Server.Utils
             return true;
         }
 
+        private static bool CommandImportDir(List<string> args)
+        {
+            // ImportDir <databaseName> <path-to-dir>
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            var serverUrl = _server.WebUrls[0];
+            Console.WriteLine($"ImportDir for database {args[0]} from dir `{args[1]}` to {serverUrl}");
+            Console.Out.Flush();
 
+            var port = new Uri(serverUrl).Port;
 
+            var url = $@"http://127.0.0.1:{port}/databases/{args[0]}/smuggler/import-dir?dir={args[1]}";
+            using (var client = new HttpClient())
+            {
+                Console.WriteLine("Sending at " + DateTime.UtcNow);
+                Console.Out.Flush();
+                var result = client.GetAsync(url).Result;
+                Console.WriteLine("At " + DateTime.UtcNow + " : Http Status Code = " + result.StatusCode);
+            }
+            Console.WriteLine("Http client closed.");
+            Console.Out.Flush();
+            return true;
+        }
+
+        private static bool CommandCreateDb(List<string> args)
+        {
+            // CreateDb <databaseName> <DataDir>
+            Console.ForegroundColor = ConsoleColor.Yellow;            
+            Console.WriteLine($"Create database {args[0]} with DataDir `{args[1]}`");
+            Console.Out.Flush();
+
+            var serverUrl = _server.WebUrls[0];
+            var port = new Uri(serverUrl).Port;
+
+            using (var store = new DocumentStore
+            {
+                Urls = new [] { $"http://127.0.0.1:{port}" },
+                Database = args[0],                
+            }.Initialize())
+            {
+                var doc = MultiDatabase.CreateDatabaseDocument(args[0]);
+                doc.Settings["DataDir"] = args[1];
+                var res = store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc)).Result;
+                Console.WriteLine("Database creation results = " + res.Key);
+            }
+            Console.Out.Flush();
+            return true;
+        }
 
         private static readonly Dictionary<Command, SingleAction> Actions = new Dictionary<Command, SingleAction>
         {
-            [Command.Prompt] = new SingleAction {NumOfArgs = 1, DelegateFync = CommandPrompt},
-            [Command.HelpPrompt] = new SingleAction {NumOfArgs = 0, DelegateFync = CommandHelpPrompt},
-            [Command.Stats] = new SingleAction {NumOfArgs = 0, DelegateFync = CommandStats},
-            [Command.Gc] = new SingleAction {NumOfArgs = 1, DelegateFync = CommandGc},
-            [Command.Log] = new SingleAction {NumOfArgs = 1, DelegateFync = CommandLog},
-            [Command.Clear] = new SingleAction {NumOfArgs = 0, DelegateFync = CommandClear},
-            [Command.Info] = new SingleAction {NumOfArgs = 0, DelegateFync = CommandInfo},
-            [Command.Logo] = new SingleAction {NumOfArgs = 0, DelegateFync = CommandLogo},
-            [Command.LowMem] = new SingleAction {NumOfArgs = 0, DelegateFync = CommandLowMem},
-            [Command.ResetServer] = new SingleAction {NumOfArgs = 0, DelegateFync = CommandResetServer},
-            [Command.Quit] = new SingleAction {NumOfArgs = 0, DelegateFync = CommandQuit},
-            [Command.Help] = new SingleAction {NumOfArgs = 0, DelegateFync = CommandHelp}
+            [Command.Prompt] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandPrompt },
+            [Command.HelpPrompt] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandHelpPrompt },
+            [Command.Stats] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandStats },
+            [Command.Gc] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandGc },
+            [Command.Log] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandLog },
+            [Command.Clear] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandClear },
+            [Command.Info] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandInfo },
+            [Command.Logo] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLogo },
+            [Command.Experimental] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandExperimental },
+            [Command.LowMem] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLowMem },
+            [Command.ResetServer] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandResetServer },
+            [Command.Quit] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandQuit },
+            [Command.Help] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandHelp },
+
+            // experimental, will not appear in 'help':
+            [Command.ImportDir] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandImportDir, Experimental = true },
+            [Command.CreateDb] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandCreateDb, Experimental = true }
         };
 
         private static RavenServer _server;
+        private static bool _experimental;
 
         private enum Command
         {
@@ -342,7 +413,10 @@ namespace Raven.Server.Utils
             LowMem,
             Help,
             UnknownCommand,
-            Logo
+            Logo,
+            Experimental,
+            ImportDir,
+            CreateDb
         }
 
         private enum LineState
@@ -489,6 +563,32 @@ namespace Raven.Server.Utils
 
                     try
                     {
+                        if (cmd.Experimental)
+                        {
+                            if (_experimental == false)
+                            {
+                                Console.ForegroundColor = ErrorColor;
+                                Console.WriteLine($"{parsedCommand.Command} is experimental, and can be executed only if expermintal option set to on");
+                                Console.WriteLine();
+                                lastRc = false;
+                                continue;
+                            }
+                            Console.ForegroundColor = WarningColor;
+                            Console.WriteLine();
+                            Console.Write("Are you sure you want to run experimental command : " + parsedCommand.Command + " ? [y/N] ");
+                            Console.Out.Flush();
+
+                            var k = Console.ReadKey();
+                            Console.Out.Flush();
+
+                            Console.WriteLine();
+                            if (!(k.KeyChar.Equals('Y') ||
+                                  k.KeyChar.Equals('y')))
+                            {
+                                lastRc = false;
+                                continue;
+                            }
+                        }
                         lastRc = cmd.DelegateFync.Invoke(parsedCommand.Args);
                     }
                     catch (Exception ex)
@@ -596,7 +696,7 @@ namespace Raven.Server.Utils
                 {
                     if (Actions[parsedLine.ParsedCommands.Last().Command].NumOfArgs > 0)
                     {
-                        parsedLine.ErrorMsg = $"Missing argument(s) after command : {parsedLine.ParsedCommands.Last().Command} (should get at least {Actions[parsedLine.ParsedCommands.Last().Command].NumOfArgs} arguments but got none";
+                        parsedLine.ErrorMsg = $"Missing argument(s) after command : {parsedLine.ParsedCommands.Last().Command} (should get at least {Actions[parsedLine.ParsedCommands.Last().Command].NumOfArgs} arguments but got none)";
                         return false;
                     }
                     return true;
