@@ -166,7 +166,7 @@ function getManageServerMenuItem() {
             css: 'icon-license-information',
             dynamicHash: appUrl.forLicenseInformation,
             enabled: canReadOrWrite
-        }),
+        }),*/
         new leafMenuItem({
             route: 'admin/settings/debugInfo',
             moduleId: 'viewmodels/manage/infoPackage',
@@ -176,6 +176,7 @@ function getManageServerMenuItem() {
             dynamicHash: appUrl.forDebugInfo,
             enabled: accessHelper.isGlobalAdmin
         }),
+        /*
         new leafMenuItem({
             route: 'admin/settings/ioTest',
             moduleId: 'viewmodels/manage/ioTest',
