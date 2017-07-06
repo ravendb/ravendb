@@ -3,15 +3,14 @@ import saveDatabaseSettingsCommand = require("commands/resources/saveDatabaseSet
 import document = require("models/database/documents/document");
 import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
-import configurationSetting = require("models/database/globalConfig/configurationSetting");
 import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
-import configurationSettings = require("models/database/globalConfig/configurationSettings");
 import accessHelper = require("viewmodels/shell/accessHelper");
 import eventsCollector = require("common/eventsCollector");
 
 class quotas extends viewModelBase {
     settingsDocument = ko.observable<document>();
 
+/*TODO
     maximumSize: configurationSetting;
     warningLimitThreshold: configurationSetting;
     maxNumberOfDocs: configurationSetting;
@@ -56,7 +55,6 @@ class quotas extends viewModelBase {
             .execute()
             .done((doc: document) => this.settingsDocument(doc));
 
-        /* TODO
         var configTask = new getConfigurationSettingsCommand(db,
             ["Raven/Quotas/Size/HardLimitInKB", "Raven/Quotas/Size/SoftMarginInKB", "Raven/Quotas/Documents/HardLimit", "Raven/Quotas/Documents/SoftLimit"])
             .execute()
@@ -78,9 +76,7 @@ class quotas extends viewModelBase {
                 divideBy1024(this.warningLimitThreshold.globalValue);
             });
         
-        return $.when<any>(dbSettingsTask, configTask);*/
-
-        return null; //TODO: delete me!
+        return $.when<any>(dbSettingsTask, configTask);
     }
 
     initializeDirtyFlag() {
@@ -112,7 +108,7 @@ class quotas extends viewModelBase {
                 this.dirtyFlag().reset(); //Resync Changes
             });
         }
-    }
+    }*/
 }
 
 export = quotas;

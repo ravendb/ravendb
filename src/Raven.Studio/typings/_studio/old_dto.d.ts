@@ -128,29 +128,9 @@ interface replicationDestinationDto {
     Disabled: boolean;
     ClientVisibleUrl: string;
     SpecifiedCollections: dictionary<string>;
-    HasGlobal?: boolean;
-    HasLocal?: boolean;
 }
 
-interface configurationDocumentDto<TClass> {
-    LocalExists?: boolean;
-    GlobalExists?: boolean;
-    MergedDocument: TClass;
-    GlobalDocument?: TClass;
-    Etag?: string;
-    Metadata?: any;
-}
 
-interface configurationSettingDto {
-    LocalExists: boolean;
-    GlobalExists: boolean;
-    EffectiveValue: string;
-    GlobalValue: string;
-}
-
-interface configurationSettingsDto {
-    Results: dictionary<configurationSettingDto>;
-}
 
 interface replicationsDto {
     Destinations: replicationDestinationDto[];
