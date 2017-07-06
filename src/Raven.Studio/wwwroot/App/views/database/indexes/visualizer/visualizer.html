@@ -66,7 +66,7 @@
                 </div>
                 
                 <div data-bind="visible: detailsGraph.viewActive">
-                    <button data-bind="click: detailsGraph.goToMasterView, if: detailsGraph.viewActive" class="btn btn-default">
+                    <button data-bind="click: detailsGraph.goToMasterView, if: detailsGraph.viewActive" class="btn btn-default btn-sm">
                         <i class="icon-arrow-left"></i> <span>Back</span>
                     </button>
 
@@ -89,6 +89,13 @@
                     <li>Click on the tree for map/reduce details. </li>
                 </ol>
             </div>
+            
+            <button class="btn btn-default nav-arrow left" title="Go to previous Map/Reduce tree" data-bind="click: detailsGraph.goToPreviousTree, enable: detailsGraph.canNavigateToPreviousTree, visible: detailsGraph.viewActive">
+                <i class="icon-arrow-filled-left"></i>
+            </button>
+            <button class="btn btn-default nav-arrow right" title="Go to next Map/Reduce tree" data-bind="click: detailsGraph.goToNextTree, enable: detailsGraph.canNavigateToNextTree, visible: detailsGraph.viewActive">
+                <i class="icon-arrow-filled-right"></i>
+            </button>
         </div>
     </div>
 </div>

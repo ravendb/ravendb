@@ -134,7 +134,7 @@ select new
                         index.DoIndexingWork(scope, CancellationToken.None);
 
                         IEnumerable<ReduceTree> trees;
-                        using (index.GetReduceTree("orders/1", out trees))
+                        using (index.GetReduceTree(new [] { "orders/1" }, out trees))
                         {
                             var result = trees.ToList();
 
@@ -142,7 +142,7 @@ select new
 
                             for (int i = 0; i < 2; i++)
                             {
-                                var tree = result[0];
+                                var tree = result[i];
 
                                 Assert.Equal(expectedTreeDepth, tree.Depth);
                                 Assert.Equal(numberOfDocs, tree.NumberOfEntries);
@@ -192,6 +192,93 @@ select new
 
                                 Assert.True(hasSource);
 
+                                Assert.Equal(numberOfDocs, pages.Sum(x => x.Entries.Count));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData(1000)]
+        [InlineData(10)] // nested section
+        public void Getting_trees_for_multiple_docs(int numberOfDocs)
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                using (var index = MapReduceIndex.CreateNew(new IndexDefinition
+                {
+                    Etag = 1,
+                    Name = "Users_ByCount_GroupByProduct",
+                    Maps = { @"from order in docs.Orders
+from line in order.Lines
+select new { Product = line.Product, Count = 1, Total = line.Price }" },
+                    Reduce = @"from result in mapResults
+group result by result.Product into g
+select new
+{
+    Product = g.Key,
+    Count = g.Sum(x=> x.Count),
+    Total = g.Sum(x=> x.Total)
+}",
+                }, database))
+                {
+                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    {
+                        for (int i = 0; i < numberOfDocs; i++)
+                        {
+                            var order = CreateOrder();
+                            PutOrder(database, order, context, i);
+                        }
+
+                        var firstRunStats = new IndexingRunStats();
+                        var scope = new IndexingStatsScope(firstRunStats);
+                        index.DoIndexingWork(scope, CancellationToken.None);
+
+                        var docIds = Enumerable.Range(0, numberOfDocs).Select(x => "orders/" + x).ToArray();
+
+                        IEnumerable<ReduceTree> trees;
+                        using (index.GetReduceTree(docIds, out trees))
+                        {
+                            var result = trees.ToList();
+
+                            Assert.Equal(2, result.Count);
+
+                            for (int i = 0; i < 2; i++)
+                            {
+                                var tree = result[0];
+
+                                List<ReduceTreePage> pages;
+
+                                if (tree.Depth > 1)
+                                {
+                                    // real tree
+                                    pages = tree.Root.Children;
+                                }
+                                else
+                                {
+                                    // nested section
+                                    pages = new List<ReduceTreePage>
+                                    {
+                                        tree.Root
+                                    };
+                                }
+
+                                Assert.NotNull(tree.Root.AggregationResult);
+
+                                var seenSources = new HashSet<string>();
+
+                                foreach (var leafPage in pages)
+                                {
+                                    foreach (var entry in leafPage.Entries)
+                                    {
+                                        Assert.NotNull(entry.Source);
+                                        seenSources.Add(entry.Source);
+                                    }
+                                }
+
+                                Assert.Equal(numberOfDocs, seenSources.Count);
                                 Assert.Equal(numberOfDocs, pages.Sum(x => x.Entries.Count));
                             }
                         }

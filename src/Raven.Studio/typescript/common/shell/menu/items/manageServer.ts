@@ -10,63 +10,6 @@ function getManageServerMenuItem() {
     let canReadOrWrite = settingsAccessAuthorizer.canReadOrWrite;
     var items: menuItem[] = [
         /* TODO
-        new intermediateMenuItem("Global config", [
-            new leafMenuItem({
-                route: "admin/settings/globalConfig",
-                moduleId: "viewmodels/manage/globalConfig/globalConfigPeriodicExport",
-                title: "Periodic export",
-                tooltip: "",
-                nav: true,
-                css: 'icon-periodic-export',
-                dynamicHash: appUrl.forGlobalConfigPeriodicExport
-            }),
-            new leafMenuItem({
-                route: "admin/settings/globalConfigDatabaseSettings",
-                moduleId: "viewmodels/manage/globalConfig/globalConfigDatabaseSettings",
-                title: "Cluster-wide database settings",
-                tooltip: "Global cluster-wide database settings",
-                nav: true,
-                css: 'icon-cluster-wide-database-settings',
-                dynamicHash: appUrl.forGlobalConfigDatabaseSettings
-            }),
-            new leafMenuItem({
-                route: "admin/settings/globalConfigReplication",
-                moduleId: "viewmodels/manage/globalConfig/globalConfigReplications",
-                title: "Replication",
-                tooltip: "Global replication settings",
-                nav: true,
-                css: 'icon-replication',
-                dynamicHash: appUrl.forGlobalConfigReplication
-            }),
-            new leafMenuItem({
-                route: "admin/settings/globalConfigSqlReplication",
-                moduleId: "viewmodels/manage/globalConfig/globalConfigSqlReplication",
-                title: "SQL Replication",
-                tooltip: "Global SQL replication settings",
-                nav: true,
-                css: 'icon-sql-replication',
-                dynamicHash: appUrl.forGlobalConfigSqlReplication
-            }),
-            new leafMenuItem({
-                route: "admin/settings/globalConfigQuotas",
-                moduleId: "viewmodels/manage/globalConfig/globalConfigQuotas",
-                title: "Quotas",
-                tooltip: "Global quotas settings",
-                nav: true,
-                css: 'icon-quotas',
-                dynamicHash: appUrl.forGlobalConfigQuotas
-            }),
-            new leafMenuItem({
-                route: "admin/settings/globalConfigVersioning",
-                moduleId: "viewmodels/manage/globalConfig/globalConfigVersioning",
-                title: "Versioning",
-                tooltip: "Global versioning settings",
-                nav: true,
-                css: 'icon-versioning',
-                dynamicHash: appUrl.forGlobalConfigVersioning
-            })     
-        ]),*/
-        /* TODO
         new leafMenuItem({
             route: ['admin/settings', 'admin/settings/apiKeys'],
             moduleId: 'viewmodels/manage/apiKeys',
@@ -166,7 +109,7 @@ function getManageServerMenuItem() {
             css: 'icon-license-information',
             dynamicHash: appUrl.forLicenseInformation,
             enabled: canReadOrWrite
-        }),
+        }),*/
         new leafMenuItem({
             route: 'admin/settings/debugInfo',
             moduleId: 'viewmodels/manage/infoPackage',
@@ -176,6 +119,7 @@ function getManageServerMenuItem() {
             dynamicHash: appUrl.forDebugInfo,
             enabled: accessHelper.isGlobalAdmin
         }),
+        /*
         new leafMenuItem({
             route: 'admin/settings/ioTest',
             moduleId: 'viewmodels/manage/ioTest',

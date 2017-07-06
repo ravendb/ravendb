@@ -4,7 +4,7 @@ import periodicExportSetup = require("models/database/documents/periodicExportSe
 
 class savePeriodicExportSetupCommand extends commandBase {
 
-    constructor(private setupToPersist: periodicExportSetup, private db: database, private globalConfig = false) {
+    constructor(private setupToPersist: periodicExportSetup, private db: database) {
         super();
     }
 
@@ -22,14 +22,14 @@ class savePeriodicExportSetupCommand extends commandBase {
                 'If-None-Match': this.setupToPersist.getEtag()
             }
         }
-        var url = this.globalConfig ? "/configuration/global/settings" : "/admin/databases?name=" + this.db.name;//TODO: use endpoints
+        var url = "/admin/databases?name=" + this.db.name;//TODO: use endpoints
         var putArgs = JSON.stringify(this.setupToPersist.toDatabaseSettingsDto());
         return this.put(url, putArgs, null, jQueryOptions);
     }
 
     private saveSetup(): JQueryPromise<any> {
         return $.Deferred();
-        /*var url = this.globalConfig ? "/docs?id=Raven/Global/Backup/Periodic/Setup" : "/docs?id=Raven/Backup/Periodic/Setup";//TODO: use endpoints
+        /*var url = "/docs?id=Raven/Backup/Periodic/Setup";//TODO: use endpoints
         var putArgs = JSON.stringify(this.setupToPersist.toDto());
         return this.put(url, putArgs, this.db);*/
     }
