@@ -168,7 +168,7 @@ namespace Raven.Server.Utils
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine(new Size(GC.GetTotalMemory(false), SizeUnit.Bytes));
             Console.ResetColor();
-            Console.Write("Garbaje Collecting... ");
+            Console.Write("Garbage Collecting... ");
             Console.Out.Flush();
 
             switch (genNum)
