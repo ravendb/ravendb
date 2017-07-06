@@ -16,6 +16,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.MoreLikeThis;
+using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
@@ -42,7 +43,7 @@ namespace Raven.Server.Documents.Queries
         {
             DocumentQueryResult result;
             var sw = Stopwatch.StartNew();
-            if (DynamicQueryRunner.IsDynamicIndex(indexName))
+            if (Index.IsDynamicIndex(indexName))
             {
                 var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
 
@@ -66,7 +67,7 @@ namespace Raven.Server.Documents.Queries
 
         public async Task ExecuteStreamQuery(string indexName, IndexQueryServerSide query, HttpResponse response, BlittableJsonTextWriter writer, OperationCancelToken token)
         {
-            if (DynamicQueryRunner.IsDynamicIndex(indexName))
+            if (Index.IsDynamicIndex(indexName))
             {
                 var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
 
@@ -133,6 +134,51 @@ namespace Raven.Server.Documents.Queries
             return index.GetTerms(field, fromValue, pageSize, context, token);
         }
 
+        public SuggestionsQueryResultServerSide ExecuteSuggestionsQuery(string indexName, SuggestionsQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
+        {            
+            if (query == null)
+                throw new ArgumentNullException(nameof(query));
+
+            // Check pre-requisites for the query to happen. 
+            
+            if (Index.IsDynamicIndex(indexName))
+                throw new InvalidOperationException("Cannot get suggestions for dynamic indexes, only static indexes with explicitly defined Suggestions are supported");
+                    
+            if (string.IsNullOrWhiteSpace(query.Term) == false)
+                throw new InvalidOperationException("Suggestions queries require a term.");
+
+            if (string.IsNullOrWhiteSpace(query.Field) == false)
+                throw new InvalidOperationException("Suggestions queries require a field.");
+
+            var sw = Stopwatch.StartNew();
+
+            // Check definition for the index. 
+
+            var index = GetIndex(indexName);
+            var indexDefinition = index.GetIndexDefinition();
+            if (indexDefinition == null)
+                throw new InvalidOperationException($"Could not find specified index '{this}'.");
+
+            if ( indexDefinition.Fields.TryGetValue(query.Field, out IndexFieldOptions field) == false)
+                throw new InvalidOperationException($"Index '{this}' does not have a field '{query.Field}'.");
+
+            if (field.Suggestions == null)
+                throw new InvalidOperationException($"Index '{this}' does not have suggestions configured for field '{query.Field}'.");
+
+            if (field.Suggestions.Value == false)
+                throw new InvalidOperationException($"Index '{this}' have suggestions explicitly disabled for field '{query.Field}'.");
+
+            var etag = index.GetIndexEtag();
+            if (etag == existingResultEtag)
+                return SuggestionsQueryResultServerSide.NotModifiedResult;
+
+            context.OpenReadTransaction();
+
+            var result = index.SuggestionsQuery(query, context, token);
+            result.DurationInMs = (int)sw.Elapsed.TotalMilliseconds;
+            return result;
+        }
+
         public MoreLikeThisQueryResultServerSide ExecuteMoreLikeThisQuery(string indexName, MoreLikeThisQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
         {
             if (query == null)
@@ -157,7 +203,7 @@ namespace Raven.Server.Documents.Queries
 
         public async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(string indexName, IndexQueryServerSide query, long? existingResultEtag, OperationCancelToken token)
         {
-            if (DynamicQueryRunner.IsDynamicIndex(indexName))
+            if (Index.IsDynamicIndex(indexName))
             {
                 var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
                 return await runner.ExecuteIndexEntries(indexName, query, existingResultEtag);
@@ -177,7 +223,7 @@ namespace Raven.Server.Documents.Queries
 
         public List<DynamicQueryToIndexMatcher.Explanation> ExplainDynamicIndexSelection(string indexName, IndexQueryServerSide indexQuery)
         {
-            if (DynamicQueryRunner.IsDynamicIndex(indexName) == false)
+            if (Index.IsDynamicIndex(indexName) == false)
                 throw new InvalidOperationException("Explain can only work on dynamic indexes");
 
             var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, OperationCancelToken.None);
