@@ -11,6 +11,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using Sparrow.Logging;
+using System.Threading;
+using Sparrow.Collections;
 using Voron.Util;
 
 namespace Voron.Impl.Journal
@@ -23,9 +25,9 @@ namespace Voron.Impl.Journal
 
         private readonly PageTable _pageTranslationTable = new PageTable();
 
-        private readonly HashSet<PagePosition> _unusedPagesHashSetPool = new HashSet<PagePosition>(PagePositionEqualityComparer.Instance);
+        private readonly HashSet<PagePosition> _unusedPagesHashSetPool = new HashSet<PagePosition>();
 
-        private readonly List<PagePosition> _unusedPages;
+        private readonly FastList<PagePosition> _unusedPages;
         private readonly ContentionLoggingLocker _locker2;
 
         public JournalFile(StorageEnvironment env, IJournalWriter journalWriter, long journalNumber)
@@ -34,7 +36,7 @@ namespace Voron.Impl.Journal
             _env = env;
             _journalWriter = journalWriter;
             _writePosIn4Kb = 0;
-            _unusedPages = new List<PagePosition>();
+            _unusedPages = new FastList<PagePosition>();
             var logger = LoggingSource.Instance.GetLogger<JournalFile>(JournalWriter.FileName.FullPath);
             _locker2 = new ContentionLoggingLocker(logger, JournalWriter.FileName.FullPath);
         }
@@ -112,8 +114,10 @@ namespace Voron.Impl.Journal
             {
                 _writePosIn4Kb += pages.NumberOf4Kbs;
 
-                Debug.Assert(!_unusedPages.Any(_unusedPagesHashSetPool.Contains));
-                _unusedPages.AddRange(_unusedPagesHashSetPool);
+                Debug.Assert(!_unusedPages.Any(_unusedPagesHashSetPool.Contains)); // We ensure there cannot be duplicates here (disjoint sets). 
+
+                foreach (var item in _unusedPagesHashSetPool)
+                    _unusedPages.Add(item);
             }
             _unusedPagesHashSetPool.Clear();
 
@@ -165,6 +169,8 @@ namespace Voron.Impl.Journal
 
         private void UpdatePageTranslationTable(LowLevelTransaction tx, HashSet<PagePosition> unused, Dictionary<long, PagePosition> ptt)
         {
+            // REVIEW: This number do not grow easily. There is no way we can go higher than int.MaxValue
+            //         Make sure that we upgrade later upwards so journal numbers are always ints.
             long journalNumber = Number;
 
             foreach (var freedPageNumber in tx.GetFreedPagesNumbers())
@@ -181,7 +187,7 @@ namespace Voron.Impl.Journal
                 long pageNumber = txPage.ScratchPageNumber;
                 if (pageNumber == -1) // if we don't already have it from TX preparing then ReadPage
                 {
-                    var scratchPage = scratchBufferPool.ReadPage(tx, txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
+                var scratchPage = scratchBufferPool.ReadPage(tx, txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
                     pageNumber = scratchPage.PageNumber;
                 }
 
@@ -214,17 +220,40 @@ namespace Voron.Impl.Journal
         }
 
         public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }
+        
+        
+        private static readonly ObjectPool<FastList<PagePosition>, FastList<PagePosition>.ResetBehavior> _scratchPagesPositionsPool = new ObjectPool<FastList<PagePosition>, FastList<PagePosition>.ResetBehavior>(() => new FastList<PagePosition>(), 10);
 
         public void FreeScratchPagesOlderThan(LowLevelTransaction tx, long lastSyncedTransactionId)
-        {
-            var unusedPages = new List<PagePosition>();
-
-            List<PagePosition> unusedAndFree;
+        {            
+            var unusedPages = _scratchPagesPositionsPool.Allocate();
+            var unusedAndFree = _scratchPagesPositionsPool.Allocate();
 
             using (_locker2.Lock())
-            {
-                unusedAndFree = _unusedPages.FindAll(position => position.TransactionId <= lastSyncedTransactionId);
-                _unusedPages.RemoveAll(position => position.TransactionId <= lastSyncedTransactionId);
+            {                
+                int count = _unusedPages.Count;
+                int originalCount = count;
+                
+                for (int i = 0; i < count; i++)
+                {
+                    var page = _unusedPages[i];
+                    if (page.TransactionId <= lastSyncedTransactionId)
+                    {
+                        unusedAndFree.Add(page);
+
+                        count--;                        
+                        
+                        if ( i < count )
+                            _unusedPages[i] = _unusedPages[count];
+                        
+                        _unusedPages.RemoveAt(count);
+
+                        i--;
+                    }
+                }
+
+                // This must hold true, if not we have leakage of memory and disk.
+                Debug.Assert(_unusedPages.Count + unusedAndFree.Count == originalCount);
 
                 _pageTranslationTable.RemoveKeysWhereAllPagesOlderThan(lastSyncedTransactionId, unusedPages);
             }
@@ -233,20 +262,15 @@ namespace Voron.Impl.Journal
             // while there might be old read tx looking at it by using PTT from the journal snapshot
             var availableForAllocationAfterTx = tx.Id;
 
-            foreach (var unusedScratchPage in unusedAndFree)
+            int length = unusedPages.Count;
+            for (int i = 0; i < length; i++)
             {
-                if (unusedScratchPage.IsFreedPageMarker)
-                    continue;
+                var page = unusedPages[i];
 
-                _env.ScratchBufferPool.Free(tx, unusedScratchPage.ScratchNumber, unusedScratchPage.ScratchPos, availableForAllocationAfterTx);
-            }
-
-            foreach (var page in unusedPages)
-            {
                 if (page.IsFreedPageMarker)
                     continue;
 
-                if (page.UnusedInPTT) // to prevent freeing a page that was already freed as unusedAndFree
+                if (page.UnusedInPTT) // to prevent freeing a page that was already freed as unused and free
                 {
                     // the page could be either freed in the current run, then just skip it to avoid freeing an unallocated page, or
                     // it could be released in an earlier run, but it still resided in PTT because a under a relevant page number of PTT 
@@ -254,8 +278,21 @@ namespace Voron.Impl.Journal
                     continue;
                 }
 
-                _env.ScratchBufferPool.Free(tx, page.ScratchNumber, page.ScratchPos, availableForAllocationAfterTx);
+                unusedAndFree.Add(page);
             }
+
+            length = unusedAndFree.Count;
+            for (int i = 0; i < length; i++)
+            {
+                var unusedPage = unusedAndFree[i];
+                if (unusedPage.IsFreedPageMarker)
+                    continue;
+
+                _env.ScratchBufferPool.Free(tx, unusedPage.ScratchNumber, unusedPage.ScratchPage, availableForAllocationAfterTx);
+            }
+
+            _scratchPagesPositionsPool.Free(unusedPages);
+            _scratchPagesPositionsPool.Free(unusedAndFree);
         }
     }
 }

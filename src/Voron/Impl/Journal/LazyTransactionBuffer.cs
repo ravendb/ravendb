@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Logging;
 using Voron.Global;
@@ -93,10 +94,12 @@ namespace Voron.Impl.Journal
             NumberOfPages = 0;
         }
 
-        public void ZeroLazyTransactionBufferIfNeeded(IPagerLevelTransactionState tx)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ZeroLazyTransactionBufferIfNeeded(TempPagerTransaction tx)
         {
             if (_options.EncryptionEnabled == false)
                 return;
+            
             var lazyTxBufferSize = _lazyTransactionPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
             var pagePointer = _lazyTransactionPager.AcquirePagePointer(tx, 0);
             Sodium.ZeroMemory(pagePointer, lazyTxBufferSize);

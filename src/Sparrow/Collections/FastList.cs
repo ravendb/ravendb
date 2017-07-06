@@ -2,10 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
-using Sparrow.Json;
 
 namespace Sparrow.Collections
 {
@@ -64,6 +61,19 @@ namespace Sparrow.Collections
                 _items[index] = value;
                 _version++;
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref T GetAsRef(uint index)
+        {
+            return ref _items[index];
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref T GetAsRef(int index)
+        {
+            return ref _items[index];
         }
 
         // Gets and sets the capacity of this list.  The capacity is the size of
