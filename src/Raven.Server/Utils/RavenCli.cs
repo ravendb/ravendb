@@ -234,8 +234,23 @@ namespace Raven.Server.Utils
             Console.WriteLine(" Build {0}, Version {1}, SemVer {2}, Commit {3}\r\n PID {4}, {5} bits, {6} Cores, Arch: {9}\r\n {7} Physical Memory, {8} Available Memory",
                 ServerVersion.Build, ServerVersion.Version, ServerVersion.FullVersion, ServerVersion.CommitHash, Process.GetCurrentProcess().Id,
                 IntPtr.Size * 8, ProcessorInfo.ProcessorCount, memoryInfo.TotalPhysicalMemory, memoryInfo.AvailableMemory, RuntimeInformation.OSArchitecture);
+
+            var bitsNum = IntPtr.Size * 8;
+            if (bitsNum == 64 && _server.Configuration.Storage.ForceUsing32BitsPager)
+            {
+                Console.WriteLine(" Running in 32 bits mode");
+            }
+
             Console.ResetColor();
             Console.Out.Flush();
+            return true;
+        }
+
+        private static bool CommandLogo(List<string> args)
+        {
+            if (args == null || args.First().Equals("no-clear") == false)
+                Console.Clear();
+            WelcomeMessage.Print();
             return true;
         }
 
@@ -264,6 +279,7 @@ namespace Raven.Server.Utils
                 new[] {"gc <gen>", "Collect garbage of specified gen (0-2)"},
                 new[] {"log <on | off | http-off>", "set log on or off. http-off can be selected to filter log output"},
                 new[] {"info", "Print system info and current stats"},
+                new[] {"logo [no-clear]", "Clear screen and print initial logo"},
                 new[] {"quit", "Quit server"},
                 new[] {"help", "This help screen"}
             };
@@ -294,17 +310,18 @@ namespace Raven.Server.Utils
 
         private static readonly Dictionary<Command, SingleAction> Actions = new Dictionary<Command, SingleAction>
         {
-            [Command.Prompt] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandPrompt },
-            [Command.HelpPrompt] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandHelpPrompt },
-            [Command.Stats] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandStats },
-            [Command.Gc] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandGc },
-            [Command.Log] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandLog },
-            [Command.Clear] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandClear },
-            [Command.Info] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandInfo },
-            [Command.LowMem] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLowMem },
-            [Command.ResetServer] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandResetServer },
-            [Command.Quit] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandQuit },
-            [Command.Help] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandHelp }
+            [Command.Prompt] = new SingleAction {NumOfArgs = 1, DelegateFync = CommandPrompt},
+            [Command.HelpPrompt] = new SingleAction {NumOfArgs = 0, DelegateFync = CommandHelpPrompt},
+            [Command.Stats] = new SingleAction {NumOfArgs = 0, DelegateFync = CommandStats},
+            [Command.Gc] = new SingleAction {NumOfArgs = 1, DelegateFync = CommandGc},
+            [Command.Log] = new SingleAction {NumOfArgs = 1, DelegateFync = CommandLog},
+            [Command.Clear] = new SingleAction {NumOfArgs = 0, DelegateFync = CommandClear},
+            [Command.Info] = new SingleAction {NumOfArgs = 0, DelegateFync = CommandInfo},
+            [Command.Logo] = new SingleAction {NumOfArgs = 0, DelegateFync = CommandLogo},
+            [Command.LowMem] = new SingleAction {NumOfArgs = 0, DelegateFync = CommandLowMem},
+            [Command.ResetServer] = new SingleAction {NumOfArgs = 0, DelegateFync = CommandResetServer},
+            [Command.Quit] = new SingleAction {NumOfArgs = 0, DelegateFync = CommandQuit},
+            [Command.Help] = new SingleAction {NumOfArgs = 0, DelegateFync = CommandHelp}
         };
 
         private static RavenServer _server;
@@ -324,7 +341,8 @@ namespace Raven.Server.Utils
             Gc,
             LowMem,
             Help,
-            UnknownCommand
+            UnknownCommand,
+            Logo
         }
 
         private enum LineState
@@ -366,7 +384,7 @@ namespace Raven.Server.Utils
 
             try
             {
-               return StartCli();
+                return StartCli();
             }
             catch (Exception ex)
             {
@@ -492,13 +510,7 @@ namespace Raven.Server.Utils
                     }
                 }
 
-                if (lastRc)
-                {
-                    Console.ForegroundColor = SuccessColor;
-                    Console.WriteLine("Command Executed Successfully");
-                    Console.WriteLine();
-                }
-                else
+                if (lastRc == false)
                 {
                     Console.ForegroundColor = NonSuccessColor;
                     Console.WriteLine("Command Failed");
@@ -515,10 +527,7 @@ namespace Raven.Server.Utils
         private const ConsoleColor UserInputColor = ConsoleColor.Green;
         private const ConsoleColor WarningColor = ConsoleColor.Yellow;
         private const ConsoleColor ErrorColor = ConsoleColor.Red;
-        private const ConsoleColor SuccessColor = ConsoleColor.DarkGreen;
         private const ConsoleColor NonSuccessColor = ConsoleColor.DarkRed;
-
-
 
         private static Command GetCommand(string fromWord)
         {
