@@ -308,7 +308,7 @@ class branchPageItem extends pageItem {
 
 }
 
-class collapsedLeavesItem extends layoutableItem {
+class collapsedLeafsItem extends layoutableItem {
 
     parentPage?: branchPageItem;
     aggregationCount: number;
@@ -338,7 +338,7 @@ class reduceTreeItem {
     displayName: string;
     depth: number;
     itemsCountAtDepth: Array<number>; // this represents non-filtered count
-    itemsAtDepth = new Map<number, Array<pageItem | collapsedLeavesItem>>(); // items after filtering depth -> list of items
+    itemsAtDepth = new Map<number, Array<pageItem | collapsedLeafsItem>>(); // items after filtering depth -> list of items
 
     constructor(tree: Raven.Server.Documents.Indexes.Debugging.ReduceTree) {
         this.tree = tree;
@@ -401,10 +401,10 @@ class reduceTreeItem {
         };
 
         filterAtDepth(0, this.tree.Root, null);
-        this.collapseNonRelevantLeaves();
+        this.collapseNonRelevantLeafs();
     }
 
-    private collapseNonRelevantLeaves() {
+    private collapseNonRelevantLeafs() {
         const lastLevel = this.depth - 1;
         const levelItems = this.itemsAtDepth.get(lastLevel);
 
@@ -413,8 +413,8 @@ class reduceTreeItem {
             .filter((x: leafPageItem) => _.some(x.entries, (e: layoutableItem) => (e instanceof entryItem) && e.source))
             .map((x: leafPageItem) => x.pageNumber);
 
-        const collapsedItems = [] as Array<pageItem | collapsedLeavesItem>;
-        let currentAggregation: collapsedLeavesItem = null;
+        const collapsedItems = [] as Array<pageItem | collapsedLeafsItem>;
+        let currentAggregation: collapsedLeafsItem = null;
 
         for (let i = 0; i < levelItems.length; i++) {
             const item = levelItems[i] as pageItem;
@@ -425,7 +425,7 @@ class reduceTreeItem {
                 if (currentAggregation && currentAggregation.parentPage === item.parentPage) {
                     currentAggregation.aggregationCount += 1;
                 } else {
-                    currentAggregation = new collapsedLeavesItem(item.parentPage, 1);
+                    currentAggregation = new collapsedLeafsItem(item.parentPage, 1);
                     collapsedItems.push(currentAggregation);
                 }
             }
@@ -792,11 +792,9 @@ class visualizerGraphDetails {
     private registerHitAreas() {
         this.hitTest.reset();
 
-        //TODO: is branches clickable?
-
         this.currentTree().itemsAtDepth.forEach(items => {
             items.forEach(item => {
-                if (item instanceof pageItem) {
+                if (item instanceof leafPageItem) {
                     this.hitTest.registerPageItem(item);
                 }
             });
@@ -874,7 +872,7 @@ class visualizerGraphDetails {
                 if (page instanceof pageItem) {
                     this.drawPage(ctx, page);
                 } else {
-                    this.drawCollapsedLeaves(ctx, page as collapsedLeavesItem);
+                    this.drawCollapsedLeafs(ctx, page as collapsedLeafsItem);
                 }
 
                 if (page.parentPage) {
@@ -941,7 +939,7 @@ class visualizerGraphDetails {
         }
     }
 
-    private drawCollapsedLeaves(ctx: CanvasRenderingContext2D, page: collapsedLeavesItem) {
+    private drawCollapsedLeafs(ctx: CanvasRenderingContext2D, page: collapsedLeafsItem) {
         ctx.fillStyle = "#3a4242";
         ctx.fillRect(page.x, page.y, page.width, page.height);
 
@@ -953,7 +951,7 @@ class visualizerGraphDetails {
             ctx.fillStyle = "#a9adad";
             ctx.textAlign = "center";
             ctx.textBaseline = "top";
-            ctx.fillText(page.aggregationCount + " leafes collapsed", page.width / 2, pageItem.margins.pageNumberTopMargin);
+            ctx.fillText(page.aggregationCount + " leafs collapsed", page.width / 2, pageItem.margins.pageNumberTopMargin);
 
         } finally {
             ctx.restore();
