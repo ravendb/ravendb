@@ -49,7 +49,7 @@
                                 <button class="btn btn-default" data-bind="click: _.partial($parent.stepDown, $data), visible: $root.topology().leader() === tag()">
                                     <i class="icon-stepdown"></i> <span>Step down</span>
                                 </button>
-                                <button class="btn btn-danger" data-bind="click: _.partial($parent.deleteNode, $data), enable: $root.canDeleteNodes">
+                                <button class="btn btn-danger" data-bind="click: _.partial($parent.deleteNode, $data), enable: $root.canDeleteNodes" title="Remove node from cluster">
                                     <i class="icon-trash"></i>
                                 </button>
                             </div>
