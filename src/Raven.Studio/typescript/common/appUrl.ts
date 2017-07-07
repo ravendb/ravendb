@@ -135,6 +135,10 @@ class appUrl {
         return "#admin/settings/cluster";
     }
 
+    static forAddClusterNode(): string {
+        return "#admin/settings/addClusterNode";
+    }
+
     static forServerSmugging(): string {
         return "#admin/settings/serverSmuggling";
     }

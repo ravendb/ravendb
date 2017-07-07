@@ -29,6 +29,14 @@ function getManageServerMenuItem() {
             enabled: canReadOrWrite
         }),
         new leafMenuItem({
+            route: 'admin/settings/addClusterNode',
+            moduleId: "viewmodels/manage/addClusterNode",
+            title: "Add Cluster Node",
+            nav: false,
+            dynamicHash: appUrl.forAddClusterNode,
+            enabled: canReadOrWrite
+        }),
+        new leafMenuItem({
             route: 'admin/settings/adminJsConsole',
             moduleId: "viewmodels/manage/adminJsConsole",
             title: "Administrator JS Console",

@@ -1,0 +1,34 @@
+<div class="content-margin">
+    <div class="row flex-row absolute-fill">
+        <form class="col-xs-12 col-lg-6 flex-vertical">
+            <div class="flex-header">
+                <button class="btn btn-primary" data-bind="click: save, disable: spinners.save, css: { 'btn-spinner': spinners.save }">
+                    <i class="icon-save"></i> <span>Save</span>
+                </button>
+                <button class="btn btn-default" data-bind="click: cancelOperation"><i class="icon-cancel"></i> <span>Cancel</span></button>
+            </div>
+            <div class="panel">
+                <div class="flex-form">
+                    <div class="panel-body" data-bind="with: model">
+                        <div class="form-group" data-bind="validationElement: serverUrl">
+                            <label for="url" class="control-label">URL</label>
+                            <div class="flex-grow">
+                                <input autocomplete="off" type="text" class="form-control" data-bind="textInput: serverUrl" id="url" placeholder="Enter server url">
+                            </div>
+                        </div>
+                        <div class="flex-horizontal">
+                            <div class="flex-grow">
+                            </div>
+                            <div>
+                                <button type="submit" class="btn btn-default btn-upcoming" disabled="disabled">
+                                    <i class="icon-rocket"></i>
+                                    <span>Test connection</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
