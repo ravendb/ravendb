@@ -587,6 +587,31 @@ namespace Raven.Database.FileSystem.Storage.Esent
             }
         }
 
+        public FileUpdateResult TouchFile(string filename, Etag etag)
+        {
+            Api.JetSetCurrentIndex(session, Files, "by_name");
+            Api.MakeKey(session, Files, filename, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, Files, SeekGrbit.SeekEQ) == false)
+                throw new FileNotFoundException(filename);
+
+            using (var update = new Update(session, Files, JET_prep.Replace))
+            {
+                var existingEtag = EnsureFileEtagMatch(filename, etag);
+
+                var newEtag = uuidGenerator.CreateSequentialUuid();
+
+                Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["etag"], newEtag.TransformToValueForEsentSorting());
+
+                update.Save();
+
+                return new FileUpdateResult
+                {
+                    PrevEtag = existingEtag,
+                    Etag = newEtag
+                };
+            }
+        }
+
         public void CompleteFileUpload(string filename)
         {
             Api.JetSetCurrentIndex(session, Files, "by_name");
