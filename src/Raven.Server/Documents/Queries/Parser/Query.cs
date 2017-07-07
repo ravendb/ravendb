@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Queries.Parser
         public List<(FieldToken Field, bool Ascending)> OrderBy;
         public List<FieldToken> GroupBy;
         public string QueryText;
-
+        
         public override string ToString()
         {
             var writer = new StringWriter();

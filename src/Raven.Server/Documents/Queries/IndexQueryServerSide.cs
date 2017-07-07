@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
+using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -25,6 +26,23 @@ namespace Raven.Server.Documents.Queries
 
         public bool IsDistinct { get; set; }
 
+        public IndexQueryServerSide()
+        {
+            // TODO arek - remove me
+        }
+        
+        public IndexQueryServerSide(string query)
+        {
+            Query = EscapingHelper.UnescapeLongDataString(query);
+
+            var qp = new QueryParser();
+            qp.Init(query);
+
+            Parsed = qp.Parse();
+        }
+        
+        public Query Parsed { get; private set; }
+        
         public static IndexQueryServerSide Create(HttpContext httpContext, int start, int pageSize, JsonOperationContext context)
         {
             var result = new IndexQueryServerSide
@@ -44,6 +62,11 @@ namespace Raven.Server.Documents.Queries
                     {
                         case "query":
                             result.Query = EscapingHelper.UnescapeLongDataString(item.Value[0]);
+
+                            var qp = new QueryParser();
+                            qp.Init("FROM Users WHERE Name = 'Arek'"/*result.Query*/);
+
+                            result.Parsed = qp.Parse();
                             break;
                         case RequestHandler.StartParameter:
                         case RequestHandler.PageSizeParameter:
@@ -123,6 +146,61 @@ namespace Raven.Server.Documents.Queries
             }
 
             return result;
+        }
+
+        public bool IsDynamic => Parsed.From.Index == false;
+        
+        public string GetCollection()
+        {
+            var fromToken = Parsed.From.From;
+            return QueryExpression.Extract(Parsed.QueryText, fromToken);
+        }
+
+        public string GetIndex()
+        {
+            var fromToken = Parsed.From.From;
+            return QueryExpression.Extract(Parsed.QueryText,  fromToken);
+        }
+        
+        public IEnumerable<FieldValuePair> GetWhereFields()
+        {
+            if (Parsed.Where == null)
+                yield break;
+            
+            foreach (var whereField in GetFieldValueTokens(Parsed.Where))
+            {
+                yield return (new FieldValuePair(QueryExpression.Extract(Parsed.QueryText, whereField.Field), QueryExpression.Extract(Parsed.QueryText, whereField.Value), whereField.Value.Type));
+            }
+        }
+
+        public IEnumerable<(string Name, bool Ascending)> GetOrderByFields()
+        {
+            if (Parsed.OrderBy == null)
+                yield break;
+            
+            foreach (var fieldInfo in Parsed.OrderBy)
+            {
+                yield return (QueryExpression.Extract(Parsed.QueryText, fieldInfo.Field), fieldInfo.Ascending);
+            }
+        }
+
+        private IEnumerable<(FieldToken Field, ValueToken Value)> GetFieldValueTokens(QueryExpression expression)
+        {
+            if (expression.Field != null)
+            {
+                yield return (expression.Field, expression.Value ?? expression.First);
+                yield break;
+            }
+
+            foreach (var field in GetFieldValueTokens(expression.Left))
+            {
+                yield return field;
+            }
+            
+            foreach (var field in GetFieldValueTokens(expression.Right))
+            {
+                yield return field;
+            }
         }
 
         private static DynamicMapReduceField[] ParseDynamicMapReduceFields(StringValues item)

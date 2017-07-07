@@ -33,8 +33,6 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/queries/$", "POST", AuthorizationStatus.ValidUser)]
         public async Task Post()
         {
-            var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
-
             using (TrackRequestTime())
             using (var token = CreateTimeLimitedOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -42,7 +40,7 @@ namespace Raven.Server.Documents.Handlers
                 var debug = GetStringQueryString("debug", required: false);
                 if (string.IsNullOrWhiteSpace(debug) == false)
                 {
-                    await Debug(context, indexName, debug, token, HttpMethod.Post);
+                    await Debug(context, debug, token, HttpMethod.Post);
                     return;
                 }
 
@@ -50,19 +48,17 @@ namespace Raven.Server.Documents.Handlers
 
                 if (string.Equals(operation, "facets", StringComparison.OrdinalIgnoreCase))
                 {
-                    await FacetedQuery(context, indexName, token).ConfigureAwait(false);
+                    await FacetedQuery(context, token).ConfigureAwait(false);
                     return;
                 }
 
-                await Query(context, indexName, token, HttpMethod.Post).ConfigureAwait(false);
+                await Query(context, token, HttpMethod.Post).ConfigureAwait(false);
             }
         }
 
         [RavenAction("/databases/*/queries/$", "GET", AuthorizationStatus.ValidUser)]
         public async Task Get()
         {
-            var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
-
             using (TrackRequestTime())
             using (var token = CreateTimeLimitedOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -70,20 +66,20 @@ namespace Raven.Server.Documents.Handlers
                 var debug = GetStringQueryString("debug", required: false);
                 if (string.IsNullOrWhiteSpace(debug) == false)
                 {
-                    await Debug(context, indexName, debug, token, HttpMethod.Get);
+                    await Debug(context, debug, token, HttpMethod.Get);
                     return;
                 }
 
                 var operation = GetStringQueryString("op", required: false);
                 if (string.Equals(operation, "morelikethis", StringComparison.OrdinalIgnoreCase))
                 {
-                    MoreLikeThis(context, indexName, token);
+                    MoreLikeThis(context, token);
                     return;
                 }
 
                 if (string.Equals(operation, "facets", StringComparison.OrdinalIgnoreCase))
                 {
-                    await FacetedQuery(context, indexName, token).ConfigureAwait(false);
+                    await FacetedQuery(context, token).ConfigureAwait(false);
                     return;
                 }
 
@@ -98,7 +94,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private async Task FacetedQuery(DocumentsOperationContext context, string indexName, OperationCancelToken token)
+        private async Task FacetedQuery(DocumentsOperationContext context, OperationCancelToken token)
         {
             var query = FacetQuery.Parse(HttpContext.Request.Query, GetStart(), GetPageSize(), DocumentConventions.Default);
 
@@ -131,7 +127,7 @@ namespace Raven.Server.Documents.Handlers
 
             var runner = new QueryRunner(Database, context);
 
-            var result = await runner.ExecuteFacetedQuery(indexName, query, facetsEtag, existingResultEtag, token);
+            var result = await runner.ExecuteFacetedQuery(query, facetsEtag, existingResultEtag, token);
 
             if (result.NotModified)
             {
@@ -147,7 +143,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private async Task Query(DocumentsOperationContext context, string indexName, OperationCancelToken token, HttpMethod method)
+        private async Task Query(DocumentsOperationContext context, OperationCancelToken token, HttpMethod method)
         {
             var indexQuery = GetIndexQuery(context, method);
 
@@ -160,7 +156,7 @@ namespace Raven.Server.Documents.Handlers
             DocumentQueryResult result;
             try
             {
-                result = await runner.ExecuteQuery(indexName, indexQuery, includes, existingResultEtag, token).ConfigureAwait(false);
+                result = await runner.ExecuteQuery(indexQuery, includes, existingResultEtag, token).ConfigureAwait(false);
             }
             catch (IndexDoesNotExistException)
             {
@@ -182,7 +178,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteDocumentQueryResult(context, result, metadataOnly, out numberOfResults);
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({indexName})", HttpContext, numberOfResults, indexQuery.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
+            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({indexQuery.GetIndex()})", HttpContext, numberOfResults, indexQuery.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
         }
 
         private IndexQueryServerSide GetIndexQuery(DocumentsOperationContext context, HttpMethod method)
@@ -230,7 +226,7 @@ namespace Raven.Server.Documents.Handlers
             var query = MoreLikeThisQueryServerSide.Create(HttpContext, GetPageSize(), context);
             var runner = new QueryRunner(Database, context);
 
-            var result = runner.ExecuteMoreLikeThisQuery(indexName, query, context, existingResultEtag, token);
+            var result = runner.ExecuteMoreLikeThisQuery(query, context, existingResultEtag, token);
 
             if (result.NotModified)
             {
@@ -246,15 +242,15 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteMoreLikeThisQueryResult(context, result, out numberOfResults);
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(MoreLikeThis)} ({indexName})", HttpContext, numberOfResults, query.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
+            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(MoreLikeThis)} ({query.GetIndex()})", HttpContext, numberOfResults, query.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
         }
 
-        private void Explain(DocumentsOperationContext context, string indexName)
+        private void Explain(DocumentsOperationContext context)
         {
             var indexQuery = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context);
             var runner = new QueryRunner(Database, context);
 
-            var explanations = runner.ExplainDynamicIndexSelection(indexName, indexQuery);
+            var explanations = runner.ExplainDynamicIndexSelection(indexQuery);
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -319,17 +315,17 @@ namespace Raven.Server.Documents.Handlers
         }
 
 
-        private async Task Debug(DocumentsOperationContext context, string indexName, string debug, OperationCancelToken token, HttpMethod method)
+        private async Task Debug(DocumentsOperationContext context, string debug, OperationCancelToken token, HttpMethod method)
         {
             if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
             {
-                await IndexEntries(context, indexName, token, method);
+                await IndexEntries(context, token, method);
                 return;
             }
 
             if (string.Equals(debug, "explain", StringComparison.OrdinalIgnoreCase))
             {
-                Explain(context, indexName);
+                Explain(context);
                 return;
             }
 
@@ -337,14 +333,14 @@ namespace Raven.Server.Documents.Handlers
             throw new NotSupportedException($"Not supported query debug operation: '{debug}'");
         }
 
-        private async Task IndexEntries(DocumentsOperationContext context, string indexName, OperationCancelToken token, HttpMethod method)
+        private async Task IndexEntries(DocumentsOperationContext context, OperationCancelToken token, HttpMethod method)
         {
             var indexQuery = GetIndexQuery(context, method);
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
             var queryRunner = new QueryRunner(Database, context);
 
-            var result = await queryRunner.ExecuteIndexEntriesQuery(indexName, indexQuery, existingResultEtag, token);
+            var result = await queryRunner.ExecuteIndexEntriesQuery(indexQuery, existingResultEtag, token);
 
             if (result.NotModified)
             {

@@ -122,5 +122,10 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
 
             return result;
         }
+
+        public string GetIndex()
+        {
+            throw new NotImplementedException("TODO arek");
+        }
     }
 }

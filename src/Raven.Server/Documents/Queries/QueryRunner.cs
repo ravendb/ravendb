@@ -39,20 +39,20 @@ namespace Raven.Server.Documents.Queries
             _documentsContext = documentsContext;
         }
 
-        public async Task<DocumentQueryResult> ExecuteQuery(string indexName, IndexQueryServerSide query, StringValues includes, long? existingResultEtag, OperationCancelToken token)
+        public async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, StringValues includes, long? existingResultEtag, OperationCancelToken token)
         {
             DocumentQueryResult result;
             var sw = Stopwatch.StartNew();
-            if (Index.IsDynamicIndex(indexName))
+            if (query.IsDynamic)
             {
                 var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
 
-                result = await runner.Execute(indexName, query, existingResultEtag);
+                result = await runner.Execute(query, existingResultEtag);
                 result.DurationInMs = (long)sw.Elapsed.TotalMilliseconds;
                 return result;
             }
 
-            var index = GetIndex(indexName);
+            var index = GetIndex(query.GetIndex());
             if (existingResultEtag.HasValue)
             {
                 var etag = index.GetIndexEtag();
@@ -65,23 +65,23 @@ namespace Raven.Server.Documents.Queries
             return result;
         }
 
-        public async Task ExecuteStreamQuery(string indexName, IndexQueryServerSide query, HttpResponse response, BlittableJsonTextWriter writer, OperationCancelToken token)
+        public async Task ExecuteStreamQuery(IndexQueryServerSide query, HttpResponse response, BlittableJsonTextWriter writer, OperationCancelToken token)
         {
-            if (Index.IsDynamicIndex(indexName))
+            if (query.IsDynamic)
             {
                 var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
 
-                await runner.ExecuteStream(response, writer, indexName, query).ConfigureAwait(false);
+                await runner.ExecuteStream(response, writer, query).ConfigureAwait(false);
 
                 return;
             }
 
-            var index = GetIndex(indexName);
+            var index = GetIndex(query.GetIndex());
 
             await index.StreamQuery(response, writer, query, _documentsContext, token);
         }
 
-        public Task<FacetedQueryResult> ExecuteFacetedQuery(string indexName, FacetQuery query, long? facetsEtag, long? existingResultEtag, OperationCancelToken token)
+        public Task<FacetedQueryResult> ExecuteFacetedQuery(FacetQuery query, long? facetsEtag, long? existingResultEtag, OperationCancelToken token)
         {
             if (query.FacetSetupDoc != null)
             {
@@ -106,8 +106,10 @@ namespace Raven.Server.Documents.Queries
 
                 query.Facets = facetSetup.Facets;
             }
+            
+            throw new NotImplementedException("TODO arek - looks like we need to introduce FacetQueryServerSide");
 
-            return ExecuteFacetedQuery(indexName, query, facetsEtag.Value, existingResultEtag, token);
+            // return ExecuteFacetedQuery("TODO arek", query, facetsEtag.Value, existingResultEtag, token);
         }
 
         private async Task<FacetedQueryResult> ExecuteFacetedQuery(string indexName, FacetQuery query, long facetsEtag, long? existingResultEtag, OperationCancelToken token)
@@ -191,7 +193,7 @@ namespace Raven.Server.Documents.Queries
                 throw new InvalidOperationException("The document id or map group fields are mandatory");
 
             var sw = Stopwatch.StartNew();
-            var index = GetIndex(indexName);
+            var index = GetIndex(query.GetIndex());
 
             if (existingResultEtag.HasValue)
             {
@@ -207,15 +209,15 @@ namespace Raven.Server.Documents.Queries
             return result;
         }
 
-        public async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(string indexName, IndexQueryServerSide query, long? existingResultEtag, OperationCancelToken token)
+        public async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, long? existingResultEtag, OperationCancelToken token)
         {
-            if (Index.IsDynamicIndex(indexName))
+            if (query.IsDynamic)
             {
                 var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
-                return await runner.ExecuteIndexEntries(indexName, query, existingResultEtag);
+                return await runner.ExecuteIndexEntries(query, existingResultEtag);
             }
 
-            var index = GetIndex(indexName);
+            var index = GetIndex(query.GetIndex());
 
             if (existingResultEtag.HasValue)
             {
@@ -227,14 +229,14 @@ namespace Raven.Server.Documents.Queries
             return index.IndexEntries(query, _documentsContext, token);
         }
 
-        public List<DynamicQueryToIndexMatcher.Explanation> ExplainDynamicIndexSelection(string indexName, IndexQueryServerSide indexQuery)
+        public List<DynamicQueryToIndexMatcher.Explanation> ExplainDynamicIndexSelection(IndexQueryServerSide indexQuery)
         {
-            if (Index.IsDynamicIndex(indexName) == false)
+            if (indexQuery.IsDynamic == false)
                 throw new InvalidOperationException("Explain can only work on dynamic indexes");
 
             var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, OperationCancelToken.None);
 
-            return runner.ExplainIndexSelection(indexName, indexQuery);
+            return runner.ExplainIndexSelection(indexQuery);
         }
 
         public Task<IOperationResult> ExecuteDeleteQuery(string indexName, IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)

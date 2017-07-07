@@ -403,10 +403,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
         {
             using (var reader = index.IndexPersistence.OpenIndexReader(context.Transaction.InnerTransaction))
             {
-                var query = new IndexQueryServerSide
-                {
-                    Query = $"{Constants.Documents.Indexing.Fields.ReduceKeyFieldName}:{reduceKeyHash}"
-                };
+                var query = new IndexQueryServerSide($"FROM INDEX \"{index.Name}\" WHERE {Constants.Documents.Indexing.Fields.ReduceKeyFieldName} = '{reduceKeyHash}'");
 
                 var fieldsToFetch = new FieldsToFetch(query, index.Definition, null);
 

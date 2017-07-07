@@ -35,6 +35,11 @@ namespace Raven.Server.Documents.Queries.Parser
             return Extract(q, val.TokenStart, val.TokenLength, val.EscapeChars);
         }
 
+        internal static string Extract(string q, FieldToken field)
+        {
+            return Extract(q, field.TokenStart, field.TokenLength, field.EscapeChars);
+        }
+
         internal static string Extract(string q, int tokenStart, int tokenLength, int escapeChars)
         {
             if (escapeChars == 0)
