@@ -67,11 +67,8 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var queryString = string.Join(",", list);
-                    queryString = string.Format(@"@in<EmailDomain>:({0})", queryString);
-
                     var query = session.Advanced.DocumentQuery<Student, Students_ByEmailDomain>()
-                                                .Where(queryString);
+                                                .WhereIn("EmailDomain", list);
 
                     Assert.Throws<InvalidOperationException>(() => query.Lazily().Value);
                 }
@@ -107,11 +104,8 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var queryString = string.Join(",", list);
-                    queryString = string.Format(@"@in<EmailDomain>:({0})", queryString);
-
                     var query = session.Advanced.DocumentQuery<Student, Students_ByEmailDomain>()
-                        .Where(queryString)
+                        .WhereIn("EmailDomain", list)
                         .Take(128);
 
                     var value = query.Lazily().Value;

@@ -14,7 +14,7 @@ namespace SlowTests.Bugs
         private readonly IndexDefinition _index = new IndexDefinition
         {
             Name = "test",
-            Maps = new HashSet<string> {"from doc in docs select new { doc.Name }"},
+            Maps = new HashSet<string> { "from doc in docs select new { doc.Name }" },
             Fields = new Dictionary<string, IndexFieldOptions>
             {
                 {"Name", new IndexFieldOptions {Storage = FieldStorage.Yes}}
@@ -35,7 +35,7 @@ namespace SlowTests.Bugs
                 }
 
                 store.Admin.Send(new PutIndexesOperation(_index));
-    
+
                 using (var s = store.OpenSession())
                 {
                     var objects = s.Advanced.DocumentQuery<dynamic>("test")
@@ -72,7 +72,7 @@ namespace SlowTests.Bugs
                 {
                     var objects = s.Query<User>("test")
                         .Customize(x => x.WaitForNonStaleResults())
-                        .Select(o => new {o.Name }).OrderBy(o => o.Name)
+                        .Select(o => new { o.Name }).OrderBy(o => o.Name)
                         .Select(o => new { o.Name })
                         .Distinct()
                         .ToList();
@@ -170,7 +170,7 @@ namespace SlowTests.Bugs
                 {
                     QueryStatistics qs;
                     var qRes = session.Advanced.DocumentQuery<Customer>("CustomersIndex")
-                        .Statistics(out qs).Where("Occupation:Marketing")
+                        .Statistics(out qs).Where("Occupation", "Marketing")
                         .Distinct()
                         .SelectFields<Customer>("CustomerId")
                         .Take(20)
@@ -199,7 +199,7 @@ namespace SlowTests.Bugs
                         HeadingId = "Customers/3"
                     }, "Customers/2");
 
-                    
+
                     session.SaveChanges();
                 }
 
@@ -209,7 +209,7 @@ namespace SlowTests.Bugs
 
                     QueryStatistics qs;
                     var qRes = session.Advanced.DocumentQuery<Customer>("ReducedCustomersIndex")
-                        .Statistics(out qs).Where("Occupation:Marketing")
+                        .Statistics(out qs).Where("Occupation", "Marketing")
                         .Distinct()
                         .SelectFields<Customer>("CustomerId")
                         .Take(20)
@@ -253,12 +253,12 @@ namespace SlowTests.Bugs
                 Reduce = results => from result in results
                                     group result by new { result.Occupation, result.CustomerId }
                                         into g
-                                        select new
-                                        {
-                                            Occupation = g.Key.Occupation,
-                                            CustomerId = g.Key.CustomerId,
-                                            Count = g.Sum(x => x.Count)
-                                        };
+                                    select new
+                                    {
+                                        Occupation = g.Key.Occupation,
+                                        CustomerId = g.Key.CustomerId,
+                                        Count = g.Sum(x => x.Count)
+                                    };
                 Store(x => x.Occupation, FieldStorage.Yes);
                 Store(x => x.CustomerId, FieldStorage.Yes);
             }

@@ -44,14 +44,14 @@ namespace SlowTests.Bugs
                 using (var s = store.OpenSession())
                 {
                     var movies = s.Advanced.DocumentQuery<Movie>("Movies")
-                        .Where("Name:DOLLY")
+                        .Where("Name", "DOLLY")
                         .WaitForNonStaleResults()
                         .ToList();
 
                     Assert.Equal(1, movies.Count);
 
                     movies = s.Advanced.DocumentQuery<Movie>("Movies")
-                        .Where("Tagline:she's")
+                        .Where("Name", "she's")
                         .WaitForNonStaleResults()
                         .ToList();
 

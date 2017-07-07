@@ -451,11 +451,6 @@ If you really want to do in memory filtering on the data returned from the query
         TSelf Take(int count);
 
         /// <summary>
-        ///     Select the default field to use for this query
-        /// </summary>
-        TSelf UsingDefaultField(string field);
-
-        /// <summary>
         ///     Select the default operator to use for this query
         /// </summary>
         TSelf UsingDefaultOperator(QueryOperator queryOperator);
@@ -537,8 +532,9 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         ///     Filter the results from the index using the specified where clause.
         /// </summary>
+        /// <param name="fieldName">Name of the field.</param>
         /// <param name="whereClause">Lucene-syntax based query predicate.</param>
-        TSelf Where(string whereClause);
+        TSelf Where(string fieldName, string whereClause);
 
         /// <summary>
         ///     Matches fields where the value is between the specified start and end, exclusive
@@ -555,22 +551,6 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="start">The start.</param>
         /// <param name="end">The end.</param>
         TSelf WhereBetween<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end);
-
-        /// <summary>
-        ///     Matches fields where the value is between the specified start and end, inclusive
-        /// </summary>
-        /// <param name="fieldName">Name of the field.</param>
-        /// <param name="start">The start.</param>
-        /// <param name="end">The end.</param>
-        TSelf WhereBetweenOrEqual(string fieldName, object start, object end);
-
-        /// <summary>
-        ///     Matches fields where the value is between the specified start and end, inclusive
-        /// </summary>
-        /// <param name="propertySelector">Property selector for the field.</param>
-        /// <param name="start">The start.</param>
-        /// <param name="end">The end.</param>
-        TSelf WhereBetweenOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end);
 
         /// <summary>
         ///     Matches fields which ends with the specified value.

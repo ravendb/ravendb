@@ -12,7 +12,6 @@ using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Sparrow.Json.Parsing;
 
@@ -20,6 +19,14 @@ namespace Raven.Client.Documents.Queries.Facets
 {
     public class FacetQuery : IndexQueryBase
     {
+        public string[] FieldsToFetch { get; set; }
+
+        public QueryOperator DefaultOperator { get; set; }
+
+        public string DefaultField { get; set; }
+
+        public bool IsDistinct { get; set; }
+
         private IReadOnlyList<Facet> _facets;
         private DynamicJsonValue _facetsAsDynamicJson;
 
@@ -75,17 +82,6 @@ namespace Raven.Client.Documents.Queries.Facets
             if (string.IsNullOrEmpty(Query) == false)
                 path.Append("&query=").Append(EscapingHelper.EscapeLongDataString(Query));
 
-            if (string.IsNullOrEmpty(DefaultField) == false)
-                path.Append("&defaultField=").Append(Uri.EscapeDataString(DefaultField));
-
-            if (DefaultOperator != QueryOperator.Or)
-                path.Append("&operator=AND");
-
-            if (IsDistinct)
-                path.Append("&distinct=true");
-
-            FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
-
             if (CutoffEtag != null)
                 path.Append("&cutOffEtag=").Append(CutoffEtag);
 
@@ -119,20 +115,8 @@ namespace Raven.Client.Documents.Queries.Facets
             if (query.TryGetValue("facetDoc", out values))
                 result.FacetSetupDoc = values.First();
 
-            if (query.TryGetValue("distinct", out values))
-                result.IsDistinct = bool.Parse(values.First());
-
-            if (query.TryGetValue("operator", out values))
-                result.DefaultOperator = "And".Equals(values.First(), StringComparison.OrdinalIgnoreCase) ? QueryOperator.And : QueryOperator.Or;
-
-            if (query.TryGetValue("defaultField", out values))
-                result.DefaultField = values.First();
-
             if (query.TryGetValue("query", out values))
                 result.Query = values.First();
-
-            if (query.TryGetValue("fetch", out values))
-                result.FieldsToFetch = values.ToArray();
 
             if (query.TryGetValue("cutOffEtag", out values))
                 result.CutoffEtag = long.Parse(values.First());
@@ -153,10 +137,6 @@ namespace Raven.Client.Documents.Queries.Facets
             {
                 IndexName = indexName,
                 CutoffEtag = query.CutoffEtag,
-                DefaultField = query.DefaultField,
-                DefaultOperator = query.DefaultOperator,
-                FieldsToFetch = query.FieldsToFetch,
-                IsDistinct = query.IsDistinct,
                 Query = query.Query,
                 WaitForNonStaleResults = query.WaitForNonStaleResults,
                 WaitForNonStaleResultsAsOfNow = query.WaitForNonStaleResultsAsOfNow,

@@ -50,8 +50,8 @@ namespace SlowTests.MailingList
                     var query2 = session.Advanced.DocumentQuery<Foo, Foos>()
                         .UsingDefaultOperator(QueryOperator.And)
                         .WithinRadiusOf("Position", 100, 20, 20, SpatialUnits.Miles)
-                        .Where("CatId:2")
-                        .Where("CatId:1")
+                        .Where("CatId", "2")
+                        .Where("CatId", "1")
                         .ToList();
 
                     Assert.Empty(query2);

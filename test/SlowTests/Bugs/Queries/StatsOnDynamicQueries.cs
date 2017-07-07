@@ -28,7 +28,7 @@ namespace SlowTests.Bugs.Queries
                     QueryStatistics stats;
                     session.Query<User>()
                         .Statistics(out stats)
-                        .Where(x=>x.Email == "ayende")
+                        .Where(x => x.Email == "ayende")
                         .ToArray();
 
                     Assert.NotEqual(0, stats.TotalResults);
@@ -56,7 +56,7 @@ namespace SlowTests.Bugs.Queries
                     QueryStatistics stats;
                     var query = session.Advanced.DocumentQuery<User>()
                         .Statistics(out stats)
-                        .Where("Email:ayende");
+                        .Where("Email", "ayende");
 
                     var result = query.ToArray();
                     Assert.NotEqual(0, stats.TotalResults);

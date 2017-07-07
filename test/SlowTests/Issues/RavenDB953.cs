@@ -36,7 +36,7 @@ namespace SlowTests.Issues
                     {
                         s.Advanced.DocumentQuery<dynamic>("test")
                             .WaitForNonStaleResultsAsOfNow()
-                            .Where("Id:MyId")
+                            .Where("Id", "MyId")
                             .ToList();
                     }
                     catch

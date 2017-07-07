@@ -53,8 +53,9 @@ namespace SlowTests.Tests.Querying
         [Fact]
         public void WhereBetweenOrEqualSameAsUntypedCounterpart()
         {
-            Assert.Equal(CreateUserQuery().WhereBetweenOrEqual("Name", "ayende", "zaphod").ToString(),
-                CreateUserQuery().WhereBetweenOrEqual(x => x.Name, "ayende", "zaphod").ToString());
+            throw new NotImplementedException();
+            //Assert.Equal(CreateUserQuery().WhereBetweenOrEqual("Name", "ayende", "zaphod").ToString(),
+            //    CreateUserQuery().WhereBetweenOrEqual(x => x.Name, "ayende", "zaphod").ToString());
         }
 
         [Fact]

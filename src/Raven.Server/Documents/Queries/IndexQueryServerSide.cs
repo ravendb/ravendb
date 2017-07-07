@@ -15,6 +15,14 @@ namespace Raven.Server.Documents.Queries
 {
     public class IndexQueryServerSide : IndexQuery<BlittableJsonReaderObject>
     {
+        public string[] FieldsToFetch { get; set; }
+
+        public QueryOperator DefaultOperator { get; set; }
+
+        public string DefaultField { get; set; }
+
+        public bool IsDistinct { get; set; }
+
         public static IndexQueryServerSide Create(HttpContext httpContext, int start, int pageSize, JsonOperationContext context)
         {
             var result = new IndexQueryServerSide

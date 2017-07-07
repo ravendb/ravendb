@@ -91,12 +91,6 @@ namespace Raven.Client.Documents.Session
         void Skip(int count);
 
         /// <summary>
-        ///   Filter the results from the index using the specified where clause.
-        /// </summary>
-        /// <param name = "whereClause">The where clause.</param>
-        void Where(string whereClause);
-
-        /// <summary>
         ///   Matches exact value
         /// </summary>
         /// <remarks>
@@ -161,15 +155,6 @@ namespace Raven.Client.Documents.Session
         /// <param name = "end">The end.</param>
         /// <returns></returns>
         void WhereBetween(string fieldName, object start, object end);
-
-        /// <summary>
-        ///   Matches fields where the value is between the specified start and end, inclusive
-        /// </summary>
-        /// <param name = "fieldName">Name of the field.</param>
-        /// <param name = "start">The start.</param>
-        /// <param name = "end">The end.</param>
-        /// <returns></returns>
-        void WhereBetweenOrEqual(string fieldName, object start, object end);
 
         /// <summary>
         ///   Matches fields where the value is greater than the specified value

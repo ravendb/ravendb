@@ -171,7 +171,7 @@ namespace SlowTests.Issues
             using (var session = store.OpenSession())
             {
                 var profile = session.Advanced.DocumentQuery<Profile>("ProfileByName")
-                    .Where("Name:Google")
+                    .Where("Name", "Google")
                     .First();
 
                 Assert.NotNull(profile);
@@ -179,18 +179,18 @@ namespace SlowTests.Issues
                 Assert.Throws<InvalidOperationException>(() =>
                 {
                     profile = session.Advanced.DocumentQuery<Profile>("ProfileByName")
-                        .Where("Name:NoSuch")
+                        .Where("Name", "NoSuch")
                         .First();
                 });
 
                 profile = session.Advanced.DocumentQuery<Profile>("ProfileByName")
-                    .Where("Name:Google")
+                    .Where("Name", "Google")
                     .FirstOrDefault();
 
                 Assert.NotNull(profile);
 
                 profile = session.Advanced.DocumentQuery<Profile>("ProfileByName")
-                    .Where("Name:NoSuch")
+                    .Where("Name", "NoSuch")
                     .FirstOrDefault();
 
                 Assert.Null(profile);
@@ -202,7 +202,7 @@ namespace SlowTests.Issues
             using (var session = store.OpenAsyncSession())
             {
                 Profile profile = await session.Advanced.AsyncDocumentQuery<Profile>("ProfileByName")
-                    .Where("Name:Google")
+                    .Where("Name", "Google")
                     .FirstAsync();
 
                 Assert.NotNull(profile);
@@ -210,18 +210,18 @@ namespace SlowTests.Issues
                 Assert.Throws<AggregateException>(() =>
                 {
                     profile = session.Advanced.AsyncDocumentQuery<Profile>("ProfileByName")
-                        .Where("Name:NoSuch")
+                        .Where("Name", "NoSuch")
                         .FirstAsync().Result;
                 });
 
                 profile = await session.Advanced.AsyncDocumentQuery<Profile>("ProfileByName")
-                    .Where("Name:Google")
+                    .Where("Name", "Google")
                     .FirstOrDefaultAsync();
 
                 Assert.NotNull(profile);
 
                 profile = await session.Advanced.AsyncDocumentQuery<Profile>("ProfileByName")
-                    .Where("Name:NoSuch")
+                    .Where("Name", "NoSuch")
                     .FirstOrDefaultAsync();
 
                 Assert.Null(profile);
@@ -235,7 +235,7 @@ namespace SlowTests.Issues
                 Profile profile;
 
                 profile = session.Advanced.DocumentQuery<Profile>("ProfileByName")
-                    .Where("Name:Google")
+                    .Where("Name", "Google")
                     .Single();
 
                 Assert.NotNull(profile);
@@ -247,13 +247,13 @@ namespace SlowTests.Issues
                 });
 
                 profile = session.Advanced.DocumentQuery<Profile>("ProfileByName")
-                    .Where("Name:NoSuch")
+                    .Where("Name", "NoSuch")
                     .SingleOrDefault();
 
                 Assert.Null(profile);
 
                 profile = session.Advanced.DocumentQuery<Profile>("ProfileByName")
-                    .Where("Name:Google")
+                    .Where("Name", "Google")
                     .SingleOrDefault();
 
                 Assert.NotNull(profile);
@@ -271,7 +271,7 @@ namespace SlowTests.Issues
             using (var session = store.OpenAsyncSession())
             {
                 Profile profile = await session.Advanced.AsyncDocumentQuery<Profile>("ProfileByName")
-                    .Where("Name:Google")
+                    .Where("Name", "Google")
                     .SingleAsync();
 
                 Assert.NotNull(profile);
@@ -283,13 +283,13 @@ namespace SlowTests.Issues
                 });
 
                 profile = await session.Advanced.AsyncDocumentQuery<Profile>("ProfileByName")
-                    .Where("Name:NoSuch")
+                    .Where("Name", "NoSuch")
                     .SingleOrDefaultAsync();
 
                 Assert.Null(profile);
 
                 profile = await session.Advanced.AsyncDocumentQuery<Profile>("ProfileByName")
-                    .Where("Name:Google")
+                    .Where("Name", "Google")
                     .SingleOrDefaultAsync();
 
                 Assert.NotNull(profile);
@@ -307,11 +307,11 @@ namespace SlowTests.Issues
             using (var session = store.OpenSession())
             {
                 Assert.Equal(0, session.Advanced.DocumentQuery<Profile>("ProfileByName")
-                    .Where("Name:NoSuch")
+                    .Where("Name", "NoSuch")
                     .Count());
 
                 Assert.Equal(1, session.Advanced.DocumentQuery<Profile>("ProfileByName")
-                  .Where("Name:Google")
+                    .Where("Name", "Google")
                   .Count());
 
                 Assert.Equal(2, session.Advanced.DocumentQuery<Profile>("ProfileByName")
@@ -321,12 +321,12 @@ namespace SlowTests.Issues
             using (var session = store.OpenSession())
             {
                 Assert.Equal(0, session.Advanced.DocumentQuery<Profile>("ProfileByName")
-                    .Where("Name:NoSuch")
+                    .Where("Name", "NoSuch")
                     .CountLazily().Value);
 
                 Assert.Equal(1, session.Advanced.DocumentQuery<Profile>("ProfileByName")
-                  .Where("Name:Google")
-                  .CountLazily().Value);
+                    .Where("Name", "Google")
+                    .CountLazily().Value);
 
                 Assert.Equal(2, session.Advanced.DocumentQuery<Profile>("ProfileByName")
                   .CountLazily().Value);
@@ -338,11 +338,11 @@ namespace SlowTests.Issues
             using (var session = store.OpenAsyncSession())
             {
                 Assert.Equal(0, await session.Advanced.AsyncDocumentQuery<Profile>("ProfileByName")
-                    .Where("Name:NoSuch")
+                    .Where("Name", "NoSuch")
                     .CountAsync());
 
                 Assert.Equal(1, await session.Advanced.AsyncDocumentQuery<Profile>("ProfileByName")
-                  .Where("Name:Google")
+                    .Where("Name", "Google")
                   .CountAsync());
 
                 Assert.Equal(2, await session.Advanced.AsyncDocumentQuery<Profile>("ProfileByName")
@@ -355,11 +355,11 @@ namespace SlowTests.Issues
             using (var session = store.OpenAsyncSession())
             {
                 Assert.Equal(0, await session.Advanced.AsyncDocumentQuery<Profile>("ProfileByName")
-                    .Where("Name:NoSuch")
+                    .Where("Name", "NoSuch")
                     .CountLazilyAsync().Value);
 
                 Assert.Equal(1, await session.Advanced.AsyncDocumentQuery<Profile>("ProfileByName")
-                  .Where("Name:Google")
+                    .Where("Name", "Google")
                   .CountLazilyAsync().Value);
 
                 Assert.Equal(2, await session.Advanced.AsyncDocumentQuery<Profile>("ProfileByName")
@@ -372,11 +372,11 @@ namespace SlowTests.Issues
             using (var session = store.OpenSession())
             {
                 Assert.Equal(0, session.Advanced.DocumentQuery<Profile>("ProfileByName")
-                    .Where("Name:NoSuch")
+                    .Where("Name", "NoSuch")
                     .Lazily().Value.Count());
 
                 Assert.Equal(1, session.Advanced.DocumentQuery<Profile>("ProfileByName")
-                  .Where("Name:Google")
+                    .Where("Name", "Google")
                   .Lazily().Value.Count());
 
                 Assert.Equal(2, session.Advanced.DocumentQuery<Profile>("ProfileByName")
@@ -389,11 +389,11 @@ namespace SlowTests.Issues
             using (var session = store.OpenAsyncSession())
             {
                 Assert.Equal(0, (await session.Advanced.AsyncDocumentQuery<Profile>("ProfileByName")
-                    .Where("Name:NoSuch")
+                    .Where("Name", "NoSuch")
                     .LazilyAsync(null).Value).Count());
 
                 Assert.Equal(1, (await session.Advanced.AsyncDocumentQuery<Profile>("ProfileByName")
-                  .Where("Name:Google")
+                    .Where("Name", "Google")
                   .LazilyAsync(null).Value).Count());
 
                 Assert.Equal(2, (await session.Advanced.AsyncDocumentQuery<Profile>("ProfileByName")

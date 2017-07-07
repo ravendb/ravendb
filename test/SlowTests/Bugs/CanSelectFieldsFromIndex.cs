@@ -62,7 +62,7 @@ namespace SlowTests.Bugs
 
                 var queryResult = store.Commands().Query("EmailAndProject", new IndexQuery()
                 {
-                    FieldsToFetch = new [] {"email"}
+                    //FieldsToFetch = new [] {"email"}
                 });
 
                 Assert.Equal(9, queryResult.Results.Length);

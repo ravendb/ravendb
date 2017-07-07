@@ -72,7 +72,9 @@ namespace SlowTests.Tests.Querying
                 {
                     var results =
                         s.Advanced.DocumentQuery<Blog>()
-                            .Where("Title.Length:3 AND Category:Rhinos")
+                            .Where("Title.Length", "3")
+                            .AndAlso()
+                            .Where("Category", "Rhinos")
                             .WaitForNonStaleResultsAsOfNow()
                             .ToArray();
 
@@ -251,7 +253,8 @@ namespace SlowTests.Tests.Querying
                             .Highlight("Title", 18, 2, out titleHighlightings)
                             .Highlight("Category", 18, 2, out categoryHighlightings)
                             .SetHighlighterTags("*", "*")
-                            .Where("Title:(target word) OR Category:rhinos")
+                            .Where("Title", "(target word)")
+                            .Where("Category", "rhinos")
                             .WaitForNonStaleResultsAsOfNow()
                             .ToArray();
 
@@ -403,7 +406,7 @@ namespace SlowTests.Tests.Querying
                 documentStore.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
-                        Name =indexName, 
+                        Name =indexName,
                         Maps = { "from blog in docs.Blogs select new { blog.Title, blog.Category }" },
                         Fields = new Dictionary<string, IndexFieldOptions>
                         {

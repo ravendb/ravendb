@@ -23,7 +23,8 @@ namespace SlowTests.Tests.Queries
         {
             using (var store = GetDocumentStore())
             {
-                ExecuteTest(store);
+                throw new NotImplementedException();
+                //ExecuteTest(store);
             }
         }
 
@@ -32,7 +33,8 @@ namespace SlowTests.Tests.Queries
         {
             using (var store = GetDocumentStore())
             {
-                ExecuteTest(store);
+                throw new NotImplementedException();
+                //ExecuteTest(store);
             }
         }
 
@@ -61,6 +63,7 @@ namespace SlowTests.Tests.Queries
             }
         }
 
+        /*
         private void ExecuteTest(IDocumentStore store)
         {
             CreateIndexAndSampleData(store);
@@ -115,6 +118,7 @@ namespace SlowTests.Tests.Queries
                 Assert.Equal(new[] { 10002, 10003, 10004, 10006 }, resultPage2.Select(r => r.BarcodeNumber));
             }
         }
+        */
 
         private void CreateIndexAndSampleData(IDocumentStore store)
         {

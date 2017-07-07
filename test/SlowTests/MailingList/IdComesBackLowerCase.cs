@@ -56,8 +56,8 @@ namespace SlowTests.MailingList
                     var products = session.Advanced.DocumentQuery<Product, Product_AvailableForSale3>()
                         .WaitForNonStaleResults()
                         .SelectFields<Product>()
-                        .UsingDefaultField("Any")
-                        .Where("MyName1").ToList();
+                        .Where("Any", "MyName1")
+                        .ToList();
 
                     Assert.Equal("Products/100", products.First().Id);
                 }
@@ -75,8 +75,8 @@ namespace SlowTests.MailingList
                 {
                     var products = session.Advanced.DocumentQuery<Product, Product_AvailableForSale3>()
                         .WaitForNonStaleResults()
-                        .UsingDefaultField("Any")
-                        .Where("MyName1").ToList();
+                        .Where("Any", "MyName1")
+                        .ToList();
 
                     Assert.Equal("Products/100", products.First().Id);
                 }

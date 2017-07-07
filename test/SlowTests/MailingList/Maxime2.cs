@@ -46,7 +46,8 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.DocumentQuery<SpatialEntity>("SpatialIndex")
-                        .Where("Name: UQAM OR Description: UQAM")
+                        .Where("Name", "UQAM")
+                        .Where("Description", "UQAM")
                         .WithinRadiusOf(500, 45.50955, -73.569133)
                         .ToList();
 

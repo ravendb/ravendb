@@ -50,7 +50,7 @@ namespace SlowTests.MailingList
 
                     var result = commands.Query("dynamic", new IndexQuery()
                     {
-                        FieldsToFetch = new[] { "Name" },
+                        //FieldsToFetch = new[] { "Name" },
                         Query = "Name:Ayende"
                     });
 
@@ -66,7 +66,7 @@ namespace SlowTests.MailingList
 
                     result = commands.Query("Index1", new IndexQuery()
                     {
-                        FieldsToFetch = new[] { "Name" },
+                        //FieldsToFetch = new[] { "Name" },
                         Query = "Name:Ayende"
                     });
 

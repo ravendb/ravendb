@@ -314,7 +314,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                                 OperationType = FieldMapReduceOperation.Count
                             }
                         },
-                        FieldsToFetch = new[] { "City" },
+                        //FieldsToFetch = new[] { "City" },
                         WaitForNonStaleResultsAsOfNow = true
                     });
 

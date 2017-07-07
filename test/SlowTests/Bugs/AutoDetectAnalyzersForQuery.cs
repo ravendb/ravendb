@@ -37,7 +37,7 @@ namespace SlowTests.Bugs
                 using(var session = store.OpenSession())
                 {
                     var foos = session.Advanced.DocumentQuery<Foo>("test")
-                        .Where("Name:Ayende")
+                        .Where("Name", "Ayende")
                         .WaitForNonStaleResults()
                         .ToList();
 

@@ -14,6 +14,7 @@ using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
+using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
@@ -30,14 +31,6 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public AsyncDocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string[] fieldsToFetch, string[] projectionFields, bool isMapReduce)
             : base(session, indexName, fieldsToFetch, projectionFields, isMapReduce)
-        {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="AbstractDocumentQuery{T,TSelf}"/> class.
-        /// </summary>
-        public AsyncDocumentQuery(AsyncDocumentQuery<T> other)
-            : base(other)
         {
         }
 
@@ -99,9 +92,9 @@ namespace Raven.Client.Documents.Session
         /// Filter the results from the index using the specified where clause.
         /// </summary>
         /// <param name="whereClause">The where clause.</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Where(string whereClause)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Where(string fieldName, string whereClause)
         {
-            Where(whereClause);
+            Where(fieldName, whereClause);
             return this;
         }
 
@@ -245,30 +238,6 @@ namespace Raven.Client.Documents.Session
         public IAsyncDocumentQuery<T> WhereBetween<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end)
         {
             WhereBetween(GetMemberQueryPath(propertySelector.Body), start, end);
-            return this;
-        }
-
-        /// <summary>
-        /// Matches fields where the value is between the specified start and end, inclusive
-        /// </summary>
-        /// <param name="fieldName">Name of the field.</param>
-        /// <param name="start">The start.</param>
-        /// <param name="end">The end.</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereBetweenOrEqual(string fieldName, object start, object end)
-        {
-            WhereBetweenOrEqual(fieldName, start, end);
-            return this;
-        }
-
-        /// <summary>
-        ///   Matches fields where the value is between the specified start and end, inclusive
-        /// </summary>
-        /// <param name = "propertySelector">Property selector for the field.</param>
-        /// <param name = "start">The start.</param>
-        /// <param name = "end">The end.</param>
-        public IAsyncDocumentQuery<T> WhereBetweenOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end)
-        {
-            WhereBetweenOrEqual(GetMemberQueryPath(propertySelector.Body), start, end);
             return this;
         }
 
@@ -896,12 +865,6 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.UsingDefaultField(string field)
-        {
-            UsingDefaultField(field);
-            return this;
-        }
-
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.UsingDefaultOperator(QueryOperator queryOperator)
         {
             UsingDefaultOperator(queryOperator);
@@ -1122,7 +1085,8 @@ namespace Raven.Client.Documents.Session
                 IsMapReduce)
             {
                 PageSize = PageSize,
-                QueryText = new StringBuilder(QueryText.ToString()),
+                WhereTokens = new LinkedList<QueryToken>(WhereTokens.Select(x => x.Clone())),
+                //QueryText = new StringBuilder(QueryText.ToString()),
                 Start = Start,
                 Timeout = Timeout,
                 CutoffEtag = CutoffEtag,
@@ -1131,7 +1095,6 @@ namespace Raven.Client.Documents.Session
                 TheWaitForNonStaleResultsAsOfNow = TheWaitForNonStaleResultsAsOfNow,
                 OrderByFields = OrderByFields,
                 DynamicMapReduceFields = DynamicMapReduceFields,
-                _isDistinct = _isDistinct,
                 AllowMultipleIndexEntriesForSameDocumentToResultTransformer = AllowMultipleIndexEntriesForSameDocumentToResultTransformer,
                 Negate = Negate,
                 TransformResultsFunc = TransformResultsFunc,
@@ -1143,7 +1106,6 @@ namespace Raven.Client.Documents.Session
                 SpatialUnits = SpatialUnits,
                 DistanceErrorPct = DistanceErrorPct,
                 RootTypes = { typeof(T) },
-                DefaultField = DefaultField,
                 BeforeQueryExecutionAction = BeforeQueryExecutionAction,
                 AfterQueryExecutedCallback = AfterQueryExecutedCallback,
                 AfterStreamExecutedCallback = AfterStreamExecutedCallback,
@@ -1158,6 +1120,10 @@ namespace Raven.Client.Documents.Session
                 LastEquality = LastEquality,
                 ShouldExplainScores = ShouldExplainScores
             };
+
+            if (IsDistinct)
+                asyncDocumentQuery.Distinct();
+
             asyncDocumentQuery.AfterQueryExecuted(AfterQueryExecutedCallback);
             return asyncDocumentQuery;
         }

@@ -89,15 +89,11 @@ namespace Raven.Client.Documents.Queries
             if (AllowMultipleIndexEntriesForSameDocumentToResultTransformer)
                 path.Append("&allowMultipleIndexEntriesForSameDocumentToResultTransformer=true");
 
-            if (IsDistinct)
-                path.Append("&distinct=true");
-
             if (ShowTimings)
                 path.Append("&showTimings=true");
             if (SkipDuplicateChecking)
                 path.Append("&skipDuplicateChecking=true");
 
-            FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
             Includes.ApplyIfNotNull(include => path.AppendFormat("&include={0}", Uri.EscapeDataString(include)));
 
             DynamicMapReduceFields.ApplyIfNotNull(field => path.Append("&mapReduce=")
@@ -159,12 +155,6 @@ namespace Raven.Client.Documents.Queries
                 path.Append(EscapingHelper.EscapeLongDataString(Query));
             }
 
-            if (string.IsNullOrEmpty(DefaultField) == false)
-            {
-                path.Append("&defaultField=").Append(Uri.EscapeDataString(DefaultField));
-            }
-            if (DefaultOperator != QueryOperator.Or)
-                path.Append("&operator=AND");
             var vars = GetCustomQueryStringVariables();
             if (!string.IsNullOrEmpty(vars))
             {
@@ -322,11 +312,6 @@ namespace Raven.Client.Documents.Queries
         protected internal bool PageSizeSet { get; private set; }
 
         /// <summary>
-        /// Whether we should apply distinct operation to the query on the server side
-        /// </summary>
-        public bool IsDistinct { get; set; }
-
-        /// <summary>
         /// Actual query that will be performed (Lucene syntax).
         /// </summary>
         public string Query { get; set; }
@@ -348,14 +333,6 @@ namespace Raven.Client.Documents.Queries
                 PageSizeSet = true;
             }
         }
-
-        /// <summary>
-        /// Array of fields that will be fetched.
-        /// <para>Fetch order:</para>
-        /// <para>1. Stored index fields</para>
-        /// <para>2. Document</para>
-        /// </summary>
-        public string[] FieldsToFetch { get; set; }
 
         /// <summary>
         /// Used to calculate index staleness. When set to <c>true</c> CutOff will be set to DateTime.UtcNow on server side.
@@ -385,20 +362,6 @@ namespace Raven.Client.Documents.Queries
         /// </summary>
         public long? CutoffEtag { get; set; }
 
-        /// <summary>
-        /// Default field to use when querying directly on the Lucene query
-        /// </summary>
-        public string DefaultField { get; set; }
-
-        /// <summary>
-        /// Changes the default operator mode we use for queries.
-        /// <para>When set to Or a query such as 'Name:John Age:18' will be interpreted as:</para>
-        /// <para> Name:John OR Age:18</para>
-        /// <para>When set to And the query will be interpreted as:</para>
-        ///	<para> Name:John AND Age:18</para>
-        /// </summary>
-        public QueryOperator DefaultOperator { get; set; }
-
         public override string ToString()
         {
             return Query;
@@ -415,14 +378,10 @@ namespace Raven.Client.Documents.Queries
                    PageSize == other.PageSize &&
                    string.Equals(Query, other.Query) &&
                    Start == other.Start &&
-                   IsDistinct == other.IsDistinct &&
-                   EnumerableExtension.ContentEquals(FieldsToFetch, other.FieldsToFetch) &&
                    WaitForNonStaleResultsTimeout == other.WaitForNonStaleResultsTimeout &&
                    WaitForNonStaleResultsAsOfNow.Equals(other.WaitForNonStaleResultsAsOfNow) &&
                    WaitForNonStaleResults.Equals(other.WaitForNonStaleResults) &&
-                   Equals(CutoffEtag, other.CutoffEtag) &&
-                   string.Equals(DefaultField, other.DefaultField) &&
-                   DefaultOperator == other.DefaultOperator;
+                   Equals(CutoffEtag, other.CutoffEtag);
         }
 
         public override bool Equals(object obj)
@@ -440,13 +399,9 @@ namespace Raven.Client.Documents.Queries
                 hashCode = (hashCode * 397) ^ PageSize.GetHashCode();
                 hashCode = (hashCode * 397) ^ (Query?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ Start;
-                hashCode = (hashCode * 397) ^ (IsDistinct ? 1 : 0);
-                hashCode = (hashCode * 397) ^ (FieldsToFetch?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (WaitForNonStaleResultsTimeout != null ? WaitForNonStaleResultsTimeout.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ WaitForNonStaleResultsAsOfNow.GetHashCode();
                 hashCode = (hashCode * 397) ^ (CutoffEtag != null ? CutoffEtag.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (DefaultField?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (int)DefaultOperator;
                 return hashCode;
             }
         }

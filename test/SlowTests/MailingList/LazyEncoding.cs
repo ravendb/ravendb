@@ -51,7 +51,8 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var x = session.Advanced.DocumentQuery<User, UserIndex>()
-                        .Where("+Name:Oren +Name:Eini")
+                        .Where("+Name", "Oren")
+                        .Where("+Name", "Eini")
                         .ToFacets(new Facet[]
                         {
                             new Facet<User>
@@ -66,7 +67,8 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var x = session.Advanced.DocumentQuery<User, UserIndex>()
-                        .Where("+Name:Oren +Name:Eini")
+                        .Where("+Name", "Oren")
+                        .Where("+Name", "Eini")
                         .ToFacetsLazy(new Facet[]
                         {
                             new Facet<User>
