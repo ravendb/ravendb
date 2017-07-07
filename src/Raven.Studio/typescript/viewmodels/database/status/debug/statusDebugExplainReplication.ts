@@ -22,9 +22,10 @@ class statusDebugExplainReplication extends viewModelBase {
 
         var deferred = $.Deferred();
 
+        /*TODO
         $.when(this.fetchReplicationDestinations())
             .always(() => deferred.resolve({ can: true }));
-
+        */
         return deferred;
     }
 
@@ -33,13 +34,14 @@ class statusDebugExplainReplication extends viewModelBase {
         this.updateHelpLink('JHZ574');
     }
 
+    /*TODO
     private fetchReplicationDestinations() {
         return new getReplicationsCommand(this.activeDatabase())
             .execute()
             .done((destinations: configurationDocumentDto<replicationsDto>) => {
                 this.destinations(destinations.MergedDocument.Destinations);
             });
-    }
+    }*/
 
     buttonEnabled = ko.computed(() => {
         var destionationSelected = this.selectedDestination() != null;
