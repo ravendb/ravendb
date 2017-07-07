@@ -1,17 +1,23 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import eventsCollector = require("common/eventsCollector");
-import addNodeToClusterCommand = require("commands/database/cluster/addNodeToClusterCommand");
 import removeNodeFromClusterCommand = require("commands/database/cluster/removeNodeFromClusterCommand");
 import leaderStepDownCommand = require("commands/database/cluster/leaderStepDownCommand");
 
 import clusterNode = require("models/database/cluster/clusterNode");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import appUrl = require("common/appUrl");
 
 class cluster extends viewModelBase {
 
     topology = clusterTopologyManager.default.topology;
 
     canDeleteNodes: KnockoutComputed<boolean>;
+
+    addNodeUrl = appUrl.forAddClusterNode();
+
+    spinners = {
+        stepdown: ko.observable<boolean>(false),
+        delete: ko.observableArray<string>([])
+    }
 
     constructor() {
         super();
@@ -30,23 +36,14 @@ class cluster extends viewModelBase {
         this.updateHelpLink("11HBHO");
     }
 
-    addAnotherServerToCluster() {
-        eventsCollector.default.reportEvent("cluster", "add-server");
-
-        const serverUrl = prompt("Enter server URL:");
-        if (serverUrl) {
-            // TODO: use url validation from extensions.ts when implementing the dialog instead of the prompt
-            new addNodeToClusterCommand(serverUrl)
-                .execute();
-        }
-    }
-
     stepDown(node: clusterNode) {
         this.confirmationMessage("Are you sure?", `Do you want current leader to step down?`, ["Cancel", "Step down"])
             .done(result => {
                 if (result.can) {
+                    this.spinners.stepdown(true);
                     new leaderStepDownCommand()
-                        .execute();
+                        .execute()
+                        .always(() => this.spinners.stepdown(false));
                 }
             });
     }
@@ -55,8 +52,10 @@ class cluster extends viewModelBase {
         this.confirmationMessage("Are you sure?", `Do you want to remove ${node.serverUrl()} from cluster?`, ["Cancel", "Delete"])
             .done(result => {
                 if (result.can) {
+                    this.spinners.delete.push(node.tag());
                     new removeNodeFromClusterCommand(node.tag())
-                        .execute();
+                        .execute()
+                        .always(() => this.spinners.delete.remove(node.tag()));
                 }
             });
     }

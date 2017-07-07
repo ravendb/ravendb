@@ -20,7 +20,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             nav: false,
             route: "databases/documents/revisions/bin",
             moduleId: "viewmodels/database/documents/revisionsBin",
-            css: 'icon-revisions-bin', //TODO: update me!
+            css: 'icon-revisions-bin',
             dynamicHash: appUrls.revisionsBin
         }),
 

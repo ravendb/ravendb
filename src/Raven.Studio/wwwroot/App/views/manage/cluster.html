@@ -3,7 +3,7 @@
         <div class="col-sm-12 col-lg-6 flex-vertical">
 
             <div class="flex-header">
-                <button data-bind="click: addAnotherServerToCluster" class="btn btn-primary"><i class="icon-plus"></i> <span>Add Node to cluster</span></button>
+                <a data-bind="attr: { href: addNodeUrl }" class="btn btn-primary"><i class="icon-plus"></i> <span>Add Node to cluster</span></a>
             </div>
 
             <div class="scroll flex-grow" data-bind="foreach: topology().nodes">
@@ -30,7 +30,7 @@
                                 </div>
                                 <div class="node-type">
                                     <h5>TYPE</h5>
-                                    <h3><i data-bind="attr: { class: cssIcon }" ></i> <span data-bind="text: type"></span></h3>
+                                    <h3><i data-bind="attr: { class: cssIcon, title: type }" ></i> <span data-bind="text: type"></span></h3>
                                 </div>
                             </div>
                             <div class="address">
@@ -46,10 +46,13 @@
                                 <button class="btn btn-default"><i class="icon-arrow-filled-down"></i> <span>Demote</span></button>
                                     
                                     -->
-                                <button class="btn btn-default" data-bind="click: _.partial($parent.stepDown, $data), visible: $root.topology().leader() === tag()">
+                                <button class="btn btn-default" 
+                                        data-bind="click: _.partial($parent.stepDown, $data), visible: $root.topology().leader() === tag(), css: { 'btn-spinner': $root.spinners.stepdown }, disable: $root.spinners.stepdown">
                                     <i class="icon-stepdown"></i> <span>Step down</span>
                                 </button>
-                                <button class="btn btn-danger" data-bind="click: _.partial($parent.deleteNode, $data), enable: $root.canDeleteNodes" title="Remove node from cluster">
+                                <button class="btn btn-danger" 
+                                        data-bind="click: _.partial($parent.deleteNode, $data), enable: $root.canDeleteNodes() && !_.includes($root.spinners.delete(), tag()), css: { 'btn-spinner': _.includes($root.spinners.delete(), tag()) }" 
+                                        title="Remove node from cluster">
                                     <i class="icon-trash"></i>
                                 </button>
                             </div>
