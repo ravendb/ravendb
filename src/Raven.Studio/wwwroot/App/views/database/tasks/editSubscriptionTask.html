@@ -22,24 +22,24 @@
                 </div>
                 <div class="scroll" data-bind="with: editedSubscription">
                     <div class="panel padding">
-                        <h2 data-bind="visible: $parent.isAddingNewSubscriptionTask()">New Subscription</h2>
-                        <h2 data-bind="visible: !$parent.isAddingNewSubscriptionTask()">Edit Subscription</h2>
+                        <h2 data-bind="visible: $root.isAddingNewSubscriptionTask()">New Subscription</h2>
+                        <h2 data-bind="visible: !$root.isAddingNewSubscriptionTask()">Edit Subscription</h2>
                         <div class="row flex-row margin-bottom">
                             <label class="control-label col-xs-12 col-sm-6 col-lg-4">Task Name</label>
                             <div class="col-xs-12 col-sm-6 col-lg-8">
-                                <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the subscription task" title="Note: if no name is supplied then task id will be used as name"
-                                       data-bind="value: taskName, attr: { disabled: !$parent.isAddingNewSubscriptionTask() }">
+                                <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the subscription task" title="Note: if no name is supplied then server will create one for you"
+                                       data-bind="value: taskName, attr: { disabled: !$root.isAddingNewSubscriptionTask() }">
                             </div>
                         </div>
-                        <div class="row flex-row margin-bottom"> 
+                        <div class="row flex-row margin-bottom">
                             <label class="control-label col-xs-12 col-sm-6 col-lg-4">Collection</label>
                             <div class=" col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: collection, validationOptions: { insertMessages: false }">
                                 <div class="dropdown btn-block">
-                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" data-bind="attr: { disabled: !$parent.isAddingNewSubscriptionTask() }">
+                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" data-bind="attr: { disabled: !$root.isAddingNewSubscriptionTask() }">
                                         <span data-bind="text: collection() || 'Select collection..', textinput: collection"></span> <!-- TODO: make the 'Select collection..' grayed out, like a real placeholder -->
                                         <span class="caret"></span>
                                     </button>
-                                    <ul class="dropdown-menu max-height" data-bind="foreach: $parent.collections">
+                                    <ul class="dropdown-menu max-height" data-bind="foreach: $root.collections">
                                         <li><a href="#" data-bind="text: name, click: _.partial($root.useCollection, $data)"></a></li>
                                     </ul>
                                 </div>
@@ -73,7 +73,7 @@
                         <div class="row flex-row margin-bottom">
                             <label class="control-label col-xs-12 col-sm-6 col-lg-4">Send Documents From</label>
                             <div class=" col-xs-12 col-sm-6 col-lg-8">
-                                <div class="dropdown btn-block" title="Set the starting point for the subscription task - TBD....">
+                                <div class="dropdown btn-block" title="Set the starting point for the subscription task">
                                     <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" disabled="disabled"> 
                                         <span data-bind="text: startingPointType"></span>
                                         <span class="caret"></span>

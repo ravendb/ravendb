@@ -38,6 +38,7 @@ import verifyDocumentsIDsCommand = require("commands/database/documents/verifyDo
 import generalUtils = require("common/generalUtils");
 import customFunctions = require("models/database/documents/customFunctions");
 import evaluationContextHelper = require("common/helpers/evaluationContextHelper");
+import collectionsTracker = require("common/helpers/database/collectionsTracker");
 
 type fetcherType = (skip: number, take: number, previewCols: string[], fullCols: string[]) => JQueryPromise<pagedResult<document>>;
 
@@ -270,7 +271,6 @@ class patchTester extends viewModelBase {
     }
 }
 
-
 class patch extends viewModelBase {
 
     static readonly $body = $("body");
@@ -296,7 +296,7 @@ class patch extends viewModelBase {
 
     indexNames = ko.observableArray<string>();
     indexFields = ko.observableArray<string>();
-    collections = ko.observableArray<collection>([]);
+    collections = collectionsTracker.default.collections;
 
     isDocumentMode: KnockoutComputed<boolean>;
     isCollectionMode: KnockoutComputed<boolean>;
@@ -422,7 +422,7 @@ class patch extends viewModelBase {
 
         this.fullDocumentsProvider = new documentPropertyProvider(this.activeDatabase());
 
-        return $.when<any>(this.fetchAllCollections(), this.fetchCustomFunctions(), this.fetchAllIndexes(), this.savedPatches.loadAll(this.activeDatabase()));
+        return $.when<any>(this.fetchCustomFunctions(), this.fetchAllIndexes(), this.savedPatches.loadAll(this.activeDatabase()));
     }
 
     attached() {
@@ -748,14 +748,6 @@ class patch extends viewModelBase {
             .execute()
             .done(functions => {
                 this.customFunctionsContext = evaluationContextHelper.createContext(functions.functions);
-            });
-    }
-
-    private fetchAllCollections(): JQueryPromise<collectionsStats> {
-        return new getCollectionsStatsCommand(this.activeDatabase())
-            .execute()
-            .done((stats: collectionsStats) => {
-                this.collections(stats.collections);
             });
     }
 

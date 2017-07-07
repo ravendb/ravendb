@@ -1,19 +1,18 @@
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
-import ongoingTaskSubscription = require("models/database/tasks/ongoingTaskSubscriptionModel");
+import ongoingTaskSubscriptionEdit = require("models/database/tasks/ongoingTaskSubscriptionEditModel");
 import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 import collection = require("models/database/documents/collection");
-import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand"); 
-import collectionsStats = require("models/database/documents/collectionsStats");
 import saveSubscriptionTaskCommand = require("commands/database/tasks/saveSubscriptionTaskCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
+import collectionsTracker = require("common/helpers/database/collectionsTracker");
 
 class editSubscriptionTask extends viewModelBase {
 
-    editedSubscription = ko.observable<ongoingTaskSubscription>();
+    editedSubscription = ko.observable<ongoingTaskSubscriptionEdit>();
     isAddingNewSubscriptionTask = ko.observable<boolean>(true);
-    collections = ko.observableArray<collection>([]);
+    collections = collectionsTracker.default.collections;
 
     constructor() {
         super();
@@ -31,16 +30,14 @@ class editSubscriptionTask extends viewModelBase {
 
             new ongoingTaskInfoCommand(this.activeDatabase(), "Subscription", args.taskId, args.taskName)
                 .execute()
-                .done((result: Raven.Client.Documents.Subscriptions.SubscriptionState) => this.editedSubscription(new ongoingTaskSubscription(result))) 
+                .done((result: Raven.Client.Documents.Subscriptions.SubscriptionState) => this.editedSubscription(new ongoingTaskSubscriptionEdit(result))) 
                 .fail(() => router.navigate(appUrl.forOngoingTasks(this.activeDatabase())));
         }
         else {
             // 2. Creating a new task
             this.isAddingNewSubscriptionTask(true);
-            this.editedSubscription(ongoingTaskSubscription.empty());
+            this.editedSubscription(ongoingTaskSubscriptionEdit.empty());
         }
-
-        return $.when<any>(this.fetchAllCollections());
     }
 
     compositionComplete() {
@@ -78,7 +75,7 @@ class editSubscriptionTask extends viewModelBase {
         this.editedSubscription().collection(collectionToUse.name);
     }
 
-    setStartingPointType(startingPointType: string) {
+    setStartingPointType(startingPointType: subscriptionStartType) {
         this.editedSubscription().startingPointType(startingPointType);
     }
 
@@ -93,14 +90,6 @@ class editSubscriptionTask extends viewModelBase {
             valid = false;
 
         return valid;
-    }
-
-    private fetchAllCollections(): JQueryPromise<collectionsStats> { // TODO: duplicate code with patch.ts - can we merge ?
-        return new getCollectionsStatsCommand(this.activeDatabase())
-            .execute()
-            .done((stats: collectionsStats) => {
-                this.collections(stats.collections);
-            });
     }
 }
 
