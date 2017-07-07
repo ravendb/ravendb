@@ -1,10 +1,26 @@
-<div id="notification-center" data-bind="css: { 'show-notifications': notificationCenter.showNotifications() }, with: notificationCenter">
+<div id="notification-center" class="flex-vertical" data-bind="css: { 'show-notifications': notificationCenter.showNotifications() }, with: notificationCenter">
+
     <div class="padding" data-bind="visible: noNewNotifications">
         <i class="icon-xl icon-empty-set text-muted"></i>
         <h2 class="text-center">No new notifications</h2>
     </div>
-    
-    <div data-bind="foreach: allNotifications">
+
+    <div class="notification-actions flex-horizontal flex-stretch-items" data-bind="visible: !noNewNotifications()">
+        <div class="flex-grow flex-horizontal flex-stretch-items">
+            <button class="notification-type-toggle active">All</button>
+            <button class="notification-type-toggle type-success">3</button>
+            <button class="notification-type-toggle type-info">1</button>
+            <button class="notification-type-toggle type-warning">5</button>
+            <button class="notification-type-toggle type-danger">800</button>
+
+            
+        </div>
+        
+        <button class="dismiss">Dismiss all</button>
+
+    </div>
+
+    <div class="notification-list scroll" data-bind="foreach: allNotifications">
         <div data-bind="template: { name: type + '-template' }"></div>
     </div>
 </div>
@@ -26,7 +42,7 @@
                             class="btn btn-sm">
                         <i class="icon-details"></i>
                         <span>Details</span>
-                    </button>                    
+                    </button>
                 </div>
             </div>
 
@@ -117,7 +133,7 @@
             <h3 class="text-warning" data-bind="text: title"></h3>
             <div class="time" data-bind="text: displayDate().format('LLL')"></div>
             <p data-bind="text: message"></p>
-            
+
             <div class="checkbox">
                 <input data-bind="attr: { id: 'dont-show-' + id }, checked: dontShowAgain" class="styled" type="checkbox">
                 <label data-bind="attr: { for: 'dont-show-' + id }">
