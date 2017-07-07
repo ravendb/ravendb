@@ -1432,7 +1432,7 @@ namespace Raven.Bundles.Replication.Tasks
                     while (true)
                     {
                         _cts.Token.ThrowIfCancellationRequested();
-
+                        actions.General.MaybePulseTransaction(120);//120 because i don't want to wait to filter 1024 iterations 
                         fetchedDocs = GetDocsToReplicate(actions, prefetchingBehavior, 
                             result.LastEtag, maxNumberOfItemsToReceiveInSingleBatch);
 
