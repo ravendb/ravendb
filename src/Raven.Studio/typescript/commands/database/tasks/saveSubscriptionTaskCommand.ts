@@ -3,20 +3,9 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class saveSubscriptionTaskCommand extends commandBase {
-    private subscriptionToSend: Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions; 
 
     constructor(private db: database, private subscriptionSettings: subscriptionDataFromUI, private taskId?: number, private disabled?: Raven.Client.Server.Operations.OngoingTaskState) {
         super();
-      
-        this.subscriptionToSend = {
-            ChangeVector: this.subscriptionSettings.ChangeVectorEntry,
-            Name: subscriptionSettings.TaskName,
-            Criteria: {
-                Collection: this.subscriptionSettings.Collection,
-                Script: this.subscriptionSettings.Script,
-                IsVersioned: this.subscriptionSettings.IsVersioned
-            }
-        };
     }
 
     execute(): JQueryPromise<Raven.Client.Server.Operations.ModifyOngoingTaskResult> {
@@ -43,7 +32,7 @@ class saveSubscriptionTaskCommand extends commandBase {
 
     private updateSubscription(): JQueryPromise<Raven.Client.Server.Operations.ModifyOngoingTaskResult> {
         let args: any;
-       
+
         if (this.taskId) { 
             // An existing task
             args = this.disabled === "Disabled" ? { name: this.db.name, id: this.taskId, disabled: true } :
@@ -52,20 +41,28 @@ class saveSubscriptionTaskCommand extends commandBase {
             // New task
             args = { name: this.db.name };
         }
-
+        
         const url = endpoints.databases.subscriptions.subscriptions + this.urlEncodeArgs(args);
 
-        const addRepTask = $.Deferred<Raven.Client.Server.Operations.ModifyOngoingTaskResult>();
+        const saveTask = $.Deferred<Raven.Client.Server.Operations.ModifyOngoingTaskResult>();
 
-        const payload = this.subscriptionToSend;
+        const subscriptionToSend = {
+            ChangeVector: this.subscriptionSettings.ChangeVectorEntry,
+            Name: this.subscriptionSettings.TaskName,
+            Criteria: {
+                Collection: this.subscriptionSettings.Collection,
+                Script: this.subscriptionSettings.Script,
+                IsVersioned: this.subscriptionSettings.IsVersioned
+            }
+        };
 
-        this.put(url, JSON.stringify(payload), this.db)
-            .done((results: Array<Raven.Client.Server.Operations.ModifyOngoingTaskResult>) => { 
-                addRepTask.resolve(results[0]);
+        this.put(url, JSON.stringify(subscriptionToSend), this.db)
+            .done((results: Raven.Client.Server.Operations.ModifyOngoingTaskResult) => { 
+                saveTask.resolve(results);
             })
-            .fail(response => addRepTask.reject(response));
+            .fail(response => saveTask.reject(response));
 
-        return addRepTask;
+        return saveTask;
     }
 }
 
