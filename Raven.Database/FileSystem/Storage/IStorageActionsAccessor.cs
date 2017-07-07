@@ -48,6 +48,8 @@ namespace Raven.Database.FileSystem.Storage
 
         void RenameFile(string filename, string rename, bool commitPeriodically = false);
 
+        FileUpdateResult TouchFile(string filename, Etag etag);
+
         RavenJObject GetConfig(string name);
 
         void SetConfig(string name, RavenJObject metadata);
