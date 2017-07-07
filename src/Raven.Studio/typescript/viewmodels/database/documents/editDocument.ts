@@ -567,6 +567,11 @@ class editDocument extends viewModelBase {
             }
         }
 
+        // server only sends @flags if there are any
+        if ("@flags" in metadata && !("@flags" in savedDocumentDto)) {
+            delete metadata["@flags"];
+        }
+
         const newDoc = new document(localDoc);
         this.document(newDoc);
         this.inReadOnlyMode(false);
