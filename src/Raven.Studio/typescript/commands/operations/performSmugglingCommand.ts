@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 
 class performSmugglingCommand extends commandBase {
 
-    constructor(private migration: serverSmugglingDto, private db: database, private updateMigrationStatus: (status: serverSmugglingOperationStateDto) => void) { 
+    constructor(private migration: serverSmugglingDto, private db: database /*, private updateMigrationStatus: (status: serverSmugglingOperationStateDto) => void*/) { 
         super();
     }
 

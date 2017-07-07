@@ -222,6 +222,10 @@ interface compactStatusDto {
     State: string;
 }
 
+interface serverSmugglingDto {
+    
+}
+
 interface commandData {
     CommandText: string;
     Params:{Id:string;Value:any}[];
@@ -729,58 +733,6 @@ interface triggerInfoDto {
 
 interface copyFromParentDto<T> {
     copyFromParent(parent: T): void;
-}
-interface topologyDto {
-    CurrentLeader: string;
-    CurrentTerm: number;
-    State: string;
-    CommitIndex: number;
-    AllVotingNodes: Array<nodeConnectionInfoDto>;
-    PromotableNodes: Array<nodeConnectionInfoDto>;
-    NonVotingNodes: Array<nodeConnectionInfoDto>;
-    TopologyId: string;
-}
-
-interface nodeConnectionInfoDto {
-    Uri: string;
-    Name: string;
-    Username?: string;
-    Password?: string;
-    Domain?: string;
-    ApiKey?: string;
-    IsNoneVoter?: boolean;
-}
-
-interface clusterConfigurationDto {
-    EnableReplication: boolean;
-    DatabaseSettings?: dictionary<string>;
-}
-
-interface clusterNodeStatusDto {
-    Uri: string;
-    Status: string;
-}
-
-interface serverSmugglingItemDto {
-    Name: string;
-    Incremental: boolean;
-}
-
-interface serverConnectionInfoDto {
-    Url: string;
-    Username: string;
-    Password: string;
-    Domain: string;
-    ApiKey: string;
-}
-
-interface serverSmugglingDto {
-    TargetServer: serverConnectionInfoDto;
-    Config: Array<serverSmugglingItemDto>;
-}
-
-interface serverSmugglingOperationStateDto extends operationStatusDto {
-    Messages: Array<string>;
 }
 
 interface dataExplorationRequestDto {
