@@ -20,7 +20,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             nav: false,
             route: "databases/documents/revisions/bin",
             moduleId: "viewmodels/database/documents/revisionsBin",
-            css: 'icon-zombie', //TODO: update me!
+            css: 'icon-revisions-bin', //TODO: update me!
             dynamicHash: appUrls.revisionsBin
         }),
 
@@ -32,7 +32,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             route: "database/conflicts",
             moduleId: "viewmodels/database/conflicts/conflicts",
-            css: 'icon-plus',
+            css: 'icon-conflicts',
             dynamicHash: appUrls.conflicts
         }),*/
         new leafMenuItem({
@@ -48,7 +48,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             route: "databases/documents/conflicts",
             moduleId: "viewmodels/database/conflicts/conflicts",
-            css: 'icon-plus',
+            css: 'icon-conflicts',
             dynamicHash: appUrls.conflicts
         }),
         new leafMenuItem({
