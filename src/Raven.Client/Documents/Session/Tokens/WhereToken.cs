@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using Raven.Client.Documents.Queries;
@@ -22,7 +21,7 @@ namespace Raven.Client.Documents.Session.Tokens
         public string FieldName { get; private set; }
         public WhereOperator WhereOperator { get; private set; }
         public string Value { get; private set; }
-        public IEnumerable Values { get; private set; }
+        public IEnumerable<object> Values { get; private set; }
         public string To { get; private set; }
         public string From { get; private set; }
         public decimal? Boost { get; set; }
@@ -166,9 +165,14 @@ namespace Raven.Client.Documents.Session.Tokens
                     writer
                         .Append(" IN (");
 
+                    var first = true;
                     foreach (var value in Values)
                     {
-                        // TODO [ppekrol]
+                        if (first == false)
+                            writer.Append(", ");
+
+                        first = false;
+                        writer.Append(value);
                     }
 
                     writer.Append(")");
