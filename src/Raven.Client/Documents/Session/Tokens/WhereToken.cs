@@ -38,6 +38,26 @@ namespace Raven.Client.Documents.Session.Tokens
             };
         }
 
+        public static WhereToken StartsWith(string fieldName, string value)
+        {
+            return new WhereToken
+            {
+                FieldName = fieldName,
+                Value = value,
+                WhereOperator = WhereOperator.StartsWith
+            };
+        }
+
+        public static WhereToken EndsWith(string fieldName, string value)
+        {
+            return new WhereToken
+            {
+                FieldName = fieldName,
+                Value = value,
+                WhereOperator = WhereOperator.EndsWith
+            };
+        }
+
         public static WhereToken GreaterThan(string fieldName, string value)
         {
             return new WhereToken
@@ -156,11 +176,16 @@ namespace Raven.Client.Documents.Session.Tokens
             if (WhereOperator == WhereOperator.Lucene)
                 writer.Append("lucene(");
 
+            if (WhereOperator == WhereOperator.StartsWith)
+                writer.Append("startsWith(");
+
+            if (WhereOperator == WhereOperator.EndsWith)
+                writer.Append("endsWith(");
+
             writer.Append(RavenQuery.EscapeField(FieldName));
 
             switch (WhereOperator)
             {
-                case WhereOperator.ContainsAny:
                 case WhereOperator.In:
                     writer
                         .Append(" IN (");
@@ -211,10 +236,15 @@ namespace Raven.Client.Documents.Session.Tokens
                     break;
                 case WhereOperator.Search:
                 case WhereOperator.Lucene:
+                case WhereOperator.StartsWith:
+                case WhereOperator.EndsWith:
                     writer
                         .Append(", ")
                         .Append(Value)
                         .Append(")");
+                    break;
+                case WhereOperator.ContainsAny:
+                    // TODO [ppekrol]
                     break;
                 case WhereOperator.ContainsAll:
                     // TODO [ppekrol]

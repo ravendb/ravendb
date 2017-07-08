@@ -1,4 +1,4 @@
-namespace Raven.Client.Documents.Session
+namespace Raven.Client.Documents.Session.Tokens
 {
     public enum WhereOperator
     {
@@ -10,8 +10,10 @@ namespace Raven.Client.Documents.Session
         In,
         Between,
         Search,
+        Lucene,
+        StartsWith,
+        EndsWith,
         ContainsAny,
-        ContainsAll,
-        Lucene
+        ContainsAll
     }
 }

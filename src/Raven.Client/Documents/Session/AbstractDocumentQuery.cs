@@ -843,15 +843,23 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name = "value">The value.</param>
         public void WhereStartsWith(string fieldName, object value)
         {
-            // NOTE: doesn't fully match StartsWith semantics
-            WhereEquals(
-                new WhereParams
-                {
-                    FieldName = fieldName,
-                    Value = string.Concat(value, "*"),
-                    IsAnalyzed = true,
-                    AllowWildcards = true
-                });
+            var whereParams = new WhereParams
+            {
+                FieldName = fieldName,
+                Value = value,
+                IsAnalyzed = true,
+                AllowWildcards = true
+            };
+
+            whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
+
+            var transformToEqualValue = TransformToEqualValue(whereParams);
+            LastEquality = new KeyValuePair<string, string>(whereParams.FieldName, transformToEqualValue);
+
+            AppendOperatorIfNeeded(WhereTokens);
+            NegateIfNeeded();
+
+            WhereTokens.AddLast(WhereToken.StartsWith(whereParams.FieldName, transformToEqualValue));
         }
 
         /// <summary>
@@ -861,18 +869,23 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name = "value">The value.</param>
         public void WhereEndsWith(string fieldName, object value)
         {
-            // https://lucene.apache.org/core/2_9_4/queryparsersyntax.html#Wildcard%20Searches
-            // You cannot use a * or ? symbol as the first character of a search
+            var whereParams = new WhereParams
+            {
+                FieldName = fieldName,
+                Value = value,
+                IsAnalyzed = true,
+                AllowWildcards = true
+            };
 
-            // NOTE: doesn't fully match EndsWith semantics
-            WhereEquals(
-                new WhereParams
-                {
-                    FieldName = fieldName,
-                    Value = string.Concat("*", value),
-                    AllowWildcards = true,
-                    IsAnalyzed = true
-                });
+            whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
+
+            var transformToEqualValue = TransformToEqualValue(whereParams);
+            LastEquality = new KeyValuePair<string, string>(whereParams.FieldName, transformToEqualValue);
+
+            AppendOperatorIfNeeded(WhereTokens);
+            NegateIfNeeded();
+
+            WhereTokens.AddLast(WhereToken.EndsWith(whereParams.FieldName, transformToEqualValue));
         }
 
         /// <summary>
