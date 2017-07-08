@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private bool _disposed;
 
         private bool _initialized;
-        private Dictionary<string, object> _fields;
+        private readonly Dictionary<string, object> _fields;
 
         public LuceneIndexPersistence(Index index)
         {
