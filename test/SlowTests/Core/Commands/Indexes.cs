@@ -165,7 +165,7 @@ namespace SlowTests.Core.Commands
 
                     var entriesOnly = commands.Query("test", new IndexQuery()
                     {
-                        SortedFields = new[] { new SortedField("Name") }
+                        //SortedFields = new[] { new SortedField("Name") }
                     }, indexEntriesOnly: true).Results;
 
                     for (int i = 0; i < 5; i++)

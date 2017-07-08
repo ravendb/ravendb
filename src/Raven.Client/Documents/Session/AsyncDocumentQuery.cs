@@ -1086,6 +1086,7 @@ namespace Raven.Client.Documents.Session
             {
                 PageSize = PageSize,
                 WhereTokens = new LinkedList<QueryToken>(WhereTokens.Select(x => x.Clone())),
+                OrderByTokens = new LinkedList<QueryToken>(OrderByTokens.Select(x => x.Clone())),
                 //QueryText = new StringBuilder(QueryText.ToString()),
                 Start = Start,
                 Timeout = Timeout,
@@ -1093,7 +1094,6 @@ namespace Raven.Client.Documents.Session
                 QueryStats = QueryStats,
                 TheWaitForNonStaleResults = TheWaitForNonStaleResults,
                 TheWaitForNonStaleResultsAsOfNow = TheWaitForNonStaleResultsAsOfNow,
-                OrderByFields = OrderByFields,
                 DynamicMapReduceFields = DynamicMapReduceFields,
                 AllowMultipleIndexEntriesForSameDocumentToResultTransformer = AllowMultipleIndexEntriesForSameDocumentToResultTransformer,
                 Negate = Negate,

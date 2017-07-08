@@ -60,7 +60,6 @@ namespace Raven.Client.Documents.Queries.Spatial
             WaitForNonStaleResultsAsOfNow = query.WaitForNonStaleResultsAsOfNow;
             CutoffEtag = query.CutoffEtag;
             PageSize = query.PageSize;
-            SortedFields = query.SortedFields;
             HighlightedFields = query.HighlightedFields;
             HighlighterPreTags = query.HighlighterPreTags;
             HighlighterPostTags = query.HighlighterPostTags;

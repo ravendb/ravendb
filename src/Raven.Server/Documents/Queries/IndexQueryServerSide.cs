@@ -15,6 +15,8 @@ namespace Raven.Server.Documents.Queries
 {
     public class IndexQueryServerSide : IndexQuery<BlittableJsonReaderObject>
     {
+        public SortedField[] SortedFields { get; set; }
+
         public string[] FieldsToFetch { get; set; }
 
         public QueryOperator DefaultOperator { get; set; }

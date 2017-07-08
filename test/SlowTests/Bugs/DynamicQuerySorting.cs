@@ -74,10 +74,10 @@ namespace SlowTests.Bugs
 
                 var indexQuery = new IndexQuery()
                 {
-                    SortedFields = new[]
-                   {
-                        new SortedField("Name"),
-                    }
+                   // SortedFields = new[]
+                   //{
+                   //     new SortedField("Name"),
+                   // }
                 };
                 
                 var indexName = store.Commands().Query("dynamic/GameServers", indexQuery).IndexName;

@@ -90,11 +90,6 @@ namespace Raven.Client.Documents.Session
         protected readonly InMemoryDocumentSessionOperations TheSession;
 
         /// <summary>
-        ///   The fields to order the results by
-        /// </summary>
-        protected string[] OrderByFields = new string[0];
-
-        /// <summary>
         /// The fields of dynamic map-reduce query
         /// </summary>
         protected DynamicMapReduceField[] DynamicMapReduceFields = new DynamicMapReduceField[0];
@@ -131,6 +126,8 @@ namespace Raven.Client.Documents.Session
         protected readonly FromToken FromToken;
 
         protected LinkedList<QueryToken> WhereTokens = new LinkedList<QueryToken>();
+
+        protected LinkedList<QueryToken> OrderByTokens = new LinkedList<QueryToken>();
 
         /// <summary>
         ///   which record to start reading from
@@ -624,8 +621,7 @@ namespace Raven.Client.Documents.Session
         public void AddOrder(string fieldName, bool descending)
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
-            fieldName = descending ? "-" + fieldName : fieldName;
-            OrderByFields = OrderByFields.Concat(new[] { fieldName }).ToArray();
+            OrderByTokens.AddLast(descending ? OrderByToken.CreateDescending(fieldName) : OrderByToken.CreateAscending(fieldName));
         }
 
         public void Highlight(string fieldName, int fragmentLength, int fragmentCount, string fragmentsField)
@@ -1091,7 +1087,11 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name = "fields">The fields.</param>
         public void OrderBy(params string[] fields)
         {
-            OrderByFields = OrderByFields.Concat(fields).ToArray();
+            foreach (var field in fields)
+            {
+                var f = EnsureValidFieldName(field, isNestedPath: false);
+                OrderByTokens.AddLast(OrderByToken.CreateAscending(f));
+            }
         }
 
         /// <summary>
@@ -1102,18 +1102,11 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name = "fields">The fields.</param>
         public void OrderByDescending(params string[] fields)
         {
-            fields = fields.Select(MakeFieldSortDescending).ToArray();
-            OrderBy(fields);
-        }
-
-        protected string MakeFieldSortDescending(string field)
-        {
-            if (string.IsNullOrWhiteSpace(field) || field.StartsWith("+") || field.StartsWith("-"))
+            foreach (var field in fields)
             {
-                return field;
+                var f = EnsureValidFieldName(field, isNestedPath: false);
+                OrderByTokens.AddLast(OrderByToken.CreateDescending(f));
             }
-
-            return "-" + field;
         }
 
         /// <summary>
@@ -1259,19 +1252,18 @@ If you really want to do in memory filtering on the data returned from the query
         {
             if (IsSpatialQuery)
             {
-                if (IndexName == "dynamic" || IndexName.StartsWith("dynamic/"))
+                if (IndexName == "dynamic" || FromToken.IsDynamic)
                     throw new NotSupportedException("Dynamic indexes do not support spatial queries. A static index, with spatial field(s), must be defined.");
 
                 var spatialQuery = new SpatialIndexQuery
                 {
-                    //IsDistinct = _isDistinct,
                     Query = query,
                     Start = Start,
                     WaitForNonStaleResultsAsOfNow = TheWaitForNonStaleResultsAsOfNow,
                     WaitForNonStaleResults = TheWaitForNonStaleResults,
                     WaitForNonStaleResultsTimeout = Timeout,
                     CutoffEtag = CutoffEtag,
-                    SortedFields = OrderByFields.Select(x => new SortedField(x)).ToArray(),
+                    //SortedFields = OrderByFields.Select(x => new SortedField(x)).ToArray(),
                     DynamicMapReduceFields = DynamicMapReduceFields,
                     //FieldsToFetch = FieldsToFetch,
                     SpatialFieldName = SpatialFieldName,
@@ -1301,14 +1293,13 @@ If you really want to do in memory filtering on the data returned from the query
 
             var indexQuery = new IndexQuery
             {
-                //IsDistinct = _isDistinct,
                 Query = query,
                 Start = Start,
                 CutoffEtag = CutoffEtag,
                 WaitForNonStaleResultsAsOfNow = TheWaitForNonStaleResultsAsOfNow,
                 WaitForNonStaleResults = TheWaitForNonStaleResults,
                 WaitForNonStaleResultsTimeout = Timeout,
-                SortedFields = OrderByFields.Select(x => new SortedField(x)).ToArray(),
+                //SortedFields = OrderByFields.Select(x => new SortedField(x)).ToArray(),
                 DynamicMapReduceFields = DynamicMapReduceFields,
                 //FieldsToFetch = FieldsToFetch,
                 //DefaultOperator = DefaultOperator,
@@ -1384,6 +1375,7 @@ If you really want to do in memory filtering on the data returned from the query
             BuildSelect(queryText);
             BuildFrom(queryText);
             BuildWhere(queryText);
+            BuildOrderBy(queryText);
 
             return queryText.ToString();
         }
@@ -1500,7 +1492,7 @@ If you really want to do in memory filtering on the data returned from the query
             if (expression.NodeType == ExpressionType.ArrayLength)
                 result.Path += ".Length";
 
-            var propertyName = IndexName == null || IndexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase)
+            var propertyName = IndexName == null || FromToken.IsDynamic
                 ? _conventions.FindPropertyNameForDynamicIndex(typeof(T), IndexName, "", result.Path)
                 : _conventions.FindPropertyNameForIndex(typeof(T), IndexName, "", result.Path);
             return propertyName;
@@ -1566,6 +1558,26 @@ If you really want to do in memory filtering on the data returned from the query
             while (token != null)
             {
                 AddSpaceIfNeeded(token.Previous?.Value, token.Value, writer);
+                token.Value.WriteTo(writer);
+
+                token = token.Next;
+            }
+        }
+
+        private void BuildOrderBy(StringBuilder writer)
+        {
+            if (OrderByTokens.Count == 0)
+                return;
+
+            writer
+                .Append(" ORDER BY ");
+
+            var token = OrderByTokens.First;
+            while (token != null)
+            {
+                if (token.Previous != null)
+                    writer.Append(", ");
+
                 token.Value.WriteTo(writer);
 
                 token = token.Next;

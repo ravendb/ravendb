@@ -63,7 +63,7 @@ namespace FastTests.Client.Indexing
                     Query = q.Query,
                     ShowTimings = q.ShowTimings,
                     SkipDuplicateChecking = q.SkipDuplicateChecking,
-                    SortedFields = q.SortedFields,
+                    //SortedFields = q.SortedFields,
                     WaitForNonStaleResults = q.WaitForNonStaleResults,
                     WaitForNonStaleResultsAsOfNow = q.WaitForNonStaleResultsAsOfNow,
                     WaitForNonStaleResultsTimeout = q.WaitForNonStaleResultsTimeout

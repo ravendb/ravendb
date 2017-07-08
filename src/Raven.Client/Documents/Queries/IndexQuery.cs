@@ -103,9 +103,6 @@ namespace Raven.Client.Documents.Queries
                         .Append("-")
                         .Append(field.IsGroupBy));
 
-            SortedFields.ApplyIfNotNull(
-                field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
-
             if (string.IsNullOrEmpty(Transformer) == false)
             {
                 path.AppendFormat("&transformer={0}", Uri.EscapeDataString(Transformer));
@@ -169,11 +166,6 @@ namespace Raven.Client.Documents.Queries
         /// Parameters that will be passed to transformer (if specified).
         /// </summary>
         public T TransformerParameters { get; set; }
-
-        /// <summary>
-        /// Array of fields containing sorting information.
-        /// </summary>
-        public SortedField[] SortedFields { get; set; }
 
         /// <summary>
         /// Array of fields in a dynamic map reduce-query
@@ -254,7 +246,6 @@ namespace Raven.Client.Documents.Queries
                 return true;
 
             return base.Equals(other) &&
-                   EnumerableExtension.ContentEquals(SortedFields, other.SortedFields) &&
                    EnumerableExtension.ContentEquals(HighlightedFields, other.HighlightedFields) &&
                    EnumerableExtension.ContentEquals(HighlighterPreTags, other.HighlighterPreTags) &&
                    EnumerableExtension.ContentEquals(HighlighterPostTags, other.HighlighterPostTags) &&
@@ -278,7 +269,6 @@ namespace Raven.Client.Documents.Queries
             {
                 var hashCode = base.GetHashCode();
                 hashCode = (hashCode * 397) ^ (TransformerParameters != null ? TransformerParameters.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (SortedFields?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (HighlightedFields?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (HighlighterPreTags?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (HighlighterPostTags?.GetHashCode() ?? 0);
