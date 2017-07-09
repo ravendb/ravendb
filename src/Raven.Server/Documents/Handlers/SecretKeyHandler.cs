@@ -17,14 +17,6 @@ namespace Raven.Server.Documents.Handlers
 {
     public class SecretKeyHandler : AdminRequestHandler
     {
-
-        private readonly Action<StreamReader> _zeroInternalBuffer =
-#if ARM
-            ExpressionHelper.CreateZeroFieldFunction<StreamReader>("_byteBuffer");
-#else
-            ExpressionHelper.CreateZeroFieldFunction<StreamReader>("byteBuffer");
-#endif
-
         [RavenAction("/admin/secrets", "GET", "/admin/secrets")]
         public Task GetKeys()
         {
@@ -75,16 +67,7 @@ namespace Raven.Server.Documents.Handlers
             using (var reader = new StreamReader(HttpContext.Request.Body))
             {
                 var base64 = reader.ReadToEnd();
-
-                try
-                {
-                    ServerStore.PutSecretKey(base64, name, overwrite);
-                }
-                finally
-                {
-                    _zeroInternalBuffer(reader);
-                }
-
+                ServerStore.PutSecretKey(base64, name, overwrite);
             }
             
             HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -102,46 +85,39 @@ namespace Raven.Server.Documents.Handlers
 
             using (var reader = new StreamReader(HttpContext.Request.Body))
             {
-                try
+                var base64 = reader.ReadToEnd();
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 {
-                    var base64 = reader.ReadToEnd();
-                    using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    ClusterTopology clusterTopology;
+                    using (ctx.OpenReadTransaction())
+                        clusterTopology = ServerStore.GetClusterTopology(ctx);
+
+                    foreach (var node in nodes)
                     {
-                        ClusterTopology clusterTopology;
-                        using (ctx.OpenReadTransaction())
-                            clusterTopology = ServerStore.GetClusterTopology(ctx);
+                        if (string.IsNullOrEmpty(node))
+                            continue;
 
-                        foreach (var node in nodes)
+                        var url = clusterTopology.GetUrlFromTag(node);
+                        if (url == null)
+                            throw new InvalidOperationException($"Node {node} is not a part of the cluster, cannot send secret key.");
+
+                        if (url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
+                            throw new InvalidOperationException($"Cannot put secret key for {name} on node {node} with url {url} because it is not using HTTPS");
+
+                        if (string.Equals(node, ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase))
                         {
-                            if (string.IsNullOrEmpty(node))
-                                continue;
+                            var key = Convert.FromBase64String(base64);
 
-                            var url = clusterTopology.GetUrlFromTag(node);
-                            if (url == null)
-                                throw new InvalidOperationException($"Node {node} is not a part of the cluster, cannot send secret key.");
+                            if (key.Length != 256 / 8)
+                                throw new ArgumentException($"Key size must be 256 bits, but was {key.Length * 8}", nameof(key));
 
-                            if (url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
-                                throw new InvalidOperationException($"Cannot put secret key for {name} on node {node} with url {url} because it is not using HTTPS");
-
-                            if (string.Equals(node, ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase))
-                            {
-                                var key = Convert.FromBase64String(base64);
-
-                                if (key.Length != 256 / 8)
-                                    throw new ArgumentException($"Key size must be 256 bits, but was {key.Length * 8}", nameof(key));
-
-                                StoreKeyLocally(name, key, ctx);
-                            }
-                            else
-                            {
-                                await SendKeyToNodeAsync(name, base64, ctx, clusterTopology, node, url).ConfigureAwait(false);
-                            }
+                            StoreKeyLocally(name, key, ctx);
+                        }
+                        else
+                        {
+                            await SendKeyToNodeAsync(name, base64, ctx, clusterTopology, node, url).ConfigureAwait(false);
                         }
                     }
-                }
-                finally
-                {
-                    _zeroInternalBuffer(reader);
                 }
             }
 
