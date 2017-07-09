@@ -204,9 +204,17 @@ namespace Raven.Server
                         try
                         {
                             var cli = new RavenCli();
-                            var b = cli.Start(this, writer, reader, false);
-                            Console.WriteLine("ADIADI :: CLI Exited with " + b);
-                            Console.Out.Flush();
+                            var restart = cli.Start(this, writer, reader, false);
+                            if (restart)
+                            {
+                                writer.WriteLine("Restarting Server...<DELIMETER_RESTART>");
+                                // TODO :: ADIADI :: perform restart server
+                            }
+                            else
+                            {
+                                writer.WriteLine("Restarting Server...<DELIMETER_QUIT>");
+                                // TODO :: ADIADI :: perform quit
+                            }
                         }
                         catch (Exception e)
                         {

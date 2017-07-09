@@ -18,6 +18,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
 
+
 namespace Raven.Server.Utils
 {
     internal class RavenCli
@@ -93,6 +94,7 @@ namespace Raven.Server.Utils
             Experimental,
             ImportDir,
             CreateDb,
+            Logout,
 
             UnknownCommand
         }
@@ -103,7 +105,7 @@ namespace Raven.Server.Utils
             None,
             Begin,
             AfterCommand,
-            AfterArgs,cre
+            AfterArgs,
             Empty
         }
 
@@ -195,12 +197,38 @@ namespace Raven.Server.Utils
                 return rc;
             }
 
-            var c = new char[1];
-            cli._reader.Read();
+            cli._writer.Write(CliDelimiter.GetDelimiterString(CliDelimiter.Delimiter.ReadKey));
             cli._writer.Flush();
-            return c[0];
+            var c = cli._reader.Read();
+            return Convert.ToChar(c);
         }
 
+        private string ReadLine(RavenCli cli)
+        {
+            if (cli._consoleColoring == false)
+            {
+                cli._writer.Write(CliDelimiter.GetDelimiterString(CliDelimiter.Delimiter.ReadLine));
+                cli._writer.Flush();
+            }
+
+            var rc = _consoleColoring ? Console.ReadLine() : cli._reader.ReadLine();
+            cli._writer.Flush();
+            return rc;
+        }
+
+        private static bool CommandLogout(List<string> args, RavenCli cli)
+        {
+            if (cli._consoleColoring)
+            {
+                WriteText("'logo' command not supported on console cli", WarningColor, cli);
+                return true;
+            }
+
+            cli._writer.WriteLine("Logging out..", TextColor, cli);
+            cli._writer.Write(CliDelimiter.GetDelimiterString(CliDelimiter.Delimiter.Logout));
+            cli._writer.Flush();
+            return true;
+        }
 
         private static bool CommandQuit(List<string> args, RavenCli cli)
         {
@@ -211,14 +239,6 @@ namespace Raven.Server.Utils
             WriteText("", TextColor, cli);
 
             return char.ToLower(k).Equals('y');
-        }
-
-        
-        private string ReadLine(RavenCli cli)
-        {
-            var rc = _consoleColoring ? Console.ReadLine() : cli._reader.ReadLine();
-            cli._writer.Flush();
-            return rc;
         }
 
         private static bool CommandResetServer(List<string> args, RavenCli cli)
@@ -234,8 +254,14 @@ namespace Raven.Server.Utils
 
         private static bool CommandStats(List<string> args, RavenCli cli)
         {
-            if (cli._consoleColoring)
-                Console.ResetColor();
+            if (cli._consoleColoring == false)
+            {
+                // beware not to allow this from remote - will disable local console!                
+                WriteText("'stats' command not supported on remote pipe connection. Use `info` or `prompt %M` instead", TextColor, cli);
+                return true;
+            }
+
+            Console.ResetColor();
 
             LoggingSource.Instance.DisableConsoleLogging();
             LoggingSource.Instance.SetupLogMode(LogMode.None,
@@ -285,7 +311,9 @@ namespace Raven.Server.Utils
 
         private static bool CommandGc(List<string> args, RavenCli cli)
         {
-            var genNum = Convert.ToInt32(args.First());
+            int genNum;
+            genNum = args == null || args.Count == 0 ? 2 : Convert.ToInt32(args.First());
+
             WriteText("Before collecting, managed memory used: ", TextColor, cli, newLine: false);
             WriteText(new Size(GC.GetTotalMemory(false), SizeUnit.Bytes).ToString(), ConsoleColor.Cyan, cli);
             var startTime = DateTime.UtcNow;
@@ -349,6 +377,8 @@ namespace Raven.Server.Utils
         {
             if (cli._consoleColoring)
                 Console.Clear();
+            else
+                cli._writer.Write(CliDelimiter.GetDelimiterString(CliDelimiter.Delimiter.Clear));
             cli._writer.Flush();
             return true;
         }
@@ -371,10 +401,13 @@ namespace Raven.Server.Utils
 
         private static bool CommandLogo(List<string> args, RavenCli cli)
         {
-            if (args.Count == 0 || args.First().Equals("no-clear") == false)
+            if (args == null || args.Count == 0 || args.First().Equals("no-clear") == false)
                 if (cli._consoleColoring)
                     Console.Clear();
-            WelcomeMessage.Print();
+            if (cli._consoleColoring)
+                WelcomeMessage.Print();
+            else
+                WriteText("'logo' command not supported on remote pipe connection", TextColor, cli);
             return true;
         }
 
@@ -413,41 +446,6 @@ namespace Raven.Server.Utils
             msg.Append($" Unmamanged Memory:{humaneProp?["TotalUnmanagedAllocations"]}");
             msg.Append($" Managed Memory:{humaneProp?["ManagedAllocations"]}");
             WriteText(msg.ToString(), ConsoleColor.Cyan, cli);
-
-            return true;
-        }
-
-
-        private static bool CommandHelp(List<string> args, RavenCli cli)
-        {
-            string[][] commandDescription = {
-                new[] {"prompt <new prompt>", "Change the cli prompt. Can be used with variables. Type 'helpPrompt` for details"},
-                new[] {"helpPrompt", "Detailed prompt command usage"},
-                new[] {"stats", "Online server's memory consumption stats, request ratio and documents count"},
-                new[] {"resetServer", "Restarts the server (quits and re-run)"},
-                new[] {"gc <gen>", "Collect garbage of specified gen (0-2)"},
-                new[] {"log [http-]< on | off >", "set log on or off. http-on/off can be selected to filter log output"},
-                new[] {"info", "Print system info and current stats"},
-                new[] {"logo [no-clear]", "Clear screen and print initial logo"},
-                new[] {"experimental <on | off>", "Set if to allow experimental cli commands"},
-                new[] {"quit", "Quit server"},
-                new[] {"help", "This help screen"}
-            };
-
-            var msg = new StringBuilder("RavenDB CLI Help" + Environment.NewLine);
-            msg.Append("================" + Environment.NewLine);
-            msg.Append("Usage: <command> [args] [ && | || <command> [args] ] ..." + Environment.NewLine + Environment.NewLine);
-            msg.Append("Commands:" + Environment.NewLine);
-
-            WriteText(msg.ToString(), TextColor, cli);
-
-
-            foreach (var cmd in commandDescription)
-            {
-                WriteText("\t" + cmd[0], ConsoleColor.Yellow, cli, newLine: false);
-                WriteText(new string(' ', 26 - cmd[0].Length) + cmd[1], ConsoleColor.DarkYellow, cli);
-            }
-            WriteText("", TextColor, cli);
 
             return true;
         }
@@ -493,12 +491,48 @@ namespace Raven.Server.Utils
             return true;
         }
 
+        private static bool CommandHelp(List<string> args, RavenCli cli)
+        {
+            string[][] commandDescription = {
+                new[] {"prompt <new prompt>", "Change the cli prompt. Can be used with variables. Type 'helpPrompt` for details"},
+                new[] {"helpPrompt", "Detailed prompt command usage"},
+                new[] {"stats", "Online server's memory consumption stats, request ratio and documents count"},
+                new[] {"resetServer", "Restarts the server (quits and re-run)"},
+                new[] {"gc [gen]", "Collect garbage of specified gen : 0, 1 or default 2"},
+                new[] {"log [http-]< on | off >", "set log on or off. http-on/off can be selected to filter log output"},
+                new[] {"info", "Print system info and current stats"},
+                new[] {"logo [no-clear]", "Clear screen and print initial logo"},
+                new[] {"clear", "Clear screen"},
+                new[] {"experimental <on | off>", "Set if to allow experimental cli commands"},
+                new[] {"logout", "Logout (applicable only on piped connection)"},
+                new[] {"quit", "Quit server"},
+                new[] {"help", "This help screen"}
+            };
+
+            var msg = new StringBuilder("RavenDB CLI Help" + Environment.NewLine);
+            msg.Append("================" + Environment.NewLine);
+            msg.Append("Usage: <command> [args] [ && | || <command> [args] ] ..." + Environment.NewLine + Environment.NewLine);
+            msg.Append("Commands:" + Environment.NewLine);
+
+            WriteText(msg.ToString(), TextColor, cli);
+
+
+            foreach (var cmd in commandDescription)
+            {
+                WriteText("\t" + cmd[0], ConsoleColor.Yellow, cli, newLine: false);
+                WriteText(new string(' ', 26 - cmd[0].Length) + cmd[1], ConsoleColor.DarkYellow, cli);
+            }
+            WriteText("", TextColor, cli);
+
+            return true;
+        }
+
         private readonly Dictionary<Command, SingleAction> _actions = new Dictionary<Command, SingleAction>
         {
             [Command.Prompt] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandPrompt },
             [Command.HelpPrompt] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandHelpPrompt },
             [Command.Stats] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandStats },
-            [Command.Gc] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandGc },
+            [Command.Gc] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandGc },
             [Command.Log] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandLog },
             [Command.Clear] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandClear },
             [Command.Info] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandInfo },
@@ -506,6 +540,7 @@ namespace Raven.Server.Utils
             [Command.Experimental] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandExperimental },
             [Command.LowMem] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLowMem },
             [Command.ResetServer] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandResetServer },
+            [Command.Logout] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLogout },
             [Command.Quit] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandQuit },
             [Command.Help] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandHelp },
 
@@ -517,7 +552,6 @@ namespace Raven.Server.Utils
         public bool Start(RavenServer server, TextWriter textWriter, TextReader textReader, bool consoleColoring)
         {
             _server = server;
-
             _writer = textWriter;
             _reader = textReader;
             _consoleColoring = consoleColoring;
@@ -529,13 +563,12 @@ namespace Raven.Server.Utils
             catch (Exception ex)
             {
                 // incase of cli failure - prevent server from going down, and switch to a (very) simple fallback cli
-                _writer.WriteLine("\nERROR in CLI:" + ex);
-                _writer.WriteLine("\n\nSwitching to simple cli...");
+                WriteText("\nERROR in CLI:" + ex, ErrorColor, this, newLine: false);
+                WriteText("\n\nSwitching to simple cli...", ErrorColor, this, newLine: false);
 
                 while (true)
                 {
-                    _writer.Write("(simple cli)>");
-                    _writer.Flush();
+                    WriteText("(simple cli)>", TextColor, this, newLine: false);
                     var line = ReadLine(this);
                     if (line == null)
                         continue;
@@ -556,8 +589,7 @@ namespace Raven.Server.Utils
                             break;
                         case "h":
                         case "help":
-                            _writer.WriteLine("Available commands: quit, reset, log, logoff");
-                            _writer.Flush();
+                            WriteText("Available commands: quit, reset, log, logoff", TextColor, this);
                             break;
                     }
                 }
@@ -584,8 +616,7 @@ namespace Raven.Server.Utils
                     Thread.Sleep(75); //waiting for Ctrl+C 
                     if (ctrlCPressed)
                         break;
-                    _writer.WriteLine("End of standard input detected, switching to server mode...");
-                    _writer.Flush();
+                    WriteText("End of standard input detected, switching to server mode...", WarningColor, this);
 
                     Program.RunAsService();
                     return false;
@@ -666,9 +697,23 @@ namespace Raven.Server.Utils
                     if (lastRc)
                     {
                         if (parsedCommand.Command == Command.ResetServer)
+                        {
+                            if (_consoleColoring == false)
+                            {
+                                var str = "Restarting Server";
+                                PrintBothToConsoleAndRemotePipe(str, this);
+                            }
                             return true;
+                        }
                         if (parsedCommand.Command == Command.Quit)
+                        {
+                            if (_consoleColoring == false)
+                            {
+                                var str = "Quitting Server";
+                                PrintBothToConsoleAndRemotePipe(str, this);
+                            }
                             return false;
+                        }
                     }
                     else
                     {
@@ -685,6 +730,19 @@ namespace Raven.Server.Utils
             }
             _writer.Flush();
             return false; // cannot reach here
+        }
+
+        private static void PrintBothToConsoleAndRemotePipe(string str, RavenCli cli)
+        {
+            cli._writer.WriteLine(str, TextColor, cli);
+            cli._writer.Write(CliDelimiter.GetDelimiterString(CliDelimiter.Delimiter.RestartServer));
+            cli._writer.Flush();
+
+            Console.ForegroundColor = WarningColor;
+            Console.WriteLine();
+            Console.WriteLine($"{str} from a remote pipe connection command");
+            Console.WriteLine();
+            Console.Out.Flush();
         }
 
         private static Command GetCommand(string fromWord)
