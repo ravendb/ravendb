@@ -203,49 +203,17 @@ namespace Raven.Server
                     {
                         try
                         {
-                            var msg = reader.ReadLine();
-                            var tokens = msg.Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries);
-
-                            if (tokens.Length < 1)
-                            {
-                                var reply = "Unknown command";
-                                PipeLogAndReply(writer, reply);
-                                continue;
-                            }
-
-                            switch (tokens[0])
-                            {
-                                case "trust":
-                                    if (tokens.Length < 3)
-                                    {
-                                        PipeLogAndReply(writer, "Expected 'trust' followed by public key and tag but didn't get both of them");
-                                    }
-                                    else
-                                    {
-                                        var k = $"Raven/Sign/Public/{tokens[2]}";
-                                        ServerStore.PutSecretKey(tokens[1], k, true);
-                                        PipeLogAndReply(writer, $"Server {tokens[2]} public key {tokens[1]} was installed successfully");
-                                    }
-                                    break;
-                                case "init":
-                                    var (apiKey, pubKey) = await ServerStore.GetApiKeyAndPublicKey();
-                                    PipeLogAndReply(writer, $"ApiKey: {apiKey}{Environment.NewLine}PublicKe: {pubKey}");
-                                    writer.Flush();
-                                    break;
-                                default:
-                                    PipeLogAndReply(writer, $"Provided command {tokens[0]} isn't supported");
-                                    continue;
-                            }
+                            var cli = new RavenCli();
+                            var b = cli.Start(this, writer, reader, false);
+                            Console.WriteLine("ADIADI :: CLI Exited with " + b);
+                            Console.Out.Flush();
                         }
                         catch (Exception e)
                         {
-                            var msg = "Failed to process pipe command";
                             if (_logger.IsInfoEnabled)
                             {
-                                _logger.Info(msg, e);
+                                _logger.Info("Got an exception inside cli (internal error) while in pipe connection", e);
                             }
-                            PipeLogAndReply(writer, $"{msg}{Environment.NewLine}{e}");
-                            continue;
                         }
                     }
                 }
