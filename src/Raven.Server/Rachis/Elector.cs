@@ -29,6 +29,37 @@ namespace Raven.Server.Rachis
                     {
                         var rv = _connection.Read<RequestVote>(context);
 
+                        ClusterTopology clusterTopology;
+                        long lastIndex;
+                        long lastTerm;
+                        string whoGotMyVoteIn;
+
+                        using (context.OpenReadTransaction())
+                        {
+                            lastIndex = _engine.GetLastEntryIndex(context);
+                            lastTerm = _engine.GetTermForKnownExisting(context, lastIndex);
+                            whoGotMyVoteIn = _engine.GetWhoGotMyVoteIn(context, rv.Term);
+
+                            clusterTopology = _engine.GetTopology(context);
+                        }
+
+                        if (clusterTopology.Members.ContainsKey(rv.Source) == false &&
+                            clusterTopology.Promotables.ContainsKey(rv.Source) == false &&
+                            clusterTopology.Watchers.ContainsKey(rv.Source) == false)
+                        {
+                            _connection.Send(context, new RequestVoteResponse
+                            {
+                                Term = _engine.CurrentTerm,
+                                VoteGranted = false,
+                                // we only report to the node asking for our vote if we are the leader, this gives
+                                // the oust node a authorotative confirmation that they were removed from the cluster
+                                NotInTopology = _engine.CurrentState == RachisConsensus.State.Leader,
+                                Message = $"Node {rv.Source} is not in my topology, cannot vote for it"
+                            });
+                            _connection.Dispose();
+                            return;
+                        }
+
                         if (rv.Term <= _engine.CurrentTerm)
                         {
                             _connection.Send(context, new RequestVoteResponse
@@ -52,37 +83,6 @@ namespace Raven.Server.Rachis
                                 Term = _engine.CurrentTerm,
                                 VoteGranted = false,
                                 Message = "I'm a leader in good standing, coup will be resisted"
-                            });
-                            _connection.Dispose();
-                            return;
-                        }
-
-                        long lastIndex;
-                        long lastTerm;
-                        string whoGotMyVoteIn;
-                        ClusterTopology clusterTopology;
-
-                        using (context.OpenReadTransaction())
-                        {
-                            lastIndex = _engine.GetLastEntryIndex(context);
-                            lastTerm = _engine.GetTermForKnownExisting(context, lastIndex);
-                            whoGotMyVoteIn = _engine.GetWhoGotMyVoteIn(context, rv.Term);
-
-                            clusterTopology = _engine.GetTopology(context) ;
-                        }
-
-                        if (clusterTopology.Members.ContainsKey(rv.Source) == false &&
-                            clusterTopology.Promotables.ContainsKey(rv.Source) == false &&
-                            clusterTopology.Watchers.ContainsKey(rv.Source) == false)
-                        {
-                            _connection.Send(context, new RequestVoteResponse
-                            {
-                                Term = _engine.CurrentTerm,
-                                VoteGranted = false,
-                                // we only report to the node asking for our vote if we are the leader, this gives
-                                // the oust node a authorotative confirmation that they were removed from the cluster
-                                NotInTopology = _engine.CurrentState == RachisConsensus.State.Leader,
-                                Message = $"Node {rv.Source} is not in my topology, cannot vote for it"
                             });
                             _connection.Dispose();
                             return;

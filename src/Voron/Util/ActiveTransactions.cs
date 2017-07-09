@@ -45,7 +45,7 @@ namespace Voron.Util
         {
             get
             {
-                var largestTx = long.MaxValue;
+                var oldestTx = long.MaxValue;
                 // ReSharper disable once LoopCanBeConvertedToQuery
                 foreach (var threadActiveTransactions in _activeTransactions.Values)
                 {
@@ -66,13 +66,15 @@ namespace Voron.Util
                         if (activeTransactionTransaction == null)
                             continue;
 
-                        if (largestTx > activeTransactionTransaction.Id)
-                            largestTx = activeTransactionTransaction.Id;
+                        if (oldestTx > activeTransactionTransaction.Id)
+                            oldestTx = activeTransactionTransaction.Id;
                     }
                 }
-                if (largestTx == long.MaxValue)
-                    return 0;
-                return largestTx;
+                
+                if (oldestTx == long.MaxValue)
+                    oldestTx = 0;
+                
+                return oldestTx;
             }
         }
 

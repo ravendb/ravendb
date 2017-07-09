@@ -73,7 +73,7 @@ class restore extends viewModelBase {
             this.isBusy(true);
             var self = this;
 
-            new getDocumentWithMetadataCommand("Raven/Restore/InProgress", null, true).execute()
+            new getDocumentWithMetadataCommand("Raven/Restore/InProgress", null, true).execute() //TODO: obsolete
                 .fail(() => deferred.resolve({ redirect: appUrl.forSettings(null) }))
                 .done((result) => {
                     if (result) {

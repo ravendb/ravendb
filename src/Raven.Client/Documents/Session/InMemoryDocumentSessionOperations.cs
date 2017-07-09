@@ -20,7 +20,6 @@ using Raven.Client.Documents.Exceptions.Session;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session.Operations.Lazy;
-using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -122,7 +121,7 @@ namespace Raven.Client.Documents.Session
         /// This instance is shared among all sessions, changes to the <see cref="DocumentConventions"/> should be done
         /// via the <see cref="IDocumentStore"/> instance, not on a single session.
         /// </remarks>
-        public DocumentConventions Conventions => DocumentStore.Conventions;
+        public DocumentConventions Conventions => _requestExecutor.Conventions;
 
         /// <summary>
         /// Gets or sets the max number of requests per session.
@@ -161,9 +160,9 @@ namespace Raven.Client.Documents.Session
             _documentStore = documentStore;
             _requestExecutor = requestExecutor;
             _releaseOperationContext = requestExecutor.ContextPool.AllocateOperationContext(out _context);
-            UseOptimisticConcurrency = documentStore.Conventions.UseOptimisticConcurrency;
-            MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
-            GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore.Conventions, GenerateId);
+            UseOptimisticConcurrency = _requestExecutor.Conventions.UseOptimisticConcurrency;
+            MaxNumberOfRequestsPerSession = _requestExecutor.Conventions.MaxNumberOfRequestsPerSession;
+            GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, GenerateId);
             EntityToBlittable = new EntityToBlittable(this);
         }
 
@@ -576,12 +575,12 @@ more responsive application.
             // to detect if they generate duplicates.
             AssertNoNonUniqueInstance(entity, id);
 
-            var tag = _documentStore.Conventions.GetCollectionName(entity);
+            var tag = _requestExecutor.Conventions.GetCollectionName(entity);
             var metadata = new DynamicJsonValue();
             if (tag != null)
                 metadata[Constants.Documents.Metadata.Collection] = tag;
 
-            var clrType = _documentStore.Conventions.GetClrTypeName(entity.GetType());
+            var clrType = _requestExecutor.Conventions.GetClrTypeName(entity.GetType());
             if (clrType != null)
                 metadata[Constants.Documents.Metadata.RavenClrType] = clrType;
 

@@ -86,6 +86,7 @@ namespace Raven.Client.Documents.Subscriptions
                 throw new ArgumentOutOfRangeException(nameof(subscriptionId));
 
             SubscriptionId = subscriptionId;
+            SubscriptionName = subscriptionId.ToString();
         }
 
         public string SubscriptionName { get; set; }

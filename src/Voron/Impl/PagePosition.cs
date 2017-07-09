@@ -20,13 +20,13 @@ namespace Voron.Impl
             if (x == y) return true;
             if (x == null || y == null) return false;
 
-            return x.ScratchPos == y.ScratchPos && x.TransactionId == y.TransactionId && x.JournalNumber == y.JournalNumber && x.IsFreedPageMarker == y.IsFreedPageMarker && x.ScratchNumber == y.ScratchNumber;
+            return x.ScratchPage == y.ScratchPage && x.TransactionId == y.TransactionId && x.JournalNumber == y.JournalNumber && x.IsFreedPageMarker == y.IsFreedPageMarker && x.ScratchNumber == y.ScratchNumber;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(PagePosition obj)
         {
-            long v = Hashing.Combine(obj.ScratchPos, obj.TransactionId);
+            long v = Hashing.Combine(obj.ScratchPage, obj.TransactionId);
             long w = Hashing.Combine(obj.JournalNumber, (long) obj.ScratchNumber);
             return (int) (v ^ w);
         }
@@ -34,16 +34,16 @@ namespace Voron.Impl
 
     public class PagePosition
     {
-        public readonly long ScratchPos;
         public readonly long TransactionId;
         public readonly long JournalNumber;
+        public readonly long ScratchPage;
         public readonly int ScratchNumber;
         public readonly bool IsFreedPageMarker;
         public bool UnusedInPTT;
 
         public PagePosition(long scratchPos, long transactionId, long journalNumber, int scratchNumber, bool isFreedPageMarker = false)
         {
-            this.ScratchPos = scratchPos;
+            this.ScratchPage = scratchPos;
             this.TransactionId = transactionId;
             this.JournalNumber = journalNumber;
             this.ScratchNumber = scratchNumber;
@@ -62,7 +62,7 @@ namespace Voron.Impl
 
         public override string ToString()
         {
-            return $"ScratchPos: {ScratchPos}, TransactionId: {TransactionId}, JournalNumber: {JournalNumber}, ScratchNumber: {ScratchNumber}, IsFreedPageMarker: {IsFreedPageMarker}";
+            return $"ScratchPos: {ScratchPage}, TransactionId: {TransactionId}, JournalNumber: {JournalNumber}, ScratchNumber: {ScratchNumber}, IsFreedPageMarker: {IsFreedPageMarker}";
         }
     }
 }

@@ -301,8 +301,8 @@ interface clusterTopologyDto {
 
 type clusterNodeType = "Member" | "Promotable" | "Watcher";
 type databaseGroupNodeType = "Member" | "Promotable" | "Watcher";
-
 type patchOption = "Document" | "Collection" | "Index";
+type subscriptionStartType = 'Beginning of Time' | 'Latest Document' | 'Change Vector';
 
 interface patchDto extends documentDto {
     PatchOnOption: patchOption;
@@ -325,6 +325,9 @@ interface externalReplicationDataFromUI {
 
 interface subscriptionDataFromUI {
     TaskName: string;
-    //TODO:...
+    Script: string;
+    Collection: string;
+    ChangeVectorEntry: Array<Raven.Client.Documents.Replication.Messages.ChangeVectorEntry>;
+    IsVersioned: boolean;
 } 
 

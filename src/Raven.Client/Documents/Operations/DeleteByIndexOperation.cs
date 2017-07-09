@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net.Http;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Http;
@@ -40,7 +41,7 @@ namespace Raven.Client.Documents.Operations
         {
         }
 
-        public override RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, JsonOperationContext context, HttpCache cache)
+        public override RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
             if (_queryToDelete == DummyQuery)
             {
@@ -54,7 +55,7 @@ namespace Raven.Client.Documents.Operations
                 }
             }
 
-            return base.GetCommand(store, context, cache);
+            return base.GetCommand(store, conventions, context, cache);
         }
     }
 
@@ -73,7 +74,7 @@ namespace Raven.Client.Documents.Operations
             _options = options;
         }
 
-        public virtual RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, JsonOperationContext context, HttpCache cache)
+        public virtual RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
             return new DeleteByIndexCommand(_indexName, _queryToDelete, _options);
         }

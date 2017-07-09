@@ -26,6 +26,7 @@ namespace Raven.Client.Server.Operations
         NotActive
     }
 
+    // TODO: remove this class, each task will return its own info class - See RavenDB-7712 
     public class GetTaskInfoResult
     {
         public long TaskId { get; set; }

@@ -32,16 +32,35 @@ using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Subscriptions
 {
-    public class SubscriptionBatch<T> 
+    public class SubscriptionBatch<T>
     {
         public struct Item
         {
+            private T _result;
+            public string ExceptionMessage { get; internal set; }
             public string Id { get; internal set; }
             public long Etag { get; internal set; }
-            public T Result { get; internal set; }
+
+            private void ThrowItemProcessException()
+            {
+                throw new InvalidOperationException($"Failed to process document {Id} with Etag {Etag} because:{Environment.NewLine}{ExceptionMessage}");
+            }
+
+            public T Result
+            {
+                get
+                {
+                    if (ExceptionMessage != null)
+                        ThrowItemProcessException();
+
+                    return _result;
+                }
+                internal set => _result = value;
+            }
+
             public BlittableJsonReaderObject RawResult { get; internal set; }
             public BlittableJsonReaderObject RawMetadata { get; internal set; }
-            
+
             private IMetadataDictionary _metadata;
             public IMetadataDictionary Metadata => _metadata ?? (_metadata = new MetadataAsDictionary(RawMetadata));
         }
@@ -55,7 +74,7 @@ namespace Raven.Client.Documents.Subscriptions
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
 
         public List<Item> Items { get; } = new List<Item>();
-        
+
         public IDocumentSession OpenSession()
         {
             return _store.OpenSession(new SessionOptions
@@ -64,7 +83,7 @@ namespace Raven.Client.Documents.Subscriptions
                 RequestExecutor = _requestExecutor
             });
         }
-        
+
         public IAsyncDocumentSession OpenAsyncSession()
         {
             return _store.OpenAsyncSession(new SessionOptions
@@ -81,8 +100,7 @@ namespace Raven.Client.Documents.Subscriptions
             _dbName = dbName;
             _logger = logger;
 
-            _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(store.Conventions,
-                entity => throw new InvalidOperationException("Shouldn't be generating new ids here"));
+            _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, entity => throw new InvalidOperationException("Shouldn't be generating new ids here"));
         }
 
 
@@ -94,41 +112,43 @@ namespace Raven.Client.Documents.Subscriptions
 
             foreach (var item in batch)
             {
-                
+
                 BlittableJsonReaderObject metadata;
                 var curDoc = item.Data;
-                
+
                 if (curDoc.TryGet(Constants.Documents.Metadata.Key, out metadata) == false)
                     ThrowRequired("@metadata field");
                 if (metadata.TryGet(Constants.Documents.Metadata.Id, out string id) == false)
                     ThrowRequired("@id field");
                 if (metadata.TryGet(Constants.Documents.Metadata.Etag, out long etag) == false)
                     ThrowRequired("@etag field");
-                if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out BlittableJsonReaderArray changeVectorAsObject) == false || 
+                if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out BlittableJsonReaderArray changeVectorAsObject) == false ||
                     changeVectorAsObject == null)
                     ThrowRequired("@change-vector field");
                 else
                     lastReceivedChangeVector = changeVectorAsObject.ToVector();
-                
+
                 if (_logger.IsInfoEnabled)
                 {
                     _logger.Info($"Got {id} (change vector: [{string.Join(",", lastReceivedChangeVector.Select(x => $"{x.DbId.ToString()}:{x.Etag}"))}], size {curDoc.Size}");
                 }
 
-                
-                T instance;
+                var instance = default(T);
 
-                if (typeof(T) == typeof(BlittableJsonReaderObject))
+                if (item.Exception == null)
                 {
-                    instance = (T)(object)curDoc;
-                }
-                else
-                {
-                    instance = (T)EntityToBlittable.ConvertToEntity(typeof(T), id, curDoc, _store.Conventions);
-                }
+                    if (typeof(T) == typeof(BlittableJsonReaderObject))
+                    {
+                        instance = (T)(object)curDoc;
+                    }
+                    else
+                    {
+                        instance = (T)EntityToBlittable.ConvertToEntity(typeof(T), id, curDoc, _requestExecutor.Conventions);
+                    }
 
-                if (string.IsNullOrEmpty(id) == false)
-                    _generateEntityIdOnTheClient.TrySetIdentity(instance, id);
+                    if (string.IsNullOrEmpty(id) == false)
+                        _generateEntityIdOnTheClient.TrySetIdentity(instance, id);
+                }
 
                 Items.Add(new Item
                 {
@@ -137,21 +157,22 @@ namespace Raven.Client.Documents.Subscriptions
                     RawResult = curDoc,
                     RawMetadata = metadata,
                     Result = instance,
+                    ExceptionMessage = item.Exception
                 });
             }
             return lastReceivedChangeVector;
         }
-        
+
         private static void ThrowRequired(string name)
         {
             throw new InvalidOperationException("Document must have a " + name);
         }
     }
-    
+
     public class Subscription<T> : IAsyncDisposable, IDisposable where T : class
     {
         public delegate Task AfterAcknowledgmentAction(SubscriptionBatch<T> batch);
-        
+
         private readonly Logger _logger;
         private readonly IDocumentStore _store;
         private readonly string _dbName;
@@ -167,7 +188,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// allows the user to define stuff that happens after the confirm was received from the server (this way we know we won't
         /// get those documents again)
         /// </summary>
-        public event AfterAcknowledgmentAction  AfterAcknowledgment;
+        public event AfterAcknowledgmentAction AfterAcknowledgment;
 
         internal Subscription(SubscriptionConnectionOptions options, IDocumentStore documentStore, string dbName)
         {
@@ -271,9 +292,9 @@ namespace Raven.Client.Documents.Subscriptions
             var command = new GetTcpInfoCommand("Subscription/" + _dbName);
 
             JsonOperationContext context;
-             var requestExecutor = _store.GetRequestExecutor(_dbName);
-      
-                 using (requestExecutor.ContextPool.AllocateOperationContext(out context))
+            var requestExecutor = _store.GetRequestExecutor(_dbName);
+
+            using (requestExecutor.ContextPool.AllocateOperationContext(out context))
             {
                 if (_redirectNode != null)
                 {
@@ -286,7 +307,7 @@ namespace Raven.Client.Documents.Subscriptions
                     {
                         // if we failed to talk to a node, we'll forget about it and let the topology to 
                         // redirect us to the current node
-                        _redirectNode = null; 
+                        _redirectNode = null;
                         throw;
                     }
                 }
@@ -339,7 +360,7 @@ namespace Raven.Client.Documents.Subscriptions
                 await _stream.FlushAsync().ConfigureAwait(false);
 
                 _subscriptionLocalRequestExecutor?.Dispose();
-                _subscriptionLocalRequestExecutor = RequestExecutor.CreateForSingleNode(command.RequestedNode.Url, _dbName, requestExecutor.ApiKey);
+                _subscriptionLocalRequestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(command.RequestedNode.Url, _dbName, requestExecutor.ApiKey, _store.Conventions);
                 return _stream;
             }
         }
@@ -374,7 +395,7 @@ namespace Raven.Client.Documents.Subscriptions
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Redirect:
                     throw new SubscriptionDoesNotBelongToNodeException(
                         $"Subscription With Id {_options.SubscriptionId} cannot be processed by current node, it will be redirected to {connectionStatus.Data[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)]}"
-                        )
+                    )
                     {
                         AppropriateNode = connectionStatus.Data[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)].ToString()
                     };
@@ -412,9 +433,9 @@ namespace Raven.Client.Documents.Subscriptions
                             return;
 
                         Task notifiedSubscriber = Task.CompletedTask;
-                        
+
                         var batch = new SubscriptionBatch<T>(_subscriptionLocalRequestExecutor, _store, _dbName, _logger);
-                        
+
                         while (_processingCts.IsCancellationRequested == false)
                         {
                             // start the read from the server
@@ -432,7 +453,7 @@ namespace Raven.Client.Documents.Subscriptions
                                     CloseTcpClient();
                                     using ((await readFromServer.ConfigureAwait(false)).ReturnContext)
                                     {
-                                        
+
                                     }
                                 }
                                 catch (Exception)
@@ -446,8 +467,8 @@ namespace Raven.Client.Documents.Subscriptions
                             _processingCts.Token.ThrowIfCancellationRequested();
 
                             var lastReceivedChangeVector = batch.Initialize(incomingBatch.Messages);
-                            
-                            
+
+
                             notifiedSubscriber = Task.Run(async () =>
                             {
                                 // ReSharper disable once AccessToDisposedClosure
@@ -473,7 +494,7 @@ namespace Raven.Client.Documents.Subscriptions
                                     }
 
                                 }
-                             
+
                                 try
                                 {
                                     if (tcpStreamCopy != null) //possibly prevent ObjectDisposedException
@@ -575,7 +596,7 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-    
+
         private void SendAck(ChangeVectorEntry[] lastReceivedChangeVector, Stream networkStream)
         {
             var ack = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(new SubscriptionConnectionClientMessage
@@ -609,7 +630,7 @@ namespace Raven.Client.Documents.Subscriptions
                     {
                         if (_processingCts.Token.IsCancellationRequested)
                             return;
-                        
+
                         if (_logger.IsInfoEnabled)
                         {
                             _logger.Info(
@@ -690,6 +711,6 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        public event Action<Subscription<T>> OnDisposed = delegate {  };
+        public event Action<Subscription<T>> OnDisposed = delegate { };
     }
 }

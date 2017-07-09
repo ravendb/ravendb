@@ -1,4 +1,6 @@
 ﻿using FastTests;
+using Raven.Client.Documents.Operations.Configuration;
+using Raven.Client.Server;
 using Raven.Client.Server.Operations.Configuration;
 using Xunit;
 
@@ -9,33 +11,26 @@ namespace SlowTests.Issues
         [Fact]
         public void CanInjectConfigurationFromServer()
         {
+            DoNotReuseServer();// we modify global server configuration, and it impacts other tests
             using (var store = GetDocumentStore())
             {
-                Assert.Equal(30, store.Conventions.MaxNumberOfRequestsPerSession);
+                var requestExecutor = store.GetRequestExecutor();
 
-                var result = store.Admin.Server.Send(new GetClientConfigurationOperation());
+                Assert.Equal(30, store.Conventions.MaxNumberOfRequestsPerSession);
+                Assert.Equal(30, requestExecutor.Conventions.MaxNumberOfRequestsPerSession);
+
+                var result = store.Admin.Send(new GetClientConfigurationOperation());
+                var serverResult = store.Admin.Server.Send(new GetServerWideClientConfigurationOperation());
+                Assert.Null(serverResult);
                 Assert.Null(result);
 
-                store.Admin.Server.Send(new PutClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 10 }));
+                store.Admin.Server.Send(new PutServerWideClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 10 }));
 
-                result = store.Admin.Server.Send(new GetClientConfigurationOperation());
-                Assert.NotNull(result);
-                Assert.True(result.RaftCommandIndex > 0);
-                Assert.Equal(10, result.Configuration.MaxNumberOfRequestsPerSession.Value);
-
-                using (var session = store.OpenSession())
-                {
-                    session.Load<dynamic>("users/1"); // forcing client configuration update
-                }
-
-                Assert.Equal(10, store.Conventions.MaxNumberOfRequestsPerSession);
-                Assert.Equal(result.RaftCommandIndex, store.GetRequestExecutor().ClientConfigurationEtag);
-
-                var differentRequestExecutor = store.GetRequestExecutor("DoNotExist");
-                Assert.Equal(result.RaftCommandIndex, differentRequestExecutor.ClientConfigurationEtag);
-
-                store.Admin.Server.Send(new PutClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 10, Disabled = true }));
-                result = store.Admin.Server.Send(new GetClientConfigurationOperation());
+                result = store.Admin.Send(new GetClientConfigurationOperation());
+                serverResult = store.Admin.Server.Send(new GetServerWideClientConfigurationOperation());
+                Assert.NotNull(serverResult);
+                Assert.Equal(10, serverResult.MaxNumberOfRequestsPerSession.Value);
+                Assert.Equal(result.RaftCommandIndex, requestExecutor.ClientConfigurationEtag);
 
                 using (var session = store.OpenSession())
                 {
@@ -43,8 +38,47 @@ namespace SlowTests.Issues
                 }
 
                 Assert.Equal(30, store.Conventions.MaxNumberOfRequestsPerSession);
-                Assert.Equal(result.RaftCommandIndex, store.GetRequestExecutor().ClientConfigurationEtag);
-                Assert.Equal(result.RaftCommandIndex, differentRequestExecutor.ClientConfigurationEtag);
+                Assert.Equal(10, requestExecutor.Conventions.MaxNumberOfRequestsPerSession);
+
+                store.Admin.Server.Send(new PutServerWideClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 10, Disabled = true }));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Load<dynamic>("users/1"); // forcing client configuration update
+                }
+
+                Assert.Equal(30, store.Conventions.MaxNumberOfRequestsPerSession);
+                Assert.Equal(30, requestExecutor.Conventions.MaxNumberOfRequestsPerSession);
+
+                store.Admin.Send(new PutClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 15 }));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Load<dynamic>("users/1"); // forcing client configuration update
+                }
+
+                Assert.Equal(30, store.Conventions.MaxNumberOfRequestsPerSession);
+                Assert.Equal(15, requestExecutor.Conventions.MaxNumberOfRequestsPerSession);
+
+                store.Admin.Send(new PutClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 15, Disabled = true }));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Load<dynamic>("users/1"); // forcing client configuration update
+                }
+
+                Assert.Equal(30, store.Conventions.MaxNumberOfRequestsPerSession);
+                Assert.Equal(30, requestExecutor.Conventions.MaxNumberOfRequestsPerSession);
+
+                store.Admin.Server.Send(new PutServerWideClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 10, Disabled = false }));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Load<dynamic>("users/1"); // forcing client configuration update
+                }
+
+                Assert.Equal(30, store.Conventions.MaxNumberOfRequestsPerSession);
+                Assert.Equal(10, requestExecutor.Conventions.MaxNumberOfRequestsPerSession);
             }
         }
     }

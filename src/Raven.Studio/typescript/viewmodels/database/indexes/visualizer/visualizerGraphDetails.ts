@@ -1,7 +1,10 @@
 import graphHelper = require("common/helpers/graph/graphHelper");
 import viewHelpers = require("common/helpers/view/viewHelpers");
+import visualizerTreeExplorer = require("viewmodels/database/indexes/visualizer/visualizerTreeExplorer")
 
+import app = require("durandal/app");
 import d3 = require('d3');
+import rbush = require("rbush");
 
 abstract class reduceValuesFormatter {
     static formatData(data: any) {
@@ -146,13 +149,15 @@ abstract class pageItem extends layoutableItem {
 
     parentPage?: branchPageItem;
     pageNumber: number;
+    sourceObject: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage;
 
     aggregationResult: any;
     aggregationResultAsMap: Map<string, string>;
 
-    constructor(parentPage: branchPageItem, pageNumber: number, aggregationResult: any) {
+    constructor(sourceObject: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage, parentPage: branchPageItem, pageNumber: number, aggregationResult: any) {
         super();
 
+        this.sourceObject = sourceObject;
         this.pageNumber = pageNumber;
         this.parentPage = parentPage;
         this.aggregationResult = aggregationResult;
@@ -210,8 +215,8 @@ class leafPageItem extends pageItem {
 
     entries = [] as Array<entryItem | entryPaddingItem>;
 
-    constructor(parentPage: branchPageItem, pageNumber: number, aggregationResult: any, nestedSection: boolean, entries: Array<entryItem | entryPaddingItem>) {
-        super(parentPage, pageNumber, aggregationResult);
+    constructor(sourceObject: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage, parentPage: branchPageItem, pageNumber: number, aggregationResult: any, nestedSection: boolean, entries: Array<entryItem | entryPaddingItem>) {
+        super(sourceObject, parentPage, pageNumber, aggregationResult);
         this.nestedSection = nestedSection;
         this.entries = entries;
     }
@@ -297,13 +302,13 @@ class leafPageItem extends pageItem {
 
 class branchPageItem extends pageItem {
 
-    constructor(parentPage: branchPageItem, pageNumber: number, aggregationResult: any) {
-        super(parentPage, pageNumber, aggregationResult);
+    constructor(sourceObject: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage, parentPage: branchPageItem, pageNumber: number, aggregationResult: any) {
+        super(sourceObject, parentPage, pageNumber, aggregationResult);
     }
 
 }
 
-class collapsedLeavesItem extends layoutableItem {
+class collapsedLeafsItem extends layoutableItem {
 
     parentPage?: branchPageItem;
     aggregationCount: number;
@@ -333,7 +338,7 @@ class reduceTreeItem {
     displayName: string;
     depth: number;
     itemsCountAtDepth: Array<number>; // this represents non-filtered count
-    itemsAtDepth = new Map<number, Array<pageItem | collapsedLeavesItem>>(); // items after filtering depth -> list of items
+    itemsAtDepth = new Map<number, Array<pageItem | collapsedLeafsItem>>(); // items after filtering depth -> list of items
 
     constructor(tree: Raven.Server.Documents.Indexes.Debugging.ReduceTree) {
         this.tree = tree;
@@ -378,7 +383,7 @@ class reduceTreeItem {
             const items = this.itemsAtDepth.get(depth);
 
             if (node.Children) {
-                const item = new branchPageItem(parentPage, node.PageNumber, node.AggregationResult);
+                const item = new branchPageItem(node, parentPage, node.PageNumber, node.AggregationResult);
                 items.push(item);
 
                 for (let i = 0; i < node.Children.length; i++) {
@@ -389,17 +394,17 @@ class reduceTreeItem {
             if (node.Entries && node.Entries.length) {
                 const entries = leafPageItem.findEntries(documents, node.Entries);
                 const isNestedSection = depth === 0; // if depth is zero and node has entries
-                const item = new leafPageItem(parentPage, node.PageNumber, node.AggregationResult, isNestedSection, entries);
+                const item = new leafPageItem(node, parentPage, node.PageNumber, node.AggregationResult, isNestedSection, entries);
                 entries.filter(x => x instanceof entryItem).forEach((entry: entryItem) => entry.parent = item);
                 items.push(item);
             }
         };
 
         filterAtDepth(0, this.tree.Root, null);
-        this.collapseNonRelevantLeaves();
+        this.collapseNonRelevantLeafs();
     }
 
-    private collapseNonRelevantLeaves() {
+    private collapseNonRelevantLeafs() {
         const lastLevel = this.depth - 1;
         const levelItems = this.itemsAtDepth.get(lastLevel);
 
@@ -408,8 +413,8 @@ class reduceTreeItem {
             .filter((x: leafPageItem) => _.some(x.entries, (e: layoutableItem) => (e instanceof entryItem) && e.source))
             .map((x: leafPageItem) => x.pageNumber);
 
-        const collapsedItems = [] as Array<pageItem | collapsedLeavesItem>;
-        let currentAggregation: collapsedLeavesItem = null;
+        const collapsedItems = [] as Array<pageItem | collapsedLeafsItem>;
+        let currentAggregation: collapsedLeafsItem = null;
 
         for (let i = 0; i < levelItems.length; i++) {
             const item = levelItems[i] as pageItem;
@@ -420,7 +425,7 @@ class reduceTreeItem {
                 if (currentAggregation && currentAggregation.parentPage === item.parentPage) {
                     currentAggregation.aggregationCount += 1;
                 } else {
-                    currentAggregation = new collapsedLeavesItem(item.parentPage, 1);
+                    currentAggregation = new collapsedLeafsItem(item.parentPage, 1);
                     collapsedItems.push(currentAggregation);
                 }
             }
@@ -489,6 +494,106 @@ class reduceTreeItem {
     }
 }
 
+
+type rTreeLeaf = {
+    minX: number;
+    minY: number;
+    maxX: number;
+    maxY: number;
+    actionType: "pageItemClicked";
+    arg: pageItem;
+}
+
+class hitTest {
+
+    cursor = ko.observable<string>("auto");
+    private mouseDown = false;
+    private currentPage: pageItem = null;
+
+    private rTree = rbush<rTreeLeaf>();
+
+    private onPageItemClicked: (item: pageItem) => void;
+    private onPageItemEnter: (item: pageItem) => void;
+    private onPageItemExit: (item: pageItem) => void;
+
+    init(onPageItemClicked: (item: pageItem) => void, onPageItemEnter: (item: pageItem) => void, onPageItemExit: (item: pageItem) => void) {
+        this.onPageItemClicked = onPageItemClicked;
+        this.onPageItemEnter = onPageItemEnter;
+        this.onPageItemExit = onPageItemExit;
+    }
+
+    registerPageItem(item: pageItem) {
+        this.rTree.insert({
+            minX: item.x,
+            maxX: item.x + item.width,
+            minY: item.y,
+            maxY: item.y + item.height,
+            actionType: "pageItemClicked",
+            arg: item
+        } as rTreeLeaf);
+    }
+
+    reset() {
+        this.rTree.clear();
+    }
+
+    onMouseMove(location: [number, number]) {
+        const items = this.findItems(location[0], location[1]);
+
+        const tree = items.find(x => x.actionType === "pageItemClicked");
+
+        if (tree) {
+            this.cursor(this.mouseDown ? graphHelper.prefixStyle("grabbing") : "pointer");
+
+            const item = tree.arg;
+            if (this.currentPage !== item) {
+                this.onPageItemEnter(item);
+                this.currentPage = item;
+            }
+
+        } else {
+            if (this.currentPage) {
+                this.onPageItemExit(this.currentPage);
+                this.currentPage = null;
+            }
+
+            this.cursor(graphHelper.prefixStyle(this.mouseDown ? "grabbing" : "grab"));
+        }
+    }
+
+    onClick(location: [number, number]) {
+        const items = this.findItems(location[0], location[1]);
+
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            switch (item.actionType) {
+                case "pageItemClicked":
+                    this.onPageItemClicked(item.arg);
+                    break;
+            }
+        }
+    }
+
+    onMouseDown() {
+        this.cursor(graphHelper.prefixStyle("grabbing"));
+        this.mouseDown = true;
+    }
+
+    onMouseUp() {
+        this.cursor(graphHelper.prefixStyle("grab"));
+        this.mouseDown = false;
+    }
+
+    private findItems(x: number, y: number): Array<rTreeLeaf> {
+        return this.rTree.search({
+            minX: x,
+            maxX: x,
+            minY: y,
+            maxY: y
+        });
+    }
+}
+
 class visualizerGraphDetails {
 
     static margins = {
@@ -506,11 +611,16 @@ class visualizerGraphDetails {
     private totalWidth: number;
     private totalHeight: number;
 
+    private hitTest = new hitTest();
+
     private documents = [] as Array<documentItem>;
 
     private canvas: d3.Selection<void>;
     private svg: d3.Selection<void>;
     private zoom: d3.behavior.Zoom<void>;
+    private currentPageItemHighlight: d3.Selection<void>;
+    private pageItemHighlightHandler: () => void = () => { };
+    private animationInProgress = false;
 
     private xScale: d3.scale.Linear<number, number>;
     private yScale: d3.scale.Linear<number, number>;
@@ -518,15 +628,27 @@ class visualizerGraphDetails {
     private viewActive = ko.observable<boolean>(false);
     private gotoMasterViewCallback: () => void;
 
-    private trees: Raven.Server.Documents.Indexes.Debugging.ReduceTree[];
-    private currentTreeIndex = 0;
+    private trees: Raven.Server.Documents.Indexes.Debugging.ReduceTree[] = [];
+    private currentTreeIndex = ko.observable<number>();
     private currentTree = ko.observable<reduceTreeItem>();
 
     private currentLineOffset = 0;
     private connectionsBaseY = 0;
 
+    private canNavigateToNextTree: KnockoutComputed<boolean>;
+    private canNavigateToPreviousTree: KnockoutComputed<boolean>;
+
     constructor() {
-        _.bindAll(this, "goToMasterView" as keyof this);
+        _.bindAll(this, ["goToMasterView", "goToNextTree", "goToPreviousTree"] as Array<keyof this>);
+
+        this.initObservables();
+    }
+
+    private initObservables() {
+        this.canNavigateToNextTree = ko.pureComputed(() => {
+            return this.currentTreeIndex() < this.trees.length - 1;
+        });
+        this.canNavigateToPreviousTree = ko.pureComputed(() => this.currentTreeIndex() > 0);
     }
 
     init(goToMasterViewCallback: () => void, trees: Raven.Server.Documents.Indexes.Debugging.ReduceTree[]) {
@@ -562,6 +684,12 @@ class visualizerGraphDetails {
             .y(this.yScale)
             .on("zoom", () => this.onZoom());
 
+        this.currentPageItemHighlight = this.svg
+            .append("svg:rect")
+            .attr("class", "highlight")
+            .attr("fill", "white")
+            .style("opacity", 0);
+
         this.svg
             .append("svg:rect")
             .attr("class", "pane")
@@ -569,6 +697,8 @@ class visualizerGraphDetails {
             .attr("height", this.totalHeight)
             .call(this.zoom)
             .call(d => this.setupEvents(d));
+
+        this.hitTest.init(item => this.onPageItemClicked(item), item => this.onPageItemEnter(item), item => this.onPageItemExit(item));
     }
 
     addDocument(documentName: string) {
@@ -587,6 +717,7 @@ class visualizerGraphDetails {
     reset() {
         this.restoreView();
         this.documents = [];
+        this.hitTest.reset();
     }
 
     setDocumentsColors(documentsColorsSetup: Array<documentColorPair>) {
@@ -597,6 +728,7 @@ class visualizerGraphDetails {
     }
 
     private restoreView() {
+        this.currentTreeIndex.notifySubscribers(); // sync tree index
         this.zoom.translate([0, 0]).scale(1).event(this.canvas);
         this.documents.forEach(doc => doc.reset());
     }
@@ -606,8 +738,15 @@ class visualizerGraphDetails {
     }
 
     private setupEvents(selection: d3.Selection<void>) {
-        selection.on("dblclick.zoom", null);
-        //TODO: allow to click selection.on("click", () => this.onClick());
+        selection.on("dblclick.zoom", null)
+            .on("click", () => this.onClick())
+            .on("mousemove", () => this.hitTest.onMouseMove(this.getMouseLocation()))
+            .on("mouseup", () => this.hitTest.onMouseUp())
+            .on("mousedown", () => this.hitTest.onMouseDown());
+
+        this.hitTest.cursor.subscribe(cursor => {
+            selection.style("cursor", cursor);
+        });
     }
 
     goToMasterView() {
@@ -624,8 +763,8 @@ class visualizerGraphDetails {
         this.toggleUiElements(true);
 
         const treeIdx = this.trees.findIndex(x => x.Name === treeName);
-        this.currentTreeIndex = treeIdx;
-        this.currentTree(new reduceTreeItem(this.trees[this.currentTreeIndex])); //TODO: consider moving this to layout?
+        this.currentTreeIndex(treeIdx);
+        this.currentTree(new reduceTreeItem(this.trees[treeIdx]));
 
         this.layout();
 
@@ -647,6 +786,19 @@ class visualizerGraphDetails {
         yStart += visualizerGraphDetails.margins.betweenTreesAndDocumentsPadding;
 
         this.layoutDocuments(yStart);
+        this.registerHitAreas();
+    }
+
+    private registerHitAreas() {
+        this.hitTest.reset();
+
+        this.currentTree().itemsAtDepth.forEach(items => {
+            items.forEach(item => {
+                if (item instanceof leafPageItem) {
+                    this.hitTest.registerPageItem(item);
+                }
+            });
+        });
     }
 
     // Return the visible items for the detailed view, ordered by their connectedEntries y coordinate
@@ -709,6 +861,8 @@ class visualizerGraphDetails {
         } finally {
             ctx.restore();
         }
+
+        this.pageItemHighlightHandler();
     }
 
     private drawTree(ctx: CanvasRenderingContext2D, tree: reduceTreeItem) {
@@ -718,7 +872,7 @@ class visualizerGraphDetails {
                 if (page instanceof pageItem) {
                     this.drawPage(ctx, page);
                 } else {
-                    this.drawCollapsedLeaves(ctx, page as collapsedLeavesItem);
+                    this.drawCollapsedLeafs(ctx, page as collapsedLeafsItem);
                 }
 
                 if (page.parentPage) {
@@ -785,7 +939,7 @@ class visualizerGraphDetails {
         }
     }
 
-    private drawCollapsedLeaves(ctx: CanvasRenderingContext2D, page: collapsedLeavesItem) {
+    private drawCollapsedLeafs(ctx: CanvasRenderingContext2D, page: collapsedLeafsItem) {
         ctx.fillStyle = "#3a4242";
         ctx.fillRect(page.x, page.y, page.width, page.height);
 
@@ -797,7 +951,7 @@ class visualizerGraphDetails {
             ctx.fillStyle = "#a9adad";
             ctx.textAlign = "center";
             ctx.textBaseline = "top";
-            ctx.fillText(page.aggregationCount + " leafes collapsed", page.width / 2, pageItem.margins.pageNumberTopMargin);
+            ctx.fillText(page.aggregationCount + " leafs collapsed", page.width / 2, pageItem.margins.pageNumberTopMargin);
 
         } finally {
             ctx.restore();
@@ -900,6 +1054,81 @@ class visualizerGraphDetails {
     private toggleUiElements(show: boolean) {
         this.svg.style("display", show ? "block" : "none");
         this.canvas.style("display", show ? "block" : "none");
+    }
+
+    goToPreviousTree() {
+        if (this.canNavigateToPreviousTree()) {
+            const previousTree = this.trees[this.currentTreeIndex() - 1];
+            this.openFor(previousTree.Name);
+        }
+    }
+
+    goToNextTree() {
+        if (this.canNavigateToNextTree()) {
+            const nextTree = this.trees[this.currentTreeIndex() + 1];
+            this.openFor(nextTree.Name);
+        }
+    }
+
+    private onClick() {
+        if ((d3.event as any).defaultPrevented) {
+            return;
+        }
+
+        this.hitTest.onClick(this.getMouseLocation());
+    }
+
+    private getMouseLocation(): [number, number] {
+        const clickLocation = d3.mouse(this.canvas.node());
+        return [this.xScale.invert(clickLocation[0]), this.yScale.invert(clickLocation[1])];
+    }
+
+    private onPageItemClicked(item: pageItem) {
+
+        app.showBootstrapDialog(new visualizerTreeExplorer(item.sourceObject));
+
+        // cancel transition
+        this.currentPageItemHighlight
+            .transition()
+            .duration(0)
+            .style("opacity", 0);
+    }
+
+    private onPageItemEnter(item: pageItem) {
+        if (this.animationInProgress) {
+            return;
+        }
+
+        this.pageItemHighlightHandler = () => {
+            const [x1, y1] = [this.xScale(item.x), this.yScale(item.y)];
+            const [x2, y2] = [this.xScale(item.x + item.width), this.yScale(item.y + item.height)];
+
+            this.currentPageItemHighlight
+                .attr("width", x2 - x1)
+                .attr("height", y2 - y1)
+                .attr("x", x1)
+                .attr("y", y1)
+                .transition()
+                .duration(200)
+                .style("opacity", 0.05);
+        }
+
+        this.pageItemHighlightHandler();
+    }
+
+    private onPageItemExit(item: pageItem) {
+        if (this.animationInProgress) {
+            return;
+        }
+
+        this.pageItemHighlightHandler = () => {
+            this.currentPageItemHighlight
+                .transition()
+                .duration(200)
+                .style("opacity", 0);
+        }
+
+        this.pageItemHighlightHandler();
     }
 }
 

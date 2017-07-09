@@ -278,7 +278,7 @@ namespace Voron.Impl.Journal
                     PagePosition value;
                     if (tx.JournalSnapshots[i].PageTranslationTable.TryGetValue(tx, pageNumber, out value))
                     {
-                        var page = _env.ScratchBufferPool.ReadPage(tx, value.ScratchNumber, value.ScratchPos, scratchPagerStates[value.ScratchNumber]);
+                        var page = _env.ScratchBufferPool.ReadPage(tx, value.ScratchNumber, value.ScratchPage, scratchPagerStates[value.ScratchNumber]);
 
                         Debug.Assert(page.PageNumber == pageNumber);
 
@@ -297,7 +297,7 @@ namespace Voron.Impl.Journal
                 if (files[i].PageTranslationTable.TryGetValue(tx, pageNumber, out value))
                 {
                     // ReSharper disable once RedundantArgumentDefaultValue
-                    var page = _env.ScratchBufferPool.ReadPage(tx, value.ScratchNumber, value.ScratchPos, pagerState: null);
+                    var page = _env.ScratchBufferPool.ReadPage(tx, value.ScratchNumber, value.ScratchPage, pagerState: null);
 
                     Debug.Assert(page.PageNumber == pageNumber);
 
@@ -1022,7 +1022,7 @@ namespace Voron.Impl.Journal
                                 var numberOfPages = scratchBufferPool.CopyPage(
                                     batchWrites,
                                     scratchNumber,
-                                    pagePosition.ScratchPos,
+                                    pagePosition.ScratchPage,
                                     pagerState);
 
                                 written += numberOfPages * Constants.Storage.PageSize;

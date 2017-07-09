@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Subscriptions
             var subscriptionCreationDto = new SubscriptionCreationOptions
             {
                 Name = subscriptionCreationOptions.Name,
-                Criteria =  subscriptionCreationOptions.CreateOptions(_store.Conventions),
+                Criteria =  subscriptionCreationOptions.CreateOptions(_store.GetRequestExecutor(database).Conventions),
                 ChangeVector = subscriptionCreationOptions.ChangeVector,
             };
 
@@ -64,7 +64,7 @@ namespace Raven.Client.Documents.Subscriptions
 
             var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
             requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);
-
+            
             var command = new CreateSubscriptionCommand(subscriptionCreationOptions, context);
             await requestExecutor.ExecuteAsync(command, context).ConfigureAwait(false);
 
@@ -80,7 +80,7 @@ namespace Raven.Client.Documents.Subscriptions
         {
             if (options == null)
                 throw new InvalidOperationException("Cannot open a subscription if options are null");
-
+            
             var subscription = new Subscription<T>(options, _store, database);
             subscription.OnDisposed  += (sender) => _subscriptions.TryRemove(sender);
             _subscriptions.Add(subscription);
@@ -106,7 +106,17 @@ namespace Raven.Client.Documents.Subscriptions
             var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
             requestExecutor.ContextPool.AllocateOperationContext(out jsonOperationContext);
 
-            var command = new DeleteSubscriptionCommand(id);
+            var command = new DeleteSubscriptionCommand(id.ToString());
+            await requestExecutor.ExecuteAsync(command, jsonOperationContext).ConfigureAwait(false);
+        }
+
+        public async Task DeleteAsync(string name, string database = null)
+        {
+            JsonOperationContext jsonOperationContext;
+            var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
+            requestExecutor.ContextPool.AllocateOperationContext(out jsonOperationContext);
+
+            var command = new DeleteSubscriptionCommand(name);
             await requestExecutor.ExecuteAsync(command, jsonOperationContext).ConfigureAwait(false);
         }
 

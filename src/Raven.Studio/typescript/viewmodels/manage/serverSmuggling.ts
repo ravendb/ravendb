@@ -1,6 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import serverSmugglingItem = require("models/resources/serverSmugglingItem");
-import serverConnectionInfo = require("models/database/cluster/serverConnectionInfo");
+//TODO: import serverConnectionInfo = require("models/database/cluster/serverConnectionInfo");
 import performSmugglingCommand = require("commands/operations/performSmugglingCommand");
 import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
@@ -9,7 +9,7 @@ import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 import databasesManager = require("common/shell/databasesManager");
 import eventsCollector = require("common/eventsCollector");
 
-class serverSmuggling extends viewModelBase {
+class serverSmuggling extends viewModelBase {/* TODO
     databases = ko.observableArray<serverSmugglingItem>([]);
     selectedDatabases = ko.observableArray<serverSmugglingItem>();
     targetServer = ko.observable<serverConnectionInfo>(new serverConnectionInfo());
@@ -181,7 +181,7 @@ class serverSmuggling extends viewModelBase {
 
         this.showCurlRequest(!this.showCurlRequest());
     }
-
+*/
 }
 
 export = serverSmuggling;  

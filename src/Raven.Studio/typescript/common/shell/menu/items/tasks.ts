@@ -11,8 +11,8 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
     const exportDatabaseUrl = ko.pureComputed(() => appUrl.forExportDatabase(activeDatabase()));
     const sampleDataUrl = ko.pureComputed(() => appUrl.forSampleData(activeDatabase()));
     const ongoingTasksUrl = ko.pureComputed(() => appUrl.forOngoingTasks(activeDatabase()));
-    const editExternalReplicationTaskUrl = ko.pureComputed(() => appUrl.forNewExternalReplication(activeDatabase()));
-    const editSubscriptionTaskUrl = ko.pureComputed(() => appUrl.forNewSubscription(activeDatabase()));
+    const editExternalReplicationTaskUrl = ko.pureComputed(() => appUrl.forEditExternalReplication(activeDatabase()));
+    const editSubscriptionTaskUrl = ko.pureComputed(() => appUrl.forEditSubscription(activeDatabase()));
     const csvImportUrl = ko.pureComputed(() => appUrl.forCsvImport(activeDatabase()));
 
     const submenu: leafMenuItem[] = [

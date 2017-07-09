@@ -128,29 +128,9 @@ interface replicationDestinationDto {
     Disabled: boolean;
     ClientVisibleUrl: string;
     SpecifiedCollections: dictionary<string>;
-    HasGlobal?: boolean;
-    HasLocal?: boolean;
 }
 
-interface configurationDocumentDto<TClass> {
-    LocalExists?: boolean;
-    GlobalExists?: boolean;
-    MergedDocument: TClass;
-    GlobalDocument?: TClass;
-    Etag?: string;
-    Metadata?: any;
-}
 
-interface configurationSettingDto {
-    LocalExists: boolean;
-    GlobalExists: boolean;
-    EffectiveValue: string;
-    GlobalValue: string;
-}
-
-interface configurationSettingsDto {
-    Results: dictionary<configurationSettingDto>;
-}
 
 interface replicationsDto {
     Destinations: replicationDestinationDto[];
@@ -240,6 +220,10 @@ interface compactStatusDto {
     Messages: string[];
     LastProgressMessage: string;
     State: string;
+}
+
+interface serverSmugglingDto {
+    
 }
 
 interface commandData {
@@ -749,58 +733,6 @@ interface triggerInfoDto {
 
 interface copyFromParentDto<T> {
     copyFromParent(parent: T): void;
-}
-interface topologyDto {
-    CurrentLeader: string;
-    CurrentTerm: number;
-    State: string;
-    CommitIndex: number;
-    AllVotingNodes: Array<nodeConnectionInfoDto>;
-    PromotableNodes: Array<nodeConnectionInfoDto>;
-    NonVotingNodes: Array<nodeConnectionInfoDto>;
-    TopologyId: string;
-}
-
-interface nodeConnectionInfoDto {
-    Uri: string;
-    Name: string;
-    Username?: string;
-    Password?: string;
-    Domain?: string;
-    ApiKey?: string;
-    IsNoneVoter?: boolean;
-}
-
-interface clusterConfigurationDto {
-    EnableReplication: boolean;
-    DatabaseSettings?: dictionary<string>;
-}
-
-interface clusterNodeStatusDto {
-    Uri: string;
-    Status: string;
-}
-
-interface serverSmugglingItemDto {
-    Name: string;
-    Incremental: boolean;
-}
-
-interface serverConnectionInfoDto {
-    Url: string;
-    Username: string;
-    Password: string;
-    Domain: string;
-    ApiKey: string;
-}
-
-interface serverSmugglingDto {
-    TargetServer: serverConnectionInfoDto;
-    Config: Array<serverSmugglingItemDto>;
-}
-
-interface serverSmugglingOperationStateDto extends operationStatusDto {
-    Messages: Array<string>;
 }
 
 interface dataExplorationRequestDto {

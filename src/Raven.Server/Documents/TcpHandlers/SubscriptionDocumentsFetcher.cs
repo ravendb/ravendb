@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.TcpHandlers
             _remoteEndpoint = remoteEndpoint;
         }
 
-        public IEnumerable<Document> GetDataToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch)
+        public IEnumerable<(Document Doc,Exception Exception)> GetDataToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch)
         {
             if (string.IsNullOrEmpty(subscription.Criteria?.Collection))
                 throw new ArgumentException("The collection name must be specified");
@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.TcpHandlers
             return GetDocumentsToSend(docsContext, subscription, startEtag, patch, _db);
         }
 
-        private IEnumerable<Document> GetDocumentsToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch,
+        private IEnumerable<(Document Doc, Exception Exception)> GetDocumentsToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch,
             DocumentDatabase db)
         {
             foreach (var doc in db.DocumentsStorage.GetDocumentsFrom(
@@ -60,10 +60,18 @@ namespace Raven.Server.Documents.TcpHandlers
                 using (doc.Data)
                 {
                     BlittableJsonReaderObject transformResult;
-                    if (ShouldSendDocument(subscription, patch, docsContext, doc, out transformResult) == false)
+                    if (ShouldSendDocument(subscription, patch, docsContext, doc, out transformResult, out var exception) == false)
                     {
+                        if (exception != null)
+                        {
+                            yield return (doc, exception);
+                        }
+                        else
+                        {
+                            doc.Data = null;
+                            yield return (doc, null);
+                        }
                         doc.Data = null;
-                        yield return doc;
                     }
                     else
                     {
@@ -71,25 +79,25 @@ namespace Raven.Server.Documents.TcpHandlers
                         {
                             if (transformResult == null)
                             {
-                                yield return doc;
+                                yield return (doc,null);
                                 continue;
                             }
 
-                            yield return new Document
+                            yield return (new Document
                             {
                                 Id = doc.Id,
                                 Etag = doc.Etag,
                                 Data = transformResult,
                                 LowerId = doc.LowerId,
                                 ChangeVector = doc.ChangeVector
-                            };
+                            },null);
                         }
                     }
                 }
             }
         }
 
-        private IEnumerable<Document> GetVerionTuplesToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch,
+        private IEnumerable<(Document Doc, Exception Exception)> GetVerionTuplesToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch,
             VersioningStorage revisions)
         {
             foreach (var versionedDocs in revisions.GetRevisionsFrom(docsContext, new CollectionName(subscription.Criteria.Collection), startEtag + 1, _maxBatchSize))
@@ -107,17 +115,22 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 using (var versioned = docsContext.ReadObject(dynamicValue, item.Id))
                 {
-                    if (ShouldSendDocumentWithVersioning(subscription, patch, docsContext, item, versioned, out var transformResult) == false)
+                    if (ShouldSendDocumentWithVersioning(subscription, patch, docsContext, item, versioned, out var transformResult, out var exception) == false)
                     {
-                        // make sure that if we read a lot of irrelevant documents, we send keep alive over the network            
-                        var doc = new Document
+                        if (exception != null)
                         {
-                            Data = null,
-                            ChangeVector = item.ChangeVector,
-                            Etag = item.Etag
-                        };
-
-                        yield return doc;
+                            yield return (versionedDocs.current, exception);
+                        }
+                        else
+                        {
+                            // make sure that if we read a lot of irrelevant documents, we send keep alive over the network
+                            yield return (new Document
+                            {
+                                Data = null,
+                                ChangeVector = item.ChangeVector,
+                                Etag = item.Etag
+                            }, null );
+                        }
                     }
                     else
                     {
@@ -125,18 +138,18 @@ namespace Raven.Server.Documents.TcpHandlers
                         {
                             if (transformResult == null)
                             {
-                                yield return versionedDocs.current;
+                                yield return (versionedDocs.current,null);
                                 continue;
                             }
 
-                            yield return new Document
+                            yield return (new Document
                             {
                                 Id = item.Id,
                                 Etag = item.Etag,
                                 Data = transformResult,
                                 LowerId = item.LowerId,
                                 ChangeVector = item.ChangeVector
-                            };
+                            },null);
                         }
                     }
                 }
@@ -144,9 +157,10 @@ namespace Raven.Server.Documents.TcpHandlers
         }
         
         private bool ShouldSendDocument(SubscriptionState subscriptionState, SubscriptionPatchDocument patch, DocumentsOperationContext dbContext,
-            Document doc, out BlittableJsonReaderObject transformResult)
+            Document doc, out BlittableJsonReaderObject transformResult, out Exception exception)
         {
             transformResult = null;
+            exception = null;
             var conflictStatus = ConflictsStorage.GetConflictStatus(
                 remote: doc.ChangeVector,
                 local: subscriptionState.ChangeVector);
@@ -169,14 +183,16 @@ namespace Raven.Server.Documents.TcpHandlers
                         $"Criteria script threw exception for subscription {_subscriptionId} connected to {_remoteEndpoint} for document id {doc.Id}",
                         ex);
                 }
+                exception = ex;
                 return false;
             }
         }
         
         
         private bool ShouldSendDocumentWithVersioning(SubscriptionState subscriptionState, SubscriptionPatchDocument patch, DocumentsOperationContext dbContext,
-            Document item, BlittableJsonReaderObject versioned, out BlittableJsonReaderObject transformResult)
+            Document item, BlittableJsonReaderObject versioned, out BlittableJsonReaderObject transformResult, out Exception exception)
         {
+            exception = null;
             transformResult = null;
             var conflictStatus = ConflictsStorage.GetConflictStatus(
                 remote: item.ChangeVector,
@@ -211,6 +227,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         $"Criteria script threw exception for subscription {_subscriptionId} connected to {_remoteEndpoint} for document id {item.Id}",
                         ex);
                 }
+                exception = ex;
                 return false;
             }
         }

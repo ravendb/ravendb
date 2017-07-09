@@ -12,18 +12,17 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
     public class ToggleSubscriptionStateCommand:UpdateValueForDatabaseCommand
     {
-        public long SubscriptionId;
+        public string SubscriptionName;
         public bool Disable;
 
         // for serialization
         private ToggleSubscriptionStateCommand():base(null){}
 
-        public ToggleSubscriptionStateCommand(long subscriptionId, bool disable,string databaseName) : base(databaseName)
+        public ToggleSubscriptionStateCommand(string subscriptionName, bool disable, string databaseName) : base(databaseName)
         {
-            SubscriptionId = subscriptionId;
+            SubscriptionName = subscriptionName;
             Disable = disable;
         }
-
 
         public override string GetItemId()
         {
@@ -32,7 +31,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         public override unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive)
         {
-            var itemKey = SubscriptionState.GenerateSubscriptionItemNameFromId(DatabaseName, SubscriptionId);
+            var itemKey = SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, SubscriptionName);
             using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
             using (Slice.From(context.Allocator, itemKey, out Slice valueName))
             {
@@ -55,7 +54,8 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         public override void FillJson(DynamicJsonValue json)
         {
-            json[nameof(SubscriptionId)] = SubscriptionId;
+            json[nameof(SubscriptionName)] = SubscriptionName;
+            json[nameof(Disable)] = Disable;
         }
     }
 }

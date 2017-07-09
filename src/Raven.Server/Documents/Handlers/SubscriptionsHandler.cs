@@ -10,6 +10,7 @@ using Sparrow.Json;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Conventions;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions;
@@ -56,16 +57,39 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
-
+                    writer.WriteStartArray();
+                    
                     using (context.OpenReadTransaction())
                     {
-                        writer.WriteDocuments(context, 
+                        var first = true;
+                        
+                        foreach (var itemDetails in fetcher.GetDataToSend(context, state, etag, patch))
+                        {
+                            if (first == false)
+                                writer.WriteComma();
 
-                            fetcher.GetDataToSend(context, state, etag, patch)
-                                .Where(x=>x.Data != null)
-                            
-                            , false, out int _);
+                            if (itemDetails.Exception == null)
+                            {
+                                writer.WriteDocument(context, itemDetails.Doc);
+                            }
+                            else
+                            {
+                                writer.WriteObject(context.ReadObject(
+                                    new DynamicJsonValue
+                                    {
+                                        ["Id"] = itemDetails.Doc.Id,
+                                        ["Etag"] = itemDetails.Doc.Etag,
+                                        ["Exception"] = itemDetails.Exception.ToString(),
+                                        ["Document"] = itemDetails.Doc.Data
+                                    }, "Subscription process exception"
+                                ));
+                            }
+
+                            first = false;
+                        }
                     }
+                    
+                    writer.WriteEndArray();
                     writer.WriteEndObject();
                 }
             }
@@ -79,7 +103,8 @@ namespace Raven.Server.Documents.Handlers
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
                 var options = JsonDeserializationServer.SubscriptionCreationParams(json);
                 var id = GetLongQueryString("id", required: false);
-                var subscriptionId = await Database.SubscriptionStorage.PutSubscription(options, id);
+                var disabled = GetBoolValueQueryString("disabled", required: false);
+                var subscriptionId = await Database.SubscriptionStorage.PutSubscription(options, id, disabled);
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created; // Created
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -92,17 +117,17 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/subscriptions", "DELETE", "/databases/{databaseName:string}/subscriptions?id={subscriptionId:long}")]
+        [RavenAction("/databases/*/subscriptions", "DELETE", "/databases/{databaseName:string}/subscriptions?id={subscriptionId:long}&taskName={taskName:string}")]
         public async Task Delete()
         {
-            var id = GetLongQueryString("id");
+            var subscriptionName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("taskName");
 
-            await Database.SubscriptionStorage.DeleteSubscription(id);
+            await Database.SubscriptionStorage.DeleteSubscription(subscriptionName);
 
             await NoContent();
         }
 
-        [RavenAction("/databases/*/subscriptions", "GET", "/databases/{databaseName:string}/subscriptions?[running=true|history=true|id=<subscription id>]")]
+        [RavenAction("/databases/*/subscriptions", "GET", "/databases/{databaseName:string}/subscriptions?[running=true|history=true|id=<subscription id>|name=<subscription name>]")]
         public Task GetAll()
         {
             var start = GetStart();
@@ -110,6 +135,7 @@ namespace Raven.Server.Documents.Handlers
             var history = GetBoolValueQueryString("history", required: false) ?? false;
             var running = GetBoolValueQueryString("running", required: false) ?? false;
             var id = GetLongQueryString("id", required: false);
+            var name = GetStringQueryString("name", required: false);
 
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))                
@@ -127,10 +153,10 @@ namespace Raven.Server.Documents.Handlers
                     var subscription = running
                         ? Database
                             .SubscriptionStorage
-                            .GetRunningSubscription(context, id.Value, history)
+                            .GetRunningSubscription(context, id.Value, name, history)
                         : Database
                             .SubscriptionStorage
-                            .GetSubscription(context, id.Value, history);
+                            .GetSubscription(context, name, history);
 
                     if (subscription == null)
                     {

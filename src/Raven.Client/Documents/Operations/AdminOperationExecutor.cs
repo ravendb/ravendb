@@ -48,7 +48,7 @@ namespace Raven.Client.Documents.Operations
             JsonOperationContext context;
             using (RequestExecutor.ContextPool.AllocateOperationContext(out context))
             {
-                var command = operation.GetCommand(_store.Conventions, context);
+                var command = operation.GetCommand(_requestExecutor.Conventions, context);
                 await RequestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
             }
         }
@@ -58,7 +58,7 @@ namespace Raven.Client.Documents.Operations
             JsonOperationContext context;
             using (RequestExecutor.ContextPool.AllocateOperationContext(out context))
             {
-                var command = operation.GetCommand(_store.Conventions, context);
+                var command = operation.GetCommand(_requestExecutor.Conventions, context);
 
                 await RequestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
                 return command.Result;
@@ -75,10 +75,10 @@ namespace Raven.Client.Documents.Operations
             JsonOperationContext context;
             using (RequestExecutor.ContextPool.AllocateOperationContext(out context))
             {
-                var command = operation.GetCommand(_store.Conventions, context);
+                var command = operation.GetCommand(_requestExecutor.Conventions, context);
 
                 await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
-                return new Operation(_requestExecutor, () => _store.Changes(_databaseName), _store.Conventions, command.Result.OperationId);
+                return new Operation(_requestExecutor, () => _store.Changes(_databaseName), _requestExecutor.Conventions, command.Result.OperationId);
             }
         }
     }

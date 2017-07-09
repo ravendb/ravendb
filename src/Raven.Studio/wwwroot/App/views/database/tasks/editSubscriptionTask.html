@@ -1,101 +1,108 @@
-
-<!-- Note - This html is in progress - do Not review -->
-
 <div class="content-margin">
     <div class="destinations flex-vertical absolute-fill content-margin">
         <div class="row flex-row flex-grow flex-stretch-items">
             <div class="col-sm-12 col-lg-6 flex-vertical">
                 <div class="flex-header">
-                    <button class="btn btn-primary">
+                    <button class="btn btn-primary" data-bind="click: saveSubscription"> 
                         <i class="icon-save"></i>
                         <span>Save</span>
                     </button>
-                    <button class="btn btn-default">
+                    <button class="btn btn-default" data-bind="click: cloneSubscription, visible: !isAddingNewSubscriptionTask()" title="Clone this subscription"> 
                         <i class="icon-clone"></i>
                         <span>Clone</span>
                     </button>
-                    <button class="btn btn-default">
+                    <button class="btn btn-default" data-bind="click: cancelOperation" title="Return to Ongoing Tasks View">
                         <i class="icon-cancel"></i>
                         <span>Cancel</span>
                     </button>
+                    <button class="btn btn-info pull-right btn-upcoming">
+                        <i class="icon-rocket"></i>
+                        <span>Test subscription</span>
+                    </button>
                 </div>
                 <div class="scroll" data-bind="with: editedSubscription">
-                    <form class="flex-form"> <!-- remove form... -->
-                        <div class="panel padding">
-                            <h2 data-bind="visible: $parent.isAddingNewSubscriptionTask">New Subscription Task</h2>
-                            <h2 data-bind="visible: !$parent.isAddingNewSubscriptionTask()">Edit Subscription Task</h2>
-                            <div class="row flex-row margin-bottom">
-                                <label class="control-label col-xs-12 col-sm-6 col-lg-4">Task Name</label>
-                                <div class="col-xs-12 col-sm-6 col-lg-8">
-                                    <input type="text" class="form-control" id="taskName" placeholder="Enter a task name of your choice">
-                                </div>
-                            </div>
-                            <div class="row flex-row margin-bottom">
-                                <label class="control-label  col-xs-12 col-sm-6 col-lg-4">Collection</label>
-                                <div class=" col-xs-12 col-sm-6 col-lg-8">
-                                    <div class="dropdown btn-block">
-                                        <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
-                                            <span>&nbsp;</span>
-                                            <span class="caret"></span>
-                                        </button>
-                                        <ul class="dropdown-menu">
-                                            <li><a href="#">us-west-1</a></li>
-                                            <li><a href="#">us-west-2</a></li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <button class="btn btn-info"><i class="icon-rocket"></i><span>Test subscription</span></button>
+                    <div class="panel padding">
+                        <h2 data-bind="visible: $root.isAddingNewSubscriptionTask()">New Subscription</h2>
+                        <h2 data-bind="visible: !$root.isAddingNewSubscriptionTask()">Edit Subscription</h2>
+                        <div class="row flex-row margin-bottom">
+                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Task Name</label>
+                            <div class="col-xs-12 col-sm-6 col-lg-8">
+                                <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the subscription task" title="Note: if no name is supplied then server will create one for you"
+                                       data-bind="value: taskName, attr: { disabled: !$root.isAddingNewSubscriptionTask() }">
                             </div>
                         </div>
-                    </form>
-                    <div class="panel">
-                        <div class="padding">
-                            <div class="toggle collapsed" data-toggle="collapse" data-target="#collapseStartingPoint" aria-expanded="false">
-                                <input id="toggle-starting-point" type="checkbox">
-                                <label for="toggle-starting-point">
-                                    Define starting point
-                                </label>
-                            </div>
-                            <div class="collapse" id="collapseStartingPoint" aria-expanded="false" style="height: 0px;">
-                                <div class="margin-top">
-                                    <div class="row flex-row margin-bottom">
-                                        <label class="control-label  col-xs-12 col-sm-6 col-xl-4">From document</label>
-                                        <div class=" col-xs-12 col-sm-6 col-xl-4">
-                                            <input type="text" class="form-control" placeholder="Document ID">
-                                        </div>
-                                        <div class=" col-xs-12 col-sm-6 col-xl-4 col-sm-offset-6 col-xl-offset-0 ">
-                                            <button class="btn btn-info btn-block"><i class="icon-import"></i><span>Load @change-vector</span></button>
-                                        </div>
-                                    </div>
-                                    <div class="row flex-row margin-bottom">
-                                        <label class="control-label  col-xs-12 col-sm-6 col-xl-4">Or paste directly</label>
-                                        <div class=" col-xs-12 col-sm-6 col-xl-4">
-                                            <textarea rows="4" class="form-control">
-                                            </textarea>
-                                        </div>
-                                        <div class="col-xs-12 col-sm-6 col-sm-offset-6 col-xl-offset-0 col-xl-4">
-                                            <button class="btn btn-default btn-block"><i class="icon-preview"></i><span>Show related document</span></button>
-                                        </div>
-                                    </div>
+                        <div class="row flex-row margin-bottom">
+                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Collection</label>
+                            <div class=" col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: collection, validationOptions: { insertMessages: false }">
+                                <div class="dropdown btn-block">
+                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" data-bind="attr: { disabled: !$root.isAddingNewSubscriptionTask() }">
+                                        <span data-bind="text: collection() || 'Select collection..', textinput: collection"></span> <!-- TODO: make the 'Select collection..' grayed out, like a real placeholder -->
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu max-height" data-bind="foreach: $root.collections">
+                                        <li><a href="#" data-bind="text: name, click: _.partial($root.useCollection, $data)"></a></li>
+                                    </ul>
                                 </div>
+                                <span class="help-block" data-bind="validationMessage: collection"></span>
                             </div>
                         </div>
                     </div>
                     <div class="panel">
                         <div class="padding">
+                            <div class="toggle">
+                                <input id="include-revisions" type="checkbox" data-bind="checked: includeRevisions">
+                                <label for="include-revisions">Include Revisions</label>
+                            </div>
                             <div class="toggle collapsed" data-toggle="collapse" data-target="#collapseTransformScript" aria-expanded="false">
                                 <input id="toggle-transform-script" type="checkbox">
                                 <label for="toggle-transform-script">
-                                    Use transform script <i class="icon-info text-info"></i>
+                                    Apply Transform Script<i class="icon-info text-info"></i>
                                 </label>
                             </div>
                             <div class="collapse" id="collapseTransformScript" aria-expanded="false">
-                                <textarea class="form-control margin-top" rows="8" placeholder="Transform script source">
-                                </textarea>
+                                <!-- TODO : ace editor, add validations ? -->
+                                <pre class="form-control margin-top" placeholder="Enter transform script" 
+                                     data-bind="aceEditor: { code: script, lang:'ace/mode/javascript' }" style="height: 160px;"></pre>
+                                <div>
+                                    <div class="help-block"></div>
+                                </div>
                             </div>
                         </div>
+                    </div>
+                    <div class="panel padding">
+                        <div class="row flex-row margin-bottom">
+                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Send Documents From</label>
+                            <div class=" col-xs-12 col-sm-6 col-lg-8">
+                                <div class="dropdown btn-block" title="Set the starting point for the subscription task">
+                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" disabled="disabled"> 
+                                        <span data-bind="text: startingPointType"></span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu max-height">
+                                        <li title="Documents will be sent from the very first document in the collection">
+                                            <a href="#" data-bind="click: _.partial($root.setStartingPointType, 'Beginning of Time')">Begining of Time</a>
+                                        </li>
+                                        <li title="Documents will be sent from the latest document in the collection">
+                                            <a href="#" data-bind="click: _.partial($root.setStartingPointType, 'Latest Document')">Latest Document</a>
+                                        </li>
+                                        <li title="Documents will be sent from the specified change vector related document">
+                                            <a href="#" data-bind="click: _.partial($root.setStartingPointType, 'Change Vector')">Change Vector</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="margin-top">
+                            <div class="row flex-row margin-bottom" data-bind="visible: startingPointChangeVector "> 
+                                <div class="col-xs-12 col-sm-6 col-sm-offset-6 col-lg-offset-4 col-lg-12">
+                                    <textarea rows="3" class="form-control" placeholder="Set change vector"></textarea>
+                                </div>
+                                <div class="col-xs-12 col-sm-6 col-sm-offset-6 col-lg-offset-4 col-lg-12">
+                                    <button class="btn btn-default btn-block"><i class="icon-preview"></i><span>&nbsp;Show related document</span></button>
+                                </div>
+                            </div>
+                        </div>
+                        <br/><br/><br/>
                     </div>
                 </div>
             </div>

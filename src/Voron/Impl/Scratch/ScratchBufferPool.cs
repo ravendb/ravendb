@@ -1,10 +1,10 @@
 ﻿using Sparrow;
 using Sparrow.Binary;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Sparrow.Collections.LockFree;
 using Voron.Global;
 using Voron.Impl.Paging;
 
@@ -33,8 +33,7 @@ namespace Voron.Impl.Scratch
 
         private Dictionary<int, PagerState> _pagerStatesAllScratchesCache;
 
-        private readonly ConcurrentDictionary<int, ScratchBufferItem> _scratchBuffers =
-            new ConcurrentDictionary<int, ScratchBufferItem>(NumericEqualityComparer.Instance);
+        private readonly ConcurrentDictionary<int, ScratchBufferItem> _scratchBuffers = new ConcurrentDictionary<int, ScratchBufferItem>(NumericEqualityComparer.Instance);
 
         private readonly LinkedList<ScratchBufferItem> _recycleArea = new LinkedList<ScratchBufferItem>();
 

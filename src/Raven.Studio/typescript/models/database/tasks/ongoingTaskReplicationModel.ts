@@ -48,7 +48,10 @@ class ongoingTaskReplicationModel extends ongoingTask {
     }
 
     initValidation() {
-        super.initValidation();
+
+        this.taskName.extend({
+            required: true
+        });
 
         this.destinationDB.extend({
             required: true,

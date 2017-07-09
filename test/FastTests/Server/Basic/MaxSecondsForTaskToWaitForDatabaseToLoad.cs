@@ -66,11 +66,11 @@ namespace FastTests.Server.Basic
                 Assert.Throws<DatabaseLoadTimeoutException>(() =>
                 {
                     using (var ctx = JsonOperationContext.ShortTermSingleUse())
-                    using (var reqExecuter = RequestExecutor.CreateForSingleNode(url, name, null))
+                    using (var requestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, name, null, DocumentConventions.Default))
                     {
-                        reqExecuter.Execute(
+                        requestExecutor.Execute(
                             new CreateDatabaseOperation(doc).GetCommand(new DocumentConventions(), ctx), ctx);
-                        reqExecuter.Execute(new GetDocumentCommand("Raven/HiloPrefix", includes: null, transformer: null, transformerParameters: null, metadataOnly: false), ctx);
+                        requestExecutor.Execute(new GetDocumentCommand("Raven/HiloPrefix", includes: null, transformer: null, transformerParameters: null, metadataOnly: false), ctx);
                     }
                 });
             }
@@ -84,7 +84,7 @@ namespace FastTests.Server.Basic
         private static DatabaseRecord GenerateDatabaseDoc(string name)
         {
             var doc = MultiDatabase.CreateDatabaseDocument(name);
-            doc.Settings[RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "10";
+            doc.Settings[RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "1";
             doc.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "true";
             doc.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "true";
             doc.Settings[RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString();

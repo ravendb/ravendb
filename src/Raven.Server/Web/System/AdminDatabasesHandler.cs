@@ -377,7 +377,7 @@ namespace Raven.Server.Web.System
             try
             {
                 var restoreConfiguration = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore");
-                var restoreConfigurationJson = JsonDeserializationCluster.RestoreBackupConfiguraionConfiguration(restoreConfiguration);
+                var restoreConfigurationJson = JsonDeserializationCluster.RestoreBackupConfiguration(restoreConfiguration);
 
                 var databaseName = restoreConfigurationJson.DatabaseName;
                 if (string.IsNullOrWhiteSpace(databaseName))
@@ -545,7 +545,7 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/update-resolver", "POST", "/admin/update-resolver?name={databaseName:string}")]
-        public async Task ChangeConflictResolver()
+        public async Task UpdateConflictResolver()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)

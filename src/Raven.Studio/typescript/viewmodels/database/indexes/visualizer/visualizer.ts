@@ -108,25 +108,61 @@ class visualizer extends viewModelBase {
             return;
         }
 
-        if (_.includes(this.documents.documentIds(), documentId)) {
-            this.globalGraph.zoomToDocument(documentId);
-        } else {
+        const expandedDocumentIds = visualizer.maybeExpandDocumentIds(documentId);
+
+        const documentsToFetch = expandedDocumentIds.filter(x => !_.includes(this.documents.documentIds(), x));
+
+        if (documentsToFetch.length) {
             this.spinners.addDocument(true);
 
-            new getIndexMapReduceTreeCommand(this.activeDatabase(), this.currentIndex(), documentId)
+            new getIndexMapReduceTreeCommand(this.activeDatabase(), this.currentIndex(), documentsToFetch)
                 .execute()
                 .done((mapReduceTrees) => {
-                    if (!_.includes(this.documents.documentIds(), documentId)) {
-                        this.documents.documentIds.push(documentId);
+                    documentsToFetch.forEach(docId => {
+                        if (!_.includes(this.documents.documentIds(), docId)) {
+                            this.documents.documentIds.push(docId);
+                            this.addDocument(docId);
+                        }
+                    });
 
-                        this.addDocument(documentId);
-                        this.addTrees(mapReduceTrees);
+                    this.addTrees(mapReduceTrees);
 
-                        this.globalGraph.zoomToDocument(documentId);
-                    }
+                    this.globalGraph.zoomToDocument(documentsToFetch[0]);
                 })
                 .always(() => this.spinners.addDocument(false));
+        } else {
+            // we already have all documents - zoom to first one
+            this.globalGraph.zoomToDocument(documentsToFetch[0]);
         }
+    }
+
+    /**
+     * If document id contains -- then exand documents ids into list
+     * Ex.: orders/1--3, expands to: orders/1, orders/2, orders/3
+     */
+    private static maybeExpandDocumentIds(input: string): Array<string> {
+        if (input.includes("--")) {
+            const tokens = input.split("--");
+            if (tokens.length === 2) {
+                const firstPart = tokens[0];
+                const lastPart = tokens[1];
+                const separatorIdx = firstPart.lastIndexOf("/");
+                if (separatorIdx >= 0) {
+                    const prefix = firstPart.substr(0, separatorIdx);
+                    const rangeStart = firstPart.substr(separatorIdx + 1);
+                    const rangeEnd = lastPart;
+
+                    if (/\d+/.test(rangeStart) && /\d+/.test(rangeEnd)) {
+                        const rangeStartInt = parseInt(rangeStart, 10);
+                        const rangeEndInt = parseInt(rangeEnd, 10);
+                        if (rangeStartInt <= rangeEndInt) {
+                            return _.range(rangeStartInt, rangeEndInt, 1).map(x => prefix + "/" + x);
+                        }
+                    }
+                }
+            }
+        }
+        return [input];
     }
 
     private addDocument(docName: string) {       

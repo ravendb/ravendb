@@ -10,13 +10,13 @@ class serverSmugglingItem {
     constructor(database: database) {
         this.database = database;
     }
-
+    /* TODO
     toDto(): serverSmugglingItemDto {
         return {
             Name: this.database.name,
             Incremental: this.incremental()
         }
-    }
+    }*/
 }
 
 export = serverSmugglingItem;

@@ -34,10 +34,10 @@ namespace Raven.Client.Documents.Changes
 
         private readonly AtomicDictionary<DatabaseConnectionState> _counters = new AtomicDictionary<DatabaseConnectionState>(StringComparer.OrdinalIgnoreCase);
 
-        public DatabaseChanges(RequestExecutor requestExecutor, DocumentConventions conventions, string databaseName, Action onDispose)
+        public DatabaseChanges(RequestExecutor requestExecutor, string databaseName, Action onDispose)
         {
             _requestExecutor = requestExecutor;
-            _conventions = conventions;
+            _conventions = requestExecutor.Conventions;
             _database = databaseName;
            
             _tcs = new TaskCompletionSource<IDatabaseChanges>(TaskCreationOptions.RunContinuationsAsynchronously);

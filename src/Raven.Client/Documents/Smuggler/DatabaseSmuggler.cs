@@ -52,7 +52,7 @@ namespace Raven.Client.Documents.Smuggler
 
             using (_requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var command = new ExportCommand(_store.Conventions, context, options, handleStreamResponse);
+                var command = new ExportCommand(_requestExecutor.Conventions, context, options, handleStreamResponse);
                 await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
             }
         }

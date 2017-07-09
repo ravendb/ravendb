@@ -35,7 +35,7 @@ namespace Raven.Client.Server.Operations
         {
             using (GetContext(out JsonOperationContext context))
             {
-                var command = operation.GetCommand(_store.Conventions, context);
+                var command = operation.GetCommand(_requestExecutor.Conventions, context);
                 await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
             }
         }
@@ -44,7 +44,7 @@ namespace Raven.Client.Server.Operations
         {
             using (GetContext(out JsonOperationContext context))
             {
-                var command = operation.GetCommand(_store.Conventions, context);
+                var command = operation.GetCommand(_requestExecutor.Conventions, context);
 
                 await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
                 return command.Result;
