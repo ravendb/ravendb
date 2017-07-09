@@ -24,10 +24,6 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases", "GET")]
         public Task Databases()
         {
-            var dbName = GetQueryStringValue("info");
-            if (dbName != null)
-                return DbInfo(dbName);
-
             var namesOnly = GetBoolValueQueryString("namesOnly", required: false) ?? false;
 
             //TODO: fill all required information (see: RavenDB-5438) - return Raven.Client.Data.DatabasesInfo
@@ -116,29 +112,6 @@ namespace Raven.Server.Web.System
                 url = clusterTopology.GetUrlFromTag(tag);
 
             return url;
-        }
-
-        private Task DbInfo(string dbName)
-        {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                context.OpenReadTransaction();
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    var dbId = Constants.Documents.Prefix + dbName;
-                    using (var dbRecord = ServerStore.Cluster.Read(context, dbId, out long etag))
-                    {
-                        if (dbRecord == null)
-                        {
-                            HttpContext.Response.Headers.Remove("Content-Type");
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            return Task.CompletedTask;
-                        }
-                        WriteDatabaseInfo(dbName, dbRecord, context, writer);
-                    }
-                    return Task.CompletedTask;
-                }
-            }
         }
 
         private void WriteDatabaseInfo(string databaseName, BlittableJsonReaderObject dbRecordBlittable,

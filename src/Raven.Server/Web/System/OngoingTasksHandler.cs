@@ -547,7 +547,7 @@ namespace Raven.Server.Web.System
 
             var id = GetLongQueryString("id");
             var typeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
-            var taskName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("taskName");
+            var taskName = GetStringQueryString("taskName", required: false);
 
             if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
                 throw new ArgumentException($"Unknown task type: {type}", "type");

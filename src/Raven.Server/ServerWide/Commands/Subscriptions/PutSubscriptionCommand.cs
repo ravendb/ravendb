@@ -26,7 +26,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
         }
 
-        public unsafe override void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive)
+        public override unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive)
         {
             var subscriptionId = SubscriptionId ?? index;
             SubscriptionName = string.IsNullOrEmpty(SubscriptionName) ? subscriptionId.ToString() : SubscriptionName;

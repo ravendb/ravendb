@@ -810,7 +810,7 @@ namespace Raven.Server.ServerWide
         {
             var deleteTaskCommand = 
                 taskType == OngoingTaskType.Subscription ? 
-                    (CommandBase)new DeleteSubscriptionCommand(dbName){SubscriptionName = taskName } : 
+                    (CommandBase)new DeleteSubscriptionCommand(dbName, taskName): 
                     new DeleteOngoingTaskCommand(taskId, taskType, dbName);
 
             return SendToLeaderAsync(deleteTaskCommand);
