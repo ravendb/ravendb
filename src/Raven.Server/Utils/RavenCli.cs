@@ -67,372 +67,9 @@ namespace Raven.Server.Utils
                 writer.Write(msg);
         };
 
-        private List<string> _promptArgs = new List<string> { "ravendb" };
+
         private TextWriter _writer;
         private TextReader _reader;
-
-
-        private class SingleAction
-        {
-            public int NumOfArgs;
-            public Func<List<string>, TextWriter, TextReader, bool, RavenServer, bool> DelegateFync;
-            public bool Experimental { get; set; }
-        }
-
-        private static bool CommandQuit(List<string> args, TextWriter writer, TextReader reader, bool consoleColoring, RavenServer server)
-        {
-            ResetColor(consoleColoring);
-            writer.WriteLine();
-            writer.Write("Are you sure you want to quit the server ? [y/N] : ");
-            writer.Flush();
-
-            var k = ReadKey(consoleColoring, reader);
-            writer.Flush();
-
-            writer.WriteLine();
-            return char.ToLower(k).Equals('y');
-        }
-
-        private static char ReadKey(bool consoleColoring, TextReader reader)
-        {
-            if (consoleColoring)
-                return Console.ReadKey().KeyChar;
-
-            var c = new char[1];
-            while (reader.Read(c, 0, 1) < 1)
-            {
-
-            }
-            return c[0];
-        }
-
-        private string ReadLine()
-        {
-            return _consoleColoring ? Console.ReadLine() : _reader.ReadLine();
-        }
-
-        private static bool CommandResetServer(List<string> args, TextWriter writer, TextReader reader, bool consoleColoring, RavenServer server)
-        {
-            ResetColor(consoleColoring);
-            writer.WriteLine();
-            writer.Write("Are you sure you want to reset the server ? [y/N] : ");
-            writer.Flush();
-
-            var k = ReadKey(consoleColoring, reader);
-            writer.Flush();
-
-            writer.WriteLine();
-            return char.ToLower(k).Equals('y');
-        }
-
-        private static bool CommandStats(List<string> args, TextWriter writer, TextReader reader, bool consoleColoring, RavenServer server)
-        {
-            LoggingSource.Instance.DisableConsoleLogging();
-            LoggingSource.Instance.SetupLogMode(LogMode.None,
-                Path.Combine(AppContext.BaseDirectory, server.Configuration.Logs.Path));
-
-            Program.WriteServerStatsAndWaitForEsc(server);
-
-            return true;
-        }
-
-        private static bool CommandPrompt(List<string> args, TextWriter writer, TextReader reader, bool consoleColoring, RavenServer server)
-        {
-            try
-            {
-                Prompt.Invoke(args, true, server, writer);
-            }
-            catch (Exception ex)
-            {
-                WriteError("Cannot set prompt to desired args, because of : " + ex.Message, writer, consoleColoring);
-                return false;
-            }
-            return true;
-        }
-
-        private static bool CommandHelpPrompt(List<string> args, TextWriter writer, TextReader reader, bool consoleColoring, RavenServer server)
-        {
-            string[][] commandDescription = {
-                new[] {"%D", "UTC Date"},
-                new[] {"%T", "UTC Time"},
-                new[] {"%M", "Memory information (WS:WorkingSet, UM:Unmanaged, M:Managed, MP:MemoryMapped)"},
-                new[] {"%R", "Momentary Req/Sec"},
-                new[] {"label", "any label"},
-            };
-
-            ResetColor(consoleColoring);
-            var msg = new StringBuilder();
-            msg.Append("Usage: prompt <[label] | [ %D | %T | %M ] | ...>" + Environment.NewLine + Environment.NewLine);
-            msg.Append("Options:" + Environment.NewLine);
-            writer.WriteLine(msg);
-
-            foreach (var cmd in commandDescription)
-            {
-                ForegroundColor(ConsoleColor.Yellow, consoleColoring);
-                writer.Write("\t" + cmd[0]);
-                ForegroundColor(ConsoleColor.DarkYellow, consoleColoring);
-                writer.WriteLine(new string(' ', 25 - cmd[0].Length) + cmd[1]);
-            }
-            ResetColor(consoleColoring);
-            writer.WriteLine();
-            writer.Flush();
-            return true;
-        }
-
-        private static bool CommandGc(List<string> args, TextWriter writer, TextReader reader, bool consoleColoring, RavenServer server)
-        {
-            var genNum = Convert.ToInt32(args.First());
-            ResetColor(consoleColoring);
-            writer.Write("Before collecting, managed memory used: ");
-            ForegroundColor(ConsoleColor.Cyan, consoleColoring);
-            writer.WriteLine(new Size(GC.GetTotalMemory(false), SizeUnit.Bytes));
-            ResetColor(consoleColoring);
-            var startTime = DateTime.UtcNow;
-            writer.Write("Garbage Collecting... ");
-            writer.Flush();
-
-            switch (genNum)
-            {
-                case 0:
-                    GC.Collect(0);
-                    break;
-                case 1:
-                    GC.Collect(1);
-                    break;
-                case 2:
-                    GC.Collect(GC.MaxGeneration);
-                    break;
-                default:
-                    WriteError("Invalid argument passed to GC. Can be 0, 1 or 2", writer, consoleColoring);
-                    return false;
-            }
-
-            GC.WaitForPendingFinalizers();
-            var actionTime = DateTime.UtcNow - startTime;
-
-            ForegroundColor(ConsoleColor.Green, consoleColoring);
-            writer.WriteLine("Collected.");
-            ResetColor(consoleColoring);
-            writer.Write("After collecting, managed memory used:  ");
-            ForegroundColor(ConsoleColor.Cyan, consoleColoring);
-            writer.Write(new Size(GC.GetTotalMemory(false), SizeUnit.Bytes));
-            ResetColor(consoleColoring);
-            writer.Write(" at ");
-            ForegroundColor(ConsoleColor.Cyan, consoleColoring);
-            writer.WriteLine(actionTime.TotalSeconds + " Seconds");
-            ResetColor(consoleColoring);
-            writer.Flush();
-
-            return true;
-        }
-
-        private static bool CommandLog(List<string> args, TextWriter writer, TextReader reader, bool consoleColoring, RavenServer server)
-        {
-            switch (args.First())
-            {
-                case "on":
-                    LoggingSource.Instance.EnableConsoleLogging();
-                    LoggingSource.Instance.SetupLogMode(LogMode.Information, Path.Combine(AppContext.BaseDirectory, server.Configuration.Logs.Path));
-                    break;
-                case "off":
-                    LoggingSource.Instance.DisableConsoleLogging();
-                    LoggingSource.Instance.SetupLogMode(LogMode.None, Path.Combine(AppContext.BaseDirectory, server.Configuration.Logs.Path));
-                    break;
-                case "http-off":
-                    RavenServerStartup.SkipHttpLogging = true;
-                    goto case "on";
-            }
-
-            return true;
-        }
-
-        private static bool CommandClear(List<string> args, TextWriter writer, TextReader reader, bool consoleColoring, RavenServer server)
-        {
-            if (consoleColoring)
-                Console.Clear();
-            writer.Flush();
-            return true;
-        }
-
-        private static bool CommandInfo(List<string> args, TextWriter writer, TextReader reader, bool consoleColoring, RavenServer server)
-        {
-            var memoryInfo = MemoryInformation.GetMemoryInfo();
-            ForegroundColor(ConsoleColor.Cyan, consoleColoring);
-            writer.WriteLine(" Build {0}, Version {1}, SemVer {2}, Commit {3}\r\n PID {4}, {5} bits, {6} Cores, Arch: {9}\r\n {7} Physical Memory, {8} Available Memory",
-                ServerVersion.Build, ServerVersion.Version, ServerVersion.FullVersion, ServerVersion.CommitHash, Process.GetCurrentProcess().Id,
-                IntPtr.Size * 8, ProcessorInfo.ProcessorCount, memoryInfo.TotalPhysicalMemory, memoryInfo.AvailableMemory, RuntimeInformation.OSArchitecture);
-
-            var bitsNum = IntPtr.Size * 8;
-            if (bitsNum == 64 && server.Configuration.Storage.ForceUsing32BitsPager)
-            {
-                writer.WriteLine(" Running in 32 bits mode");
-            }
-
-            ResetColor(consoleColoring);
-            writer.Flush();
-            return true;
-        }
-
-        private static bool CommandLogo(List<string> args, TextWriter writer, TextReader reader, bool consoleColoring, RavenServer server)
-        {
-            if (args == null || args.First().Equals("no-clear") == false)
-                if (consoleColoring)
-                    Console.Clear();
-            WelcomeMessage.Print();
-            return true;
-        }
-
-        private static bool CommandExperimental(List<string> args, TextWriter writer, TextReader reader, bool consoleColoring, RavenServer server)
-        {
-            var isOn = args.First().Equals("on");
-            var isOff = args.First().Equals("off");
-            if (!isOff && !isOn)
-            {
-                WriteError("Experimental cli commands can be set to only on or off. Setting to off.", writer, consoleColoring);
-                return false;
-            }
-
-            return isOn; // here rc is not an exit code, it is a setter to _experimental
-        }
-
-        private static bool CommandLowMem(List<string> args, TextWriter writer, TextReader reader, bool consoleColoring, RavenServer server)
-        {
-            ResetColor(consoleColoring);
-            writer.Write("Before simulating low-mem, memory stats: ");
-            ForegroundColor(ConsoleColor.Cyan, consoleColoring);
-            var json = MemoryStatsHandler.MemoryStatsInternal();
-            var humaneProp = (json["Humane"] as DynamicJsonValue);
-
-            StringBuilder msg = new StringBuilder();
-            msg.Append($"Working Set:{humaneProp?["WorkingSet"]}");
-            msg.Append($" Unmamanged Memory:{humaneProp?["TotalUnmanagedAllocations"]}");
-            msg.Append($" Managed Memory:{humaneProp?["ManagedAllocations"]}");
-            writer.WriteLine(msg);
-            ResetColor(consoleColoring);
-            writer.Write("Sending Low Memory simulation signal... ");
-            LowMemoryNotification.Instance.SimulateLowMemoryNotification();
-            ForegroundColor(ConsoleColor.Green, consoleColoring);
-            writer.WriteLine("Sent.");
-            ResetColor(consoleColoring);
-            writer.Write("After sending low mem simulation event, memory stats: ");
-            ForegroundColor(ConsoleColor.Cyan, consoleColoring);
-            msg.Clear();
-            msg.Append($"Working Set:{humaneProp?["WorkingSet"]}");
-            msg.Append($" Unmamanged Memory:{humaneProp?["TotalUnmanagedAllocations"]}");
-            msg.Append($" Managed Memory:{humaneProp?["ManagedAllocations"]}");
-            writer.WriteLine(msg);
-            ResetColor(consoleColoring);
-            writer.Flush();
-            return true;
-        }
-
-
-        private static bool CommandHelp(List<string> args, TextWriter writer, TextReader reader, bool consoleColoring, RavenServer server)
-        {
-            string[][] commandDescription = {
-                new[] {"prompt <new prompt>", "Change the cli prompt. Can be used with variables. Type 'helpPrompt` for details"},
-                new[] {"helpPrompt", "Detailed prompt command usage"},
-                new[] {"stats", "Online server's memory consumption stats, request ratio and documents count"},
-                new[] {"resetServer", "Restarts the server (quits and re-run)"},
-                new[] {"gc <gen>", "Collect garbage of specified gen (0-2)"},
-                new[] {"log <on | off | http-off>", "set log on or off. http-off can be selected to filter log output"},
-                new[] {"info", "Print system info and current stats"},
-                new[] {"logo [no-clear]", "Clear screen and print initial logo"},
-                new[] {"experimental <on | off>", "Set if to allow experimental cli commands"},
-                new[] {"quit", "Quit server"},
-                new[] {"help", "This help screen"}
-            };
-
-            ResetColor(consoleColoring);
-            var msg = "RavenDB CLI Help" + Environment.NewLine;
-            msg += "================" + Environment.NewLine;
-            msg += "Usage: <command> [args] [ && | || <command> [args] ] ..." + Environment.NewLine + Environment.NewLine;
-            msg += "Commands:" + Environment.NewLine;
-            writer.WriteLine(msg);
-
-            foreach (var cmd in commandDescription)
-            {
-                ForegroundColor(ConsoleColor.Yellow, consoleColoring);
-                writer.Write("\t" + cmd[0]);
-                ForegroundColor(ConsoleColor.DarkYellow, consoleColoring);
-                writer.WriteLine(new string(' ', 26 - cmd[0].Length) + cmd[1]);
-            }
-            ResetColor(consoleColoring);
-            writer.WriteLine();
-            writer.Flush();
-
-            return true;
-        }
-
-        private static bool CommandImportDir(List<string> args, TextWriter writer, TextReader reader, bool consoleColoring, RavenServer server)
-        {
-            // ImportDir <databaseName> <path-to-dir>
-            ForegroundColor(ConsoleColor.Yellow, consoleColoring);
-            var serverUrl = server.WebUrls[0];
-            writer.WriteLine($"ImportDir for database {args[0]} from dir `{args[1]}` to {serverUrl}");
-            writer.Flush();
-
-            var port = new Uri(serverUrl).Port;
-
-            var url = $@"http://127.0.0.1:{port}/databases/{args[0]}/smuggler/import-dir?dir={args[1]}";
-            using (var client = new HttpClient())
-            {
-                writer.WriteLine("Sending at " + DateTime.UtcNow);
-                writer.Flush();
-                var result = client.GetAsync(url).Result;
-                writer.WriteLine("At " + DateTime.UtcNow + " : Http Status Code = " + result.StatusCode);
-            }
-            writer.WriteLine("Http client closed.");
-            writer.Flush();
-            return true;
-        }
-
-        private static bool CommandCreateDb(List<string> args, TextWriter writer, TextReader reader, bool consoleColoring, RavenServer server)
-        {
-            // CreateDb <databaseName> <DataDir>
-            ForegroundColor(ConsoleColor.Yellow, consoleColoring);
-            writer.WriteLine($"Create database {args[0]} with DataDir `{args[1]}`");
-            writer.Flush();
-
-            var serverUrl = server.WebUrls[0];
-            var port = new Uri(serverUrl).Port;
-
-            using (var store = new DocumentStore
-            {
-                Urls = new[] { $"http://127.0.0.1:{port}" },
-                Database = args[0],
-            }.Initialize())
-            {
-                var doc = MultiDatabase.CreateDatabaseDocument(args[0]);
-                doc.Settings["DataDir"] = args[1];
-                var res = store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc)).Result;
-                writer.WriteLine("Database creation results = " + res.Key);
-            }
-            writer.Flush();
-            return true;
-        }
-
-        private readonly Dictionary<Command, SingleAction> _actions = new Dictionary<Command, SingleAction>
-        {
-            [Command.Prompt] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandPrompt },
-            [Command.HelpPrompt] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandHelpPrompt },
-            [Command.Stats] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandStats },
-            [Command.Gc] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandGc },
-            [Command.Log] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandLog },
-            [Command.Clear] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandClear },
-            [Command.Info] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandInfo },
-            [Command.Logo] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLogo },
-            [Command.Experimental] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandExperimental },
-            [Command.LowMem] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLowMem },
-            [Command.ResetServer] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandResetServer },
-            [Command.Quit] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandQuit },
-            [Command.Help] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandHelp },
-
-            // experimental, will not appear in 'help':
-            [Command.ImportDir] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandImportDir, Experimental = true },
-            [Command.CreateDb] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandCreateDb, Experimental = true }
-        };
-
         private RavenServer _server;
         private bool _experimental;
         private bool _consoleColoring;
@@ -466,7 +103,7 @@ namespace Raven.Server.Utils
             None,
             Begin,
             AfterCommand,
-            AfterArgs,
+            AfterArgs,cre
             Empty
         }
 
@@ -489,21 +126,396 @@ namespace Raven.Server.Utils
         {
             public LineState LineState;
             public string ErrorMsg;
-            public List<ParsedCommand> ParsedCommands = new List<ParsedCommand>();
+            public readonly List<ParsedCommand> ParsedCommands = new List<ParsedCommand>();
         }
 
+        private List<string> _promptArgs = new List<string> { "ravendb" };
 
-        private static void ResetColor(bool consoleColoring)
+        private const ConsoleColor PromptHeaderColor = ConsoleColor.Magenta;
+        private const ConsoleColor PromptArrowColor = ConsoleColor.Cyan;
+        private const ConsoleColor UserInputColor = ConsoleColor.Green;
+        private const ConsoleColor WarningColor = ConsoleColor.Yellow;
+        private const ConsoleColor TextColor = ConsoleColor.White;
+        private const ConsoleColor ErrorColor = ConsoleColor.Red;
+
+        private class SingleAction
         {
-            if (consoleColoring)
-                Console.ResetColor();
+            public int NumOfArgs;
+            public Func<List<string>, RavenCli, bool> DelegateFync;
+            public bool Experimental { get; set; }
         }
 
-        private static void ForegroundColor(ConsoleColor color, bool consoleColoring)
+        private static void PrintCliHeader(RavenCli cli)
         {
-            if (consoleColoring)
+            if (cli._consoleColoring)
+                Console.ForegroundColor = PromptHeaderColor;
+            try
+            {
+                Prompt.Invoke(cli._promptArgs, false, cli._server, cli._writer);
+            }
+            catch (Exception ex)
+            {
+                WriteError("PromptError:" + ex.Message, cli);
+            }
+            WriteText("> ", PromptArrowColor, cli, newLine: false);
+            if (cli._consoleColoring)
+                Console.ForegroundColor = UserInputColor;
+        }
+
+        private static void WriteError(string txt, RavenCli cli)
+        {
+            WriteText($"ERROR: {txt}", ErrorColor, cli);
+            WriteText("", TextColor, cli);
+        }
+
+        private static void WriteWarning(string txt, RavenCli cli)
+        {
+            WriteText($"WARNING: {txt}", WarningColor, cli);
+            WriteText("", TextColor, cli);
+        }
+
+        private static void WriteText(string txt, ConsoleColor color, RavenCli cli, bool newLine = true)
+        {
+            if (cli._consoleColoring)
                 Console.ForegroundColor = color;
+            cli._writer.Write(txt);
+            if (newLine)
+                cli._writer.WriteLine();
+            if (cli._consoleColoring)
+                Console.ResetColor();
+            cli._writer.Flush();
         }
+
+        private static char ReadKey(RavenCli cli)
+        {
+            if (cli._consoleColoring)
+            {
+                var rc = Console.ReadKey().KeyChar;
+                cli._writer.Flush();
+                return rc;
+            }
+
+            var c = new char[1];
+            while (cli._reader.Read(c, 0, 1) < 1) // ADIADI TODO :: might be blocking read (forever.. )
+            {
+
+            }
+            cli._writer.Flush();
+            return c[0];
+        }
+
+
+        private static bool CommandQuit(List<string> args, RavenCli cli)
+        {
+            WriteText("", TextColor, cli);
+            WriteText("Are you sure you want to quit the server ? [y/N] : ", TextColor, cli, newLine: false);
+
+            var k = ReadKey(cli);
+            WriteText("", TextColor, cli);
+
+            return char.ToLower(k).Equals('y');
+        }
+
+        
+        private string ReadLine(RavenCli cli)
+        {
+            var rc = _consoleColoring ? Console.ReadLine() : cli._reader.ReadLine();
+            cli._writer.Flush();
+            return rc;
+        }
+
+        private static bool CommandResetServer(List<string> args, RavenCli cli)
+        {
+            WriteText("", TextColor, cli);
+            WriteText("Are you sure you want to reset the server ? [y/N] : ", TextColor, cli, newLine: false);
+
+            var k = ReadKey(cli);
+            WriteText("", TextColor, cli);
+
+            return char.ToLower(k).Equals('y');
+        }
+
+        private static bool CommandStats(List<string> args, RavenCli cli)
+        {
+            if (cli._consoleColoring)
+                Console.ResetColor();
+
+            LoggingSource.Instance.DisableConsoleLogging();
+            LoggingSource.Instance.SetupLogMode(LogMode.None,
+                Path.Combine(AppContext.BaseDirectory, cli._server.Configuration.Logs.Path));
+
+            Program.WriteServerStatsAndWaitForEsc(cli._server);
+
+            return true;
+        }
+
+        private static bool CommandPrompt(List<string> args, RavenCli cli)
+        {
+            try
+            {
+                Prompt.Invoke(args, true, cli._server, cli._writer);
+            }
+            catch (Exception ex)
+            {
+                WriteError("Cannot set prompt to desired args, because of : " + ex.Message, cli);
+                return false;
+            }
+            return true;
+        }
+
+        private static bool CommandHelpPrompt(List<string> args, RavenCli cli)
+        {
+            string[][] commandDescription = {
+                new[] {"%D", "UTC Date"},
+                new[] {"%T", "UTC Time"},
+                new[] {"%M", "Memory information (WS:WorkingSet, UM:Unmanaged, M:Managed, MP:MemoryMapped)"},
+                new[] {"%R", "Momentary Req/Sec"},
+                new[] {"label", "any label"},
+            };
+
+            var msg = new StringBuilder();
+            msg.Append("Usage: prompt <[label] | [ %D | %T | %M ] | ...>" + Environment.NewLine + Environment.NewLine);
+            msg.Append("Options:" + Environment.NewLine);
+            WriteText(msg.ToString(), TextColor, cli);
+
+            foreach (var cmd in commandDescription)
+            {
+                WriteText("\t" + cmd[0], ConsoleColor.Yellow, cli, newLine: false);
+                WriteText(new string(' ', 25 - cmd[0].Length) + cmd[1], ConsoleColor.DarkYellow, cli);
+            }
+            return true;
+        }
+
+        private static bool CommandGc(List<string> args, RavenCli cli)
+        {
+            var genNum = Convert.ToInt32(args.First());
+            WriteText("Before collecting, managed memory used: ", TextColor, cli, newLine: false);
+            WriteText(new Size(GC.GetTotalMemory(false), SizeUnit.Bytes).ToString(), ConsoleColor.Cyan, cli);
+            var startTime = DateTime.UtcNow;
+            WriteText("Garbage Collecting... ", TextColor, cli, newLine: false);
+
+            switch (genNum)
+            {
+                case 0:
+                    GC.Collect(0);
+                    break;
+                case 1:
+                    GC.Collect(1);
+                    break;
+                case 2:
+                    GC.Collect(GC.MaxGeneration);
+                    break;
+                default:
+                    WriteError("Invalid argument passed to GC. Can be 0, 1 or 2", cli);
+                    return false;
+            }
+
+            GC.WaitForPendingFinalizers();
+            var actionTime = DateTime.UtcNow - startTime;
+
+            WriteText("Collected.", ConsoleColor.Green, cli);
+            WriteText("After collecting, managed memory used:  ", TextColor, cli, newLine: false);
+            WriteText(new Size(GC.GetTotalMemory(false), SizeUnit.Bytes).ToString(), ConsoleColor.Cyan, cli, newLine: false);
+            WriteText(" at ", TextColor, cli, newLine: false);
+            WriteText(actionTime.TotalSeconds + " Seconds", ConsoleColor.Cyan, cli);
+            return true;
+        }
+
+        private static bool CommandLog(List<string> args, RavenCli cli)
+        {
+            switch (args.First())
+            {
+                case "on":
+                    LoggingSource.Instance.EnableConsoleLogging();
+                    LoggingSource.Instance.SetupLogMode(LogMode.Information, Path.Combine(AppContext.BaseDirectory, cli._server.Configuration.Logs.Path));
+                    WriteText("Loggin set to ON", ConsoleColor.Green, cli);
+                    break;
+                case "off":
+                    LoggingSource.Instance.DisableConsoleLogging();
+                    LoggingSource.Instance.SetupLogMode(LogMode.None, Path.Combine(AppContext.BaseDirectory, cli._server.Configuration.Logs.Path));
+                    WriteText("Loggin set to OFF", ConsoleColor.DarkGreen, cli);
+                    break;
+                case "http-off":
+                    WriteText("Setting HTTP logging OFF", ConsoleColor.DarkGreen, cli);
+                    RavenServerStartup.SkipHttpLogging = true;
+                    goto case "on";
+                case "http-on":
+                    WriteText("Setting HTTP logging ON", ConsoleColor.Green, cli);
+                    RavenServerStartup.SkipHttpLogging = false;
+                    goto case "on";
+            }
+
+            return true;
+        }
+
+        private static bool CommandClear(List<string> args, RavenCli cli)
+        {
+            if (cli._consoleColoring)
+                Console.Clear();
+            cli._writer.Flush();
+            return true;
+        }
+
+        private static bool CommandInfo(List<string> args, RavenCli cli)
+        {
+            var memoryInfo = MemoryInformation.GetMemoryInfo();
+            WriteText(
+                $" Build {ServerVersion.Build}, Version {ServerVersion.Version}, SemVer {ServerVersion.FullVersion}, Commit {ServerVersion.CommitHash}" + Environment.NewLine +
+                $" PID {Process.GetCurrentProcess().Id}, {IntPtr.Size * 8} bits, {ProcessorInfo.ProcessorCount} Cores, Arch: {RuntimeInformation.OSArchitecture}" + Environment.NewLine +
+                $" {memoryInfo.TotalPhysicalMemory} Physical Memory, {memoryInfo.AvailableMemory} Available Memory",
+                ConsoleColor.Cyan, cli);
+
+            var bitsNum = IntPtr.Size * 8;
+            if (bitsNum == 64 && cli._server.Configuration.Storage.ForceUsing32BitsPager)
+                WriteText(" Running in 32 bits mode", ConsoleColor.DarkCyan, cli);
+
+            return true;
+        }
+
+        private static bool CommandLogo(List<string> args, RavenCli cli)
+        {
+            if (args.Count == 0 || args.First().Equals("no-clear") == false)
+                if (cli._consoleColoring)
+                    Console.Clear();
+            WelcomeMessage.Print();
+            return true;
+        }
+
+        private static bool CommandExperimental(List<string> args, RavenCli cli)
+        {
+            var isOn = args.First().Equals("on");
+            var isOff = args.First().Equals("off");
+            if (!isOff && !isOn)
+            {
+                WriteError("Experimental cli commands can be set to only on or off. Setting to off.", cli);
+                return false;
+            }
+
+            return isOn; // here rc is not an exit code, it is a setter to _experimental
+        }
+
+        private static bool CommandLowMem(List<string> args, RavenCli cli)
+        {
+            WriteText("Before simulating low-mem, memory stats: ", TextColor, cli, newLine: false);
+
+            var json = MemoryStatsHandler.MemoryStatsInternal();
+            var humaneProp = (json["Humane"] as DynamicJsonValue);
+            StringBuilder msg = new StringBuilder();
+            msg.Append($"Working Set:{humaneProp?["WorkingSet"]}");
+            msg.Append($" Unmamanged Memory:{humaneProp?["TotalUnmanagedAllocations"]}");
+            msg.Append($" Managed Memory:{humaneProp?["ManagedAllocations"]}");
+            WriteText(msg.ToString(), ConsoleColor.Cyan, cli);
+
+            WriteText("Sending Low Memory simulation signal... ", TextColor, cli, newLine: false);
+            LowMemoryNotification.Instance.SimulateLowMemoryNotification();
+            WriteText("Sent.", ConsoleColor.Green, cli);
+
+            WriteText("After sending low mem simulation event, memory stats: ", TextColor, cli, newLine: false);
+            msg.Clear();
+            msg.Append($"Working Set:{humaneProp?["WorkingSet"]}");
+            msg.Append($" Unmamanged Memory:{humaneProp?["TotalUnmanagedAllocations"]}");
+            msg.Append($" Managed Memory:{humaneProp?["ManagedAllocations"]}");
+            WriteText(msg.ToString(), ConsoleColor.Cyan, cli);
+
+            return true;
+        }
+
+
+        private static bool CommandHelp(List<string> args, RavenCli cli)
+        {
+            string[][] commandDescription = {
+                new[] {"prompt <new prompt>", "Change the cli prompt. Can be used with variables. Type 'helpPrompt` for details"},
+                new[] {"helpPrompt", "Detailed prompt command usage"},
+                new[] {"stats", "Online server's memory consumption stats, request ratio and documents count"},
+                new[] {"resetServer", "Restarts the server (quits and re-run)"},
+                new[] {"gc <gen>", "Collect garbage of specified gen (0-2)"},
+                new[] {"log [http-]< on | off >", "set log on or off. http-on/off can be selected to filter log output"},
+                new[] {"info", "Print system info and current stats"},
+                new[] {"logo [no-clear]", "Clear screen and print initial logo"},
+                new[] {"experimental <on | off>", "Set if to allow experimental cli commands"},
+                new[] {"quit", "Quit server"},
+                new[] {"help", "This help screen"}
+            };
+
+            var msg = new StringBuilder("RavenDB CLI Help" + Environment.NewLine);
+            msg.Append("================" + Environment.NewLine);
+            msg.Append("Usage: <command> [args] [ && | || <command> [args] ] ..." + Environment.NewLine + Environment.NewLine);
+            msg.Append("Commands:" + Environment.NewLine);
+
+            WriteText(msg.ToString(), TextColor, cli);
+
+
+            foreach (var cmd in commandDescription)
+            {
+                WriteText("\t" + cmd[0], ConsoleColor.Yellow, cli, newLine: false);
+                WriteText(new string(' ', 26 - cmd[0].Length) + cmd[1], ConsoleColor.DarkYellow, cli);
+            }
+            WriteText("", TextColor, cli);
+
+            return true;
+        }
+
+        private static bool CommandImportDir(List<string> args, RavenCli cli)
+        {
+            // ImportDir <databaseName> <path-to-dir>
+            var serverUrl = cli._server.WebUrls[0];
+            WriteText($"ImportDir for database {args[0]} from dir `{args[1]}` to {serverUrl}", ConsoleColor.Yellow, cli);
+
+            var port = new Uri(serverUrl).Port;
+
+            var url = $@"http://127.0.0.1:{port}/databases/{args[0]}/smuggler/import-dir?dir={args[1]}";
+            using (var client = new HttpClient())
+            {
+                WriteText("Sending at " + DateTime.UtcNow, TextColor, cli);
+                var result = client.GetAsync(url).Result;
+                WriteText("At " + DateTime.UtcNow + " : Http Status Code = " + result.StatusCode, TextColor, cli);
+            }
+            WriteText("Http client closed.", TextColor, cli);
+            return true;
+        }
+
+        private static bool CommandCreateDb(List<string> args, RavenCli cli)
+        {
+            // CreateDb <databaseName> <DataDir>
+            WriteText($"Create database {args[0]} with DataDir `{args[1]}`", ConsoleColor.Yellow, cli);
+
+            var serverUrl = cli._server.WebUrls[0];
+            var port = new Uri(serverUrl).Port;
+
+            using (var store = new DocumentStore
+            {
+                Urls = new[] { $"http://127.0.0.1:{port}" },
+                Database = args[0],
+            }.Initialize())
+            {
+                var doc = MultiDatabase.CreateDatabaseDocument(args[0]);
+                doc.Settings["DataDir"] = args[1];
+                var res = store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc)).Result;
+                WriteText("Database creation results = " + res.Key, TextColor, cli);
+            }
+            return true;
+        }
+
+        private readonly Dictionary<Command, SingleAction> _actions = new Dictionary<Command, SingleAction>
+        {
+            [Command.Prompt] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandPrompt },
+            [Command.HelpPrompt] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandHelpPrompt },
+            [Command.Stats] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandStats },
+            [Command.Gc] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandGc },
+            [Command.Log] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandLog },
+            [Command.Clear] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandClear },
+            [Command.Info] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandInfo },
+            [Command.Logo] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLogo },
+            [Command.Experimental] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandExperimental },
+            [Command.LowMem] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLowMem },
+            [Command.ResetServer] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandResetServer },
+            [Command.Quit] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandQuit },
+            [Command.Help] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandHelp },
+
+            // experimental, will not appear in 'help':
+            [Command.ImportDir] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandImportDir, Experimental = true },
+            [Command.CreateDb] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandCreateDb, Experimental = true }
+        };
 
         public bool Start(RavenServer server, TextWriter textWriter, TextReader textReader, bool consoleColoring)
         {
@@ -527,7 +539,7 @@ namespace Raven.Server.Utils
                 {
                     _writer.Write("(simple cli)>");
                     _writer.Flush();
-                    var line = ReadLine();
+                    var line = ReadLine(this);
                     if (line == null)
                         continue;
                     switch (line)
@@ -566,8 +578,8 @@ namespace Raven.Server.Utils
 
             while (true)
             {
-                PrintCliHeader();
-                var line = ReadLine();
+                PrintCliHeader(this);
+                var line = ReadLine(this);
                 _writer.Flush();
 
                 if (line == null)
@@ -587,7 +599,7 @@ namespace Raven.Server.Utils
 
                 if (ParseLine(nextline, parsedLine) == false)
                 {
-                    WriteError(parsedLine.ErrorMsg, _writer, _consoleColoring);
+                    WriteError(parsedLine.ErrorMsg, this);
                     continue;
                 }
 
@@ -599,20 +611,17 @@ namespace Raven.Server.Utils
                 {
                     if (lastRc == false)
                     {
-                        ForegroundColor(WarningColor, _consoleColoring);
                         if (parsedCommand.PrevConcatAction == ConcatAction.And)
                         {
-                            _writer.WriteLine($"Warning: Will not execute command `{parsedCommand.Command}` as previous command return non-successful return code");
+                            WriteWarning($"Warning: Will not execute command `{parsedCommand.Command}` as previous command return non-successful return code", this);
                             break;
                         }
-                        _writer.WriteLine($"Warning: Will execute command `{parsedCommand.Command}` after previous command return non-successful return code");
+                        WriteWarning($"Warning: Will execute command `{parsedCommand.Command}` after previous command return non-successful return code", this);
                     }
 
                     if (_actions.ContainsKey(parsedCommand.Command) == false)
                     {
-                        ForegroundColor(ErrorColor, _consoleColoring);
-                        _writer.WriteLine($"CLI Internal Error (missing definition for the command: {parsedCommand.Command})");
-                        _writer.WriteLine();
+                        WriteError($"CLI Internal Error (missing definition for the command: {parsedCommand.Command})", this);
                         lastRc = false;
                         continue;
                     }
@@ -625,29 +634,24 @@ namespace Raven.Server.Utils
                         {
                             if (_experimental == false)
                             {
-                                ForegroundColor(ErrorColor, _consoleColoring);
-                                _writer.WriteLine($"{parsedCommand.Command} is experimental, and can be executed only if expermintal option set to on");
-                                _writer.WriteLine();
+                                WriteError($"{parsedCommand.Command} is experimental, and can be executed only if expermintal option set to on", this);
                                 lastRc = false;
                                 continue;
                             }
-                            ForegroundColor(WarningColor, _consoleColoring);
-                            _writer.WriteLine();
-                            _writer.Write("Are you sure you want to run experimental command : " + parsedCommand.Command + " ? [y/N] ");
-                            _writer.Flush();
+                            WriteText("", TextColor, this);
+                            WriteText("Are you sure you want to run experimental command : " + parsedCommand.Command + " ? [y/N] ", WarningColor, this, newLine: false);
 
-                            var k = ReadKey(_consoleColoring, _reader);
-                            _writer.Flush();
+                            var k = ReadKey(this);
+                            WriteText("", TextColor, this);
 
-                            _writer.WriteLine();
+
                             if (char.ToLower(k).Equals('y') == false)
-
                             {
                                 lastRc = false;
                                 continue;
                             }
                         }
-                        lastRc = cmd.DelegateFync.Invoke(parsedCommand.Args, _writer, _reader, _consoleColoring, _server);
+                        lastRc = cmd.DelegateFync.Invoke(parsedCommand.Args, this);
 
                         if (parsedCommand.Command == Command.Prompt && lastRc )
                             _promptArgs = parsedCommand.Args;
@@ -659,43 +663,34 @@ namespace Raven.Server.Utils
                     }
                     catch (Exception ex)
                     {
-                        ForegroundColor(ErrorColor, _consoleColoring);
-                        _writer.WriteLine(ex);
-                        _writer.WriteLine();
-                        ResetColor(_consoleColoring);
+                        WriteError(ex.ToString(), this);
                         break;
                     }
                     if (lastRc)
                     {
-                        _writer.Flush();
-
                         if (parsedCommand.Command == Command.ResetServer)
                             return true;
                         if (parsedCommand.Command == Command.Quit)
                             return false;
                     }
+                    else
+                    {
+                        if (parsedCommand.Command == Command.Quit ||
+                            parsedCommand.Command == Command.ResetServer)
+                            lastRc = true; // if answered "No" for the above command - don't print ERROR
+                    }
                 }
 
                 if (lastRc == false)
                 {
-                    ForegroundColor(NonSuccessColor, _consoleColoring);
-                    _writer.WriteLine("Command Failed");
-                    _writer.WriteLine();
+                    WriteError("Command Failed", this);
                 }
-                _writer.Flush();
             }
             _writer.Flush();
             return false; // cannot reach here
         }
 
-        private const ConsoleColor PromptHeaderColor = ConsoleColor.Magenta;
-        private const ConsoleColor PromptArrowColor = ConsoleColor.Cyan;
-        private const ConsoleColor UserInputColor = ConsoleColor.Green;
-        private const ConsoleColor WarningColor = ConsoleColor.Yellow;
-        private const ConsoleColor ErrorColor = ConsoleColor.Red;
-        private const ConsoleColor NonSuccessColor = ConsoleColor.DarkRed;
-
-        private Command GetCommand(string fromWord)
+        private static Command GetCommand(string fromWord)
         {
             if (char.IsNumber(fromWord[0]))
                 return Command.UnknownCommand; // TryParse of enum returns true for numbers
@@ -844,32 +839,6 @@ namespace Raven.Server.Utils
             }
 
             return true;
-        }
-
-        private void PrintCliHeader()
-        {
-            ForegroundColor(PromptHeaderColor, _consoleColoring);
-            try
-            {
-                Prompt.Invoke(_promptArgs, false, _server, _writer);
-            }
-            catch (Exception ex)
-            {
-                _writer.WriteLine("PromptError:" + ex.Message);
-            }
-            ForegroundColor(PromptArrowColor, _consoleColoring);
-            _writer.Write("> ");
-            ForegroundColor(UserInputColor, _consoleColoring);
-            _writer.Flush();
-        }
-
-        private static void WriteError(string err, TextWriter writer, bool consoleColoring)
-        {
-            ForegroundColor(ErrorColor, consoleColoring);
-            writer.Write($"ERROR: {err}");
-            writer.WriteLine();
-            ResetColor(consoleColoring);
-            writer.Flush();
-        }
+        }        
     }
 }
