@@ -196,10 +196,7 @@ namespace Raven.Server.Utils
             }
 
             var c = new char[1];
-            while (cli._reader.Read(c, 0, 1) < 1) // ADIADI TODO :: might be blocking read (forever.. )
-            {
-
-            }
+            cli._reader.Read();
             cli._writer.Flush();
             return c[0];
         }
