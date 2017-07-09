@@ -1095,9 +1095,9 @@ class indexPerformance extends viewModelBase {
             if (element.ReduceDetails) {
                 let reduceDetails: string;
                 reduceDetails = `<br/>*** Reduce details ***<br/>`;
-                reduceDetails += `Compressed leaves: ${element.ReduceDetails.NumberOfCompressedLeafs.toLocaleString()}<br/>`;
+                reduceDetails += `Compressed leafs: ${element.ReduceDetails.NumberOfCompressedLeafs.toLocaleString()}<br/>`;
                 reduceDetails += `Modified branches: ${element.ReduceDetails.NumberOfModifiedBranches.toLocaleString()}<br/>`;
-                reduceDetails += `Modified leaves: ${element.ReduceDetails.NumberOfModifiedLeafs.toLocaleString()}`;
+                reduceDetails += `Modified leafs: ${element.ReduceDetails.NumberOfModifiedLeafs.toLocaleString()}`;
                 tooltipHtml += reduceDetails;
             }           
 

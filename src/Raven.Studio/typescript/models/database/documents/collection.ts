@@ -9,6 +9,8 @@ class collection {
 
     documentCount: KnockoutObservable<number> = ko.observable(0);
     name: string;
+    sizeClass: KnockoutComputed<string>;
+    countPrefix: KnockoutComputed<number>;
 
     private db: database;
 
@@ -16,6 +18,28 @@ class collection {
         this.name = name;
         this.db = ownerDatabase;
         this.documentCount(docCount);
+
+        this.sizeClass = ko.pureComputed(() => {
+            const count = this.documentCount();
+            if (count < 100000) {
+                return "";
+            }
+            if (count < 1000 * 1000) {
+                return "kilo";
+            }
+            return "mega";
+        });
+
+        this.countPrefix = ko.pureComputed(() => {
+            const count = this.documentCount();
+            if (count < 100000) {
+                return count;
+            }
+            if (count < 1000 * 1000) {
+                return _.floor(count / 1000, 2);
+            }
+            return _.floor(count / 1000000, 2);
+        });
     }
 
     get isSystemDocuments() {

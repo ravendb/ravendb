@@ -249,14 +249,6 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             nav: false,
             dynamicHash: appUrls.statusStorageOnDisk
         }),*/
-        /* TODO
-        new leafMenuItem({
-            route: 'databases/status/infoPackage',
-            moduleId: 'viewmodels/manage/infoPackage',
-            title: 'Gather Debug Info',
-            nav: accessHelper.canExposeConfigOverTheWire(),
-            dynamicHash: appUrls.infoPackage
-        })*/
     ];
 
     return new intermediateMenuItem("Stats", items, "icon-stats");

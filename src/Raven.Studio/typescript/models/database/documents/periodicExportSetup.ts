@@ -264,10 +264,10 @@ class periodicExportSetup {
 
     fromDatabaseSettingsDto(dbSettingsDto: documentDto) {
         this.dbSettingsDto = dbSettingsDto;
-        this.awsAccessKey(dbSettingsDto["Settings"]["Raven/AWSAccessKey"]);
-        this.awsSecretKey(dbSettingsDto["SecuredSettings"]["Raven/AWSSecretKey"]);
-        this.azureStorageAccount(dbSettingsDto["Settings"]["Raven/AzureStorageAccount"]);
-        this.azureStorageKey(dbSettingsDto["SecuredSettings"]["Raven/AzureStorageKey"]);
+        this.awsAccessKey(dbSettingsDto["Settings"]["Raven/AWSAccessKey"]); //TODO: obsolete
+        this.awsSecretKey(dbSettingsDto["SecuredSettings"]["Raven/AWSSecretKey"]);//TODO: obsolete
+        this.azureStorageAccount(dbSettingsDto["Settings"]["Raven/AzureStorageAccount"]);//TODO: obsolete
+        this.azureStorageKey(dbSettingsDto["SecuredSettings"]["Raven/AzureStorageKey"]);//TODO: obsolete
 
         if (periodicExportSetup.decryptFailedValue === this.awsSecretKey()) {
             this.awsSecretKey("");

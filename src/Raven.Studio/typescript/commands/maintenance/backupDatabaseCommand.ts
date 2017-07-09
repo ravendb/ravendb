@@ -33,7 +33,7 @@ class backupDatabaseCommand extends commandBase {
     }
 
     private getBackupStatus(result: JQueryDeferred<any>) {
-        new getDocumentWithMetadataCommand("Raven/Backup/Status", this.db)
+        new getDocumentWithMetadataCommand("Raven/Backup/Status", this.db) //TODO: obsolete
             .execute()
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to fetch backup status!", response.responseText, response.statusText);

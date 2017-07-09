@@ -7,8 +7,6 @@ using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations
 {
-
-
     public class GetOngoingTaskInfoOperation : IServerOperation<GetTaskInfoResult>
     {
         private readonly string _database;

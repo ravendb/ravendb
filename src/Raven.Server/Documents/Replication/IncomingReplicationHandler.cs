@@ -135,14 +135,11 @@ namespace Raven.Server.Documents.Replication
                                 _connectionOptions.PinnedBuffer,
                                 _database.DatabaseShutdown))
                             {
-                                TransactionOperationContext configurationContext;
                                 if (msg.Document != null)
                                 {
                                     using (var writer = new BlittableJsonTextWriter(msg.Context, _stream))
-                                    using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(
-                                            out configurationContext))
                                     {
-                                        HandleSingleReplicationBatch(msg.Context, configurationContext,
+                                        HandleSingleReplicationBatch(msg.Context,
                                             msg.Document,
                                             writer);
                                     }
@@ -150,15 +147,12 @@ namespace Raven.Server.Documents.Replication
                                 else // notify peer about new change vector
                                 {
 
-                                    using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(
-                                        out configurationContext))
                                     using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(
                                             out DocumentsOperationContext documentsContext))
                                     using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
                                     {
                                         SendHeartbeatStatusToSource(
                                             documentsContext,
-                                            configurationContext,
                                             writer,
                                             _lastDocumentEtag,
                                             "Notify");
@@ -204,7 +198,6 @@ namespace Raven.Server.Documents.Replication
 
         private void HandleSingleReplicationBatch(
             DocumentsOperationContext documentsContext,
-            TransactionOperationContext configurationContext,
             BlittableJsonReaderObject message,
             BlittableJsonTextWriter writer)
         {
@@ -258,7 +251,7 @@ namespace Raven.Server.Documents.Replication
                     default:
                         throw new ArgumentOutOfRangeException("Unknown message type: " + messageType);
                 }
-                SendHeartbeatStatusToSource(documentsContext, configurationContext, writer, _lastDocumentEtag,  messageType);
+                SendHeartbeatStatusToSource(documentsContext, writer, _lastDocumentEtag,  messageType);
             }
             catch (ObjectDisposedException)
             {
@@ -480,10 +473,11 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void SendHeartbeatStatusToSource(DocumentsOperationContext documentsContext, TransactionOperationContext configurationContext, BlittableJsonTextWriter writer, long lastDocumentEtag, string handledMessageType)
+        private void SendHeartbeatStatusToSource(DocumentsOperationContext documentsContext, BlittableJsonTextWriter writer, long lastDocumentEtag, string handledMessageType)
         {
             var changeVectorAsDynamicJson = new DynamicJsonArray();
             ChangeVectorEntry[] databaseChangeVector;
+
 
             using (documentsContext.OpenReadTransaction())
             {

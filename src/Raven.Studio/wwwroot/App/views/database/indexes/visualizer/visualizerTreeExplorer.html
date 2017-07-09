@@ -1,0 +1,23 @@
+<div class="modal-dialog modal-lg visualiserTreeExplorer" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="icon-cancel"></i>
+            </button>
+            <h4 class="modal-title">Map/Reduce Page Entries</h4>
+        </div>
+        <div class="modal-body">
+            <div style="position: relative; height: 500px">
+                <virtual-grid style="height: 500px" class="resizable flex-window" params="controller: gridController"></virtual-grid>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <div class="text-right">
+                <button type="button" class="btn btn-default" data-bind="click: $root.close">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="tooltip json-preview visualizer-tree-tooltip" style="opacity: 0">
+    <pre><code class="white-space-pre"></code></pre>
+</div>

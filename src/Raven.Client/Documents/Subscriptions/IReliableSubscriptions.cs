@@ -64,5 +64,10 @@ namespace Raven.Client.Documents.Subscriptions
         /// It deletes a subscription.
         /// </summary>
         Task DeleteAsync(long id, string database = null);
+
+        /// <summary>
+        /// It deletes a subscription.
+        /// </summary>
+        Task DeleteAsync(string name, string database = null);
     }
 }

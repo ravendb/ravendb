@@ -75,7 +75,6 @@ class licensingStatus extends dialogViewModelBase {
             { displayName: "Compression", value: licenseStatus.Attributes.compression },
             { displayName: "FIPS Compliance", value: licenseStatus.Attributes.fips },
             { displayName: "Quotas", value: licenseStatus.Attributes.quotas },
-            { displayName: "Global Configuration", value: licenseStatus.Attributes.globalConfigurations },
             { displayName: "Authorization", value: licenseStatus.Attributes.authorization },
             { displayName: "Document Expiration", value: licenseStatus.Attributes.documentExpiration },
             { displayName: "Versioning", value: licenseStatus.Attributes.versioning },

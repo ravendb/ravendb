@@ -94,6 +94,11 @@ namespace SlowTests.SlowTests.Bugs
             }
         }
 
+        protected override void ModifyStore(DocumentStore store)
+        {
+            store.Conventions.MaxNumberOfRequestsPerSession = 1000000; // 1 Million
+        }
+
         [Fact]
         public void will_timeout_query_after_some_time()
         {
@@ -103,7 +108,6 @@ namespace SlowTests.SlowTests.Bugs
                 new Answers_ByAnswerEntityTransformer().Execute(store);
                 var answerId = "";
 
-                store.Conventions.MaxNumberOfRequestsPerSession = 1000000; // 1 Million
                 CreateEntities(store, 0);
 
                 const string content = "This is doable";

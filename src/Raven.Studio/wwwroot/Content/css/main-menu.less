@@ -314,11 +314,39 @@
         }
     }
 
-    .collections-list {
-        a {
+    .collection-count {
+        width: 60px;
+        border-radius: 1px;
+        font-size: 75%;
+        display: flex;
+        color: @gray-lighter;
+        background-color: @brand-primary;
+
+        .value {
+            flex-grow: 1;
+            text-align: center;
         }
 
-        .collection-count {            
+        .kilo, .mega {
+            padding: 5px;
+            line-height: 10px;
+            border-radius: 0 1px 1px 0;
+        }
+
+        .kilo {
+            background-color: fadeout(@gray-lighter,70%);
+
+            &::before {
+                content: 'k';
+            }
+        }
+
+        .mega {
+            background-color: fadeout(@gray-darker,70%);
+
+            &::before {
+                content: 'M';
+            }
         }
     }
 }

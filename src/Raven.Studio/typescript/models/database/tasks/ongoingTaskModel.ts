@@ -7,8 +7,7 @@ abstract class ongoingTaskModel {
     taskType = ko.observable<Raven.Client.Server.Operations.OngoingTaskType>();
     responsibleNode = ko.observable<Raven.Client.Server.Operations.NodeId>();
     taskState = ko.observable<Raven.Client.Server.Operations.OngoingTaskState>();
-    lastModificationTime = ko.observable<string>();
-    taskConnectionStatus = ko.observable<Raven.Client.Server.Operations.OngoingTaskConnectionStatus>();
+    taskConnectionStatus = ko.observable<Raven.Client.Server.Operations.OngoingTaskConnectionStatus>(); // TODO: discuss this property...
     
     badgeText: KnockoutComputed<string>;
     badgeClass: KnockoutComputed<string>;
@@ -53,14 +52,7 @@ abstract class ongoingTaskModel {
         this.taskType(dto.TaskType);
         this.responsibleNode(dto.ResponsibleNode);
         this.taskState(dto.TaskState);
-        this.lastModificationTime(dto.LastModificationTime);
         this.taskConnectionStatus(dto.TaskConnectionStatus);
-    }
-
-    protected initValidation() {
-        this.taskName.extend({
-            required: true
-        });
     }
 }
 

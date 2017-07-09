@@ -139,19 +139,7 @@ class etl extends viewModelBase {
         return new getCollectionsStatsCommand(db).execute();
     }
 
-    enableReplication() {
-        new enableReplicationCommand(this.activeDatabase())
-            .execute()
-            .done((bundles) => {
-                var db = this.activeDatabase();
-                db.activeBundles(bundles);
-                this.replicationEnabled(true);
-                this.fetchReplications(db);
-                this.fetchCollectionsStats(db).done(results => {
-                    this.collections(results.collections);
-                });
-            });
-    }*/
+    */
 
     /*
         TODO @gregolsky apply google analytics

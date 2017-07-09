@@ -11,9 +11,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {   
                 Console.WriteLine(i);
-                using (var test = new RachisTests.DatabaseCluster.ClusterDatabaseMaintenance())   
+                using (var test = new SlowTests.Server.Replication.ReplicationOfConflicts())   
                 {
-                    test.MoveToPassiveWhenRefusedConnectionFromAllNodes().Wait();
+                    test.ReplicateTombstoneConflict().Wait();
                 }
             }
         }

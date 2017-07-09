@@ -24,6 +24,8 @@ namespace Raven.Server.Utils
             for (var index = 0; index < _docs.Length; index++)
             {
                 var doc = _docs[index];
+                if (doc == null)
+                    continue; // we never suggest to delete a document
                 for(var indexProp = 0; indexProp<doc.Count; indexProp++)
                 {
                     BlittableJsonReaderObject.PropertyDetails prop = new BlittableJsonReaderObject.PropertyDetails();
@@ -67,6 +69,8 @@ namespace Raven.Server.Utils
                     continue;
 
                 BlittableJsonReaderObject token;
+                if (_docs[i] == null)
+                    continue;
                 if (_docs[i].TryGetWithoutThrowingOnError(prop.Key, out token) == false)
                     return false;
                 if (token == null)
@@ -149,7 +153,9 @@ namespace Raven.Server.Utils
                 if (i == index)
                     continue;
                 var other = _docs[i];
-                
+                if (other == null)
+                    continue;
+
                 BlittableJsonReaderObject.PropertyDetails otherProp = new BlittableJsonReaderObject.PropertyDetails();
                 var propIndex = other.GetPropertyIndex(prop.Name);
                 if (propIndex == -1)

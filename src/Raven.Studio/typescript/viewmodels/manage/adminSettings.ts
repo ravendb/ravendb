@@ -49,7 +49,6 @@ class adminSettings extends viewModelBase {
 
         var apiKeyRoute = { route: ['', 'apiKeys'], moduleId: 'viewmodels/manage/apiKeys', title: 'API Keys', nav: true, hash: appUrl.forApiKeys(), enabled: canReadOrWrite };
         var clusterRoute = { route: 'cluster', moduleId: "viewmodels/manage/cluster", title: "Cluster", nav: true, hash: appUrl.forCluster(), enabled: canReadOrWrite };
-        var globalConfigRoute = { route: 'globalConfig*details', moduleId: 'viewmodels/manage/globalConfig/globalConfig', title: 'Global Configuration', nav: true, hash: appUrl.forGlobalConfig(), enabled: canReadOrWrite };
         var serverSmuggling = { route: "serverSmuggling", moduleId: "viewmodels/manage/serverSmuggling", title: "Server Smuggling", nav: true, hash: appUrl.forServerSmugging(), enabled: isGlobalAdmin };
         var backupRoute = { route: 'backup', moduleId: 'viewmodels/manage/backup', title: 'Backup', nav: true, hash: appUrl.forBackup(), enabled: isGlobalAdmin };
         var compactRoute = { route: 'compact', moduleId: 'viewmodels/manage/compact', title: 'Compact', nav: true, hash: appUrl.forCompact(), enabled: isGlobalAdmin };
@@ -68,7 +67,6 @@ class adminSettings extends viewModelBase {
         var routes = [
             apiKeyRoute,
             clusterRoute,
-            globalConfigRoute,
             serverSmuggling,
             backupRoute,
             compactRoute,

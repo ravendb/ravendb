@@ -14,7 +14,8 @@ class distributeSecretCommand extends commandBase {
         }
         const url = endpoints.global.secretKey.adminSecretsDistribute + this.urlEncodeArgs(args);
         
-        return this.post<void>(url, this.secret, null, { dataType: 'text' });
+        return this.post<void>(url, this.secret, null, { dataType: 'text' })
+            .fail((response: JQueryXHR) => this.reportError("Failed to distribute secret key", response.responseText, response.statusText));
     }
 }
 

@@ -86,7 +86,7 @@ class reduceTreeItem {
 
     width = 0;
     height = 0;
-    totalLeavesNumberWidth = 0;
+    totalLeafsNumberWidth = 0;
     x: number;
     y: number;
     extraLeftPadding = 0; //used when text (reduce key) is longer than contents
@@ -155,10 +155,10 @@ class reduceTreeItem {
 
         filterAtDepth(0, this.tree.Root, null);
 
-        this.collapseNonRelevantLeaves();
+        this.collapseNonRelevantLeafs();
     }
 
-    private collapseNonRelevantLeaves() {
+    private collapseNonRelevantLeafs() {
         const lastLevel = this.depth - 1;
         const levelItems = this.itemsAtDepth.get(lastLevel);
 
@@ -201,7 +201,7 @@ class reduceTreeItem {
     }
 
     private layout() {
-        this.totalLeavesNumberWidth = visualizerGraphGlobal.totalEntriesWidth(_.max(this.itemsCountAtDepth));
+        this.totalLeafsNumberWidth = visualizerGraphGlobal.totalEntriesWidth(_.max(this.itemsCountAtDepth));
         this.calculateTreeDimensions();
 
         const maxItems = this.getMaxVisibleItems();
@@ -220,7 +220,7 @@ class reduceTreeItem {
         for (let depth = this.depth - 1; depth >= 0; depth--) {
             const items = this.itemsAtDepth.get(depth);
 
-            if (depth === this.depth - 1) { // leaves level
+            if (depth === this.depth - 1) { // leafs level
                 const startAndOffset = graphHelper
                     .computeStartAndOffset(pagesTotalWidth,
                     items.length,
@@ -229,7 +229,7 @@ class reduceTreeItem {
                 const xOffset = startAndOffset.offset;
 
                 let xStart = reduceTreeItem.margins.treeMargin +
-                    this.totalLeavesNumberWidth +
+                    this.totalLeafsNumberWidth +
                     reduceTreeItem.margins.treeMargin +
                     this.extraLeftPadding +
                     startAndOffset.start;
@@ -281,7 +281,7 @@ class reduceTreeItem {
         const maxItems = this.getMaxVisibleItems();
 
         let width = reduceTreeItem.margins.treeMargin +
-            this.totalLeavesNumberWidth +
+            this.totalLeafsNumberWidth +
             reduceTreeItem.margins.treeMargin;
 
         width += this.getPagesOnlyWidth(maxItems);
@@ -805,7 +805,7 @@ class visualizerGraphGlobal {
 
         for (let i = 0; i < this.documents.length; i++) {
             const doc = this.documents[i];
-            const documentNameWidthEstimation = (text: string) => text.length * 9;
+            const documentNameWidthEstimation = (text: string) => text.length * 10;
 
 
             doc.width = documentItem.margins.badgePadding * 2 + documentNameWidthEstimation(doc.name) + documentItem.margins.deleteAreaWidth;
@@ -905,10 +905,10 @@ class visualizerGraphGlobal {
                 ctx.font = "18px Lato";
                 ctx.textAlign = "right";
                 ctx.fillText(items.toString(),
-                    reduceTreeItem.margins.treeMargin + tree.totalLeavesNumberWidth,
+                    reduceTreeItem.margins.treeMargin + tree.totalLeafsNumberWidth,
                     totalEntiresY + 16);
 
-                const spliterX = reduceTreeItem.margins.treeMargin + tree.totalLeavesNumberWidth + 4;
+                const spliterX = reduceTreeItem.margins.treeMargin + tree.totalLeafsNumberWidth + 4;
 
                 ctx.beginPath();
                 ctx.moveTo(spliterX, totalEntiresY - 6);
