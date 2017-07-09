@@ -1,22 +1,109 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
-using Jint;
-using Org.BouncyCastle.Pkix;
+using System.Text;
 using Raven.Server;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow;
 using Voron;
 using Voron.Impl.Compaction;
+using static Sparrow.CliDelimiter;
 
 namespace rvn
 {
     class Program
     {
         static void Main(string[] args)
-        {
+        {           
+            if (args.Length == 2 && args[0].ToLower().Equals("admin-channel"))
+            {
+                var pid = Convert.ToInt32(args[1]);
+                try
+                {
+                    var pipeName = RavenServer.PipePrefix + pid;
+                    var client = new NamedPipeClientStream(pipeName);
+                    try
+                    {
+                        client.Connect(3000);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine(Environment.NewLine + "Couldn't connect to " + pipeName);
+                        Console.ResetColor();
+                        Console.WriteLine();
+                        Console.WriteLine(ex);
+                        Environment.Exit(1);
+                    }
+
+                    var reader = new StreamReader(client);
+                    var writer = new StreamWriter(client);
+                    var buffer = new char[16 * 1024];
+                    var sb = new StringBuilder();
+
+                    Delimiter[] delimiters =
+                    {
+                        Delimiter.NotFound,
+                        Delimiter.ReadLine,
+                        Delimiter.ReadKey,
+                        Delimiter.Clear,
+                        Delimiter.Logout,
+                        Delimiter.Quit,
+                        Delimiter.RestartServer
+                    };
+
+                    while (true)
+                    {
+                        sb.Clear();
+                        var delimiter = Delimiter.NotFound;
+                        while (delimiter == Delimiter.NotFound)
+                        {
+                            var v = reader.Read(buffer, 0, 8192);
+                            sb.Append(new string(buffer, 0, v));
+
+                            foreach (var del in delimiters)
+                            {
+                                if (sb.ToString().EndsWith(GetDelimiterString(del)))
+                                {
+                                    delimiter = del;
+                                    break;
+                                }
+                            }                                                       
+                        }
+
+                        var str = sb.ToString();
+                        Console.Write(str.Substring(0, str.IndexOf(GetDelimiterKeyWord, StringComparison.Ordinal)));
+
+                        switch (delimiter)
+                        {
+                            case Delimiter.ReadLine:
+                                writer.WriteLine(Console.ReadLine());
+                                break;
+                            case Delimiter.ReadKey:
+                                writer.Write(Console.ReadKey().KeyChar);
+                                break;
+                            case Delimiter.Clear:
+                                Console.Clear();
+                                break;
+                            case Delimiter.RestartServer: // TODO :: ADIADI : restart server to reconnect after X seconds or infinite loop.. 
+                            case Delimiter.Quit:
+                            case Delimiter.Logout:
+                                Console.WriteLine();
+                                Environment.Exit(0);
+                                break;                                
+                        }
+                        writer.Flush();
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    throw;
+                }
+            }
+
+
             //TODO: Need proper error messages
 
             var command = args[1].ToLowerInvariant();
