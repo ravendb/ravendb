@@ -470,15 +470,15 @@ namespace Raven.Server.Web.System
 
             var key = GetLongQueryString("key");
             var typeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
-            var disable = GetBoolValueQueryString("disable");
-            var taskName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("taskName");
+            var disable = GetBoolValueQueryString("disable", required: true) ?? true;
+            var taskName = GetStringQueryString("taskName", required: false);
 
             if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
-                throw new ArgumentException($"Unknown task type: {type}", "type");
+                throw new ArgumentException($"Unknown task type: {type}", nameof(type));
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var (index, _) = await ServerStore.ToggleTaskState(key, taskName, type, disable.Value, dbName);
+                var (index, _) = await ServerStore.ToggleTaskState(key, taskName, type, disable, dbName);
                 await ServerStore.Cluster.WaitForIndexNotification(index); 
                 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK; 

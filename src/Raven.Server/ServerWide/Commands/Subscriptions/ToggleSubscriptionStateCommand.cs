@@ -1,4 +1,5 @@
 using System;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server;
@@ -18,8 +19,10 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         // for serialization
         private ToggleSubscriptionStateCommand():base(null){}
 
-        public ToggleSubscriptionStateCommand(string subscriptionName, bool disable, string databaseName) : base(databaseName)
+        public ToggleSubscriptionStateCommand([NotNull] string subscriptionName, bool disable, [NotNull] string databaseName) : base(databaseName)
         {
+            if (string.IsNullOrEmpty(subscriptionName)) throw new ArgumentException("Value cannot be null or empty.", nameof(subscriptionName));
+            if (string.IsNullOrEmpty(databaseName)) throw new ArgumentException("Value cannot be null or empty.", nameof(databaseName));
             SubscriptionName = subscriptionName;
             Disable = disable;
         }
