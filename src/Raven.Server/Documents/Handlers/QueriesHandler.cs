@@ -11,10 +11,12 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Extensions;
+using Raven.Server.Documents.Indexes.IndexMerging;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Faceted;
 using Raven.Server.Documents.Queries.MoreLikeThis;
+using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
@@ -86,6 +88,13 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
+                if (string.Equals(operation, "suggestions", StringComparison.OrdinalIgnoreCase))
+                {
+                    Suggestions(context, indexName, token);
+                    return;
+
+                }
+                
                 await Query(context, indexName, token, HttpMethod.Get).ConfigureAwait(false);
             }
         }
@@ -190,6 +199,30 @@ namespace Raven.Server.Documents.Handlers
                 indexQuery.Query = queryString;
             }
             return indexQuery;
+        }
+
+        private void Suggestions(DocumentsOperationContext context, string indexName, OperationCancelToken token)
+        {
+            var existingResultEtag = GetLongFromHeaders("If-None-Match");
+
+            var query = SuggestionsQueryServerSide.Create(HttpContext, GetPageSize(), context);
+            var runner = new QueryRunner(Database, context);
+
+            var result = runner.ExecuteSuggestionsQuery(indexName, query, context, existingResultEtag, token);
+            if (result.NotModified)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                return;
+            }
+
+            HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
+
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteSuggestionsQueryResult(context, result);
+            }
+
+            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Suggestions)} ({indexName})", HttpContext, result.Suggestions.Length, query.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
         }
 
         private void MoreLikeThis(DocumentsOperationContext context, string indexName, OperationCancelToken token)

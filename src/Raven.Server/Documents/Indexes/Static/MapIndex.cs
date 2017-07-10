@@ -16,16 +16,27 @@ namespace Raven.Server.Documents.Indexes.Static
     public class MapIndex : MapIndexBase<MapIndexDefinition>
     {
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _suggestionsActive = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         protected internal readonly StaticIndexBase _compiled;
         private bool? _isSideBySide;
 
         private HandleReferences _handleReferences;
+        private HandleSuggestions _handleSuggestions;
 
         private MapIndex(long etag, MapIndexDefinition definition, StaticIndexBase compiled)
             : base(etag, IndexType.Map, definition)
         {
             _compiled = compiled;
+
+            foreach (var field in definition.IndexDefinition.Fields)
+            {
+                var suggestionOption = field.Value.Suggestions;
+                if (suggestionOption.HasValue && suggestionOption.Value)
+                {
+                    _suggestionsActive.Add(field.Key);
+                }
+            }
 
             if (_compiled.ReferencedCollections == null)
                 return;
@@ -34,7 +45,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 foreach (var referencedCollection in collection.Value)
                     _referencedCollections.Add(referencedCollection.Name);
-            }
+            }           
         }
 
         public override bool HasBoostedFields => _compiled.HasBoostedFields;
@@ -43,11 +54,16 @@ namespace Raven.Server.Documents.Indexes.Static
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()
         {
-            var workers = new List<IIndexingWork>();
-            workers.Add(new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, null));
+            var workers = new List<IIndexingWork>
+            {
+                new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, null)
+            };
 
             if (_referencedCollections.Count > 0)
                 workers.Add(_handleReferences = new HandleReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
+
+            if (_suggestionsActive.Count > 0)
+                workers.Add(_handleSuggestions = new HandleSuggestions(this, _suggestionsActive, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
 
             workers.Add(new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, null, Configuration));
 

@@ -20,6 +20,7 @@ using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Sorting;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
+using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Raven.Server.ServerWide.Context;
@@ -344,6 +345,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             return results;
+        }
+
+
+        public string[] Suggestions(SuggestionsQueryServerSide query)
+        {
+            throw new NotImplementedException();                
         }
 
         public IEnumerable<Document> MoreLikeThis(MoreLikeThisQueryServerSide query, HashSet<string> stopWords, Func<string[], IQueryResultRetriever> createRetriever, CancellationToken token)
