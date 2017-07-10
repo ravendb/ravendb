@@ -230,7 +230,7 @@ namespace Raven.Server.Utils
         {
             if (cli._consoleColoring)
             {
-                WriteText("'logo' command not supported on console cli", WarningColor, cli);
+                WriteText("'logout' command not supported on console cli", WarningColor, cli);
                 return true;
             }
 
@@ -782,19 +782,28 @@ namespace Raven.Server.Utils
 
                 if (line == null)
                 {
-                    Thread.Sleep(75); //waiting for Ctrl+C 
-                    if (ctrlCPressed)
-                        break;
-                    WriteText("End of standard input detected, switching to server mode...", WarningColor, this);
+                    if (_consoleColoring == false)
+                    {
+                        // for some reason remote pipe couldn't ReadLine
+                        WriteText("End of standard input detected. Remote console might not support input", ErrorColor, this);
+                        // simulate logout:
+                        line = "logout";
+                    }
+                    else
+                    {
+                        Thread.Sleep(75); //waiting for Ctrl+C 
+                        if (ctrlCPressed)
+                            break;
+                        WriteText("End of standard input detected, switching to server mode...", WarningColor, this);
 
-                    Program.RunAsService();
-                    return false;
+                        Program.RunAsService();
+                        return false;
+                    }
                 }
 
-                var nextline = line;
                 var parsedLine = new ParsedLine { LineState = LineState.Begin };
 
-                if (ParseLine(nextline, parsedLine) == false)
+                if (ParseLine(line, parsedLine) == false)
                 {
                     WriteError(parsedLine.ErrorMsg, this);
                     continue;
@@ -867,21 +876,37 @@ namespace Raven.Server.Utils
                     {
                         if (parsedCommand.Command == Command.ResetServer)
                         {
-                            if (_consoleColoring == false)
+                            if (Program.IsRunningAsService || _writer == Console.Out)
                             {
-                                var str = "Restarting Server";
-                                PrintBothToConsoleAndRemotePipe(str, this);
+                                if (_consoleColoring == false)
+                                {
+                                    var str = "Restarting Server";
+                                    PrintBothToConsoleAndRemotePipe(str, this, CliDelimiter.Delimiter.RestartServer);
+                                }
+                                return true;
                             }
-                            return true;
+
+                            WriteText("Server is not running as Service. Restart from a remote connection is not allowed." + Environment.NewLine +
+                                    "Restart the server from it's main console" + Environment.NewLine, WarningColor, this);
                         }
                         if (parsedCommand.Command == Command.Quit)
                         {
-                            if (_consoleColoring == false)
+                            if (Program.IsRunningAsService || _writer == Console.Out)
                             {
-                                var str = "Quitting Server";
-                                PrintBothToConsoleAndRemotePipe(str, this);
+                                if (_consoleColoring == false)
+                                {
+                                    var str = "Quitting Server";
+                                    PrintBothToConsoleAndRemotePipe(str, this, CliDelimiter.Delimiter.Quit);
+                                }
+                                return false;
                             }
-                            return false;
+
+                            WriteText("Server is not running as Service. Quit from a remote connection is not allowed." + Environment.NewLine +
+                                      "Quit the server from it's main console" + Environment.NewLine, WarningColor, this);
+                        }
+                        if (parsedCommand.Command == Command.Logout)
+                        {
+                            break;
                         }
                     }
                     else
@@ -898,13 +923,16 @@ namespace Raven.Server.Utils
                 }
             }
             _writer.Flush();
-            return false; // cannot reach here
+            
+            // we are logging out from cli
+            Debug.Assert(_consoleColoring == false);
+            return false;
         }
 
-        private static void PrintBothToConsoleAndRemotePipe(string str, RavenCli cli)
+        private static void PrintBothToConsoleAndRemotePipe(string str, RavenCli cli, CliDelimiter.Delimiter delimiter)
         {
             cli._writer.WriteLine(str, TextColor, cli);
-            cli._writer.Write(CliDelimiter.GetDelimiterString(CliDelimiter.Delimiter.RestartServer));
+            cli._writer.Write(CliDelimiter.GetDelimiterString(delimiter));
             cli._writer.Flush();
 
             Console.ForegroundColor = WarningColor;

@@ -5,6 +5,7 @@ using System.IO;
 using System.IO.Pipes;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Raven.Server;
 using static Sparrow.CliDelimiter;
 
@@ -14,8 +15,16 @@ namespace rvn
     {
         static void Main(string[] args)
         {
-            if (args.Length > 0 && args[0].ToLower().Equals("admin-channel"))
+            bool reconnect = true;
+            while (reconnect)
             {
+                reconnect = false;
+                if (args.Length < 1 || !args[0].ToLower().Equals("admin-channel"))
+                {
+                    Console.WriteLine("Usage : rvn admin-channel [PID]" + Environment.NewLine);
+                    Console.Out.Flush();
+                    Environment.Exit(5);
+                }
                 int pid = 0;
                 if (args.Length > 2)
                 {
@@ -174,14 +183,25 @@ namespace rvn
                             case Delimiter.Clear:
                                 Console.Clear();
                                 break;
-                            case Delimiter.RestartServer: // TODO :: ADIADI : restart server to reconnect after X seconds or infinite loop.. 
-                            case Delimiter.Quit:
                             case Delimiter.Logout:
+                            case Delimiter.Quit:
                                 Console.WriteLine();
                                 Environment.Exit(0);
                                 break;
+                            case Delimiter.RestartServer:
+                                Console.WriteLine();
+                                for (int i = 10; i >= 0; i--)
+                                {
+                                    Console.Write($"\rTrying to reconnect in {i} seconds ...  ");
+                                    Thread.Sleep(1000);
+                                }
+                                Console.WriteLine();
+                                reconnect = true;
+                                break;
                         }
                         writer.Flush();
+                        if (reconnect)
+                            break;
                     }
                 }
                 catch (Exception e)

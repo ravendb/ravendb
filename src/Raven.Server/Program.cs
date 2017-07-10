@@ -111,15 +111,11 @@ namespace Raven.Server
                                         Console.Error.WriteLine($"Tcp listen failure (see {server.ServerStore.NodeHttpServerUrl}/info/tcp for details) {tcp.Exception.Message}");
                                     }
                                 });
-                            Console.WriteLine("Server started, listening to requests...");                            
-                            if (CommandLineSwitches.Daemon)
-                            {
-                                RunAsService();
-                            }
-                            else
-                            {
-                                rerun = RunInteractive(server);
-                            }
+                            Console.WriteLine("Server started, listening to requests...");
+
+                            IsRunningAsService = false;
+                            rerun = CommandLineSwitches.Daemon ? RunAsService() : RunInteractive(server);
+
                             Console.WriteLine("Starting shut down...");
                             if (Logger.IsInfoEnabled)
                                 Logger.Info("Server is shutting down");
@@ -148,9 +144,14 @@ namespace Raven.Server
         }
 
         public static ManualResetEvent QuitServerMre = new ManualResetEvent(false);
+        public static ManualResetEvent ResetServerMre = new ManualResetEvent(false);
 
-        public static void RunAsService()
+        public static bool IsRunningAsService;
+
+        public static bool RunAsService()
         {
+            IsRunningAsService = true;
+
             if (Logger.IsInfoEnabled)
                 Logger.Info("Server is running as a service");
             Console.WriteLine("Running as Service");
@@ -162,6 +163,13 @@ namespace Raven.Server
             };
 
             QuitServerMre.WaitOne();
+            if (ResetServerMre.WaitOne(0))
+            {
+                ResetServerMre.Reset();
+                QuitServerMre.Reset();
+                return true;
+            }
+            return false;
         }
 
         private static bool RunInteractive(RavenServer server)
