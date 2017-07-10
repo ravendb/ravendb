@@ -896,8 +896,6 @@ If you really want to do in memory filtering on the data returned from the query
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded();
 
-            fieldName = GetFieldNameForRangeQueries(fieldName, start, end);
-
             WhereTokens.AddLast(WhereToken.Between(fieldName, start == null ? "*" : TransformToRangeValue(new WhereParams { Value = start, FieldName = fieldName }), end == null ? "NULL" : TransformToRangeValue(new WhereParams { Value = end, FieldName = fieldName })));
         }
 
@@ -910,8 +908,6 @@ If you really want to do in memory filtering on the data returned from the query
         {
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded();
-
-            fieldName = GetFieldNameForRangeQueries(fieldName, value, null);
 
             WhereTokens.AddLast(WhereToken.GreaterThan(fieldName, value == null ? "*" : TransformToRangeValue(new WhereParams { Value = value, FieldName = fieldName })));
         }
@@ -926,8 +922,6 @@ If you really want to do in memory filtering on the data returned from the query
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded();
 
-            fieldName = GetFieldNameForRangeQueries(fieldName, value, null);
-
             WhereTokens.AddLast(WhereToken.GreaterThanOrEqual(fieldName, value == null ? "*" : TransformToRangeValue(new WhereParams { Value = value, FieldName = fieldName })));
         }
 
@@ -941,8 +935,6 @@ If you really want to do in memory filtering on the data returned from the query
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded();
 
-            fieldName = GetFieldNameForRangeQueries(fieldName, value, null);
-
             WhereTokens.AddLast(WhereToken.LessThan(fieldName, value == null ? "NULL" : TransformToRangeValue(new WhereParams { Value = value, FieldName = fieldName })));
         }
 
@@ -955,8 +947,6 @@ If you really want to do in memory filtering on the data returned from the query
         {
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded();
-
-            fieldName = GetFieldNameForRangeQueries(fieldName, value, null);
 
             WhereTokens.AddLast(WhereToken.LessThanOrEqual(fieldName, value == null ? "NULL" : TransformToRangeValue(new WhereParams { Value = value, FieldName = fieldName })));
         }
@@ -1690,17 +1680,6 @@ If you really want to do in memory filtering on the data returned from the query
             return fieldName;
         }
 
-        private string GetFieldNameForRangeQueries(string fieldName, object start, object end)
-        {
-            fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
-
-            if (fieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
-                return fieldName;
-
-            var val = start ?? end;
-            return FieldUtil.ApplyRangeSuffixIfNecessary(fieldName, val);
-        }
-
         private object TransformToEqualValue(WhereParams whereParams)
         {
             if (whereParams.Value == null)
@@ -1824,7 +1803,7 @@ If you really want to do in memory filtering on the data returned from the query
             return func;
         }
 
-        private string TransformToRangeValue(WhereParams whereParams)
+        private object TransformToRangeValue(WhereParams whereParams)
         {
             if (whereParams.Value == null)
                 return Constants.Documents.Indexing.Fields.NullValueNotAnalyzed;
@@ -1843,17 +1822,17 @@ If you really want to do in memory filtering on the data returned from the query
                 return ((DateTimeOffset)whereParams.Value).UtcDateTime.GetDefaultRavenFormat(true);
 
             if (whereParams.Value is int)
-                return NumberUtil.NumberToString((int)whereParams.Value);
+                return whereParams.Value;
             if (whereParams.Value is long)
-                return NumberUtil.NumberToString((long)whereParams.Value);
+                return whereParams.Value;
             if (whereParams.Value is decimal)
-                return NumberUtil.NumberToString((double)(decimal)whereParams.Value);
+                return (double)(decimal)whereParams.Value;
             if (whereParams.Value is double)
-                return NumberUtil.NumberToString((double)whereParams.Value);
+                return whereParams.Value;
             if (whereParams.Value is TimeSpan)
-                return NumberUtil.NumberToString(((TimeSpan)whereParams.Value).Ticks);
+                return ((TimeSpan)whereParams.Value).Ticks;
             if (whereParams.Value is float)
-                return NumberUtil.NumberToString((float)whereParams.Value);
+                return whereParams.Value;
             if (whereParams.Value is string)
                 return RavenQuery.Escape(whereParams.Value.ToString(), false, true);
 

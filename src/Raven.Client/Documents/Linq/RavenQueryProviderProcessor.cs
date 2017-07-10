@@ -1840,7 +1840,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 return Constants.Documents.Indexing.Fields.DocumentIdFieldName;
             }
 
-            return FieldUtil.ApplyRangeSuffixIfNecessary(expression.Path, value);
+            return expression.Path;
         }
 
         /// <summary>

@@ -8,16 +8,17 @@ using Lucene.Net.Index;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Raven.Client.Documents.Queries;
-using Raven.Server.Documents.Queries.LuceneIntegration;
 using Raven.Server.Documents.Queries.Parse;
 using Raven.Server.Utils;
-using Version = Lucene.Net.Util.Version;
 using Raven.Server.Documents.Queries.Parser;
 
 namespace Raven.Server.Documents.Queries
 {
     public static class QueryBuilder
     {
+        private static TermLuceneASTNode WildCardTerm = new TermLuceneASTNode() { Term = "*", Type = TermLuceneASTNode.TermType.WildCardTerm };
+        private static TermLuceneASTNode NullTerm = new TermLuceneASTNode() { Term = "NULL", Type = TermLuceneASTNode.TermType.Null };
+
         public static bool UseLuceneASTParser { get; set; } = true;
 
         public static Lucene.Net.Search.Query BuildQuery(string query, Analyzer analyzer)
@@ -62,73 +63,57 @@ namespace Raven.Server.Documents.Queries
             switch (expression.Type)
             {
                 case OperatorType.Equal:
-                    var fieldNode = new FieldLuceneASTNode()
+                    return new FieldLuceneASTNode()
                     {
                         FieldName = new FieldName(QueryExpression.Extract(query, expression.Field)),
+                        Node = CreateTermNode(query, expression.Value ?? expression.First)
                     };
-
-                    switch (expression.Value.Type)
-                    {
-                        case ValueTokenType.Null:
-                            fieldNode.Node = new TermLuceneASTNode()
-                            {
-                                Type = TermLuceneASTNode.TermType.Null
-                            };
-                            break;
-                        case ValueTokenType.False:
-                        case ValueTokenType.True:
-                            throw new NotImplementedException("expression.Value.Type:" + expression.Type);
-                        default:
-                            var value = expression.Value ?? expression.First;
-                            string term;
-                            switch (value.Type)
-                            {
-                                case ValueTokenType.String:
-                                    term = QueryExpression.Extract(query, value.TokenStart + 1, value.TokenLength - 1, value.EscapeChars);
-                                    break;
-                                default:
-                                    term = QueryExpression.Extract(query, value);
-                                    break;
-                            }
-
-                            fieldNode.Node = new TermLuceneASTNode()
-                            {
-                                Term = term,
-                            };
-                            break;
-                    }
-
-                    return fieldNode;
                 case OperatorType.GreaterThen:
-
                 case OperatorType.LessThen:
                 case OperatorType.LessThenEqual:
                 case OperatorType.GreaterThenEqual:
+                    var fieldName = QueryExpression.Extract(query, expression.Field);
 
-                    throw new NotImplementedException("Type:" + expression.Type);
+                    var valueToken = expression.Value ?? expression.First;
 
+                    switch (valueToken.Type)
+                    {
+                        case ValueTokenType.Double:
+                            fieldName += "_D_Range";
+                            break;
+                        case ValueTokenType.Long:
+                            fieldName += "_L_Range";
+                            break;
+                    }
 
-                //    writer.WritePropertyName("Field");
-                //    WriteValue(query, writer, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
-                //    writer.WritePropertyName("Value");
-                //    switch (Value.Type)
-                //    {
-                //        case ValueTokenType.Null:
-                //            writer.WriteValue((string)null);
-                //            break;
-                //        case ValueTokenType.False:
-                //            writer.WriteValue(false);
-                //            break;
-                //        case ValueTokenType.True:
-                //            writer.WriteValue(true);
-                //            break;
-                //        default:
-                //            WriteValue(query, writer, Value.TokenStart, Value.TokenLength, Value.EscapeChars,
-                //                Value.Type == ValueTokenType.String);
-                //            break;
-                //    }
+                    RangeLuceneASTNode rangeNode = new RangeLuceneASTNode()
+                    {
+                        InclusiveMin = false,
+                        InclusiveMax = false,
+                        RangeMin = WildCardTerm,
+                        RangeMax = NullTerm
+                    };
 
-                //    break;
+                    switch (expression.Type)
+                    {
+                        case OperatorType.LessThen:
+                            rangeNode.RangeMax = CreateTermNode(query, valueToken);
+                            break;
+                        case OperatorType.GreaterThen:
+                            rangeNode.RangeMin = CreateTermNode(query, valueToken);
+                            break;
+                        case OperatorType.LessThenEqual:
+                        case OperatorType.GreaterThenEqual:
+                            throw new NotImplementedException("Type:" + expression.Type);
+                        default:
+                            break;
+                    }
+
+                    return new FieldLuceneASTNode()
+                    {
+                        FieldName = new FieldName(fieldName),
+                        Node = rangeNode
+                    };
                 //case OperatorType.Between:
                 //    writer.WritePropertyName("Field");
                 //    WriteValue(query, writer, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
@@ -189,6 +174,48 @@ namespace Raven.Server.Documents.Queries
                 //break;
                 default:
                     throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        private static TermLuceneASTNode CreateTermNode(string query, ValueToken value)
+        {
+            switch (value.Type)
+            {
+                case ValueTokenType.Null:
+                    return new TermLuceneASTNode()
+                    {
+                        Type = TermLuceneASTNode.TermType.Null
+                    };
+                case ValueTokenType.False:
+                case ValueTokenType.True:
+                    throw new NotImplementedException("expression.Value.Type:" + value.Type);
+                default:
+                    TermLuceneASTNode.TermType type = TermLuceneASTNode.TermType.Quoted;
+                    string term;
+
+                    switch (value.Type)
+                    {
+                        case ValueTokenType.String:
+                            term = QueryExpression.Extract(query, value.TokenStart + 1, value.TokenLength - 2, value.EscapeChars);
+                            break;
+                        case ValueTokenType.Long:
+                            term = QueryExpression.Extract(query, value);
+                            type = TermLuceneASTNode.TermType.Long;
+                            break;
+                        case ValueTokenType.Double:
+                            term = QueryExpression.Extract(query, value);
+                            type = TermLuceneASTNode.TermType.Double;
+                            break;
+                        default:
+                            term = QueryExpression.Extract(query, value);
+                            break;
+                    }
+
+                    return new TermLuceneASTNode()
+                    {
+                        Term = term,
+                        Type = type,
+                    };
             }
         }
 
