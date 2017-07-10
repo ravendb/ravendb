@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using FastTests;
 using FastTests.Client.Attachments;
 using SlowTests.Client.Attachments;
 using Tests.Infrastructure;
@@ -6,7 +7,7 @@ using Xunit;
 
 namespace StressTests.Client.Attachments
 {
-    public class AttachmentsSessionStress
+    public class AttachmentsSessionStress : NoDisposalNeeded
     {
         [Theory]
         [InlineData(1000)]
