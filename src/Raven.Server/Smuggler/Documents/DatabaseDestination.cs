@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
@@ -146,6 +147,11 @@ namespace Raven.Server.Smuggler.Documents
                 HandleBatchOfDocumentsIfNecessary();
             }
 
+            public Stream GetTempStream()
+            {
+                return _command.AttachmentStreamsTempFile.StartNewStream();
+            }
+
             public DocumentsOperationContext GetContextForNewDocument()
             {
                 _command.Context.CachedProperties.NewDocument();
@@ -242,6 +248,8 @@ namespace Raven.Server.Smuggler.Documents
             private readonly Logger _log;
 
             public readonly List<DocumentItem> Documents = new List<DocumentItem>();
+            public StreamsTempFile AttachmentStreamsTempFile;
+
             private IDisposable _resetContext;
             private bool _isDisposed;
 
@@ -256,6 +264,8 @@ namespace Raven.Server.Smuggler.Documents
                 _buildType = buildType;
                 _log = log;
                 _resetContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
+
+                AttachmentStreamsTempFile = _database.DocumentsStorage.AttachmentsStorage.GetTempFile("smuggler");
             }
 
             public DocumentsOperationContext Context => _context;
@@ -274,7 +284,7 @@ namespace Raven.Server.Smuggler.Documents
                             using (attachment)
                             using (Slice.From(context.Allocator, "Smuggler", out Slice tag)) // TODO: Export the tag also
                             {
-                                _database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, tag, attachment.Base64Hash, attachment.File);
+                                _database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, tag, attachment.Base64Hash, attachment.Stream);
                             }
                         }
                     }
@@ -374,6 +384,9 @@ namespace Raven.Server.Smuggler.Documents
                 Documents.Clear();
                 _resetContext?.Dispose();
                 _resetContext = null;
+
+                AttachmentStreamsTempFile?.Dispose();
+                AttachmentStreamsTempFile = null;
             }
 
             public void Add(DocumentItem document)

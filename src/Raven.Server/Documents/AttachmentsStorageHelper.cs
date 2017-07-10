@@ -37,7 +37,6 @@ namespace Raven.Server.Documents
                     }
                 }
                 await file.WriteAsync(buffer.Buffer.Array, buffer.Buffer.Offset, bufferRead, cancellationToken);
-                file.Position = 0;
                 PartialComputeHash(cryptoState, buffer, bufferRead);
                 var hash = FinalizeGetHash(cryptoState, buffer);
                 return hash;

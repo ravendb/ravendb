@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.Handlers
                 MediaTypeHeaderValue.Parse(HttpContext.Request.ContentType),
                 MultipartRequestHelper.MultipartBoundaryLengthLimit);
             var reader = new MultipartReader(boundary, RequestBodyStream());
-            for (int i = 0; i < int.MaxValue; i++)
+            for (var i = 0; i < int.MaxValue; i++)
             {
                 var section = await reader.ReadNextSectionAsync().ConfigureAwait(false);
                 if (section == null)
@@ -106,11 +106,16 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 if (command.AttachmentStreams == null)
+                {
                     command.AttachmentStreams = new Queue<MergedBatchCommand.AttachmentStream>();
+                    command.AttachmentStreamsTempFile = Database.DocumentsStorage.AttachmentsStorage.GetTempFile("batch");
+                }
 
-                var attachmentStream = new MergedBatchCommand.AttachmentStream();
-                attachmentStream.FileDispose = Database.DocumentsStorage.AttachmentsStorage.GetTempFile(out attachmentStream.File);
-                attachmentStream.Hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, bodyStream, attachmentStream.File, Database.DatabaseShutdown);
+                var attachmentStream = new MergedBatchCommand.AttachmentStream
+                {
+                    Stream = command.AttachmentStreamsTempFile.StartNewStream()
+                };
+                attachmentStream.Hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, bodyStream, attachmentStream.Stream, Database.DatabaseShutdown);
                 command.AttachmentStreams.Enqueue(attachmentStream);
             }
         }
@@ -244,6 +249,7 @@ namespace Raven.Server.Documents.Handlers
             public DynamicJsonArray Reply;
             public ArraySegment<BatchRequestParser.CommandData> ParsedCommands;
             public Queue<AttachmentStream> AttachmentStreams;
+            public StreamsTempFile AttachmentStreamsTempFile;
             public DocumentDatabase Database;
             public long LastEtag;
             private HashSet<string> _documentsToUpdateAfterAttachmentChange;
@@ -365,10 +371,11 @@ namespace Raven.Server.Documents.Handlers
                             }
                             break;
                         case CommandType.AttachmentPUT:
-                            using (var attachmentStream = AttachmentStreams.Dequeue())
+                            var attachmentStream = AttachmentStreams.Dequeue();
+                            using (var stream = attachmentStream.Stream)
                             {
                                 var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, cmd.Id, cmd.Name,
-                                    cmd.ContentType, attachmentStream.Hash, cmd.Etag, attachmentStream.File, updateDocument: false);
+                                    cmd.ContentType, attachmentStream.Hash, cmd.Etag, stream, updateDocument: false);
                                 LastEtag = attachmentPutResult.Etag;
 
                                 if (_documentsToUpdateAfterAttachmentChange == null)
@@ -429,19 +436,14 @@ namespace Raven.Server.Documents.Handlers
                     cmd.Document?.Dispose();
                 }
                 BatchRequestParser.ReturnBuffer(ParsedCommands);
+                AttachmentStreamsTempFile?.Dispose();
+                AttachmentStreamsTempFile = null;
             }
 
-            public struct AttachmentStream : IDisposable
+            public struct AttachmentStream
             {
                 public string Hash;
-
-                public Stream File;
-                public AttachmentsStorage.ReleaseTempFile FileDispose;
-
-                public void Dispose()
-                {
-                    FileDispose.Dispose();
-                }
+                public Stream Stream;
             }
         }
 

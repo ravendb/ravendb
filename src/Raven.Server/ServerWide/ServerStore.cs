@@ -547,7 +547,7 @@ namespace Raven.Server.ServerWide
                     {
                         nodesStatuses = new Dictionary<string, NodeStatus>
                         {
-                            [leaderTag] = new NodeStatus {ConnectionStatus = "Connected"}
+                            [leaderTag] = new NodeStatus { Connected = true } 
                         };
                     }
                     break;
