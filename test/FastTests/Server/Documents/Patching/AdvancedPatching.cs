@@ -40,7 +40,7 @@ namespace FastTests.Server.Documents.Patching
     this.Id = 'Something new'; 
     this.Value++; 
     this.newValue = ""err!!"";
-    this.Comments = this.Comments.Map(function(comment) {   
+    this.Comments = this.Comments.map(function(comment) {   
         return (comment == ""one"") ? comment + "" test"" : comment;
     });";
 
@@ -260,7 +260,7 @@ namespace FastTests.Server.Documents.Patching
 
                     await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
                     {
-                        Script = "this.Comments.Remove('two');"
+                        Script = "_.pull(this.Comments,'two');"
                     }));
 
                     var doc = await commands.GetAsync("doc");
@@ -281,7 +281,7 @@ namespace FastTests.Server.Documents.Patching
 
                     await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
                     {
-                        Script = "this.Comments.RemoveWhere(function(el) {return el == 'seven';});",
+                        Script = "_.remove(this.Comments,function(el) {return el == 'seven';});",
                     }));
 
                     var doc = await commands.GetAsync("doc");
