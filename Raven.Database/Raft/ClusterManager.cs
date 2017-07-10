@@ -107,8 +107,8 @@ namespace Raven.Database.Raft
                 var sourceInformation = doc.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
                 if (sourceInformation == null)
                     return;
-                var lastUpdate = sourceInformation.LastModifiedAtSource ?? DateTime.MaxValue;                
-                if (lastUpdate + maxReplicationLatency >= modification.LastModified)
+                var lastUpdate = sourceInformation.LastModifiedAtSource ?? DateTime.MaxValue;
+                if (lastUpdate == DateTime.MaxValue || lastUpdate + maxReplicationLatency >= modification.LastModified)
                     anyDatabaseUptodate = true;
             },true);
             if (anyDatabaseUptodate == false && anyDatabaseUp)
