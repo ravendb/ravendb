@@ -134,7 +134,7 @@ namespace Voron.Impl
 
         public ulong Hash => _txHeader->Hash;
 
-        private LowLevelTransaction(LowLevelTransaction previous)
+        private LowLevelTransaction(LowLevelTransaction previous, long txId)
         {
             // this is meant to be used with transaction merging only
             // so it makes a lot of assumptions about the usage scenario
@@ -151,7 +151,7 @@ namespace Voron.Impl
             DataPager = env.Options.DataPager;
             _env = env;
             _journal = env.Journal;
-            _id = previous.Id + 1;
+            _id = txId;
             _freeSpaceHandling = previous._freeSpaceHandling;
             _allocator = previous._allocator;
 
@@ -805,7 +805,9 @@ namespace Voron.Impl
 
             CommitStage1_CompleteTransaction();
 
-            var nextTx = new LowLevelTransaction(this);
+            var nextTx = new LowLevelTransaction(this,
+                writeToJournalIsRequired ? Id + 1 : Id
+                );
             _asyncCommitNextTransaction = nextTx;
             AsyncCommit = writeToJournalIsRequired
                   ? Task.Run(() => { CommitStage2_WriteToJournal(); })

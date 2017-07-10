@@ -1,6 +1,7 @@
 using System;
 using SlowTests.Bugs;
 using SlowTests.Issues;
+using FastTests.Voron.Storage;
 
 namespace Tryouts
 {
@@ -11,9 +12,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {   
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Server.Documents.ETL.EtlTasksManagement_RavenDB_7276())   
+                using (var test = new RavenDB_7698())   
                 {
-                    test.CanDeleteEtl().Wait();
+                    test.CanRestartEmptyAsyncTransaction();
                 }
             }
         }
