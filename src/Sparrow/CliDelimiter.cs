@@ -10,10 +10,11 @@
             Clear,
             Logout,
             Quit,
-            RestartServer
+            RestartServer,
+            ContinuePrinting
         }
 
-        public static string GetDelimiterKeyWord => "DELIMITER";
-        public static string GetDelimiterString(Delimiter delimiter) => $"{GetDelimiterKeyWord}<{delimiter}>";        
+        public const string DelimiterKeyWord = "DELIMITER:";
+        public static string GetDelimiterString(Delimiter delimiter) => DelimiterKeyWord + delimiter;        
     }
 }
