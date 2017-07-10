@@ -56,7 +56,7 @@ namespace Raven.Server
                 return 0;
             }
 
-            WelcomeMessage.Print();
+            new WelcomeMessage(Console.Out).Print();
 
             var configuration = new RavenConfiguration(null, ResourceType.Server, CommandLineSwitches.CustomConfigPath);
 
@@ -147,10 +147,10 @@ namespace Raven.Server
             return 0;
         }
 
+        public static ManualResetEvent QuitServerMre = new ManualResetEvent(false);
+
         public static void RunAsService()
         {
-            ManualResetEvent mre = new ManualResetEvent(false);
-
             if (Logger.IsInfoEnabled)
                 Logger.Info("Server is running as a service");
             Console.WriteLine("Running as Service");
@@ -158,10 +158,10 @@ namespace Raven.Server
             AssemblyLoadContext.Default.Unloading += (s) =>
             {
                 Console.WriteLine("Received graceful exit request...");
-                mre.Set();
+                QuitServerMre.Set();
             };
 
-            mre.WaitOne();
+            QuitServerMre.WaitOne();
         }
 
         private static bool RunInteractive(RavenServer server)

@@ -214,6 +214,8 @@ namespace Raven.Server
                             {
                                 writer.WriteLine("Restarting Server...<DELIMETER_QUIT>");
                                 // TODO :: ADIADI :: perform quit
+
+                                Program.QuitServerMre.Set();
                             }
                         }
                         catch (Exception e)

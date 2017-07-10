@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
@@ -405,9 +406,9 @@ namespace Raven.Server.Utils
                 if (cli._consoleColoring)
                     Console.Clear();
             if (cli._consoleColoring)
-                WelcomeMessage.Print();
+                new WelcomeMessage(Console.Out).Print();
             else
-                WriteText("'logo' command not supported on remote pipe connection", TextColor, cli);
+                new WelcomeMessage(cli._writer).Print();
             return true;
         }
 
@@ -604,7 +605,13 @@ namespace Raven.Server.Utils
                 {
                     ctrlCPressed = true;
                 };
-
+            else
+            {
+                new WelcomeMessage(_writer).Print(); // beware not to print any delimiters until reaching PrintCliHeader
+                _writer.WriteLine("Connected to RavenDB Console through named pipe connection..." + Environment.NewLine);
+                _writer.Write(CliDelimiter.GetDelimiterString(CliDelimiter.Delimiter.ContinuePrinting));
+                _writer.Flush();
+            }
             while (true)
             {
                 PrintCliHeader(this);
