@@ -708,7 +708,6 @@ namespace Raven.Server.Documents.Replication
                 attachment.Stream = _attachmentStreamsTempFile.StartNewStream();
                 ReadExactly(streamLength, attachment.Stream);
 
-                attachment.Stream.Position = 0;
                 _replicatedAttachmentStreams[attachment.Base64Hash] = attachment;
             }
         }
@@ -796,8 +795,8 @@ namespace Raven.Server.Documents.Replication
                     var database = _incoming._database;
 
                     var maxReceivedChangeVectorByDatabase = new Dictionary<Guid, long>();
-                    var list = context.LastDatabaseChangeVector ?? 
-                        (context.LastDatabaseChangeVector = database.DocumentsStorage.GetDatabaseChangeVector(context));
+                    var list = context.LastDatabaseChangeVector ??
+                               (context.LastDatabaseChangeVector = database.DocumentsStorage.GetDatabaseChangeVector(context));
                     foreach (var changeVectorEntry in list)
                     {
                         maxReceivedChangeVectorByDatabase[changeVectorEntry.DbId] = changeVectorEntry.Etag;
@@ -891,7 +890,7 @@ namespace Raven.Server.Documents.Replication
                                         continue;
                                     }
 
-                                    var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, item.Id, _changeVector, 
+                                    var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, item.Id, _changeVector,
                                         out ChangeVectorEntry[] conflictingVector);
                                     switch (conflictStatus)
                                     {
@@ -946,6 +945,8 @@ namespace Raven.Server.Documents.Replication
                             }
                         }
                     }
+
+                    _incoming._attachmentStreamsTempFile.Reset();
 
                     Debug.Assert(_incoming._replicatedAttachmentStreams.Count == 0, "We should handle all attachment streams during WriteAttachment.");
                     Debug.Assert(context.LastDatabaseChangeVector != null);
