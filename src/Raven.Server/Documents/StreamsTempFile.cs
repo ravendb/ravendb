@@ -10,6 +10,7 @@ namespace Raven.Server.Documents
         private readonly string _tempFile;
         private readonly DocumentDatabase _database;
         private readonly FileStream _file;
+        private bool _reading;
 
         public StreamsTempFile(string tempFile, DocumentDatabase database)
         {
@@ -21,9 +22,21 @@ namespace Raven.Server.Documents
 
         public Stream StartNewStream()
         {
+            if (_reading)
+                throw new NotSupportedException();
+
             return _database.DocumentsStorage.Environment.Options.EncryptionEnabled
                 ? (Stream)new TempCryptoStream(_file)
-                : new InnerPartStream(_file);
+                : new InnerPartStream(_file, this);
+        }
+
+        public void Reset()
+        {
+            _reading = false;
+
+            var _128mb = 128 * 1024 * 1024;
+            if (_file.Length > _128mb)
+                _file.SetLength(_128mb);
         }
 
         public void Dispose()
@@ -35,12 +48,14 @@ namespace Raven.Server.Documents
         private class InnerPartStream : Stream
         {
             private readonly Stream _file;
+            private readonly StreamsTempFile _parent;
             private readonly long _startPosition;
             private long _length;
             private bool _reading;
-            public InnerPartStream(FileStream file)
+            public InnerPartStream(FileStream file, StreamsTempFile parent)
             {
                 _file = file;
+                _parent = parent;
                 _startPosition = file.Position;
             }
 
@@ -65,6 +80,7 @@ namespace Raven.Server.Documents
                     throw new NotSupportedException();
 
                 _reading = true;
+                _parent._reading = true;
                 return _file.Seek(_startPosition + offset, origin);
             }
 
