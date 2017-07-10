@@ -18,20 +18,6 @@ namespace Raven.Client.Json
             return Expression.Lambda<Action<TClass, TField>>(assignExp, targetExp, valueExp).Compile();
         }
 
-        public static Action<TClass> CreateZeroFieldFunction<TClass>(string fieldName)
-        {
-            FieldInfo field = typeof(TClass).GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Instance);
-            if (field == null) {
-                throw new InvalidOperationException($"Field not found in { typeof(TClass).FullName }: { fieldName }.");
-            }
-
-            var param = Expression.Parameter(typeof(TClass), "param");
-            var fieldExpression = Expression.Field(param, field);
-
-            var body = Expression.Call(null, typeof(Sodium).GetMethod("ZeroBuffer"), fieldExpression);
-            return Expression.Lambda<Action<TClass>>(body, param).Compile();
-        }
-
         private static Expression CastFromObject(this Expression expr, Type targetType)
         {
             return expr.Type == targetType ? expr :

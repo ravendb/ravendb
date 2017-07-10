@@ -16,8 +16,6 @@ using System.Linq;
 
 namespace Raven.Server.Documents.Patch
 {
-    // base on Jint's ArrayInstance implementation
-
     public class BlittableObjectInstance : ObjectInstance
     {
         public readonly BlittableJsonReaderObject Blittable;
