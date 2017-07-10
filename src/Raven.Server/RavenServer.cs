@@ -205,13 +205,12 @@ namespace Raven.Server
                             if (restart)
                             {
                                 writer.WriteLine("Restarting Server...<DELIMETER_RESTART>");
-                                // TODO :: ADIADI :: perform restart server
+                                Program.ResetServerMre.Set();
+                                Program.QuitServerMre.Set();
                             }
                             else
                             {
-                                writer.WriteLine("Restarting Server...<DELIMETER_QUIT>");
-                                // TODO :: ADIADI :: perform quit
-
+                                writer.WriteLine("Quitting Server...<DELIMETER_RESTART>");
                                 Program.QuitServerMre.Set();
                             }
                         }
@@ -240,6 +239,7 @@ namespace Raven.Server
                 {
                     // reopen the pipe after every use, since we need to close it properly
                     Pipe.Dispose();
+                    Thread.Sleep(5000); // we need to give some time after dispose before opening new pipe
                     OpenPipe();
                 }
                 catch (Exception e)
