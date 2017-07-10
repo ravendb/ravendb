@@ -468,10 +468,14 @@ namespace Raven.Bundles.Replication.Tasks
 
                             if (t.Result == null)
                                 return;
+
                             docDb.TransactionalStorage.Batch(actions =>
                             {
-                                var shouldRunAgain = t.Result.LastReplicatedDocumentEtag != Etag.InvalidEtag &&
-                                        actions.Staleness.GetMostRecentDocumentEtag() != t.Result.LastReplicatedDocumentEtag;
+                                var shouldRunAgain = (t.Result.LastReplicatedDocumentEtag != Etag.InvalidEtag &&
+                                                      actions.Staleness.GetMostRecentDocumentEtag() != t.Result.LastReplicatedDocumentEtag) ||
+                                                     (t.Result.LastReplicatedAttachmentEtag != Etag.InvalidEtag &&
+                                                      actions.Staleness.GetMostRecentAttachmentEtag() != t.Result.LastReplicatedAttachmentEtag);
+
                                 if (shouldRunAgain)
                                 {
                                     docDb.WorkContext.ReplicationResetEvent.Set();
@@ -529,11 +533,6 @@ namespace Raven.Bundles.Replication.Tasks
 
                 return Task.WhenAny(startedTasks.ToArray()).AssertNotFailed();
             }
-        }
-        
-        private void RunReplicaitonAgainIfNeeded(ReplicationStrategy dest, LastReplicatedEtags tResult, DocumentDatabase docDb)
-        {
-            
         }
 
         private void ClearCachedLastEtagForRemovedServers(ReplicationStrategy[] destinations)
