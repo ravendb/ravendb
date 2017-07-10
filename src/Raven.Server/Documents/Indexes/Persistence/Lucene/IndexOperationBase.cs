@@ -94,9 +94,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         protected Query GetLuceneQuery(string q, QueryOperator defaultOperator, string defaultField, Analyzer analyzer)
         {
+            throw new NotSupportedException("TODO arek - remove");
+        }
+
+        protected Query GetLuceneQuery(Queries.Parser.Query q, Analyzer analyzer)
+        {
             Query documentQuery;
 
-            if (string.IsNullOrEmpty(q))
+            if (string.IsNullOrEmpty(q.QueryText))
             {
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Issuing query on index {_indexName} for all documents");
@@ -123,7 +128,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     //    return parent.CreateAnalyzer(newAnalyzer, toDispose, true);
                     //});
 
-                    documentQuery = QueryBuilder.BuildQuery(q, defaultOperator, defaultField, analyzer);
+                    documentQuery = QueryBuilder.BuildQuery(q, analyzer);
                 }
                 finally
                 {

@@ -77,8 +77,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var docsToGet = pageSize;
             var position = query.Start;
 
-            var luceneQuery = GetLuceneQuery(query.Query, query.DefaultOperator, query.DefaultField, _analyzer);
-            var sort = GetSort(query.SortedFields);
+            var luceneQuery = GetLuceneQuery(query.Parsed, _analyzer);
+            var sort = GetSort(query);
             var returnedResults = 0;
 
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
@@ -308,6 +308,53 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 return new SortField(IndexField.ReplaceInvalidCharactersInFieldName(x.Field), (int)sortOptions, x.Descending);
             }).ToArray());
+        }
+        
+        private Sort GetSort(IndexQueryServerSide query)
+        {
+            List<SortField> sort = null;
+            foreach (var field in query.GetOrderByFields())
+            {
+                if (sort == null)
+                    sort = new List<SortField>();
+                
+                var sortOptions = SortOptions.String;
+
+                if (field.Name == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
+                {
+                    sort.Add(SortField.FIELD_SCORE);
+                    continue;
+                }
+
+                if (InvariantCompare.IsPrefix(field.Name, Constants.Documents.Indexing.Fields.AlphaNumericFieldName, CompareOptions.None))
+                {
+                    var customFieldName = SortFieldHelper.ExtractName(field.Name);
+                    if (customFieldName.IsNullOrWhiteSpace())
+                        throw new InvalidOperationException("Alphanumeric sort: cannot figure out what field to sort on!");
+
+                    var anSort = new AlphaNumericComparatorSource();
+                    sort.Add(new SortField(customFieldName, anSort, field.Ascending == false));
+                    continue;
+                }
+
+                if (InvariantCompare.IsPrefix(field.Name, Constants.Documents.Indexing.Fields.RandomFieldName, CompareOptions.None))
+                {
+                    var customFieldName = SortFieldHelper.ExtractName(field.Name);
+                    if (customFieldName.IsNullOrWhiteSpace()) // truly random
+                        sort.Add(new RandomSortField(Guid.NewGuid().ToString()));
+                    else
+                        sort.Add(new RandomSortField(customFieldName));
+                    
+                    continue;
+                }
+
+                if (InvariantCompare.IsSuffix(field.Name, Constants.Documents.Indexing.Fields.RangeFieldSuffix, CompareOptions.None))
+                    sortOptions = SortOptions.Numeric;
+
+                sort.Add(new SortField(IndexField.ReplaceInvalidCharactersInFieldName(field.Name), (int)sortOptions, field.Ascending == false));
+            }
+
+            return sort == null ? null : new Sort(sort.ToArray());
         }
 
         public HashSet<string> Terms(string field, string fromValue, int pageSize, CancellationToken token)

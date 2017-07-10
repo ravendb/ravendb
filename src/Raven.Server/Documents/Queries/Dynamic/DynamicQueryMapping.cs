@@ -117,6 +117,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
             
             foreach (var field in query.GetWhereFields())
             {
+                if (field.Name == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+                    continue;
+                
                 fields[field.Name] = new DynamicQueryMappingItem(field.Name, FieldMapReduceOperation.None);
 
                 switch (field.ValueType)
@@ -156,7 +159,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 
                 fields[field.Name] = new DynamicQueryMappingItem(fieldName, FieldMapReduceOperation.None);
 
-                if (sorting[field.Name] == null)
+                if (sorting.TryGetValue(fieldName, out var _) == false)
                 {
                     sorting[field.Name] = new DynamicSortInfo()
                     {
@@ -178,7 +181,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
 //                numericFields = null;
 
             result.MapFields = fields.Values
-                .Where(x => x.Name != Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                 .OrderByDescending(x => x.Name.Length)
                 .ToArray();
 

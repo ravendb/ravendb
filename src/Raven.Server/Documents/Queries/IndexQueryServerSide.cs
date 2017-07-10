@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Queries
                             result.Query = EscapingHelper.UnescapeLongDataString(item.Value[0]);
 
                             var qp = new QueryParser();
-                            qp.Init("FROM Users WHERE Name = 'Arek'"/*result.Query*/);
+                            qp.Init(result.Query);
 
                             result.Parsed = qp.Parse();
                             break;

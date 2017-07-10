@@ -2045,7 +2045,7 @@ namespace Raven.Server.Documents.Indexes
         {
             if (string.IsNullOrWhiteSpace(query.Query) == false)
             {
-                var setOfFields = SimpleQueryParser.GetFields(query.Query, QueryOperator.Or, null);
+                var setOfFields = new HashSet<string>();  // TODO arek - get query fields
                 foreach (var field in setOfFields)
                 {
                     var f = field;
