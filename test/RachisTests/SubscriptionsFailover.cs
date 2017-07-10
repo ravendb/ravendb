@@ -16,7 +16,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Server.Operations;
-using Raven.Client.Server.Versioning;
+using Raven.Client.Server.Revisions;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Rachis;
@@ -178,7 +178,7 @@ namespace RachisTests
                 Database = defaultDatabase
             }.Initialize())
             {
-                await SetupVersioning(leader, defaultDatabase).ConfigureAwait(false);
+                await SetupRevisions(leader, defaultDatabase).ConfigureAwait(false);
 
                 var reachedMaxDocCountMre = new AsyncManualResetEvent();
                 var ackSent = new AsyncManualResetEvent();
@@ -212,7 +212,7 @@ namespace RachisTests
                 Database = defaultDatabase
             }.Initialize())
             {
-                await SetupVersioning(leader, defaultDatabase).ConfigureAwait(false);
+                await SetupRevisions(leader, defaultDatabase).ConfigureAwait(false);
 
                 var reachedMaxDocCountMre = new AsyncManualResetEvent();
                 var ackSent = new AsyncManualResetEvent();
@@ -327,20 +327,20 @@ namespace RachisTests
             }
         }
 
-        private async Task SetupVersioning(RavenServer server, string defaultDatabase)
+        private async Task SetupRevisions(RavenServer server, string defaultDatabase)
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                var versioningDoc = new VersioningConfiguration
+                var configuration = new RevisionsConfiguration
                 {
-                    Default = new VersioningCollectionConfiguration
+                    Default = new RevisionsCollectionConfiguration
                     {
                         Active = true,
                         MinimumRevisionsToKeep = 10,
                     },
-                    Collections = new Dictionary<string, VersioningCollectionConfiguration>
+                    Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                     {
-                        ["Users"] = new VersioningCollectionConfiguration
+                        ["Users"] = new RevisionsCollectionConfiguration
                         {
                             Active = true,
                             MinimumRevisionsToKeep = 10
@@ -349,9 +349,9 @@ namespace RachisTests
                 };
 
                 var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(defaultDatabase);
-                var res = await documentDatabase.ServerStore.ModifyDatabaseVersioning(context,
+                var res = await documentDatabase.ServerStore.ModifyDatabaseRevisions(context,
                     defaultDatabase,
-                    EntityToBlittable.ConvertEntityToBlittable(versioningDoc,
+                    EntityToBlittable.ConvertEntityToBlittable(configuration,
                         new DocumentConventions(),
                         context));
 

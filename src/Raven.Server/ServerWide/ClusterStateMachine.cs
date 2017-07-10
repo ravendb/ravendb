@@ -143,7 +143,7 @@ namespace Raven.Server.ServerWide
                     case nameof(SetTransformerLockCommand):
                     case nameof(DeleteTransformerCommand):
                     case nameof(RenameTransformerCommand):
-                    case nameof(EditVersioningCommand):
+                    case nameof(EditRevisionsConfigurationCommand):
                     case nameof(UpdatePeriodicBackupCommand):
                     case nameof(EditExpirationCommand):
                     case nameof(ModifyConflictSolverCommand):

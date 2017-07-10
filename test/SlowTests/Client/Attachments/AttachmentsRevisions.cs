@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Documents.Versioning;
+using FastTests.Server.Documents.Revisions;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
@@ -15,14 +15,14 @@ using Xunit;
 
 namespace SlowTests.Client.Attachments
 {
-    public class AttachmentsVersioning : RavenTestBase
+    public class AttachmentsRevisions : RavenTestBase
     {
         [Fact]
         public async Task PutAttachments()
         {
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database, false, 4);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, false, 4);
                 var names = CreateDocumentWithAttachments(store);
                 AssertRevisions(store, names, (session, revisions) =>
                 {

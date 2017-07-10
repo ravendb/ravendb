@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Versioning;
+using FastTests.Server.Documents.Revisions;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -169,7 +169,7 @@ namespace FastTests.Smuggler
                 {
                     using (var session = store1.OpenAsyncSession())
                     {
-                        await VersioningHelper.SetupVersioning(Server.ServerStore, store1.Database);
+                        await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database);
 
                         await session.StoreAsync(new Person {Name = "Name1"});
                         await session.StoreAsync(new Person {Name = "Name2"});
@@ -208,7 +208,7 @@ namespace FastTests.Smuggler
 
                 using (var store2 = GetDocumentStore(dbSuffixIdentifier: "store2"))
                 {
-                    await VersioningHelper.SetupVersioning(Server.ServerStore, store2.Database);
+                    await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
 
                     await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
 
@@ -233,7 +233,7 @@ namespace FastTests.Smuggler
                 {
                     using (var session = store1.OpenAsyncSession())
                     {
-                        await VersioningHelper.SetupVersioning(Server.ServerStore, store1.Database);
+                        await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database);
 
                         await session.StoreAsync(new Person { Name = "Name1" });
                         await session.StoreAsync(new Person { Name = "Name2" });

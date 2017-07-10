@@ -14,7 +14,7 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using System.Linq;
-using Raven.Client.Server.Versioning;
+using Raven.Client.Server.Revisions;
 
 namespace Raven.Server.Documents
 {
@@ -128,13 +128,13 @@ namespace Raven.Server.Documents
 #endif
                     }
 
-                    if (_documentDatabase.DocumentsStorage.VersioningStorage.Configuration != null &&
+                    if (_documentDatabase.DocumentsStorage.RevisionsStorage.Configuration != null &&
                         (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
                     {
-                        if (_documentDatabase.DocumentsStorage.VersioningStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document,
-                            ref flags, out VersioningCollectionConfiguration configuration))
+                        if (_documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document,
+                            ref flags, out RevisionsCollectionConfiguration configuration))
                         {
-                            _documentDatabase.DocumentsStorage.VersioningStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration);
+                            _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration);
                         }
                     }
                 }

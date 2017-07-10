@@ -862,30 +862,30 @@ namespace Raven.Server.Documents.Replication
 
                                     if ((item.Flags & DocumentFlags.Revision) == DocumentFlags.Revision)
                                     {
-                                        if (database.DocumentsStorage.VersioningStorage.Configuration == null)
+                                        if (database.DocumentsStorage.RevisionsStorage.Configuration == null)
                                         {
                                             if (_incoming._log.IsOperationsEnabled)
-                                                _incoming._log.Operations("Versioning storage is disabled but the node got a versioned document from replication.");
+                                                _incoming._log.Operations("Revisions are disabled but the node got a revision from replication.");
                                             continue;
                                         }
                                         if (_incoming._log.IsInfoEnabled)
                                             _incoming._log.Info($"RevisionPUT '{item.Id}', with change vector = {_changeVector.Format()}");
-                                        database.DocumentsStorage.VersioningStorage.Put(context, item.Id, document, item.Flags,
+                                        database.DocumentsStorage.RevisionsStorage.Put(context, item.Id, document, item.Flags,
                                             NonPersistentDocumentFlags.FromReplication, _changeVector, item.LastModifiedTicks);
                                         continue;
                                     }
 
                                     if ((item.Flags & DocumentFlags.DeleteRevision) == DocumentFlags.DeleteRevision)
                                     {
-                                        if (database.DocumentsStorage.VersioningStorage.Configuration == null)
+                                        if (database.DocumentsStorage.RevisionsStorage.Configuration == null)
                                         {
                                             if (_incoming._log.IsOperationsEnabled)
-                                                _incoming._log.Operations("Versioning storage is disabled but the node got a versioned document from replication.");
+                                                _incoming._log.Operations("Revisions are disabled but the node got a delete revision from replication.");
                                             continue;
                                         }
                                         if (_incoming._log.IsInfoEnabled)
                                             _incoming._log.Info($"RevisionDELETE '{item.Id}', with change vector = {_changeVector.Format()}");
-                                        database.DocumentsStorage.VersioningStorage.Delete(context, item.Id, document, _changeVector,
+                                        database.DocumentsStorage.RevisionsStorage.Delete(context, item.Id, document, _changeVector,
                                             item.LastModifiedTicks, NonPersistentDocumentFlags.FromReplication);
                                         continue;
                                     }

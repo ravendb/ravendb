@@ -4,8 +4,8 @@ using System.Diagnostics;
 using System.Net;
 using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Subscriptions;
-using Raven.Server.Documents.Versioning;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -37,10 +37,11 @@ namespace Raven.Server.Documents.TcpHandlers
 
             if (subscription.Criteria.IsVersioned)
             {
-                if (_db.DocumentsStorage.VersioningStorage == null || _db.DocumentsStorage.VersioningStorage.IsVersioned(subscription.Criteria.Collection) == false)
-                    throw new SubscriptionInvalidStateException($"Cannot use a versioned subscription, database {_db.Name} does not have versioning setup"); 
+                if (_db.DocumentsStorage.RevisionsStorage == null ||
+                    _db.DocumentsStorage.RevisionsStorage.IsVersioned(subscription.Criteria.Collection) == false)
+                    throw new SubscriptionInvalidStateException($"Cannot use a revisions subscription, database {_db.Name} does not have revisions configuration."); 
 
-                return GetVerionTuplesToSend(docsContext, subscription, startEtag, patch, _db.DocumentsStorage.VersioningStorage);
+                return GetVerionTuplesToSend(docsContext, subscription, startEtag, patch, _db.DocumentsStorage.RevisionsStorage);
             }
 
 
@@ -98,7 +99,7 @@ namespace Raven.Server.Documents.TcpHandlers
         }
 
         private IEnumerable<(Document Doc, Exception Exception)> GetVerionTuplesToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch,
-            VersioningStorage revisions)
+            RevisionsStorage revisions)
         {
             foreach (var versionedDocs in revisions.GetRevisionsFrom(docsContext, new CollectionName(subscription.Criteria.Collection), startEtag + 1, _maxBatchSize))
             {
@@ -115,7 +116,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 using (var versioned = docsContext.ReadObject(dynamicValue, item.Id))
                 {
-                    if (ShouldSendDocumentWithVersioning(subscription, patch, docsContext, item, versioned, out var transformResult, out var exception) == false)
+                    if (ShouldSendDocumentWithRevisions(subscription, patch, docsContext, item, versioned, out var transformResult, out var exception) == false)
                     {
                         if (exception != null)
                         {
@@ -189,7 +190,7 @@ namespace Raven.Server.Documents.TcpHandlers
         }
         
         
-        private bool ShouldSendDocumentWithVersioning(SubscriptionState subscriptionState, SubscriptionPatchDocument patch, DocumentsOperationContext dbContext,
+        private bool ShouldSendDocumentWithRevisions(SubscriptionState subscriptionState, SubscriptionPatchDocument patch, DocumentsOperationContext dbContext,
             Document item, BlittableJsonReaderObject versioned, out BlittableJsonReaderObject transformResult, out Exception exception)
         {
             exception = null;
@@ -204,7 +205,7 @@ namespace Raven.Server.Documents.TcpHandlers
             if (patch == null)
                 return true;
             
-            if (patch.FilterJavaScript == SubscriptionCreationOptions.DefaultVersioningScript)
+            if (patch.FilterJavaScript == SubscriptionCreationOptions.DefaultRevisionsScript)
             {
                 transformResult = versioned;
                 return true;

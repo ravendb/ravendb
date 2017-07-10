@@ -2,7 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Versioning;
+using FastTests.Server.Documents.Revisions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
@@ -27,7 +27,7 @@ namespace FastTests.Voron.Backups
             using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
                 var context = DocumentsOperationContext.ShortTermSingleUse(database);
-                await VersioningHelper.SetupVersioning(Server.ServerStore, database.Name, false, 13);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, database.Name, false, 13);
                 var subscriptionCriteria = new SubscriptionCriteria("Users");
                 var obj = JObject.FromObject(subscriptionCriteria);
                 var objString = obj.ToString(Formatting.None);
