@@ -9,7 +9,6 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Security;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -20,7 +19,6 @@ using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
-using Raven.Client.Http.OAuth;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Client.Server.Commands;
@@ -37,22 +35,20 @@ namespace Raven.Client.Http
 
         private static readonly TimeSpan GlobalHttpClientTimeout = TimeSpan.FromHours(12);
 
-        private static readonly Lazy<HttpClient> GlobalHttpClient = new Lazy<HttpClient>(() => CreateClient(GlobalHttpClientTimeout));
+        private static readonly ConcurrentDictionary<string,Lazy<HttpClient>> GlobalHttpClient = new ConcurrentDictionary<string, Lazy<HttpClient>>();
 
         private readonly SemaphoreSlim _updateTopologySemaphore = new SemaphoreSlim(1, 1);
         private readonly SemaphoreSlim _updateClientConfigurationSemaphore = new SemaphoreSlim(1, 1);
 
-        protected ConcurrentDictionary<ServerNode, NodeStatus> _failedNodesTimers = new ConcurrentDictionary<ServerNode, NodeStatus>();
+        protected ConcurrentDictionary<ServerNode, NodeStatus> FailedNodesTimers = new ConcurrentDictionary<ServerNode, NodeStatus>();
 
-        private readonly string _apiKey;
         private readonly string _databaseName;
+        private readonly X509Certificate2 _certificate;
 
         protected static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecutor>("Client");
         private DateTime _lastReturnedResponse;
 
         public readonly JsonContextPool ContextPool;
-
-        private readonly ApiKeyAuthenticator _authenticator = new ApiKeyAuthenticator();
 
         public readonly AsyncLocal<AggressiveCacheOptions> AggressiveCaching = new AsyncLocal<AggressiveCacheOptions>();
 
@@ -62,16 +58,12 @@ namespace Raven.Client.Http
 
         private Timer _updateTopologyTimer;
 
-        private Timer _updateCurrentTokenTimer;
-
         protected NodeSelector _nodeSelector;
 
         private TimeSpan? _defaultTimeout;
 
         //note: the condition for non empty nodes is precaution, should never happen..
         public string Url => _nodeSelector?.GetCurrentNode()?.Url;
-
-        public string ClusterToken;
 
         public long TopologyEtag { get; protected set; }
 
@@ -97,37 +89,48 @@ namespace Raven.Client.Http
 
         public event EventHandler<(long RaftCommandIndex, ClientConfiguration Configuration)> ClientConfigurationChanged;
 
-        protected RequestExecutor(string databaseName, string apiKey, DocumentConventions conventions)
+        protected RequestExecutor(string databaseName, X509Certificate2 certificate,  DocumentConventions conventions)
         {
             _databaseName = databaseName;
-            _apiKey = apiKey;
+            _certificate = certificate;
 
             _lastReturnedResponse = DateTime.UtcNow;
 
             ContextPool = new JsonContextPool();
             Conventions = conventions.Clone();
+
+
+            string thumbprint = string.Empty;
+            if (certificate != null)
+                thumbprint = certificate.Thumbprint;
+
+
+            if (GlobalHttpClient.TryGetValue(thumbprint, out var lazyClient) == false)
+            {
+                lazyClient = GlobalHttpClient.GetOrAdd(thumbprint, new Lazy<HttpClient>(CreateClient));
+            }
+
+            _httpClient = lazyClient.Value;
         }
 
-        public string ApiKey => _apiKey;
-
-        public static RequestExecutor Create(string[] urls, string databaseName, string apiKey, DocumentConventions conventions)
+        public static RequestExecutor Create(string[] urls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
-            var executor = new RequestExecutor(databaseName, apiKey, conventions);
+            var executor = new RequestExecutor(databaseName, certificate, conventions);
             executor._firstTopologyUpdate = executor.FirstTopologyUpdate(urls);
             return executor;
         }
 
-        public static RequestExecutor CreateForSingleNodeWithConfigurationUpdates(string url, string databaseName, string apiKey, DocumentConventions conventions)
+        public static RequestExecutor CreateForSingleNodeWithConfigurationUpdates(string url, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
-            var executor = CreateForSingleNodeWithoutConfigurationUpdates(url, databaseName, apiKey, conventions);
+            var executor = CreateForSingleNodeWithoutConfigurationUpdates(url, databaseName, certificate, conventions);
             executor._disableClientConfigurationUpdates = false;
 
             return executor;
         }
 
-        public static RequestExecutor CreateForSingleNodeWithoutConfigurationUpdates(string url, string databaseName, string apiKey, DocumentConventions conventions)
+        public static RequestExecutor CreateForSingleNodeWithoutConfigurationUpdates(string url, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
-            var executor = new RequestExecutor(databaseName, apiKey, conventions)
+            var executor = new RequestExecutor(databaseName, certificate, conventions)
             {
                 _nodeSelector = new NodeSelector(new Topology
                 {
@@ -229,8 +232,8 @@ namespace Raven.Client.Http
 
         protected void DisposeAllFailedNodesTimers()
         {
-            var oldFailedNodesTimers = _failedNodesTimers;
-            _failedNodesTimers.Clear();
+            var oldFailedNodesTimers = FailedNodesTimers;
+            FailedNodesTimers.Clear();
 
             foreach (var failedNodesTimers in oldFailedNodesTimers)
             {
@@ -412,16 +415,19 @@ namespace Raven.Client.Http
                 ResponseDisposeHandling responseDispose = ResponseDisposeHandling.Automatic;
                 try
                 {
-                    var client = GetHttpClientForCommand(command);
                     var timeout = command.Timeout ?? _defaultTimeout;
                     if (timeout.HasValue)
                     {
+                        if (timeout > GlobalHttpClientTimeout)
+                            ThrowTimeoutTooLarge(timeout);
+
+
                         using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, CancellationToken.None))
                         {
                             cts.CancelAfter(timeout.Value);
                             try
                             {
-                                response = await command.SendAsync(client, request, cts.Token).ConfigureAwait(false);
+                                response = await command.SendAsync(_httpClient, request, cts.Token).ConfigureAwait(false);
                             }
                             catch (OperationCanceledException e)
                             {
@@ -433,7 +439,7 @@ namespace Raven.Client.Http
                     }
                     else
                     {
-                        response = await command.SendAsync(client, request, token).ConfigureAwait(false);
+                        response = await command.SendAsync(_httpClient, request, token).ConfigureAwait(false);
                     }
                     sp.Stop();
                 }
@@ -516,6 +522,11 @@ namespace Raven.Client.Http
             }
         }
 
+        private static void ThrowTimeoutTooLarge(TimeSpan? timeout)
+        {
+            throw new InvalidOperationException($"Maximum request timeout is set to '{GlobalHttpClientTimeout}' but was '{timeout}'.");
+        }
+
         private HttpCache.ReleaseCacheItem GetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, string url, out long cachedEtag, out BlittableJsonReaderObject cachedValue)
         {
             if (command.IsReadRequest && command.ResponseType == RavenCommandResponseType.Object)
@@ -538,9 +549,6 @@ namespace Raven.Client.Http
 
             request.RequestUri = new Uri(url);
 
-            if (ClusterToken != null)
-                request.Headers.Add("Raven-Authorization", ClusterToken);
-
             if (!request.Headers.Contains("Raven-Client-Version"))
                 request.Headers.Add("Raven-Client-Version", ClientVersion);
             return request;
@@ -559,23 +567,6 @@ namespace Raven.Client.Http
                         command.SetResponse(null, fromCache: false);
                     else
                         command.SetResponseRaw(response, null, context);
-                    return true;
-                case HttpStatusCode.Unauthorized:
-                case HttpStatusCode.PreconditionFailed:
-                    if (string.IsNullOrEmpty(_apiKey))
-                        throw AuthorizationException.EmptyApiKey(url);
-                    if (++command.AuthenticationRetries > 1)
-                        throw AuthorizationException.Unauthorized(url);
-
-
-#if DEBUG && FIDDLER
-// Make sure to avoid a cross DNS security issue, when running with Fiddler
-                if (string.IsNullOrEmpty(oauthSource) == false)
-                    oauthSource = oauthSource.Replace("localhost:", "localhost.fiddler:");
-#endif
-
-                    await HandleUnauthorized(chosenNode, context).ConfigureAwait(false);
-                    await ExecuteAsync(chosenNode, context, command).ConfigureAwait(false);
                     return true;
                 case HttpStatusCode.Forbidden:
                     throw AuthorizationException.Forbidden(url);
@@ -641,7 +632,7 @@ namespace Raven.Client.Http
         private void SpawnHealthChecks(ServerNode chosenNode, int nodeIndex)
         {
             var nodeStatus = new NodeStatus(this, nodeIndex, chosenNode);
-            if (_failedNodesTimers.TryAdd(chosenNode, nodeStatus))
+            if (FailedNodesTimers.TryAdd(chosenNode, nodeStatus))
                 nodeStatus.StartTimer();
         }
 
@@ -668,13 +659,13 @@ namespace Raven.Client.Http
                         if (Logger.IsInfoEnabled)
                             Logger.Info($"{serverNode.ClusterTag} is still down", e);
 
-                        if (_failedNodesTimers.TryGetValue(nodeStatus.Node, out status))
+                        if (FailedNodesTimers.TryGetValue(nodeStatus.Node, out status))
                             nodeStatus.UpdateTimer();
 
                         return;// will wait for the next timer call
                     }
 
-                    if (_failedNodesTimers.TryRemove(nodeStatus.Node, out status))
+                    if (FailedNodesTimers.TryRemove(nodeStatus.Node, out status))
                     {
                         status.Dispose();
                     }
@@ -737,51 +728,11 @@ namespace Raven.Client.Http
             throw new InvalidOperationException("Empty database topology, this shouldn't happen.");
         }
 
-        public async Task<string> GetAuthenticationToken(JsonOperationContext context, ServerNode node)
-        {
-            return ClusterToken = await _authenticator.GetAuthenticationTokenAsync(_apiKey, node.Url, context).ConfigureAwait(false);
-        }
-
-        private async Task HandleUnauthorized(ServerNode node, JsonOperationContext context, bool shouldThrow = true)
-        {
-            try
-            {
-                var currentToken = await _authenticator.GetAuthenticationTokenAsync(_apiKey, node.Url, context).ConfigureAwait(false);
-                ClusterToken = currentToken;
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info("Failed to authorize using api key", e);
-
-                if (shouldThrow)
-                    throw;
-            }
-
-            if (_updateCurrentTokenTimer == null)
-            {
-                _updateCurrentTokenTimer = new Timer(UpdateCurrentTokenCallback, null, TimeSpan.FromMinutes(20), TimeSpan.FromMinutes(20));
-            }
-        }
-
-        private void UpdateCurrentTokenCallback(object _)
-        {
-            JsonOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            {
-                var topology = _nodeSelector.Topology;
-                foreach (var node in topology.Nodes)
-                {
-#pragma warning disable 4014
-                    HandleUnauthorized(node, context, shouldThrow: false);
-#pragma warning restore 4014
-                }
-            }
-        }
 
         protected bool _disposed;
         protected Task _firstTopologyUpdate;
         protected string[] _lastKnownUrls;
+        private HttpClient _httpClient;
 
         public virtual void Dispose()
         {
@@ -795,14 +746,13 @@ namespace Raven.Client.Http
             _disposed = true;
             Cache.Dispose();
             ContextPool.Dispose();
-            _updateCurrentTokenTimer?.Dispose();
             _updateTopologyTimer?.Dispose();
             DisposeAllFailedNodesTimers();
             // shared instance, cannot dispose!
             //_httpClient.Dispose();
         }
 
-        private static HttpClient CreateClient(TimeSpan timeout)
+        private HttpClient CreateClient()
         {
             var httpMessageHandler = new HttpClientHandler();
             if (PlatformDetails.RunningOnMacOsx)
@@ -815,10 +765,12 @@ namespace Raven.Client.Http
             {
                 httpMessageHandler.ServerCertificateCustomValidationCallback += OnServerCertificateCustomValidationCallback;
             }
+            if (_certificate != null)
+                httpMessageHandler.ClientCertificates.Add(_certificate);
 
             return new HttpClient(httpMessageHandler)
             {
-                Timeout = timeout
+                Timeout = GlobalHttpClientTimeout
             };
         }
 
@@ -830,15 +782,6 @@ namespace Raven.Client.Http
             if (onServerCertificateCustomValidationCallback == null)
                 return errors == SslPolicyErrors.None;
             return onServerCertificateCustomValidationCallback(msg, cert, chain, errors);
-        }
-
-        private static HttpClient GetHttpClientForCommand<T>(RavenCommand<T> command)
-        {
-            var timeout = command.Timeout;
-            if (timeout.HasValue && timeout > GlobalHttpClientTimeout)
-                throw new InvalidOperationException($"Maximum request timeout is set to '{GlobalHttpClientTimeout}' but was '{timeout}'.");
-
-            return GlobalHttpClient.Value;
         }
 
         public class NodeStatus : IDisposable
