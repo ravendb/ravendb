@@ -38,9 +38,6 @@ using AccessToken = Raven.Server.Web.Authentication.AccessToken;
 using System.Reflection;
 using Raven.Client.Extensions;
 using Raven.Client.Server.Operations.ApiKeys;
-using Raven.Server.ServerWide.Commands;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Platform;
 
 namespace Raven.Server
 {
