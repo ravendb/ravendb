@@ -316,7 +316,6 @@ namespace Raven.Client.Documents.Subscriptions
                     await requestExecutor.ExecuteAsync(command, context).ConfigureAwait(false);
                 }
 
-                var apiToken = await requestExecutor.GetAuthenticationToken(context, command.RequestedNode).ConfigureAwait(false);
                 var uri = new Uri(command.Result.Url);
 
                 _tcpClient = new TcpClient();
@@ -333,7 +332,6 @@ namespace Raven.Client.Documents.Subscriptions
                 {
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
                     DatabaseName = databaseName,
-                    AuthorizationToken = apiToken
                 }));
 
                 var options = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(_options));
@@ -352,7 +350,7 @@ namespace Raven.Client.Documents.Subscriptions
                         case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
                             break;
                         default:
-                            throw AuthorizationException.Unauthorized(reply.Status, _dbName);
+                            throw new InvalidOperationException($"Unexpected reply from the server {reply.Status} when connecting to {databaseName}");
                     }
                 }
                 await _stream.WriteAsync(options, 0, options.Length).ConfigureAwait(false);
@@ -360,7 +358,7 @@ namespace Raven.Client.Documents.Subscriptions
                 await _stream.FlushAsync().ConfigureAwait(false);
 
                 _subscriptionLocalRequestExecutor?.Dispose();
-                _subscriptionLocalRequestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(command.RequestedNode.Url, _dbName, requestExecutor.ApiKey, _store.Conventions);
+                _subscriptionLocalRequestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(command.RequestedNode.Url, _dbName, requestExecutor.Certificate, _store.Conventions);
                 return _stream;
             }
         }

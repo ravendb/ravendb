@@ -43,7 +43,7 @@ namespace Raven.Client.Http
         protected ConcurrentDictionary<ServerNode, NodeStatus> FailedNodesTimers = new ConcurrentDictionary<ServerNode, NodeStatus>();
 
         private readonly string _databaseName;
-        private readonly X509Certificate2 _certificate;
+        public X509Certificate2 Certificate { get; }
 
         protected static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecutor>("Client");
         private DateTime _lastReturnedResponse;
@@ -92,7 +92,7 @@ namespace Raven.Client.Http
         protected RequestExecutor(string databaseName, X509Certificate2 certificate,  DocumentConventions conventions)
         {
             _databaseName = databaseName;
-            _certificate = certificate;
+            Certificate = certificate;
 
             _lastReturnedResponse = DateTime.UtcNow;
 
@@ -765,8 +765,8 @@ namespace Raven.Client.Http
             {
                 httpMessageHandler.ServerCertificateCustomValidationCallback += OnServerCertificateCustomValidationCallback;
             }
-            if (_certificate != null)
-                httpMessageHandler.ClientCertificates.Add(_certificate);
+            if (Certificate != null)
+                httpMessageHandler.ClientCertificates.Add(Certificate);
 
             return new HttpClient(httpMessageHandler)
             {

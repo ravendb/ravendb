@@ -18,7 +18,5 @@
         public string SourceNodeTag { get; set; }
 
         public OperationTypes Operation { get; set; }
-
-        public string AuthorizationToken { get; set; }
     }
 }
