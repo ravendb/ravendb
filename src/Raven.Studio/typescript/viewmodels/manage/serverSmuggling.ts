@@ -20,7 +20,7 @@ class serverSmuggling extends viewModelBase {/* TODO
     noIncremental: KnockoutComputed<boolean>;
     databasesSelection: KnockoutComputed<checkbox>;
     incrementalSelection: KnockoutComputed<checkbox>;
-    disableVersioningSelection: KnockoutComputed<checkbox>;
+    disableRevisionsSelection: KnockoutComputed<checkbox>;
 
     showJsonRequest = ko.observable<boolean>(false);
     showCurlRequest = ko.observable<boolean>(false);
