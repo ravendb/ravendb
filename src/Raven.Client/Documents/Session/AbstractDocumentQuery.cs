@@ -69,7 +69,7 @@ namespace Raven.Client.Documents.Session
 
         private int _currentClauseDepth;
 
-        protected KeyValuePair<string, string> LastEquality;
+        protected KeyValuePair<string, object> LastEquality;
 
         protected Dictionary<string, object> TransformerParameters = new Dictionary<string, object>();
 
@@ -803,7 +803,7 @@ If you really want to do in memory filtering on the data returned from the query
             whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
 
             var transformToEqualValue = TransformToEqualValue(whereParams);
-            LastEquality = new KeyValuePair<string, string>(whereParams.FieldName, transformToEqualValue);
+            LastEquality = new KeyValuePair<string, object>(whereParams.FieldName, transformToEqualValue);
 
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded();
@@ -850,7 +850,7 @@ If you really want to do in memory filtering on the data returned from the query
             whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
 
             var transformToEqualValue = TransformToEqualValue(whereParams);
-            LastEquality = new KeyValuePair<string, string>(whereParams.FieldName, transformToEqualValue);
+            LastEquality = new KeyValuePair<string, object>(whereParams.FieldName, transformToEqualValue);
 
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded();
@@ -876,7 +876,7 @@ If you really want to do in memory filtering on the data returned from the query
             whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
 
             var transformToEqualValue = TransformToEqualValue(whereParams);
-            LastEquality = new KeyValuePair<string, string>(whereParams.FieldName, transformToEqualValue);
+            LastEquality = new KeyValuePair<string, object>(whereParams.FieldName, transformToEqualValue);
 
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded();
@@ -1352,7 +1352,7 @@ If you really want to do in memory filtering on the data returned from the query
                     throw new ArgumentOutOfRangeException(nameof(escapeQueryOptions), "Value: " + escapeQueryOptions);
             }
             var hasWhiteSpace = searchTerms.Any(char.IsWhiteSpace);
-            LastEquality = new KeyValuePair<string, string>(fieldName,
+            LastEquality = new KeyValuePair<string, object>(fieldName,
                 hasWhiteSpace ? "(" + searchTerms + ")" : searchTerms
                 );
 
@@ -1383,7 +1383,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         /// The last term that we asked the query to use equals on
         /// </summary>
-        public KeyValuePair<string, string> GetLastEqualityTerm(bool isAsync = false)
+        public KeyValuePair<string, object> GetLastEqualityTerm(bool isAsync = false)
         {
             return LastEquality;
         }
@@ -1625,7 +1625,7 @@ If you really want to do in memory filtering on the data returned from the query
                     Value = value
                 };
 
-                yield return TransformToEqualValue(nestedWhereParams).Replace(",", "`,`");
+                yield return TransformToEqualValue(nestedWhereParams);
             }
         }
 
@@ -1701,27 +1701,27 @@ If you really want to do in memory filtering on the data returned from the query
             return FieldUtil.ApplyRangeSuffixIfNecessary(fieldName, val);
         }
 
-        private string TransformToEqualValue(WhereParams whereParams)
+        private object TransformToEqualValue(WhereParams whereParams)
         {
             if (whereParams.Value == null)
             {
-                return Constants.Documents.Indexing.Fields.NullValueNotAnalyzed;
+                return null;
             }
             if (Equals(whereParams.Value, string.Empty))
             {
-                return Constants.Documents.Indexing.Fields.EmptyStringNotAnalyzed;
+                return string.Empty;
             }
 
             var type = whereParams.Value.GetType().GetNonNullableType();
 
             if (_conventions.SaveEnumsAsIntegers && type.GetTypeInfo().IsEnum)
             {
-                return ((int)whereParams.Value).ToString();
+                return (int)whereParams.Value;
             }
 
             if (type == typeof(bool))
             {
-                return (bool)whereParams.Value ? "true" : "false";
+                return (bool)whereParams.Value;
             }
             if (type == typeof(DateTime))
             {
@@ -1737,13 +1737,14 @@ If you really want to do in memory filtering on the data returned from the query
 
             if (type == typeof(decimal))
             {
-                return RavenQuery.Escape(((double)(decimal)whereParams.Value).ToString(CultureInfo.InvariantCulture), false, false);
+                return (double)(decimal)whereParams.Value;
             }
 
             if (type == typeof(double))
             {
-                return RavenQuery.Escape(((double)(whereParams.Value)).ToString("r", CultureInfo.InvariantCulture), false, false);
+                return (double)whereParams.Value;
             }
+
             var strValue = whereParams.Value as string;
             if (strValue != null)
             {
@@ -1758,8 +1759,7 @@ If you really want to do in memory filtering on the data returned from the query
 
             if (whereParams.Value is ValueType)
             {
-                var escaped = RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
-                    whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
+                var escaped = RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture), whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
 
                 return escaped;
             }

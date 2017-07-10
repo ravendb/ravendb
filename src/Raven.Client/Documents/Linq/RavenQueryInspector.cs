@@ -279,7 +279,7 @@ namespace Raven.Client.Documents.Linq
         ///<summary>
         /// Get the last equality term for the query
         ///</summary>
-        public KeyValuePair<string, string> GetLastEqualityTerm(bool isAsync = false)
+        public KeyValuePair<string, object> GetLastEqualityTerm(bool isAsync = false)
         {
             var ravenQueryProvider = new RavenQueryProviderProcessor<T>(_provider.QueryGenerator, null, null, null, _indexName, new HashSet<string>(),
                 new List<RenamedField>(), _isMapReduce, _provider.ResultTransformer, _provider.TransformerParameters, OriginalQueryType);

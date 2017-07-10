@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Extensions;
@@ -20,15 +21,15 @@ namespace Raven.Client.Documents.Session.Tokens
 
         public string FieldName { get; private set; }
         public WhereOperator WhereOperator { get; private set; }
-        public string Value { get; private set; }
+        public object Value { get; private set; }
         public IEnumerable<object> Values { get; private set; }
-        public string To { get; private set; }
-        public string From { get; private set; }
+        public object To { get; private set; }
+        public object From { get; private set; }
         public decimal? Boost { get; set; }
         public decimal? Fuzzy { get; set; }
         public int? Proximity { get; set; }
 
-        public static WhereToken Equals(string fieldName, string value)
+        public static WhereToken Equals(string fieldName, object value)
         {
             return new WhereToken
             {
@@ -38,7 +39,7 @@ namespace Raven.Client.Documents.Session.Tokens
             };
         }
 
-        public static WhereToken StartsWith(string fieldName, string value)
+        public static WhereToken StartsWith(string fieldName, object value)
         {
             return new WhereToken
             {
@@ -48,7 +49,7 @@ namespace Raven.Client.Documents.Session.Tokens
             };
         }
 
-        public static WhereToken EndsWith(string fieldName, string value)
+        public static WhereToken EndsWith(string fieldName, object value)
         {
             return new WhereToken
             {
@@ -58,7 +59,7 @@ namespace Raven.Client.Documents.Session.Tokens
             };
         }
 
-        public static WhereToken GreaterThan(string fieldName, string value)
+        public static WhereToken GreaterThan(string fieldName, object value)
         {
             return new WhereToken
             {
@@ -68,7 +69,7 @@ namespace Raven.Client.Documents.Session.Tokens
             };
         }
 
-        public static WhereToken GreaterThanOrEqual(string fieldName, string value)
+        public static WhereToken GreaterThanOrEqual(string fieldName, object value)
         {
             return new WhereToken
             {
@@ -78,7 +79,7 @@ namespace Raven.Client.Documents.Session.Tokens
             };
         }
 
-        public static WhereToken LessThan(string fieldName, string value)
+        public static WhereToken LessThan(string fieldName, object value)
         {
             return new WhereToken
             {
@@ -88,7 +89,7 @@ namespace Raven.Client.Documents.Session.Tokens
             };
         }
 
-        public static WhereToken LessThanOrEqual(string fieldName, string value)
+        public static WhereToken LessThanOrEqual(string fieldName, object value)
         {
             return new WhereToken
             {
@@ -108,7 +109,7 @@ namespace Raven.Client.Documents.Session.Tokens
             };
         }
 
-        public static WhereToken Between(string fieldName, string from, string to)
+        public static WhereToken Between(string fieldName, object from, object to)
         {
             return new WhereToken
             {
@@ -197,51 +198,45 @@ namespace Raven.Client.Documents.Session.Tokens
                             writer.Append(", ");
 
                         first = false;
-                        writer.Append(value);
+
+                        WriteValue(writer, value);
                     }
 
                     writer.Append(")");
                     break;
                 case WhereOperator.Between:
-                    writer
-                        .Append(" BETWEEN ")
-                        .Append(From)
-                        .Append(" AND ")
-                        .Append(To);
+                    writer.Append(" BETWEEN ");
+                    WriteValue(writer, From);
+                    writer.Append(" AND ");
+                    WriteValue(writer, To);
                     break;
                 case WhereOperator.Equals:
-                    writer
-                        .Append(" = ")
-                        .Append(Value);
+                    writer.Append(" = ");
+                    WriteValue(writer, Value);
                     break;
                 case WhereOperator.GreaterThan:
-                    writer
-                        .Append(" > ")
-                        .Append(Value);
+                    writer.Append(" > ");
+                    WriteValue(writer, Value);
                     break;
                 case WhereOperator.GreaterThanOrEqual:
-                    writer
-                        .Append(" >= ")
-                        .Append(Value);
+                    writer.Append(" >= ");
+                    WriteValue(writer, Value);
                     break;
                 case WhereOperator.LessThan:
-                    writer
-                        .Append(" < ")
-                        .Append(Value);
+                    writer.Append(" < ");
+                    WriteValue(writer, Value);
                     break;
                 case WhereOperator.LessThanOrEqual:
-                    writer
-                        .Append(" <= ")
-                        .Append(Value);
+                    writer.Append(" <= ");
+                    WriteValue(writer, Value);
                     break;
                 case WhereOperator.Search:
                 case WhereOperator.Lucene:
                 case WhereOperator.StartsWith:
                 case WhereOperator.EndsWith:
-                    writer
-                        .Append(", ")
-                        .Append(Value)
-                        .Append(")");
+                    writer.Append(", ");
+                    WriteValue(writer, Value);
+                    writer.Append(")");
                     break;
                 case WhereOperator.ContainsAny:
                     // TODO [ppekrol]
@@ -292,6 +287,37 @@ namespace Raven.Client.Documents.Session.Tokens
                 To = To,
                 Values = Values
             };
+        }
+
+        private static void WriteValue(StringBuilder writer, object value)
+        {
+            if (value == null)
+            {
+                writer.Append("null");
+                return;
+            }
+
+            if (value is bool)
+            {
+                writer.Append((bool)value ? "true" : "false");
+                return;
+            }
+
+            if (value is int)
+            {
+                writer.Append(((int)value).ToInvariantString());
+                return;
+            }
+
+            if (value is double)
+            {
+                writer.Append(((double)value).ToString("r", CultureInfo.InvariantCulture));
+                return;
+            }
+
+            writer.Append("'");
+            writer.Append(value);
+            writer.Append("'");
         }
     }
 }

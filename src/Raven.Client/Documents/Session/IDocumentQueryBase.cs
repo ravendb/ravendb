@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Session
         ///  The last term that we asked the query to use equals on
         /// </summary>
         /// <param name="isAsync"></param>
-        KeyValuePair<string, string> GetLastEqualityTerm(bool isAsync = false);
+        KeyValuePair<string, object> GetLastEqualityTerm(bool isAsync = false);
         /// <summary>
         ///     Negate the next operation
         /// </summary>

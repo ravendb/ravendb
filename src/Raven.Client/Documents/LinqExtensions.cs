@@ -448,7 +448,7 @@ namespace Raven.Client.Documents
                 throw new InvalidOperationException("Could not suggest on a query that doesn't have a single equality check");
 
             query.Field = lastEqualityTerm.Key;
-            query.Term = lastEqualityTerm.Value;
+            query.Term = lastEqualityTerm.Value.ToString();
         }
 
         /// <summary>

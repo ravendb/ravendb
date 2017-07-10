@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// The last term that we asked the query to use equals on
         /// </summary>
-        KeyValuePair<string, string> GetLastEqualityTerm(bool isAsync = false);
+        KeyValuePair<string, object> GetLastEqualityTerm(bool isAsync = false);
 
         /// <summary>
         /// Get the index query for this query

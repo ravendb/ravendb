@@ -46,9 +46,9 @@ namespace Raven.Client.Documents.Session.Tokens
             }
 
             writer
-                .Append("FROM INDEX \"")
+                .Append("FROM INDEX '")
                 .Append(IndexName)
-                .Append("\"");
+                .Append("'");
         }
 
         public override QueryToken Clone()
