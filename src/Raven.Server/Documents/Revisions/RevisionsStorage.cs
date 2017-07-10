@@ -228,7 +228,7 @@ namespace Raven.Server.Documents.Revisions
             }
             finally
             {
-                documentFlags |= DocumentFlags.Versioned;
+                documentFlags |= DocumentFlags.HasRevisions;
             }
         }
 

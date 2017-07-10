@@ -162,7 +162,7 @@ namespace SlowTests.Client.Attachments
         private static void AssertNoRevisionAttachment(User revision, IDocumentSession session, bool isDeleteRevision = false)
         {
             var metadata = session.Advanced.GetMetadataFor(revision);
-            var flags = DocumentFlags.Versioned | DocumentFlags.Revision;
+            var flags = DocumentFlags.HasRevisions | DocumentFlags.Revision;
             if (isDeleteRevision)
                 flags = DocumentFlags.DeleteRevision;
             Assert.Equal(flags.ToString(), metadata[Constants.Documents.Metadata.Flags]);
@@ -172,7 +172,7 @@ namespace SlowTests.Client.Attachments
         private static void AssertRevisionAttachments(string[] names, int expectedCount, User revision, IDocumentSession session)
         {
             var metadata = session.Advanced.GetMetadataFor(revision);
-            Assert.Equal((DocumentFlags.Versioned | DocumentFlags.Revision | DocumentFlags.HasAttachments).ToString(), metadata[Constants.Documents.Metadata.Flags]);
+            Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.HasAttachments).ToString(), metadata[Constants.Documents.Metadata.Flags]);
             var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
             Assert.Equal(expectedCount, attachments.Length);
 
