@@ -16,21 +16,16 @@ namespace Raven.Client.Documents.Commands
     {
         private readonly DocumentConventions _conventions;
         private readonly JsonOperationContext _context;
-        private readonly string _indexName;
         private readonly IndexQuery _indexQuery;
         private readonly HashSet<string> _includes;
         private readonly bool _metadataOnly;
         private readonly bool _indexEntriesOnly;
 
-        public QueryCommand(DocumentConventions conventions, JsonOperationContext context, string indexName, IndexQuery indexQuery, HashSet<string> includes = null, bool metadataOnly = false, bool indexEntriesOnly = false)
+        public QueryCommand(DocumentConventions conventions, JsonOperationContext context, IndexQuery indexQuery, HashSet<string> includes = null, bool metadataOnly = false, bool indexEntriesOnly = false)
         {
-            if (indexQuery == null)
-                throw new ArgumentNullException(nameof(indexQuery));
-
             _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
             _context = context ?? throw new ArgumentNullException(nameof(context));
-            _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
-            _indexQuery = indexQuery;
+            _indexQuery = indexQuery ?? throw new ArgumentNullException(nameof(indexQuery));
             _includes = includes;
             _metadataOnly = metadataOnly;
             _indexEntriesOnly = indexEntriesOnly;
@@ -64,15 +59,12 @@ namespace Raven.Client.Documents.Commands
                 });
             }
 
-            var indexQueryUrl = _indexQuery.GetIndexQueryUrl(_indexName, "queries", includeQuery: method == HttpMethod.Get);
-
-            EnsureIsNotNullOrEmpty(indexQueryUrl, "index");
-
             var pathBuilder = new StringBuilder(node.Url);
             pathBuilder.Append("/databases/")
                 .Append(node.Database)
-                .Append('/')
-                .Append(indexQueryUrl);
+                .Append("/queries");
+
+            _indexQuery.AppendQueryString(pathBuilder, _conventions, appendQuery: method == HttpMethod.Get);
 
             if (_metadataOnly)
                 pathBuilder.Append("&metadata-only=true");

@@ -38,15 +38,15 @@ namespace SlowTests.Core.Commands
                     commands.Put("contacts/2", null, contact2, new Dictionary<string, object> { { "@collection", "Contacts" } });
                     commands.Put("contacts/3", null, contact3, new Dictionary<string, object> { { "@collection", "Contacts" } });
 
-                    store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
+                    store.Admin.Send(new PutIndexesOperation(new IndexDefinition
                     {
                         Maps = { "from contact in docs.Contacts select new { contact.FirstName }" },
                         Name = indexName
-                    }}));
+                    }));
 
                     WaitForIndexing(store);
 
-                    var companies = commands.Query(indexName, new IndexQuery() { Query = "" });
+                    var companies = commands.Query(new IndexQuery { Query = $"FROM INDEX '{indexName}'" });
                     Assert.Equal(3, companies.TotalResults);
 
                     var company = (BlittableJsonReaderObject)companies.Results[0];
@@ -88,21 +88,21 @@ namespace SlowTests.Core.Commands
                     WaitForIndexing(store);
                 }
 
-                var stringBuilder = new StringBuilder();
+                var stringBuilder = new StringBuilder("FROM INDEX 'Test' WHERE");
                 var maxLengthOfQueryUsingGetUrl = store.Conventions.MaxLengthOfQueryUsingGetUrl;
                 while (stringBuilder.Length < maxLengthOfQueryUsingGetUrl)
                 {
-                    stringBuilder.Append(@"(Name: ""Async Company #1"") OR");
+                    stringBuilder.Append(@" (Name = 'Async Company #1') OR");
                 }
-                stringBuilder.Append(@"(Name: ""Async Company #2"")");
+                stringBuilder.Append(@" (Name = 'Async Company #2')");
                 //const string queryString = @"(((TagID: ""6ba9d9d1\-6b33\-40df\-b0fe\-5091790d9519"") AND (AssociatedTagID: ""0f7e407f\-46c8\-4dcc\-bcae\-512934732af5"")) OR (((TagID: ""bd7ad8b4\-f9df\-4aa0\-9a18\-9517bfd4bd83"") AND (AssociatedTagID: ""0f7e407f\-46c8\-4dcc\-bcae\-512934732af5"")) OR (((TagID: ""d278241e\-d6b2\-4d53\-bf42\-ae2786bb8307"") AND (AssociatedTagID: ""0f7e407f\-46c8\-4dcc\-bcae\-512934732af5"")) OR (((TagID: ""4e470c6a\-b2cc\-47ba\-a8c6\-0e84cc3c2f98"") AND (AssociatedTagID: ""0f7e407f\-46c8\-4dcc\-bcae\-512934732af5"")) OR (((TagID: ""ba59490f\-7003\-463b\-bb3d\-7ffd3f016af9"") AND (AssociatedTagID: ""0f7e407f\-46c8\-4dcc\-bcae\-512934732af5"")) OR (((TagID: ""bd7ad8b4\-f9df\-4aa0\-9a18\-9517bfd4bd83"") AND (AssociatedTagID: ""53cd8b83\-8793\-4328\-a6f3\-d45755275766"")) OR (((TagID: ""bd7ad8b4\-f9df\-4aa0\-9a18\-9517bfd4bd83"") AND (AssociatedTagID: ""6ba9d9d1\-6b33\-40df\-b0fe\-5091790d9519"")) OR (((TagID: ""7227bfa3\-1da2\-48d5\-aefb\-5716fe538173"") AND (AssociatedTagID: ""6ba9d9d1\-6b33\-40df\-b0fe\-5091790d9519"")) OR (((TagID: ""66010435\-60bd\-4cb2\-bbba\-ef262c6f3b40"") AND (AssociatedTagID: ""6ba9d9d1\-6b33\-40df\-b0fe\-5091790d9519"")) OR (((TagID: ""95cda7f6\-181c\-49f7\-809b\-9436011c7f29"") AND (AssociatedTagID: ""6ba9d9d1\-6b33\-40df\-b0fe\-5091790d9519"")) OR (((TagID: ""6ce4f353\-93fa\-452c\-be97\-5c91c5a2a6bb"") AND (AssociatedTagID: ""6ba9d9d1\-6b33\-40df\-b0fe\-5091790d9519"")) OR (((TagID: ""6ba9d9d1\-6b33\-40df\-b0fe\-5091790d9519"") AND (AssociatedTagID: ""4e470c6a\-b2cc\-47ba\-a8c6\-0e84cc3c2f98"")) OR (((TagID: ""bd7ad8b4\-f9df\-4aa0\-9a18\-9517bfd4bd83"") AND (AssociatedTagID: ""4e470c6a\-b2cc\-47ba\-a8c6\-0e84cc3c2f98"")) OR (((TagID: ""d278241e\-d6b2\-4d53\-bf42\-ae2786bb8307"") AND (AssociatedTagID: ""4e470c6a\-b2cc\-47ba\-a8c6\-0e84cc3c2f98"")) OR (((TagID: ""ba59490f\-7003\-463b\-bb3d\-7ffd3f016af9"") AND (AssociatedTagID: ""4e470c6a\-b2cc\-47ba\-a8c6\-0e84cc3c2f98"")) OR (((TagID: ""fb638f78\-686d\-4d81\-b9f6\-332a1c936a36"") AND (AssociatedTagID: ""ba59490f\-7003\-463b\-bb3d\-7ffd3f016af9"")) OR ((TagID: ""bd7ad8b4\-f9df\-4aa0\-9a18\-9517bfd4bd83"") AND (AssociatedTagID: ""ba59490f\-7003\-463b\-bb3d\-7ffd3f016af9""))))))))))))))))))";
 
                 Assert.NotInRange(stringBuilder.Length, 0, store.Conventions.MaxLengthOfQueryUsingGetUrl);
-                var indexQuery = new IndexQuery() { Start = 0, PageSize = 50, Query = stringBuilder.ToString() };
+                var indexQuery = new IndexQuery { Start = 0, PageSize = 50, Query = stringBuilder.ToString() };
 
                 using (var commands = store.Commands())
                 {
-                    var queryResult = commands.Query("Test", indexQuery);
+                    var queryResult = commands.Query(indexQuery);
                     Assert.Equal(2, queryResult.TotalResults);
                 }
             }

@@ -465,8 +465,8 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType { Value = 2 },"CustomTypes/1");
-                    await session.StoreAsync(new CustomType { Value = 1 },"CustomTypes/2");
+                    await session.StoreAsync(new CustomType { Value = 2 }, "CustomTypes/1");
+                    await session.StoreAsync(new CustomType { Value = 1 }, "CustomTypes/2");
                     await session.SaveChangesAsync();
                 }
 
@@ -499,8 +499,8 @@ this.Value = another.Value;
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType { Value = 2 },"CustomTypes/1");
-                    await session.StoreAsync(new CustomType { Value = 1 },"CustomTypes/2");
+                    await session.StoreAsync(new CustomType { Value = 2 }, "CustomTypes/1");
+                    await session.StoreAsync(new CustomType { Value = 1 }, "CustomTypes/2");
                     await session.SaveChangesAsync();
                 }
 
@@ -607,7 +607,7 @@ this.Value = another.Value;
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType { Value = 10 },"CustomTypes/1");
+                    await session.StoreAsync(new CustomType { Value = 10 }, "CustomTypes/1");
                     await session.SaveChangesAsync();
                 }
 
@@ -724,7 +724,7 @@ this.Value = another.Value;
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType { Value = 10 },"CustomTypes/1");
+                    await session.StoreAsync(new CustomType { Value = 10 }, "CustomTypes/1");
                     await session.SaveChangesAsync();
                 }
 
@@ -822,8 +822,8 @@ this.Value = another.Value;
                         .ToListAsync();
                 }
 
-                var operation = await store.Operations.SendAsync(new PatchByIndexOperation("TestIndex",
-                    new IndexQuery() { Query = "Value:1" },
+                var operation = await store.Operations.SendAsync(new PatchByIndexOperation(
+                    new IndexQuery { Query = "FROM INDEX 'TestIndex' WHERE Value = 1" },
                     new PatchRequest { Script = @"PutDocument('NewItem/3', {'CopiedValue': this.Value });" }),
                     CancellationToken.None);
                 await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
@@ -942,8 +942,8 @@ this.Value = another.Value;
 
                 WaitForIndexing(store);
 
-                var operation = store.Operations.Send(new PatchByIndexOperation("TestIndex",
-                    new IndexQuery() { Query = "Owner:Bob" },
+                var operation = store.Operations.Send(new PatchByIndexOperation(
+                    new IndexQuery { Query = "FROM INDEX 'TestIndex' WHERE Owner = 'Bob'" },
                     new PatchRequest { Script = SampleScript }));
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(15));

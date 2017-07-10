@@ -58,7 +58,7 @@ namespace SlowTests.MailingList
                         Assert.Equal(3, list.Count);
                     }
 
-                    var query = commands.Query("HouseByRent", new IndexQuery() { Query = "*:* AND -Rent:[[NULL_VALUE]]" });
+                    var query = commands.Query(new IndexQuery { Query = "FROM INDEX 'HouseByRent' WHERE true AND NOT RENT = null" });
 
                     Assert.Equal(1, query.TotalResults);
                 }

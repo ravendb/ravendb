@@ -33,8 +33,6 @@ namespace Raven.Client.Documents.Conventions
         private readonly Dictionary<string, SortOptions> _customDefaultSortOptions = new Dictionary<string, SortOptions>();
         private readonly List<Type> _customRangeTypes = new List<Type>();
 
-        private readonly List<Tuple<Type, TryConvertValueForQueryDelegate<object>>> _listOfQueryValueConverters = new List<Tuple<Type, TryConvertValueForQueryDelegate<object>>>();
-
         private readonly IList<Tuple<Type, Func<string, object, Task<string>>>> _listOfRegisteredIdConventionsAsync = new List<Tuple<Type, Func<string, object, Task<string>>>>();
 
         private readonly IList<Tuple<Type, Func<ValueType, string>>> _listOfRegisteredIdLoadConventions = new List<Tuple<Type, Func<ValueType, string>>>();
@@ -401,43 +399,6 @@ namespace Raven.Client.Documents.Conventions
         public DocumentConventions Clone()
         {
             return (DocumentConventions)MemberwiseClone();
-        }
-
-        public void RegisterQueryValueConverter<T>(TryConvertValueForQueryDelegate<T> converter, SortOptions defaultSortOption = SortOptions.String, bool usesRangeField = false)
-        {
-            TryConvertValueForQueryDelegate<object> actual = (string name, object value, QueryValueConvertionType convertionType, out string strValue) =>
-            {
-                if (value is T)
-                    return converter(name, (T)value, convertionType, out strValue);
-                strValue = null;
-                return false;
-            };
-
-            int index;
-            for (index = 0; index < _listOfQueryValueConverters.Count; index++)
-            {
-                var entry = _listOfQueryValueConverters[index];
-                if (entry.Item1.IsAssignableFrom(typeof(T)))
-                    break;
-            }
-
-            _listOfQueryValueConverters.Insert(index, Tuple.Create(typeof(T), actual));
-
-            if (defaultSortOption != SortOptions.String)
-                _customDefaultSortOptions.Add(typeof(T).Name, defaultSortOption);
-
-            if (usesRangeField)
-                _customRangeTypes.Add(typeof(T));
-        }
-
-
-        public bool TryConvertValueForQuery(string fieldName, object value, QueryValueConvertionType convertionType, out string strValue)
-        {
-            foreach (var queryValueConverterTuple in _listOfQueryValueConverters
-                .Where(tuple => tuple.Item1.IsInstanceOfType(value)))
-                return queryValueConverterTuple.Item2(fieldName, value, convertionType, out strValue);
-            strValue = null;
-            return false;
         }
 
         public static RangeType GetRangeType(object o)

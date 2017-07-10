@@ -4,10 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Collections.Generic;
 using System.Threading;
 using FastTests;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
@@ -57,13 +55,10 @@ namespace SlowTests.Bugs
                                                                               }}}));
 
 
-                while (store.Commands().Query("EmailAndProject", new IndexQuery()).IsStale)
+                while (store.Commands().Query(new IndexQuery { Query = "FROM INDEX 'EmailAndProject'" }).IsStale)
                     Thread.Sleep(100);
 
-                var queryResult = store.Commands().Query("EmailAndProject", new IndexQuery()
-                {
-                    //FieldsToFetch = new [] {"email"}
-                });
+                var queryResult = store.Commands().Query(new IndexQuery { Query = "SELECT email FROM INDEX 'EmailAndProject'" });
 
                 Assert.Equal(9, queryResult.Results.Length);
                 

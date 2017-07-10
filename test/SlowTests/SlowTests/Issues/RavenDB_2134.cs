@@ -45,10 +45,10 @@ namespace SlowTests.SlowTests.Issues
                 WaitForIndexing(store,timeout: TimeSpan.FromMinutes(2));
                 var queryToDelete = new IndexQuery()
                 {
-                    Query = string.Empty
+                    Query = $"FROM INDEX '{stats.IndexName}'"
                 };
 
-                var operation = store.Operations.Send(new DeleteByIndexOperation(stats.IndexName, queryToDelete));
+                var operation = store.Operations.Send(new DeleteByIndexOperation(queryToDelete));
                 operation.WaitForCompletion(TimeSpan.FromMinutes(2));
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(2));

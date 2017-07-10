@@ -507,7 +507,7 @@ namespace FastTests.Client.Indexing
 
                 using (var commands = store.Commands())
                 {
-                    var command = new ExplainQueryCommand(store.Conventions, commands.Context, "dynamic/Users", new IndexQuery());
+                    var command = new ExplainQueryCommand(store.Conventions, commands.Context, new IndexQuery { Query = "FROM Users" });
 
                     await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
 

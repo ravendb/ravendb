@@ -40,15 +40,8 @@ namespace Raven.Client.Documents.Session.Operations
                 throw new ArgumentException("Key cannot be null or empty index");
 
             _session.IncrementRequestCount();
-            string path;
-            if (query.Query != null && query.Query.Length > _session.Conventions.MaxLengthOfQueryUsingGetUrl)
-            {
-                path = query.GetIndexQueryUrl(indexName, "streams/queries", includeQuery: false);
-            }
-            else
-            {
-                path = query.GetIndexQueryUrl(indexName, "streams/queries");
-            }
+
+            var path = $"streams/queries{query.GetQueryString(_session.Conventions, appendQuery: query.Query == null || query.Query.Length <= _session.Conventions.MaxLengthOfQueryUsingGetUrl)}";
 
             return new StreamCommand(path, string.IsNullOrWhiteSpace(query.Transformer) == false);
         }

@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
@@ -733,7 +732,7 @@ namespace Raven.Client.Documents.Session
                 QueryOperation = InitializeQueryOperation();
             }
 
-            var lazyQueryOperation = new LazyQueryOperation<T>(QueryOperation, AfterQueryExecutedCallback);
+            var lazyQueryOperation = new LazyQueryOperation<T>(TheSession.Conventions, QueryOperation, AfterQueryExecutedCallback);
 
             return ((AsyncDocumentSession)TheSession).AddLazyCountOperation(lazyQueryOperation, token);
         }
@@ -1026,7 +1025,7 @@ namespace Raven.Client.Documents.Session
                 QueryOperation = InitializeQueryOperation();
             }
 
-            var lazyQueryOperation = new LazyQueryOperation<T>(QueryOperation, AfterQueryExecutedCallback);
+            var lazyQueryOperation = new LazyQueryOperation<T>(TheSession.Conventions, QueryOperation, AfterQueryExecutedCallback);
             return ((AsyncDocumentSession)TheSession).AddLazyOperation(lazyQueryOperation, onEval);
         }
 
@@ -1095,7 +1094,7 @@ namespace Raven.Client.Documents.Session
                 PageSize = PageSize,
                 WhereTokens = new LinkedList<QueryToken>(WhereTokens.Select(x => x.Clone())),
                 OrderByTokens = new LinkedList<QueryToken>(OrderByTokens.Select(x => x.Clone())),
-                //QueryText = new StringBuilder(QueryText.ToString()),
+                QueryParameters = QueryParameters,
                 Start = Start,
                 Timeout = Timeout,
                 CutoffEtag = CutoffEtag,

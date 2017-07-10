@@ -79,7 +79,7 @@ namespace SlowTests.MailingList
 
                     using (var commands = documentStore.Commands())
                     {
-                        var queryResult = commands.Query(typeof(CarIndex).Name, indexQuery);
+                        var queryResult = commands.Query(indexQuery);
 
                         var carLots = queryResult
                             .Results

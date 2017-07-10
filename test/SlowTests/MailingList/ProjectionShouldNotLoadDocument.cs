@@ -48,11 +48,7 @@ namespace SlowTests.MailingList
                 {
                     commands.Put("FOO", null, new { Name = "Ayende" }, new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "Foos" } });
 
-                    var result = commands.Query("dynamic", new IndexQuery()
-                    {
-                        //FieldsToFetch = new[] { "Name" },
-                        Query = "Name:Ayende"
-                    });
+                    var result = commands.Query(new IndexQuery { Query = "SELECT Name FROM @AllDocs WHERE NAME = 'Ayende'" });
 
                     // if this is upper case, then we loaded this from the db, because we used Auto-Index that is not storing fields
                     var json = (BlittableJsonReaderObject)result.Results[0];
@@ -64,11 +60,7 @@ namespace SlowTests.MailingList
                     new Index1().Execute(store);
                     WaitForIndexing(store);
 
-                    result = commands.Query("Index1", new IndexQuery()
-                    {
-                        //FieldsToFetch = new[] { "Name" },
-                        Query = "Name:Ayende"
-                    });
+                    result = commands.Query(new IndexQuery { Query = "SELECT Name FROM INDEX 'Index1' WHERE Name = 'Ayende'" });
 
                     // if this is lower case, then we loaded this from the index, not from the db, because w used Static-Index with stored field
                     json = (BlittableJsonReaderObject)result.Results[0];

@@ -154,7 +154,7 @@ namespace SlowTests.Core.Commands
 
                 using (var commands = store.Commands())
                 {
-                    var metadataOnly = commands.Query("test", new IndexQuery(), metadataOnly: true).Results;
+                    var metadataOnly = commands.Query(new IndexQuery { Query = "FROM INDEX 'test'" }, metadataOnly: true).Results;
 
                     foreach (BlittableJsonReaderObject item in metadataOnly)
                     {
@@ -163,10 +163,7 @@ namespace SlowTests.Core.Commands
                         Assert.True(item.TryGet(Constants.Documents.Metadata.Key, out _));
                     }
 
-                    var entriesOnly = commands.Query("test", new IndexQuery()
-                    {
-                        //SortedFields = new[] { new SortedField("Name") }
-                    }, indexEntriesOnly: true).Results;
+                    var entriesOnly = commands.Query(new IndexQuery { Query = "FROM INDEX 'test' ORDER BY Name ASC" }, indexEntriesOnly: true).Results;
 
                     for (int i = 0; i < 5; i++)
                     {
@@ -180,7 +177,7 @@ namespace SlowTests.Core.Commands
 
                         string id;
                         Assert.True(item.TryGet(Constants.Documents.Indexing.Fields.DocumentIdFieldName, out id));
-                        Assert.Equal("users/" + (i + 1)+ "-a", id);
+                        Assert.Equal("users/" + (i + 1) + "-a", id);
                     }
                 }
             }

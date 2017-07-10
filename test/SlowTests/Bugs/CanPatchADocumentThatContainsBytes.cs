@@ -42,7 +42,7 @@ namespace SlowTests.Bugs
 
                 using (var session = store.OpenSession())
                 {
-                    var index = new IndexQuery()
+                    var index = new IndexQuery
                     {
                         Query =
                             session.Query<PrimarySkills.Result, PrimarySkills>()
@@ -58,7 +58,7 @@ for (var i = 0; i < this.Skills.$values.length; i++) {
 "
                     };
 
-                    var operation = store.Operations.Send(new PatchByIndexOperation("PrimarySkills", index, patch));
+                    var operation = store.Operations.Send(new PatchByIndexOperation(index, patch));
 
                     operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 

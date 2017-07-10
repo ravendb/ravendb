@@ -13,9 +13,9 @@ namespace SlowTests.MailingList
             {
                 using (var commands = store.Commands())
                 {
-                    commands.Query("dynamic", new IndexQuery()
+                    commands.Query(new IndexQuery
                     {
-                        Query = "PortalId:0 AND Query:(*) QueryBoosted:(*)"
+                        Query = "FROM @AllDocs WHERE PortalId = 0 AND Regex(Query, '(*)') OR Regex(QueryBoosted, '(*)')"
                     });
                 }
             }

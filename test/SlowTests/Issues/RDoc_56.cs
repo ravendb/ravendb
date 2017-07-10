@@ -226,7 +226,7 @@ namespace SlowTests.Issues
 
                 using (var commands = store.Commands())
                 {
-                    var arrayResult = commands.Query(indexName, new IndexQuery(), metadataOnly: false, indexEntriesOnly: true);
+                    var arrayResult = commands.Query(new IndexQuery { Query = $"FROM INDEX '{indexName}'" }, metadataOnly: false, indexEntriesOnly: true);
 
                     Assert.Equal(expectedNumberOfResults, arrayResult.Results.Length);
                 }

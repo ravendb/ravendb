@@ -5,7 +5,6 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries;
@@ -1065,7 +1064,7 @@ namespace Raven.Client.Documents.Session
             }
 
 
-            var lazyQueryOperation = new LazyQueryOperation<T>(QueryOperation, AfterQueryExecutedCallback);
+            var lazyQueryOperation = new LazyQueryOperation<T>(TheSession.Conventions, QueryOperation, AfterQueryExecutedCallback);
 
             return ((DocumentSession)TheSession).AddLazyCountOperation(lazyQueryOperation);
         }
@@ -1081,7 +1080,7 @@ namespace Raven.Client.Documents.Session
                 QueryOperation = InitializeQueryOperation();
             }
 
-            var lazyQueryOperation = new LazyQueryOperation<T>(QueryOperation, AfterQueryExecutedCallback);
+            var lazyQueryOperation = new LazyQueryOperation<T>(TheSession.Conventions, QueryOperation, AfterQueryExecutedCallback);
             return ((DocumentSession)TheSession).AddLazyOperation(lazyQueryOperation, onEval);
         }
 
@@ -1122,7 +1121,7 @@ namespace Raven.Client.Documents.Session
                 PageSize = PageSize,
                 WhereTokens = new LinkedList<QueryToken>(WhereTokens.Select(x => x.Clone())),
                 OrderByTokens = new LinkedList<QueryToken>(OrderByTokens.Select(x => x.Clone())),
-                //QueryText = new StringBuilder(QueryText.ToString()),
+                QueryParameters = QueryParameters,
                 Start = Start,
                 Timeout = Timeout,
                 CutoffEtag = CutoffEtag,

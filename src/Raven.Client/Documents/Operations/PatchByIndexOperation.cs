@@ -21,26 +21,18 @@ namespace Raven.Client.Documents.Operations
             : base(new TIndexCreator().IndexName, expression, patch, options)
         {
         }
-
-        protected PatchByIndexOperation(string indexName, IndexQuery queryToUpdate, PatchRequest patch, QueryOperationOptions options = null)
-            : base(indexName, queryToUpdate, patch, options)
-        {
-        }
     }
 
     public class PatchByIndexOperation<TEntity> : PatchByIndexOperation
     {
+        private readonly string _indexName;
         private readonly Expression<Func<TEntity, bool>> _expression;
 
         public PatchByIndexOperation(string indexName, Expression<Func<TEntity, bool>> expression, PatchRequest patch, QueryOperationOptions options = null)
-            : base(indexName, DummyQuery, patch, options)
+            : base(DummyQuery, patch, options)
         {
+            _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
             _expression = expression ?? throw new ArgumentNullException(nameof(expression));
-        }
-
-        protected PatchByIndexOperation(string indexName, IndexQuery queryToUpdate, PatchRequest patch, QueryOperationOptions options = null)
-            : base(indexName, queryToUpdate, patch, options)
-        {
         }
 
         public override RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
@@ -49,7 +41,7 @@ namespace Raven.Client.Documents.Operations
             {
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Query<TEntity>().Where(_expression);
+                    var query = session.Query<TEntity>(_indexName).Where(_expression);
                     _queryToUpdate = new IndexQuery
                     {
                         Query = query.ToString()
@@ -65,14 +57,12 @@ namespace Raven.Client.Documents.Operations
     {
         protected static IndexQuery DummyQuery = new IndexQuery();
 
-        protected readonly string _indexName;
         protected IndexQuery _queryToUpdate;
         private readonly PatchRequest _patch;
         private readonly QueryOperationOptions _options;
 
-        public PatchByIndexOperation(string indexName, IndexQuery queryToUpdate, PatchRequest patch, QueryOperationOptions options = null)
+        public PatchByIndexOperation(IndexQuery queryToUpdate, PatchRequest patch, QueryOperationOptions options = null)
         {
-            _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
             _queryToUpdate = queryToUpdate ?? throw new ArgumentNullException(nameof(queryToUpdate));
             _patch = patch ?? throw new ArgumentNullException(nameof(patch));
             _options = options;
@@ -80,38 +70,32 @@ namespace Raven.Client.Documents.Operations
 
         public virtual RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new PatchByIndexCommand(conventions, context, _indexName, _queryToUpdate, _patch, _options);
+            return new PatchByIndexCommand(conventions, context, _queryToUpdate, _patch, _options);
         }
 
         private class PatchByIndexCommand : RavenCommand<OperationIdResult>
         {
             private readonly JsonOperationContext _context;
-            private readonly string _indexName;
+            private readonly DocumentConventions _conventions;
             private readonly IndexQuery _queryToUpdate;
             private readonly BlittableJsonReaderObject _patch;
             private readonly QueryOperationOptions _options;
 
-            public PatchByIndexCommand(DocumentConventions conventions, JsonOperationContext context, string indexName, IndexQuery queryToUpdate, PatchRequest patch, QueryOperationOptions options = null)
+            public PatchByIndexCommand(DocumentConventions conventions, JsonOperationContext context, IndexQuery queryToUpdate, PatchRequest patch, QueryOperationOptions options = null)
             {
-                if (conventions == null)
-                    throw new ArgumentNullException(nameof(conventions));
-                if (queryToUpdate == null)
-                    throw new ArgumentNullException(nameof(queryToUpdate));
                 if (patch == null)
                     throw new ArgumentNullException(nameof(patch));
 
                 _context = context ?? throw new ArgumentNullException(nameof(context));
-                _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
-                _queryToUpdate = queryToUpdate;
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+                _queryToUpdate = queryToUpdate ?? throw new ArgumentNullException(nameof(queryToUpdate));
                 _patch = EntityToBlittable.ConvertEntityToBlittable(patch, conventions, _context);
                 _options = options ?? new QueryOperationOptions();
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                var u = $"{node.Url}/databases/{node.Database}";
-                url = $"{_queryToUpdate.GetIndexQueryUrl(u, _indexName, "queries")}&allowStale=" +
-                      $"{_options.AllowStale}&maxOpsPerSec={_options.MaxOpsPerSecond}&details={_options.RetrieveDetails}";
+                url = $"{node.Url}/databases/{node.Database}/queries{_queryToUpdate.GetQueryString(_conventions)}&allowStale={_options.AllowStale}&maxOpsPerSec={_options.MaxOpsPerSecond}&details={_options.RetrieveDetails}";
 
                 if (_options.StaleTimeout != null)
                     url += "&staleTimeout=" + _options.StaleTimeout;

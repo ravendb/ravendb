@@ -1,10 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Linq;
 using FastTests;
-using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
@@ -34,7 +29,7 @@ namespace SlowTests.Bugs
                         .OrderBy(x => x.Name)
                         .ToList();
                 }
-                var indexDefinition = store.Admin.Send(new GetIndexOperation(stats.IndexName));              
+                var indexDefinition = store.Admin.Send(new GetIndexOperation(stats.IndexName));
                 Assert.Equal(SortOptions.String, indexDefinition.Fields["Name"].Sort);
             }
         }
@@ -72,15 +67,9 @@ namespace SlowTests.Bugs
                         .ToList();
                 }
 
-                var indexQuery = new IndexQuery()
-                {
-                   // SortedFields = new[]
-                   //{
-                   //     new SortedField("Name"),
-                   // }
-                };
-                
-                var indexName = store.Commands().Query("dynamic/GameServers", indexQuery).IndexName;
+                var indexQuery = new IndexQuery { Query = "FROM GameServers ORDER BY Name ASC" };
+
+                var indexName = store.Commands().Query(indexQuery).IndexName;
                 Assert.Equal(stats.IndexName, indexName);
             }
         }

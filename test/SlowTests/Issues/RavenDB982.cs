@@ -27,7 +27,7 @@ namespace SlowTests.Issues
 
                 using (var commands = store.Commands())
                 {
-                    var queryResult = commands.Query("PeopleByAge", new IndexQuery());
+                    var queryResult = commands.Query(new IndexQuery { Query = "FROM INDEX 'PeopleByAge'"});
 
                     var result = (BlittableJsonReaderObject)queryResult.Results[0];
 

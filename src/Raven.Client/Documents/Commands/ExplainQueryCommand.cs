@@ -18,17 +18,12 @@ namespace Raven.Client.Documents.Commands
 
         private readonly DocumentConventions _conventions;
         private readonly JsonOperationContext _context;
-        private readonly string _indexName;
         private readonly IndexQuery _indexQuery;
 
-        public ExplainQueryCommand(DocumentConventions conventions, JsonOperationContext context, string indexName, IndexQuery indexQuery)
+        public ExplainQueryCommand(DocumentConventions conventions, JsonOperationContext context, IndexQuery indexQuery)
         {
-            if (indexQuery == null)
-                throw new ArgumentNullException(nameof(indexQuery));
-
             _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
             _context = context ?? throw new ArgumentNullException(nameof(context));
-            _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
             _indexQuery = indexQuery;
         }
 
@@ -57,8 +52,7 @@ namespace Raven.Client.Documents.Commands
                 });
             }
 
-            var indexQueryUrl = $"{_indexQuery.GetIndexQueryUrl(_indexName, "queries", includeQuery: method == HttpMethod.Get)}&debug=explain";
-            url = $"{node.Url}/databases/{node.Database}/" + indexQueryUrl;
+            url = $"{node.Url}/databases/{node.Database}/queries/{_indexQuery.GetQueryString(_conventions, appendQuery: method == HttpMethod.Get)}&debug=explain";
 
             return request;
         }

@@ -52,19 +52,17 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
             {
                 using (var commands = store.Commands())
                 {
-                    var queryResult = commands.Query("dynamic",
-                        new IndexQuery()
-                        {
-                            Query = "Name:Ayende AND Age:3"
-                        });
+                    var queryResult = commands.Query(new IndexQuery()
+                    {
+                        Query = "FROM @AllDocs WHERE Name = 'Ayende' AND Age = 3"
+                    });
 
                     Assert.Equal("Auto/AllDocs/ByAgeAndName", queryResult.IndexName);
 
-                    queryResult = commands.Query("dynamic",
-                        new IndexQuery()
-                        {
-                            Query = "Name:Ayende"
-                        });
+                    queryResult = commands.Query(new IndexQuery()
+                    {
+                        Query = "FROM @AllDocs WHERE Name = 'Ayende'"
+                    });
 
                     Assert.Equal("Auto/AllDocs/ByAgeAndName", queryResult.IndexName);
                 }
@@ -76,27 +74,26 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexesOperation(new[] {
-                                                new IndexDefinition
-                                                {
-                                                    Name = "test",
-                                                    Maps = { "from doc in docs select new { doc.Name, doc.Age }" }
-                                                }}));
+                store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                {
+                    Name = "test",
+                    Maps = { "from doc in docs select new { doc.Name, doc.Age }" }
+                }));
 
                 using (var commands = store.Commands())
                 {
-                    var queryResult = commands.Query("dynamic",
-                        new IndexQuery()
+                    var queryResult = commands.Query(
+                        new IndexQuery
                         {
-                            Query = "Name:Ayende AND Age:3"
+                            Query = "FROM @AllDocs WHERE Name = 'Ayende' AND Age = 3"
                         });
 
                     Assert.Equal("test", queryResult.IndexName);
 
-                    queryResult = commands.Query("dynamic",
-                        new IndexQuery()
+                    queryResult = commands.Query(
+                        new IndexQuery
                         {
-                            Query = "Name:Ayende"
+                            Query = "FROM @AllDocs WHERE Name = 'Ayende'"
                         });
 
                     Assert.Equal("test", queryResult.IndexName);
@@ -111,26 +108,26 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
             {
                 using (var commands = store.Commands())
                 {
-                    var queryResult = commands.Query("dynamic",
+                    var queryResult = commands.Query(
                         new IndexQuery()
                         {
-                            Query = "Name:3"
+                            Query = "FROM @AllDocs WHERE Name = 3"
                         });
 
                     Assert.Equal("Auto/AllDocs/ByName", queryResult.IndexName);
 
-                    queryResult = commands.Query("dynamic",
+                    queryResult = commands.Query(
                         new IndexQuery()
                         {
-                            Query = "Age:3"
+                            Query = "FROM @AllDocs WHERE Age = 3"
                         });
 
                     Assert.Equal("Auto/AllDocs/ByAgeAndName", queryResult.IndexName);
 
-                    queryResult = commands.Query("dynamic",
-                        new IndexQuery()
+                    queryResult = commands.Query(
+                        new IndexQuery
                         {
-                            Query = "Name:Ayende"
+                            Query = "FROM @AllDocs WHERE Name = 'Ayende'"
                         });
 
                     Assert.Equal("Auto/AllDocs/ByAgeAndName", queryResult.IndexName);
@@ -145,26 +142,26 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
             {
                 using (var commands = store.Commands())
                 {
-                    var queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery()
+                    var queryResult = commands.Query(
+                        new IndexQuery
                         {
-                            Query = "Name:3"
+                            Query = "FROM Users WHERE Name = 3"
                         });
 
                     Assert.Equal("Auto/Users/ByName", queryResult.IndexName);
 
-                    queryResult = commands.Query("dynamic/Users",
+                    queryResult = commands.Query(
                         new IndexQuery()
                         {
-                            Query = "Age:3"
+                            Query = "FROM Users WHERE Age = 3"
                         });
 
                     Assert.Equal("Auto/Users/ByAgeAndName", queryResult.IndexName);
 
-                    queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery()
+                    queryResult = commands.Query(
+                        new IndexQuery
                         {
-                            Query = "Name:Ayende"
+                            Query = "FROM Users WHERE Name = 'Ayende'"
                         });
 
                     Assert.Equal("Auto/Users/ByAgeAndName", queryResult.IndexName);
@@ -178,26 +175,26 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
             {
                 using (var commands = store.Commands())
                 {
-                    var queryResult = commands.Query("dynamic/Users",
+                    var queryResult = commands.Query(
                         new IndexQuery()
                         {
-                            Query = "Name:3"
+                            Query = "FROM Users WHERE Name = 3"
                         });
 
                     Assert.Equal("Auto/Users/ByName", queryResult.IndexName);
 
-                    queryResult = commands.Query("dynamic/Cars",
+                    queryResult = commands.Query(
                         new IndexQuery()
                         {
-                            Query = "Age:3"
+                            Query = "FROM Cars WHERE Age = 3"
                         });
 
                     Assert.Equal("Auto/Cars/ByAge", queryResult.IndexName);
 
-                    queryResult = commands.Query("dynamic/Users",
+                    queryResult = commands.Query(
                         new IndexQuery()
                         {
-                            Query = "Name:Ayende"
+                            Query = "FROM Users WHERE Name = 'Ayende'"
                         });
 
                     Assert.Equal("Auto/Users/ByName", queryResult.IndexName);
@@ -226,18 +223,18 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
 
                 using (var commands = store.Commands())
                 {
-                    var queryResult = commands.Query("dynamic",
+                    var queryResult = commands.Query(
                         new IndexQuery()
                         {
-                            Query = "Name:Ayende AND Age:3"
+                            Query = "FROM @AllDocs WHERE Name = 'Ayende' AND Age = 3"
                         });
 
                     Assert.Equal("test", queryResult.IndexName);
 
-                    queryResult = commands.Query("dynamic",
+                    queryResult = commands.Query(
                         new IndexQuery()
                         {
-                            Query = "Name:Ayende"
+                            Query = "FROM @AllDocs WHERE Name = 'Ayende'"
                         });
 
                     Assert.Equal("test", queryResult.IndexName);
@@ -267,18 +264,18 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
 
                 using (var commands = store.Commands())
                 {
-                    var queryResult = commands.Query("dynamic",
+                    var queryResult = commands.Query(
                         new IndexQuery()
                         {
-                            Query = "Name:Ayende AND Age:3"
+                            Query = "FROM @AllDocs WHERE Name = 'Ayende' AND Age = 3"
                         });
 
                     Assert.Equal("test", queryResult.IndexName);
 
-                    queryResult = commands.Query("test2",
+                    queryResult = commands.Query(
                         new IndexQuery()
                         {
-                            Query = "Name:Ayende"
+                            Query = "FROM FROM INDEX 'test2' WHERE Name = 'Ayende'"
                         });
 
                     Assert.Equal("test2", queryResult.IndexName);
@@ -305,20 +302,20 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
 
                 using (var commands = store.Commands())
                 {
-                    var queryResult = commands.Query("dynamic",
+                    var queryResult = commands.Query(
                         new IndexQuery()
                         {
-                            Query = "Title:Matt"
+                            Query = "FROM @AllDocs WHERE Title = 'Matt'"
                         });
 
                     //Because the "test" index has a field set to Analyzed (and the default is Non-Analyzed), 
                     //it should NOT be considered a match by the query optimizer!
                     Assert.NotEqual("test", queryResult.IndexName);
 
-                    queryResult = commands.Query("dynamic",
+                    queryResult = commands.Query(
                         new IndexQuery()
                         {
-                            Query = "BodyText:Matt"
+                            Query = "FROM @AllDocs WHERE BodyText = 'Matt'"
                         });
                     //This query CAN use the existing index because "BodyText" is NOT set to analyzed
                     Assert.Equal("test", queryResult.IndexName);

@@ -117,14 +117,14 @@ namespace SlowTests.Core.Commands
 
                     WaitForIndexing(store);
 
-                    var operation = store.Operations.Send(new PatchByIndexOperation("MyIndex", new IndexQuery() { Query = "" }, new PatchRequest { Script = "this.NewName = 'NewValue';" }));
+                    var operation = store.Operations.Send(new PatchByIndexOperation(new IndexQuery { Query = "FROM INDEX 'MyIndex'" }, new PatchRequest { Script = "this.NewName = 'NewValue';" }));
                     operation.WaitForCompletion(TimeSpan.FromSeconds(15));
 
                     dynamic document = await commands.GetAsync("items/1");
                     Assert.Equal("NewValue", document.NewName.ToString());
                     WaitForIndexing(store);
 
-                    operation = store.Operations.Send(new DeleteByIndexOperation("MyIndex", new IndexQuery() { Query = "" }));
+                    operation = store.Operations.Send(new DeleteByIndexOperation(new IndexQuery() { Query = $"FROM INDEX 'MyIndex'" }));
                     operation.WaitForCompletion(TimeSpan.FromSeconds(15));
 
                     var documents = await commands.GetAsync(0, 25);

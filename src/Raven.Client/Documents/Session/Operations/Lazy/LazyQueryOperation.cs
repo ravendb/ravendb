@@ -1,6 +1,7 @@
 using System;
 using System.Text;
 using Raven.Client.Documents.Commands.MultiGet;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
@@ -9,24 +10,23 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 {
     internal class LazyQueryOperation<T> : ILazyOperation
     {
+        private readonly DocumentConventions _conventions;
         private readonly QueryOperation _queryOperation;
         private readonly Action<QueryResult> _afterQueryExecuted;
 
-        public LazyQueryOperation(QueryOperation queryOperation, Action<QueryResult> afterQueryExecuted)
+        public LazyQueryOperation(DocumentConventions conventions, QueryOperation queryOperation, Action<QueryResult> afterQueryExecuted)
         {
+            _conventions = conventions;
             _queryOperation = queryOperation;
             _afterQueryExecuted = afterQueryExecuted;
         }
 
         public GetRequest CreateRequest()
         {
-            var stringBuilder = new StringBuilder();
-            _queryOperation.IndexQuery.AppendQueryString(stringBuilder);
-
             var request = new GetRequest
             {
-                Url = "/queries/" + _queryOperation.IndexName,
-                Query = stringBuilder.ToString()
+                Url = "/queries",
+                Query = _queryOperation.IndexQuery.GetQueryString(_conventions)
             };
 
             return request;

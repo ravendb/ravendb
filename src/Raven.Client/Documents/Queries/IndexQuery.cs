@@ -6,10 +6,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Reflection;
 using System.Text;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
+using Sparrow.Extensions;
 
 namespace Raven.Client.Documents.Queries
 {
@@ -23,62 +27,25 @@ namespace Raven.Client.Documents.Queries
             return base.Equals(other) && DictionaryExtensions.ContentEquals(TransformerParameters, other.TransformerParameters);
         }
 
-        /// <summary>
-        /// Gets the index query URL.
-        /// </summary>
-        public string GetIndexQueryUrl(string operationUrl, string index, string operationName, bool includeQuery = true)
-        {
-            if (operationUrl.EndsWith("/"))
-                operationUrl = operationUrl.Substring(0, operationUrl.Length - 1);
-            var path = new StringBuilder()
-                .Append(operationUrl)
-                .Append("/")
-                .Append(operationName)
-                .Append("/")
-                .Append(index);
-
-            AppendQueryString(path, includeQuery);
-
-            return path.ToString();
-        }
-
-        // TODO Iftah, merge the two GetIndexQueryUrl()
-        /// <summary>
-        /// Gets the index query URL.
-        /// </summary>
-        public string GetIndexQueryUrl(string index, string operationName, bool includeQuery = true)
-        {
-            var path = new StringBuilder();
-
-            path.Append(operationName)
-                .Append("/")
-                .Append(index);
-
-            AppendQueryString(path, includeQuery);
-
-            return path.ToString();
-        }
-
-        public string GetMinimalQueryString()
+        public string GetMinimalQueryString(QueryConventions conventions, bool appendQuery = true)
         {
             var sb = new StringBuilder();
-            AppendMinimalQueryString(sb);
+            AppendMinimalQueryString(sb, conventions, appendQuery);
             return sb.ToString();
         }
 
-
-        public string GetQueryString()
+        public string GetQueryString(QueryConventions conventions, bool appendQuery = true)
         {
             var sb = new StringBuilder();
-            AppendQueryString(sb);
+            AppendQueryString(sb, conventions, appendQuery);
             return sb.ToString();
         }
 
-        public void AppendQueryString(StringBuilder path, bool includeQuery = true)
+        public void AppendQueryString(StringBuilder path, QueryConventions conventions, bool appendQuery = true)
         {
             path.Append("?");
 
-            AppendMinimalQueryString(path, includeQuery);
+            AppendMinimalQueryString(path, conventions, appendQuery);
 
             if (Start != 0)
                 path.Append("&start=").Append(Start);
@@ -110,9 +77,12 @@ namespace Raven.Client.Documents.Queries
 
             if (TransformerParameters != null)
             {
-                foreach (var input in TransformerParameters)
+                foreach (var tp in TransformerParameters)
                 {
-                    path.AppendFormat("&tp-{0}={1}", input.Key, input.Value);
+                    path.Append("&tp-");
+                    path.Append(tp.Key);
+                    path.Append("=");
+                    WriteParameterValue(path, conventions, tp.Value);
                 }
             }
 
@@ -144,19 +114,115 @@ namespace Raven.Client.Documents.Queries
                 path.Append("&explainScores=true");
         }
 
-        private void AppendMinimalQueryString(StringBuilder path, bool appendQuery = true)
+        private void AppendMinimalQueryString(StringBuilder path, QueryConventions conventions, bool appendQuery = true)
         {
             if (string.IsNullOrEmpty(Query) == false && appendQuery)
             {
-                path.Append("&query=");
+                if (path.Length == 0 || path[path.Length - 1] != '?')
+                    path.Append("&");
+
+                path.Append("query=");
                 path.Append(EscapingHelper.EscapeLongDataString(Query));
             }
 
-            var vars = GetCustomQueryStringVariables();
-            if (!string.IsNullOrEmpty(vars))
+            if (QueryParameters != null && appendQuery)
             {
-                path.Append(vars.StartsWith("&") ? vars : ("&" + vars));
+                foreach (var qp in QueryParameters)
+                {
+                    path.Append("&qp-");
+                    path.Append(qp.Key);
+                    path.Append("=");
+                    WriteParameterValue(path, conventions, qp.Value);
+                }
             }
+
+            var vars = GetCustomQueryStringVariables();
+            if (string.IsNullOrEmpty(vars) == false)
+            {
+                path.Append(vars.StartsWith("&") ? vars : "&" + vars);
+            }
+        }
+
+        private static void WriteParameterValue(StringBuilder path, QueryConventions conventions, object value)
+        {
+            if (value == null)
+            {
+                path.Append("null");
+                return;
+            }
+
+            if (value is DateTime)
+            {
+                var date = (DateTime)value;
+                value = date.GetDefaultRavenFormat(isUtc: date.Kind == DateTimeKind.Utc);
+            }
+
+            if (value is DateTimeOffset)
+            {
+                var dateTimeOffset = (DateTimeOffset)value;
+                value = dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(true);
+            }
+
+            if (value is int)
+            {
+                path.Append(NumberUtil.NumberToString((int)value));
+                return;
+            }
+
+            if (value is long)
+            {
+                path.Append(NumberUtil.NumberToString((long)value));
+                return;
+            }
+
+            if (value is decimal)
+            {
+                path.Append(NumberUtil.NumberToString((double)(decimal)value));
+                return;
+            }
+
+            if (value is double)
+            {
+                path.Append(NumberUtil.NumberToString((double)value));
+                return;
+            }
+
+            if (value is TimeSpan)
+            {
+                path.Append(NumberUtil.NumberToString(((TimeSpan)value).Ticks));
+                return;
+            }
+
+            if (value is float)
+            {
+                path.Append(NumberUtil.NumberToString((float)value));
+                return;
+            }
+
+            if (value is bool)
+            {
+                path.Append((bool)value ? "true" : "false");
+                return;
+            }
+
+            if (conventions.SaveEnumsAsIntegers && value.GetType().GetNonNullableType().GetTypeInfo().IsEnum)
+            {
+                path.Append(NumberUtil.NumberToString((int)value));
+                return;
+            }
+
+            if (value is ValueType)
+                value = RavenQuery.Escape(Convert.ToString(value, CultureInfo.InvariantCulture), false, true);
+
+            if (value is string)
+            {
+                path.Append("'");
+                path.Append(value);
+                path.Append("'");
+                return;
+            }
+
+            throw new NotSupportedException($"Cannot convert '{value.GetType()}' to query string parameter.");
         }
     }
 
@@ -166,6 +232,8 @@ namespace Raven.Client.Documents.Queries
         /// Parameters that will be passed to transformer (if specified).
         /// </summary>
         public T TransformerParameters { get; set; }
+
+        public T QueryParameters { get; set; }
 
         /// <summary>
         /// Array of fields in a dynamic map reduce-query

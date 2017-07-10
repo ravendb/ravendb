@@ -26,16 +26,16 @@ namespace SlowTests.Bugs
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new IndexDefinition
                 {
                     Maps = { "from doc in docs select new { doc.Name }" },
                     Name = "test"
-                }}));
+                }));
 
-                string documentId = null;
+                string documentId;
                 using (var session = store.OpenSession())
                 {
-                    var d = new FooBar() { };
+                    var d = new FooBar();
                     session.Store(d);
                     session.SaveChanges();
 
@@ -50,11 +50,11 @@ namespace SlowTests.Bugs
                     Assert.Equal(documentId, session.Advanced.GetDocumentId(d));
                 }
 
-                string script = @"  var id = __document_id; this.Name = id;";
+                const string script = @"  var id = __document_id; this.Name = id;";
 
                 WaitForIndexing(store);
 
-                store.Operations.Send(new PatchByIndexOperation("test", new IndexQuery(), new PatchRequest { Script = script } , new QueryOperationOptions())).WaitForCompletion(TimeSpan.FromSeconds(15));
+                store.Operations.Send(new PatchByIndexOperation(new IndexQuery { Query = "FROM INDEX 'test'" }, new PatchRequest { Script = script }, new QueryOperationOptions())).WaitForCompletion(TimeSpan.FromSeconds(15));
 
                 using (var session = store.OpenSession())
                 {
