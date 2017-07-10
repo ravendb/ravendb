@@ -1,25 +1,25 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="VersioningHandler.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="AdminRevisionsHandler.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
-using Raven.Client.Documents.Exceptions.Versioning;
+using Raven.Client.Documents.Exceptions.Revisions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
-    public class AdminVersioningHandler : DatabaseRequestHandler
+    public class AdminRevisionsHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/admin/revisions", "DELETE", "/databases/*/admin/revisions?id={documentId:string|multiple}")]
         public async Task DeleteRevisionsFor()
         {
-            var versioningStorage = Database.DocumentsStorage.VersioningStorage;
-            if (versioningStorage.Configuration == null)
-                throw new VersioningDisabledException();
+            var revisionsStorage = Database.DocumentsStorage.RevisionsStorage;
+            if (revisionsStorage.Configuration == null)
+                throw new RevisionsDisabledException();
 
             var ids = GetStringValuesQueryString("id");
 
@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 foreach (var id in _ids)
                 {
-                    _database.DocumentsStorage.VersioningStorage.DeleteRevisionsFor(context, id);
+                    _database.DocumentsStorage.RevisionsStorage.DeleteRevisionsFor(context, id);
                 }
                 return 1;
             }

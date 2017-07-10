@@ -4,34 +4,34 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
-using Raven.Client.Server.Versioning;
+using Raven.Client.Server.Revisions;
 using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations
 {
-    public class ConfigureVersioningOperation : IServerOperation<ConfigureVersioningOperationResult>
+    public class ConfigureRevisionsOperation : IServerOperation<ConfigureRevisionsOperationResult>
     {
-        private readonly VersioningConfiguration _configuration;
+        private readonly RevisionsConfiguration _configuration;
         private readonly string _databaseName;
 
-        public ConfigureVersioningOperation(VersioningConfiguration configuration, string databaseName)
+        public ConfigureRevisionsOperation(RevisionsConfiguration configuration, string databaseName)
         {
             _configuration = configuration;
             _databaseName = databaseName;
         }
-        public RavenCommand<ConfigureVersioningOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<ConfigureRevisionsOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new ConfigureVersioningCommand(_configuration, _databaseName, context);
+            return new ConfigureRevisionsCommand(_configuration, _databaseName, context);
         }
     }
 
-    public class ConfigureVersioningCommand : RavenCommand<ConfigureVersioningOperationResult>
+    public class ConfigureRevisionsCommand : RavenCommand<ConfigureRevisionsOperationResult>
     {
-        private readonly VersioningConfiguration _configuration;
+        private readonly RevisionsConfiguration _configuration;
         private readonly string _databaseName;
         private readonly JsonOperationContext _context;
 
-        public ConfigureVersioningCommand(VersioningConfiguration configuration, string databaseName, JsonOperationContext context)
+        public ConfigureRevisionsCommand(RevisionsConfiguration configuration, string databaseName, JsonOperationContext context)
         {
             _configuration = configuration;
             _databaseName = databaseName;
@@ -42,7 +42,7 @@ namespace Raven.Client.Server.Operations
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/admin/versioning/config?name={_databaseName}";
+            url = $"{node.Url}/admin/revisions/config?name={_databaseName}";
 
             var request = new HttpRequestMessage
             {
@@ -62,11 +62,11 @@ namespace Raven.Client.Server.Operations
             if (response == null)
                 ThrowInvalidResponse();
 
-            Result = JsonDeserializationClient.ConfigureVersioningOperationResult(response);
+            Result = JsonDeserializationClient.ConfigureRevisionsOperationResult(response);
         }
     }
 
-    public class ConfigureVersioningOperationResult
+    public class ConfigureRevisionsOperationResult
     {
         public long? ETag { get; set; }
     }

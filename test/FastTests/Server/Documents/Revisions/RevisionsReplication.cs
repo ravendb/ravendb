@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="Versioning.cs" company="Hibernating Rhinos LTD">
+// <copyright file="Revisions.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -14,9 +14,9 @@ using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace FastTests.Server.Documents.Versioning
+namespace FastTests.Server.Documents.Revisions
 {
-    public class VersioningReplication : ReplicationTestsBase
+    public class RevisionsReplication : ReplicationTestsBase
     {
         private void WaitForMarker(DocumentStore store1, DocumentStore store2)
         {
@@ -36,8 +36,8 @@ namespace FastTests.Server.Documents.Versioning
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store1.Database);
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store2.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
                 await SetupReplicationAsync(store1, store2);
 
                 using (var session = store1.OpenAsyncSession())
@@ -69,8 +69,8 @@ namespace FastTests.Server.Documents.Versioning
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store1.Database);
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store2.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
                 await SetupReplicationAsync(store1, store2);
 
                 using (var session = store1.OpenAsyncSession())
@@ -96,8 +96,8 @@ namespace FastTests.Server.Documents.Versioning
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store1.Database);
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store2.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
                 await SetupReplicationAsync(store1, store2);
 
                 using (var session = store1.OpenAsyncSession())
@@ -128,8 +128,8 @@ namespace FastTests.Server.Documents.Versioning
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store1.Database);
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store2.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
                 await SetupReplicationAsync(store1, store2);
 
                 using (var session = store1.OpenAsyncSession())
@@ -171,8 +171,8 @@ namespace FastTests.Server.Documents.Versioning
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store1.Database, false);
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store2.Database, false);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, false);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database, false);
                 await SetupReplicationAsync(store1, store2);
 
                 var deletedRevisions = await store1.Commands().GetRevisionsBinEntriesAsync(long.MaxValue);
@@ -231,7 +231,7 @@ namespace FastTests.Server.Documents.Versioning
                 Assert.Equal(DocumentFlags.DeleteRevision.ToString(), revisions[2][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
                 Assert.Equal((DocumentFlags.Versioned | DocumentFlags.Revision | DocumentFlags.FromReplication).ToString(), revisions[3][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
 
-                await store1.Admin.SendAsync(new Versioning.DeleteRevisionsOperation(id, "users/not/exists"));
+                await store1.Admin.SendAsync(new RevisionsTests.DeleteRevisionsOperation(id, "users/not/exists"));
                 WaitForMarker(store1, store2);
 
                 statistics = store2.Admin.Send(new GetStatisticsOperation());

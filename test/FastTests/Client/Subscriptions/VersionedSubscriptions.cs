@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Server.Versioning;
+using Raven.Client.Server.Revisions;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
@@ -26,29 +26,29 @@ namespace FastTests.Client.Subscriptions
 
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
-                    var versioningDoc = new VersioningConfiguration
+                    var configuration = new RevisionsConfiguration
                     {
-                        Default = new VersioningCollectionConfiguration
+                        Default = new RevisionsCollectionConfiguration
                         {
                             Active = true,
                             MinimumRevisionsToKeep = 5,
                         },
-                        Collections = new Dictionary<string, VersioningCollectionConfiguration>
+                        Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                         {
-                            ["Users"] = new VersioningCollectionConfiguration
+                            ["Users"] = new RevisionsCollectionConfiguration
                             {
                                 Active = true
                             },
-                            ["Dons"] = new VersioningCollectionConfiguration
+                            ["Dons"] = new RevisionsCollectionConfiguration
                             {
                                 Active = true,
                             }
                         }
                     };
 
-                    await Server.ServerStore.ModifyDatabaseVersioning(context,
+                    await Server.ServerStore.ModifyDatabaseRevisions(context,
                         store.Database,
-                        EntityToBlittable.ConvertEntityToBlittable(versioningDoc,
+                        EntityToBlittable.ConvertEntityToBlittable(configuration,
                             new DocumentConventions(),
                             context));
                 }
@@ -105,29 +105,29 @@ namespace FastTests.Client.Subscriptions
 
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
-                    var versioningDoc = new VersioningConfiguration
+                    var configuration = new RevisionsConfiguration
                     {
-                        Default = new VersioningCollectionConfiguration
+                        Default = new RevisionsCollectionConfiguration
                         {
                             Active = true,
                             MinimumRevisionsToKeep = 5,
                         },
-                        Collections = new Dictionary<string, VersioningCollectionConfiguration>
+                        Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                         {
-                            ["Users"] = new VersioningCollectionConfiguration
+                            ["Users"] = new RevisionsCollectionConfiguration
                             {
                                 Active = true
                             },
-                            ["Dons"] = new VersioningCollectionConfiguration
+                            ["Dons"] = new RevisionsCollectionConfiguration
                             {
                                 Active = true,
                             }
                         }
                     };
 
-                    await Server.ServerStore.ModifyDatabaseVersioning(context,
+                    await Server.ServerStore.ModifyDatabaseRevisions(context,
                         store.Database,
-                        EntityToBlittable.ConvertEntityToBlittable(versioningDoc,
+                        EntityToBlittable.ConvertEntityToBlittable(configuration,
                             new DocumentConventions(),
                             context));
                 }
@@ -207,29 +207,29 @@ namespace FastTests.Client.Subscriptions
 
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
-                    var versioningDoc = new VersioningConfiguration
+                    var configuration = new RevisionsConfiguration
                     {
-                        Default = new VersioningCollectionConfiguration
+                        Default = new RevisionsCollectionConfiguration
                         {
                             Active = true,
                             MinimumRevisionsToKeep = 5,
                         },
-                        Collections = new Dictionary<string, VersioningCollectionConfiguration>
+                        Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                         {
-                            ["Users"] = new VersioningCollectionConfiguration
+                            ["Users"] = new RevisionsCollectionConfiguration
                             {
                                 Active = true
                             },
-                            ["Dons"] = new VersioningCollectionConfiguration
+                            ["Dons"] = new RevisionsCollectionConfiguration
                             {
                                 Active = true,
                             }
                         }
                     };
 
-                    await Server.ServerStore.ModifyDatabaseVersioning(context,
+                    await Server.ServerStore.ModifyDatabaseRevisions(context,
                         store.Database,
-                        EntityToBlittable.ConvertEntityToBlittable(versioningDoc,
+                        EntityToBlittable.ConvertEntityToBlittable(configuration,
                             new DocumentConventions(),
                             context));
                 }
@@ -277,7 +277,7 @@ namespace FastTests.Client.Subscriptions
         }
 
         [Fact]
-        public async Task VersionedSubscriptionsWithCustomScriptCompareDocs()
+        public async Task RevisionsSubscriptionsWithCustomScriptCompareDocs()
         {
             using (var store = GetDocumentStore())
             {
@@ -300,29 +300,29 @@ namespace FastTests.Client.Subscriptions
 
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
-                    var versioningDoc = new VersioningConfiguration
+                    var configuration = new RevisionsConfiguration
                     {
-                        Default = new VersioningCollectionConfiguration
+                        Default = new RevisionsCollectionConfiguration
                         {
                             Active = true,
                             MinimumRevisionsToKeep = 5,
                         },
-                        Collections = new Dictionary<string, VersioningCollectionConfiguration>
+                        Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                         {
-                            ["Users"] = new VersioningCollectionConfiguration
+                            ["Users"] = new RevisionsCollectionConfiguration
                             {
                                 Active = true
                             },
-                            ["Dons"] = new VersioningCollectionConfiguration
+                            ["Dons"] = new RevisionsCollectionConfiguration
                             {
                                 Active = true,
                             }
                         }
                     };
 
-                    await Server.ServerStore.ModifyDatabaseVersioning(context,
+                    await Server.ServerStore.ModifyDatabaseRevisions(context,
                         store.Database,
-                        EntityToBlittable.ConvertEntityToBlittable(versioningDoc,
+                        EntityToBlittable.ConvertEntityToBlittable(configuration,
                             new DocumentConventions(),
                             context));
                 }

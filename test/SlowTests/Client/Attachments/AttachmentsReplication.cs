@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Documents.Versioning;
+using FastTests.Server.Documents.Revisions;
 using FastTests.Server.Replication;
 using Orders;
 using Raven.Client;
@@ -466,13 +466,13 @@ namespace SlowTests.Client.Attachments
         }
 
         [Fact]
-        public async Task AttachmentsVersioningReplication()
+        public async Task AttachmentsRevisionsReplication()
         {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store1.Database, false, 4);
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store2.Database, false, 4);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, false, 4);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database, false, 4);
 
                 using (var session = store1.OpenSession())
                 {

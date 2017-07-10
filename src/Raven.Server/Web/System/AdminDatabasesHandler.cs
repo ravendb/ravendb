@@ -297,16 +297,16 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/expiration/config", "POST", "/admin/config-expiration?name={databaseName:string}")]
+        [RavenAction("/admin/expiration/config", "POST", "/admin/expiration/config?name={databaseName:string}")]
         public async Task ConfigExpiration()
         {
             await DatabaseConfigurations(ServerStore.ModifyDatabaseExpiration, "read-expiration-config");
         }
 
-        [RavenAction("/admin/versioning/config", "POST", "/admin/config-versioning?name={databaseName:string}")]
-        public async Task ConfigVersioning()
+        [RavenAction("/admin/revisions/config", "POST", "/admin/revisions/config?name={databaseName:string}")]
+        public async Task ConfigRevisions()
         {
-            await DatabaseConfigurations(ServerStore.ModifyDatabaseVersioning, "read-versioning-config");
+            await DatabaseConfigurations(ServerStore.ModifyDatabaseRevisions, "read-revisions-config");
         }
 
         [RavenAction("/admin/periodic-backup/update", "POST", "/admin/config-periodic-backup?name={databaseName:string}")]

@@ -910,10 +910,10 @@ namespace Raven.Server.ServerWide
             return etlType;
         }
 
-        public Task<(long, object)> ModifyDatabaseVersioning(JsonOperationContext context, string name, BlittableJsonReaderObject configurationJson)
+        public Task<(long, object)> ModifyDatabaseRevisions(JsonOperationContext context, string name, BlittableJsonReaderObject configurationJson)
         {
-            var editVersioning = new EditVersioningCommand(JsonDeserializationCluster.VersioningConfiguration(configurationJson), name);
-            return SendToLeaderAsync(editVersioning);
+            var editRevisions = new EditRevisionsConfigurationCommand(JsonDeserializationCluster.RevisionsConfiguration(configurationJson), name);
+            return SendToLeaderAsync(editRevisions);
         }
 
         public async Task<(long, object)> AddConnectionString(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject connectionString)

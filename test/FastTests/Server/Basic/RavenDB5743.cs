@@ -1,5 +1,5 @@
 ﻿using System.Threading.Tasks;
-using FastTests.Server.Documents.Versioning;
+using FastTests.Server.Documents.Revisions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -12,7 +12,7 @@ namespace FastTests.Server.Basic
         {
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
 
                 using (var session = store.OpenAsyncSession())
                 {

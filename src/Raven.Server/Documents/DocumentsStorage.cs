@@ -7,7 +7,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Server.Documents.Versioning;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -164,7 +164,7 @@ namespace Raven.Server.Documents
 
         public StorageEnvironment Environment { get; private set; }
 
-        public VersioningStorage VersioningStorage;
+        public RevisionsStorage RevisionsStorage;
         public ConflictsStorage ConflictsStorage;
         public AttachmentsStorage AttachmentsStorage;
         public IdentitiesStorage Identities;
@@ -253,7 +253,7 @@ namespace Raven.Server.Documents
 
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
 
-                    VersioningStorage = new VersioningStorage(_documentDatabase);
+                    RevisionsStorage = new RevisionsStorage(_documentDatabase);
                     Identities = new IdentitiesStorage(_documentDatabase, tx);
                     ConflictsStorage = new ConflictsStorage(_documentDatabase, tx);
                     AttachmentsStorage = new AttachmentsStorage(_documentDatabase, tx);
@@ -326,7 +326,7 @@ namespace Raven.Server.Documents
 
         public static long ReadLastRevisionsEtag(Transaction tx)
         {
-            return ReadLastEtagFrom(tx, VersioningStorage.AllRevisionsEtagsSlice);
+            return ReadLastEtagFrom(tx, RevisionsStorage.AllRevisionsEtagsSlice);
         }
 
         public static long ReadLastAttachmentsEtag(Transaction tx)
@@ -994,9 +994,9 @@ namespace Raven.Server.Documents
                 }
 
                 if (collectionName.IsSystem == false &&
-                    _documentDatabase.DocumentsStorage.VersioningStorage.Configuration != null)
+                    _documentDatabase.DocumentsStorage.RevisionsStorage.Configuration != null)
                 {
-                    _documentDatabase.DocumentsStorage.VersioningStorage.Delete(context, id, lowerId, collectionName, changeVector, modifiedTicks, doc.NonPersistentFlags);
+                    _documentDatabase.DocumentsStorage.RevisionsStorage.Delete(context, id, lowerId, collectionName, changeVector, modifiedTicks, doc.NonPersistentFlags);
                 }
                 table.Delete(doc.StorageId);
 

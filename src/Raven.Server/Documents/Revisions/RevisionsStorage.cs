@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 using Raven.Client;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Server;
-using Raven.Client.Server.Versioning;
+using Raven.Client.Server.Revisions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -20,9 +20,9 @@ using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
 
-namespace Raven.Server.Documents.Versioning
+namespace Raven.Server.Documents.Revisions
 {
-    public unsafe class VersioningStorage
+    public unsafe class RevisionsStorage
     {
         private static readonly Slice IdAndEtagSlice;
         private static readonly Slice FlagsAndEtagSlice;
@@ -35,8 +35,8 @@ namespace Raven.Server.Documents.Versioning
 
         private readonly DocumentDatabase _database;
         private readonly DocumentsStorage _documentsStorage;
-        public VersioningConfiguration Configuration { get; private set; }
-        public readonly VersioningOperations Operations;
+        public RevisionsConfiguration Configuration { get; private set; }
+        public readonly RevisionsOperations Operations;
         private readonly HashSet<string> _tableCreated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly Logger _logger;
 
@@ -56,14 +56,14 @@ namespace Raven.Server.Documents.Versioning
             LastModified = 8,
         }
 
-        private readonly VersioningCollectionConfiguration _emptyConfiguration = new VersioningCollectionConfiguration();
+        private readonly RevisionsCollectionConfiguration _emptyConfiguration = new RevisionsCollectionConfiguration();
 
-        public VersioningStorage(DocumentDatabase database)
+        public RevisionsStorage(DocumentDatabase database)
         {
             _database = database;
             _documentsStorage = _database.DocumentsStorage;
-            _logger = LoggingSource.Instance.GetLogger<VersioningStorage>(database.Name);
-            Operations = new VersioningOperations(_database);
+            _logger = LoggingSource.Instance.GetLogger<RevisionsStorage>(database.Name);
+            Operations = new RevisionsOperations(_database);
         }
 
         private Table EnsureRevisionTableCreated(Transaction tx, CollectionName collection)
@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Versioning
             return tx.OpenTable(DocsSchema, tableName);
         }
 
-        static VersioningStorage()
+        static RevisionsStorage()
         {
             Slice.From(StorageEnvironment.LabelsContext, "RevisionsChangeVector", ByteStringType.Immutable, out var changeVectorSlice);
             Slice.From(StorageEnvironment.LabelsContext, "RevisionsIdAndEtag", ByteStringType.Immutable, out IdAndEtagSlice);
@@ -124,18 +124,18 @@ namespace Raven.Server.Documents.Versioning
         {
             try
             {
-                var versioning = dbRecord.Versioning;
-                if (versioning == null ||
-                    (versioning.Default == null && versioning.Collections.Count == 0))
+                var revisions = dbRecord.Revisions;
+                if (revisions == null ||
+                    (revisions.Default == null && revisions.Collections.Count == 0))
                 {
                     Configuration = null;
                     return;
                 }
 
-                if (versioning.Equals(Configuration))
+                if (revisions.Equals(Configuration))
                     return;
 
-                Configuration = versioning;
+                Configuration = revisions;
 
                 using (var tx = _database.DocumentsStorage.Environment.WriteTransaction())
                 {
@@ -151,14 +151,14 @@ namespace Raven.Server.Documents.Versioning
                 }
 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info("Versioning configuration changed");
+                    _logger.Info("Revisions configuration changed");
             }
             catch (Exception e)
             {
-                var msg = "Cannot enable versioning for documents as the versioning configuration" +
+                var msg = "Cannot enable revisions for documents as the revisions configuration" +
                           $" in the database record is missing or not valid: {dbRecord}";
-                _database.NotificationCenter.Add(AlertRaised.Create($"Versioning error in {_database.Name}", msg,
-                    AlertType.VersioningConfigurationNotValid, NotificationSeverity.Error, _database.Name));
+                _database.NotificationCenter.Add(AlertRaised.Create($"Revisions error in {_database.Name}", msg,
+                    AlertType.RevisionsConfigurationNotValid, NotificationSeverity.Error, _database.Name));
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations(msg, e);
             }
@@ -182,10 +182,10 @@ namespace Raven.Server.Documents.Versioning
             return _emptyConfiguration.Active;
         }
 
-        private VersioningCollectionConfiguration GetVersioningConfiguration(CollectionName collectionName)
+        private RevisionsCollectionConfiguration GetRevisionsConfiguration(CollectionName collectionName)
         {
             if (Configuration.Collections != null && 
-                Configuration.Collections.TryGetValue(collectionName.Name, out VersioningCollectionConfiguration configuration))
+                Configuration.Collections.TryGetValue(collectionName.Name, out RevisionsCollectionConfiguration configuration))
             {
                 return configuration;
             }
@@ -200,9 +200,9 @@ namespace Raven.Server.Documents.Versioning
 
         public bool ShouldVersionDocument(CollectionName collectionName, NonPersistentDocumentFlags nonPersistentFlags, 
             BlittableJsonReaderObject existingDocument, BlittableJsonReaderObject document, ref DocumentFlags documentFlags, 
-            out VersioningCollectionConfiguration configuration)
+            out RevisionsCollectionConfiguration configuration)
         {
-            configuration = GetVersioningConfiguration(collectionName);
+            configuration = GetRevisionsConfiguration(collectionName);
             if (configuration.Active == false)
                 return false;
 
@@ -234,7 +234,7 @@ namespace Raven.Server.Documents.Versioning
 
         public void Put(DocumentsOperationContext context, string id, BlittableJsonReaderObject document,
             DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, ChangeVectorEntry[] changeVector, long lastModifiedTicks,
-            VersioningCollectionConfiguration configuration = null)
+            RevisionsCollectionConfiguration configuration = null)
         {
             Debug.Assert(changeVector != null, "Change vector must be set");
 
@@ -290,7 +290,7 @@ namespace Raven.Server.Documents.Versioning
                 }
 
                 if (configuration == null)
-                    configuration = GetVersioningConfiguration(collectionName);
+                    configuration = GetRevisionsConfiguration(collectionName);
 
                 DeleteOldRevisions(context, table, lowerId, configuration, nonPersistentFlags, changeVector);
             }
@@ -298,7 +298,7 @@ namespace Raven.Server.Documents.Versioning
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice lowerId, 
-            VersioningCollectionConfiguration configuration, NonPersistentDocumentFlags nonPersistentFlags, ChangeVectorEntry[] changeVector)
+            RevisionsCollectionConfiguration configuration, NonPersistentDocumentFlags nonPersistentFlags, ChangeVectorEntry[] changeVector)
         {
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
             {
@@ -311,7 +311,7 @@ namespace Raven.Server.Documents.Versioning
         }
 
         private void DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, 
-            VersioningCollectionConfiguration configuration, long revisionsCount, NonPersistentDocumentFlags nonPersistentFlags, 
+            RevisionsCollectionConfiguration configuration, long revisionsCount, NonPersistentDocumentFlags nonPersistentFlags, 
             ChangeVectorEntry[] changeVector)
         {
             if ((nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) == NonPersistentDocumentFlags.FromSmuggler)
@@ -455,7 +455,7 @@ namespace Raven.Server.Documents.Versioning
         {
             Debug.Assert(changeVector != null, "Change vector must be set");
 
-            var configuration = GetVersioningConfiguration(collectionName);
+            var configuration = GetRevisionsConfiguration(collectionName);
             if (configuration.Active == false)
                 return;
 

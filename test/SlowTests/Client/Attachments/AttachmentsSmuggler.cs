@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Documents.Versioning;
+using FastTests.Server.Documents.Revisions;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
@@ -210,7 +210,7 @@ namespace SlowTests.Client.Attachments
             {
                 using (var store1 = GetDocumentStore(dbSuffixIdentifier: "store1"))
                 {
-                    await VersioningHelper.SetupVersioning(Server.ServerStore, store1.Database, false, 4);
+                    await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, false, 4);
                     using (var session = store1.OpenSession())
                     {
                         session.Store(new User { Name = "Fitzchak" }, "users/1");
@@ -238,7 +238,7 @@ namespace SlowTests.Client.Attachments
 
                 using (var store2 = GetDocumentStore(dbSuffixIdentifier: "store2"))
                 {
-                    await VersioningHelper.SetupVersioning(Server.ServerStore, store2.Database);
+                    await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
 
                     await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
 
@@ -279,8 +279,8 @@ namespace SlowTests.Client.Attachments
             {
                 using (var store1 = GetDocumentStore(dbSuffixIdentifier: "store1"))
                 {
-                    await VersioningHelper.SetupVersioning(Server.ServerStore, store1.Database, false, 4);
-                    AttachmentsVersioning.CreateDocumentWithAttachments(store1);
+                    await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, false, 4);
+                    AttachmentsRevisions.CreateDocumentWithAttachments(store1);
                     using (var bigStream = new MemoryStream(Enumerable.Range(1, 999 * 1024).Select(x => (byte)x).ToArray()))
                         store1.Operations.Send(new PutAttachmentOperation("users/1", "big-file", bigStream, "image/png"));
 
@@ -297,7 +297,7 @@ namespace SlowTests.Client.Attachments
 
                 using (var store2 = GetDocumentStore(dbSuffixIdentifier: "store2"))
                 {
-                    await VersioningHelper.SetupVersioning(Server.ServerStore, store2.Database);
+                    await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
 
                     for (var i = 0; i < 2; i++) // Make sure that we can import attachments twice and it will overwrite
                     {

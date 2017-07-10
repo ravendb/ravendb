@@ -84,7 +84,7 @@ namespace Raven.Client.Documents.Subscriptions
 
     public class SubscriptionCreationOptions
     {
-        public const string DefaultVersioningScript = "return {Current:this.Current, Previous:this.Previous};";
+        public const string DefaultRevisionsScript = "return {Current:this.Current, Previous:this.Previous};";
         public string Name { get; set; }
         public SubscriptionCriteria Criteria { get; set; }
         public ChangeVectorEntry[] ChangeVector { get; set; }
@@ -105,7 +105,7 @@ namespace Raven.Client.Documents.Subscriptions
 
             return new SubscriptionCriteria(conventions.GetCollectionName(isVersioned ? tType.GenericTypeArguments[0] : typeof(T)))
             {
-                Script = Criteria?.Script ?? (isVersioned ? SubscriptionCreationOptions.DefaultVersioningScript : null),
+                Script = Criteria?.Script ?? (isVersioned ? SubscriptionCreationOptions.DefaultRevisionsScript : null),
                 IsVersioned =  isVersioned || (Criteria?.IsVersioned ?? false) 
             };
 
