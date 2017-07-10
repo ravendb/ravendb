@@ -13,7 +13,7 @@ class deleteRevisionsForDocumentsCommand extends commandBase {
             id: this.ids
         }
 
-        const url = endpoints.databases.adminVersioning.adminRevisions + this.urlEncodeArgs(args);
+        const url = endpoints.databases.adminRevisions.adminRevisions + this.urlEncodeArgs(args);
 
         return this.del<void>(url, null, this.db, { dataType: undefined });
     }

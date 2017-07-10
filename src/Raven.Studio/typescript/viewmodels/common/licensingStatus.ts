@@ -77,7 +77,7 @@ class licensingStatus extends dialogViewModelBase {
             { displayName: "Quotas", value: licenseStatus.Attributes.quotas },
             { displayName: "Authorization", value: licenseStatus.Attributes.authorization },
             { displayName: "Document Expiration", value: licenseStatus.Attributes.documentExpiration },
-            { displayName: "Versioning", value: licenseStatus.Attributes.versioning },
+            { displayName: "Revisions", value: licenseStatus.Attributes.revisions },
             { displayName: "Cluster", value: licenseStatus.Attributes.clustering },
             { displayName: "Monitoring", value: licenseStatus.Attributes.monitoring },
             { displayName: "Hot Spare", value: licenseStatus.Attributes.hotSpare },

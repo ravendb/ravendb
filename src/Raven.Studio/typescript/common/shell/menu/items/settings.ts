@@ -70,7 +70,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/settings/revisions',
             title: 'Document Revisions',
             nav: true,
-            css: 'icon-versioning', //TODO: rename icon 
+            css: 'icon-revisions', //TODO: rename icon 
             dynamicHash: appUrls.revisions
         }),
         /* TODO: move to tasks in menu

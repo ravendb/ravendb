@@ -630,8 +630,8 @@ class editDocument extends viewModelBase {
 
             })
             .fail((xhr: JQueryXHR) => {
-                // if versioning is enabled try to load revisions bin entry
-                if (xhr.status === 404 && db.hasVersioningConfiguration()) {
+                // if revisions is enabled try to load revisions bin entry
+                if (xhr.status === 404 && db.hasRevisionsConfiguration()) {
                     this.loadRevisionsBinEntry(id)
                         .done(doc => loadTask.resolve(doc))
                         .fail(() => loadTask.reject())
