@@ -175,6 +175,11 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
 
+            public Stream GetTempStream()
+            {
+                throw new NotSupportedException();
+            }
+
             private void WriteUniqueAttachmentStreams(Document document, SmugglerProgressBase.CountsWithLastEtag progress)
             {
                 if ((document.Flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments ||

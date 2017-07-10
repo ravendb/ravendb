@@ -89,8 +89,7 @@ namespace Sparrow.Json
         {
             _cts.Token.ThrowIfCancellationRequested();
             var currentThread = _contextPool.Value;
-            IDisposable returnContext;
-            if (TryReuseExistingContextFrom(currentThread, out context, out returnContext))
+            if (TryReuseExistingContextFrom(currentThread, out context, out IDisposable returnContext))
                 return returnContext;
 
             // couldn't find it on our own thread, let us try and steal from other threads
