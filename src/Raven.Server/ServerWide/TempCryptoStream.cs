@@ -1,14 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using Lucene.Net.Search;
-using Raven.Client.Exceptions;
+using Raven.Server.Utils;
 using Sparrow;
 
 namespace Raven.Server.ServerWide
@@ -17,6 +9,7 @@ namespace Raven.Server.ServerWide
     {
         private readonly string _file;
         private readonly FileStream _stream;
+        private readonly long _startPosition;
 
         public override bool CanRead => true;
         public override bool CanSeek => true;
@@ -27,30 +20,34 @@ namespace Raven.Server.ServerWide
             get
             {
                 if (_blockNumber - 1 == _maxBlockWrittenToStream)
-                    return (_blockNumber * _internalBuffer.Length) + _bufferValidIndex;
+                    return _blockNumber * _internalBuffer.Length + _bufferValidIndex;
                 return _stream.Length;
             }
         }
 
         public override long Position
         {
-            get { return (_blockNumber * _internalBuffer.Length) + _bufferIndex; }
-            set { Seek(value, SeekOrigin.Begin); }
+            get => _blockNumber * _internalBuffer.Length + _bufferIndex;
+            set => Seek(value, SeekOrigin.Begin);
         }
 
         private readonly byte[] _key;
         private readonly byte[] _nonce;
-        private readonly byte[] _internalBuffer;
-        private int _bufferIndex;
+        private readonly byte[] _internalBuffer;    // Temp buffer for one block only
+        private int _bufferIndex;    // The position in the block buffer.
         private int _bufferValidIndex;
         private long _blockNumber;
         private long _maxBlockWrittenToStream = -1;
 
-
-        public TempCryptoStream(string file)
+        public TempCryptoStream(string file) : this(new FileStream(file, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose))
         {
             _file = file;
-            _stream = new FileStream(file, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose | FileOptions.SequentialScan);
+        }
+
+        public TempCryptoStream(FileStream stream)
+        {
+            _stream = stream;
+            _startPosition = stream.Position;
             _internalBuffer = new byte[4096];
 
             _key = new byte[Sodium.crypto_stream_xchacha20_keybytes()];
@@ -93,12 +90,12 @@ namespace Raven.Server.ServerWide
                     }
                     else
                     {
-                        Seek((_blockNumber+1)*_internalBuffer.Length, SeekOrigin.Begin);
+                        Seek((_blockNumber + 1) * _internalBuffer.Length, SeekOrigin.Begin);
                     }
                 }
 
                 // small write or the remains of a big one
-                if (count > 0) 
+                if (count > 0)
                 {
                     Sparrow.Memory.Copy(pInternalBuffer + _bufferIndex, pInputBuffer + offset, count);
                     _bufferIndex += count;
@@ -121,7 +118,7 @@ namespace Raven.Server.ServerWide
             fixed (byte* n = _nonce)
             fixed (byte* k = _key)
             {
-                _stream.Seek(_blockNumber * _internalBuffer.Length, SeekOrigin.Begin);
+                _stream.Seek(_startPosition + _blockNumber * _internalBuffer.Length, SeekOrigin.Begin);
 
                 var rc = Sodium.crypto_stream_xchacha20_xor_ic(pInternalBuffer, pInternalBuffer, (ulong)_bufferValidIndex, n, (ulong)_blockNumber, k);
                 if (rc != 0)
@@ -201,7 +198,7 @@ namespace Raven.Server.ServerWide
             }
 
             // Seek to start of requested block and read into the internal buffer
-            _stream.Seek(offset - positionInsideBlock, SeekOrigin.Begin); 
+            _stream.Seek(_startPosition + offset - positionInsideBlock, SeekOrigin.Begin);
 
             fixed (byte* pInternalBuffer = _internalBuffer)
             fixed (byte* k = _key)
@@ -234,15 +231,10 @@ namespace Raven.Server.ServerWide
 
         protected override void Dispose(bool disposing)
         {
-            _stream.Dispose();
-            try
+            if (_file != null)
             {
-                if (File.Exists(_file)) // On Linux we don't get DeleteOnClose
-                    File.Delete(_file);
-            }
-            catch (Exception)
-            {
-                // ignore, nothing we can do here
+                _stream.Dispose();
+                PosixFile.DeleteOnClose(_file);
             }
         }
     }

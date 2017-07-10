@@ -422,7 +422,7 @@ namespace Raven.Server.Smuggler.Documents
                         }
                     }
 
-                    // TODO: RavenDB-6931 - Make sure that patching cannot change the @attachments and @collectoin in metadata
+                    // TODO: RavenDB-6931 - Make sure that patching cannot change the @attachments and @collection in metadata
 
                     item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
