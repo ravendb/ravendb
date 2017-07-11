@@ -30,6 +30,7 @@ namespace Raven.Server.Documents
         FromSmuggler = 0x4,
         FromReplication = 0x8,
         ByAttachmentUpdate = 0x10,
-        ResolveAttachmentsConflict = 0x20
+        ResolveAttachmentsConflict = 0x20,
+        FromRevision = 0x40,
     }
 }
