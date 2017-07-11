@@ -161,7 +161,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             add_index(definition);
             
-            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' AND Address.Street ='1stAvenue' AND Friends,Name = 'Jon'"));
+            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' AND Address.Street ='1stAvenue' AND Friends[].Name = 'Jon'"));
 
             var result = _sut.Match(dynamicQuery);
 
@@ -272,7 +272,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             add_index(definition);
 
-            var dynamicQueryWithStringSorting = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Age BETWEEN 9 AND null ORDER BY Age AS long"));
+            var dynamicQueryWithStringSorting = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Age > 9 ORDER BY Age AS long"));
 
             var result = _sut.Match(dynamicQueryWithStringSorting);
 

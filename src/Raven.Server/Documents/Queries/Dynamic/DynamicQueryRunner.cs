@@ -220,8 +220,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     query.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // allow new auto indexes to have some results
             }
 
-            EnsureValidQuery(query, map);
-
             return (index, collection);
         }
 
@@ -323,14 +321,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             index = null;
             return false;
-        }
-
-        private static void EnsureValidQuery(IndexQueryServerSide query, DynamicQueryMapping map)
-        {
-            foreach (var field in map.MapFields)
-            {
-                query.Query = query.Query.Replace(field.Name, IndexField.ReplaceInvalidCharactersInFieldName(field.Name));
-            }
         }
     }
 }

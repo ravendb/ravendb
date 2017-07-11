@@ -1,16 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using Lucene.Net.Analysis;
-using Lucene.Net.Index;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Queries.Parse;
 using Raven.Server.Utils;
 using Raven.Server.Documents.Queries.Parser;
+using Raven.Server.Documents.Indexes;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -69,7 +66,7 @@ namespace Raven.Server.Documents.Queries
                 case OperatorType.LessThen:
                 case OperatorType.LessThenEqual:
                 case OperatorType.GreaterThenEqual:
-                    var fieldName = QueryExpression.Extract(query, expression.Field);
+                    var fieldName = IndexField.ReplaceInvalidCharactersInFieldName(QueryExpression.Extract(query, expression.Field));
                     FieldName.FieldType fieldType = FieldName.FieldType.String;
 
                     var valueToken = expression.Value ?? expression.First;
@@ -80,11 +77,11 @@ namespace Raven.Server.Documents.Queries
                             fieldType = FieldName.FieldType.String;
                             break;
                         case ValueTokenType.Double:
-                            fieldName += "_D_Range";
+                            fieldName += Client.Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble;
                             fieldType = FieldName.FieldType.Double;
                             break;
                         case ValueTokenType.Long:
-                            fieldName += "_L_Range";
+                            fieldName += Client.Constants.Documents.Indexing.Fields.RangeFieldSuffixLong;
                             fieldType = FieldName.FieldType.Long;
                             break;
                     }
