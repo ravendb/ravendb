@@ -281,6 +281,8 @@ namespace Raven.Database.Raft
             }
             //deleting the replication state from the system database
             DatabasesLandlord.SystemDatabase.Documents.Delete(Constants.Cluster.ClusterReplicationStateDocumentKey, null,null);
+            //deleting cluster configuration document
+            DatabasesLandlord.SystemDatabase.Documents.Delete(Constants.Cluster.ClusterConfigurationDocumentKey, null, null);
 
         }
 
