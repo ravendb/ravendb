@@ -39,6 +39,29 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Fact]
+        public async Task Numeric_where_clause()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Foo", Age = 40 });
+                    await session.StoreAsync(new User { Name = "Bar", Age = 50 });
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Age == 50).ToList();
+
+                    Assert.Equal(1, users.Count);
+                    Assert.Equal("Bar", users[0].Name);
+                }
+            }
+        }
+
+        [Fact]
         public async Task Numeric_range_where_clause()
         {
             using (var store = GetDocumentStore())

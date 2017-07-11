@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 ForCollection = query.GetCollection()
             };
 
-            var fields = new Dictionary<string, DynamicQueryMappingItem>();
+            var fields = new Dictionary<string, (DynamicQueryMappingItem DynamicItem, FieldValuePair QueryItem)>();
             var sorting = new Dictionary<string, DynamicSortInfo>();
             
             foreach (var field in query.GetWhereFields())
@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 if (field.Name == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                     continue;
                 
-                fields[field.Name] = new DynamicQueryMappingItem(field.Name, FieldMapReduceOperation.None);
+                fields[field.Name] = (new DynamicQueryMappingItem(field.Name, FieldMapReduceOperation.None), field);
 
                 switch (field.ValueType)
                 {
@@ -157,16 +157,29 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 if (InvariantCompare.IsPrefix(fieldName, Constants.Documents.Indexing.Fields.AlphaNumericFieldName, CompareOptions.None))
                     fieldName = SortFieldHelper.ExtractName(fieldName);
                 
-                fields[field.Name] = new DynamicQueryMappingItem(fieldName, FieldMapReduceOperation.None);
-
                 if (sorting.TryGetValue(fieldName, out var _) == false)
                 {
+                    SortOptions sortType = SortOptions.String;
+
+                    if (fields.TryGetValue(fieldName, out var whereField))
+                    {
+                        switch (whereField.QueryItem.ValueType)
+                        {
+                            case ValueTokenType.Double:
+                            case ValueTokenType.Long:
+                                sortType = SortOptions.Numeric;
+                                break;
+                        }
+                    }
+
                     sorting[field.Name] = new DynamicSortInfo()
                     {
-                        FieldType = SortOptions.Numeric, // TODO arek
+                        FieldType = sortType,
                         Name = fieldName
                     };
                 }
+
+                fields[field.Name] = (new DynamicQueryMappingItem(fieldName, FieldMapReduceOperation.None), null);
             }
             
             // dynamic map-reduce query
@@ -180,7 +193,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 //
 //                numericFields = null;
 
+            // TODO arek - get rid of linq
             result.MapFields = fields.Values
+                .Select(x => x.DynamicItem)
                 .OrderByDescending(x => x.Name.Length)
                 .ToArray();
 

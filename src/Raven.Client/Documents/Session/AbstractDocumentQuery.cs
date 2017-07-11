@@ -1724,6 +1724,33 @@ If you really want to do in memory filtering on the data returned from the query
                 return (double)whereParams.Value;
             }
 
+            if (type == typeof(int))
+                return (int)whereParams.Value;
+
+            if (type == typeof(uint))
+                return (uint)whereParams.Value;
+
+            if (type == typeof(long))
+                return (long)whereParams.Value;
+
+            if (type == typeof(ulong))
+                return (ulong)whereParams.Value;
+
+            if (type == typeof(float))
+                return (float)whereParams.Value;
+
+            if (type == typeof(byte))
+                return (byte)whereParams.Value;
+
+            if (type == typeof(sbyte))
+                return (sbyte)whereParams.Value;
+
+            if (type == typeof(short))
+                return (short)whereParams.Value;
+
+            if (type == typeof(ushort))
+                return (ushort)whereParams.Value;
+
             var strValue = whereParams.Value as string;
             if (strValue != null)
             {

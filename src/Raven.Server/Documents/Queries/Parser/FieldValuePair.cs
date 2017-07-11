@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.Documents.Queries.Parser
 {
-    public struct FieldValuePair
+    public class FieldValuePair
     {
         public readonly string Name;
         public readonly string Value;
