@@ -348,8 +348,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     continue;
                 }
 
-                if (InvariantCompare.IsSuffix(field.Name, Constants.Documents.Indexing.Fields.RangeFieldSuffix, CompareOptions.None))
-                    sortOptions = SortOptions.Numeric;
+                switch (field.OrderingType)
+                {
+                    case Queries.Parser.OrderByFieldType.Long:
+                    case Queries.Parser.OrderByFieldType.Double:
+                        sortOptions = SortOptions.Numeric;
+                        break;
+                }
 
                 sort.Add(new SortField(IndexField.ReplaceInvalidCharactersInFieldName(field.Name), (int)sortOptions, field.Ascending == false));
             }

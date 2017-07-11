@@ -161,22 +161,38 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 {
                     SortOptions sortType = SortOptions.String;
 
-                    if (fields.TryGetValue(fieldName, out var whereField))
+                    switch (field.OrderingType)
                     {
-                        switch (whereField.QueryItem.ValueType)
-                        {
-                            case ValueTokenType.Double:
-                            case ValueTokenType.Long:
-                                sortType = SortOptions.Numeric;
-                                break;
-                        }
+                        case OrderByFieldType.Implicit:
+                        case OrderByFieldType.String:
+                            sortType = SortOptions.String;
+                            break;
+                        case OrderByFieldType.Long:
+                        case OrderByFieldType.Double:
+                            sortType = SortOptions.Numeric;
+                            break;
                     }
+
+                    //if (fields.TryGetValue(fieldName, out var whereField))
+                    //{
+                    //    switch (whereField.QueryItem.ValueType)
+                    //    {
+                    //        case ValueTokenType.Double:
+                    //        case ValueTokenType.Long:
+                    //            sortType = SortOptions.Numeric;
+                    //            break;
+                    //    }
+                    //}
 
                     sorting[field.Name] = new DynamicSortInfo()
                     {
                         FieldType = sortType,
                         Name = fieldName
                     };
+                }
+                else
+                {
+                    // field was specified in WHERE
                 }
 
                 fields[field.Name] = (new DynamicQueryMappingItem(fieldName, FieldMapReduceOperation.None), null);

@@ -618,10 +618,10 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name = "fieldName">Name of the field.</param>
         /// <param name = "descending">if set to <c>true</c> [descending].</param>
-        public void AddOrder(string fieldName, bool descending)
+        public void AddOrder(string fieldName, bool descending, OrderingType ordering = OrderingType.String)
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
-            OrderByTokens.AddLast(descending ? OrderByToken.CreateDescending(fieldName) : OrderByToken.CreateAscending(fieldName));
+            OrderByTokens.AddLast(descending ? OrderByToken.CreateDescending(fieldName, ordering) : OrderByToken.CreateAscending(fieldName, ordering));
         }
 
         public void Highlight(string fieldName, int fragmentLength, int fragmentCount, string fragmentsField)
@@ -1075,13 +1075,10 @@ If you really want to do in memory filtering on the data returned from the query
         ///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
         /// <param name = "fields">The fields.</param>
-        public void OrderBy(params string[] fields)
+        public void OrderBy(string field, OrderingType ordering = OrderingType.String)
         {
-            foreach (var field in fields)
-            {
-                var f = EnsureValidFieldName(field, isNestedPath: false);
-                OrderByTokens.AddLast(OrderByToken.CreateAscending(f));
-            }
+            var f = EnsureValidFieldName(field, isNestedPath: false);
+            OrderByTokens.AddLast(OrderByToken.CreateAscending(f, ordering));
         }
 
         /// <summary>
@@ -1090,13 +1087,10 @@ If you really want to do in memory filtering on the data returned from the query
         ///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
         /// <param name = "fields">The fields.</param>
-        public void OrderByDescending(params string[] fields)
+        public void OrderByDescending(string field, OrderingType ordering = OrderingType.String)
         {
-            foreach (var field in fields)
-            {
-                var f = EnsureValidFieldName(field, isNestedPath: false);
-                OrderByTokens.AddLast(OrderByToken.CreateDescending(f));
-            }
+            var f = EnsureValidFieldName(field, isNestedPath: false);
+            OrderByTokens.AddLast(OrderByToken.CreateDescending(f, ordering));
         }
 
         /// <summary>

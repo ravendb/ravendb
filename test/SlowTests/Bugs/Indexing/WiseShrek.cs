@@ -102,7 +102,8 @@ namespace SlowTests.Bugs.Indexing
                 List<Soft> tmps = session.Advanced.DocumentQuery<Soft>("test").
                                         WaitForNonStaleResults(TimeSpan.FromHours(1))
                                         .WhereStartsWith("f_name", "s")
-                                        .OrderBy(new[] { "-f_License", "f_totaldownload" })
+                                        .OrderBy("-f_License")
+                                        .OrderBy("f_totaldownload")
                                         .ToList();
 
 

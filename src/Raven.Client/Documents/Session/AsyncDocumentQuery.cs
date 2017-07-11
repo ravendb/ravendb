@@ -493,9 +493,9 @@ namespace Raven.Client.Documents.Session
         /// You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
         /// <param name="fields">The fields.</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderBy(params string[] fields)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderBy(string field, OrderingType ordering)
         {
-            OrderBy(fields);
+            OrderBy(field, ordering);
             return this;
         }
 
@@ -507,7 +507,11 @@ namespace Raven.Client.Documents.Session
         /// <param name = "propertySelectors">Property selectors for the fields.</param>
         public IAsyncDocumentQuery<T> OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
         {
-            OrderBy(propertySelectors.Select(GetMemberQueryPathForOrderBy).ToArray());
+            foreach (var item in propertySelectors)
+            {
+                OrderBy(GetMemberQueryPathForOrderBy(item), OrderingUtil.GetOrderingOfType(item.Type));
+            }
+            
             return this;
         }
 
@@ -517,9 +521,9 @@ namespace Raven.Client.Documents.Session
         /// You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
         /// <param name="fields">The fields.</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDescending(params string[] fields)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDescending(string field, OrderingType ordering)
         {
-            OrderByDescending(fields);
+            OrderByDescending(field, ordering);
             return this;
         }
 
@@ -531,7 +535,11 @@ namespace Raven.Client.Documents.Session
         /// <param name = "propertySelectors">Property selectors for the fields.</param>
         public IAsyncDocumentQuery<T> OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
         {
-            OrderByDescending(propertySelectors.Select(GetMemberQueryPathForOrderBy).ToArray());
+            foreach (var item in propertySelectors)
+            {
+                OrderByDescending(GetMemberQueryPathForOrderBy(item), OrderingUtil.GetOrderingOfType(item.Type));
+            }
+            
             return this;
         }
 

@@ -62,7 +62,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name = "fieldName">Name of the field.</param>
         /// <param name = "descending">if set to <c>true</c> [descending].</param>
-        void AddOrder(string fieldName, bool descending);
+        void AddOrder(string fieldName, bool descending, OrderingType ordering = OrderingType.String);
 
         /// <summary>
         ///   Includes the specified path in the query, loading the document specified in that path
@@ -231,7 +231,7 @@ namespace Raven.Client.Documents.Session
         ///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
         /// <param name = "fields">The fields.</param>
-        void OrderBy(params string[] fields);
+        void OrderBy(string field, OrderingType ordering = OrderingType.String);
 
         /// <summary>
         ///   Adds matches highlighting for the specified field.

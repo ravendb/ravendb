@@ -729,9 +729,9 @@ namespace Raven.Client.Documents.Session
         /// You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
         /// <param name="fields">The fields.</param>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderBy(params string[] fields)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderBy(string field, OrderingType ordering)
         {
-            OrderBy(fields);
+            OrderBy(field, ordering);
             return this;
         }
 
@@ -743,7 +743,10 @@ namespace Raven.Client.Documents.Session
         /// <param name = "propertySelectors">Property selectors for the fields.</param>
         public IDocumentQuery<T> OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
         {
-            OrderBy(propertySelectors.Select(GetMemberQueryPathForOrderBy).ToArray());
+            foreach (var item in propertySelectors)
+            {
+                OrderBy(GetMemberQueryPathForOrderBy(item), OrderingUtil.GetOrderingOfType(item.Type));
+            }
             return this;
         }
 
@@ -753,9 +756,9 @@ namespace Raven.Client.Documents.Session
         /// You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
         /// <param name="fields">The fields.</param>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDescending(params string[] fields)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDescending(string field, OrderingType ordering)
         {
-            OrderByDescending(fields);
+            OrderByDescending(field, ordering);
             return this;
         }
 
@@ -767,7 +770,11 @@ namespace Raven.Client.Documents.Session
         /// <param name = "propertySelectors">Property selectors for the fields.</param>
         public IDocumentQuery<T> OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
         {
-            OrderByDescending(propertySelectors.Select(GetMemberQueryPathForOrderBy).ToArray());
+            foreach (var item in propertySelectors)
+            {
+                OrderByDescending(GetMemberQueryPathForOrderBy(item), OrderingUtil.GetOrderingOfType(item.Type));
+            }
+
             return this;
         }
 

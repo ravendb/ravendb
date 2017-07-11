@@ -173,14 +173,14 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        public IEnumerable<(string Name, bool Ascending)> GetOrderByFields()
+        public IEnumerable<(string Name, OrderByFieldType OrderingType, bool Ascending)> GetOrderByFields()
         {
             if (Parsed.OrderBy == null)
                 yield break;
             
             foreach (var fieldInfo in Parsed.OrderBy)
             {
-                yield return (QueryExpression.Extract(Parsed.QueryText, fieldInfo.Field), fieldInfo.Ascending);
+                yield return (QueryExpression.Extract(Parsed.QueryText, fieldInfo.Field), fieldInfo.FieldType, fieldInfo.Ascending);
             }
         }
 

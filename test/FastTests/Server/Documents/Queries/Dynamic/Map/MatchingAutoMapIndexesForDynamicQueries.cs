@@ -99,7 +99,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 new IndexField
                 {
                     Name = "Age",
-                    Storage = FieldStorage.No
+                    Storage = FieldStorage.No,
+                    Sort = SortOptions.Numeric
                 }
             });
 
@@ -160,7 +161,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             add_index(definition);
             
-            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' AND Address.Street ='1stAvenue' AND Friends,Name 'Jon'"));
+            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' AND Address.Street ='1stAvenue' AND Friends,Name = 'Jon'"));
 
             var result = _sut.Match(dynamicQuery);
 

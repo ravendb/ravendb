@@ -278,7 +278,7 @@ If you really want to do in memory filtering on the data returned from the query
         ///     The fields are the names of the fields to sort, defaulting to sorting by ascending.
         ///     You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
-        TSelf OrderBy(params string[] fields);
+        TSelf OrderBy(string field, OrderingType ordering = OrderingType.String);
 
         /// <summary>
         ///     Order the results by the specified fields
@@ -293,7 +293,7 @@ If you really want to do in memory filtering on the data returned from the query
         ///     The fields are the names of the fields to sort, defaulting to sorting by descending.
         ///     You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
-        TSelf OrderByDescending(params string[] fields);
+        TSelf OrderByDescending(string field, OrderingType ordering = OrderingType.String);
 
         /// <summary>
         ///     Order the results by the specified fields
