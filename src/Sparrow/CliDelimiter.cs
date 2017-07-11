@@ -9,7 +9,7 @@
             ReadKey,
             Clear,
             Logout,
-            Quit,
+            Shutdown,
             RestartServer,
             ContinuePrinting
         }

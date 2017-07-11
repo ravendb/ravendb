@@ -99,7 +99,7 @@ namespace rvn
                         Delimiter.ReadKey,
                         Delimiter.Clear,
                         Delimiter.Logout,
-                        Delimiter.Quit,
+                        Delimiter.Shutdown,
                         Delimiter.RestartServer,
                         Delimiter.ContinuePrinting
                     };
@@ -184,7 +184,7 @@ namespace rvn
                                 Console.Clear();
                                 break;
                             case Delimiter.Logout:
-                            case Delimiter.Quit:
+                            case Delimiter.Shutdown:
                                 Console.WriteLine();
                                 Environment.Exit(0);
                                 break;

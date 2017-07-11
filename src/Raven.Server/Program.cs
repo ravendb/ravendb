@@ -88,9 +88,9 @@ namespace Raven.Server
                     {
                         try
                         {
-                            server.OpenPipe(); // TODO: although server should dispose the pipe - it is not.. after resetserver
+                            server.OpenPipe();
                             server.Initialize();
-                            
+
                             if (CommandLineSwitches.PrintServerId)
                                 Console.WriteLine($"Server ID is {server.ServerStore.GetServerId()}.");
 
@@ -98,6 +98,8 @@ namespace Raven.Server
                                 BrowserHelper.OpenStudioInBrowser(server.ServerStore.NodeHttpServerUrl);
 
                             Console.WriteLine($"Server available on: {server.ServerStore.NodeHttpServerUrl}");
+
+                            var consoleMre = new ManualResetEvent(false);
 
                             server.GetTcpServerStatusAsync()
                                 .ContinueWith(tcp =>
@@ -108,13 +110,15 @@ namespace Raven.Server
                                     }
                                     else
                                     {
-                                        Console.Error.WriteLine($"Tcp listen failure (see {server.ServerStore.NodeHttpServerUrl}/info/tcp for details) {tcp.Exception.Message}");
+                                        Console.Error.WriteLine(
+                                            $"Tcp listen failure (see {server.ServerStore.NodeHttpServerUrl}/info/tcp for details) {tcp.Exception.Message}");
                                     }
+                                    consoleMre.Set();
                                 });
                             Console.WriteLine("Server started, listening to requests...");
 
                             IsRunningAsService = false;
-                            rerun = CommandLineSwitches.Daemon ? RunAsService() : RunInteractive(server);
+                            rerun = CommandLineSwitches.Daemon ? RunAsService() : RunInteractive(server, consoleMre);
 
                             Console.WriteLine("Starting shut down...");
                             if (Logger.IsInfoEnabled)
@@ -134,16 +138,25 @@ namespace Raven.Server
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("Error during shutdown");
-                    Console.WriteLine(e);
-                    return -2;
+                    if (e.ToString().Contains(@"'WriteReqPool'") &&
+                        e.ToString().Contains("System.ObjectDisposedException")) // TODO : Remove this check in dotnet 2.0 - https://github.com/aspnet/KestrelHttpServer/issues/1231
+                    {
+                        Console.WriteLine("Ignoring Kestrel's Exception : 'Cannot access a disposed object. Object name: 'WriteReqPool'");
+                        Console.Out.Flush();
+                    }
+                    else
+                    {
+                        Console.WriteLine("Error during shutdown");
+                        Console.WriteLine(e);
+                        return -2;
+                    }
                 }
             } while (rerun);
 
             return 0;
         }
 
-        public static ManualResetEvent QuitServerMre = new ManualResetEvent(false);
+        public static ManualResetEvent ShutdownServerMre = new ManualResetEvent(false);
         public static ManualResetEvent ResetServerMre = new ManualResetEvent(false);
 
         public static bool IsRunningAsService;
@@ -158,21 +171,23 @@ namespace Raven.Server
 
             AssemblyLoadContext.Default.Unloading += (s) =>
             {
+                if (ShutdownServerMre.WaitOne(0))
+                    return; // already done
                 Console.WriteLine("Received graceful exit request...");
-                QuitServerMre.Set();
+                ShutdownServerMre.Set();
             };
 
-            QuitServerMre.WaitOne();
+            ShutdownServerMre.WaitOne();
             if (ResetServerMre.WaitOne(0))
             {
                 ResetServerMre.Reset();
-                QuitServerMre.Reset();
+                ShutdownServerMre.Reset();
                 return true;
             }
             return false;
         }
 
-        private static bool RunInteractive(RavenServer server)
+        private static bool RunInteractive(RavenServer server, ManualResetEvent consoleMre)
         {
             var configuration = server.Configuration;
 
@@ -182,7 +197,7 @@ namespace Raven.Server
                 Path.Combine(AppContext.BaseDirectory, configuration.Logs.Path));
 
 
-            return new RavenCli().Start(server, Console.Out, Console.In, true);
+            return new RavenCli().Start(server, Console.Out, Console.In, true, consoleMre);
         }
 
         public static void WriteServerStatsAndWaitForEsc(RavenServer server)

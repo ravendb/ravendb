@@ -83,7 +83,7 @@ namespace Raven.Server.Utils
             None,
             Prompt,
             HelpPrompt,
-            Quit,
+            Shutdown,
             Log,
             Clear,
             ResetServer,
@@ -240,10 +240,10 @@ namespace Raven.Server.Utils
             return true;
         }
 
-        private static bool CommandQuit(List<string> args, RavenCli cli)
+        private static bool CommandShutdown(List<string> args, RavenCli cli)
         {
             WriteText("", TextColor, cli);
-            WriteText("Are you sure you want to quit the server ? [y/N] : ", TextColor, cli, newLine: false);
+            WriteText("Are you sure you want to shutdown the server ? [y/N] : ", TextColor, cli, newLine: false);
 
             var k = ReadKey(cli);
             WriteText("", TextColor, cli);
@@ -660,8 +660,8 @@ namespace Raven.Server.Utils
                 new[] {"decrypt", "Decrypt server store"},
                 new[] {"experimental <on | off>", "Set if to allow experimental cli commands"},
                 new[] {"logout", "Logout (applicable only on piped connection)"},
-                new[] {"resetServer", "Restarts the server (quits and re-run)"},
-                new[] {"quit", "Quit server"},
+                new[] {"resetServer", "Restarts the server (shutdown and re-run)"},
+                new[] {"shutdown", "Shutdown the server"},
                 new[] {"help", "This help screen"}
             };
 
@@ -697,7 +697,7 @@ namespace Raven.Server.Utils
             [Command.LowMem] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLowMem },
             [Command.ResetServer] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandResetServer },
             [Command.Logout] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLogout },
-            [Command.Quit] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandQuit },
+            [Command.Shutdown] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandShutdown },
             [Command.Help] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandHelp },
 
             [Command.GetKey] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandGetKey },
@@ -712,7 +712,7 @@ namespace Raven.Server.Utils
             [Command.CreateDb] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandCreateDb, Experimental = true }
         };
 
-        public bool Start(RavenServer server, TextWriter textWriter, TextReader textReader, bool consoleColoring)
+        public bool Start(RavenServer server, TextWriter textWriter, TextReader textReader, bool consoleColoring, ManualResetEvent consoleMre)
         {
             _server = server;
             _writer = textWriter;
@@ -721,7 +721,7 @@ namespace Raven.Server.Utils
 
             try
             {
-                return StartCli();
+                return StartCli(consoleMre);
             }
             catch (Exception ex)
             {
@@ -737,7 +737,7 @@ namespace Raven.Server.Utils
                         continue;
                     switch (line)
                     {
-                        case "quit":
+                        case "shutdown":
                         case "q":
                             return false;
                         case "reset":
@@ -752,14 +752,14 @@ namespace Raven.Server.Utils
                             break;
                         case "h":
                         case "help":
-                            WriteText("Available commands: quit, reset, log, logoff", TextColor, this);
+                            WriteText("Available commands: shutdown, reset, log, logoff", TextColor, this);
                             break;
                     }
                 }
             }
         }
 
-        public bool StartCli()
+        private bool StartCli(ManualResetEvent consoleMre)
         {
             var ctrlCPressed = false;
             if (_consoleColoring)
@@ -776,6 +776,12 @@ namespace Raven.Server.Utils
             }
             while (true)
             {
+                if (consoleMre != null && _consoleColoring)
+                {
+                    // wait for "Tcp listening on" to printed before prompt
+                    consoleMre.WaitOne(2000);
+                }
+
                 PrintCliHeader(this);
                 var line = ReadLine(this);
                 _writer.Flush();
@@ -889,20 +895,20 @@ namespace Raven.Server.Utils
                             WriteText("Server is not running as Service. Restart from a remote connection is not allowed." + Environment.NewLine +
                                     "Restart the server from it's main console" + Environment.NewLine, WarningColor, this);
                         }
-                        if (parsedCommand.Command == Command.Quit)
+                        if (parsedCommand.Command == Command.Shutdown)
                         {
                             if (Program.IsRunningAsService || _writer == Console.Out)
                             {
                                 if (_consoleColoring == false)
                                 {
-                                    var str = "Quitting Server";
-                                    PrintBothToConsoleAndRemotePipe(str, this, CliDelimiter.Delimiter.Quit);
+                                    var str = "Shutting down the server";
+                                    PrintBothToConsoleAndRemotePipe(str, this, CliDelimiter.Delimiter.Shutdown);
                                 }
                                 return false;
                             }
 
-                            WriteText("Server is not running as Service. Quit from a remote connection is not allowed." + Environment.NewLine +
-                                      "Quit the server from it's main console" + Environment.NewLine, WarningColor, this);
+                            WriteText("Server is not running as Service. Shutdown from a remote connection is not allowed." + Environment.NewLine +
+                                      "Shutdown the server from it's main console" + Environment.NewLine, WarningColor, this);
                         }
                         if (parsedCommand.Command == Command.Logout)
                         {
@@ -911,7 +917,7 @@ namespace Raven.Server.Utils
                     }
                     else
                     {
-                        if (parsedCommand.Command == Command.Quit ||
+                        if (parsedCommand.Command == Command.Shutdown ||
                             parsedCommand.Command == Command.ResetServer)
                             lastRc = true; // if answered "No" for the above command - don't print ERROR
                     }
@@ -956,7 +962,7 @@ namespace Raven.Server.Utils
             switch (txt)
             {
                 case "q":
-                    cmd = Command.Quit;
+                    cmd = Command.Shutdown;
                     break;
                 case "h":
                     cmd = Command.Help;
