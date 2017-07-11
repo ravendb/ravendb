@@ -39,7 +39,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
     editViewUpdate(dto: Raven.Client.Documents.Subscriptions.SubscriptionState) {
         this.script(dto.Criteria.Script);
         this.fromChangeVector(dto.ChangeVector);
-        this.includeRevisions(dto.Criteria.IsVersioned);
+        this.includeRevisions(dto.Criteria.IncludeRevisions);
     }
 
     dataFromUI(): subscriptionDataFromUI {
@@ -49,7 +49,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
             // TODO:  Note: null means that we define with 'Beginning of Time'. This is temporary, until the other 2 options are implemented 
             Collection: this.collection(), 
             Script: this.script(),
-            IsVersioned: this.includeRevisions()
+            IncludeRevisions: this.includeRevisions()
         }
     }
 
@@ -71,7 +71,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
                 Criteria: {
                      Collection: null,
                      Script: null,
-                     IsVersioned: false
+                     IncludeRevisions: false
                 },
                 ChangeVector: [],
                 LastEtagReachedInServer: null,

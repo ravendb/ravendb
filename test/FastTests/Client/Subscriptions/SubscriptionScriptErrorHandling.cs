@@ -112,7 +112,7 @@ namespace FastTests.Client.Subscriptions
                     Criteria = new SubscriptionCriteria<User>()
                     {
                         Script = "reta   fsd",
-                        IsVersioned = true
+                        IncludeRevisions = true
                     }
                 });
 

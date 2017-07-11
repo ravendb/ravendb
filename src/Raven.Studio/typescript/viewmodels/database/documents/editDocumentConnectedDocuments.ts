@@ -77,7 +77,7 @@ class connectedDocuments {
         if (!doc) {
             return false;
         }
-        return doc.__metadata.hasFlag("Versioned") || doc.__metadata.hasFlag("DeleteRevision");
+        return doc.__metadata.hasFlag("HasRevisions") || doc.__metadata.hasFlag("DeleteRevision");
     });
 
     constructor(document: KnockoutObservable<document>,
@@ -249,7 +249,7 @@ class connectedDocuments {
     fetchRevisionDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocumentItem>> {
         const doc = this.document();
 
-        if (!doc.__metadata.hasFlag("Versioned") && !doc.__metadata.hasFlag("DeleteRevision")) {
+        if (!doc.__metadata.hasFlag("HasRevisions") && !doc.__metadata.hasFlag("DeleteRevision")) {
             return connectedDocuments.emptyDocResult<connectedDocumentItem>();
         }
 
@@ -392,7 +392,7 @@ class connectedDocuments {
             this.recentDocuments.appendRecentDocument(this.db(), this.document().getId());
             this.currentDocumentIsStarred(starredDocumentsStorage.isStarred(this.db(), this.document().getId()));
 
-            if (connectedDocuments.currentTab() === "revisions" && (!document.__metadata.hasFlag("Versioned") && !document.__metadata.hasFlag("DeleteRevision"))) {
+            if (connectedDocuments.currentTab() === "revisions" && (!document.__metadata.hasFlag("HasRevisions") && !document.__metadata.hasFlag("DeleteRevision"))) {
                 // this will also reset grid
                 connectedDocuments.currentTab("attachments");
             } else {

@@ -73,7 +73,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             {
                 [nameof(SubscriptionCriteria.Collection)] = Criteria.Collection,
                 [nameof(SubscriptionCriteria.Script)] = Criteria.Script,
-                [nameof(SubscriptionCriteria.IsVersioned)] = Criteria.IsVersioned
+                [nameof(SubscriptionCriteria.IncludeRevisions)] = Criteria.IncludeRevisions
             };
             json[nameof(InitialChangeVector)] = InitialChangeVector?.ToJson();
             json[nameof(SubscriptionName)] = SubscriptionName;
