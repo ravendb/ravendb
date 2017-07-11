@@ -6,9 +6,7 @@
 
 using System.Collections.Generic;
 using FastTests;
-using Org.BouncyCastle.Bcpg.OpenPgp;
 using Raven.Client.Documents.Operations;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Issues

@@ -21,7 +21,6 @@ using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Utils;
-using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests

@@ -1,10 +1,13 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Operators;
+using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Crypto.Prng;
 using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
@@ -13,9 +16,9 @@ using Org.BouncyCastle.X509;
 using BigInteger = Org.BouncyCastle.Math.BigInteger;
 using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
-namespace Tests.Infrastructure
+namespace Raven.Server.Utils
 {
-    public class CertificateUtils
+    internal class CertificateUtils
     {
         public static X509Certificate2 CreateSelfSignedCertificate(string subjectName, string issuerName)
         {
@@ -24,7 +27,32 @@ namespace Tests.Infrastructure
             return CreateSelfSignedCertificateBasedOnCertificateAuthorityPrivateKey(subjectName, issuerName, caPrivateKey);
         }
 
-        private static X509Certificate2 CreateSelfSignedCertificateBasedOnCertificateAuthorityPrivateKey(string subjectName, string issuerName, AsymmetricKeyParameter issuerPrivKey)
+        public static X509Certificate2 CreateSelfSignedClientCertificate(string subjectName, RavenServer.CertificateHolder certificateHolder)
+        {
+            return CreateSelfSignedCertificateBasedOnCertificateAuthorityPrivateKey(
+                subjectName, 
+                certificateHolder.Certificate.Subject, 
+                certificateHolder.PrivateKey.Key);
+        }
+
+        public static AsymmetricKeyParameter TransformRsaPrivateKey(AsymmetricAlgorithm privateKey)
+        {
+            RSACryptoServiceProvider prov = privateKey as RSACryptoServiceProvider;
+            // take care of the possible NRE
+            RSAParameters parameters = prov.ExportParameters(true);
+
+            return new RsaPrivateCrtKeyParameters(
+                new BigInteger(1, parameters.Modulus),
+                new BigInteger(1, parameters.Exponent),
+                new BigInteger(1, parameters.D),
+                new BigInteger(1, parameters.P),
+                new BigInteger(1, parameters.Q),
+                new BigInteger(1, parameters.DP),
+                new BigInteger(1, parameters.DQ),
+                new BigInteger(1, parameters.InverseQ));
+        }
+        private static X509Certificate2 CreateSelfSignedCertificateBasedOnCertificateAuthorityPrivateKey(string subjectName, string issuerName, 
+            AsymmetricKeyParameter issuerPrivKey)
         {
             const int keyStrength = 2048;
 
@@ -49,7 +77,7 @@ namespace Tests.Infrastructure
 
             // Valid For
             DateTime notBefore = DateTime.UtcNow.Date;
-            DateTime notAfter = notBefore.AddYears(2);
+            DateTime notAfter = notBefore.AddYears(5);
             certificateGenerator.SetNotBefore(notBefore);
             certificateGenerator.SetNotAfter(notAfter);
 

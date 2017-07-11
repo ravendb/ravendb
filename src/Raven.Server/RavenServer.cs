@@ -35,6 +35,13 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using System.Reflection;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http.Features.Authentication;
+using Microsoft.AspNetCore.Server.Kestrel.Filter;
+using Microsoft.AspNetCore.Server.Kestrel.Https;
+using Org.BouncyCastle.Pkcs;
+using Org.BouncyCastle.Security;
+using Raven.Client;
 using Raven.Client.Extensions;
 using Raven.Client.Server.Operations.Certificates;
 using Raven.Server.ServerWide.Commands;
@@ -82,7 +89,7 @@ namespace Raven.Server
 
             _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("<TcpServer>");
         }
-        
+
         public Task<TcpListenerStatus> GetTcpServerStatusAsync()
         {
             return _tcpListenerTask;
@@ -116,9 +123,19 @@ namespace Raven.Server
                 if (Configuration.Security.CertificatePath != null)
                 {
                     ServerCertificateHolder = LoadCertificate(Configuration.Security);
-                    
-                    kestrelOptions += options => options.UseHttps(ServerCertificateHolder.Certificate);
-                    
+                    kestrelOptions += options =>
+                    {
+                        var filterOptions = new HttpsConnectionFilterOptions
+                        {
+                            ServerCertificate = ServerCertificateHolder.Certificate,
+                            CheckCertificateRevocation = true,
+                            ClientCertificateMode = ClientCertificateMode.AllowCertificate,
+                            SslProtocols = SslProtocols.Tls,
+                        };
+
+                        options.ConnectionFilter = new AuthenticatingFilter( this,new HttpsConnectionFilter(filterOptions, new NoOpConnectionFilter()));
+                    };
+
                     // Enforce https in all network activities
                     if (Configuration.Core.ServerUrl.StartsWith("http:", StringComparison.OrdinalIgnoreCase))
                         throw new InvalidOperationException($"When the `{RavenConfiguration.GetKey(x => x.Security.CertificatePath)}` is specified, the `{RavenConfiguration.GetKey(x => x.Core.ServerUrl)}` must be using https, but was " + Configuration.Core.ServerUrl);
@@ -160,7 +177,7 @@ namespace Raven.Server
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Initialized Server... {string.Join(", ", WebUrls)}");
-                
+
                 _tcpListenerTask = StartTcpListener();
             }
             catch (Exception e)
@@ -177,7 +194,7 @@ namespace Raven.Server
             // so we won't generate one per server in our test environment 
             if (Pipe == null)
                 return;
-            
+
             while (true)
             {
                 try
@@ -189,7 +206,7 @@ namespace Raven.Server
                         try
                         {
                             var msg = reader.ReadLine();
-                            var tokens = msg.Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries);
+                            var tokens = msg.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
                             if (tokens.Length < 1)
                             {
@@ -277,30 +294,158 @@ namespace Raven.Server
             }
         }
 
+        public class AuthenticateConnection : IHttpAuthenticationFeature
+        {
+            public HashSet<string> AuthorizedDatabases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            private HashSet<string> _caseSensitiveAuthorizedDatabases = new HashSet<string>();
+            public X509Certificate2 Certificate;
+            public CertificateDefinition Definition;
+            
+            public bool CanAccess(string db)
+            {
+                if (Status == AuthenticationStatus.ServerAdmin)
+                    return true;
+                if (db == null)
+                    return false;
+
+                if (Status != AuthenticationStatus.Allowed)
+                    return false;
+                if (_caseSensitiveAuthorizedDatabases.Contains(db))
+                    return true;
+                if (AuthorizedDatabases.Contains(db) == false)
+                    return false;
+                // Technically speaking, since this is per connection, this is single threaded. But I'm 
+                // worried about race conditions here if we move to HTTP 2.0 at some point. At that point,
+                // we'll probably want to handle this concurrently, and the cost of adding it in this manner
+                // is pretty small for most cases anyway
+                _caseSensitiveAuthorizedDatabases = new HashSet<string>(_caseSensitiveAuthorizedDatabases)
+                {
+                    db
+                };
+                return true;
+            }
+
+            ClaimsPrincipal IHttpAuthenticationFeature.User { get; set; }
+
+            IAuthenticationHandler IHttpAuthenticationFeature.Handler { get; set; }
+
+            public AuthenticationStatus Status;
+        }
+
+        public class AuthenticatingFilter : IConnectionFilter
+        {
+            private readonly RavenServer _server;
+            private readonly HttpsConnectionFilter _httpsConnectionFilter;
+
+            public AuthenticatingFilter(RavenServer server, HttpsConnectionFilter httpsConnectionFilter)
+            {
+                _server = server;
+                _httpsConnectionFilter = httpsConnectionFilter;
+            }
+
+            public async Task OnConnectionAsync(ConnectionFilterContext context)
+            {
+                await _httpsConnectionFilter.OnConnectionAsync(context);
+                var old = context.PrepareRequest;
+                var featureCollection = new FeatureCollection();
+                old(featureCollection);
+                var authenticationStatus = new AuthenticateConnection();
+                
+                //TODO: What about expired certificate?
+
+                var tls = featureCollection.Get<ITlsConnectionFeature>();
+                var certificate = tls.ClientCertificate;
+                authenticationStatus.Certificate = certificate;
+                if (certificate == null)
+                {
+                    authenticationStatus.Status = AuthenticationStatus.NoCertificateProvided;
+                }
+                else if (certificate.Equals(_server.ServerCertificateHolder.Certificate))
+                {
+                    authenticationStatus.Status = AuthenticationStatus.ServerAdmin;
+                }
+                else
+                {
+                    using (_server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    {
+                        var certKey = Constants.Certificates.Prefix + certificate.Thumbprint;
+                        var permisions = _server.ServerStore.Cluster.Read(ctx, certKey) ?? 
+                            _server.ServerStore.Cluster.GetLocalState(ctx, certKey);
+                        if (permisions == null)
+                        {
+                            authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
+                        }
+                        else
+                        {
+                            var definition = JsonDeserializationServer.CertificateDefinition(permisions);
+                            authenticationStatus.Definition = definition;
+                            if (definition.ServerAdmin)
+                            {
+                                authenticationStatus.Status = AuthenticationStatus.ServerAdmin;
+                            }
+                            else
+                            {
+                                authenticationStatus.Status = AuthenticationStatus.Allowed;
+                                foreach (var database in definition.Databases)
+                                {
+                                    authenticationStatus.AuthorizedDatabases.Add(database);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // build the token
+                context.PrepareRequest = features =>
+                {
+                    old?.Invoke(features);
+                    features.Set<IHttpAuthenticationFeature>(authenticationStatus);
+                };
+            }
+        }
+
         public string[] WebUrls { get; set; }
 
         private readonly JsonContextPool _tcpContextPool = new JsonContextPool();
-        
+
         internal CertificateHolder ServerCertificateHolder = new CertificateHolder();
 
         public class CertificateHolder
         {
             public string CertificateForClients;
             public X509Certificate2 Certificate;
+            public AsymmetricKeyEntry PrivateKey;
         }
 
         private static CertificateHolder LoadCertificate(SecurityConfiguration config)
         {
             try
             {
+                var rawData = File.ReadAllBytes(config.CertificatePath);
+                var store = new Pkcs12Store();
+                store.Load(new MemoryStream(rawData), config.CertificatePassword?.ToCharArray());
+                AsymmetricKeyEntry pk = null;
+                foreach (string alias in store.Aliases)
+                {
+                    pk = store.GetKey(alias);
+                    if (pk != null)
+                        break;
+                }
+
+                if(pk == null)
+                    throw new EncryptionException("Unable to find the private key in the provided certificate: " + config.CertificatePath);
+
+
+
                 var loadedCertificate = config.CertificatePassword == null
-                    ? new X509Certificate2(File.ReadAllBytes(config.CertificatePath))
-                    : new X509Certificate2(File.ReadAllBytes(config.CertificatePath), config.CertificatePassword);
+                    ? new X509Certificate2(rawData)
+                    : new X509Certificate2(rawData, config.CertificatePassword);
 
                 return new CertificateHolder
                 {
                     Certificate = loadedCertificate,
-                    CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert))
+                    CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),
+                    PrivateKey = pk
                 };
             }
             catch (Exception e)
@@ -308,7 +453,7 @@ namespace Raven.Server
                 throw new InvalidOperationException($"Could not load certificate file {config.CertificatePath}, please check the path and password", e);
             }
         }
-        
+
         public class TcpListenerStatus
         {
             public readonly List<TcpListener> Listeners = new List<TcpListener>();
@@ -372,7 +517,7 @@ namespace Raven.Server
                     }
                 }
 
-                if(successfullyBoundToAtLeastOne == false)
+                if (successfullyBoundToAtLeastOne == false)
                 {
                     if (errors.Count == 1)
                         throw errors[0];
@@ -484,7 +629,7 @@ namespace Raven.Server
                                 // we don't want to allow external (and anonymous) users to send us unlimited data
                                 // a maximum of 2 KB for the header is big enough to include any valid header that
                                 // we can currently think of
-                                maxSize: 1024*2
+                                maxSize: 1024 * 2
                                 ))
                             {
                                 header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
@@ -580,9 +725,9 @@ namespace Raven.Server
                     tcp.PinnedBuffer
                 ))
                 {
-                    
+
                     var maintenanceHeader = JsonDeserializationRachis<ClusterMaintenanceSupervisor.ClusterMaintenanceConnectionHeader>.Deserialize(headerJson);
-                    
+
                     if (_clusterMaintenanceWorker?.CurrentTerm > maintenanceHeader.Term)
                     {
                         if (_tcpLogger.IsInfoEnabled)
@@ -601,7 +746,7 @@ namespace Raven.Server
                     }
                     return true;
                 }
-                
+
             }
             return false;
         }
@@ -627,7 +772,7 @@ namespace Raven.Server
             }
 
             tcp.DocumentDatabase = await databaseLoadingTask;
-            if(tcp.DocumentDatabase == null)
+            if (tcp.DocumentDatabase == null)
                 DatabaseDoesNotExistException.Throw(header.DatabaseName);
 
             Debug.Assert(tcp.DocumentDatabase != null);
@@ -684,7 +829,7 @@ namespace Raven.Server
         {
             return true;
         }
-        
+
         private static void ThrowDatabaseShutdown(DocumentDatabase database)
         {
             throw new DatabaseDisabledException($"Database {database.Name} was shutdown.");
@@ -769,5 +914,14 @@ namespace Raven.Server
             Pipe = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte,
                 PipeOptions.None, 1024, 1024);
         }
+    }
+
+    public enum AuthenticationStatus
+    {
+        None,
+        NoCertificateProvided,
+        UnfamiliarCertificate,
+        Allowed,
+        ServerAdmin,
     }
 }
