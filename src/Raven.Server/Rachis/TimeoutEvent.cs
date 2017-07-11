@@ -72,12 +72,14 @@ namespace Raven.Server.Rachis
         {
             lock (this)
             {
+                if (Disable)
+                    return;
+                
                 try
                 {
                     if (_timeoutHappened == null)
                         return;
-                    if (Disable)
-                        return;
+               
 
                     _timeoutHappened?.Invoke();
                 }

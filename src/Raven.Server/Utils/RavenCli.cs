@@ -12,6 +12,7 @@ using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Debugging;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Json.Parsing;
@@ -85,6 +86,7 @@ namespace Raven.Server.Utils
             HelpPrompt,
             Shutdown,
             Log,
+            Timer,
             Clear,
             ResetServer,
             Stats,
@@ -348,6 +350,26 @@ namespace Raven.Server.Utils
             return true;
         }
 
+        private static bool CommandTimer(List<string> args, RavenCli cli)
+        {
+            switch (args.First())
+            {
+                case "on":
+                    TimeoutEvent.Disable = false;
+                    WriteText("Timer enabled", ConsoleColor.Green, cli);
+                    break;
+                case "off":
+                    TimeoutEvent.Disable = true;
+                    WriteText("Timer disabled", ConsoleColor.Green, cli);
+                    break;
+                case "fire":
+                    cli._server.ServerStore.Engine.Timeout.ExecuteTimeoutBehavior();
+                    WriteText("Timer fired", ConsoleColor.Green, cli);
+                    break;
+            }
+
+            return true;
+        }
         private static bool CommandLog(List<string> args, RavenCli cli)
         {
             switch (args.First())
@@ -355,12 +377,12 @@ namespace Raven.Server.Utils
                 case "on":
                     LoggingSource.Instance.EnableConsoleLogging();
                     LoggingSource.Instance.SetupLogMode(LogMode.Information, Path.Combine(AppContext.BaseDirectory, cli._server.Configuration.Logs.Path));
-                    WriteText("Loggin set to ON", ConsoleColor.Green, cli);
+                    WriteText("Logging set to ON", ConsoleColor.Green, cli);
                     break;
                 case "off":
                     LoggingSource.Instance.DisableConsoleLogging();
                     LoggingSource.Instance.SetupLogMode(LogMode.None, Path.Combine(AppContext.BaseDirectory, cli._server.Configuration.Logs.Path));
-                    WriteText("Loggin set to OFF", ConsoleColor.DarkGreen, cli);
+                    WriteText("Logging set to OFF", ConsoleColor.DarkGreen, cli);
                     break;
                 case "http-off":
                     WriteText("Setting HTTP logging OFF", ConsoleColor.DarkGreen, cli);
@@ -509,6 +531,7 @@ namespace Raven.Server.Utils
                 new[] {"logout", "Logout (applicable only on piped connection)"},
                 new[] {"resetServer", "Restarts the server (shutdown and re-run)"},
                 new[] {"shutdown", "Shutdown the server"},
+                new[] {"timer", "<on | off | fire>"},
                 new[] {"help", "This help screen"}
             };
 
@@ -537,6 +560,7 @@ namespace Raven.Server.Utils
             [Command.Stats] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandStats },
             [Command.Gc] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandGc },
             [Command.Log] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandLog },
+            [Command.Timer] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandTimer },
             [Command.Clear] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandClear },
             [Command.Info] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandInfo },
             [Command.Logo] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLogo },
