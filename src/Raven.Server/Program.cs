@@ -86,7 +86,6 @@ namespace Raven.Server
                 {
                     using (var server = new RavenServer(configuration))
                     {
-                        var consoleMre = new ManualResetEvent(false);
                         try
                         {
                             server.OpenPipe();
@@ -99,6 +98,8 @@ namespace Raven.Server
                                 BrowserHelper.OpenStudioInBrowser(server.ServerStore.NodeHttpServerUrl);
 
                             Console.WriteLine($"Server available on: {server.ServerStore.NodeHttpServerUrl}");
+
+                            var consoleMre = new ManualResetEvent(false);
 
                             server.GetTcpServerStatusAsync()
                                 .ContinueWith(tcp =>
@@ -130,10 +131,6 @@ namespace Raven.Server
                             Console.WriteLine(e);
 
                             return -1;
-                        }
-                        finally
-                        {
-                            consoleMre.Dispose();
                         }
                     }
 
