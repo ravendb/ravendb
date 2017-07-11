@@ -4,11 +4,13 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Exceptions;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Server;
 using Raven.Server.Documents.Patch;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron;
@@ -110,7 +112,7 @@ namespace Raven.Server.Documents.Replication
 
                             if (ConflictSolver?.ResolveToLatest == true)
                             {
-                                resolvedConflicts.Add((ResolveToLatest(context, conflicts), maxConflictEtag));
+                                resolvedConflicts.Add((ResolveToLatest(conflicts), maxConflictEtag));
 
                                 //stats.AddResolvedBy("ResolveToLatest", conflictList.Count);
                             }
@@ -362,10 +364,27 @@ namespace Raven.Server.Documents.Replication
             return true;
         }
 
-        public DocumentConflict ResolveToLatest(
-            DocumentsOperationContext context,
-            IReadOnlyList<DocumentConflict> conflicts)
+        public unsafe DocumentConflict ResolveToLatest(List<DocumentConflict> conflicts)
         {
+            // we have to sort this here because we need to ensure that all the nodes are always 
+            // arrive to the same conclusion, regardless of what time they go it
+            conflicts.Sort((x, y) =>
+            {
+                if (x.ChangeVector.Length != y.ChangeVector.Length)
+                {
+                    return x.ChangeVector.Length.CompareTo(y.ChangeVector.Length);
+                }
+                
+                fixed (ChangeVectorEntry* px = x.ChangeVector)
+                fixed (ChangeVectorEntry* py = y.ChangeVector)
+                {
+                    var hashX = Hashing.XXHash64.Calculate((byte*)px, (ulong)(sizeof(ChangeVectorEntry) * x.ChangeVector.Length));
+                    var hashy = Hashing.XXHash64.Calculate((byte*)py, (ulong)(sizeof(ChangeVectorEntry) * y.ChangeVector.Length));
+
+                    return hashX.CompareTo(hashy);
+                }
+            });
+            
             var latestDoc = conflicts[0];
             var latestTime = latestDoc.LastModified.Ticks;
 
