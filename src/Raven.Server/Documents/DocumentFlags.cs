@@ -26,7 +26,7 @@ namespace Raven.Server.Documents
         None = 0,
 
         LegacyRevision = 0x1,
-        LegacyVersioned = 0x2,
+        LegacyHasRevisions = 0x2,
         FromSmuggler = 0x4,
         FromReplication = 0x8,
         ByAttachmentUpdate = 0x10,

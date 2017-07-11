@@ -164,45 +164,25 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public bool IsVersioned(string collection)
+        public RevisionsCollectionConfiguration GetRevisionsConfiguration(string collection)
         {
             if (Configuration == null)
-                return false;
+                return _emptyConfiguration;
 
-            if (Configuration.Collections != null && Configuration.Collections.TryGetValue(collection, out var configuration))
-            {
-                return configuration.Active;
-            }
-
-            if (Configuration.Default != null)
-            {
-                return Configuration.Default.Active;
-            }
-
-            return _emptyConfiguration.Active;
-        }
-
-        private RevisionsCollectionConfiguration GetRevisionsConfiguration(CollectionName collectionName)
-        {
             if (Configuration.Collections != null && 
-                Configuration.Collections.TryGetValue(collectionName.Name, out RevisionsCollectionConfiguration configuration))
+                Configuration.Collections.TryGetValue(collection, out RevisionsCollectionConfiguration configuration))
             {
                 return configuration;
             }
 
-            if (Configuration.Default != null)
-            {
-                return Configuration.Default;
-            }
-
-            return _emptyConfiguration;
+            return Configuration.Default ?? _emptyConfiguration;
         }
 
         public bool ShouldVersionDocument(CollectionName collectionName, NonPersistentDocumentFlags nonPersistentFlags, 
             BlittableJsonReaderObject existingDocument, BlittableJsonReaderObject document, ref DocumentFlags documentFlags, 
             out RevisionsCollectionConfiguration configuration)
         {
-            configuration = GetRevisionsConfiguration(collectionName);
+            configuration = GetRevisionsConfiguration(collectionName.Name);
             if (configuration.Active == false)
                 return false;
 
@@ -214,7 +194,7 @@ namespace Raven.Server.Documents.Revisions
                 {
                     // we are not going to create a revision if it's an import from v3
                     // (since this import is going to import revisions as well)
-                    return (nonPersistentFlags & NonPersistentDocumentFlags.LegacyVersioned) != NonPersistentDocumentFlags.LegacyVersioned;
+                    return (nonPersistentFlags & NonPersistentDocumentFlags.LegacyHasRevisions) != NonPersistentDocumentFlags.LegacyHasRevisions;
                 }
 
                 // compare the contents of the existing and the new document
@@ -290,7 +270,7 @@ namespace Raven.Server.Documents.Revisions
                 }
 
                 if (configuration == null)
-                    configuration = GetRevisionsConfiguration(collectionName);
+                    configuration = GetRevisionsConfiguration(collectionName.Name);
 
                 DeleteOldRevisions(context, table, lowerId, configuration, nonPersistentFlags, changeVector);
             }
@@ -455,7 +435,7 @@ namespace Raven.Server.Documents.Revisions
         {
             Debug.Assert(changeVector != null, "Change vector must be set");
 
-            var configuration = GetRevisionsConfiguration(collectionName);
+            var configuration = GetRevisionsConfiguration(collectionName.Name);
             if (configuration.Active == false)
                 return;
 

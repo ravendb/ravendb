@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         public string Collection { get;  set; }
         public string Script { get; set; }
-        public bool IsVersioned { get; set; }
+        public bool IncludeRevisions { get; set; }
     }
 
     public class SubscriptionCriteria<T>
@@ -70,7 +70,7 @@ namespace Raven.Client.Documents.Subscriptions
         }
         
         public string Script { get; set; }
-        public bool? IsVersioned { get; set; }
+        public bool? IncludeRevisions { get; set; }
     }
     
     
@@ -79,7 +79,7 @@ namespace Raven.Client.Documents.Subscriptions
         public ChangeVectorEntry[] ChangeVector { get; set; }
         public string Collection { get; set; }
         public string Script { get; set; }
-        public bool IsVersioned { get; set; }
+        public bool IncludeRevisions { get; set; }
     }
 
     public class SubscriptionCreationOptions
@@ -101,12 +101,12 @@ namespace Raven.Client.Documents.Subscriptions
         public SubscriptionCriteria CreateOptions(DocumentConventions conventions)
         {
             var tType = typeof(T);
-            var isVersioned = tType.IsConstructedGenericType && tType.GetGenericTypeDefinition() == typeof(Versioned<>);
+            var includeRevisions = tType.IsConstructedGenericType && tType.GetGenericTypeDefinition() == typeof(Revision<>);
 
-            return new SubscriptionCriteria(conventions.GetCollectionName(isVersioned ? tType.GenericTypeArguments[0] : typeof(T)))
+            return new SubscriptionCriteria(conventions.GetCollectionName(includeRevisions ? tType.GenericTypeArguments[0] : typeof(T)))
             {
-                Script = Criteria?.Script ?? (isVersioned ? SubscriptionCreationOptions.DefaultRevisionsScript : null),
-                IsVersioned =  isVersioned || (Criteria?.IsVersioned ?? false) 
+                Script = Criteria?.Script ?? (includeRevisions ? SubscriptionCreationOptions.DefaultRevisionsScript : null),
+                IncludeRevisions =  includeRevisions || (Criteria?.IncludeRevisions ?? false) 
             };
 
         }
@@ -116,7 +116,7 @@ namespace Raven.Client.Documents.Subscriptions
         public ChangeVectorEntry[] ChangeVector { get; set; }
     }
 
-    public class Versioned<T> where T : class
+    public class Revision<T> where T : class
     {
         public T Previous;
         public T Current;

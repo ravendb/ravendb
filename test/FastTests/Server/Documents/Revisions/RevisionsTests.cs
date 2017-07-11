@@ -53,7 +53,7 @@ namespace FastTests.Server.Documents.Revisions
         }
 
         [Fact]
-        public async Task CanCheckIfDocumentIsVersioned()
+        public async Task CanCheckIfDocumentHasRevisions()
         {
             var company = new Company { Name = "Company Name" };
             using (var store = GetDocumentStore())

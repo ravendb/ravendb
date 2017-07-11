@@ -35,23 +35,23 @@ namespace Raven.Server.Documents.TcpHandlers
             if (string.IsNullOrEmpty(subscription.Criteria?.Collection))
                 throw new ArgumentException("The collection name must be specified");
 
-            if (subscription.Criteria.IsVersioned)
+            if (subscription.Criteria.IncludeRevisions)
             {
-                if (_db.DocumentsStorage.RevisionsStorage == null ||
-                    _db.DocumentsStorage.RevisionsStorage.IsVersioned(subscription.Criteria.Collection) == false)
+                if (_db.DocumentsStorage.RevisionsStorage.Configuration == null ||
+                    _db.DocumentsStorage.RevisionsStorage.GetRevisionsConfiguration(subscription.Criteria.Collection).Active == false)
                     throw new SubscriptionInvalidStateException($"Cannot use a revisions subscription, database {_db.Name} does not have revisions configuration."); 
 
-                return GetVerionTuplesToSend(docsContext, subscription, startEtag, patch, _db.DocumentsStorage.RevisionsStorage);
+                return GetRevisionsToSend(docsContext, subscription, startEtag, patch);
             }
 
 
-            return GetDocumentsToSend(docsContext, subscription, startEtag, patch, _db);
+            return GetDocumentsToSend(docsContext, subscription, startEtag, patch);
         }
 
-        private IEnumerable<(Document Doc, Exception Exception)> GetDocumentsToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch,
-            DocumentDatabase db)
+        private IEnumerable<(Document Doc, Exception Exception)> GetDocumentsToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, 
+            long startEtag, SubscriptionPatchDocument patch)
         {
-            foreach (var doc in db.DocumentsStorage.GetDocumentsFrom(
+            foreach (var doc in _db.DocumentsStorage.GetDocumentsFrom(
                 docsContext,
                 subscription.Criteria.Collection,
                 startEtag + 1,
@@ -98,29 +98,30 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        private IEnumerable<(Document Doc, Exception Exception)> GetVerionTuplesToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch,
-            RevisionsStorage revisions)
+        private IEnumerable<(Document Doc, Exception Exception)> GetRevisionsToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, 
+            long startEtag, SubscriptionPatchDocument patch)
         {
-            foreach (var versionedDocs in revisions.GetRevisionsFrom(docsContext, new CollectionName(subscription.Criteria.Collection), startEtag + 1, _maxBatchSize))
+            var collectionName = new CollectionName(subscription.Criteria.Collection);
+            foreach (var revisionTuple in _db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, collectionName, startEtag + 1, _maxBatchSize))
             {
-                var item = (versionedDocs.current ?? versionedDocs.previous);
+                var item = (revisionTuple.current ?? revisionTuple.previous);
                 Debug.Assert(item != null);
 
                 var dynamicValue = new DynamicJsonValue();
 
-                if (versionedDocs.current != null)
-                    dynamicValue["Current"] = versionedDocs.current.Data;
+                if (revisionTuple.current != null)
+                    dynamicValue["Current"] = revisionTuple.current.Data;
 
-                if (versionedDocs.previous != null)
-                    dynamicValue["Previous"] = versionedDocs.previous.Data;
+                if (revisionTuple.previous != null)
+                    dynamicValue["Previous"] = revisionTuple.previous.Data;
 
-                using (var versioned = docsContext.ReadObject(dynamicValue, item.Id))
+                using (var revision = docsContext.ReadObject(dynamicValue, item.Id))
                 {
-                    if (ShouldSendDocumentWithRevisions(subscription, patch, docsContext, item, versioned, out var transformResult, out var exception) == false)
+                    if (ShouldSendDocumentWithRevisions(subscription, patch, docsContext, item, revision, out var transformResult, out var exception) == false)
                     {
                         if (exception != null)
                         {
-                            yield return (versionedDocs.current, exception);
+                            yield return (revisionTuple.current, exception);
                         }
                         else
                         {
@@ -139,7 +140,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         {
                             if (transformResult == null)
                             {
-                                yield return (versionedDocs.current,null);
+                                yield return (revisionTuple.current,null);
                                 continue;
                             }
 
@@ -191,7 +192,7 @@ namespace Raven.Server.Documents.TcpHandlers
         
         
         private bool ShouldSendDocumentWithRevisions(SubscriptionState subscriptionState, SubscriptionPatchDocument patch, DocumentsOperationContext dbContext,
-            Document item, BlittableJsonReaderObject versioned, out BlittableJsonReaderObject transformResult, out Exception exception)
+            Document item, BlittableJsonReaderObject revision, out BlittableJsonReaderObject transformResult, out Exception exception)
         {
             exception = null;
             transformResult = null;
@@ -207,14 +208,14 @@ namespace Raven.Server.Documents.TcpHandlers
             
             if (patch.FilterJavaScript == SubscriptionCreationOptions.DefaultRevisionsScript)
             {
-                transformResult = versioned;
+                transformResult = revision;
                 return true;
             }
             try
             {
                 var docToProccess = new Document
                 {
-                    Data = versioned,
+                    Data = revision,
                     Id = item.Id,
                 };
 
