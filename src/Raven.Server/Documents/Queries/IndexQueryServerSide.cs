@@ -210,7 +210,7 @@ namespace Raven.Server.Documents.Queries
         public string GetIndex()
         {
             var fromToken = Parsed.From.From;
-            return QueryExpression.Extract(Parsed.QueryText, fromToken);
+            return QueryExpression.Extract(Parsed.QueryText, fromToken.TokenStart + 1, fromToken.TokenLength - 2, fromToken.EscapeChars);
         }
 
         public IEnumerable<FieldValuePair> GetWhereFields()
