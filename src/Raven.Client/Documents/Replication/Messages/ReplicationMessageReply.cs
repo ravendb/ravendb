@@ -25,6 +25,8 @@ namespace Raven.Client.Documents.Replication.Messages
         public ChangeVectorEntry[] ChangeVector { get; set; }
 
         public string DatabaseId { get; set; }
+        
+        public long CurrentEtag { get; set; }
     }
 
     public static class ChangeVectorExtensions

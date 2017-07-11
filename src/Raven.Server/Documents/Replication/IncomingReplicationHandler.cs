@@ -479,11 +479,16 @@ namespace Raven.Server.Documents.Replication
         {
             var changeVectorAsDynamicJson = new DynamicJsonArray();
             ChangeVectorEntry[] databaseChangeVector;
-
+            long currentLastEtagMatchingChangeVector;
 
             using (documentsContext.OpenReadTransaction())
             {
+                // we need to get both of them in a transaction, the other side will check if its known change vector
+                // is the same or higher then ours, and if so, we'll update the change vector on the sibling to reflect
+                // our own latest etag. This allows us to have effective syncronzation points, since each change will
+                // be able to tell (roughly) where it is at on the entire cluster. 
                 databaseChangeVector = _database.DocumentsStorage.GetDatabaseChangeVector(documentsContext);
+                currentLastEtagMatchingChangeVector = DocumentsStorage.ReadLastEtag(documentsContext.Transaction.InnerTransaction);
             }
 
             foreach (var changeVectorEntry in databaseChangeVector)
@@ -491,6 +496,7 @@ namespace Raven.Server.Documents.Replication
                 changeVectorAsDynamicJson.Add(new DynamicJsonValue
                 {
                     [nameof(ChangeVectorEntry.DbId)] = changeVectorEntry.DbId.ToString(),
+                    [nameof(ReplicationMessageReply.CurrentEtag)] = currentLastEtagMatchingChangeVector,
                     [nameof(ChangeVectorEntry.Etag)] = changeVectorEntry.Etag
                 });
             }

@@ -297,12 +297,6 @@ namespace Raven.Server.Documents
             return changeVector;
         }
 
-        public void SetDatabaseChangeVector(DocumentsOperationContext context, Dictionary<Guid, long> changeVector)
-        {
-            var tree = context.Transaction.InnerTransaction.ReadTree(GlobalChangeVectorSlice);
-            ChangeVectorUtils.WriteChangeVectorTo(context, changeVector, tree);
-        }
-
         public void SetDatabaseChangeVector(DocumentsOperationContext context, ChangeVectorEntry[] changeVector)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(GlobalChangeVectorSlice);
@@ -1251,7 +1245,8 @@ namespace Raven.Server.Documents
             var fst = context.Transaction.InnerTransaction.FixedTreeFor(fstIndex.Name, sizeof(long));
             return fst.NumberOfEntries;
         }
-
+        
+        
         public class CollectionStats
         {
             public string Name;

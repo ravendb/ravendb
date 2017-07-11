@@ -421,7 +421,6 @@ namespace Raven.Server.Documents.Replication
             private readonly DocumentDatabase _database;
             private readonly ReplicationMessageReply _replicationBatchReply;
             private  Guid _dbid;
-            private long _currentEtagOnSibling;
 
             public UpdateSiblingCurrentEtag(DocumentDatabase database,ReplicationMessageReply replicationBatchReply)
             {
@@ -434,17 +433,7 @@ namespace Raven.Server.Documents.Replication
                 if (Guid.TryParse(_replicationBatchReply.DatabaseId, out _dbid) == false)
                     return false;
 
-
-                for (int i = 0; i < _replicationBatchReply.ChangeVector.Length; i++)
-                {
-                    if (_replicationBatchReply.ChangeVector[i].DbId == _dbid)
-                    {
-                        _currentEtagOnSibling = _replicationBatchReply.ChangeVector[i].Etag;
-                        break;
-                    }
-                }
-
-                return _currentEtagOnSibling > 0;
+                return _replicationBatchReply.CurrentEtag > 0;
             }
 
             public override int Execute(DocumentsOperationContext context)
@@ -465,7 +454,7 @@ namespace Raven.Server.Documents.Replication
                         continue;
 
                     context.LastDatabaseChangeVector[i].Etag = Math.Max(context.LastDatabaseChangeVector[i].Etag,
-                        _currentEtagOnSibling);
+                        _replicationBatchReply.CurrentEtag);
                     return 1;
                 }
 
@@ -473,7 +462,7 @@ namespace Raven.Server.Documents.Replication
                 context.LastDatabaseChangeVector[length] = new ChangeVectorEntry
                 {
                     DbId = _dbid,
-                    Etag = _currentEtagOnSibling
+                    Etag = _replicationBatchReply.CurrentEtag
                 };
                 return 1;
             }
