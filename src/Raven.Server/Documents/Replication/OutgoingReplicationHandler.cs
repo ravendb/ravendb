@@ -209,8 +209,11 @@ namespace Raven.Server.Documents.Replication
                             while (true)
                             {
 #if DEBUG
-                                _parent.WaitFormTest.WaitAsync().Wait(_cts.Token);
-                                _parent.WaitFormTest.Reset();
+                                if (_parent.WaitFormTest != null)
+                                {
+                                    _parent.WaitFormTest.WaitAsync().Wait(_cts.Token);
+                                    _parent.WaitFormTest.Reset();
+                                }
 #endif
 
                                 var sp = Stopwatch.StartNew();
