@@ -10,6 +10,7 @@ namespace Raven.Server.Documents.Queries.Parser
         private static readonly string[] BinaryOperators = {"OR", "AND"};
         private static readonly string[] StaticValues = {"true", "false", "null"};
         private static readonly string[] OrderByOptions = {"ASC", "DESC", "ASCENDING", "DESCENDING"};
+        private static readonly string[] OrderByAsOptions = { "string", "long", "double" };
 
 
         private int _depth;
@@ -70,13 +71,31 @@ namespace Raven.Server.Documents.Queries.Parser
             return fields;
         }
 
-        private List<ValueTuple<FieldToken, bool>> OrderBy()
+        private List<ValueTuple<FieldToken, OrderByFieldType, bool>> OrderBy()
         {
-            var orderBy = new List<(FieldToken Field, bool Ascending)>();
+            var orderBy = new List<(FieldToken Field, OrderByFieldType FieldType, bool Ascending)>();
             do
             {
                 if (Field(out var field) == false)
                     ThrowParseException("Unable to get field for ORDER BY");
+
+                OrderByFieldType type = OrderByFieldType.Implicit;
+
+                if (Scanner.TryScan("AS") && Scanner.TryScan(OrderByAsOptions, out var asMatch))
+                {
+                    switch (asMatch)
+                    {
+                        case "string":
+                            type = OrderByFieldType.String;
+                            break;
+                        case "long":
+                            type = OrderByFieldType.Long;
+                            break;
+                        case "double":
+                            type = OrderByFieldType.Double;
+                            break;
+                    }
+                }
 
                 var asc = true;
 
@@ -86,7 +105,7 @@ namespace Raven.Server.Documents.Queries.Parser
                         asc = false;
                 }
 
-                orderBy.Add((field, asc));
+                orderBy.Add((field, type, asc));
 
                 if (Scanner.TryScan(",") == false)
                     break;

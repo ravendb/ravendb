@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Queries.Parser
         public (FieldToken From, FieldToken Alias, QueryExpression Filter, bool Index) From;
         public List<(QueryExpression Expression, FieldToken Alias)> Select;
         public List<(QueryExpression Expression, FieldToken Alias)> With;
-        public List<(FieldToken Field, bool Ascending)> OrderBy;
+        public List<(FieldToken Field, OrderByFieldType FieldType, bool Ascending)> OrderBy;
         public List<FieldToken> GroupBy;
         public string QueryText;
         
@@ -163,6 +163,13 @@ namespace Raven.Server.Documents.Queries.Parser
                     writer.WritePropertyName("Field");
                     QueryExpression.WriteValue(QueryText, writer, field.Field.TokenStart, field.Field.TokenLength,
                         field.Field.EscapeChars);
+
+                    if (field.FieldType != OrderByFieldType.Implicit)
+                    {
+                        writer.WritePropertyName("FieldType");
+                        writer.WriteValue(field.FieldType.ToString());
+                    }
+
                     writer.WritePropertyName("Ascending");
                     writer.WriteValue(field.Ascending);
                     writer.WriteEndObject();
