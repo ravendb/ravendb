@@ -496,7 +496,6 @@ namespace Raven.Server.Documents.Replication
                 changeVectorAsDynamicJson.Add(new DynamicJsonValue
                 {
                     [nameof(ChangeVectorEntry.DbId)] = changeVectorEntry.DbId.ToString(),
-                    [nameof(ReplicationMessageReply.CurrentEtag)] = currentLastEtagMatchingChangeVector,
                     [nameof(ChangeVectorEntry.Etag)] = changeVectorEntry.Etag
                 });
             }
@@ -511,7 +510,7 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageReply.Type)] = "Ok",
                 [nameof(ReplicationMessageReply.MessageType)] = handledMessageType,
                 [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastDocumentEtag,
-                
+                [nameof(ReplicationMessageReply.CurrentEtag)] = currentLastEtagMatchingChangeVector,
                 [nameof(ReplicationMessageReply.Exception)] = null,
                 [nameof(ReplicationMessageReply.ChangeVector)] = changeVectorAsDynamicJson,
                 [nameof(ReplicationMessageReply.DatabaseId)] = _database.DbId.ToString(),
