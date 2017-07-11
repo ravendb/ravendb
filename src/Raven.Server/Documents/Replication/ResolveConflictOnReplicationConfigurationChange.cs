@@ -88,7 +88,6 @@ namespace Raven.Server.Documents.Replication
                                     scriptResolver,
                                     conflicts,
                                     collection,
-                                    hasLocalTombstone: false,
                                     resolvedConflict: out resolved))
                                 {
                                     resolvedConflicts.Add((resolved, maxConflictEtag));
@@ -335,8 +334,7 @@ namespace Raven.Server.Documents.Replication
             DocumentsOperationContext context,
             ScriptResolver scriptResolver,
             IReadOnlyList<DocumentConflict> conflicts,
-            LazyStringValue collection,
-            bool hasLocalTombstone, 
+            LazyStringValue collection, 
             out DocumentConflict resolvedConflict)
         {
             resolvedConflict = null;

@@ -153,8 +153,7 @@ namespace Raven.Server.Documents.Replication
                 documentsContext,
                 scriptResolver,
                 conflictedDocs,
-                documentsContext.GetLazyString(collection),
-                isTombstone, out var resolved))
+                documentsContext.GetLazyString(collection), out var resolved))
             {
                 _conflictResolver.PutResolvedDocument(documentsContext, resolved);
                 return true;
