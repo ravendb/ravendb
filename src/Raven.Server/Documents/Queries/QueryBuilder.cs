@@ -32,12 +32,14 @@ namespace Raven.Server.Documents.Queries
             {
                 var node = ToLuceneNode(query.QueryText, query.Where);
 
-                return node.ToQuery(new LuceneASTQueryConfiguration
+                var luceneQuery = node.ToQuery(new LuceneASTQueryConfiguration
                 {
                     Analayzer = analyzer,
                     DefaultOperator = QueryOperator.And,
                     FieldName = new FieldName(string.Empty)
                 });
+
+                return luceneQuery;
             }
         }
 
@@ -63,57 +65,81 @@ namespace Raven.Server.Documents.Queries
             switch (expression.Type)
             {
                 case OperatorType.Equal:
-                    return new FieldLuceneASTNode()
                     {
-                        FieldName = new FieldName(QueryExpression.Extract(query, expression.Field)),
-                        Node = CreateTermNode(query, expression.Value ?? expression.First)
-                    };
+                        FieldName.FieldType fieldType = FieldName.FieldType.String;
+                        var valueToken = expression.Value ?? expression.First;
+
+                        switch (valueToken.Type)
+                        {
+                            case ValueTokenType.String:
+                                fieldType = FieldName.FieldType.String;
+                                break;
+                            default:
+                                throw new NotImplementedException(valueToken.Type.ToString());
+                        }
+
+                        return new FieldLuceneASTNode()
+                        {
+                            FieldName = new FieldName(QueryExpression.Extract(query, expression.Field), fieldType),
+                            Node = CreateTermNode(query, valueToken)
+                        };
+                    }
                 case OperatorType.GreaterThen:
                 case OperatorType.LessThen:
                 case OperatorType.LessThenEqual:
                 case OperatorType.GreaterThenEqual:
-                    var fieldName = QueryExpression.Extract(query, expression.Field);
-
-                    var valueToken = expression.Value ?? expression.First;
-
-                    switch (valueToken.Type)
                     {
-                        case ValueTokenType.Double:
-                            fieldName += "_D_Range";
-                            break;
-                        case ValueTokenType.Long:
-                            fieldName += "_L_Range";
-                            break;
+                        var fieldName = QueryExpression.Extract(query, expression.Field);
+                        FieldName.FieldType fieldType = FieldName.FieldType.Long;
+
+                        var valueToken = expression.Value ?? expression.First;
+
+                        switch (valueToken.Type)
+                        {
+                            case ValueTokenType.Double:
+                                fieldName += "_D_Range";
+                                fieldType = FieldName.FieldType.Double;
+                                break;
+                            case ValueTokenType.Long:
+                                fieldName += "_L_Range";
+                                fieldType = FieldName.FieldType.Long;
+                                break;
+                        }
+
+                        RangeLuceneASTNode rangeNode = new RangeLuceneASTNode()
+                        {
+                            InclusiveMin = false,
+                            InclusiveMax = false,
+                            RangeMin = WildCardTerm,
+                            RangeMax = NullTerm
+                        };
+
+                        switch (expression.Type)
+                        {
+                            case OperatorType.LessThen:
+                                rangeNode.RangeMax = CreateTermNode(query, valueToken);
+                                break;
+                            case OperatorType.GreaterThen:
+                                rangeNode.RangeMin = CreateTermNode(query, valueToken);
+                                break;
+                            case OperatorType.LessThenEqual:
+                                rangeNode.InclusiveMax = true;
+                                rangeNode.RangeMax = CreateTermNode(query, valueToken);
+                                break;
+                            case OperatorType.GreaterThenEqual:
+                                rangeNode.InclusiveMin = true;
+                                rangeNode.RangeMin = CreateTermNode(query, valueToken);
+                                break;
+                            default:
+                                break;
+                        }
+
+                        return new FieldLuceneASTNode()
+                        {
+                            FieldName = new FieldName(fieldName, fieldType),
+                            Node = rangeNode
+                        };
                     }
-
-                    RangeLuceneASTNode rangeNode = new RangeLuceneASTNode()
-                    {
-                        InclusiveMin = false,
-                        InclusiveMax = false,
-                        RangeMin = WildCardTerm,
-                        RangeMax = NullTerm
-                    };
-
-                    switch (expression.Type)
-                    {
-                        case OperatorType.LessThen:
-                            rangeNode.RangeMax = CreateTermNode(query, valueToken);
-                            break;
-                        case OperatorType.GreaterThen:
-                            rangeNode.RangeMin = CreateTermNode(query, valueToken);
-                            break;
-                        case OperatorType.LessThenEqual:
-                        case OperatorType.GreaterThenEqual:
-                            throw new NotImplementedException("Type:" + expression.Type);
-                        default:
-                            break;
-                    }
-
-                    return new FieldLuceneASTNode()
-                    {
-                        FieldName = new FieldName(fieldName),
-                        Node = rangeNode
-                    };
                 //case OperatorType.Between:
                 //    writer.WritePropertyName("Field");
                 //    WriteValue(query, writer, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
