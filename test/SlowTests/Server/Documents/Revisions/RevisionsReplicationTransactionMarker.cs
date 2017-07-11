@@ -24,8 +24,8 @@ namespace SlowTests.Server.Documents.Revisions
                 database1.Configuration.Replication.MaxItemsCount = 1;
                 database1.ReplicationLoader.WaitFormTest = new AsyncManualResetEvent();
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database);
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, false);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database, false);
 
                 using (var session = store1.OpenAsyncSession())
                 {
@@ -50,6 +50,26 @@ namespace SlowTests.Server.Documents.Revisions
                     var oren = await session.LoadAsync<User>("users/oren");
                     fitzchak.Balance -= 5;
                     oren.Balance += 5;
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var michael = await session.LoadAsync<User>("users/michael");
+                    session.Delete(michael);
+                    var fitzchak = await session.LoadAsync<User>("users/fitzchak");
+                    var oren = await session.LoadAsync<User>("users/oren");
+                    fitzchak.Balance -= 5;
+                    oren.Balance += 5;
+                    await session.SaveChangesAsync();
+                }
+
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Id = "users/michael", Name = "Michael", Balance = 10 });
+                    var oren = await session.LoadAsync<User>("users/oren");
+                    oren.Balance -= 10;
                     await session.SaveChangesAsync();
                 }
 
@@ -83,6 +103,26 @@ namespace SlowTests.Server.Documents.Revisions
                     var michael = await session.LoadAsync<User>("users/michael");
                     Assert.Equal(15, fitzchak.Balance);
                     Assert.Equal(0, michael.Balance);
+                }
+
+                database1.ReplicationLoader.WaitFormTest.Set();
+                using (var session = store2.OpenAsyncSession())
+                {
+                    Assert.True(WaitForDocument<User>(store2, "users/oren", u => u.Balance == 20));
+                    var fitzchak = await session.LoadAsync<User>("users/fitzchak");
+                    var michael = await session.LoadAsync<User>("users/michael");
+                    Assert.Equal(10, fitzchak.Balance);
+                    Assert.Null(michael);
+                }
+
+                database1.ReplicationLoader.WaitFormTest.Set();
+                using (var session = store2.OpenAsyncSession())
+                {
+                    Assert.True(WaitForDocument<User>(store2, "users/oren", u => u.Balance == 10));
+                    var fitzchak = await session.LoadAsync<User>("users/fitzchak");
+                    var michael = await session.LoadAsync<User>("users/michael");
+                    Assert.Equal(10, fitzchak.Balance);
+                    Assert.Equal(10, michael.Balance);
                 }
             }
         }
