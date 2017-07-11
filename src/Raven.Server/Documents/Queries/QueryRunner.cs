@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Queries
 
                 query.Facets = facetSetup.Facets;
             }
-            
+
             throw new NotImplementedException("TODO arek - looks like we need to introduce FacetQueryServerSide");
 
             // return ExecuteFacetedQuery("TODO arek", query, facetsEtag.Value, existingResultEtag, token);
@@ -239,9 +239,9 @@ namespace Raven.Server.Documents.Queries
             return runner.ExplainIndexSelection(query);
         }
 
-        public Task<IOperationResult> ExecuteDeleteQuery(string indexName, IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
+        public Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(indexName, query, options, context, onProgress, (key, retrieveDetails) =>
+            return ExecuteOperation(query, options, context, onProgress, (key, retrieveDetails) =>
             {
                 var command = new DeleteDocumentCommand(key, null, _database);
 
@@ -253,9 +253,9 @@ namespace Raven.Server.Documents.Queries
             }, token);
         }
 
-        public Task<IOperationResult> ExecutePatchQuery(string indexName, IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
+        public Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(indexName, query, options, context, onProgress, (key, retrieveDetails) =>
+            return ExecuteOperation(query, options, context, onProgress, (key, retrieveDetails) =>
             {
                 var command = _database.Patcher.GetPatchDocumentCommand(context, key, changeVector: null, patch: patch, patchIfMissing: null, skipPatchIfChangeVectorMismatch: false, debugMode: false);
 
@@ -268,11 +268,11 @@ namespace Raven.Server.Documents.Queries
             }, token);
         }
 
-        private async Task<IOperationResult> ExecuteOperation<T>(string indexName, IndexQueryServerSide query, QueryOperationOptions options,
+        private async Task<IOperationResult> ExecuteOperation<T>(IndexQueryServerSide query, QueryOperationOptions options,
             DocumentsOperationContext context, Action<DeterminateProgress> onProgress, Func<string, bool, BulkOperationCommand<T>> func, OperationCancelToken token)
             where T : TransactionOperationsMerger.MergedTransactionCommand
         {
-            var index = GetIndex(indexName);
+            var index = GetIndex(query.GetIndex());
 
             if (index.Type.IsMapReduce())
                 throw new InvalidOperationException("Cannot execute bulk operation on Map-Reduce indexes.");

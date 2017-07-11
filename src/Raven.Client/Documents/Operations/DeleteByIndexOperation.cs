@@ -100,7 +100,7 @@ namespace Raven.Client.Documents.Operations
                     .Append("/databases/")
                     .Append(node.Database)
                     .Append("/queries")
-                    .Append("allowStale=")
+                    .Append("?allowStale=")
                     .Append(_options.AllowStale)
                     .Append("&maxOpsPerSec=")
                     .Append(_options.MaxOpsPerSecond)

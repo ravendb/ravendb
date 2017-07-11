@@ -100,7 +100,7 @@ namespace Raven.Client.Documents.Operations
                     .Append("/databases/")
                     .Append(node.Database)
                     .Append("/queries")
-                    .Append("allowStale=")
+                    .Append("?allowStale=")
                     .Append(_options.AllowStale)
                     .Append("&maxOpsPerSec=")
                     .Append(_options.MaxOpsPerSecond)
@@ -121,9 +121,16 @@ namespace Raven.Client.Documents.Operations
                         {
                             using (var writer = new BlittableJsonTextWriter(_context, stream))
                             {
-                                // TODO [ppekrol]
+                                writer.WriteStartObject();
 
-                                throw new NotImplementedException();
+                                writer.WritePropertyName("Query");
+                                writer.WriteObject(_queryToUpdate);
+                                writer.WriteComma();
+
+                                writer.WritePropertyName("Patch");
+                                writer.WriteObject(_patch);
+
+                                writer.WriteEndObject();
                             }
                         }
                     )

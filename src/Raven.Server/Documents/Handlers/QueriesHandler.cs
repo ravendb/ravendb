@@ -9,6 +9,7 @@ using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes.IndexMerging;
 using Raven.Server.Documents.Operations;
@@ -283,35 +284,43 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/queries/$", "DELETE", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/queries", "DELETE", AuthorizationStatus.ValidUser)]
         public Task Delete()
         {
             var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context); // we don't dispose this as operation is async
 
-            ExecuteQueryOperation((runner, indexName, query, options, onProgress, token) => runner.ExecuteDeleteQuery(indexName, query, options, context, onProgress, token),
+            var reader = context.Read(RequestBodyStream(), "queries/delete");
+            var query = IndexQueryServerSide.Create(reader);
+
+            ExecuteQueryOperation(query.GetIndex(), (runner, options, onProgress, token) => runner.ExecuteDeleteQuery(query, options, context, onProgress, token),
                 context, returnContextToPool, Operations.Operations.OperationType.DeleteByIndex);
             return Task.CompletedTask;
 
         }
 
-        [RavenAction("/databases/*/queries/$", "PATCH", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/queries", "PATCH", AuthorizationStatus.ValidUser)]
         public Task Patch()
         {
             var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context); // we don't dispose this as operation is async
 
-            var reader = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
-            var patch = PatchRequest.Parse(reader);
+            var reader = context.Read(RequestBodyStream(), "queries/patch");
+            if (reader == null)
+                throw new BadRequestException("Missing JSON content.");
+            if (reader.TryGet("Patch", out BlittableJsonReaderObject patchJson) == false || patchJson == null)
+                throw new BadRequestException("Missing 'Patch' property.");
+            if (reader.TryGet("Query", out BlittableJsonReaderObject queryJson) == false || queryJson == null)
+                throw new BadRequestException("Missing 'Query' property.");
 
-            ExecuteQueryOperation((runner, indexName, query, options, onProgress, token) => runner.ExecutePatchQuery(indexName, query, options, patch, context, onProgress, token),
+            var patch = PatchRequest.Parse(patchJson);
+            var query = IndexQueryServerSide.Create(queryJson);
+
+            ExecuteQueryOperation(query.GetIndex(), (runner, options, onProgress, token) => runner.ExecutePatchQuery(query, options, patch, context, onProgress, token),
                 context, returnContextToPool, Operations.Operations.OperationType.UpdateByIndex);
             return Task.CompletedTask;
         }
 
-        private void ExecuteQueryOperation(Func<QueryRunner, string, IndexQueryServerSide, QueryOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, Operations.Operations.OperationType operationType)
+        private void ExecuteQueryOperation(string indexName, Func<QueryRunner, QueryOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, Operations.Operations.OperationType operationType)
         {
-            var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
-
-            var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context);
             var options = GetQueryOperationOptions();
             var token = CreateTimeLimitedOperationToken();
 
@@ -319,8 +328,7 @@ namespace Raven.Server.Documents.Handlers
 
             var operationId = Database.Operations.GetNextOperationId();
 
-            var task = Database.Operations.AddOperation(Database,indexName, operationType, onProgress =>
-                    operation(queryRunner, indexName, query, options, onProgress, token), operationId, token);
+            var task = Database.Operations.AddOperation(indexName, operationType, onProgress => operation(queryRunner, options, onProgress, token), operationId, token);
 
             task.ContinueWith(_ =>
             {

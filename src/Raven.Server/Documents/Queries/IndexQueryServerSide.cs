@@ -16,6 +16,8 @@ namespace Raven.Server.Documents.Queries
 {
     public class IndexQueryServerSide : IndexQuery<BlittableJsonReaderObject>
     {
+        private string _indexName;
+
         public SortedField[] SortedFields { get; set; }
 
         public string[] FieldsToFetch { get; set; }
@@ -209,8 +211,13 @@ namespace Raven.Server.Documents.Queries
 
         public string GetIndex()
         {
-            var fromToken = Parsed.From.From;
-            return QueryExpression.Extract(Parsed.QueryText, fromToken.TokenStart + 1, fromToken.TokenLength - 2, fromToken.EscapeChars);
+            if (_indexName == null)
+            {
+                var fromToken = Parsed.From.From;
+                _indexName = QueryExpression.Extract(Parsed.QueryText, fromToken.TokenStart + 1, fromToken.TokenLength - 2, fromToken.EscapeChars);
+            }
+
+            return _indexName;
         }
 
         public IEnumerable<FieldValuePair> GetWhereFields()
