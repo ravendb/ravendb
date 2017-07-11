@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
-using System.ServiceModel;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -466,7 +465,7 @@ namespace Raven.Server.ServerWide
 
         }
 
-        private unsafe bool TryLoadAuthenticationKeyPairs(TransactionOperationContext ctx)
+        private bool TryLoadAuthenticationKeyPairs(TransactionOperationContext ctx)
         {
             using (ctx.OpenReadTransaction())
             {
@@ -1451,7 +1450,7 @@ namespace Raven.Server.ServerWide
             }            
         }
 
-        private const string secretCharacters = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        private const string SecretCharacters = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
         private string GenerateRandomSecret()
         {
             var rand = new Random();
@@ -1459,7 +1458,7 @@ namespace Raven.Server.ServerWide
             var sb = new StringBuilder();
             for (int i = 0; i < secretLength; i++)
             {
-                sb.Append(secretCharacters[rand.Next(secretCharacters.Length)]);
+                sb.Append(SecretCharacters[rand.Next(SecretCharacters.Length)]);
             }
             return sb.ToString();
         }

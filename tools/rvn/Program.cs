@@ -1,216 +1,153 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.IO.Pipes;
-using System.Linq;
 using System.Text;
-using System.Threading;
-using Raven.Server;
-using static Sparrow.CliDelimiter;
 
 namespace rvn
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static int Main(string[] args)
         {
-            bool reconnect = true;
-            while (reconnect)
+            if (args.Length == 0 || args[0].Equals("-h") || args[0].Equals("--help"))
+                PrintUsageAndExit();
+            if (args[0].Equals("--offline-help"))
+                PrintUsageAndExit(true);
+
+
+            switch (args[0])
             {
-                reconnect = false;
-                if (args.Length < 1 || !args[0].ToLower().Equals("admin-channel"))
-                {
-                    Console.WriteLine("Usage : rvn admin-channel [PID]" + Environment.NewLine);
-                    Console.Out.Flush();
-                    Environment.Exit(5);
-                }
-                int pid = 0;
-                if (args.Length > 2)
-                {
-                    Console.WriteLine("Invalid number of arges passed with admin-channgel" + Environment.NewLine +
-                                      "Usage: admin-channel [RavenDB PID]" + Environment.NewLine);
-                    Console.Out.Flush();
-                    Environment.Exit(2);
-                }
-                if (args.Length == 2)
-                    pid = Convert.ToInt32(args[1]);
-                else
-                {
-                    var processes = Process.GetProcessesByName("Raven.Server");
-                    var thisProcess = Process.GetCurrentProcess();
-                    var availableDotnetProcesses = new List<Process>();
-                    foreach (var pr in processes)
+                case "admin-channel":
+                    if (args.Length > 2)
+                        PrintInvalidUsageAndExit($"Invalid number of argumets passed to {args[0]}");
+                    var pid = args.Length == 2 ? (int?)Convert.ToInt32(args[1]) : null;
+                    AdminChannel.Connect(pid);
+                    break;
+
+                case "offline-operation":
+                    if (args.Length < 2)
+                        PrintInvalidUsageAndExit($"No command after '{args[0]}'");
+
+                    switch (args[1])
                     {
-                        if (thisProcess.Id == pr.Id)
-                            continue;
-                        availableDotnetProcesses.Add(pr);
-                    }
-
-                    if (availableDotnetProcesses.Count == 0)
-                    {
-                        Console.WriteLine("Couldn't find automatically another dotnet process." + Environment.NewLine +
-                                          "Please specify RavenDB Server proccess manually");
-                        Console.Out.Flush();
-                        Environment.Exit(3);
-                    }
-                    else if (availableDotnetProcesses.Count == 1)
-                    {
-                        Console.WriteLine("Will try to connect to discovered dotnet process : " + availableDotnetProcesses.First().Id + "..." + Environment.NewLine);
-                        Console.Out.Flush();
-                        pid = availableDotnetProcesses.First().Id;
-                    }
-                    else
-                    {
-                        Console.Write("More then one dotnet process where found:");
-                        availableDotnetProcesses.ForEach(x => Console.Write(" " + x.Id));
-                        Console.WriteLine(Environment.NewLine + "Please specify RavenDB Server proccess manually" + Environment.NewLine);
-                        Console.Out.Flush();
-                        Environment.Exit(4);
-                    }
-                }
-                try
-                {
-                    var pipeName = RavenServer.PipePrefix + pid;
-                    var client = new NamedPipeClientStream(pipeName);
-                    try
-                    {
-                        client.Connect(3000);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine(Environment.NewLine + "Couldn't connect to " + pipeName);
-                        Console.ResetColor();
-                        Console.WriteLine();
-                        Console.WriteLine(ex);
-                        Environment.Exit(1);
-                    }
-
-                    var reader = new StreamReader(client);
-                    var writer = new StreamWriter(client);
-                    var buffer = new char[16 * 1024];
-                    var sb = new StringBuilder();
-
-                    Delimiter[] delimiters =
-                    {
-                        Delimiter.NotFound,
-                        Delimiter.ReadLine,
-                        Delimiter.ReadKey,
-                        Delimiter.Clear,
-                        Delimiter.Logout,
-                        Delimiter.Shutdown,
-                        Delimiter.RestartServer,
-                        Delimiter.ContinuePrinting
-                    };
-
-                    string restOfString = null;
-                    while (true)
-                    {
-                        sb.Clear();
-                        bool skipOnceRead = false;
-                        if (restOfString != null)
-                        {
-                            sb.Append(restOfString);
-                            restOfString = null;
-                            skipOnceRead = true; // to avoid situation where another delimiter passed in previous Read, and next Read might blocked forever
-                        }
-
-                        var delimiter = Delimiter.NotFound;
-                        // ReSharper disable once LoopVariableIsNeverChangedInsideLoop
-                        while (delimiter == Delimiter.NotFound)
-                        {
-                            if (skipOnceRead == false)
-                            {
-                                var v = reader.Read(buffer, 0, 8192);
-                                if (v == 0)
-                                    continue;
-
-                                sb.Append(new string(buffer, 0, v));
-                            }
-                            else
-                            {
-                                skipOnceRead = false;
-                            }
-
-                            var sbString = sb.ToString();
-                            var firstDelimiterPos = sbString.IndexOf(DelimiterKeyWord, StringComparison.Ordinal);
-                            if (firstDelimiterPos == -1)
-                                continue;
-                            var delimiterString = sbString.Substring(firstDelimiterPos);
-
-                            Delimiter firstDelimiter = Delimiter.NotFound;
-                            int firstIndex = 0;
-                            var lowestPos = 8192;
-                            foreach (var del in delimiters)
-                            {
-                                var index = delimiterString.IndexOf(GetDelimiterString(del), StringComparison.Ordinal);
-                                if (index == -1)
-                                    continue;
-                                if (index < lowestPos)
-                                {
-                                    lowestPos = index;
-                                    firstDelimiter = del;
-                                    firstIndex = index;
-                                }
-                            }
-                            if (firstDelimiter == Delimiter.NotFound)
-                                continue;
-
-                            var posAgterFirstDelimiter = firstIndex + GetDelimiterString(firstDelimiter).Length;
-                            restOfString = delimiterString.Substring(posAgterFirstDelimiter);
-
-                            delimiter = firstDelimiter;
+                        case "get-key":
+                            if (args.Length != 3)
+                                PrintInvalidUsageAndExit($"Invalid number of argumets passed to '{args[0]}' '{args[1]}' command");
+                            WriteLine(OfflineOperations.GetKey(args[2]));
                             break;
-                        }
-
-                        var str = sb.ToString();
-                        Console.Write(str.Substring(0, str.IndexOf(DelimiterKeyWord, StringComparison.Ordinal)));
-
-                        if (delimiter == Delimiter.ContinuePrinting)
-                        {
-                            continue;
-                        }
-
-                        switch (delimiter)
-                        {
-                            case Delimiter.ReadLine:
-                                writer.WriteLine(Console.ReadLine());
-                                break;
-                            case Delimiter.ReadKey:
-                                writer.Write(Console.ReadKey().KeyChar);
-                                break;
-                            case Delimiter.Clear:
-                                Console.Clear();
-                                break;
-                            case Delimiter.Logout:
-                            case Delimiter.Shutdown:
-                                Console.WriteLine();
-                                Environment.Exit(0);
-                                break;
-                            case Delimiter.RestartServer:
-                                Console.WriteLine();
-                                for (int i = 10; i >= 0; i--)
-                                {
-                                    Console.Write($"\rTrying to reconnect in {i} seconds ...  ");
-                                    Thread.Sleep(1000);
-                                }
-                                Console.WriteLine();
-                                reconnect = true;
-                                break;
-                        }
-                        writer.Flush();
-                        if (reconnect)
+                        case "put-key":
+                            if (args.Length != 3)
+                                PrintInvalidUsageAndExit($"Invalid number of argumets passed to '{args[0]}' '{args[1]}' command");
+                            WriteLine(OfflineOperations.PutKey(args[2]));
+                            break;
+                        case "init-keys":
+                            if (args.Length != 2)
+                                PrintInvalidUsageAndExit($"Invalid number of argumets passed to '{args[0]}' '{args[1]}' command");
+                            WriteLine(OfflineOperations.InitKeys());
+                            break;
+                        case "trust":
+                            if (args.Length != 4)
+                                PrintInvalidUsageAndExit($"Invalid number of argumets passed to '{args[0]}' '{args[1]}' command");
+                            WriteLine(OfflineOperations.Trust(args[2], args[3]));
+                            break;
+                        case "encrypt":
+                            if (args.Length != 3)
+                                PrintInvalidUsageAndExit($"Invalid number of argumets passed to '{args[0]}' '{args[1]}' command");
+                            WriteLine(OfflineOperations.Encrypt(args[2]));
+                            break;
+                        case "decrypt":
+                            if (args.Length != 3)
+                                PrintInvalidUsageAndExit($"Invalid number of argumets passed to '{args[0]}' '{args[1]}' command");
+                            WriteLine(OfflineOperations.Decrypt(args[2]));
+                            break;
+                        default:
+                            PrintInvalidUsageAndExit($"Unknown '{args[1]}' command after '{args[0]}'");
                             break;
                     }
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    throw;
-                }
+                    break;
+
+                default:
+                    PrintInvalidUsageAndExit($"Unkown command '{args[0]}' passed to rvn");
+                    break;
+
             }
+
+            return 0;
         }
+
+        private static void WriteLine(string s)
+        {
+            Console.WriteLine(s);
+            Console.Out.Flush();
+        }
+
+        private static void PrintUsageAndExit(bool offlineHelp = false)
+        {
+            var nl = Environment.NewLine;
+            var sb = new StringBuilder($"Usage:{nl}");
+            sb.Append($"\trvn <command> [options]{nl}{nl}");
+            sb.Append($"\tcommand:\tadmin-channel [PID]\tNamed Pipe Connection to RavenDB with PID. If PID ommited - will try auto pid discovery{nl}");
+            sb.Append($"\t\t\toffline-operations <operation-command> [args]{nl}{nl}");
+            if (offlineHelp == false)
+                sb.Append($"\tFor information about offline-operations type : rvn --offline-help{nl}");
+            else
+                sb.Append(@"
+Description: 
+    This utility lets you manage RavenDB offline operations, such as setting encryption mode for the server store.
+
+    The server store which may contains sensitive information is not encrypted by default (even if it contains encrypted databases).
+    If you want it encrypted, you must do it manually using this tool.
+    
+Usage:
+
+Setup encryption for the server store or decrypt an encrypted store. All commands MUST run under the same user as the one that
+the RavenDB server is using.
+The server MUST be offline for the duration of those operations.
+
+
+    rvn server encrypt <path>
+
+        The encrypt command gets the path of RavenDB's system directory, encrypts the files and saves the key to the same directory.
+        This key file (secret.key.encrypted) is protected for the current OS user. Once encrypted, The server will only work for 
+        the current user.
+        It is recommended that you'll do that as part of the initial setup of the server, before it is running. Encrypted server 
+        store can only talk to other encrypted server stores, and only over SSL. 
+
+    rvn server decrypt <path>
+
+        The decrypt command gets the path of RavenDB's system directory on the new machine. It will decrypt the files in that 
+        directory using the key which was inserted earlier using the put-key command.
+
+
+In order to backup the files (for any user) and possibly transfer them to a different machine use the following:
+
+    rvn server get-key <path>
+
+        Once the server store is encrypted run the get-key command with the system directory path, the output it the unprotected key.
+        This key will allow decryption of the server store and must be kept safely. This is REQUIRED when restoring backups from an 
+        encrypted server store.
+
+
+    rvn server put-key <path>
+
+        To restore, on a new machine, run the put-key command with the system directory path. This will protect the key on the new machine
+        for the current OS user. This is typically used as part of the restore process of an encrypted server store on a new machine.
+
+");
+            Console.WriteLine(sb);
+            Environment.Exit(1);
+        }
+
+        private static void PrintInvalidUsageAndExit(string str)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("ERROR: " + str);
+            Console.ResetColor();
+            Console.WriteLine("For info type : rvn --help");
+            Console.WriteLine();
+            Console.Out.Flush();
+            Environment.Exit(1);
+        }
+
+
     }
 }
 

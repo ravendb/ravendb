@@ -614,6 +614,7 @@ namespace Raven.Server
             //since the responses to TCP connections mostly continue to run
             //beyond this point, no sense to dispose the connection now, so set it to null.
             //this way the responders are responsible to dispose the connection and the context                    
+            // ReSharper disable once RedundantAssignment
             tcp = null;
             return false;
         }
