@@ -8,12 +8,17 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using Raven.Client.Documents;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Client.Util;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Debugging;
+using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
@@ -70,7 +75,6 @@ namespace Raven.Server.Utils
                 writer.Write(msg);
         };
 
-
         private TextWriter _writer;
         private TextReader _reader;
         private RavenServer _server;
@@ -94,10 +98,12 @@ namespace Raven.Server.Utils
             Help,
             Logo,
             Experimental,
+            AdminScript,
             ImportDir,
             CreateDb,
             Logout,
-            
+            Print,
+
             UnknownCommand
         }
 
@@ -290,7 +296,8 @@ namespace Raven.Server.Utils
 
         private static bool CommandHelpPrompt(List<string> args, RavenCli cli)
         {
-            string[][] commandDescription = {
+            string[][] commandDescription =
+            {
                 new[] {"%D", "UTC Date"},
                 new[] {"%T", "UTC Time"},
                 new[] {"%M", "Memory information (WS:WorkingSet, UM:Unmanaged, M:Managed, MP:MemoryMapped)"},
@@ -389,8 +396,10 @@ namespace Raven.Server.Utils
         {
             var memoryInfo = MemoryInformation.GetMemoryInfo();
             WriteText(
-                $" Build {ServerVersion.Build}, Version {ServerVersion.Version}, SemVer {ServerVersion.FullVersion}, Commit {ServerVersion.CommitHash}" + Environment.NewLine +
-                $" PID {Process.GetCurrentProcess().Id}, {IntPtr.Size * 8} bits, {ProcessorInfo.ProcessorCount} Cores, Arch: {RuntimeInformation.OSArchitecture}" + Environment.NewLine +
+                $" Build {ServerVersion.Build}, Version {ServerVersion.Version}, SemVer {ServerVersion.FullVersion}, Commit {ServerVersion.CommitHash}" +
+                Environment.NewLine +
+                $" PID {Process.GetCurrentProcess().Id}, {IntPtr.Size * 8} bits, {ProcessorInfo.ProcessorCount} Cores, Arch: {RuntimeInformation.OSArchitecture}" +
+                Environment.NewLine +
                 $" {memoryInfo.TotalPhysicalMemory} Physical Memory, {memoryInfo.AvailableMemory} Available Memory",
                 ConsoleColor.Cyan, cli);
 
@@ -424,6 +433,103 @@ namespace Raven.Server.Utils
             }
 
             return isOn; // here rc is not an exit code, it is a setter to _experimental
+        }
+
+        private static bool CommandAdminScript(List<string> args, RavenCli cli)
+        {
+            // TODO: ADIADI : Replace the entire usage of this command into : adminScript <database|server> [databaseName]
+            if (args.Count != 2)
+            {
+                WriteError("Invalid number of arguments passed to adminScript", cli);
+                return false;
+            }
+
+            var databaseName = args[0];
+            bool isServerScript = false;
+            if (args[1].Equals("true", StringComparison.OrdinalIgnoreCase))
+                isServerScript = true;
+            else if (args[1].Equals("false", StringComparison.OrdinalIgnoreCase) == false)
+            {
+                WriteError($"Invalid arguments 'server-script' ('{args[1]}') passed to adminScript. Must be true or false", cli);
+                return false;
+            }
+
+            DocumentDatabase database = null;
+            if (isServerScript == false)
+                database = cli._server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
+
+            var jsCli = new JavaScriptCli();
+            if (jsCli.CreateScript(cli._reader, cli._writer, cli._consoleColoring, database, cli._server) == false)
+            {
+                WriteError("Invalid JavaScript entered, or user cancelled", cli);
+                return false;
+            }
+
+            using (cli._server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                object result;
+                var adminJsScript = new AdminJsScript { Script = jsCli.Script };
+
+                if (isServerScript)
+                {
+                    var console = new AdminJsConsole(cli._server);
+                    result = console.ApplyServerScript(adminJsScript);
+                }
+                else if (string.IsNullOrWhiteSpace(databaseName) == false)
+                {
+                    //database script
+                    if (database == null)
+                    {
+                        DatabaseDoesNotExistException.Throw(databaseName);
+                    }
+
+                    var console = new AdminJsConsole(database);
+                    result = console.ApplyScript(adminJsScript);
+                }
+                else
+                {
+                    WriteError($"database `{databaseName} not found, and 'server-script' set to false. Can't determine what to apply this script on", cli);
+                    return false;
+                }
+
+                string str;
+                if (result == null || result is DynamicJsonValue)
+                {
+                    var ms = new MemoryStream();
+                    using (var writer = new BlittableJsonTextWriter(context, ms))
+                    {
+                        writer.WriteStartObject();
+
+                        writer.WritePropertyName(nameof(AdminJsScriptResult.Result));
+
+                        if (result != null)
+                        {
+                            context.Write(writer, result as DynamicJsonValue);
+                        }
+                        else
+                        {
+                            writer.WriteNull();
+                        }
+
+                        writer.WriteEndObject();
+                        writer.Flush();
+                    }
+
+                    str = Encoding.UTF8.GetString(ms.ToArray());                    
+                }
+                else
+                    str = result.ToString();
+                str += Environment.NewLine;
+
+                if (cli._consoleColoring)
+                    Console.ForegroundColor = ConsoleColor.Magenta;
+
+                WriteText(str, TextColor, cli);
+
+                if (cli._consoleColoring)
+                    Console.ResetColor();
+            }
+            return true;
         }
 
         private static bool CommandLowMem(List<string> args, RavenCli cli)
@@ -493,6 +599,13 @@ namespace Raven.Server.Utils
             return true;
         }
 
+        private static bool CommandPrint(List<string> args, RavenCli cli)
+        {
+            foreach (var arg in args)
+                WriteText(">" + arg + "<", TextColor, cli);
+            return true;
+        }
+
         private static bool CommandHelp(List<string> args, RavenCli cli)
         {
             string[][] commandDescription = {
@@ -505,11 +618,18 @@ namespace Raven.Server.Utils
                 new[] {"logo [no-clear]", "Clear screen and print initial logo"},
                 new[] {"gc [gen]", "Collect garbage of specified gen : 0, 1 or default 2"},
                 new[] {"lowMem", "Simulate Low-Memory event"},
-                new[] {"experimental <on | off>", "Set if to allow experimental cli commands"},
+                new[] {"experimental <on | off>", "Set if to allow experimental cli commands. WARNING: Use with care!"},
+                new[] {"adminScript <d> <m>", "Execute script on database 'd'. if 'm' is true, database name is ignored for server-script. WARNING: Use with care!"},
                 new[] {"logout", "Logout (applicable only on piped connection)"},
                 new[] {"resetServer", "Restarts the server (shutdown and re-run)"},
                 new[] {"shutdown", "Shutdown the server"},
                 new[] {"help", "This help screen"}
+            };
+
+            string[][] commandExperimentalDescription =
+            {
+                new[] {"createDb <database> <dir>", "Create database named 'database' in DataDir 'dir'"},
+                new[] {"importDir <database> <path>", "Smuggler import entire directory (halts cli) from path"}
             };
 
             var msg = new StringBuilder("RavenDB CLI Help" + Environment.NewLine);
@@ -519,13 +639,23 @@ namespace Raven.Server.Utils
 
             WriteText(msg.ToString(), TextColor, cli);
 
-
             foreach (var cmd in commandDescription)
             {
                 WriteText("\t" + cmd[0], ConsoleColor.Yellow, cli, newLine: false);
                 WriteText(new string(' ', 29 - cmd[0].Length) + cmd[1], ConsoleColor.DarkYellow, cli);
             }
             WriteText("", TextColor, cli);
+
+            if (cli._experimental)
+            {
+                msg.Append(Environment.NewLine + "Experimental Commands (WARNING: Use with care!):" + Environment.NewLine);
+                foreach (var cmd in commandExperimentalDescription)
+                {
+                    WriteText("\t" + cmd[0], ConsoleColor.Yellow, cli, newLine: false);
+                    WriteText(new string(' ', 29 - cmd[0].Length) + cmd[1], ConsoleColor.DarkYellow, cli);
+                }
+                WriteText("", TextColor, cli);
+            }
 
             return true;
         }
@@ -541,6 +671,7 @@ namespace Raven.Server.Utils
             [Command.Info] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandInfo },
             [Command.Logo] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLogo },
             [Command.Experimental] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandExperimental },
+            [Command.AdminScript] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandAdminScript },
             [Command.LowMem] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLowMem },
             [Command.ResetServer] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandResetServer },
             [Command.Logout] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLogout },
@@ -549,7 +680,8 @@ namespace Raven.Server.Utils
 
             // experimental, will not appear in 'help':
             [Command.ImportDir] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandImportDir, Experimental = true },
-            [Command.CreateDb] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandCreateDb, Experimental = true }
+            [Command.CreateDb] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandCreateDb, Experimental = true },
+            [Command.Print] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandPrint, Experimental = true } // test cli
         };
 
         public bool Start(RavenServer server, TextWriter textWriter, TextReader textReader, bool consoleColoring, ManualResetEvent consoleMre)
@@ -605,6 +737,7 @@ namespace Raven.Server.Utils
             if (_consoleColoring)
                 Console.CancelKeyPress += (sender, args) =>
                 {
+                    Console.ResetColor();
                     ctrlCPressed = true;
                 };
             else
@@ -705,7 +838,7 @@ namespace Raven.Server.Utils
                         }
                         lastRc = cmd.DelegateFync.Invoke(parsedCommand.Args, this);
 
-                        if (parsedCommand.Command == Command.Prompt && lastRc )
+                        if (parsedCommand.Command == Command.Prompt && lastRc)
                             _promptArgs = parsedCommand.Args;
                         else if (parsedCommand.Command == Command.Experimental)
                         {
@@ -769,7 +902,7 @@ namespace Raven.Server.Utils
                 }
             }
             _writer.Flush();
-            
+
             // we are logging out from cli
             Debug.Assert(_consoleColoring == false);
             return false;
@@ -921,7 +1054,7 @@ namespace Raven.Server.Utils
                 {
                     if (args.Count < _actions[parsedLine.ParsedCommands.Last().Command].NumOfArgs)
                     {
-                        parsedLine.ErrorMsg = $"Missing argument(s) after command : {parsedLine.ParsedCommands.Last().Command} (should get at least {_actions[parsedLine.ParsedCommands.Last().Command].NumOfArgs} arguments but got {args.Count}";
+                        parsedLine.ErrorMsg = $"Missing argument(s) after command : {parsedLine.ParsedCommands.Last().Command} (should get at least {_actions[parsedLine.ParsedCommands.Last().Command].NumOfArgs} arguments but got {args.Count})";
                         return false;
                     }
                     return true;
@@ -937,6 +1070,68 @@ namespace Raven.Server.Utils
             }
 
             return true;
-        }        
+        }
+    }
+
+    internal class JavaScriptCli
+    {
+        private const string ExecutionStr = "function ExecuteAdminScript(databaseInner){{ return (function(database){{ {0} }}).apply(this, [databaseInner]); }};";
+        private const string ServerExecutionStr = "function ExecuteAdminScript(serverInner){{ return (function(server){{ {0} }}).apply(this, [serverInner]); }};";
+
+        public bool CreateScript(TextReader reader, TextWriter writer, bool consoleColoring, DocumentDatabase database, RavenServer server)
+        {
+            var execString = database != null ? ExecutionStr : ServerExecutionStr;
+            if (consoleColoring)
+                Console.ForegroundColor = ConsoleColor.Cyan;
+            writer.WriteLine();
+            writer.WriteLine("Enter JavaScript:");
+
+            if (consoleColoring)
+                Console.ForegroundColor = ConsoleColor.DarkCyan;
+
+            writer.WriteLine("(to cancel enter in new line 'cancel' or 'done' to execute)");
+            writer.WriteLine("(  script will be executed automatically if found valid   )");
+            writer.WriteLine();
+
+            var sb = new StringBuilder();
+
+            if (consoleColoring)
+                Console.ResetColor();
+
+            while (true)
+            {
+                writer.Write(">>> ");
+                writer.Flush();
+
+                var line = reader.ReadLine();
+                if (line.Equals("cancel"))
+                    return false;
+                if (line.Equals("done"))
+                    break;
+
+                sb.Append(line);
+
+
+                AdminJsConsole adminJsConsole = database != null ? new AdminJsConsole(database) : new AdminJsConsole(server);
+                var adminJsScript = new AdminJsScript { Script = sb.ToString() };
+                bool hadErrors = false;
+                try
+                {
+                    adminJsConsole.GetEngine(adminJsScript, execString);
+                }
+                catch
+                {
+                    hadErrors = true;
+                }
+                if (hadErrors == false)
+                    break;
+            }
+
+            Script = sb.ToString();
+
+            return true;
+        }
+
+        public string Script { get; set; }
     }
 }
