@@ -10,6 +10,7 @@ using System.Threading;
 using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
+using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.ServerWide;
 using Sparrow;
@@ -19,6 +20,7 @@ using Sparrow.LowMemory;
 using Sparrow.Utils;
 using Voron;
 using Voron.Impl.Compaction;
+using Size = Sparrow.Size;
 
 
 namespace Raven.Server.Utils
@@ -460,145 +462,6 @@ namespace Raven.Server.Utils
             return true;
         }
 
-        private static bool CommandGetKey(List<string> args, RavenCli cli)
-        {
-            var srcDir = args[0];
-
-            var masterKey = Sodium.GenerateMasterKey();
-            var dstDir = Path.Combine(Path.GetDirectoryName(srcDir), "Temp.Encryption");
-
-            var srcOptions = StorageEnvironmentOptions.ForPath(srcDir);
-            var dstOptions = StorageEnvironmentOptions.ForPath(dstDir);
-
-            dstOptions.MasterKey = masterKey;
-
-            var entropy = Sodium.GenerateRandomBuffer(256);
-            var protect = SecretProtection.Protect(masterKey, entropy);
-
-            StorageCompaction.Execute(srcOptions, (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)dstOptions);
-
-            using (var f = File.OpenWrite(Path.Combine(dstDir, SecretKeyEncrypted)))
-            {
-                f.Write(protect, 0, protect.Length);
-                f.Write(entropy, 0, entropy.Length);
-                f.Flush();
-            }
-
-            WriteText($"GetKey: {Path.Combine(dstDir, SecretKeyEncrypted)} Created Successfully", SuccessColor, cli);
-            return true;
-        }
-
-
-        private static string RecoverServerStoreKey(string srcDir)
-        {
-            var keyPath = Path.Combine(srcDir, SecretKeyEncrypted);
-            if (File.Exists(keyPath) == false)
-                throw new IOException("File not exists:" + keyPath);
-
-            var buffer = File.ReadAllBytes(keyPath);
-            var secret = new byte[buffer.Length - 32];
-            var entropy = new byte[32];
-            Array.Copy(buffer, 0, secret, 0, buffer.Length - 32);
-            Array.Copy(buffer, buffer.Length - 32, entropy, 0, 32);
-
-            var key = SecretProtection.Unprotect(secret, entropy);
-            return Convert.ToBase64String(key);
-        }
-
-        private const string SecretKeyEncrypted = "secret.key.encrypted";
-
-        private static bool CommandPutKey(List<string> args, RavenCli cli)
-        {
-            var destDir = args[0];
-
-            var base64Key = RecoverServerStoreKey(destDir);
-            var entropy = Sodium.GenerateRandomBuffer(256);
-            var secret = Convert.FromBase64String(base64Key);
-            var protect = SecretProtection.Protect(secret, entropy);
-
-            using (var f = File.OpenWrite(Path.Combine(destDir, SecretKeyEncrypted)))
-            {
-                f.Write(protect, 0, protect.Length);
-                f.Write(entropy, 0, entropy.Length);
-                f.Flush();
-            }
-
-            WriteText($"PutKey: {Path.Combine(destDir, SecretKeyEncrypted)} Created Successfully", SuccessColor, cli);
-            return true;
-        }
-
-
-
-        private static bool CommandInitKeys(List<string> args, RavenCli cli)
-        {
-            WriteText("InitKeys is not implemented", ErrorColor, cli);
-            return false;
-        }
-
-        private static bool CommandEncrypt(List<string> args, RavenCli cli)
-        {
-            var srcDir = args[0];
-
-            var masterKey = Sodium.GenerateMasterKey();
-            var dstDir = Path.Combine(Path.GetDirectoryName(srcDir), "Temp.Encryption");
-
-            var srcOptions = StorageEnvironmentOptions.ForPath(srcDir);
-            var dstOptions = StorageEnvironmentOptions.ForPath(dstDir);
-
-            dstOptions.MasterKey = masterKey;
-
-            var entropy = Sodium.GenerateRandomBuffer(256);
-            var protect = SecretProtection.Protect(masterKey, entropy);
-
-            StorageCompaction.Execute(srcOptions, (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)dstOptions);
-
-            using (var f = File.OpenWrite(Path.Combine(dstDir, SecretKeyEncrypted)))
-            {
-                f.Write(protect, 0, protect.Length);
-                f.Write(entropy, 0, entropy.Length);
-                f.Flush();
-            }
-
-            IOExtensions.DeleteDirectory(srcDir);
-            Directory.Move(dstDir, srcDir);
-
-            WriteText($"Encrypt: {Path.Combine(dstDir, SecretKeyEncrypted)} Created Successfully", SuccessColor, cli);
-            return true;
-        }
-
-        private static bool CommandDecrypt(List<string> args, RavenCli cli)
-        {
-            var srcDir = args[0];
-
-            var dstDir = Path.Combine(Path.GetDirectoryName(srcDir), "Temp.Decryption");
-            var bytes = File.ReadAllBytes(Path.Combine(srcDir, SecretKeyEncrypted));
-            var secret = new byte[bytes.Length - 32];
-            var entropy = new byte[32];
-            Array.Copy(bytes, 0, secret, 0, bytes.Length - 32);
-            Array.Copy(bytes, bytes.Length - 32, entropy, 0, 32);
-
-            var srcOptions = StorageEnvironmentOptions.ForPath(srcDir);
-            var dstOptions = StorageEnvironmentOptions.ForPath(dstDir);
-
-            srcOptions.MasterKey = SecretProtection.Unprotect(secret, entropy);
-
-            StorageCompaction.Execute(srcOptions, (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)dstOptions);
-
-            IOExtensions.DeleteDirectory(srcDir);
-            Directory.Move(dstDir, srcDir);
-
-            WriteText($"Decrypt: {Path.Combine(dstDir, SecretKeyEncrypted)} Created Successfully", SuccessColor, cli);
-            return true;
-        }
-
-        private static bool CommandTrust(List<string> args, RavenCli cli)
-        {
-            //var key = args[0];
-            //var tag = args[1];
-            WriteText("InitKeys is not implemented", ErrorColor, cli);
-            return false;
-        }
-
         private static bool CommandImportDir(List<string> args, RavenCli cli)
         {
             // ImportDir <databaseName> <path-to-dir>
@@ -699,13 +562,6 @@ namespace Raven.Server.Utils
             [Command.Logout] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLogout },
             [Command.Shutdown] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandShutdown },
             [Command.Help] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandHelp },
-
-            [Command.GetKey] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandGetKey },
-            [Command.PutKey] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandPutKey },
-            [Command.InitKeys] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandInitKeys },
-            [Command.Trust] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandTrust },
-            [Command.Encrypt] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandEncrypt },
-            [Command.Decrypt] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandDecrypt },
 
             // experimental, will not appear in 'help':
             [Command.ImportDir] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandImportDir, Experimental = true },

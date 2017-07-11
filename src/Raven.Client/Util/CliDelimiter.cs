@@ -1,4 +1,4 @@
-﻿namespace Sparrow
+﻿namespace Raven.Client.Util
 {
     public class CliDelimiter
     {

@@ -111,6 +111,7 @@ namespace Raven.Server
                                     else
                                     {
                                         Console.Error.WriteLine(
+                                            // ReSharper disable once AccessToDisposedClosure
                                             $"Tcp listen failure (see {server.ServerStore.NodeHttpServerUrl}/info/tcp for details) {tcp.Exception.Message}");
                                     }
                                     consoleMre.Set();
