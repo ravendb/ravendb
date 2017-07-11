@@ -1209,7 +1209,7 @@ namespace Raven.Server.ServerWide
                     {
                         await Task.WhenAny(logChange, timeoutTask);
                         if (logChange.IsCompleted == false)
-                            ThrowTimeoutException();
+                            ThrowTimeoutException(cmd);
 
                         continue;
                     }
@@ -1227,7 +1227,7 @@ namespace Raven.Server.ServerWide
 
                 await Task.WhenAny(logChange, timeoutTask);
                 if (logChange.IsCompleted == false)
-                    ThrowTimeoutException();
+                    ThrowTimeoutException(cmd);
             }
         }
 
@@ -1237,9 +1237,9 @@ namespace Raven.Server.ServerWide
                                             "Passive nodes aren't members of a cluster and require admin action (such as creating a db) to indicate that this node should create its own cluster");
         }
 
-        private static void ThrowTimeoutException()
+        private void ThrowTimeoutException(CommandBase cmd)
         {
-            throw new TimeoutException("Could not send command to leader because there is no leader, and we timed out waiting for one");
+            throw new TimeoutException($"Could not send command {cmd.GetType().FullName} from {NodeTag} to leader because there is no leader, and we timed out waiting for one after {Engine.OperationTimeout}");
         }
 
         private async Task<(long Etag, object Result)> SendToNodeAsync(string engineLeaderTag, CommandBase cmd)
