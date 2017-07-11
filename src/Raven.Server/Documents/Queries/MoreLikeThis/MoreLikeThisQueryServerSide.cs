@@ -11,6 +11,46 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
 {
     public sealed class MoreLikeThisQueryServerSide : MoreLikeThisQuery<BlittableJsonReaderObject>
     {
+        public static MoreLikeThisQueryServerSide Create(BlittableJsonReaderObject json)
+        {
+            var result = new MoreLikeThisQueryServerSide();
+
+            result.MinimumWordLength = json.GetWithoutThrowingOnError<int?>(nameof(result.MinimumWordLength));
+            result.MinimumTermFrequency = json.GetWithoutThrowingOnError<int?>(nameof(result.MinimumTermFrequency));
+            result.MinimumDocumentFrequency = json.GetWithoutThrowingOnError<int?>(nameof(result.MinimumDocumentFrequency));
+            result.StopWordsDocumentId = json.GetWithoutThrowingOnError<string>(nameof(result.StopWordsDocumentId));
+            result.MaximumQueryTerms = json.GetWithoutThrowingOnError<int?>(nameof(result.MaximumQueryTerms));
+            result.MaximumNumberOfTokensParsed = json.GetWithoutThrowingOnError<int?>(nameof(result.MaximumNumberOfTokensParsed));
+            result.MaximumDocumentFrequencyPercentage = json.GetWithoutThrowingOnError<int?>(nameof(result.MaximumDocumentFrequencyPercentage));
+            result.PageSize = json.GetWithoutThrowingOnError<int>(nameof(result.PageSize));
+            result.MaximumDocumentFrequency = json.GetWithoutThrowingOnError<int>(nameof(result.MaximumDocumentFrequency));
+            result.IndexName = json.GetWithoutThrowingOnError<string>(nameof(result.IndexName));
+            result.DocumentId = json.GetWithoutThrowingOnError<string>(nameof(result.DocumentId));
+            result.Transformer = json.GetWithoutThrowingOnError<string>(nameof(result.Transformer));
+            result.AdditionalQuery = json.GetWithoutThrowingOnError<string>(nameof(result.Transformer));
+            result.Boost = json.GetWithoutThrowingOnError<bool>(nameof(result.Boost));
+            result.BoostFactor = json.GetWithoutThrowingOnError<float?>(nameof(result.BoostFactor));
+
+            if (json.TryGet(nameof(result.Includes), out BlittableJsonReaderArray includesArray) && includesArray != null && includesArray.Length > 0)
+            {
+                result.Includes = new string[includesArray.Length];
+                for (var i = 0; i < includesArray.Length; i++)
+                    result.Includes[i] = includesArray.GetStringByIndex(i);
+            }
+
+            if (json.TryGet(nameof(result.Fields), out BlittableJsonReaderArray fieldsArray) && fieldsArray != null && fieldsArray.Length > 0)
+            {
+                result.Fields = new string[fieldsArray.Length];
+                for (var i = 0; i < fieldsArray.Length; i++)
+                    result.Fields[i] = fieldsArray.GetStringByIndex(i);
+            }
+
+            if (json.TryGet(nameof(result.TransformerParameters), out BlittableJsonReaderObject tp))
+                result.TransformerParameters = tp;
+
+            return result;
+        }
+
         public static MoreLikeThisQueryServerSide Create(HttpContext httpContext, int pageSize, JsonOperationContext context)
         {
             var result = new MoreLikeThisQueryServerSide
@@ -121,11 +161,6 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
                 result.TransformerParameters = context.ReadObject(transformerParameters, "transformer/parameters");
 
             return result;
-        }
-
-        public string GetIndex()
-        {
-            throw new NotImplementedException("TODO arek");
         }
     }
 }

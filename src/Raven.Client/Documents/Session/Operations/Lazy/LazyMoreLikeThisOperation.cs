@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.MoreLikeThis;
@@ -25,13 +26,15 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 
         public GetRequest CreateRequest()
         {
-            var uri = _query.GetRequestUri();
-            var separator = uri.IndexOf('?');
-            return new GetRequest
-            {
-                Url = uri.Substring(0, separator),
-                Query = uri.Substring(separator, uri.Length - separator)
-            };
+            throw new NotImplementedException();
+
+            //var uri = _query.GetRequestUri();
+            //var separator = uri.IndexOf('?');
+            //return new GetRequest
+            //{
+            //    Url = uri.Substring(0, separator),
+            //    Query = uri.Substring(separator, uri.Length - separator - 1)
+            //};
         }
 
         public object Result { get; private set; }

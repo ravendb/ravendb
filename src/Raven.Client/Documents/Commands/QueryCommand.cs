@@ -39,12 +39,16 @@ namespace Raven.Client.Documents.Commands
             var path = new StringBuilder(node.Url)
                 .Append("/databases/")
                 .Append(node.Database)
-                .Append("/queries?");
+                .Append("/queries");
 
             if (_metadataOnly)
-                path.Append("&metadata-only=true");
+                path.Append("?metadata-only=true");
+
             if (_indexEntriesOnly)
-                path.Append("&debug=entries");
+            {
+                path.Append(_metadataOnly == false ? "?" : "&");
+                path.Append("debug=entries");
+            }
 
             var request = new HttpRequestMessage
             {

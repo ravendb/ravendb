@@ -1,18 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
-using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Queries.MoreLikeThis
 {
     public class MoreLikeThisQuery : MoreLikeThisQuery<Dictionary<string, object>>
     {
-        protected override void CreateRequestUri(StringBuilder uri)
-        {
-            base.CreateRequestUri(uri);
-
-            TransformerParameters.ApplyIfNotNull(tp => uri.AppendFormat("&tp-{0}={1}", tp.Key, tp.Value));
-        }
     }
 
     public abstract class MoreLikeThisQuery<T> : IIndexQuery
@@ -148,64 +140,5 @@ namespace Raven.Client.Documents.Queries.MoreLikeThis
         /// Whether the page size was explicitly set or still at its default value
         /// </summary>
         protected internal bool PageSizeSet { get; private set; }
-
-        protected virtual void CreateRequestUri(StringBuilder uri)
-        {
-            uri.AppendFormat("/queries/{0}?&op=morelikethis", Uri.EscapeUriString(IndexName));
-
-            if (MapGroupFields.Count > 0)
-                MapGroupFields.ApplyIfNotNull(mgf => uri.AppendFormat("&mgf-{0}={1}", mgf.Key, mgf.Value));
-            else
-            {
-                if (DocumentId == null)
-                    throw new ArgumentNullException(nameof(DocumentId), "DocumentId cannot be null");
-
-                uri.AppendFormat("&docid={0}", DocumentId);
-            }
-
-            if (string.IsNullOrWhiteSpace(AdditionalQuery) == false)
-                uri.Append("&query=").Append(Uri.EscapeDataString(AdditionalQuery));
-            if (Boost != null && Boost != DefaultBoost)
-                uri.Append("&boost=true&");
-            if (BoostFactor != null && BoostFactor != DefaultBoostFactor)
-                uri.AppendFormat("&boostFactor={0}&", BoostFactor);
-            if (MaximumQueryTerms != null && MaximumQueryTerms != DefaultMaximumQueryTerms)
-                uri.AppendFormat("&maxQueryTerms={0}&", MaximumQueryTerms);
-            if (MaximumNumberOfTokensParsed != null && MaximumNumberOfTokensParsed != DefaultMaximumNumberOfTokensParsed)
-                uri.AppendFormat("&maxNumTokens={0}&", MaximumNumberOfTokensParsed);
-            if (MaximumWordLength != null && MaximumWordLength != DefaultMaximumWordLength)
-                uri.AppendFormat("&maxWordLen={0}&", MaximumWordLength);
-            if (MinimumDocumentFrequency != null && MinimumDocumentFrequency != DefaultMinimumDocumentFrequency)
-                uri.AppendFormat("&minDocFreq={0}&", MinimumDocumentFrequency);
-            if (MaximumDocumentFrequency != null && MaximumDocumentFrequency != DefaultMaximumDocumentFrequency)
-                uri.AppendFormat("&maxDocFreq={0}&", MaximumDocumentFrequency);
-            if (MaximumDocumentFrequencyPercentage != null)
-                uri.AppendFormat("&maxDocFreqPct={0}&", MaximumDocumentFrequencyPercentage);
-            if (MinimumTermFrequency != null && MinimumTermFrequency != DefaultMinimumTermFrequency)
-                uri.AppendFormat("&minTermFreq={0}&", MinimumTermFrequency);
-            if (MinimumWordLength != null && MinimumWordLength != DefaultMinimumWordLength)
-                uri.AppendFormat("&minWordLen={0}&", MinimumWordLength);
-            if (StopWordsDocumentId != null)
-                uri.AppendFormat("&stopWords={0}&", StopWordsDocumentId);
-            if (string.IsNullOrEmpty(Transformer) == false)
-                uri.AppendFormat("&transformer={0}", Uri.EscapeDataString(Transformer));
-
-            if (PageSizeSet)
-                uri.Append("&pageSize=").Append(PageSize);
-
-            Fields.ApplyIfNotNull(f => uri.AppendFormat("&field={0}", f));
-            Includes.ApplyIfNotNull(i => uri.AppendFormat("&include={0}", i));
-        }
-
-        public string GetRequestUri()
-        {
-            if (string.IsNullOrEmpty(IndexName))
-                throw new InvalidOperationException("Index name cannot be null or empty");
-
-            var uri = new StringBuilder();
-            CreateRequestUri(uri);
-
-            return uri.ToString();
-        }
     }
 }

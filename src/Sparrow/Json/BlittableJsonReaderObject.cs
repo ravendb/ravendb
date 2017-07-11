@@ -212,11 +212,19 @@ namespace Sparrow.Json
         {
             get
             {
-                object result = null;
-                if (TryGetMember(name, out result) == false)
+                if (TryGetMember(name, out object result) == false)
                     throw new ArgumentException($"Member named {name} does not exist");
                 return result;
             }
+        }
+
+        public T GetWithoutThrowingOnError<T>(string name)
+        {
+            if (TryGetMember(name, out object resultAsObject) == false)
+                return default(T);
+
+            ConvertType(resultAsObject, out T result);
+            return result;
         }
 
         public bool TryGet<T>(string name, out T obj)

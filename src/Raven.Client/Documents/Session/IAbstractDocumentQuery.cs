@@ -330,6 +330,7 @@ namespace Raven.Client.Documents.Session
         void AddRootType(Type type);
         void SetTransformer(string transformer);
         void Distinct();
+        void Exists(string fieldName);
 
         /// <summary>
         /// Performs a query matching ANY of the provided values against the given field (OR)

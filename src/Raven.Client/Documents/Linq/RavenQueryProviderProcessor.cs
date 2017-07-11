@@ -979,6 +979,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 if (options.HasFlag(SearchOptions.Not))
                 {
                     _documentQuery.OpenSubclause();
+                    _documentQuery.Exists(expressionInfo.Path);
+                    _documentQuery.AndAlso();
                     _documentQuery.NegateNext();
                 }
 
@@ -990,8 +992,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 _documentQuery.Search(expressionInfo.Path, searchTerms, queryOptions);
                 if (options.HasFlag(SearchOptions.Not))
                 {
-                    _documentQuery.AndAlso();
-                    _documentQuery.Search(expressionInfo.Path, "*");
                     _documentQuery.CloseSubclause();
                 }
 

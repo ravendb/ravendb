@@ -3,6 +3,8 @@ using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace FastTests.Client.Queries
@@ -138,11 +140,16 @@ namespace FastTests.Client.Queries
                         .Search(x => x.Tags, "i love cats")
                         .Where(x => x.Name == "User");
 
+                    var query = GetIndexQuery(ravenQueryable);
 
-                    Assert.Equal("Tags:(i love cats) AND (Name:User)", ravenQueryable.ToString());
+                    Assert.Equal("FROM INDEX 'test' WHERE search(Tags, :p0) AND (Name = :p1)", query.Query);
+                    Assert.Equal("i love cats", query.QueryParameters["p0"]);
+                    Assert.Equal("User", query.QueryParameters["p1"]);
                 }
             }
         }
+
+
 
         [Fact]
         public void SearchCanUseAnd2()
@@ -192,8 +199,11 @@ namespace FastTests.Client.Queries
                         .Search(x => x.Tags, "i love cats", options: SearchOptions.Or)
                         .Where(x => x.Name == "User");
 
+                    var query = GetIndexQuery(ravenQueryable);
 
-                    Assert.Equal("Tags:(i love cats) Name:User", ravenQueryable.ToString());
+                    Assert.Equal("FROM INDEX 'test' WHERE search(Tags, :p0) OR Name = :p1", query.Query);
+                    Assert.Equal("i love cats", query.QueryParameters["p0"]);
+                    Assert.Equal("User", query.QueryParameters["p1"]);
                 }
             }
         }
@@ -211,8 +221,12 @@ namespace FastTests.Client.Queries
                         .Search(x => x.Users, "i love cats")
                         .Where(x => x.Name == "User");
 
+                    var query = GetIndexQuery(ravenQueryable);
 
-                    Assert.Equal("( Tags:(i love cats) Users:(i love cats)) AND (Name:User)", ravenQueryable.ToString());
+                    Assert.Equal("FROM INDEX 'test' WHERE (search(Tags, :p0) OR search(Users, :p1)) AND (Name = :p2)", query.Query);
+                    Assert.Equal("i love cats", query.QueryParameters["p0"]);
+                    Assert.Equal("i love cats", query.QueryParameters["p1"]);
+                    Assert.Equal("User", query.QueryParameters["p2"]);
                 }
             }
         }
@@ -284,8 +298,11 @@ namespace FastTests.Client.Queries
                         .Search(x => x.Tags, "i love cats", options: SearchOptions.Not | SearchOptions.And)
                         .Where(x => x.Name == "User");
 
+                    var query = GetIndexQuery(ravenQueryable);
 
-                    Assert.Equal("( -Tags:(i love cats) AND Tags:(*)) AND (Name:User)", ravenQueryable.ToString());
+                    Assert.Equal("FROM INDEX 'test' WHERE (exists(Tags) AND NOT search(Tags, :p0)) AND (Name = :p1)", query.Query);
+                    Assert.Equal("i love cats", query.QueryParameters["p0"]);
+                    Assert.Equal("User", query.QueryParameters["p1"]);
                 }
             }
         }
@@ -545,6 +562,12 @@ namespace FastTests.Client.Queries
                     qry.ToList();
                 }
             }
+        }
+
+        private static IndexQuery GetIndexQuery(IQueryable<Image> queryable)
+        {
+            var inspector = (IRavenQueryInspector)queryable;
+            return inspector.GetIndexQuery(isAsync: false);
         }
     }
 }

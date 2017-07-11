@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -30,7 +29,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class QueriesHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/queries/$", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/queries", "POST", AuthorizationStatus.ValidUser)]
         public async Task Post()
         {
             using (TrackRequestTime())
@@ -45,6 +44,11 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 var operation = GetStringQueryString("op", required: false);
+                if (string.Equals(operation, "morelikethis", StringComparison.OrdinalIgnoreCase))
+                {
+                    MoreLikeThis(context, token, HttpMethod.Post);
+                    return;
+                }
 
                 if (string.Equals(operation, "facets", StringComparison.OrdinalIgnoreCase))
                 {
@@ -73,7 +77,7 @@ namespace Raven.Server.Documents.Handlers
                 var operation = GetStringQueryString("op", required: false);
                 if (string.Equals(operation, "morelikethis", StringComparison.OrdinalIgnoreCase))
                 {
-                    MoreLikeThis(context, token);
+                    MoreLikeThis(context, token, HttpMethod.Get);
                     return;
                 }
 
@@ -89,7 +93,7 @@ namespace Raven.Server.Documents.Handlers
                     return;
 
                 }
-
+                
                 await Query(context, indexName, token, HttpMethod.Get).ConfigureAwait(false);
             }
         }
@@ -145,7 +149,7 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task Query(DocumentsOperationContext context, OperationCancelToken token, HttpMethod method)
         {
-            var indexQuery = GetIndexQuery(context, method);
+            var indexQuery = await GetIndexQuery(context, method);
 
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
             var includes = GetStringValuesQueryString("include", required: false);
@@ -181,18 +185,34 @@ namespace Raven.Server.Documents.Handlers
             AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({indexQuery.GetIndex()})", HttpContext, numberOfResults, indexQuery.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
         }
 
-        private IndexQueryServerSide GetIndexQuery(DocumentsOperationContext context, HttpMethod method)
+        private async Task<IndexQueryServerSide> GetIndexQuery(JsonOperationContext context, HttpMethod method)
         {
-            var indexQuery = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context);
-
-            if (method == HttpMethod.Post && string.IsNullOrWhiteSpace(indexQuery.Query))
+            if (method == HttpMethod.Get)
             {
-                var request = context.Read(RequestBodyStream(), "QueryInPostBody");
-                if (request.TryGet("Query", out string queryString) == false)
-                    throw new InvalidDataException("Missing 'Query' property in the POST request body");
-                indexQuery.Query = queryString;
+                //IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context);
+                throw new NotImplementedException();
             }
-            return indexQuery;
+
+            var indexQueryJson = await context.ReadForMemoryAsync(RequestBodyStream(), "index/query");
+
+            // read from cache here
+
+            return IndexQueryServerSide.Create(indexQueryJson);
+        }
+
+        private MoreLikeThisQueryServerSide GetMoreLikeThisQuery(JsonOperationContext context, HttpMethod method)
+        {
+            if (method == HttpMethod.Get)
+            {
+                //MoreLikeThisQueryServerSide.Create(HttpContext, GetPageSize(), context);
+                throw new NotImplementedException();
+            }
+
+            var indexQueryJson = context.ReadForMemory(RequestBodyStream(), "morelikethis/query");
+
+            // read from cache here
+
+            return MoreLikeThisQueryServerSide.Create(indexQueryJson);
         }
 
         private void Suggest(DocumentsOperationContext context, string indexName, OperationCancelToken token)
@@ -242,12 +262,12 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteMoreLikeThisQueryResult(context, result, out numberOfResults);
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(MoreLikeThis)} ({query.GetIndex()})", HttpContext, numberOfResults, query.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
+            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(MoreLikeThis)} ({query.IndexName})", HttpContext, numberOfResults, query.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
         }
 
-        private void Explain(DocumentsOperationContext context)
+        private async Task Explain(DocumentsOperationContext context, HttpMethod method)
         {
-            var indexQuery = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context);
+            var indexQuery = await GetIndexQuery(context, method);
             var runner = new QueryRunner(Database, context);
 
             var explanations = runner.ExplainDynamicIndexSelection(indexQuery);
@@ -314,7 +334,6 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-
         private async Task Debug(DocumentsOperationContext context, string debug, OperationCancelToken token, HttpMethod method)
         {
             if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
@@ -325,17 +344,16 @@ namespace Raven.Server.Documents.Handlers
 
             if (string.Equals(debug, "explain", StringComparison.OrdinalIgnoreCase))
             {
-                Explain(context);
+                await Explain(context, method);
                 return;
             }
-
 
             throw new NotSupportedException($"Not supported query debug operation: '{debug}'");
         }
 
         private async Task IndexEntries(DocumentsOperationContext context, OperationCancelToken token, HttpMethod method)
         {
-            var indexQuery = GetIndexQuery(context, method);
+            var indexQuery = await GetIndexQuery(context, method);
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
             var queryRunner = new QueryRunner(Database, context);

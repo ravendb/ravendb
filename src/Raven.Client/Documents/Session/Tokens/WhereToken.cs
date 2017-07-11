@@ -158,6 +158,16 @@ namespace Raven.Client.Documents.Session.Tokens
             };
         }
 
+        public static QueryToken Exists(string fieldName)
+        {
+            return new WhereToken
+            {
+                FieldName = fieldName,
+                ParameterName = null,
+                WhereOperator = WhereOperator.Exists
+            };
+        }
+
         public override void WriteTo(StringBuilder writer)
         {
             if (Boost.HasValue)
@@ -180,6 +190,9 @@ namespace Raven.Client.Documents.Session.Tokens
 
             if (WhereOperator == WhereOperator.EndsWith)
                 writer.Append("endsWith(");
+
+            if (WhereOperator == WhereOperator.Exists)
+                writer.Append("exists(");
 
             writer.Append(RavenQuery.EscapeField(FieldName));
 
@@ -232,6 +245,10 @@ namespace Raven.Client.Documents.Session.Tokens
                     writer
                         .Append(", :")
                         .Append(ParameterName)
+                        .Append(")");
+                    break;
+                case WhereOperator.Exists:
+                    writer
                         .Append(")");
                     break;
                 default:

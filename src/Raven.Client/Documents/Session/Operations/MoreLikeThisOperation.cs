@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Session.Operations
         {
             _session.IncrementRequestCount();
 
-            return new MoreLikeThisCommand(_query);
+            return new MoreLikeThisCommand(_session.Conventions, _session.Context, _query);
         }
 
         public void SetResult(MoreLikeThisQueryResult result)

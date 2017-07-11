@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Queries
         {
             // TODO arek - remove me
         }
-        
+
         public IndexQueryServerSide(string query)
         {
             Query = EscapingHelper.UnescapeLongDataString(query);
@@ -40,9 +40,63 @@ namespace Raven.Server.Documents.Queries
 
             Parsed = qp.Parse();
         }
-        
+
         public Query Parsed { get; private set; }
-        
+
+        public static IndexQueryServerSide Create(BlittableJsonReaderObject json)
+        {
+            if (json.TryGet(nameof(Query), out string query) == false || string.IsNullOrEmpty(query))
+                throw new InvalidOperationException($"Index query does not contain '{nameof(Query)}' field.");
+
+            if (json.TryGet(nameof(QueryParameters), out BlittableJsonReaderObject temp) && temp != null)
+            {
+                // temporary till QP are working
+
+                var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                foreach (var propertyIndex in temp.GetPropertiesByInsertionOrder())
+                {
+                    temp.GetPropertyByIndex(propertyIndex, ref propertyDetails);
+
+                    var parameterName = $":{propertyDetails.Name}";
+                    var parameterValue = propertyDetails.Value;
+                    if (propertyDetails.Token == BlittableJsonToken.String)
+                        parameterValue = $"'{parameterValue}'";
+
+                    query = query.Replace(parameterName, parameterValue.ToString());
+                }
+            }
+
+            var result = new IndexQueryServerSide(query);
+
+            result.AllowMultipleIndexEntriesForSameDocumentToResultTransformer = json.GetWithoutThrowingOnError<bool>(nameof(result.AllowMultipleIndexEntriesForSameDocumentToResultTransformer));
+            result.CutoffEtag = json.GetWithoutThrowingOnError<long?>(nameof(result.CutoffEtag));
+            result.DisableCaching = json.GetWithoutThrowingOnError<bool>(nameof(result.DisableCaching));
+            result.ExplainScores = json.GetWithoutThrowingOnError<bool>(nameof(result.ExplainScores));
+            result.PageSize = json.GetWithoutThrowingOnError<int>(nameof(result.PageSize));
+            result.Start = json.GetWithoutThrowingOnError<int>(nameof(result.Start));
+            result.ShowTimings = json.GetWithoutThrowingOnError<bool>(nameof(result.ShowTimings));
+            result.SkipDuplicateChecking = json.GetWithoutThrowingOnError<bool>(nameof(result.SkipDuplicateChecking));
+            result.Transformer = json.GetWithoutThrowingOnError<string>(nameof(result.Transformer));
+            result.WaitForNonStaleResultsTimeout = json.GetWithoutThrowingOnError<TimeSpan?>(nameof(result.WaitForNonStaleResultsTimeout));
+            result.WaitForNonStaleResults = json.GetWithoutThrowingOnError<bool>(nameof(result.WaitForNonStaleResults));
+            result.WaitForNonStaleResultsAsOfNow = json.GetWithoutThrowingOnError<bool>(nameof(result.WaitForNonStaleResultsAsOfNow));
+
+            if (json.TryGet(nameof(result.Includes), out BlittableJsonReaderArray includesArray) && includesArray != null && includesArray.Length > 0)
+            {
+                result.Includes = new string[includesArray.Length];
+                for (var i = 0; i < includesArray.Length; i++)
+                    result.Includes[i] = includesArray.GetStringByIndex(i);
+            }
+
+            if (json.TryGet(nameof(result.QueryParameters), out BlittableJsonReaderObject qp))
+                result.QueryParameters = qp;
+
+            if (json.TryGet(nameof(result.TransformerParameters), out BlittableJsonReaderObject tp))
+                result.TransformerParameters = tp;
+
+            return result;
+        }
+
         public static IndexQueryServerSide Create(HttpContext httpContext, int start, int pageSize, JsonOperationContext context)
         {
             var result = new IndexQueryServerSide
@@ -146,7 +200,7 @@ namespace Raven.Server.Documents.Queries
         }
 
         public bool IsDynamic => Parsed.From.Index == false;
-        
+
         public string GetCollection()
         {
             var fromToken = Parsed.From.From;
@@ -156,14 +210,14 @@ namespace Raven.Server.Documents.Queries
         public string GetIndex()
         {
             var fromToken = Parsed.From.From;
-            return QueryExpression.Extract(Parsed.QueryText,  fromToken);
+            return QueryExpression.Extract(Parsed.QueryText, fromToken);
         }
-        
+
         public IEnumerable<FieldValuePair> GetWhereFields()
         {
             if (Parsed.Where == null)
                 yield break;
-            
+
             foreach (var whereField in GetFieldValueTokens(Parsed.Where))
             {
                 yield return (new FieldValuePair(QueryExpression.Extract(Parsed.QueryText, whereField.Field), QueryExpression.Extract(Parsed.QueryText, whereField.Value), whereField.Value.Type));
@@ -174,7 +228,7 @@ namespace Raven.Server.Documents.Queries
         {
             if (Parsed.OrderBy == null)
                 yield break;
-            
+
             foreach (var fieldInfo in Parsed.OrderBy)
             {
                 yield return (QueryExpression.Extract(Parsed.QueryText, fieldInfo.Field), fieldInfo.FieldType, fieldInfo.Ascending);
@@ -193,7 +247,7 @@ namespace Raven.Server.Documents.Queries
             {
                 yield return field;
             }
-            
+
             foreach (var field in GetFieldValueTokens(expression.Right))
             {
                 yield return field;

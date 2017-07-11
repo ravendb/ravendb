@@ -995,22 +995,17 @@ If you really want to do in memory filtering on the data returned from the query
         /// </remarks>
         public void Boost(decimal boost)
         {
+            if (boost == 1m) // 1.0 is the default
+                return;
+
             var whereToken = WhereTokens.Last?.Value as WhereToken;
             if (whereToken == null)
-            {
                 throw new InvalidOperationException("Missing where clause");
-            }
 
             if (boost <= 0m)
-            {
                 throw new ArgumentOutOfRangeException(nameof(boost), "Boost factor must be a positive number");
-            }
 
-            if (boost != 1m)
-            {
-                // 1.0 is the default
-                whereToken.Boost = boost;
-            }
+            whereToken.Boost = boost;
         }
 
         /// <summary>
@@ -1378,6 +1373,16 @@ If you really want to do in memory filtering on the data returned from the query
                 WhereTokens.AddLast(IntersectToken.Instance);
 
             throw new InvalidOperationException("Cannot add INTERSECT at this point.");
+        }
+
+        public void Exists(string fieldName)
+        {
+            AppendOperatorIfNeeded(WhereTokens);
+            NegateIfNeeded();
+
+            fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
+
+            WhereTokens.AddLast(WhereToken.Exists(fieldName));
         }
 
         public void ContainsAny(string fieldName, IEnumerable<object> values)
@@ -1769,7 +1774,7 @@ If you really want to do in memory filtering on the data returned from the query
 
         private string AddQueryParameter(string fieldName, object value)
         {
-            var parameterName = QueryParameters.Count.ToInvariantString();
+            var parameterName = $"p{QueryParameters.Count.ToInvariantString()}";
             QueryParameters.Add(parameterName, value);
             return parameterName;
         }
