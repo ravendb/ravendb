@@ -97,7 +97,7 @@ namespace FastTests.Server.Documents.Revisions
                 using (var session = store.OpenAsyncSession())
                 {
                     var exception = await Assert.ThrowsAsync<RevisionsDisabledException>(async () => await session.Advanced.GetRevisionsForAsync<Company>("companies/1"));
-                    Assert.Contains("Revisions is disabled", exception.Message);
+                    Assert.Contains("Revisions are disabled", exception.Message);
                 }
             }
         }
