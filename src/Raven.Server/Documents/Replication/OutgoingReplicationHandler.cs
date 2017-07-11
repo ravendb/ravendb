@@ -122,6 +122,7 @@ namespace Raven.Server.Documents.Replication
             var node = Destination as InternalReplication;
             return node?.NodeTag;
         }
+
         private void ReplicateToDestination()
         {
             NativeMemory.EnsureRegistered();
@@ -207,6 +208,11 @@ namespace Raven.Server.Documents.Replication
                         {
                             while (true)
                             {
+#if DEBUG
+                                _parent.WaitFormTest.WaitAsync().Wait(_cts.Token);
+                                _parent.WaitFormTest.Reset();
+#endif
+
                                 var sp = Stopwatch.StartNew();
                                 var stats = _lastStats = new OutgoingReplicationStatsAggregator(_parent.GetNextReplicationStatsId(), _lastStats);
                                 AddReplicationPerformance(stats);
@@ -231,7 +237,7 @@ namespace Raven.Server.Documents.Replication
                                         }
                                         catch (OperationCanceledException)
                                         {
-                                            //cancelation is not an actual error,
+                                            //cancellation is not an actual error,
                                             //it is a "notification" that we need to cancel current operation
                                             throw;
                                         }

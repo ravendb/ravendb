@@ -134,7 +134,8 @@ namespace Raven.Server.Documents
                         if (_documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document,
                             ref flags, out RevisionsCollectionConfiguration configuration))
                         {
-                            _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration);
+                            _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, 
+                                changeVector, modifiedTicks, configuration, collectionName);
                         }
                     }
                 }
