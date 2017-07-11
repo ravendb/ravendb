@@ -118,7 +118,6 @@ namespace Raven.Server.Documents.Replication
             }
 
             var conflictedDocs = new List<DocumentConflict>(documentsContext.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(documentsContext, id));
-            var isTombstone = false;
 
             if (conflictedDocs.Count == 0)
             {
@@ -133,7 +132,6 @@ namespace Raven.Server.Documents.Replication
                 else if (relevantLocalDoc.Tombstone != null)
                 {
                     conflictedDocs.Add(DocumentConflict.From(relevantLocalDoc.Tombstone));
-                    isTombstone = true;
                 }
             }
 
