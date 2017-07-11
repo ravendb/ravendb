@@ -1101,6 +1101,7 @@ namespace Raven.Server.Utils
             while (true)
             {
                 writer.Write(">>> ");
+                writer.Write(CliDelimiter.GetDelimiterString(CliDelimiter.Delimiter.ReadLine));
                 writer.Flush();
 
                 var line = reader.ReadLine();
