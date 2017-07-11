@@ -1392,16 +1392,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             var result = GetMemberDirect(expression.Body);
 
-            var fieldType = result.Type;
             var fieldName = result.Path;
             if (result.MaybeProperty != null &&
                 QueryGenerator.Conventions.FindIdentityProperty(result.MaybeProperty))
             {
                 fieldName = Constants.Documents.Indexing.Fields.DocumentIdFieldName;
-                fieldType = typeof(string);
             }
 
-            fieldName = FieldUtil.ApplyRangeSuffixIfNecessary(fieldName, fieldType);
             _documentQuery.AddOrder(fieldName, descending);
         }
 
