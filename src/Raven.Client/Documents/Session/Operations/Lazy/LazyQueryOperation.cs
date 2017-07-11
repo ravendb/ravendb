@@ -23,10 +23,12 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 
         public GetRequest CreateRequest()
         {
+            throw new NotImplementedException();
+
             var request = new GetRequest
             {
                 Url = "/queries",
-                Query = _queryOperation.IndexQuery.GetQueryString(_conventions)
+                //Query = _queryOperation.IndexQuery.GetQueryString(_conventions)
             };
 
             return request;

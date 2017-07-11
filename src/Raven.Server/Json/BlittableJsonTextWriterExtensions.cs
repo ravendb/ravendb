@@ -498,41 +498,12 @@ namespace Raven.Server.Json
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(query.DynamicMapReduceFields));
-            writer.WriteStartArray();
-            var isFirstInternal = true;
-            foreach (var field in query.DynamicMapReduceFields)
-            {
-                if (isFirstInternal == false)
-                    writer.WriteComma();
-
-                isFirstInternal = false;
-
-                writer.WriteStartObject();
-
-                writer.WritePropertyName(nameof(field.Name));
-                writer.WriteString(field.Name);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(field.IsGroupBy));
-                writer.WriteBool(field.IsGroupBy);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(field.OperationType));
-                writer.WriteString(field.OperationType.ToString());
-                writer.WriteComma();
-
-                writer.WriteEndObject();
-            }
-            writer.WriteEndArray();
-            writer.WriteComma();
-
             writer.WritePropertyName(nameof(query.FieldsToFetch));
+            var isFirstInternal = true;
             if (query.FieldsToFetch != null)
             {
                 writer.WriteStartArray();
 
-                isFirstInternal = true;
                 foreach (var field in query.FieldsToFetch)
                 {
                     if (isFirstInternal == false) writer.WriteComma();

@@ -22,14 +22,14 @@ namespace SlowTests.Issues
                         .Customize(x =>
                             x.WithinRadiusOf(fieldName: "Coordinates", radius: 1, latitude: 55.675285554217, longitude: 12.556675672531128, distErrorPercent: 0.025));
 
-                    var queryUrl1 = nearbyPoints1.GetIndexQuery(false).GetQueryString(DocumentConventions.Default);
-                    Assert.NotNull(queryUrl1.Contains("distErrorPercent=0.025"));
+                    //var queryUrl1 = nearbyPoints1.GetIndexQuery(false).GetQueryString(DocumentConventions.Default);
+                    //Assert.NotNull(queryUrl1.Contains("distErrorPercent=0.025"));
 
                     var nearbyPoints2 = (RavenQueryInspector<Entity>)session.Query<Entity, EntitySpatialIndex>()
                         .Customize(x =>
                             x.WithinRadiusOf(fieldName: "Coordinates", radius: 1, latitude: 55.675285554217, longitude: 12.556675672531128, distErrorPercent: 0.01));
-                    var queryUrl2 = nearbyPoints2.GetIndexQuery(false).GetQueryString(DocumentConventions.Default);
-                    Assert.NotNull(queryUrl2.Contains("distErrorPercent=0.01"));
+                    //var queryUrl2 = nearbyPoints2.GetIndexQuery(false).GetQueryString(DocumentConventions.Default);
+                    //Assert.NotNull(queryUrl2.Contains("distErrorPercent=0.01"));
                 }
             }
         }

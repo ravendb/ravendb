@@ -76,7 +76,6 @@ namespace Raven.Client.Documents.Conventions
             MaxNumberOfRequestsPerSession = 30;
 
             PrettifyGeneratedLinqExpressions = true;
-            MaxLengthOfQueryUsingGetUrl = 1024 + 512;
 
             JsonContractResolver = new DefaultRavenContractResolver();
             CustomizeJsonSerializer = serializer => { };// todo: remove this or merge with SerializeEntityToJsonStream
@@ -100,11 +99,6 @@ namespace Raven.Client.Documents.Conventions
         /// </summary>
         /// <value>The max number of requests per session.</value>
         public int MaxNumberOfRequestsPerSession { get; set; }
-
-        /// <summary>
-        ///     Gets or sets the default max length of a query using the GET method against a server.
-        /// </summary>
-        public int MaxLengthOfQueryUsingGetUrl { get; set; }
 
         /// <summary>
         ///     Whether to allow queries on document id.
@@ -477,13 +471,11 @@ namespace Raven.Client.Documents.Conventions
                     _originalConfiguration = new ClientConfiguration
                     {
                         MaxNumberOfRequestsPerSession = MaxNumberOfRequestsPerSession,
-                        MaxLengthOfQueryUsingGetUrl = MaxLengthOfQueryUsingGetUrl,
                         PrettifyGeneratedLinqExpressions = PrettifyGeneratedLinqExpressions
                     };
                 }
 
                 MaxNumberOfRequestsPerSession = configuration.MaxNumberOfRequestsPerSession ?? _originalConfiguration.MaxNumberOfRequestsPerSession.Value;
-                MaxLengthOfQueryUsingGetUrl = configuration.MaxLengthOfQueryUsingGetUrl ?? _originalConfiguration.MaxLengthOfQueryUsingGetUrl.Value;
                 PrettifyGeneratedLinqExpressions = configuration.PrettifyGeneratedLinqExpressions ?? _originalConfiguration.PrettifyGeneratedLinqExpressions.Value;
             }
         }

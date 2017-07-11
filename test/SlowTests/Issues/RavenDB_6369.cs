@@ -46,7 +46,7 @@ namespace SlowTests.Issues
 
         private class TestQueryCommand : QueryCommand
         {
-            public TestQueryCommand(DocumentConventions conventions, JsonOperationContext context, IndexQuery indexQuery, HashSet<string> includes = null, bool metadataOnly = false, bool indexEntriesOnly = false) : base(conventions, context, indexQuery, includes, metadataOnly, indexEntriesOnly)
+            public TestQueryCommand(DocumentConventions conventions, JsonOperationContext context, IndexQuery indexQuery, bool metadataOnly = false, bool indexEntriesOnly = false) : base(conventions, context, indexQuery, metadataOnly, indexEntriesOnly)
             {
                 Timeout = TimeSpan.FromMilliseconds(100);
             }

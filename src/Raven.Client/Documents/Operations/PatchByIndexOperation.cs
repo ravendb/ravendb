@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net.Http;
+using System.Text;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
@@ -76,39 +77,59 @@ namespace Raven.Client.Documents.Operations
         private class PatchByIndexCommand : RavenCommand<OperationIdResult>
         {
             private readonly JsonOperationContext _context;
-            private readonly DocumentConventions _conventions;
-            private readonly IndexQuery _queryToUpdate;
+            private readonly BlittableJsonReaderObject _queryToUpdate;
             private readonly BlittableJsonReaderObject _patch;
             private readonly QueryOperationOptions _options;
 
             public PatchByIndexCommand(DocumentConventions conventions, JsonOperationContext context, IndexQuery queryToUpdate, PatchRequest patch, QueryOperationOptions options = null)
             {
+                if (queryToUpdate == null)
+                    throw new ArgumentNullException(nameof(queryToUpdate));
                 if (patch == null)
                     throw new ArgumentNullException(nameof(patch));
 
                 _context = context ?? throw new ArgumentNullException(nameof(context));
-                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
-                _queryToUpdate = queryToUpdate ?? throw new ArgumentNullException(nameof(queryToUpdate));
+                _queryToUpdate = EntityToBlittable.ConvertEntityToBlittable(queryToUpdate, conventions, _context);
                 _patch = EntityToBlittable.ConvertEntityToBlittable(patch, conventions, _context);
                 _options = options ?? new QueryOperationOptions();
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/queries{_queryToUpdate.GetQueryString(_conventions)}&allowStale={_options.AllowStale}&maxOpsPerSec={_options.MaxOpsPerSecond}&details={_options.RetrieveDetails}";
+                var path = new StringBuilder(node.Url)
+                    .Append("/databases/")
+                    .Append(node.Database)
+                    .Append("/queries")
+                    .Append("allowStale=")
+                    .Append(_options.AllowStale)
+                    .Append("&maxOpsPerSec=")
+                    .Append(_options.MaxOpsPerSecond)
+                    .Append("&details=")
+                    .Append(_options.RetrieveDetails);
 
                 if (_options.StaleTimeout != null)
-                    url += "&staleTimeout=" + _options.StaleTimeout;
+                {
+                    path
+                        .Append("&staleTimeout=")
+                        .Append(_options.StaleTimeout.Value);
+                }
 
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethods.Patch,
                     Content = new BlittableJsonContent(stream =>
-                    {
-                        _context.Write(stream, _patch);
-                    })
+                        {
+                            using (var writer = new BlittableJsonTextWriter(_context, stream))
+                            {
+                                // TODO [ppekrol]
+
+                                throw new NotImplementedException();
+                            }
+                        }
+                    )
                 };
 
+                url = path.ToString();
                 return request;
             }
 

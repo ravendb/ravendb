@@ -29,19 +29,19 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "",
-                DynamicMapReduceFields = new[]
-            {
-                new DynamicMapReduceField
-                {
-                    Name = "Location",
-                    IsGroupBy = true
-                },
-                new DynamicMapReduceField
-                {
-                    Name = "Count",
-                    OperationType = FieldMapReduceOperation.Count
-                }
-            }
+                //DynamicMapReduceFields = new[]
+                //{
+                //    new DynamicMapReduceField
+                //    {
+                //        Name = "Location",
+                //        IsGroupBy = true
+                //    },
+                //    new DynamicMapReduceField
+                //    {
+                //        Name = "Count",
+                //        OperationType = FieldMapReduceOperation.Count
+                //    }
+                //}
             });
 
             var result = _sut.Match(dynamicQuery);
@@ -78,19 +78,19 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Location:Poland",
-                DynamicMapReduceFields = new[]
-                {
-                    new DynamicMapReduceField
-                    {
-                        Name = "Count",
-                        OperationType = FieldMapReduceOperation.Count
-                    },
-                    new DynamicMapReduceField
-                    {
-                        Name = "Location",
-                        IsGroupBy = true
-                    }
-                },
+                //DynamicMapReduceFields = new[]
+                //{
+                //    new DynamicMapReduceField
+                //    {
+                //        Name = "Count",
+                //        OperationType = FieldMapReduceOperation.Count
+                //    },
+                //    new DynamicMapReduceField
+                //    {
+                //        Name = "Location",
+                //        IsGroupBy = true
+                //    }
+                //},
                 SortedFields = new[]
                 {
                     new SortedField("Count_L_Range"),
@@ -126,19 +126,19 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Location:Poland",
-                DynamicMapReduceFields = new[]
-            {
-                new DynamicMapReduceField
-                {
-                    Name = "Count",
-                    OperationType = FieldMapReduceOperation.Count
-                },
-                new DynamicMapReduceField
-                {
-                    Name = "Location",
-                    IsGroupBy = true
-                }
-            }
+                //DynamicMapReduceFields = new[]
+                //{
+                //    new DynamicMapReduceField
+                //    {
+                //        Name = "Count",
+                //        OperationType = FieldMapReduceOperation.Count
+                //    },
+                //    new DynamicMapReduceField
+                //    {
+                //        Name = "Location",
+                //        IsGroupBy = true
+                //    }
+                //}
             });
 
             var result = _sut.Match(dynamicQuery);
@@ -172,19 +172,19 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Location:Poland",
-                DynamicMapReduceFields = new[]
-                {
-                    new DynamicMapReduceField
-                    {
-                        Name = "Count",
-                        OperationType = FieldMapReduceOperation.Sum
-                    },
-                    new DynamicMapReduceField
-                    {
-                        Name = "Location",
-                        IsGroupBy = true
-                    }
-                }
+                //DynamicMapReduceFields = new[]
+                //{
+                //    new DynamicMapReduceField
+                //    {
+                //        Name = "Count",
+                //        OperationType = FieldMapReduceOperation.Sum
+                //    },
+                //    new DynamicMapReduceField
+                //    {
+                //        Name = "Location",
+                //        IsGroupBy = true
+                //    }
+                //}
             });
 
             var result = _sut.Match(dynamicQuery);
@@ -218,24 +218,24 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Location:Poland",
-                DynamicMapReduceFields = new[]
-                {
-                    new DynamicMapReduceField
-                    {
-                        Name = "Count",
-                        OperationType = FieldMapReduceOperation.Count
-                    },
-                    new DynamicMapReduceField
-                    {
-                        Name = "Sum",
-                        OperationType = FieldMapReduceOperation.Sum
-                    },
-                    new DynamicMapReduceField
-                    {
-                        Name = "Location",
-                        IsGroupBy = true
-                    }
-                }
+                //DynamicMapReduceFields = new[]
+                //{
+                //    new DynamicMapReduceField
+                //    {
+                //        Name = "Count",
+                //        OperationType = FieldMapReduceOperation.Count
+                //    },
+                //    new DynamicMapReduceField
+                //    {
+                //        Name = "Sum",
+                //        OperationType = FieldMapReduceOperation.Sum
+                //    },
+                //    new DynamicMapReduceField
+                //    {
+                //        Name = "Location",
+                //        IsGroupBy = true
+                //    }
+                //}
             });
 
             var result = _sut.Match(dynamicQuery);
@@ -306,24 +306,24 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Location:Poland",
-                DynamicMapReduceFields = new[]
-                {
-                    new DynamicMapReduceField
-                    {
-                        Name = "Count",
-                        OperationType = FieldMapReduceOperation.Count
-                    },
-                    new DynamicMapReduceField
-                    {
-                        Name = "Location",
-                        IsGroupBy = true
-                    },
-                    new DynamicMapReduceField
-                    {
-                        Name = "NickName",
-                        IsGroupBy = true
-                    }
-                }
+                //DynamicMapReduceFields = new[]
+                //{
+                //    new DynamicMapReduceField
+                //    {
+                //        Name = "Count",
+                //        OperationType = FieldMapReduceOperation.Count
+                //    },
+                //    new DynamicMapReduceField
+                //    {
+                //        Name = "Location",
+                //        IsGroupBy = true
+                //    },
+                //    new DynamicMapReduceField
+                //    {
+                //        Name = "NickName",
+                //        IsGroupBy = true
+                //    }
+                //}
             });
 
             var result = _sut.Match(dynamicQuery);
@@ -382,19 +382,19 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Location:Poland",
-                DynamicMapReduceFields = new[]
-                {
-                    new DynamicMapReduceField
-                    {
-                        Name = "Count",
-                        OperationType = FieldMapReduceOperation.Count
-                    },
-                    new DynamicMapReduceField
-                    {
-                        Name = "Location",
-                        IsGroupBy = true
-                    }
-                }
+                //DynamicMapReduceFields = new[]
+                //{
+                //    new DynamicMapReduceField
+                //    {
+                //        Name = "Count",
+                //        OperationType = FieldMapReduceOperation.Count
+                //    },
+                //    new DynamicMapReduceField
+                //    {
+                //        Name = "Location",
+                //        IsGroupBy = true
+                //    }
+                //}
             });
 
             var result = _sut.Match(dynamicQuery);

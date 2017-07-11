@@ -298,23 +298,23 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     var command = new QueryCommand(store.Conventions, commands.Context, new IndexQuery
                     {
                         Query = "FROM Addresses",
-                        DynamicMapReduceFields = new[]
-                        {
-                            new DynamicMapReduceField
-                            {
-                                Name = "City",
-                                ClientSideName = null,
-                                IsGroupBy = true,
-                                OperationType = FieldMapReduceOperation.None
-                            },
-                            new DynamicMapReduceField
-                            {
-                                Name = "Count",
-                                ClientSideName = "TotalCount",
-                                IsGroupBy = false,
-                                OperationType = FieldMapReduceOperation.Count
-                            }
-                        },
+                        //DynamicMapReduceFields = new[]
+                        //{
+                        //    new DynamicMapReduceField
+                        //    {
+                        //        Name = "City",
+                        //        ClientSideName = null,
+                        //        IsGroupBy = true,
+                        //        OperationType = FieldMapReduceOperation.None
+                        //    },
+                        //    new DynamicMapReduceField
+                        //    {
+                        //        Name = "Count",
+                        //        ClientSideName = "TotalCount",
+                        //        IsGroupBy = false,
+                        //        OperationType = FieldMapReduceOperation.Count
+                        //    }
+                        //},
                         //FieldsToFetch = new[] { "City" },
                         WaitForNonStaleResultsAsOfNow = true
                     });

@@ -142,19 +142,19 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             _sut = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Location:A*",
-                DynamicMapReduceFields = new[]
-                {
-                    new DynamicMapReduceField
-                    {
-                        Name = "Count",
-                        OperationType = FieldMapReduceOperation.Count
-                    },
-                    new DynamicMapReduceField
-                    {
-                        Name = "Location",
-                        IsGroupBy = true
-                    }
-                },
+                //DynamicMapReduceFields = new[]
+                //{
+                //    new DynamicMapReduceField
+                //    {
+                //        Name = "Count",
+                //        OperationType = FieldMapReduceOperation.Count
+                //    },
+                //    new DynamicMapReduceField
+                //    {
+                //        Name = "Location",
+                //        IsGroupBy = true
+                //    }
+                //},
                 SortedFields = new[]
                 {
                     new SortedField("Count_L_Range"),
@@ -166,24 +166,24 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             _sut = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Location:A*",
-                DynamicMapReduceFields = new[]
-                {
-                    new DynamicMapReduceField
-                    {
-                        Name = "Count",
-                        OperationType = FieldMapReduceOperation.Count,
-                    },
-                    new DynamicMapReduceField
-                    {
-                        Name = "Age",
-                        OperationType = FieldMapReduceOperation.Sum
-                    },
-                    new DynamicMapReduceField
-                    {
-                        Name = "Location",
-                        IsGroupBy = true
-                    }
-                },
+                //DynamicMapReduceFields = new[]
+                //{
+                //    new DynamicMapReduceField
+                //    {
+                //        Name = "Count",
+                //        OperationType = FieldMapReduceOperation.Count,
+                //    },
+                //    new DynamicMapReduceField
+                //    {
+                //        Name = "Age",
+                //        OperationType = FieldMapReduceOperation.Sum
+                //    },
+                //    new DynamicMapReduceField
+                //    {
+                //        Name = "Location",
+                //        IsGroupBy = true
+                //    }
+                //},
                 SortedFields = new[]
                 {
                     new SortedField("Age_L_Range"),
@@ -211,7 +211,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             _sut = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = query,
-                DynamicMapReduceFields = mapReduceFields
+                //DynamicMapReduceFields = mapReduceFields
             });
         }
     }

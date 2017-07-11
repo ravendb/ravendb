@@ -93,9 +93,6 @@ namespace Raven.Server.Documents.Queries
                         case "sort":
                             result.SortedFields = item.Value.Select(y => new SortedField(y)).ToArray();
                             break;
-                        case "mapReduce":
-                            result.DynamicMapReduceFields = ParseDynamicMapReduceFields(item.Value);
-                            break;
                         case "include":
                             if (includes == null)
                                 includes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

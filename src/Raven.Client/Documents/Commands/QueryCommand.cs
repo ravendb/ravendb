@@ -1,10 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Text;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
@@ -16,66 +15,51 @@ namespace Raven.Client.Documents.Commands
     {
         private readonly DocumentConventions _conventions;
         private readonly JsonOperationContext _context;
-        private readonly IndexQuery _indexQuery;
-        private readonly HashSet<string> _includes;
+        private readonly BlittableJsonReaderObject _indexQuery;
         private readonly bool _metadataOnly;
         private readonly bool _indexEntriesOnly;
 
-        public QueryCommand(DocumentConventions conventions, JsonOperationContext context, IndexQuery indexQuery, HashSet<string> includes = null, bool metadataOnly = false, bool indexEntriesOnly = false)
+        public QueryCommand(DocumentConventions conventions, JsonOperationContext context, IndexQuery indexQuery, bool metadataOnly = false, bool indexEntriesOnly = false)
         {
+            if (indexQuery == null)
+                throw new ArgumentNullException(nameof(indexQuery));
+
             _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
             _context = context ?? throw new ArgumentNullException(nameof(context));
-            _indexQuery = indexQuery ?? throw new ArgumentNullException(nameof(indexQuery));
-            _includes = includes;
+            _indexQuery = EntityToBlittable.ConvertEntityToBlittable(indexQuery, conventions, context);
             _metadataOnly = metadataOnly;
             _indexEntriesOnly = indexEntriesOnly;
 
-            if (_indexQuery.WaitForNonStaleResultsTimeout.HasValue && _indexQuery.WaitForNonStaleResultsTimeout != TimeSpan.MaxValue)
-                Timeout = _indexQuery.WaitForNonStaleResultsTimeout.Value.Add(TimeSpan.FromSeconds(10)); // giving the server an opportunity to finish the response
+            if (indexQuery.WaitForNonStaleResultsTimeout.HasValue && indexQuery.WaitForNonStaleResultsTimeout != TimeSpan.MaxValue)
+                Timeout = indexQuery.WaitForNonStaleResultsTimeout.Value.Add(TimeSpan.FromSeconds(10)); // giving the server an opportunity to finish the response
         }
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            var method = _indexQuery.Query == null || _indexQuery.Query.Length <= _conventions.MaxLengthOfQueryUsingGetUrl
-                ? HttpMethod.Get
-                : HttpMethod.Post;
+            var path = new StringBuilder(node.Url)
+                .Append("/databases/")
+                .Append(node.Database)
+                .Append("/queries?");
+
+            if (_metadataOnly)
+                path.Append("&metadata-only=true");
+            if (_indexEntriesOnly)
+                path.Append("&debug=entries");
 
             var request = new HttpRequestMessage
             {
-                Method = method
+                Method = HttpMethod.Post,
+                Content = new BlittableJsonContent(stream =>
+                    {
+                        using (var writer = new BlittableJsonTextWriter(_context, stream))
+                        {
+                            writer.WriteObject(_indexQuery);
+                        }
+                    }
+                )
             };
 
-            if (method == HttpMethod.Post)
-            {
-                request.Content = new BlittableJsonContent(stream =>
-                {
-                    using (var writer = new BlittableJsonTextWriter(_context, stream))
-                    {
-                        writer.WriteStartObject();
-                        writer.WritePropertyName("Query");
-                        writer.WriteString(_indexQuery.Query);
-                        writer.WriteEndObject();
-                    }
-                });
-            }
-
-            var pathBuilder = new StringBuilder(node.Url);
-            pathBuilder.Append("/databases/")
-                .Append(node.Database)
-                .Append("/queries");
-
-            _indexQuery.AppendQueryString(pathBuilder, _conventions, appendQuery: method == HttpMethod.Get);
-
-            if (_metadataOnly)
-                pathBuilder.Append("&metadata-only=true");
-            if (_indexEntriesOnly)
-                pathBuilder.Append("&debug=entries");
-            if (_includes != null && _includes.Count > 0)
-            {
-                pathBuilder.Append("&").Append(string.Join("&", _includes.Select(x => "include=" + x).ToArray()));
-            }
-
-            url = pathBuilder.ToString();
+            url = path.ToString();
             return request;
         }
 
