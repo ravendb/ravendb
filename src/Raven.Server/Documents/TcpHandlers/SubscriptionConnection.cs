@@ -21,6 +21,7 @@ using Sparrow.Utils;
 using System.Linq;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Extensions;
 using Voron;
 
 namespace Raven.Server.Documents.TcpHandlers
@@ -381,7 +382,9 @@ namespace Raven.Server.Documents.TcpHandlers
                             foreach (var result in fetcher.GetDataToSend(docsContext, subscription, startEtag, patch))
                             {
                                 startEtag = result.Doc.Etag;
-                                lastChangeVector = ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, subscription.ChangeVector);
+                                lastChangeVector = subscription.ChangeVector == null ? 
+                                    result.Doc.ChangeVector : 
+                                    ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, subscription.ChangeVector.ToChangeVector());
                                 
                                 if (result.Doc.Data == null)
                                 {

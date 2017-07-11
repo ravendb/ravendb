@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Sparrow.Json;
@@ -11,27 +12,27 @@ namespace Raven.Client.Documents.Operations
     {
         private readonly string _documentId;
         private readonly string _name;
-        private readonly long? _etag;
+        private readonly string _changeVector;
 
-        public DeleteAttachmentOperation(string documentId, string name, long? etag = null)
+        public DeleteAttachmentOperation(string documentId, string name, string changeVector = null)
         {
             _documentId = documentId;
             _name = name;
-            _etag = etag;
+            _changeVector = changeVector;
         }
 
         public RavenCommand GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new DeleteAttachmentCommand(_documentId, _name, _etag);
+            return new DeleteAttachmentCommand(_documentId, _name, _changeVector);
         }
 
         private class DeleteAttachmentCommand : RavenCommand
         {
             private readonly string _documentId;
             private readonly string _name;
-            private readonly long? _etag;
+            private readonly string _changeVector;
 
-            public DeleteAttachmentCommand(string documentId, string name, long? etag)
+            public DeleteAttachmentCommand(string documentId, string name, string changeVector)
             {
                 if (string.IsNullOrWhiteSpace(documentId))
                     throw new ArgumentNullException(nameof(documentId));
@@ -40,7 +41,7 @@ namespace Raven.Client.Documents.Operations
 
                 _documentId = documentId;
                 _name = name;
-                _etag = etag;
+                _changeVector = changeVector;
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
@@ -50,7 +51,7 @@ namespace Raven.Client.Documents.Operations
                 {
                     Method = HttpMethods.Delete,
                 };
-                AddEtagIfNotNull(_etag, request);
+                AddChangeVectorIfNotNull(_changeVector, request);
                 return request;
             }
         }

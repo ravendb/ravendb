@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using FastTests;
+using Raven.Client.Documents.Replication.Messages;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 
@@ -25,7 +26,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var enumerator = session.Advanced.Stream<object>(fromEtag: 0);
+                    var enumerator = session.Advanced.Stream<object>(new ChangeVectorEntry[0]);
 
                     var count = 0;
                     while (enumerator.MoveNext())
@@ -54,7 +55,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var enumerator = session.Advanced.Stream<object>(fromEtag: 0);
+                    var enumerator = session.Advanced.Stream<object>(new ChangeVectorEntry[0]);
 
                     while (enumerator.MoveNext())
                     {

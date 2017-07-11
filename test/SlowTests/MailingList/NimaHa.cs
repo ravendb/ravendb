@@ -47,9 +47,9 @@ namespace SlowTests.MailingList
 
                 using (var commands = store.Commands())
                 {
-                    commands.Put("house/1", 0, commands.ParseJson(house1), metadata);
-                    commands.Put("house/2", 0, commands.ParseJson(house2), metadata);
-                    commands.Put("house/3", 0, commands.ParseJson(house3), metadata);
+                    commands.Put("house/1", null, commands.ParseJson(house1), metadata);
+                    commands.Put("house/2", null, commands.ParseJson(house2), metadata);
+                    commands.Put("house/3", null, commands.ParseJson(house3), metadata);
 
                     //Wait for non stale results
                     using (var session = store.OpenSession())

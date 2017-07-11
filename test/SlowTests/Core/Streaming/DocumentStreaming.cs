@@ -6,7 +6,7 @@
 
 using System.Collections.Generic;
 using FastTests;
-
+using Raven.Client.Documents.Replication.Messages;
 using Xunit;
 
 using User = SlowTests.Core.Utils.Entities.User;
@@ -50,7 +50,7 @@ namespace SlowTests.Core.Streaming
         {
             using (var store = GetDocumentStore())
             {
-                long? fromEtag;
+                string changeVectorEntries;
 
                 using (var session = store.OpenSession())
                 {
@@ -68,19 +68,19 @@ namespace SlowTests.Core.Streaming
                     }
                     session.SaveChanges();
 
-                    fromEtag = session.Advanced.GetEtagFor(hundredthUser);
+                    changeVectorEntries = session.Advanced.GetChangeVectorFor(hundredthUser);
                 }
 
                 int count = 0;
-                var ids = new List<KeyValuePair<string, long>>();
+                var ids = new List<KeyValuePair<string, string>>();
                 using (var session = store.OpenSession())
                 {
-                    using (var reader = session.Advanced.Stream<User>(fromEtag: fromEtag))
+                    using (var reader = session.Advanced.Stream<User>(changeVectorEntries))
                     {
                         while (reader.MoveNext())
                         {
                             count++;
-                            ids.Add(new KeyValuePair<string, long>(reader.Current.Id, reader.Current.Etag));
+                            ids.Add(new KeyValuePair<string, string>(reader.Current.Id, reader.Current.ChangeVector));
                             Assert.IsType<User>(reader.Current.Document);
                         }
                     }

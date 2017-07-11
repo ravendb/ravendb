@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Sparrow.Binary;
 using Voron;
 using Voron.Data.BTrees;
@@ -71,24 +71,7 @@ namespace Raven.Server.Utils
             }
             return changeVector;
         }
-
-        public static ChangeVectorEntry[] GetChangeVectorForWrite(ChangeVectorEntry[] existingChangeVector, Guid dbid, long etag)
-        {
-            if (existingChangeVector == null || existingChangeVector.Length == 0)
-            {
-                return new[]
-                {
-                    new ChangeVectorEntry
-                    {
-                        DbId = dbid,
-                        Etag = etag
-                    }
-                };
-            }
-
-            return UpdateChangeVectorWithNewEtag(dbid, etag, existingChangeVector);
-        }
-
+        
         public static ChangeVectorEntry[] UpdateChangeVectorWithNewEtag(Guid dbId, long newEtag, ChangeVectorEntry[] changeVector)
         {
             var length = changeVector.Length;
@@ -108,6 +91,9 @@ namespace Raven.Server.Utils
 
         public static ChangeVectorEntry[] MergeVectors(ChangeVectorEntry[] vectorA, ChangeVectorEntry[] vectorB)
         {
+            Debug.Assert(vectorA != null);
+            Debug.Assert(vectorB != null);
+
             Array.Sort(vectorA);
             Array.Sort(vectorB);
             int ia = 0, ib = 0;

@@ -403,7 +403,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteString(cmd.PutResult.Id);
                     writer.WriteComma();
 
-                    writer.WritePropertyName(nameof(PutResult.ETag));
+                    writer.WritePropertyName(nameof(PutResult.ChangeVector));
                     writer.WriteInteger(cmd.PutResult.Etag);
 
                     writer.WriteEndObject();

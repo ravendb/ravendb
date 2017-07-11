@@ -1,4 +1,5 @@
 using FastTests;
+using Raven.Client.Documents.Replication.Messages;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -26,7 +27,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var count = 0;
-                    using (var streamDocs = session.Advanced.Stream<object>(fromEtag: 0))
+                    using (var streamDocs = session.Advanced.Stream<object>(new ChangeVectorEntry[0]))
                     {
                         while (streamDocs.MoveNext())
                         {

@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Globalization;
 using Raven.Client;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
@@ -62,7 +62,6 @@ namespace Raven.Server.Documents
                 };
             }
 
-            mutatedMetadata[Constants.Documents.Metadata.Etag] = Etag;
             mutatedMetadata[Constants.Documents.Metadata.Id] = Id;
             if (ChangeVector != null)
                 mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector.ToJson();

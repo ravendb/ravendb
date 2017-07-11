@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Net;
 using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.ServerWide.Context;
@@ -163,7 +164,7 @@ namespace Raven.Server.Documents.TcpHandlers
             exception = null;
             var conflictStatus = ConflictsStorage.GetConflictStatus(
                 remote: doc.ChangeVector,
-                local: subscriptionState.ChangeVector);
+                local: subscriptionState.ChangeVector.ToChangeVector());
 
             if (conflictStatus == ConflictsStorage.ConflictStatus.AlreadyMerged)
                 return false;
@@ -196,7 +197,7 @@ namespace Raven.Server.Documents.TcpHandlers
             transformResult = null;
             var conflictStatus = ConflictsStorage.GetConflictStatus(
                 remote: item.ChangeVector,
-                local: subscriptionState.ChangeVector);
+                local: subscriptionState.ChangeVector.ToChangeVector());
 
             if (conflictStatus == ConflictsStorage.ConflictStatus.AlreadyMerged)
                 return false;

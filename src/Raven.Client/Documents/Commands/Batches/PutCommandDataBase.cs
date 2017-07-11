@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -7,35 +8,35 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     internal class PutCommandDataWithBlittableJson : PutCommandDataBase<BlittableJsonReaderObject>
     {
-        public PutCommandDataWithBlittableJson(string id, long? etag, BlittableJsonReaderObject document)
-            : base(id, etag, document)
+        public PutCommandDataWithBlittableJson(string id, string changeVector, BlittableJsonReaderObject document)
+            : base(id, changeVector, document)
         {
         }
     }
 
     public class PutCommandData : PutCommandDataBase<DynamicJsonValue>
     {
-        public PutCommandData(string id, long? etag, DynamicJsonValue document)
-            : base(id, etag, document)
+        public PutCommandData(string id, string changeVector, DynamicJsonValue document)
+            : base(id, changeVector, document)
         {
         }
     }
 
     public abstract class PutCommandDataBase<T> : ICommandData
     {
-        protected PutCommandDataBase(string id, long? etag, T document)
+        protected PutCommandDataBase(string id, string changeVector, T document)
         {
             if (document == null)
                 throw new ArgumentNullException(nameof(document));
 
             Id = id;
-            Etag = etag;
+            ChangeVector = changeVector;
             Document = document;
         }
 
         public string Id { get; }
         public string Name { get; } = null;
-        public long? Etag { get; }
+        public string ChangeVector { get; }
         public T Document { get; }
         public CommandType Type { get; } = CommandType.PUT;
 
@@ -44,7 +45,7 @@ namespace Raven.Client.Documents.Commands.Batches
             return new DynamicJsonValue
             {
                 [nameof(Id)] = Id,
-                [nameof(Etag)] = Etag,
+                [nameof(ChangeVector)] = ChangeVector,
                 [nameof(Document)] = Document,
                 [nameof(Type)] = Type.ToString()
             };

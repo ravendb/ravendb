@@ -14,7 +14,6 @@ namespace Raven.Client.Json
         private static readonly LazyStringValue LastModified;
         private static readonly LazyStringValue Collection;
         private static readonly LazyStringValue ChangeVector;
-        private static readonly LazyStringValue Etag;
         private static readonly LazyStringValue Id;
 
         static BlittableOperation()
@@ -22,7 +21,6 @@ namespace Raven.Client.Json
             LastModified = Context.Value.GetLazyString(Constants.Documents.Metadata.LastModified);
             Collection = Context.Value.GetLazyString(Constants.Documents.Metadata.Collection);
             ChangeVector = Context.Value.GetLazyString(Constants.Documents.Metadata.ChangeVector);
-            Etag = Context.Value.GetLazyString(Constants.Documents.Metadata.Etag);
             Id = Context.Value.GetLazyString(Constants.Documents.Metadata.Id);
         }
 
@@ -72,7 +70,6 @@ namespace Raven.Client.Json
                 if (newProp.Name.Equals(LastModified) ||
                     newProp.Name.Equals(Collection) ||
                     newProp.Name.Equals(ChangeVector) ||
-                    newProp.Name.Equals(Etag) ||
                     newProp.Name.Equals(Id))
                     continue;
 

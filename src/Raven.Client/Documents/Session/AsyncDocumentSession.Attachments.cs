@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Session
             return await DocumentStore.Operations.SendAsync(operation).ConfigureAwait(false);
         }
 
-        public async Task<AttachmentResult> GetRevisionAttachmentAsync(string documentId, string name, ChangeVectorEntry[] changeVector)
+        public async Task<AttachmentResult> GetRevisionAttachmentAsync(string documentId, string name, string changeVector)
         {
             var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Revision, changeVector);
             return await DocumentStore.Operations.SendAsync(operation).ConfigureAwait(false);

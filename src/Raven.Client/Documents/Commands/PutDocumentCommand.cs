@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
@@ -11,14 +12,14 @@ namespace Raven.Client.Documents.Commands
     public class PutDocumentCommand : RavenCommand<PutResult>
     {
         private readonly string _id;
-        private readonly long? _etag;
+        private readonly string _changeVector;
         private readonly BlittableJsonReaderObject _document;
         private readonly JsonOperationContext _context;
 
-        public PutDocumentCommand(string id, long? etag, BlittableJsonReaderObject document, JsonOperationContext context)
+        public PutDocumentCommand(string id, string changeVector, BlittableJsonReaderObject document, JsonOperationContext context)
         {
             _id = id ?? throw new ArgumentNullException(nameof(id));
-            _etag = etag;
+            _changeVector = changeVector;
             _document = document ?? throw new ArgumentNullException(nameof(document));
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
@@ -35,7 +36,7 @@ namespace Raven.Client.Documents.Commands
                     _context.Write(stream, _document);
                 }),
             };
-            AddEtagIfNotNull(_etag, request);
+            AddChangeVectorIfNotNull(_changeVector, request);
             return request;
         }
 

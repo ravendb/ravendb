@@ -5,6 +5,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Transformers;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
@@ -358,7 +359,7 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             Data = data,
                             Id = modifier.Id,
-                            ChangeVector = modifier.ChangeVector,
+                            ChangeVector = modifier.ChangeVector.ToString().ToChangeVector(),
                             Flags = modifier.Flags,
                             NonPersistentFlags = modifier.NonPersistentFlags,
                         },

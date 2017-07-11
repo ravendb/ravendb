@@ -133,7 +133,7 @@ namespace Raven.Client.Http
             throw new InvalidDataException("Response is invalid.");
         }
 
-        protected void AddEtagIfNotNull(long? etag, HttpRequestMessage request)
+        protected void AddChangeVectorIfNotNull(string changeVector, HttpRequestMessage request)
         {
 #if DEBUG
             if (IsReadRequest)
@@ -145,8 +145,8 @@ namespace Raven.Client.Http
             }
 #endif
 
-            if (etag.HasValue)
-                request.Headers.TryAddWithoutValidation("If-Match", $"\"{etag.Value}\"");
+            if (changeVector != null)
+                request.Headers.TryAddWithoutValidation("If-Match", $"\"{changeVector}\"");
         }
     }
 

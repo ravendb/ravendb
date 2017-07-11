@@ -20,9 +20,9 @@ namespace Raven.Client.Documents.Operations
         private readonly string _documentId;
         private readonly string _name;
         private readonly AttachmentType _type;
-        private readonly ChangeVectorEntry[] _changeVector;
+        private readonly string _changeVector;
 
-        public GetAttachmentOperation(string documentId, string name, AttachmentType type, ChangeVectorEntry[] changeVector)
+        public GetAttachmentOperation(string documentId, string name, AttachmentType type, string changeVector)
         {
             _documentId = documentId;
             _name = name;
@@ -41,9 +41,9 @@ namespace Raven.Client.Documents.Operations
             private readonly string _documentId;
             private readonly string _name;
             private readonly AttachmentType _type;
-            private readonly ChangeVectorEntry[] _changeVector;
+            private readonly string _changeVector;
 
-            public GetAttachmentCommand(JsonOperationContext context, string documentId, string name, AttachmentType type, ChangeVectorEntry[] changeVector)
+            public GetAttachmentCommand(JsonOperationContext context, string documentId, string name, AttachmentType type, string changeVector)
             {
                 if (string.IsNullOrWhiteSpace(documentId))
                     throw new ArgumentNullException(nameof(documentId));
@@ -85,26 +85,7 @@ namespace Raven.Client.Documents.Operations
                             writer.WriteComma();
 
                             writer.WritePropertyName("ChangeVector");
-                            writer.WriteStartArray();
-                            bool first = true;
-                            foreach (var vectorEntry in _changeVector)
-                            {
-                                if (first == false)
-                                    writer.WriteComma();
-                                first = false;
-
-                                writer.WriteStartObject();
-
-                                writer.WritePropertyName(nameof(vectorEntry.DbId));
-                                writer.WriteString(vectorEntry.DbId.ToString());
-                                writer.WriteComma();
-
-                                writer.WritePropertyName(nameof(vectorEntry.Etag));
-                                writer.WriteInteger(vectorEntry.Etag);
-
-                                writer.WriteEndObject();
-                            }
-                            writer.WriteEndArray();
+                            writer.WriteString(_changeVector);
 
                             writer.WriteEndObject();
                         }

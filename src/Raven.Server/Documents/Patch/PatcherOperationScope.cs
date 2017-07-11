@@ -86,8 +86,8 @@ namespace Raven.Server.Documents.Patch
 
             var metadata = metadataValue.AsObject();
 
-            if (etag > 0)
-                metadata.FastAddProperty(Constants.Documents.Metadata.Etag, etag, true, true, true);
+//            if (etag > 0)
+//                metadata.FastAddProperty(Constants.Documents.Metadata.Etag, etag, true, true, true);
 
             if (lastModified.HasValue && lastModified != default(DateTime))
                 metadata.FastAddProperty(Constants.Documents.Metadata.LastModified, lastModified.Value.GetDefaultRavenFormat(), true, true, true);
@@ -235,7 +235,6 @@ namespace Raven.Server.Documents.Patch
             return property == Constants.Documents.Indexing.Fields.ReduceKeyFieldName ||
                    property == Constants.Documents.Indexing.Fields.DocumentIdFieldName ||
                    property == Constants.Documents.Metadata.Id ||
-                   property == Constants.Documents.Metadata.Etag ||
                    property == Constants.Documents.Metadata.LastModified ||
                    property == Constants.Documents.Metadata.IndexScore ||
                    property == Constants.Documents.Metadata.ChangeVector ||

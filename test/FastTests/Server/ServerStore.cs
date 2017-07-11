@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Server.Operations.ApiKeys;
@@ -58,11 +60,9 @@ namespace FastTests.Server
                     }
 
                     var result = command.Result;
-                    BlittableJsonReaderObject metadata;
-                    var hasMetadataProperty = result.TryGet("@metadata", out metadata);
-                    long etag;
-                    var hasEtagProperty = metadata.TryGet("@etag", out etag);
-                    Assert.True(hasMetadataProperty && hasEtagProperty && etag > 0, $"{hasMetadataProperty} - {hasEtagProperty} - {etag}");
+                    var hasMetadataProperty = result.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
+                    var hasChangeVector = metadata.TryGetChangeVector(out string changeVector);
+                    Assert.True(hasMetadataProperty && hasChangeVector && changeVector != null, $"{hasMetadataProperty} - {hasChangeVector} - {changeVector}");
                 }
             }
         }

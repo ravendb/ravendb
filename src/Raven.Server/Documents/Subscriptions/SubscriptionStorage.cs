@@ -12,6 +12,7 @@ using Sparrow.Logging;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Client.Documents.Replication.Messages;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Server.Rachis;
@@ -84,7 +85,7 @@ namespace Raven.Server.Documents.Subscriptions
 
             var command = new AcknowledgeSubscriptionBatchCommand(_db.Name)
             {
-                ChangeVector = changeVectorForEtag,
+                ChangeVector = changeVectorForEtag.ToJson(),
                 NodeTag = _serverStore.NodeTag,
                 SubscriptionId = id,
                 SubscriptionName = name,

@@ -10,6 +10,7 @@ using Microsoft.Net.Http.Headers;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Routing;
@@ -283,21 +284,13 @@ namespace Raven.Server.Documents.Handlers
                             LastEtag = putResult.Etag;
                             ModifiedCollections?.Add(putResult.Collection.Name);
 
-                            var changeVector = new DynamicJsonArray();
-                            if (putResult.ChangeVector != null)
-                            {
-                                foreach (var entry in putResult.ChangeVector)
-                                    changeVector.Add(entry.ToJson());
-                            }
-
                             // Make sure all the metadata fields are always been add
                             var putReply = new DynamicJsonValue
                             {
                                 ["Type"] = CommandType.PUT.ToString(),
                                 [Constants.Documents.Metadata.Id] = putResult.Id,
-                                [Constants.Documents.Metadata.Etag] = putResult.Etag,
                                 [Constants.Documents.Metadata.Collection] = putResult.Collection.Name,
-                                [Constants.Documents.Metadata.ChangeVector] = changeVector,
+                                [Constants.Documents.Metadata.ChangeVector] = putResult.ChangeVector.ToJson(),
                                 [Constants.Documents.Metadata.LastModified] = putResult.LastModified,
                             };
 

@@ -45,14 +45,14 @@ namespace Raven.Client.Documents.Session.Operations
                 var entity = (T)_session.ConvertToEntity(typeof(T), id, document);
                 results.Add(entity);
 
-                var etag = metadata.GetEtag();
+                var changeVector = BlittableJsonExtensions.GetChangeVector(metadata);
                 _session.DocumentsByEntity[entity] = new DocumentInfo
                 {
                     Id = id,
+                    ChangeVector = changeVector,
                     Document = document,
                     Metadata = metadata,
                     Entity = entity,
-                    ETag = etag
                 };
             }
 

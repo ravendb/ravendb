@@ -7,6 +7,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Transformers;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -65,7 +66,7 @@ namespace SlowTests.Issues
                         Assert.Equal(2, count);
                     }
 
-                    using (var enumerator = session.Advanced.Stream<SimpleTransformer.Result>(0, transformer: transformer.TransformerName, transformerParameters: new Dictionary<string, object> { { "Name", "Test" } }))
+                    using (var enumerator = session.Advanced.Stream<SimpleTransformer.Result>(new ChangeVectorEntry[0], transformer: transformer.TransformerName, transformerParameters: new Dictionary<string, object> { { "Name", "Test" } }))
                     {
                         var count = 0;
                         while (enumerator.MoveNext())
@@ -116,7 +117,7 @@ namespace SlowTests.Issues
                         Assert.Equal(2, count);
                     }
 
-                    using (var enumerator = await session.Advanced.StreamAsync<SimpleTransformer.Result>(0, transformer: transformer.TransformerName, transformerParameters: new Dictionary<string, object> { { "Name", "Test" } }))
+                    using (var enumerator = await session.Advanced.StreamAsync<SimpleTransformer.Result>(new ChangeVectorEntry[0], transformer: transformer.TransformerName, transformerParameters: new Dictionary<string, object> { { "Name", "Test" } }))
                     {
                         var count = 0;
                         while (await enumerator.MoveNextAsync())

@@ -39,7 +39,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Returns the revision attachment by the document id and attachment name.
         /// </summary>
-        Task<AttachmentResult> GetRevisionAttachmentAsync(string documentId, string name, ChangeVectorEntry[] changeVector);
+        Task<AttachmentResult> GetRevisionAttachmentAsync(string documentId, string name, string changeVector);
 
         /// <summary>
         /// Stores attachment to be sent in the session.

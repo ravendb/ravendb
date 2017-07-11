@@ -1,7 +1,9 @@
 ﻿using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Exceptions;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -42,11 +44,17 @@ namespace SlowTests.Issues
                     var ex = Assert.Throws<DocumentConflictException>(() => session.Load<User>("users/1"));
                     maxConflictEtag = ex.LargestEtag;
                 }
-
                 //should throw concurrency exception because we use lower etag then max etag of existing conflicts
                 using (var session = storeA.OpenSession())
                 {
-                    session.Store(new User { Name = "James Doe" }, maxConflictEtag - 1, "users/1");
+                    var db = GetDocumentDatabaseInstanceFor(storeA).Result;
+                    var cv = new ChangeVectorEntry[1];
+                    cv[0] = new ChangeVectorEntry
+                    {
+                        DbId = db.DbId,
+                        Etag = maxConflictEtag - 1
+                    };
+                    session.Store(new User { Name = "James Doe" }, cv.ToJson(), "users/1");
                     Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
                 }
 
@@ -92,7 +100,14 @@ namespace SlowTests.Issues
                 //should throw concurrency exception because we use lower etag then max etag of existing conflicts
                 using (var session = storeA.OpenSession())
                 {
-                    session.Delete("users/1", maxConflictEtag - 1);
+                    var db = GetDocumentDatabaseInstanceFor(storeA).Result;
+                    var cv = new ChangeVectorEntry[1];
+                    cv[0] = new ChangeVectorEntry
+                    {
+                        DbId = db.DbId,
+                        Etag = maxConflictEtag - 1
+                    };
+                    session.Delete("users/1", cv.ToJson());
                     Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
                 }
 

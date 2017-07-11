@@ -104,14 +104,6 @@ namespace Raven.Client.Documents.Session
         string GetDocumentId(object entity);
 
         /// <summary>
-        ///     Gets the ETag for the specified entity.
-        ///     If the entity is transient, it will load the etag from the store
-        ///     and associate the current state of the entity with the etag from the server.
-        /// </summary>
-        /// <param name="instance">The instance.</param>
-        long? GetEtagFor<T>(T instance);
-
-        /// <summary>
         ///     Gets the metadata for the specified entity.
         ///     If the entity is transient, it will load the metadata from the store
         ///     and associate the current state of the entity with the metadata from the server.
@@ -125,7 +117,7 @@ namespace Raven.Client.Documents.Session
         ///     and associate the current state of the entity with the metadata from the server.
         /// </summary>
         /// <param name="instance">The instance.</param>
-        ChangeVectorEntry[] GetChangeVectorFor<T>(T instance);
+        string GetChangeVectorFor<T>(T instance);
 
         /// <summary>
         ///     Determines whether the specified entity has changed.

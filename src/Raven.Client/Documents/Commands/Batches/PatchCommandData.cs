@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -8,17 +9,17 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     public class PatchCommandData : ICommandData
     {
-        public PatchCommandData(string id, long? etag, PatchRequest patch, PatchRequest patchIfMissing)
+        public PatchCommandData(string id, string changeVector, PatchRequest patch, PatchRequest patchIfMissing)
         {
             Id = id ?? throw new ArgumentNullException(nameof(id));
-            Etag = etag;
+            ChangeVector = changeVector;
             Patch = patch ?? throw new ArgumentNullException(nameof(patch));
             PatchIfMissing = patchIfMissing;
         }
 
         public string Id { get; }
         public string Name { get; } = null;
-        public long? Etag { get; }
+        public string ChangeVector { get; }
         public PatchRequest Patch { get; }
         public PatchRequest PatchIfMissing { get; }
         public CommandType Type { get; } = CommandType.PATCH;
@@ -28,7 +29,7 @@ namespace Raven.Client.Documents.Commands.Batches
             var json = new DynamicJsonValue
             {
                 [nameof(Id)] = Id,
-                [nameof(Etag)] = Etag,
+                [nameof(ChangeVector)] = ChangeVector,
                 [nameof(Patch)] = Patch.ToJson(conventions, context),
                 [nameof(Type)] = Type.ToString()
             };

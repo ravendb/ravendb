@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;
@@ -90,7 +91,7 @@ namespace Raven.Client.Documents.Session
             private StreamResult<T> CreateStreamResult(BlittableJsonReaderObject json)
             {
                 var metadata = json.GetMetadata();
-                var etag = metadata.GetEtag();
+                var changeVector = BlittableJsonExtensions.GetChangeVector(metadata);
                 var id = metadata.GetId();
 
                 json = _parent.Context.ReadObject(json, id);
@@ -98,7 +99,7 @@ namespace Raven.Client.Documents.Session
 
                 var streamResult = new StreamResult<T>
                 {
-                    Etag = etag,
+                    ChangeVector = changeVector,
                     Id = id,
                     Document = entity,
                     Metadata = new MetadataAsDictionary(metadata)
@@ -113,7 +114,7 @@ namespace Raven.Client.Documents.Session
                     throw new InvalidOperationException("Transformed document must have a $values property");
 
                 var metadata = json.GetMetadata();
-                var etag = metadata.GetEtag();
+                var changeVector = BlittableJsonExtensions.GetChangeVector(metadata);
                 var id = metadata.GetId();
 
                 foreach (var value in TransformerHelper.ParseResultsForStreamOperation<T>(_parent, values))
@@ -121,7 +122,7 @@ namespace Raven.Client.Documents.Session
                     yield return new StreamResult<T>
                     {
                         Id = id,
-                        Etag = etag,
+                        ChangeVector = changeVector,
                         Document = value,
                         Metadata = new MetadataAsDictionary(metadata)
                     };
@@ -152,24 +153,21 @@ namespace Raven.Client.Documents.Session
             return StreamAsync(indexQuery, token);
         }
 
-        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(long? fromEtag, int start = 0,
-                                                                    int pageSize = Int32.MaxValue, string transformer = null, Dictionary<string, object> transformerParameters = null, CancellationToken token = default(CancellationToken))
+        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(ChangeVectorEntry[] fromChangeVector, int start = 0, int pageSize = int.MaxValue, string transformer = null, Dictionary<string, object> transformerParameters = null, CancellationToken token = default(CancellationToken))
         {
-            return StreamAsync<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize, transformer: transformer, transformerParameters: transformerParameters, token: token);
+            return StreamAsync<T>(fromChangeVector, startsWith: null, matches: null, start: start, pageSize: pageSize, transformer: transformer, transformerParameters: transformerParameters, token: token);
         }
 
         public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0,
                                    int pageSize = Int32.MaxValue, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null, CancellationToken token = default(CancellationToken))
         {
-            return StreamAsync<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, startAfter: startAfter, transformer: transformer, transformerParameters: transformerParameters, token: token);
+            return StreamAsync<T>(fromChangeVector: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, startAfter: startAfter, transformer: transformer, transformerParameters: transformerParameters, token: token);
         }
 
-        private async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(long? fromEtag, string startsWith, string matches,
-            int start, int pageSize, string startAfter = null, string transformer = null,
-            Dictionary<string, object> transformerParameters = null, CancellationToken token = default(CancellationToken))
+        private async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(ChangeVectorEntry[] fromChangeVector, string startsWith, string matches, int start, int pageSize, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null, CancellationToken token = default(CancellationToken))
         {
             var streamOperation = new StreamOperation(this);
-            var command = streamOperation.CreateRequest(fromEtag, startsWith, matches, start, pageSize, null, startAfter, transformer,
+            var command = streamOperation.CreateRequest(fromChangeVector, startsWith, matches, start, pageSize, null, startAfter, transformer,
                 transformerParameters);
             await RequestExecutor.ExecuteAsync(command, Context, token).ConfigureAwait(false);
             var result = streamOperation.SetResultAsync(command.Result);

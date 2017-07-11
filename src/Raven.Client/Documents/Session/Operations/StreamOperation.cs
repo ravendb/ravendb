@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -53,16 +54,16 @@ namespace Raven.Client.Documents.Session.Operations
             return new StreamCommand(path, string.IsNullOrWhiteSpace(query.Transformer) == false);
         }
 
-        public StreamCommand CreateRequest(long? fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null)
+        public StreamCommand CreateRequest(ChangeVectorEntry[] fromChangeVector, string startsWith, string matches, int start, int pageSize, string exclude, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null)
         {
-            if (fromEtag != null && startsWith != null)
+            if (fromChangeVector != null && startsWith != null)
                 throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
 
             var sb = new StringBuilder("streams/docs?");
 
-            if (fromEtag != null)
+            if (fromChangeVector != null)
             {
-                sb.Append("etag=").Append(fromEtag).Append("&");
+                sb.Append("changeVector=").Append(fromChangeVector).Append("&");
             }
             else
             {

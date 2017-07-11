@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
 using Sparrow.Json.Parsing;
 using Xunit;
 
@@ -327,7 +328,7 @@ namespace SlowTests.Core.Session
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("companies/1");
-                    Assert.Equal(1, session.Advanced.GetEtagFor(company));
+                    Assert.Equal(1, session.Advanced.GetChangeVectorFor(company).ToChangeVector()[0].Etag);
                 }
             }
         }

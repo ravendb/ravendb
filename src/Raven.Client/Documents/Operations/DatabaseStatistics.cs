@@ -62,7 +62,7 @@ namespace Raven.Client.Documents.Operations
         /// <summary>
         /// Global change vector of the database.
         /// </summary>
-        public ChangeVectorEntry[] DatabaseChangeVector { get; set; }
+        public string DatabaseChangeVector { get; set; }
 
         /// <summary>
         /// Database identifier.

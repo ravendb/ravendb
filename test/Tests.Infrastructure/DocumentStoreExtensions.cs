@@ -11,6 +11,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -58,12 +59,12 @@ namespace FastTests
                 return (TEntity)_store.Conventions.DeserializeEntityFromBlittable(typeof(TEntity), json);
             }
 
-            public PutResult Put(string id, long? etag, object data, Dictionary<string, object> metadata = null)
+            public PutResult Put(string id, string changeVector, object data, Dictionary<string, object> metadata = null)
             {
-                return AsyncHelpers.RunSync(() => PutAsync(id, etag, data, metadata));
+                return AsyncHelpers.RunSync(() => PutAsync(id, changeVector, data, metadata));
             }
 
-            public async Task<PutResult> PutAsync(string id, long? etag, object data, Dictionary<string, object> metadata = null, CancellationToken cancellationToken = default(CancellationToken))
+            public async Task<PutResult> PutAsync(string id, string changeVector, object data, Dictionary<string, object> metadata = null, CancellationToken cancellationToken = default(CancellationToken))
             {
                 if (id == null)
                     throw new ArgumentNullException(nameof(id));
@@ -73,7 +74,7 @@ namespace FastTests
                 var documentInfo = new DocumentInfo
                 {
                     Id = id,
-                    ETag = etag
+                    ChangeVector = changeVector
                 };
 
                 using (var session = _store.OpenSession())
@@ -107,7 +108,7 @@ namespace FastTests
                     }
 
 
-                    var command = new PutDocumentCommand(id, etag, documentJson, Context);
+                    var command = new PutDocumentCommand(id, changeVector, documentJson, Context);
 
                     await RequestExecutor.ExecuteAsync(command, Context, cancellationToken);
 
@@ -115,17 +116,17 @@ namespace FastTests
                 }
             }
 
-            public void Delete(string id, long? etag)
+            public void Delete(string id, string changeVector)
             {
-                AsyncHelpers.RunSync(() => DeleteAsync(id, etag));
+                AsyncHelpers.RunSync(() => DeleteAsync(id, changeVector));
             }
 
-            public async Task DeleteAsync(string id, long? etag)
+            public async Task DeleteAsync(string id, string changeVector)
             {
                 if (id == null)
                     throw new ArgumentNullException(nameof(id));
 
-                var command = new DeleteDocumentCommand(id, etag);
+                var command = new DeleteDocumentCommand(id, changeVector);
 
                 await RequestExecutor.ExecuteAsync(command, Context);
             }

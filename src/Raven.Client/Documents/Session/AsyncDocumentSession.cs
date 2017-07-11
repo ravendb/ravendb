@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Extensions;
@@ -117,7 +118,5 @@ namespace Raven.Client.Documents.Session
                 saveChangesOperation.SetResult(command.Result);
             }
         }
-
-
     }
 }

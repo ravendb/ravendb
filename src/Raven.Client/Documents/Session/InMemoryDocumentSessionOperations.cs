@@ -165,19 +165,7 @@ namespace Raven.Client.Documents.Session
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, GenerateId);
             EntityToBlittable = new EntityToBlittable(this);
         }
-
-        /// <summary>
-        /// Gets the ETag for the specified entity.
-        /// If the entity is transient, it will load the etag from the store
-        /// and associate the current state of the entity with the etag from the server.
-        /// </summary>
-        /// <param name="instance">The instance.</param>
-        /// <returns></returns>
-        public long? GetEtagFor<T>(T instance)
-        {
-            return GetDocumentInfo(instance).ETag;
-        }
-
+        
         /// <summary>
         /// Gets the metadata for the specified entity.
         /// </summary>
@@ -200,17 +188,23 @@ namespace Raven.Client.Documents.Session
             return metadata;
         }
 
-        public ChangeVectorEntry[] GetChangeVectorFor<T>(T instance)
+        /// <summary>
+        /// Gets the Change Vector for the specified entity.
+        /// If the entity is transient, it will load the change vector from the store
+        /// and associate the current state of the entity with the change vector from the server.
+        /// </summary>
+        /// <param name="instance">The instance.</param>
+        /// <returns></returns>
+        public string GetChangeVectorFor<T>(T instance)
         {
             if(instance == null)
                 throw new ArgumentNullException(nameof(instance));
 
             var documentInfo = GetDocumentInfo(instance);
-            BlittableJsonReaderArray changeVectorJson;
-            if (documentInfo.Metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out changeVectorJson))
-                return changeVectorJson.ToVector();
+            if (documentInfo.Metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVectorJson))
+                return changeVectorJson;
 
-            return new ChangeVectorEntry[0];
+            return null;
         }
 
         private DocumentInfo GetDocumentInfo<T>(T instance)
@@ -374,9 +368,8 @@ more responsive application.
 
             var entity = ConvertToEntity(entityType, id, document);
 
-            long etag;
-            if (metadata.TryGet(Constants.Documents.Metadata.Etag, out etag) == false)
-                throw new InvalidOperationException("Document must have an ETag");
+            if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false)
+                throw new InvalidOperationException("Document must have Change Vector");
 
             if (noTracking == false)
             {
@@ -386,7 +379,7 @@ more responsive application.
                     Document = document,
                     Metadata = metadata,
                     Entity = entity,
-                    ETag = etag
+                    ChangeVector = changeVector
                 };
 
                 DocumentsById.Add(newDocumentInfo);
@@ -459,10 +452,10 @@ more responsive application.
             Delete(id, null);
         }
 
-        public void Delete(string id, long? expectedEtag)
+        public void Delete(string id, string expectedChangeVector)
         {
             if (id == null) throw new ArgumentNullException(nameof(id));
-            long? etag = null;
+            string changeVector = null;
             DocumentInfo documentInfo;
             if (DocumentsById.TryGetValue(id, out documentInfo))
             {
@@ -477,12 +470,12 @@ more responsive application.
                     DocumentsByEntity.Remove(documentInfo.Entity);
                 }
                 DocumentsById.Remove(id);
-                etag = documentInfo.ETag;
+                changeVector = documentInfo.ChangeVector;
             }
             
             KnownMissingIds.Add(id);
-            etag = UseOptimisticConcurrency ? etag : null;
-            Defer(new DeleteCommandData(id, expectedEtag ?? etag));
+            changeVector = UseOptimisticConcurrency ? changeVector : null;
+            Defer(new DeleteCommandData(id, expectedChangeVector ?? changeVector));
         }
 
         //TODO
@@ -510,14 +503,6 @@ more responsive application.
         }
 
         /// <summary>
-        /// Stores the specified entity in the session. The entity will be saved when SaveChanges is called.
-        /// </summary>
-        public void Store(object entity, long? etag)
-        {
-            StoreInternal(entity, etag, null, etag == null ? ConcurrencyCheckMode.Disabled : ConcurrencyCheckMode.Forced);
-        }
-
-        /// <summary>
         /// Stores the specified entity in the session, explicitly specifying its Id. The entity will be saved when SaveChanges is called.
         /// </summary>
         public void Store(object entity, string id)
@@ -528,12 +513,12 @@ more responsive application.
         /// <summary>
         /// Stores the specified entity in the session, explicitly specifying its Id. The entity will be saved when SaveChanges is called.
         /// </summary>
-        public void Store(object entity, long? etag, string id)
+        public void Store(object entity, string changeVector, string id)
         {
-            StoreInternal(entity, etag, id, etag == null ? ConcurrencyCheckMode.Disabled : ConcurrencyCheckMode.Forced);
+            StoreInternal(entity, changeVector, id, changeVector == null ? ConcurrencyCheckMode.Disabled : ConcurrencyCheckMode.Forced);
         }
-
-        private void StoreInternal(object entity, long? etag, string id, ConcurrencyCheckMode forceConcurrencyCheck)
+        
+        private void StoreInternal(object entity, string changeVector, string id, ConcurrencyCheckMode forceConcurrencyCheck)
         {
             if (null == entity)
                 throw new ArgumentNullException(nameof(entity));
@@ -541,8 +526,6 @@ more responsive application.
             DocumentInfo value;
             if (DocumentsByEntity.TryGetValue(entity, out value))
             {
-                if (etag != null)
-                    value.ETag = etag;
                 value.ConcurrencyCheckMode = forceConcurrencyCheck;
                 return;
             }
@@ -586,7 +569,7 @@ more responsive application.
 
             if (id != null)
                 KnownMissingIds.Remove(id);
-            StoreEntityInUnitOfWork(id, entity, etag, metadata, forceConcurrencyCheck);
+            StoreEntityInUnitOfWork(id, entity, changeVector, metadata, forceConcurrencyCheck);
         }
 
         public Task StoreAsync(object entity, CancellationToken token = default(CancellationToken))
@@ -597,14 +580,9 @@ more responsive application.
             return StoreAsyncInternal(entity, null, null, hasId == false ? ConcurrencyCheckMode.Forced : ConcurrencyCheckMode.Auto, token: token);
         }
 
-        public Task StoreAsync(object entity, long? etag, CancellationToken token = default(CancellationToken))
+        public Task StoreAsync(object entity, string changeVector, string id, CancellationToken token = default(CancellationToken))
         {
-            return StoreAsyncInternal(entity, etag, null, etag == null ? ConcurrencyCheckMode.Disabled : ConcurrencyCheckMode.Forced, token: token);
-        }
-
-        public Task StoreAsync(object entity, long? etag, string id, CancellationToken token = default(CancellationToken))
-        {
-            return StoreAsyncInternal(entity, etag, id, etag == null ? ConcurrencyCheckMode.Disabled : ConcurrencyCheckMode.Forced, token: token);
+            return StoreAsyncInternal(entity, changeVector, id, changeVector == null ? ConcurrencyCheckMode.Disabled : ConcurrencyCheckMode.Forced, token: token);
         }
 
         public Task StoreAsync(object entity, string id, CancellationToken token = default(CancellationToken))
@@ -612,7 +590,7 @@ more responsive application.
             return StoreAsyncInternal(entity, null, id, ConcurrencyCheckMode.Auto, token: token);
         }
 
-        private async Task StoreAsyncInternal(object entity, long? etag, string id, ConcurrencyCheckMode forceConcurrencyCheck, CancellationToken token = default(CancellationToken))
+        private async Task StoreAsyncInternal(object entity, string changeVector, string id, ConcurrencyCheckMode forceConcurrencyCheck, CancellationToken token = default(CancellationToken))
         {
             if (null == entity)
                 throw new ArgumentNullException(nameof(entity));
@@ -622,7 +600,7 @@ more responsive application.
                 id = await GenerateDocumentIdForStorageAsync(entity).WithCancellation(token).ConfigureAwait(false);
             }
 
-            StoreInternal(entity, etag, id, forceConcurrencyCheck);
+            StoreInternal(entity, changeVector, id, forceConcurrencyCheck);
         }
 
         protected abstract string GenerateId(object entity);
@@ -653,7 +631,7 @@ more responsive application.
 
         protected abstract Task<string> GenerateIdAsync(object entity);
 
-        protected virtual void StoreEntityInUnitOfWork(string id, object entity, long? etag, DynamicJsonValue metadata, ConcurrencyCheckMode forceConcurrencyCheck)
+        protected virtual void StoreEntityInUnitOfWork(string id, object entity, string changeVector, DynamicJsonValue metadata, ConcurrencyCheckMode forceConcurrencyCheck)
         {
             DeletedEntities.Remove(entity);
             if (id != null)
@@ -663,7 +641,7 @@ more responsive application.
             {
                 Id = id,
                 Metadata = Context.ReadObject(metadata, id),
-                ETag = etag,
+                ChangeVector = changeVector,
                 ConcurrencyCheckMode = forceConcurrencyCheck,
                 Entity = entity,
                 IsNewDocument = true,
@@ -752,10 +730,10 @@ more responsive application.
                     if (result.DeferredCommandsDictionary.TryGetValue((documentInfo.Id, CommandType.ClientAnyCommand, null), out ICommandData command))
                         ThrowInvalidDeletedDocumentWithDeferredCommand(command);
 
-                    long? etag = null;
+                    string changeVector = null;
                     if (DocumentsById.TryGetValue(documentInfo.Id, out documentInfo))
                     {
-                        etag = documentInfo.ETag;
+                        changeVector = documentInfo.ChangeVector;
 
                         if (documentInfo.Entity != null)
                         {
@@ -768,10 +746,10 @@ more responsive application.
 
                         DocumentsById.Remove(documentInfo.Id);
                     }
-                    etag = UseOptimisticConcurrency ? etag : null;
+                    changeVector = UseOptimisticConcurrency ? changeVector : null;
                     var beforeDeleteEventArgs = new BeforeDeleteEventArgs(this, documentInfo.Id, documentInfo.Entity);
                     OnBeforeDelete?.Invoke(this, beforeDeleteEventArgs);
-                    result.SessionCommands.Add(new DeleteCommandData(documentInfo.Id, etag));
+                    result.SessionCommands.Add(new DeleteCommandData(documentInfo.Id, changeVector));
                 }
             }
             DeletedEntities.Clear();
@@ -802,13 +780,13 @@ more responsive application.
 
                 entity.Value.Document = document;
 
-                var etag = (UseOptimisticConcurrency &&
+                var changeVector = (UseOptimisticConcurrency &&
                             entity.Value.ConcurrencyCheckMode != ConcurrencyCheckMode.Disabled) ||
                            entity.Value.ConcurrencyCheckMode == ConcurrencyCheckMode.Forced
-                    ? (long?)(entity.Value.ETag ?? 0)
+                    ? entity.Value.ChangeVector
                     : null;
 
-                result.SessionCommands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, etag, document));
+                result.SessionCommands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, changeVector, document));
             }
         }
 
@@ -1183,8 +1161,8 @@ more responsive application.
             document.TryGetMember(Constants.Documents.Metadata.Key, out object value);
             documentInfo.Metadata = value as BlittableJsonReaderObject;
 
-            document.TryGetMember(Constants.Documents.Metadata.Etag, out object etag);
-            documentInfo.ETag = etag as long?;
+            document.TryGetMember(Constants.Documents.Metadata.ChangeVector, out var changeVector);
+            documentInfo.ChangeVector = changeVector as string;
 
             documentInfo.Document = document;
 
@@ -1231,7 +1209,7 @@ more responsive application.
         public enum ConcurrencyCheckMode
         {
             /// <summary>
-            /// Automatic optimistic concurrency check depending on UseOptimisticConcurrency setting or provided ETag
+            /// Automatic optimistic concurrency check depending on UseOptimisticConcurrency setting or provided Change Vector
             /// </summary>
             Auto,
 
@@ -1288,10 +1266,10 @@ more responsive application.
         public string Id { get; set; }
 
         /// <summary>
-        /// Gets or sets the ETag.
+        /// Gets or sets the ChangeVector.
         /// </summary>
-        /// <value>The ETag.</value>
-        public long? ETag { get; set; }
+        /// <value>The ChangeVector.</value>
+        public string ChangeVector { get; set; }
 
         /// <summary>
         /// A concurrency check will be forced on this entity 
@@ -1321,14 +1299,14 @@ more responsive application.
         {
             BlittableJsonReaderObject metadata;
             string id;
-            long etag;
+            string changeVector;
 
             if (document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false)
                 throw new InvalidOperationException("Document must have a metadata");
             if (metadata.TryGet(Constants.Documents.Metadata.Id, out id) == false)
                 throw new InvalidOperationException("Document must have an id");
-            if (metadata.TryGet(Constants.Documents.Metadata.Etag, out etag) == false)
-                throw new InvalidOperationException("Document must have an ETag");
+            if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out changeVector) == false)
+                throw new InvalidOperationException("Document must have an Change Vector");
 
             var newDocumentInfo = new DocumentInfo
             {
@@ -1336,7 +1314,7 @@ more responsive application.
                 Document = document,
                 Metadata = metadata,
                 Entity = null,
-                ETag = etag
+                ChangeVector = changeVector
             };
             return newDocumentInfo;
         }

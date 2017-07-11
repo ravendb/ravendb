@@ -39,11 +39,11 @@ namespace Raven.Client.Documents.Subscriptions
             private T _result;
             public string ExceptionMessage { get; internal set; }
             public string Id { get; internal set; }
-            public long Etag { get; internal set; }
+            public ChangeVectorEntry[] ChangeVector { get; internal set; }
 
             private void ThrowItemProcessException()
             {
-                throw new InvalidOperationException($"Failed to process document {Id} with Etag {Etag} because:{Environment.NewLine}{ExceptionMessage}");
+                throw new InvalidOperationException($"Failed to process document {Id} with Change Vector {ChangeVector.ToJson()} because:{Environment.NewLine}{ExceptionMessage}");
             }
 
             public T Result
@@ -120,13 +120,11 @@ namespace Raven.Client.Documents.Subscriptions
                     ThrowRequired("@metadata field");
                 if (metadata.TryGet(Constants.Documents.Metadata.Id, out string id) == false)
                     ThrowRequired("@id field");
-                if (metadata.TryGet(Constants.Documents.Metadata.Etag, out long etag) == false)
-                    ThrowRequired("@etag field");
-                if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out BlittableJsonReaderArray changeVectorAsObject) == false ||
-                    changeVectorAsObject == null)
+                if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false ||
+                    changeVector == null)
                     ThrowRequired("@change-vector field");
                 else
-                    lastReceivedChangeVector = changeVectorAsObject.ToVector();
+                    lastReceivedChangeVector = changeVector.ToChangeVector();
 
                 if (_logger.IsInfoEnabled)
                 {
@@ -152,7 +150,7 @@ namespace Raven.Client.Documents.Subscriptions
 
                 Items.Add(new Item
                 {
-                    Etag = etag,
+                    ChangeVector = changeVector.ToChangeVector(),
                     Id = id,
                     RawResult = curDoc,
                     RawMetadata = metadata,

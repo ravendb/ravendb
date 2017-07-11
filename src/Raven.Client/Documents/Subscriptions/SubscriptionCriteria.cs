@@ -76,7 +76,7 @@ namespace Raven.Client.Documents.Subscriptions
     
     public class SubscriptionTryout
     {
-        public ChangeVectorEntry[] ChangeVector { get; set; }
+        public string ChangeVector { get; set; }
         public string Collection { get; set; }
         public string Script { get; set; }
         public bool IsVersioned { get; set; }
@@ -87,7 +87,7 @@ namespace Raven.Client.Documents.Subscriptions
         public const string DefaultVersioningScript = "return {Current:this.Current, Previous:this.Previous};";
         public string Name { get; set; }
         public SubscriptionCriteria Criteria { get; set; }
-        public ChangeVectorEntry[] ChangeVector { get; set; }
+        public string ChangeVector { get; set; }
     }
 
     public class SubscriptionCreationOptions<T>
@@ -113,7 +113,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         public string Name { get; set; }
         public SubscriptionCriteria<T> Criteria { get; set; }
-        public ChangeVectorEntry[] ChangeVector { get; set; }
+        public string ChangeVector { get; set; }
     }
 
     public class Versioned<T> where T : class
