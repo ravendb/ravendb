@@ -287,7 +287,7 @@ namespace Raven.Server.Documents.Replication
                 using (Slice.External(context.Allocator, conflict.LowerId, out Slice lowerId))
                 {
                     _database.DocumentsStorage.Delete(context, lowerId, conflict.Id, null,
-                        _database.Time.GetUtcNow().Ticks, conflict.ChangeVector, conflict.Collection);
+                        _database.Time.GetUtcNow().Ticks, conflict.ChangeVector, new CollectionName(conflict.Collection));
                     return;
                 }
             }

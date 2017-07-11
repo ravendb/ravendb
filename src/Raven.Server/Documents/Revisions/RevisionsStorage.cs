@@ -446,7 +446,7 @@ namespace Raven.Server.Documents.Revisions
                         [Constants.Documents.Metadata.Collection] = collectionName.Name
                     }
                 }, "RevisionsBin");
-                Delete(context, lowerId, idPtr, collectionName, deleteRevisionDocument, changeVector, lastModifiedTicks, nonPersistentFlags);
+                Delete(context, lowerId, idPtr, id, collectionName, deleteRevisionDocument, changeVector, lastModifiedTicks, nonPersistentFlags);
             }
         }
 
@@ -458,11 +458,11 @@ namespace Raven.Server.Documents.Revisions
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
                 var collectionName = _documentsStorage.ExtractCollectionName(context, id, deleteRevisionDocument);
-                Delete(context, lowerId, idPtr, collectionName, deleteRevisionDocument, changeVector, lastModifiedTicks, nonPersistentFlags);
+                Delete(context, lowerId, idPtr, id, collectionName, deleteRevisionDocument, changeVector, lastModifiedTicks, nonPersistentFlags);
             }
         }
 
-        private void Delete(DocumentsOperationContext context, Slice lowerId, Slice id, CollectionName collectionName, 
+        private void Delete(DocumentsOperationContext context, Slice lowerId, Slice idSlice, string id, CollectionName collectionName, 
             BlittableJsonReaderObject deleteRevisionDocument, ChangeVectorEntry[] changeVector, 
             long lastModifiedTicks, NonPersistentDocumentFlags nonPersistentFlags)
         {
@@ -485,6 +485,28 @@ namespace Raven.Server.Documents.Revisions
                 return;
             }
 
+            var fromReplication = (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) == NonPersistentDocumentFlags.FromReplication;
+            if (fromReplication)
+            {
+                try
+                {
+                    var hasDoc = _documentsStorage.GetTableValueReaderForDocument(context, lowerId, out TableValueReader tvr);
+                    if (hasDoc)
+                    {
+                        var docChangeVector = TableValueToChangeVector(ref tvr, (int)DocumentsTable.ChangeVector);
+                        if (changeVector.GreaterThan(docChangeVector))
+                        {
+                            _documentsStorage.Delete(context, lowerId, id, null, lastModifiedTicks, changeVector, collectionName,
+                                nonPersistentFlags | NonPersistentDocumentFlags.FromRevision);
+                        }
+                    }
+                }
+                catch (DocumentConflictException)
+                {
+                    // Do not modify the document.
+                }
+            }
+
             var newEtag = _database.DocumentsStorage.GenerateNextEtag();
             var newEtagSwapBytes = Bits.SwapBytes(newEtag);
 
@@ -499,7 +521,7 @@ namespace Raven.Server.Documents.Revisions
                     tvb.Add(lowerId);
                     tvb.Add(SpecialChars.RecordSeparator);
                     tvb.Add(newEtagSwapBytes);
-                    tvb.Add(id);
+                    tvb.Add(idSlice);
                     tvb.Add(deleteRevisionDocument.BasePointer, deleteRevisionDocument.Size);
                     tvb.Add((int)DocumentFlags.DeleteRevision);
                     tvb.Add(newEtagSwapBytes);
