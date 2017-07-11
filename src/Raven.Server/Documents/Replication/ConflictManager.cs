@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Replication
                 doc))
                 return;
 
-            if (_conflictResolver.ConflictSolver.ResolveToLatest)
+            if (_conflictResolver.ConflictSolver?.ResolveToLatest == true)
             {
                 if (conflictedChangeVector == null) //precaution
                     throw new InvalidOperationException(
