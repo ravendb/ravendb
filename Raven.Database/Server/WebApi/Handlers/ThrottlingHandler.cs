@@ -25,45 +25,50 @@ namespace Raven.Database.Server.WebApi.Handlers
             concurrentRequestSemaphore = new SemaphoreSlim(maxConcurrentServerRequests);
         }
 
+        private const string _debugStr = "/debug/";
+
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            bool waiting = false;
+            bool acuiredSemaphore = false;
             try
             {
                 TaskCanceledException tce = null;
-
-                try
-                {
-                    waiting = await concurrentRequestSemaphore.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
-                }
-                catch (TaskCanceledException e)
-                {
-                    tce = e;
-                }
-
-                if (tce != null)
-                {
-                    Logger.InfoException("Got task canceled exception.", tce);
-                    return await base.SendAsync(request, cancellationToken).ConfigureAwait(false); ;
-                }
-
-                if (waiting == false)
+                // Allow debug endpoints to bypass the concurrent request limit
+                if (request.RequestUri.AbsolutePath.Contains(_debugStr) == false)
                 {
                     try
                     {
-                        Logger.Info("Too many concurrent requests, throttling! ({0})", request.RequestUri);
-                        return await HandleTooBusyError(request).ConfigureAwait(false);
+                        acuiredSemaphore = await concurrentRequestSemaphore.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
                     }
-                    catch (Exception e)
+                    catch (TaskCanceledException e)
                     {
-                        Logger.WarnException("Could not send a too busy error to the client", e);
+                        tce = e;
+                    }
+
+                    if (tce != null)
+                    {
+                        Logger.InfoException("Got task canceled exception.", tce);
+                        return await base.SendAsync(request, cancellationToken).ConfigureAwait(false); ;
+                    }
+
+                    if (acuiredSemaphore == false)
+                    {
+                        try
+                        {
+                            Logger.Info("Too many concurrent requests, throttling! ({0})", request.RequestUri);
+                            return await HandleTooBusyError(request).ConfigureAwait(false);
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.WarnException("Could not send a too busy error to the client", e);
+                        }
                     }
                 }
                 return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
-                if (waiting)
+                if (acuiredSemaphore)
                     concurrentRequestSemaphore.Release();
             }
         }
