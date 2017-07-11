@@ -86,11 +86,13 @@ namespace Raven.Client.Server.Operations
     {
         public List<NodeId> Members { get; set; }
         public List<NodeId> Promotables { get; set; }
+        public Dictionary<string, DbGroupNodeStatus> Status { get; set; }
 
         public NodesTopology()
         {
             Members = new List<NodeId>();
             Promotables = new List<NodeId>();
+            Status = new Dictionary<string, DbGroupNodeStatus>();
         }
 
         public DynamicJsonValue ToJson()
@@ -99,6 +101,22 @@ namespace Raven.Client.Server.Operations
             {
                 [nameof(Members)] = new DynamicJsonArray(Members.Select(x => x.ToJson())),
                 [nameof(Promotables)] = new DynamicJsonArray(Promotables.Select(x => x.ToJson())),
+                [nameof(Status)] = DynamicJsonValue.Convert(Status)
+            };
+        }
+    }
+
+    public class DbGroupNodeStatus : IDynamicJson
+    {
+        public string LastStatus;
+        public string LastError;
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(LastStatus)] = LastStatus,
+                [nameof(LastError)] = LastError
             };
         }
     }
