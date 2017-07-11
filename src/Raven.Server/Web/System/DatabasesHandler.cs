@@ -155,6 +155,7 @@ namespace Raven.Server.Web.System
                         Url = url
                     };
                     nodesTopology.Members.Add(GetNodeId(node));
+                    nodesTopology.Status[member] = new DbGroupNodeStatus { LastStatus = "Ok" };
                 }
                 foreach (var promotable in topology.Promotables)
                 {
@@ -167,6 +168,17 @@ namespace Raven.Server.Web.System
                     };
                     var promotableTask = new PromotableTask(promotable, url, databaseName);
                     nodesTopology.Promotables.Add(GetNodeId(node, topology.WhoseTaskIsIt(promotableTask, ServerStore.IsPassive())));
+
+                    var nodeStatus = new DbGroupNodeStatus();
+                    if (topology.PromotablesStatus.TryGetValue(promotable, out var status))
+                    {
+                        nodeStatus.LastStatus = status;
+                    }
+                    if (topology.DemotionReasons.TryGetValue(promotable, out var reason))
+                    {
+                        nodeStatus.LastError = reason;
+                    }
+                    nodesTopology.Status[promotable] = nodeStatus;
                 }
             }
 

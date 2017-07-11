@@ -145,6 +145,9 @@ namespace Raven.Server.ServerWide.Maintenance
                     {
                         hasLivingNode = true;
                         _hasLivingNodesFlag = true;
+
+                        topology.DemotionReasons.Remove(member);
+                        topology.PromotablesStatus.Remove(member);
                     }
                 }
 
@@ -183,6 +186,33 @@ namespace Raven.Server.ServerWide.Maintenance
                         {
                             _logger.Operations($"We demote the database {dbName} on {member}");
                         }
+
+                        string reason;
+                        if (nodeStats == null)
+                        {
+                            reason = "Demoted because it had no status report in the latest cluster stats";
+                        }
+                        else if (nodeStats.LastReportStatus != ClusterNodeStatusReport.ReportStatus.Ok)
+                        {
+                            reason = $"Demoted because the last report status was \"{nodeStats.LastReportStatus}\" ";
+                        }
+                        else if (nodeStats.LastReport.TryGetValue(dbName, out var stats) && stats.Status == DatabaseStatus.Faulted)
+                        {
+                            reason = "Demoted because the DatabaseStatus for this node is Faulted";
+                        }
+                        else
+                        {
+                            reason = "Demoted because it had no DatabaseStatusReport";
+                        }
+
+                        if (nodeStats?.LastError?.Message != null)
+                        {
+                            reason += $". {nodeStats.LastError.Message}";
+                        }
+
+                        topology.DemotionReasons[member] = reason;
+                        topology.PromotablesStatus[member] = nodeStats?.LastReportStatus.ToString();
+
                         return true;
                     }
 
@@ -199,6 +229,8 @@ namespace Raven.Server.ServerWide.Maintenance
                             {
                                 _logger.Operations($"We demote the database {dbName} on {member}, because it is too long in Loading state.");
                             }
+                            topology.DemotionReasons[member] = "Demoted because it is too long in Loading state";
+                            topology.PromotablesStatus[member] = "Loading the databse";
                             return true;
                         }
                     }
@@ -242,12 +274,18 @@ namespace Raven.Server.ServerWide.Maintenance
                         {
                             _logger.Operations($"We promote the database {dbName} on {promotable} to be a full member");
                         }
+                        topology.PromotablesStatus.Remove(promotable);
+                        topology.DemotionReasons.Remove(promotable);
                         return true;
                     }
                     if (_logger.IsInfoEnabled)
                     {
                         _logger.Info($"The database {dbName} on {promotable} not ready to be promoted, because the indexes are not up-to-date.\n");
                     }
+
+                    topology.PromotablesStatus[promotable] = "node is not ready to be promoted, because the indexes are not up-to-date";
+
+
                 }
                 else
                 {
@@ -256,6 +294,10 @@ namespace Raven.Server.ServerWide.Maintenance
                         _logger.Info($"The database {dbName} on {promotable} not ready to be promoted, because the change vectors are {status}.\n" +
                                            $"mentor's change vector : {mentorPrevDbStats.LastChangeVector}, node's change vector : {promotableDbStats.LastChangeVector}");
                     }
+                    topology.PromotablesStatus[promotable] = $"node is not ready to be promoted, because the change vectors are {status}.\n" +
+                                                             $"mentor's change vector : {mentorPrevDbStats.LastChangeVector}, " +
+                                                             $"node's change vector : {promotableDbStats.LastChangeVector}";
+
                 }
             }
             return false;
