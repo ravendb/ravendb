@@ -53,7 +53,7 @@ namespace FastTests.Server.Documents.Revisions
         }
 
         [Fact]
-        public async Task CanCheckIfDocumentIsVersioned()
+        public async Task CanCheckIfDocumentHasRevisions()
         {
             var company = new Company { Name = "Company Name" };
             using (var store = GetDocumentStore())
@@ -69,7 +69,7 @@ namespace FastTests.Server.Documents.Revisions
                     var company3 = await session.LoadAsync<Company>(company.Id);
                     var metadata = session.Advanced.GetMetadataFor(company3);
 
-                    Assert.Equal(DocumentFlags.Versioned.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+                    Assert.Equal(DocumentFlags.HasRevisions.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
                 }
             }
         }
@@ -419,9 +419,9 @@ namespace FastTests.Server.Documents.Revisions
                 dynamic revisions = await store.Commands().GetRevisionsForAsync(id, metadataOnly: true);
                 Assert.Equal(4, revisions.Count);
                 Assert.Equal(DocumentFlags.DeleteRevision.ToString(), revisions[0][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
-                Assert.Equal((DocumentFlags.Versioned | DocumentFlags.Revision).ToString(), revisions[1][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
+                Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision).ToString(), revisions[1][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
                 Assert.Equal(DocumentFlags.DeleteRevision.ToString(), revisions[2][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
-                Assert.Equal((DocumentFlags.Versioned | DocumentFlags.Revision).ToString(), revisions[3][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
+                Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision).ToString(), revisions[3][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
 
                 await store.Admin.SendAsync(new DeleteRevisionsOperation(id, "users/not/exists"));
 

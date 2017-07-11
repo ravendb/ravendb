@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        private Engine GetEngine(AdminJsScript script, string executionString)
+        public Engine GetEngine(AdminJsScript script, string executionString)
         {
             Engine jintEngine;
             try

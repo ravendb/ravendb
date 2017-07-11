@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Handlers
                     Criteria = new SubscriptionCriteria
                     {
                         Collection = tryout.Collection,
-                        IsVersioned = tryout.IsVersioned,
+                        IncludeRevisions = tryout.IncludeRevisions,
                         Script = tryout.Script
                     },
                 };

@@ -1,6 +1,6 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
-type knownDocumentFlags = "Versioned" | "Revision" | "HasAttachments" | "DeleteRevision";
+type knownDocumentFlags = "HasRevisions" | "Revision" | "HasAttachments" | "DeleteRevision";
 
 class documentMetadata {
     collection: string;

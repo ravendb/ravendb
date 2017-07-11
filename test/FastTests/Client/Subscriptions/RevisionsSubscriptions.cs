@@ -13,16 +13,17 @@ using Sparrow;
 
 namespace FastTests.Client.Subscriptions
 {
-    public class VersionedSubscriptions:RavenTestBase
+    public class RevisionsSubscriptions:RavenTestBase
     {
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(15);
+
         [Fact]
-        public async Task PlainVersionedSubscriptions()
+        public async Task PlainRevisionsSubscriptions()
         {
             using (var store = GetDocumentStore())
             {
 
-                var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Versioned<User>>());
+                var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Revision<User>>());
 
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
@@ -74,7 +75,7 @@ namespace FastTests.Client.Subscriptions
                     }
                 }
 
-                using (var sub = store.Subscriptions.Open<Versioned<User>>(new SubscriptionConnectionOptions(subscriptionId)))
+                using (var sub = store.Subscriptions.Open<Revision<User>>(new SubscriptionConnectionOptions(subscriptionId)))
                 {
                     var mre = new AsyncManualResetEvent();
                     var names = new HashSet<string>();
@@ -96,12 +97,12 @@ namespace FastTests.Client.Subscriptions
         }
 
         [Fact]
-        public async Task PlainVersionedSubscriptionsCompareDocs()
+        public async Task PlainRevisionsSubscriptionsCompareDocs()
         {
             using (var store = GetDocumentStore())
             {
 
-                var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Versioned<User>>());
+                var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Revision<User>>());
 
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
@@ -151,7 +152,7 @@ namespace FastTests.Client.Subscriptions
                     }
                 }
 
-                using (var sub = store.Subscriptions.Open<Versioned<User>>(new SubscriptionConnectionOptions(subscriptionId)))
+                using (var sub = store.Subscriptions.Open<Revision<User>>(new SubscriptionConnectionOptions(subscriptionId)))
                 {
                     var mre = new AsyncManualResetEvent();
                     var names = new HashSet<string>();
@@ -185,7 +186,7 @@ namespace FastTests.Client.Subscriptions
         }
 
         [Fact]
-        public async Task VersionedSubscriptionsWithCustomScript()
+        public async Task RevisionsSubscriptionsWithCustomScript()
         {
             using (var store = GetDocumentStore())
             {
@@ -201,7 +202,7 @@ namespace FastTests.Client.Subscriptions
                         }
                         else return false;
                         ",
-                        IsVersioned = true
+                        IncludeRevisions = true
                     }
                 });
 
@@ -293,7 +294,7 @@ namespace FastTests.Client.Subscriptions
                         }
                         else return false;
                         ",
-                        IsVersioned = true
+                        IncludeRevisions = true
 
                     }
                 });
