@@ -973,7 +973,7 @@ namespace Raven.Database.Config
         [JsonIgnore]
         public CompositionContainer Container
         {
-            get { return container ?? (container = new CompositionContainer(Catalog)); }
+            get { return container ?? (container = new CompositionContainer(Catalog, CompositionOptions.IsThreadSafe)); }
             set
             {
                 containerExternallySet = true;
