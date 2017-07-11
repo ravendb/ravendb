@@ -12,9 +12,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {   
                 Console.WriteLine(i);
-                using (var test = new RavenDB_7698())   
+                using (var test = new SlowTests.Client.Attachments.AttachmentsSmuggler())   
                 {
-                    test.CanRestartEmptyAsyncTransaction();
+                    test.CanExportAndImportAttachmentsAndRevisionAttachments().Wait();
                 }
             }
         }

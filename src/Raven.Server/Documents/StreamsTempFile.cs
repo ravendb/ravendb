@@ -23,7 +23,7 @@ namespace Raven.Server.Documents
         public Stream StartNewStream()
         {
             if (_reading)
-                throw new NotSupportedException();
+                throw new NotSupportedException("The temp file was already moved to reading mode");
 
             return _database.DocumentsStorage.Environment.Options.EncryptionEnabled
                 ? (Stream)new TempCryptoStream(_file)

@@ -402,7 +402,6 @@ namespace Raven.Server.Smuggler.Documents
                 }
                 size -= read.bytesRead;
             }
-            attachment.Stream.Position = 0;
         }
 
         private BlittableJsonDocumentBuilder CreateBuilder(JsonOperationContext context, BlittableMetadataModifier modifier)

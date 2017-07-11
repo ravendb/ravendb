@@ -149,6 +149,9 @@ namespace Raven.Server.Smuggler.Documents
 
             public Stream GetTempStream()
             {
+                if(_command.AttachmentStreamsTempFile == null)
+                    _command.AttachmentStreamsTempFile = _database.DocumentsStorage.AttachmentsStorage.GetTempFile("smuggler");
+
                 return _command.AttachmentStreamsTempFile.StartNewStream();
             }
 
@@ -264,8 +267,6 @@ namespace Raven.Server.Smuggler.Documents
                 _buildType = buildType;
                 _log = log;
                 _resetContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
-
-                AttachmentStreamsTempFile = _database.DocumentsStorage.AttachmentsStorage.GetTempFile("smuggler");
             }
 
             public DocumentsOperationContext Context => _context;
