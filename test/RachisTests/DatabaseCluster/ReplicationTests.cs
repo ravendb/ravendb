@@ -6,7 +6,7 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
-using Raven.Client.Server.Operations.ApiKeys;
+using Raven.Client.Server.Operations.Certificates;
 using Raven.Server.Web.System;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -415,13 +415,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        private readonly ApiKeyDefinition _apiKey = new ApiKeyDefinition
-        {
-            Enabled = true,
-            Secret = "secret",
-        };
-
-        [Theory]
+        /*[Theory]
         [InlineData("secret")]
         [InlineData("bad")]
         public async Task ReplicateToWatcherWithAuth(string api)
@@ -434,8 +428,8 @@ namespace RachisTests.DatabaseCluster
             {
                 _apiKey.ResourcesAccessMode[store1.Database] = AccessMode.Admin;
                 _apiKey.ResourcesAccessMode[store2.Database] = AccessMode.ReadWrite;
-                store2.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
-                var doc = store2.Admin.Server.Send(new GetApiKeyOperation("super"));
+                store2.Admin.Server.Send(new PutCertificateOperation("super", _apiKey));
+                var doc = store2.Admin.Server.Send(new GetCertificateOperation("super"));
                 Assert.NotNull(doc);
                 Server.Configuration.Security.AuthenticationEnabled = true;
 
@@ -463,6 +457,6 @@ namespace RachisTests.DatabaseCluster
                     Assert.False(WaitForDocument<User>(store2, "users/1", (u) => u.Name == "Karmel"));
                 }
             }
-        }
+        }*/
     }
 }

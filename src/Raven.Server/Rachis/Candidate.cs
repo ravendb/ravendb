@@ -70,7 +70,8 @@ namespace Raven.Server.Rachis
                     {
                         if (voter.Key == _engine.Tag)
                             continue; // we already voted for ourselves
-                        var candidateAmbassador = new CandidateAmbassador(_engine, this, voter.Key, voter.Value, clusterTopology.ApiKey);
+                        var candidateAmbassador = new CandidateAmbassador(_engine, this, voter.Key, voter.Value,
+                            _engine.ClusterCertificate);
                         _voters.Add(candidateAmbassador);
                         try
                         {

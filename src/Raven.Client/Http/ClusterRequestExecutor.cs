@@ -38,6 +38,7 @@ namespace Raven.Client.Http
 
         public static ClusterRequestExecutor CreateForSingleNode(string url, X509Certificate2 certificate)
         {
+            ValidateUrls(new[] { url }, certificate);
             var executor = new ClusterRequestExecutor(certificate, DocumentConventions.Default)
             {
                 _nodeSelector = new NodeSelector(new Topology

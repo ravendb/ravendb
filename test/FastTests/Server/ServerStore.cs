@@ -5,7 +5,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Server.Operations.ApiKeys;
+using Raven.Client.Server.Operations.Certificates;
 using Raven.Client.Util.Helpers;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -132,9 +132,10 @@ namespace FastTests.Server
                 TransactionOperationContext context;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
                 {
-                    await Server.ServerStore.PutValueInClusterAsync(new PutApiKeyCommand("foo/bar", new ApiKeyDefinition
+                    await Server.ServerStore.PutValueInClusterAsync(new PutCertificateCommand("foo/bar", new CertificateDefinition()
                     {
-                        Secret = "123"
+                        //iftah
+                        //Secret = "123"
                     }));
                 }
 
@@ -159,17 +160,19 @@ namespace FastTests.Server
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
                 using (context.OpenWriteTransaction())
                 {
-                    await Server.ServerStore.PutValueInClusterAsync(new PutApiKeyCommand("foo/bar", new ApiKeyDefinition
+                    await Server.ServerStore.PutValueInClusterAsync(new PutCertificateCommand("foo/bar", new CertificateDefinition
                     {
-                        Secret = "123"
+                        //iftah
+                        //Secret = "123"
                     }));
                 }
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
                 {
-                    await Server.ServerStore.PutValueInClusterAsync(new PutApiKeyCommand("foo/bar", new ApiKeyDefinition
+                    await Server.ServerStore.PutValueInClusterAsync(new PutCertificateCommand("foo/bar", new CertificateDefinition
                     {
-                        Secret = "321"
+                        //iftah
+                        //Secret = "123"
                     }));
                 }
 

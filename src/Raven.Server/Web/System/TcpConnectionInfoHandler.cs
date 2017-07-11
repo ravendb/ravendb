@@ -22,7 +22,7 @@ namespace Raven.Server.Web.System
                 var output = new DynamicJsonValue
                 {
                     [nameof(TcpConnectionInfo.Url)] = tcpServerUrl,
-                    [nameof(TcpConnectionInfo.Certificate)] = Server.ServerCertificate?.CertificateForClients,
+                    [nameof(TcpConnectionInfo.Certificate)] = Server.ServerCertificateHolder.CertificateForClients,
                 };
 
                 context.Write(writer, output);

@@ -645,16 +645,7 @@ namespace Raven.Server.Documents.Replication
             }
 
         }
-
-        public string GetClusterApiKey()
-        {
-            using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-            {
-                return _server.GetClusterTopology(ctx).ApiKey;
-            }         
-        }
-
+        
         private void OnIncomingReceiveSucceeded(IncomingReplicationHandler instance)
         {
             _incomingLastActivityTime.AddOrUpdate(instance.ConnectionInfo, DateTime.UtcNow, (_, __) => DateTime.UtcNow);

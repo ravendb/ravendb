@@ -19,7 +19,6 @@ using Raven.Client.Json;
 using Raven.Client.Server;
 using Raven.Client.Server.ETL;
 using Raven.Client.Server.Operations;
-using Raven.Client.Server.Operations.ApiKeys;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -180,7 +179,7 @@ namespace Raven.Server.ServerWide
                             }
                             foreach (var node in nodesChanges.addedValues)
                             {
-                                var task = ClusterMaintenanceSupervisor.AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key), clusterTopology.ApiKey).ContinueWith(t =>
+                                var task = ClusterMaintenanceSupervisor.AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key)).ContinueWith(t =>
                                 {
                                     if (Logger.IsInfoEnabled)
                                         Logger.Info($"ClusterMaintenanceSupervisor() => Failed to add to cluster node key = {node.Key}", t.Exception);
@@ -212,9 +211,9 @@ namespace Raven.Server.ServerWide
             return _engine.GetTopology(context);
         }
 
-        public async Task AddNodeToClusterAsync(string nodeUrl, byte[] publicKey, string nodeTag = null, bool validateNotInTopology = true)
+        public async Task AddNodeToClusterAsync(string nodeUrl, string nodeTag = null, bool validateNotInTopology = true)
         {
-            await _engine.AddToClusterAsync(nodeUrl, publicKey, nodeTag, validateNotInTopology).WithCancellation(_shutdownNotification.Token);
+            await _engine.AddToClusterAsync(nodeUrl, nodeTag, validateNotInTopology).WithCancellation(_shutdownNotification.Token);
         }
 
         public async Task RemoveFromClusterAsync(string nodeTag)
@@ -406,77 +405,10 @@ namespace Raven.Server.ServerWide
                 if (_engine.StateMachine.Read(context, Constants.Configuration.ClientId, out long etag) != null)
                     _lastClientConfigurationIndex = etag;
             }
-
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            {
-                if (TryLoadAuthenticationKeyPairs(ctx) == false)
-                    GenerateAuthenticationSignetureKeys(ctx);
-            }
-            GenerateAuthenticationBoxKeys();
-
+            
             Task.Run(ClusterMaintenanceSetupTask, ServerShutdown);
         }
-
-        public byte[] BoxPublicKey, BoxSecretKey, SignPublicKey, SignSecretKey;
-
-
-        internal string GetClusterTokenForNode(JsonOperationContext context)
-        {
-            var token = SignedTokenGenerator.GenerateToken(context, SignSecretKey,
-                Constants.ApiKeys.ClusterApiKeyName, NodeTag,
-                DateTime.UtcNow.AddMinutes(30));
-
-            return Encoding.UTF8.GetString(token.Array, token.Offset, token.Count);
-        }
-
-        private void GenerateAuthenticationSignetureKeys(TransactionOperationContext ctx)
-        {
-            SignPublicKey = new byte[Sodium.crypto_sign_publickeybytes()];
-            SignSecretKey = new byte[Sodium.crypto_sign_secretkeybytes()];
-            unsafe
-            {
-                fixed (byte* signPk = SignPublicKey)
-                fixed (byte* signSk = SignSecretKey)
-                {
-                    if (Sodium.crypto_sign_keypair(signPk, signSk) != 0)
-                        throw new CryptographicException("Unable to generate crypto_sign_keypair for authentication");
-                }
-            }
-
-            using (var tx = ctx.OpenWriteTransaction())
-            {
-                PutSecretKey(ctx, "Raven/Sign/Public", SignPublicKey, overwrite: true, cloneKey: true);
-                PutSecretKey(ctx, "Raven/Sign/Private", SignSecretKey, overwrite: true, cloneKey: true);
-                tx.Commit();
-            }
-        }
-        private void GenerateAuthenticationBoxKeys()
-        {
-            BoxPublicKey = new byte[Sodium.crypto_box_publickeybytes()];
-            BoxSecretKey = new byte[Sodium.crypto_box_secretkeybytes()];
-            unsafe
-            {
-                fixed (byte* boxPk = BoxPublicKey)
-                fixed (byte* boxSk = BoxSecretKey)
-                {
-                    if (Sodium.crypto_box_keypair(boxPk, boxSk) != 0)
-                        throw new CryptographicException("Unable to generate crypto_box_keypair for authentication");
-                }
-            }
-
-        }
-
-        private unsafe bool TryLoadAuthenticationKeyPairs(TransactionOperationContext ctx)
-        {
-            using (ctx.OpenReadTransaction())
-            {
-                SignPublicKey = GetSecretKey(ctx, "Raven/Sign/Public");
-                SignSecretKey = GetSecretKey(ctx, "Raven/Sign/Private");
-            }
-
-            return SignPublicKey != null && SignSecretKey != null;
-        }
-
+        
         private void OnStateChanged(object sender, RachisConsensus.StateTransition state)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -1089,11 +1021,7 @@ namespace Raven.Server.ServerWide
 
         public void SecedeFromCluster()
         {
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            {
-                GenerateAuthenticationSignetureKeys(ctx);
-            }
-            Engine.Bootstrap(NodeHttpServerUrl, SignPublicKey, forNewCluster: true);
+            Engine.Bootstrap(NodeHttpServerUrl, forNewCluster: true);
         }
 
         public Task<(long Etag, object Result)> WriteDatabaseRecordAsync(
@@ -1126,7 +1054,7 @@ namespace Raven.Server.ServerWide
         {
             if (_engine.CurrentState == RachisConsensus.State.Passive)
             {
-                _engine.Bootstrap(_ravenServer.ServerStore.NodeHttpServerUrl, SignPublicKey);
+                _engine.Bootstrap(_ravenServer.ServerStore.NodeHttpServerUrl);
             }
         }
 
@@ -1259,12 +1187,10 @@ namespace Raven.Server.ServerWide
                 var command = new PutRaftCommand(context, cmdJson);
 
                 if (_clusterRequestExecutor == null
-                    || _clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false
-                    || _clusterRequestExecutor.ApiKey?.Equals(clusterTopology.ApiKey) == false)
+                    || _clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false)
                 {
                     _clusterRequestExecutor?.Dispose();
-                    _clusterRequestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, clusterTopology.ApiKey);
-                    _clusterRequestExecutor.ClusterToken = GetClusterTokenForNode(context);
+                    _clusterRequestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, RavenServer.ServerCertificateHolder.Certificate);
                     _clusterRequestExecutor.DefaultTimeout = Engine.OperationTimeout;
                 }
 
@@ -1399,7 +1325,8 @@ namespace Raven.Server.ServerWide
 
         }
 
-        private const string SystemApiKey = "Raven:System";
+        // iftah
+        /*private const string SystemApiKey = "Raven:System";
         public async Task<(string ApiKey, string PublicKey)> GetApiKeyAndPublicKey()
         {
             TransactionOperationContext context;
@@ -1449,7 +1376,7 @@ namespace Raven.Server.ServerWide
                 }
                 return (keyFullName, Convert.ToBase64String(SignPublicKey));
             }            
-        }
+        }*/
 
         private const string secretCharacters = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
         private string GenerateRandomSecret()

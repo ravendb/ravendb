@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,10 +15,8 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
-using Raven.Client.Http.OAuth;
 using Raven.Client.Server;
-using Raven.Client.Server.Operations.ApiKeys;
-using Raven.Client.Server.Operations.Configuration;
+using Raven.Client.Server.Operations.Certificates;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
@@ -46,6 +45,7 @@ namespace Raven.Server.ServerWide
 {
     public class ClusterStateMachine : RachisStateMachine
     {
+        private const string LocalNodeStateTreeName = "LocalNodeState";
         private static readonly TableSchema ItemsSchema;
         private static readonly Slice EtagIndexName;
         private static readonly Slice Items;
@@ -169,10 +169,8 @@ namespace Raven.Server.ServerWide
                     case nameof(ToggleSubscriptionStateCommand):
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, leader);
                         break;
-                    case nameof(PutApiKeyCommand):
-                        PutValue<ApiKeyDefinition>(context, type, cmd, index, leader);
-                        context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented +=
-                            () => serverStore.RavenServer.AccessTokenCache.Clear();
+                    case nameof(PutCertificateCommand):
+                        PutValue<CertificateDefinition>(context, type, cmd, index, leader);
                         break;
                     case nameof(PutClientConfigurationCommand):
                         PutValue<ClientConfiguration>(context, type, cmd, index, leader);
@@ -561,6 +559,31 @@ namespace Raven.Server.ServerWide
         {
             base.Initialize(parent, context);
             ItemsSchema.Create(context.Transaction.InnerTransaction, Items, 32);
+            context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
+        }
+
+        public unsafe void PutLocalState(TransactionOperationContext context, string key, BlittableJsonReaderObject value)
+        {
+            var localState = context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
+            using (localState.DirectAdd(key, value.Size, out var ptr))
+            {
+                value.CopyTo(ptr);
+            }
+        }
+
+        public void DeleteLocalState(TransactionOperationContext context, string key, BlittableJsonReaderObject value)
+        {
+            var localState = context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
+            localState.Delete(key);
+        }
+
+        public unsafe BlittableJsonReaderObject GetLocalState(TransactionOperationContext context, string key)
+        {
+            var localState = context.Transaction.InnerTransaction.ReadTree(LocalNodeStateTreeName);
+            var read = localState.Read(key);
+            if (read == null)
+                return null;
+            return new BlittableJsonReaderObject(read.Reader.Base, read.Reader.Length, context);
         }
 
         public IEnumerable<Tuple<string, BlittableJsonReaderObject>> ItemsStartingWith(TransactionOperationContext context, string prefix, int start, int take)
@@ -691,15 +714,14 @@ namespace Raven.Server.ServerWide
             return size;
         }
 
-        public override async Task<Stream> ConnectToPeer(string url, string apiKey)
+        public override async Task<Stream> ConnectToPeer(string url, X509Certificate2 certificate)
         {
             if (url == null) throw new ArgumentNullException(nameof(url));
             if (_parent == null) throw new InvalidOperationException("Cannot connect to peer without a parent");
             if (_parent.IsEncrypted && url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
                 throw new InvalidOperationException($"Failed to connect to node {url}. Connections from encrypted store must use HTTPS.");
 
-            var info = await ReplicationUtils.GetTcpInfoAsync(url, "Rachis.Server", apiKey, "Cluster");
-            var authenticator = new ApiKeyAuthenticator();
+            var info = await ReplicationUtils.GetTcpInfoAsync(url, "Rachis.Server", "Cluster", certificate);
 
             var tcpInfo = new Uri(info.Url);
             var tcpClient = new TcpClient();
@@ -711,12 +733,10 @@ namespace Raven.Server.ServerWide
 
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var apiToken = await authenticator.GetAuthenticationTokenAsync(apiKey, url, context);
                     var msg = new DynamicJsonValue
                     {
                         [nameof(TcpConnectionHeaderMessage.DatabaseName)] = null,
                         [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Cluster,
-                        [nameof(TcpConnectionHeaderMessage.AuthorizationToken)] = apiToken,
                     };
                     using (var writer = new BlittableJsonTextWriter(context, stream))
                     using (var msgJson = context.ReadObject(msg, "message"))
@@ -734,7 +754,7 @@ namespace Raven.Server.ServerWide
                             case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
                                 break;
                             default:
-                                throw AuthorizationException.Unauthorized(reply.Status, "Server");
+                                throw new InvalidOperationException($"Unexpected server response {reply.Status} when connecting to {url} {DatabaseName}");
                         }
                     }
                 }

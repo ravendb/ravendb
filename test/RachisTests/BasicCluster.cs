@@ -26,7 +26,7 @@ namespace RachisTests
 
             foreach (var follower in followers)
             {
-                await a.AddToClusterAsync(follower.Url, DummyPublicKey);
+                await a.AddToClusterAsync(follower.Url);
                 await follower.WaitForTopology(Leader.TopologyModification.Voter);
             }
 
@@ -99,9 +99,9 @@ namespace RachisTests
             var bUpgraded = b.WaitForTopology(Leader.TopologyModification.Voter);
             var cUpgraded = c.WaitForTopology(Leader.TopologyModification.Voter);
 
-            await a.AddToClusterAsync(b.Url, DummyPublicKey);
+            await a.AddToClusterAsync(b.Url);
             await b.WaitForTopology(Leader.TopologyModification.Voter);
-            await a.AddToClusterAsync(c.Url, DummyPublicKey);
+            await a.AddToClusterAsync(c.Url);
             await c.WaitForTopology(Leader.TopologyModification.Voter);
 
             await bUpgraded;
@@ -141,7 +141,7 @@ namespace RachisTests
 
             var b = SetupServer();
 
-            await a.AddToClusterAsync(b.Url, DummyPublicKey);
+            await a.AddToClusterAsync(b.Url);
             await b.WaitForTopology(Leader.TopologyModification.Voter);
             long lastIndex = 0;
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -169,7 +169,7 @@ namespace RachisTests
             var a = SetupServer(true);
             var b = SetupServer();
 
-            await a.AddToClusterAsync(b.Url, DummyPublicKey);
+            await a.AddToClusterAsync(b.Url);
             await b.WaitForTopology(Leader.TopologyModification.Voter);
 
             using (var ctx = JsonOperationContext.ShortTermSingleUse())

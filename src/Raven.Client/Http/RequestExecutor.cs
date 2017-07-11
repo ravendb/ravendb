@@ -130,6 +130,7 @@ namespace Raven.Client.Http
 
         public static RequestExecutor CreateForSingleNodeWithoutConfigurationUpdates(string url, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
+            ValidateUrls(new []{url}, certificate);
             var executor = new RequestExecutor(databaseName, certificate, conventions)
             {
                 _nodeSelector = new NodeSelector(new Topology
@@ -312,6 +313,8 @@ namespace Raven.Client.Http
 
         protected async Task FirstTopologyUpdate(string[] initialUrls)
         {
+            ValidateUrls(initialUrls, Certificate);
+
             var list = new List<(string, Exception)>();
             foreach (var url in initialUrls)
             {
@@ -355,6 +358,34 @@ namespace Raven.Client.Http
             throw new AggregateException("Failed to retrieve cluster topology from all known nodes" + Environment.NewLine +
                                          string.Join(Environment.NewLine, list.Select(x => x.Item1 + " -> " + x.Item2?.Message))
                 , list.Select(x => x.Item2));
+        }
+
+        protected static void ValidateUrls(string[] initialUrls, X509Certificate2 certificate)
+        {
+            var requireHttps = certificate != null;
+            foreach (var url in initialUrls)
+            {
+                if (Uri.TryCreate(url, UriKind.Absolute, out var uri) == false)
+                    throw new InvalidOperationException("The url '" + url + "' is not valid");
+
+                requireHttps |= string.Equals(uri.Scheme, "https", StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (requireHttps == false)
+                return;
+
+            foreach (var url in initialUrls)
+            {
+                var uri = new Uri(url); // verified it works above
+
+                if (string.Equals(uri.Scheme, "http", StringComparison.OrdinalIgnoreCase) == false)
+                    continue;
+
+                if (certificate != null)
+                    throw new InvalidOperationException("The url " + url + " is using HTTP, but a certificate is specified, which require us to use HTTPS");
+
+                throw new InvalidOperationException("The url " + url + " is using HTTP, but other urls are using HTTPS, and mixing of HTTP and HTTPS is not allowed");
+            }
         }
 
         private void InitializeUpdateTopologyTimer()

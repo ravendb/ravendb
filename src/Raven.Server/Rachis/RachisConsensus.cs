@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -57,6 +58,8 @@ namespace Raven.Server.Rachis
             StateMachine.Apply(context, uptoInclusive, leader, _serverStore);
         }
 
+        public override X509Certificate2 ClusterCertificate => _serverStore.RavenServer.ServerCertificateHolder.Certificate;
+
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
         {
             return StateMachine.ShouldSnapshot(slice, type);
@@ -67,9 +70,9 @@ namespace Raven.Server.Rachis
             StateMachine.OnSnapshotInstalled(context, lastIncludedIndex);
         }
 
-        public override Task<Stream> ConnectToPeer(string url, string apiKey, TransactionOperationContext context = null)
+        public override Task<Stream> ConnectToPeer(string url, X509Certificate2 certificate, TransactionOperationContext context = null)
         {
-            return StateMachine.ConnectToPeer(url, apiKey);
+            return StateMachine.ConnectToPeer(url, certificate);
         }
 
         private class NullDisposable : IDisposable
@@ -592,8 +595,6 @@ namespace Raven.Server.Rachis
             var topology = GetTopology(context);
             var newTopology = new ClusterTopology(
                 topology.TopologyId,
-                null,
-                new Dictionary<string, string>(),
                 new Dictionary<string, string>(),
                 new Dictionary<string, string>(),
                 new Dictionary<string, string>(),
@@ -611,8 +612,6 @@ namespace Raven.Server.Rachis
             {
                 return new ClusterTopology(
                     null,
-                    null,
-                    new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
@@ -1276,14 +1275,12 @@ namespace Raven.Server.Rachis
             ContextPool?.Dispose();
         }
 
-        public abstract Task<Stream> ConnectToPeer(string url, string apiKey, TransactionOperationContext context = null);
+        public abstract Task<Stream> ConnectToPeer(string url, X509Certificate2 certificate, TransactionOperationContext context = null);
 
-        public void Bootstrap(string selfUrl, byte[] publicKey, bool forNewCluster = false)
+        public void Bootstrap(string selfUrl, bool forNewCluster = false)
         {
             if (selfUrl == null)
                 throw new ArgumentNullException(nameof(selfUrl));
-            if (publicKey == null)
-                throw new ArgumentNullException(nameof(publicKey));
 
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var tx = ctx.OpenWriteTransaction())
@@ -1298,17 +1295,12 @@ namespace Raven.Server.Rachis
 
                 var topology = new ClusterTopology(
                     Guid.NewGuid().ToString(),
-                    null,
                     new Dictionary<string, string>
                     {
                         [_tag] = selfUrl
                     },
                     new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
-                    new Dictionary<string, string>
-                    {
-                        [_tag] = Convert.ToBase64String(publicKey)
-                    },
                     "A"
                 );
 
@@ -1320,9 +1312,9 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public Task AddToClusterAsync(string url, byte[] publicKey, string nodeTag = null, bool validateNotInTopology = true)
+        public Task AddToClusterAsync(string url, string nodeTag = null, bool validateNotInTopology = true)
         {
-            return ModifyTopologyAsync(nodeTag, url, Leader.TopologyModification.Promotable, publicKey, validateNotInTopology);
+            return ModifyTopologyAsync(nodeTag, url, Leader.TopologyModification.Promotable, validateNotInTopology);
         }
 
         public Task RemoveFromClusterAsync(string nodeTag)
@@ -1330,14 +1322,14 @@ namespace Raven.Server.Rachis
             return ModifyTopologyAsync(nodeTag, null, Leader.TopologyModification.Remove);
         }
 
-        private async Task ModifyTopologyAsync(string nodeTag, string nodeUrl, Leader.TopologyModification modification, byte[] publicKey = null, bool validateNotInTopology = false)
+        private async Task ModifyTopologyAsync(string nodeTag, string nodeUrl, Leader.TopologyModification modification, bool validateNotInTopology = false)
         {
             var leader = _currentLeader;
             if (leader == null)
                 throw new NotLeadingException("There is no leader, cannot accept commands. " + _lastStateChangeReason);
 
             Task task;
-            while (leader.TryModifyTopology(nodeTag, nodeUrl, modification, publicKey, out task, validateNotInTopology) == false)
+            while (leader.TryModifyTopology(nodeTag, nodeUrl, modification, out task, validateNotInTopology) == false)
                 await task;
 
             await task;
@@ -1370,6 +1362,8 @@ namespace Raven.Server.Rachis
         }
 
         public bool IsEncrypted => _persistentState.Options.EncryptionEnabled;
+
+        public abstract X509Certificate2 ClusterCertificate { get; }
 
         public abstract bool ShouldSnapshot(Slice slice, RootObjectType type);
 

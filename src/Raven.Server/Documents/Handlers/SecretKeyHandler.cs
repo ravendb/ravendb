@@ -8,6 +8,7 @@ using Raven.Client.Json;
 using Raven.Client.Server.Commands;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
@@ -115,7 +116,7 @@ namespace Raven.Server.Documents.Handlers
                         }
                         else
                         {
-                            await SendKeyToNodeAsync(name, base64, ctx, clusterTopology, node, url).ConfigureAwait(false);
+                            await SendKeyToNodeAsync(name, base64, ctx, ServerStore, node, url).ConfigureAwait(false);
                         }
                     }
                 }
@@ -124,9 +125,9 @@ namespace Raven.Server.Documents.Handlers
             HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
         }
        
-        private static async Task SendKeyToNodeAsync(string name, string base64, TransactionOperationContext ctx, ClusterTopology clusterTopology, string node, string url)
+        private static async Task SendKeyToNodeAsync(string name, string base64, TransactionOperationContext ctx, ServerStore server, string node, string url)
         {
-            using (var shortLived = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, name, clusterTopology.ApiKey, DocumentConventions.Default))
+            using (var shortLived = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, name, server.RavenServer.ServerCertificateHolder.Certificate, DocumentConventions.Default))
             {
                 var command = new PutSecretKeyCommand(name, base64);
                 try

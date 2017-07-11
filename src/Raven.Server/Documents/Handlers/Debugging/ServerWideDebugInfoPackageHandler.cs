@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
@@ -80,18 +81,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                         var databaseNames = ServerStore.Cluster.GetDatabaseNames(transactionOperationContext).ToList();
                         var topology = ServerStore.GetClusterTopology(transactionOperationContext);
-
-                        var operationTimeout = ServerStore.Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan;
-                        var tokenTtl = TimeSpan.FromMilliseconds(operationTimeout.TotalMilliseconds * topology.AllNodes.Count);
-                        var apiKeyTokenBuffer = SignedTokenGenerator.GenerateToken(
-                            jsonOperationContext,
-                            ServerStore.SignSecretKey,
-                            "Raven/Debug-Info-Package-Api-Key",
-                            ServerStore.NodeTag,
-                            DateTime.UtcNow.Add(tokenTtl));
-
-                        var apiKeyToken = Encoding.UTF8.GetString(apiKeyTokenBuffer.Array, apiKeyTokenBuffer.Offset, apiKeyTokenBuffer.Count);
-
+                        
                         //this means no databases are defined in the cluster
                         //in this case just output server-wide endpoints from all cluster nodes
                         if (databaseNames.Count == 0)
@@ -108,9 +98,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                         archive, 
                                         tag: tagWithUrl.Key, 
                                         url: tagWithUrl.Value,
-                                        apiKey: topology.ApiKey,
-                                        databaseNames:null,
-                                        token: apiKeyToken);
+                                        certificate: Server.ServerCertificateHolder.Certificate,
+                                        databaseNames:null);
                                 }
                                 catch (Exception e)
                                 {
@@ -135,8 +124,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                         tag: urlToDatabaseNamesMap.Value.Item2,
                                         url: urlToDatabaseNamesMap.Key,
                                         databaseNames: urlToDatabaseNamesMap.Value.Item1,
-                                        apiKey: topology.ApiKey,
-                                        token: apiKeyToken);
+                                        certificate: Server.ServerCertificateHolder.Certificate);
                                 }
                                 catch (Exception e)
                                 {
@@ -155,13 +143,17 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
         private async Task WriteDebugInfoPackageForNodeAsync(
             JsonOperationContext jsonOperationContext, 
-            ZipArchive archive, string tag, string url, IEnumerable<string> databaseNames = null, string apiKey = null, string token = null)
+            ZipArchive archive, 
+            string tag, 
+            string url, 
+            IEnumerable<string> databaseNames, 
+            X509Certificate2 certificate)
         {
             //note : theoretically GetDebugInfoFromNodeAsync() can throw, error handling is done at the level of WriteDebugInfoPackageForNodeAsync() calls
             using (var responseStream = await GetDebugInfoFromNodeAsync(
                 jsonOperationContext,
                 url,
-                databaseNames ?? EmptyStringArray,apiKey, token))
+                databaseNames ?? EmptyStringArray, certificate))
             {
                 var entry = archive.CreateEntry($"Node - [{tag}].zip");
                 using (var entryStream = entry.Open())
@@ -195,7 +187,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         }
 
         private async Task<Stream> GetDebugInfoFromNodeAsync(JsonOperationContext jsonOperationContext, 
-            string url, IEnumerable<string> databaseNames, string apiKey, string token)
+            string url, IEnumerable<string> databaseNames, X509Certificate2 certificate)
         {
             var bodyJson = new DynamicJsonValue
             {
@@ -210,8 +202,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 writer.Flush();
                 ms.Flush();
 
-                var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, apiKey);
-                requestExecutor.ClusterToken = token;
+                var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, certificate);
                 requestExecutor.DefaultTimeout = ServerStore.Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan;
 
                 var rawStreamCommand = new GetRawStreamResultCommand("/debug/remote-cluster-info-package", ms);

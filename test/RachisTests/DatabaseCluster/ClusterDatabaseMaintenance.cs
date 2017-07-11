@@ -212,7 +212,7 @@ namespace RachisTests.DatabaseCluster
                 await Servers[1].ServerStore.WaitForState(RachisConsensus.State.Passive).WaitAsync(TimeSpan.FromSeconds(30));
                 Assert.Equal(RachisConsensus.State.Passive,Servers[1].ServerStore.CurrentState);
                 // rejoin the node to the cluster
-                await leader.ServerStore.AddNodeToClusterAsync(urls[0], Servers[1].ServerStore.SignPublicKey,nodeTag);
+                await leader.ServerStore.AddNodeToClusterAsync(urls[0], nodeTag);
                 await Servers[1].ServerStore.WaitForState(RachisConsensus.State.Follower).WaitAsync(TimeSpan.FromSeconds(30));
                 Assert.Equal(RachisConsensus.State.Follower, Servers[1].ServerStore.CurrentState);
             }

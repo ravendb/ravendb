@@ -34,10 +34,9 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using AccessToken = Raven.Server.Web.Authentication.AccessToken;
 using System.Reflection;
 using Raven.Client.Extensions;
-using Raven.Client.Server.Operations.ApiKeys;
+using Raven.Client.Server.Operations.Certificates;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Platform;
@@ -58,8 +57,6 @@ namespace Raven.Server
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger<RavenServer>("Raven/Server");
 
         public readonly RavenConfiguration Configuration;
-
-        public readonly ConcurrentDictionary<string, AccessToken> AccessTokenCache = new ConcurrentDictionary<string, AccessToken>();
 
         public Timer ServerMaintenanceTimer;
 
@@ -82,7 +79,6 @@ namespace Raven.Server
 
             ServerStore = new ServerStore(Configuration, this);
             Metrics = new MetricsCountersManager();
-            ServerMaintenanceTimer = new Timer(ServerMaintenanceTimerByMinute, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
 
             _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("<TcpServer>");
         }
@@ -90,17 +86,6 @@ namespace Raven.Server
         public Task<TcpListenerStatus> GetTcpServerStatusAsync()
         {
             return _tcpListenerTask;
-        }
-
-        private void ServerMaintenanceTimerByMinute(object state)
-        {
-            foreach (var accessToken in AccessTokenCache.Values)
-            {
-                if (accessToken.IsExpired == false)
-                    continue;
-
-                AccessTokenCache.TryRemove(accessToken.Token, out var _);
-            }
         }
 
         public void Initialize()
@@ -130,9 +115,9 @@ namespace Raven.Server
 
                 if (Configuration.Security.CertificatePath != null)
                 {
-                    ServerCertificate = LoadCertificate(Configuration.Security);
+                    ServerCertificateHolder = LoadCertificate(Configuration.Security);
                     
-                    kestrelOptions += options => options.UseHttps(ServerCertificate.Certificate);
+                    kestrelOptions += options => options.UseHttps(ServerCertificateHolder.Certificate);
                     
                     // Enforce https in all network activities
                     if (Configuration.Core.ServerUrl.StartsWith("http:", StringComparison.OrdinalIgnoreCase))
@@ -228,8 +213,9 @@ namespace Raven.Server
                                     }
                                     break;
                                 case "init":
-                                    var (apiKey, pubKey) = await ServerStore.GetApiKeyAndPublicKey();
-                                    PipeLogAndReply(writer, $"ApiKey: {apiKey}{Environment.NewLine}PublicKe: {pubKey}");
+                                    // iftah
+                                    /*var (apiKey, pubKey) = await ServerStore.GetApiKeyAndPublicKey();
+                                    PipeLogAndReply(writer, $"ApiKey: {apiKey}{Environment.NewLine}PublicKe: {pubKey}");*/
                                     writer.Flush();
                                     break;
                                 default:
@@ -295,7 +281,7 @@ namespace Raven.Server
 
         private readonly JsonContextPool _tcpContextPool = new JsonContextPool();
         
-        internal CertificateHolder ServerCertificate;
+        internal CertificateHolder ServerCertificateHolder = new CertificateHolder();
 
         public class CertificateHolder
         {
@@ -673,17 +659,22 @@ namespace Raven.Server
 
         private async Task<Stream> AuthenticateAsServerIfSslNeeded(Stream stream)
         {
-            if (ServerCertificate != null)
+            if (ServerCertificateHolder.Certificate != null)
             {
-                SslStream sslStream = new SslStream(stream, false, (sender, certificate, chain, errors) =>
+                var sslStream = new SslStream(stream, false, (sender, certificate, chain, errors) =>
                 {
                     return errors == SslPolicyErrors.None ||
                            // it is fine that the client doesn't have a cert, we just care that they
-                           // are connecting to us securely
+                           // are connecting to us securely. At any rate, we'll ensure that if certificate
+                           // is required, we'll validate that it is one of the expected ones on the server
+                           // and that the client is authorized to do so. 
+                           // Otherwise, we'll generate an error, but we'll do that at a higher level then
+                           // SSL, because that generate a nicer error for the user to read then just aborted
+                           // connection because SSL negotation failed.
                            errors == SslPolicyErrors.RemoteCertificateNotAvailable;
                 });
                 stream = sslStream;
-                await sslStream.AuthenticateAsServerAsync(ServerCertificate.Certificate, true, SslProtocols.Tls12, false);
+                await sslStream.AuthenticateAsServerAsync(ServerCertificateHolder.Certificate, true, SslProtocols.Tls12, false);
             }
 
             return stream;
@@ -691,71 +682,9 @@ namespace Raven.Server
 
         private bool TryAuthorize(JsonOperationContext context, RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header)
         {
-            using (var writer = new BlittableJsonTextWriter(context, stream))
-            {
-                if (configuration.Security.AuthenticationEnabled == false
-                    && header.AuthorizationToken == null)
-                {
-                    ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.Success));
-                    return true;
-                }
-                
-                var sigBase64Size = Sparrow.Utils.Base64.CalculateAndValidateOutputLength(Sodium.crypto_sign_bytes());
-                if (header.AuthorizationToken == null || header.AuthorizationToken.Length < sigBase64Size + 8 /* sig length + prefix */)
-                {
-                    ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.AuthorizationTokenRequired));
-                    return false;
-                }
-
-                AccessToken accessToken;
-                if (RequestRouter.TryGetAccessToken(this, header.AuthorizationToken, sigBase64Size, out accessToken) == false)
-                {
-                    if (accessToken.IsExpired)
-                    {
-                        ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.ExpiredAuthorizationToken));
-                        return false;
-                    }
-                    ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.BadAuthorizationToken));
-                    return false;
-                }
-
-                AccessMode mode;
-                var hasValue =
-                    accessToken.AuthorizedDatabases.TryGetValue(header.DatabaseName, out mode) ||
-                    accessToken.AuthorizedDatabases.TryGetValue("*", out mode);
-
-                if (hasValue == false)
-                    mode = AccessMode.None;
-
-                switch (mode)
-                {
-                    case AccessMode.None:
-                        ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.Forbidden));
-                        return false;
-                    case AccessMode.ReadOnly:
-                        ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.ForbiddenReadOnly));
-                        return false;
-                    case AccessMode.ReadWrite:
-                    case AccessMode.Admin:
-                        ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.Success));
-                        return true;
-                    default:
-                        throw new ArgumentOutOfRangeException("Unknown access mode: " + mode);
-                }
-            }
-
+            return true;
         }
-
-
-        private static void ReplyStatus(BlittableJsonTextWriter writer, string status)
-        {
-            writer.WriteStartObject();
-            writer.WritePropertyName(nameof(TcpConnectionHeaderResponse.Status));
-            writer.WriteString(status);
-            writer.WriteEndObject();
-            writer.Flush();
-        }
-
+        
         private static void ThrowDatabaseShutdown(DocumentDatabase database)
         {
             throw new DatabaseDisabledException($"Database {database.Name} was shutdown.");

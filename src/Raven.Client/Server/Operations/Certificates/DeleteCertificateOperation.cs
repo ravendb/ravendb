@@ -4,34 +4,34 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Sparrow.Json;
 
-namespace Raven.Client.Server.Operations.ApiKeys
+namespace Raven.Client.Server.Operations.Certificates
 {
-    public class DeleteApiKeyOperation : IServerOperation
+    public class DeleteCertificateOperation : IServerOperation
     {
         private readonly string _name;
 
-        public DeleteApiKeyOperation(string name)
+        public DeleteCertificateOperation(string name)
         {
             _name = name ?? throw new ArgumentNullException(nameof(name));
         }
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new DeleteApiKeyCommand(_name);
+            return new DeleteCertificateCommand(_name);
         }
 
-        private class DeleteApiKeyCommand : RavenCommand
+        private class DeleteCertificateCommand : RavenCommand
         {
             private readonly string _name;
 
-            public DeleteApiKeyCommand(string name)
+            public DeleteCertificateCommand(string name)
             {
                 _name = name ?? throw new ArgumentNullException(nameof(name));
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/api-keys?name=" + Uri.EscapeDataString(_name);
+                url = $"{node.Url}/admin/certificates?name=" + Uri.EscapeDataString(_name);
 
                 return new HttpRequestMessage
                 {

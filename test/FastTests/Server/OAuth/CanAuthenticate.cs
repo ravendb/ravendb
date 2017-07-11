@@ -10,13 +10,12 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions.Security;
-using Raven.Client.Http.OAuth;
-using Raven.Client.Server.Operations.ApiKeys;
+using Raven.Client.Server.Operations.Certificates;
 using Xunit;
 
 namespace FastTests.Server.OAuth
 {
-    public class CanAuthenticate : RavenTestBase
+    /*public class CanAuthenticate : RavenTestBase
     {
         private readonly ApiKeyDefinition _apiKey = new ApiKeyDefinition
         {
@@ -34,8 +33,8 @@ namespace FastTests.Server.OAuth
             {
                 _apiKey.ResourcesAccessMode[store.Database] = AccessMode.ReadWrite;
 
-                store.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
-                var doc = store.Admin.Server.Send(new GetApiKeyOperation("super"));
+                store.Admin.Server.Send(new PutCertificateOperation("super", _apiKey));
+                var doc = store.Admin.Server.Send(new GetCertificateOperation("super"));
                 Assert.NotNull(doc);
 
                 Server.Configuration.Security.AuthenticationEnabled = true;
@@ -58,8 +57,8 @@ namespace FastTests.Server.OAuth
            Server.Configuration.Security.AuthenticationEnabled = false;
             using (var store = GetDocumentStore(apiKey: "super/" + "bad secret"))
             {
-                store.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
-                var doc = store.Admin.Server.Send(new GetApiKeyOperation("super"));
+                store.Admin.Server.Send(new PutCertificateOperation("super", _apiKey));
+                var doc = store.Admin.Server.Send(new GetCertificateOperation("super"));
                 Assert.NotNull(doc);
 
                 Server.Configuration.Security.AuthenticationEnabled = true;
@@ -77,73 +76,21 @@ namespace FastTests.Server.OAuth
 
             using (var store = GetDocumentStore())
             {
-                store.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
-                var doc = store.Admin.Server.Send(new GetApiKeyOperation("super"));
+                store.Admin.Server.Send(new PutCertificateOperation("super", _apiKey));
+                var doc = store.Admin.Server.Send(new GetCertificateOperation("super"));
                 Assert.NotNull(doc);
 
                 _apiKey.Enabled = false;
-                store.Admin.Server.Send(new PutApiKeyOperation("duper", _apiKey));
-                store.Admin.Server.Send(new PutApiKeyOperation("shlumper", _apiKey));
-                store.Admin.Server.Send(new DeleteApiKeyOperation("shlumper"));
+                store.Admin.Server.Send(new PutCertificateOperation("duper", _apiKey));
+                store.Admin.Server.Send(new PutCertificateOperation("shlumper", _apiKey));
+                store.Admin.Server.Send(new DeleteCertificateOperation("shlumper"));
 
-                var apiKeys = store.Admin.Server.Send(new GetApiKeysOperation(0, 1024)).ToList();
+                var apiKeys = store.Admin.Server.Send(new GetCertificatesOperation(0, 1024)).ToList();
                 Assert.Equal(2, apiKeys.Count);
                 Assert.Equal("duper", apiKeys[0].UserName);
                 Assert.False(apiKeys[0].Enabled);
                 Assert.Equal("super", apiKeys[1].UserName);
                 Assert.True(apiKeys[1].Enabled);
-            }
-        }
-
-        [Fact]
-        public async Task CanGetTokenFromServer()
-        {
-            DoNotReuseServer();
-            using (var store = GetDocumentStore())
-            {
-                StoreSampleDoc(store, "test/1");
-
-                // Should get PreconditionFailed on Get without token
-                Server.Configuration.Security.AuthenticationEnabled = true;
-                var client = new HttpClient();
-
-                var baseUrl = $"{store.Urls.First()}/databases/{store.Database}";
-
-                var result = await client.GetAsync(baseUrl + "/docs?id=test/1");
-                Assert.Equal(HttpStatusCode.PreconditionFailed, result.StatusCode);
-
-                // Should throw on DoOAuthRequestAsync with unknown apiKey
-                using (var commands = store.Commands())
-                {
-                    var apiKeyAuthenticator = new ApiKeyAuthenticator();
-                    var exception = await Assert.ThrowsAsync<AuthenticationException>(async () => await apiKeyAuthenticator.GetAuthenticationTokenAsync("super/secret", store.Urls.First(), commands.Context));
-                    Assert.Contains("Could not find api key: super", exception.Message);
-                }
-
-                // Admin should be able to save apiKey
-                Server.Configuration.Security.AuthenticationEnabled = false;
-                 _apiKey.ResourcesAccessMode[store.Database] = AccessMode.ReadWrite;
-                store.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
-                var doc = store.Admin.Server.Send(new GetApiKeyOperation("super"));
-                Assert.NotNull(doc);
-
-                // Should get token
-                string token;
-                using (var commands = store.Commands())
-                {
-                   Server.Configuration.Security.AuthenticationEnabled = true;
-                    var apiKeyAuthenticator = new ApiKeyAuthenticator();
-                    token = await apiKeyAuthenticator.GetAuthenticationTokenAsync("super/secret", store.Urls.First(), commands.Context);
-                    Assert.NotNull(token);
-                    Assert.NotEqual(string.Empty, token);
-                }
-
-                // Verify successfull get with valid token
-                var authenticatedClient = new HttpClient();
-                authenticatedClient.DefaultRequestHeaders.TryAddWithoutValidation("Raven-Authorization", token);
-                result = await authenticatedClient.GetAsync(baseUrl + "/docs?id=test/1");
-                Assert.Equal(HttpStatusCode.OK, result.StatusCode);
-                Server.Configuration.Security.AuthenticationEnabled = false;
             }
         }
 
@@ -155,8 +102,8 @@ namespace FastTests.Server.OAuth
             Server.Configuration.Security.AuthenticationEnabled = false;
             using (var store = GetDocumentStore(apiKey: "super/" + "secret"))
             {
-                store.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
-                var doc = store.Admin.Server.Send(new GetApiKeyOperation("super"));
+                store.Admin.Server.Send(new PutCertificateOperation("super", _apiKey));
+                var doc = store.Admin.Server.Send(new GetCertificateOperation("super"));
                 Assert.NotNull(doc);
 
                  Server.Configuration.Security.AuthenticationEnabled = true;
@@ -177,5 +124,5 @@ namespace FastTests.Server.OAuth
                 session.SaveChanges();
             }
         }
-    }
+    }*/
 }

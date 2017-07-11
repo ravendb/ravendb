@@ -66,7 +66,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     json[nameof(NodeInfo.NodeTag)] = ServerStore.NodeTag;
                     json[nameof(NodeInfo.TopologyId)] = ServerStore.GetClusterTopology(context).TopologyId;
-                    json[nameof(NodeInfo.PublicKey)] = Convert.ToBase64String(ServerStore.SignPublicKey);
                     json[nameof(ServerStore.ClusterStatus)] = ServerStore.ClusterStatus();
                 }
                 context.Write(writer, json);
@@ -90,21 +89,15 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     var tag = ServerStore.NodeTag ?? "A";
                     var serverUrl = ServerStore.NodeHttpServerUrl;
-                    var publicKey = ServerStore.SignPublicKey;
 
                     topology = new ClusterTopology(
                         "dummy",
-                        null,
                         new Dictionary<string, string>
                         {
                             [tag] = serverUrl
                         },
                         new Dictionary<string, string>(),
                         new Dictionary<string, string>(),
-                        new Dictionary<string, string>
-                        {
-                            [tag] = Convert.ToBase64String(publicKey)
-                        },
                         tag
                     );
                     nodeTag = tag;
@@ -192,17 +185,14 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 {
-                    string apiKey;
                     string topologyId;
                     using (ctx.OpenReadTransaction())
                     {
                         var clusterTopology = ServerStore.GetClusterTopology(ctx);
-                        apiKey = clusterTopology.ApiKey;
                         topologyId = clusterTopology.TopologyId;
                     }
-                    using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(serverUrl, apiKey))
+                    using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(serverUrl, Server.ServerCertificateHolder.Certificate))
                     {
-                        requestExecutor.ClusterToken = ServerStore.GetClusterTokenForNode(ctx);
                         var infoCmd = new GetNodeInfoCommand();
                         await requestExecutor.ExecuteAsync(infoCmd, ctx);
                         var nodeInfo = infoCmd.Result;
@@ -215,7 +205,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                         var nodeTag = nodeInfo.NodeTag == "?" 
                             ? null : nodeInfo.NodeTag;
-                        await ServerStore.AddNodeToClusterAsync(serverUrl, Convert.FromBase64String(nodeInfo.PublicKey), nodeTag, validateNotInTopology:false);
+                        await ServerStore.AddNodeToClusterAsync(serverUrl, nodeTag, validateNotInTopology:false);
                         NoContentStatus();
                         return;
                     }

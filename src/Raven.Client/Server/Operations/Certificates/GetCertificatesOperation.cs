@@ -4,30 +4,30 @@ using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
 
-namespace Raven.Client.Server.Operations.ApiKeys
+namespace Raven.Client.Server.Operations.Certificates
 {
-    public class GetApiKeysOperation : IServerOperation<NamedApiKeyDefinition[]>
+    public class GetCertificatesOperation : IServerOperation<CertificateDefinition[]>
     {
         private readonly int _start;
         private readonly int _pageSize;
 
-        public GetApiKeysOperation(int start, int pageSize)
+        public GetCertificatesOperation(int start, int pageSize)
         {
             _start = start;
             _pageSize = pageSize;
         }
 
-        public RavenCommand<NamedApiKeyDefinition[]> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<CertificateDefinition[]> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetApiKeysCommand(_start, _pageSize);
+            return new GetCertificatesCommand(_start, _pageSize);
         }
 
-        private class GetApiKeysCommand : RavenCommand<NamedApiKeyDefinition[]>
+        private class GetCertificatesCommand : RavenCommand<CertificateDefinition[]>
         {
             private readonly int _start;
             private readonly int _pageSize;
 
-            public GetApiKeysCommand(int start, int pageSize)
+            public GetCertificatesCommand(int start, int pageSize)
             {
                 _start = start;
                 _pageSize = pageSize;
@@ -37,7 +37,7 @@ namespace Raven.Client.Server.Operations.ApiKeys
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/api-keys?start={_start}&pageSize={_pageSize}";
+                url = $"{node.Url}/admin/certificates?start={_start}&pageSize={_pageSize}";
 
                 var request = new HttpRequestMessage
                 {
@@ -52,7 +52,7 @@ namespace Raven.Client.Server.Operations.ApiKeys
                 if (response == null)
                     return;
 
-                Result = JsonDeserializationClient.GetApiKeysResponse(response).Results;
+                Result = JsonDeserializationClient.GetCertificatesResponse(response).Results;
             }
         }
     }

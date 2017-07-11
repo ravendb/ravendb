@@ -1,15 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Documents.Replication;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
 using Raven.Client.Server.Commands;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Replication;
 using Sparrow.Json;
 
 namespace Raven.Server.Utils

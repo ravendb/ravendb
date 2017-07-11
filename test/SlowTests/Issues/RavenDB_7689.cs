@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Server;
-using Raven.Client.Server.Operations.ApiKeys;
+using Raven.Client.Server.Operations.Certificates;
 using Raven.Server;
 using Raven.Server.Config.Attributes;
 using Raven.Tests.Core.Utils.Entities;
@@ -15,7 +15,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_7689 : ClusterTestBase
     {
-        [Fact(Skip = "We're going to remove the api-keys")]
+        /*[Fact(Skip = "We're going to remove the api-keys")]
         public async Task InvalidateTheAccessTokenCache()
         {
             var apiKey = new ApiKeyDefinition
@@ -57,10 +57,10 @@ namespace SlowTests.Issues
                 apiKey: "super/" + apiKey.Secret))
             {
                 apiKey.ResourcesAccessMode[database] = accessMode;
-                store.Admin.Server.Send(new PutApiKeyOperation("super", apiKey));
+                store.Admin.Server.Send(new PutCertificateOperation("super", apiKey));
             }
 
             leader.Configuration.Security.AuthenticationEnabled = true;
-        }
+        }*/
     }
 }

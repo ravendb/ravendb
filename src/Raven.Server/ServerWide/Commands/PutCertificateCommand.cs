@@ -1,16 +1,16 @@
-﻿using Raven.Client.Server.Operations.ApiKeys;
+﻿using Raven.Client.Server.Operations.Certificates;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class PutApiKeyCommand : PutValueCommand<ApiKeyDefinition>
+    public class PutCertificateCommand : PutValueCommand<CertificateDefinition>
     {
-        public PutApiKeyCommand()
+        public PutCertificateCommand()
         {
             // for deserialization
         }
 
-        public PutApiKeyCommand(string name, ApiKeyDefinition value)
+        public PutCertificateCommand(string name, CertificateDefinition value)
         {
             Name = name;
             Value = value;
