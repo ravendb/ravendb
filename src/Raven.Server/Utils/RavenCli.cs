@@ -18,8 +18,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
-using Voron;
-using Voron.Impl.Compaction;
 using Size = Sparrow.Size;
 
 
@@ -100,13 +98,6 @@ namespace Raven.Server.Utils
             CreateDb,
             Logout,
             
-            Encrypt,
-            Decrypt,
-            InitKeys,
-            PutKey,
-            GetKey,
-            Trust,
- 
             UnknownCommand
         }
 
@@ -150,7 +141,6 @@ namespace Raven.Server.Utils
         private const ConsoleColor WarningColor = ConsoleColor.Yellow;
         private const ConsoleColor TextColor = ConsoleColor.White;
         private const ConsoleColor ErrorColor = ConsoleColor.Red;
-        private const ConsoleColor SuccessColor = ConsoleColor.Green;
 
         private class SingleAction
         {
@@ -515,12 +505,6 @@ namespace Raven.Server.Utils
                 new[] {"logo [no-clear]", "Clear screen and print initial logo"},
                 new[] {"gc [gen]", "Collect garbage of specified gen : 0, 1 or default 2"},
                 new[] {"lowMem", "Simulate Low-Memory event"},
-                new[] {"getKey <source-dir>", "Get server store key from source directory"},
-                new[] {"putkey <dest-dir>", "Put server store key from destination directory"},
-                new[] {"initKeys", "Print first api key and public key"},
-                new[] {"trust <key> <tag>", "Trust key + tag in this server"},
-                new[] {"encrypt", "Encrypt server store"},
-                new[] {"decrypt", "Decrypt server store"},
                 new[] {"experimental <on | off>", "Set if to allow experimental cli commands"},
                 new[] {"logout", "Logout (applicable only on piped connection)"},
                 new[] {"resetServer", "Restarts the server (shutdown and re-run)"},
