@@ -229,14 +229,14 @@ namespace Raven.Server.Documents.Queries
             return index.IndexEntries(query, _documentsContext, token);
         }
 
-        public List<DynamicQueryToIndexMatcher.Explanation> ExplainDynamicIndexSelection(IndexQueryServerSide indexQuery)
+        public List<DynamicQueryToIndexMatcher.Explanation> ExplainDynamicIndexSelection(IndexQueryServerSide query)
         {
-            if (indexQuery.IsDynamic == false)
+            if (query.IsDynamic == false)
                 throw new InvalidOperationException("Explain can only work on dynamic indexes");
 
             var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, OperationCancelToken.None);
 
-            return runner.ExplainIndexSelection(indexQuery);
+            return runner.ExplainIndexSelection(query);
         }
 
         public Task<IOperationResult> ExecuteDeleteQuery(string indexName, IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)

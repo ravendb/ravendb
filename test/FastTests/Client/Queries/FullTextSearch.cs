@@ -163,8 +163,11 @@ namespace FastTests.Client.Queries
                         .Where(x => x.Name == "User")
                         .Search(x => x.Tags, "i love cats", options: SearchOptions.And);
 
+                    var query = GetIndexQuery(ravenQueryable);
 
-                    Assert.Equal("Name:User AND Tags:(i love cats)", ravenQueryable.ToString());
+                    Assert.Equal("FROM INDEX 'test' WHERE Name = :p0 AND search(Tags, :p1)", query.Query);
+                    Assert.Equal("i love cats", query.QueryParameters["p1"]);
+                    Assert.Equal("User", query.QueryParameters["p0"]);
                 }
             }
         }
@@ -181,8 +184,11 @@ namespace FastTests.Client.Queries
                         .Search(x => x.Tags, "i love cats", options: SearchOptions.And)
                         .Where(x => x.Name == "User");
 
+                    var query = GetIndexQuery(ravenQueryable);
 
-                    Assert.Equal("Tags:(i love cats) AND (Name:User)", ravenQueryable.ToString());
+                    Assert.Equal("FROM INDEX 'test' WHERE search(Tags, :p0) AND (Name = :p1)", query.Query);
+                    Assert.Equal("i love cats", query.QueryParameters["p0"]);
+                    Assert.Equal("User", query.QueryParameters["p1"]);
                 }
             }
         }
@@ -280,8 +286,11 @@ namespace FastTests.Client.Queries
                         .Search(x => x.Tags, "i love cats", options: SearchOptions.Not)
                         .Where(x => x.Name == "User");
 
+                    var query = GetIndexQuery(ravenQueryable);
 
-                    Assert.Equal("( -Tags:(i love cats) AND Tags:(*)) Name:User", ravenQueryable.ToString());
+                    Assert.Equal("FROM INDEX 'test' WHERE (exists(Tags) AND NOT search(Tags, :p0)) OR Name = :p1", query.Query);
+                    Assert.Equal("i love cats", query.QueryParameters["p0"]);
+                    Assert.Equal("User", query.QueryParameters["p1"]);
                 }
             }
         }
@@ -372,20 +381,24 @@ namespace FastTests.Client.Queries
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new IndexDefinition
                 {
                     Maps = { "from doc in docs.Images select new { doc.Tags, doc.Users }" },
                     Name = "test"
-                }}));
+                }));
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Query<Image>("test")
+                    var ravenQueryable = session.Query<Image>("test")
                         .Customize(x => x.WaitForNonStaleResults())
                         .Search(x => x.Tags, "i love cats")
-                        .Search(x => x.Users, "oren")
-                        .ToString();
-                    Assert.Equal("( Tags:(i love cats) Users:(oren))", query.Trim());
+                        .Search(x => x.Users, "oren");
+
+                    var query = GetIndexQuery(ravenQueryable);
+
+                    Assert.Equal("FROM INDEX 'test' WHERE (search(Tags, :p0) OR search(Users, :p1))", query.Query);
+                    Assert.Equal("i love cats", query.QueryParameters["p0"]);
+                    Assert.Equal("oren", query.QueryParameters["p1"]);
                 }
             }
         }
