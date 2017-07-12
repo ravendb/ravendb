@@ -923,7 +923,8 @@ namespace Raven.Server.Documents.Replication
                                                         context, keySlice, item.Id, null,
                                                         item.LastModifiedTicks,
                                                         _changeVector,
-                                                        context.GetLazyString(item.Collection));
+                                                        new CollectionName(item.Collection),
+                                                        NonPersistentDocumentFlags.FromReplication);
                                                 }
                                             }
                                             break;

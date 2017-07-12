@@ -897,10 +897,9 @@ namespace Raven.Server.Documents
             long? expectedEtag,
             long? lastModifiedTicks = null,
             ChangeVectorEntry[] changeVector = null,
-            LazyStringValue collection = null)
+            CollectionName collectionName = null, 
+            NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
         {
-            var collectionName = collection != null ? new CollectionName(collection) : null;
-
             if (ConflictsStorage.ConflictsCount != 0)
             {
                 var result = ConflictsStorage.DeleteConflicts(context, lowerId, expectedEtag, changeVector);
@@ -988,10 +987,19 @@ namespace Raven.Server.Documents
                 }
 
                 if (collectionName.IsSystem == false &&
-                    _documentDatabase.DocumentsStorage.RevisionsStorage.Configuration != null)
+                    (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                 {
-                    _documentDatabase.DocumentsStorage.RevisionsStorage.Delete(context, id, lowerId, collectionName, changeVector, modifiedTicks, doc.NonPersistentFlags);
+                    var revisionsStorage = _documentDatabase.DocumentsStorage.RevisionsStorage;
+                    if (revisionsStorage.Configuration != null &&
+                        (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
+                    {
+                        if (revisionsStorage.GetRevisionsConfiguration(collectionName.Name).Active)
+                        {
+                            revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector, modifiedTicks, doc.NonPersistentFlags);
+                        }
+                    }
                 }
+
                 table.Delete(doc.StorageId);
 
                 if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
