@@ -25,8 +25,8 @@ namespace FastTests.Server.Documents.Queries.Parser
         }
 
         [Theory]
-        [InlineData(" :name ", 5)]
-        [InlineData(":age ", 4)]
+        [InlineData(" :name ", 4)]
+        [InlineData(":age ", 3)]
         public void CanParseParameter(string q, int len)
         {
             var parser = new QueryParser();

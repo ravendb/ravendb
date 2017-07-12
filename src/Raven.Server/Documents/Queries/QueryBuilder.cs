@@ -23,11 +23,11 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException("TODO arek - remove me");
         }
 
-        public static Lucene.Net.Search.Query BuildQuery(Parser.Query query, Analyzer analyzer)
+        public static Lucene.Net.Search.Query BuildQuery(Parser.Query query, WhereFields whereFields, Analyzer analyzer)
         {
             using (CultureHelper.EnsureInvariantCulture())
             {
-                var node = ToLuceneNode(query.QueryText, query.Where);
+                var node = ToLuceneNode(query.QueryText, query.Where, whereFields);
 
                 var luceneQuery = node.ToQuery(new LuceneASTQueryConfiguration
                 {
@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private static LuceneASTNodeBase ToLuceneNode(string query, QueryExpression expression)
+        private static LuceneASTNodeBase ToLuceneNode(string query, QueryExpression expression, WhereFields whereFields)
         {
             if (expression == null)
                 return new AllDocumentsLuceneASTNode();
@@ -69,9 +69,9 @@ namespace Raven.Server.Documents.Queries
                     var fieldName = IndexField.ReplaceInvalidCharactersInFieldName(QueryExpression.Extract(query, expression.Field));
                     FieldName.FieldType fieldType = FieldName.FieldType.String;
 
-                    var valueToken = expression.Value ?? expression.First;
+                    var (value, valueType) = whereFields[fieldName];
 
-                    switch (valueToken.Type)
+                    switch (valueType)
                     {
                         case ValueTokenType.String:
                             fieldType = FieldName.FieldType.String;
@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Queries
                         return new FieldLuceneASTNode()
                         {
                             FieldName = new FieldName(fieldName, fieldType),
-                            Node = CreateTermNode(query, valueToken)
+                            Node = CreateTermNode(value, valueType)
                         };
                     }
 
@@ -108,23 +108,23 @@ namespace Raven.Server.Documents.Queries
                         case OperatorType.Equal:
                             rangeNode.InclusiveMin = true;
                             rangeNode.InclusiveMax = true;
-                            var node = CreateTermNode(query, valueToken);
+                            var node = CreateTermNode(value, valueType);
                             rangeNode.RangeMin = node;
                             rangeNode.RangeMax = node;
                             break;
                         case OperatorType.LessThen:
-                            rangeNode.RangeMax = CreateTermNode(query, valueToken);
+                            rangeNode.RangeMax = CreateTermNode(value, valueType);
                             break;
                         case OperatorType.GreaterThen:
-                            rangeNode.RangeMin = CreateTermNode(query, valueToken);
+                            rangeNode.RangeMin = CreateTermNode(value, valueType);
                             break;
                         case OperatorType.LessThenEqual:
                             rangeNode.InclusiveMax = true;
-                            rangeNode.RangeMax = CreateTermNode(query, valueToken);
+                            rangeNode.RangeMax = CreateTermNode(value, valueType);
                             break;
                         case OperatorType.GreaterThenEqual:
                             rangeNode.InclusiveMin = true;
-                            rangeNode.RangeMin = CreateTermNode(query, valueToken);
+                            rangeNode.RangeMin = CreateTermNode(value, valueType);
                             break;
                         default:
                             break;
@@ -158,10 +158,10 @@ namespace Raven.Server.Documents.Queries
                 //    writer.WriteEndArray();
                 //break;
                 case OperatorType.And:
-                    return new OperatorLuceneASTNode(ToLuceneNode(query, expression.Left), ToLuceneNode(query, expression.Right), OperatorLuceneASTNode.Operator.AND,
+                    return new OperatorLuceneASTNode(ToLuceneNode(query, expression.Left, whereFields), ToLuceneNode(query, expression.Right, whereFields), OperatorLuceneASTNode.Operator.AND,
                         true);
                 case OperatorType.Or:
-                    return new OperatorLuceneASTNode(ToLuceneNode(query, expression.Left), ToLuceneNode(query, expression.Right), OperatorLuceneASTNode.Operator.OR,
+                    return new OperatorLuceneASTNode(ToLuceneNode(query, expression.Left, whereFields), ToLuceneNode(query, expression.Right, whereFields), OperatorLuceneASTNode.Operator.OR,
                         true);
                 case OperatorType.AndNot:
                 case OperatorType.OrNot:
@@ -198,9 +198,9 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private static TermLuceneASTNode CreateTermNode(string query, ValueToken value)
+        private static TermLuceneASTNode CreateTermNode(string value, ValueTokenType valueType)
         {
-            switch (value.Type)
+            switch (valueType)
             {
                 case ValueTokenType.Null:
                     return new TermLuceneASTNode()
@@ -209,32 +209,30 @@ namespace Raven.Server.Documents.Queries
                     };
                 case ValueTokenType.False:
                 case ValueTokenType.True:
-                    throw new NotImplementedException("expression.Value.Type:" + value.Type);
+                    throw new NotImplementedException("expression.Value.Type:" + valueType);
                 default:
-                    TermLuceneASTNode.TermType type = TermLuceneASTNode.TermType.Quoted;
-                    string term;
-
-                    switch (value.Type)
+                    TermLuceneASTNode.TermType type;
+                   
+                    switch (valueType)
                     {
                         case ValueTokenType.String:
-                            term = QueryExpression.Extract(query, value.TokenStart + 1, value.TokenLength - 2, value.EscapeChars);
+                            type = TermLuceneASTNode.TermType.Quoted;
                             break;
                         case ValueTokenType.Long:
-                            term = QueryExpression.Extract(query, value);
                             type = TermLuceneASTNode.TermType.Long;
                             break;
                         case ValueTokenType.Double:
-                            term = QueryExpression.Extract(query, value);
                             type = TermLuceneASTNode.TermType.Double;
                             break;
                         default:
-                            term = QueryExpression.Extract(query, value);
-                            break;
+                            throw new NotImplementedException("Unhandled value type: " + valueType);
+                            //type = TermLuceneASTNode.TermType.Quoted;
+                            //break;
                     }
 
                     return new TermLuceneASTNode()
                     {
-                        Term = term,
+                        Term = value,
                         Type = type,
                     };
             }

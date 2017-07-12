@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var docsToGet = pageSize;
             var position = query.Start;
 
-            var luceneQuery = GetLuceneQuery(query.Parsed, _analyzer);
+            var luceneQuery = GetLuceneQuery(query.Parsed, query.Fields.Where, _analyzer);
             var sort = GetSort(query);
             var returnedResults = 0;
 
@@ -312,12 +312,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         
         private Sort GetSort(IndexQueryServerSide query)
         {
-            List<SortField> sort = null;
-            foreach (var field in query.GetOrderByFields())
+            var orderByFields = query.Fields.OrderBy;
+
+            if (orderByFields == null)
+                return null;
+
+            var sort = new List<SortField>();
+
+            foreach (var field in orderByFields)
             {
-                if (sort == null)
-                    sort = new List<SortField>();
-                
                 var sortOptions = SortOptions.String;
 
                 if (field.Name == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
@@ -359,7 +362,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 sort.Add(new SortField(IndexField.ReplaceInvalidCharactersInFieldName(field.Name), (int)sortOptions, field.Ascending == false));
             }
 
-            return sort == null ? null : new Sort(sort.ToArray());
+            return new Sort(sort.ToArray());
         }
 
         public HashSet<string> Terms(string field, string fromValue, int pageSize, CancellationToken token)

@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             throw new NotSupportedException("TODO arek - remove");
         }
 
-        protected Query GetLuceneQuery(Queries.Parser.Query q, Analyzer analyzer)
+        protected Query GetLuceneQuery(Queries.Parser.Query q, WhereFields whereFields, Analyzer analyzer)
         {
             Query documentQuery;
 
@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     //    return parent.CreateAnalyzer(newAnalyzer, toDispose, true);
                     //});
 
-                    documentQuery = QueryBuilder.BuildQuery(q, analyzer);
+                    documentQuery = QueryBuilder.BuildQuery(q, whereFields, analyzer);
                 }
                 finally
                 {

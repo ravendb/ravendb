@@ -5,12 +5,10 @@ using System.Globalization;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Queries;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
-using Raven.Server.Documents.Queries.Parse;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Sorting;
 
@@ -112,76 +110,86 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 ForCollection = query.GetCollection()
             };
 
-            var fields = new Dictionary<string, (DynamicQueryMappingItem DynamicItem, FieldValuePair QueryItem)>();
+            var fields = new Dictionary<string, DynamicQueryMappingItem>();
             var sorting = new Dictionary<string, DynamicSortInfo>();
-            
-            foreach (var field in query.GetWhereFields())
+
+            if (query.Fields.Where != null)
             {
-                if (field.Name == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
-                    continue;
-                
-                fields[field.Name] = (new DynamicQueryMappingItem(field.Name, FieldMapReduceOperation.None), field);
-
-                switch (field.ValueType)
+                foreach (var field in query.Fields.Where.Fields)
                 {
-                    case ValueTokenType.Double:
-                    case ValueTokenType.Long:
+                    var fieldName = field.Key;
+
+                    if (fieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+                        continue;
+
+                    fields[fieldName] = new DynamicQueryMappingItem(fieldName, FieldMapReduceOperation.None);
+
+                    switch (field.Value.ValueType)
                     {
-                        if (field.Name == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
-                            continue;
+                        case ValueTokenType.Double:
+                        case ValueTokenType.Long:
+                            {
+                                if (fieldName == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
+                                    continue;
 
-                        if (InvariantCompare.IsPrefix(field.Name, Constants.Documents.Indexing.Fields.RandomFieldName, CompareOptions.None))
-                            continue;
+                                if (InvariantCompare.IsPrefix(fieldName, Constants.Documents.Indexing.Fields.RandomFieldName, CompareOptions.None))
+                                    continue;
 
-                        sorting[field.Name] = (new DynamicSortInfo()
+                                sorting[fieldName] = (new DynamicSortInfo()
+                                {
+                                    Name = fieldName,
+                                    FieldType = SortOptions.Numeric
+                                });
+                                break;
+                            }
+                    }
+                }
+            }
+
+            if (query.Fields.OrderBy != null)
+            {
+                foreach (var field in query.Fields.OrderBy)
+                {
+                    var fieldName = field.Name;
+
+                    if (fieldName == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
+                        continue;
+
+                    if (fieldName.StartsWith(Constants.Documents.Indexing.Fields.RandomFieldName) ||
+                        fieldName.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
+                        continue;
+
+                    if (InvariantCompare.IsPrefix(fieldName, Constants.Documents.Indexing.Fields.AlphaNumericFieldName, CompareOptions.None))
+                        fieldName = SortFieldHelper.ExtractName(fieldName);
+
+                    if (sorting.TryGetValue(fieldName, out var _) == false)
+                    {
+                        SortOptions sortType = SortOptions.String;
+
+                        switch (field.OrderingType)
                         {
-                            Name = field.Name,
-                            FieldType = SortOptions.Numeric
-                        });
-                        break;
+                            case OrderByFieldType.Implicit:
+                            case OrderByFieldType.String:
+                                sortType = SortOptions.String;
+                                break;
+                            case OrderByFieldType.Long:
+                            case OrderByFieldType.Double:
+                                sortType = SortOptions.Numeric;
+                                break;
+                        }
+
+                        sorting[field.Name] = new DynamicSortInfo()
+                        {
+                            FieldType = sortType,
+                            Name = fieldName
+                        };
                     }
+
+                    fields[field.Name] = new DynamicQueryMappingItem(fieldName, FieldMapReduceOperation.None);
                 }
             }
 
-            foreach (var field in query.GetOrderByFields())
-            {
-                var fieldName = field.Name;
-                    
-                if (fieldName == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
-                    continue;
-
-                if (fieldName.StartsWith(Constants.Documents.Indexing.Fields.RandomFieldName) ||
-                    fieldName.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
-                    continue;
-
-                if (InvariantCompare.IsPrefix(fieldName, Constants.Documents.Indexing.Fields.AlphaNumericFieldName, CompareOptions.None))
-                    fieldName = SortFieldHelper.ExtractName(fieldName);
-                
-                if (sorting.TryGetValue(fieldName, out var _) == false)
-                {
-                    SortOptions sortType = SortOptions.String;
-
-                    switch (field.OrderingType)
-                    {
-                        case OrderByFieldType.Implicit:
-                        case OrderByFieldType.String:
-                            sortType = SortOptions.String;
-                            break;
-                        case OrderByFieldType.Long:
-                        case OrderByFieldType.Double:
-                            sortType = SortOptions.Numeric;
-                            break;
-                    }
-
-                    sorting[field.Name] = new DynamicSortInfo()
-                    {
-                        FieldType = sortType,
-                        Name = fieldName
-                    };
-                }
-
-                fields[field.Name] = (new DynamicQueryMappingItem(fieldName, FieldMapReduceOperation.None), null);
-            }
+            
             
             // dynamic map-reduce query
             
@@ -196,7 +204,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             // TODO arek - get rid of linq
             result.MapFields = fields.Values
-                .Select(x => x.DynamicItem)
                 .OrderByDescending(x => x.Name.Length)
                 .ToArray();
 

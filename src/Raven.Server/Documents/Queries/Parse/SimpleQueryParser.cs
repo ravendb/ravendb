@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using Lucene.Net.Analysis;
 using Lucene.Net.Search;
-using Lucene.Net.Search.Function;
-using Lucene.Net.Search.Spans;
-using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Queries.LuceneIntegration;
 
@@ -20,7 +15,7 @@ namespace Raven.Server.Documents.Queries.Parse
             if (string.IsNullOrWhiteSpace(query.Query))
                 yield break;
 
-            var q = QueryBuilder.BuildQuery(query.Parsed, QueryAnalyzer);
+            var q = QueryBuilder.BuildQuery(query.Parsed, query.Fields.Where, QueryAnalyzer);
             var termQuery = q as TermQuery;
             if (termQuery != null)
             {

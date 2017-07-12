@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Primitives;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
@@ -49,24 +47,6 @@ namespace Raven.Server.Documents.Queries
         {
             if (json.TryGet(nameof(Query), out string query) == false || string.IsNullOrEmpty(query))
                 throw new InvalidOperationException($"Index query does not contain '{nameof(Query)}' field.");
-
-            if (json.TryGet(nameof(QueryParameters), out BlittableJsonReaderObject temp) && temp != null)
-            {
-                // temporary till QP are working
-
-                var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-                foreach (var propertyIndex in temp.GetPropertiesByInsertionOrder())
-                {
-                    temp.GetPropertyByIndex(propertyIndex, ref propertyDetails);
-
-                    var parameterName = $":{propertyDetails.Name}";
-                    var parameterValue = propertyDetails.Value;
-                    if (propertyDetails.Token == BlittableJsonToken.String)
-                        parameterValue = $"'{parameterValue}'";
-
-                    query = query.Replace(parameterName, parameterValue.ToString());
-                }
-            }
 
             var result = new IndexQueryServerSide(query);
 
@@ -220,26 +200,105 @@ namespace Raven.Server.Documents.Queries
             return _indexName;
         }
 
-        public IEnumerable<FieldValuePair> GetWhereFields()
-        {
-            if (Parsed.Where == null)
-                yield break;
+        private QueryFields _fields;
 
-            foreach (var whereField in GetFieldValueTokens(Parsed.Where))
+        public QueryFields Fields
+        {
+            get
             {
-                yield return (new FieldValuePair(QueryExpression.Extract(Parsed.QueryText, whereField.Field), QueryExpression.Extract(Parsed.QueryText, whereField.Value), whereField.Value.Type));
+                if (_fields != null)
+                    return _fields;
+
+                return _fields = RetrieveFields();
             }
         }
 
-        public IEnumerable<(string Name, OrderByFieldType OrderingType, bool Ascending)> GetOrderByFields()
+        private QueryFields RetrieveFields()
         {
-            if (Parsed.OrderBy == null)
-                yield break;
+            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
 
-            foreach (var fieldInfo in Parsed.OrderBy)
+            var result = new QueryFields();
+
+            if (Parsed.Where != null)
             {
-                yield return (QueryExpression.Extract(Parsed.QueryText, fieldInfo.Field), fieldInfo.FieldType, fieldInfo.Ascending);
+                result.Where = new WhereFields();
+
+                foreach (var whereField in GetFieldValueTokens(Parsed.Where))
+                {
+                    var fieldName = QueryExpression.Extract(Parsed.QueryText, whereField.Field);
+
+                    if (whereField.Value.Type == ValueTokenType.Parameter)
+                    {
+                        var parameterName = QueryExpression.Extract(Parsed.QueryText, whereField.Value);
+
+                        var index = QueryParameters.GetPropertyIndex(parameterName);
+
+                        QueryParameters.GetPropertyByIndex(index, ref propertyDetails);
+
+                        string value = null;
+                        ValueTokenType type;
+
+                        switch (propertyDetails.Token)
+                        {
+                            case BlittableJsonToken.Integer:
+                                value = propertyDetails.Value.ToString();
+                                type = ValueTokenType.Long;
+                                break;
+                            case BlittableJsonToken.LazyNumber:
+                                value = propertyDetails.Value.ToString();
+                                type = ValueTokenType.Double;
+                                break;
+                            case BlittableJsonToken.String:
+                            case BlittableJsonToken.CompressedString:
+                                value = propertyDetails.Value.ToString();
+                                type = ValueTokenType.String;
+                                break;
+                            case BlittableJsonToken.Boolean:
+                                var booleanValue = (bool)propertyDetails.Value;
+
+                                if (booleanValue)
+                                    type = ValueTokenType.True;
+                                else
+                                    type = ValueTokenType.False;
+                                break;
+                            case BlittableJsonToken.Null:
+                                type = ValueTokenType.Null;
+                                break;
+                            default:
+                                throw new ArgumentException($"Unhandled token: {propertyDetails.Token}");
+                        }
+
+                        result.Where.Add(fieldName, value, type);
+                    }
+                    else
+                    {
+                        string value;
+                        switch (whereField.Value.Type)
+                        {
+                            case ValueTokenType.String:
+                                value = QueryExpression.Extract(Parsed.QueryText, whereField.Value.TokenStart + 1, whereField.Value.TokenLength - 2, whereField.Value.EscapeChars);
+                                break;
+                            default:
+                                value = QueryExpression.Extract(Parsed.QueryText, whereField.Value);
+                                break;
+                        }
+
+                        result.Where.Add(fieldName, value, whereField.Value.Type);
+                    }
+                }
             }
+
+            if (Parsed.OrderBy != null)
+            {
+                result.OrderBy = new List<(string Name, OrderByFieldType OrderingType, bool Ascending)>();
+
+                foreach (var fieldInfo in Parsed.OrderBy)
+                {
+                    result.OrderBy.Add((QueryExpression.Extract(Parsed.QueryText, fieldInfo.Field), fieldInfo.FieldType, fieldInfo.Ascending));
+                }
+            }
+
+            return result;
         }
 
         private IEnumerable<(FieldToken Field, ValueToken Value)> GetFieldValueTokens(QueryExpression expression)
@@ -259,35 +318,6 @@ namespace Raven.Server.Documents.Queries
             {
                 yield return field;
             }
-        }
-
-        private static DynamicMapReduceField[] ParseDynamicMapReduceFields(StringValues item)
-        {
-            var mapReduceFields = new DynamicMapReduceField[item.Count];
-
-            for (int i = 0; i < item.Count; i++)
-            {
-                var mapReduceField = item[i].Split('-');
-
-                if (mapReduceField.Length != 3)
-                    throw new InvalidOperationException($"Invalid format of dynamic map-reduce field: {item[i]}");
-
-                if (Enum.TryParse(mapReduceField[1], out FieldMapReduceOperation operation) == false)
-                    throw new InvalidOperationException($"Could not parse map-reduce field operation: {mapReduceField[2]}");
-
-                var fieldName = mapReduceField[0];
-
-                if (operation == FieldMapReduceOperation.Count && string.Equals(fieldName, "Count", StringComparison.OrdinalIgnoreCase) == false)
-                    throw new InvalidOperationException($"The only valid field name for 'Count' operation is 'Count' but was '{fieldName}'.");
-
-                mapReduceFields[i] = new DynamicMapReduceField
-                {
-                    Name = fieldName,
-                    OperationType = operation,
-                    IsGroupBy = bool.Parse(mapReduceField[2]),
-                };
-            }
-            return mapReduceFields;
         }
     }
 }

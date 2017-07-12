@@ -245,13 +245,14 @@ namespace Raven.Server.Documents.Queries.Parser
                 return false;
             }
 
+            Scanner.TokenStart = Scanner.Position;
+
             tokenStart = Scanner.TokenStart;
-            tokenLength = 1;
 
             if (Scanner.Identifier(false) == false)
                 ThrowParseException("Expected parameter name");
 
-            tokenLength += Scanner.TokenLength;
+            tokenLength = Scanner.TokenLength;
             return true;
         }
 
