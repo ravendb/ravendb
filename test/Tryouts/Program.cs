@@ -12,9 +12,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {   
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Client.Attachments.AttachmentsReplication())   
+                using (var test = new SlowTests.Server.Documents.Indexing.MapReduce.RavenDB_4323_Replication())   
                 {
-                    test.AttachmentsRevisionsReplication().Wait();
+                    test.ReduceOutputShouldNotBeReplicated().Wait();
                 }
             }
         }
