@@ -12,9 +12,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {   
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Issues.RavenDB_6886())   
+                using (var test = new SlowTests.Client.Attachments.AttachmentsReplication())   
                 {
-                    test.Cluster_identity_for_single_document_in_parallel_on_different_nodes_should_work().Wait();
+                    test.AttachmentsRevisionsReplication().Wait();
                 }
             }
         }
