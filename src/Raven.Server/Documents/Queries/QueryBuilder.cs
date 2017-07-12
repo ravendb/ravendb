@@ -66,10 +66,12 @@ namespace Raven.Server.Documents.Queries
                 case OperatorType.LessThen:
                 case OperatorType.LessThenEqual:
                 case OperatorType.GreaterThenEqual:
-                    var fieldName = IndexField.ReplaceInvalidCharactersInFieldName(QueryExpression.Extract(query, expression.Field));
-                    FieldName.FieldType fieldType = FieldName.FieldType.String;
-
+                    var fieldName = QueryExpression.Extract(query, expression.Field);
                     var (value, valueType) = whereFields[fieldName];
+
+                    var luceneFieldName = IndexField.ReplaceInvalidCharactersInFieldName(fieldName);
+
+                    FieldName.FieldType fieldType = FieldName.FieldType.String;
 
                     switch (valueType)
                     {
@@ -77,11 +79,11 @@ namespace Raven.Server.Documents.Queries
                             fieldType = FieldName.FieldType.String;
                             break;
                         case ValueTokenType.Double:
-                            fieldName += Client.Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble;
+                            luceneFieldName += Client.Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble;
                             fieldType = FieldName.FieldType.Double;
                             break;
                         case ValueTokenType.Long:
-                            fieldName += Client.Constants.Documents.Indexing.Fields.RangeFieldSuffixLong;
+                            luceneFieldName += Client.Constants.Documents.Indexing.Fields.RangeFieldSuffixLong;
                             fieldType = FieldName.FieldType.Long;
                             break;
                     }
@@ -90,7 +92,7 @@ namespace Raven.Server.Documents.Queries
                     {
                         return new FieldLuceneASTNode()
                         {
-                            FieldName = new FieldName(fieldName, fieldType),
+                            FieldName = new FieldName(luceneFieldName, fieldType),
                             Node = CreateTermNode(value, valueType)
                         };
                     }
@@ -132,7 +134,7 @@ namespace Raven.Server.Documents.Queries
 
                     return new FieldLuceneASTNode()
                     {
-                        FieldName = new FieldName(fieldName, fieldType),
+                        FieldName = new FieldName(luceneFieldName, fieldType),
                         Node = rangeNode
                     };
                 //case OperatorType.Between:
