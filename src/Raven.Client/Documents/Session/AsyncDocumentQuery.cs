@@ -28,8 +28,8 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentQuery{T}"/> class.
         /// </summary>
-        public AsyncDocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string[] fieldsToFetch, string[] projectionFields, bool isMapReduce)
-            : base(session, indexName, fieldsToFetch, projectionFields, isMapReduce)
+        public AsyncDocumentQuery(InMemoryDocumentSessionOperations session, string indexName, FieldsToFetchToken fieldsToFetchToken, bool isMapReduce)
+            : base(session, indexName, fieldsToFetchToken, isMapReduce)
         {
         }
 
@@ -516,7 +516,7 @@ namespace Raven.Client.Documents.Session
             {
                 OrderBy(GetMemberQueryPathForOrderBy(item), OrderingUtil.GetOrderingOfType(item.Type));
             }
-            
+
             return this;
         }
 
@@ -544,7 +544,7 @@ namespace Raven.Client.Documents.Session
             {
                 OrderByDescending(GetMemberQueryPathForOrderBy(item), OrderingUtil.GetOrderingOfType(item.Type));
             }
-            
+
             return this;
         }
 
@@ -1093,8 +1093,7 @@ namespace Raven.Client.Documents.Session
             var query = new AsyncDocumentQuery<TResult>(
                 TheSession,
                 IndexName,
-                fieldsToFetch,
-                projectionFields,
+                null,
                 IsMapReduce)
             {
                 PageSize = PageSize,
@@ -1134,8 +1133,10 @@ namespace Raven.Client.Documents.Session
                 ShouldExplainScores = ShouldExplainScores
             };
 
-            var before = true;
-            var fieldsToFetchToken = query.SelectTokens.First;
+            FieldsToFetchToken fieldsToFetchToken = null;
+            if (fieldsToFetch != null && fieldsToFetch.Length > 0)
+                fieldsToFetchToken = FieldsToFetchToken.Create(fieldsToFetch, projectionFields);
+
             foreach (var token in SelectTokens)
             {
                 if (fieldsToFetchToken == null)
@@ -1146,14 +1147,11 @@ namespace Raven.Client.Documents.Session
 
                 if (token is FieldsToFetchToken)
                 {
-                    before = false;
+                    query.SelectTokens.AddLast(fieldsToFetchToken);
                     continue;
                 }
 
-                if (before)
-                    query.SelectTokens.AddBefore(fieldsToFetchToken, token.Clone());
-                else
-                    query.SelectTokens.AddLast(token.Clone());
+                query.SelectTokens.AddLast(fieldsToFetchToken);
             }
 
             query.AfterQueryExecuted(AfterQueryExecutedCallback);

@@ -1,6 +1,7 @@
 using System;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session.Tokens;
 
 namespace Raven.Client.Documents.Session
 {
@@ -64,7 +65,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>(string index, bool isMapReduce)
         {
-            return new AsyncDocumentQuery<T>(this, index, new string[0], new string[0], isMapReduce);
+            return new AsyncDocumentQuery<T>(this, index, FieldsToFetchToken.Empty, isMapReduce);
         }
 
         /// <summary>
@@ -74,7 +75,7 @@ namespace Raven.Client.Documents.Session
         {
             var indexName = CreateDynamicIndexName<T>();
 
-            return new AsyncDocumentQuery<T>(this, indexName, new string[0], new string[0], false);
+            return new AsyncDocumentQuery<T>(this, indexName, FieldsToFetchToken.Empty, false);
         }
 
         public RavenQueryInspector<S> CreateRavenQueryInspector<S>()

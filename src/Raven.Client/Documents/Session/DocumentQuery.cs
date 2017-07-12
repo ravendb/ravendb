@@ -26,8 +26,8 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
         /// </summary>
-        public DocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string[] fieldsToFetch, string[] projectionFields, bool isMapReduce)
-            : base(session, indexName, fieldsToFetch, projectionFields, isMapReduce)
+        public DocumentQuery(InMemoryDocumentSessionOperations session, string indexName, FieldsToFetchToken fieldsToFetchToken, bool isMapReduce)
+            : base(session, indexName, fieldsToFetchToken, isMapReduce)
         {
         }
 
@@ -1120,8 +1120,7 @@ namespace Raven.Client.Documents.Session
             var query = new DocumentQuery<TResult>(
                 TheSession,
                 IndexName,
-                fieldsToFetch,
-                projectionFields,
+                null,
                 IsMapReduce)
             {
                 PageSize = PageSize,
@@ -1160,26 +1159,25 @@ namespace Raven.Client.Documents.Session
                 ShouldExplainScores = ShouldExplainScores
             };
 
-            var before = true;
-            var fieldsToFetchToken = query.SelectTokens.First;
+            FieldsToFetchToken fieldsToFetchToken = null;
+            if (fieldsToFetch != null && fieldsToFetch.Length > 0)
+                fieldsToFetchToken = FieldsToFetchToken.Create(fieldsToFetch, projectionFields);
+
             foreach (var token in SelectTokens)
             {
-                if (token is FieldsToFetchToken)
-                {
-                    before = false;
-                    continue;
-                }
-
                 if (fieldsToFetchToken == null)
                 {
                     query.SelectTokens.AddLast(token.Clone());
                     continue;
                 }
 
-                if (before)
-                    query.SelectTokens.AddBefore(fieldsToFetchToken, token.Clone());
-                else
-                    query.SelectTokens.AddLast(token.Clone());
+                if (token is FieldsToFetchToken)
+                {
+                    query.SelectTokens.AddLast(fieldsToFetchToken);
+                    continue;
+                }
+
+                query.SelectTokens.AddLast(fieldsToFetchToken);
             }
 
             query.AfterQueryExecuted(AfterQueryExecutedCallback);

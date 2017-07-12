@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session.Tokens;
 
 namespace Raven.Client.Documents.Session
 {

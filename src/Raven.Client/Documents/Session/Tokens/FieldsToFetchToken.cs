@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Text;
 
 namespace Raven.Client.Documents.Session.Tokens
@@ -20,6 +19,8 @@ namespace Raven.Client.Documents.Session.Tokens
             FieldsToFetch = fieldsToFetch;
             Projections = projections;
         }
+
+        public static FieldsToFetchToken Empty = new FieldsToFetchToken(new string[0], new string[0]);
 
         public static FieldsToFetchToken Create(string[] fieldsToFetch, string[] projections)
         {
@@ -47,7 +48,7 @@ namespace Raven.Client.Documents.Session.Tokens
 
         public override QueryToken Clone()
         {
-            return new FieldsToFetchToken(FieldsToFetch.ToArray(), Projections.ToArray());
+            throw new NotSupportedException();
         }
     }
 }

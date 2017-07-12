@@ -32,7 +32,6 @@ namespace Raven.Client.Documents.Session
     public abstract class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IAbstractDocumentQuery<T>
                                                             where TSelf : AbstractDocumentQuery<T, TSelf>
     {
-
         private static readonly Regex EscapePostfixWildcard = new Regex(@"\\\*(\s|$)", RegexOptions.Compiled);
 
         protected QueryOperator DefaultOperator;
@@ -219,17 +218,16 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         protected AbstractDocumentQuery(InMemoryDocumentSessionOperations session,
                                      string indexName,
-                                     string[] fieldsToFetch,
-                                     string[] projectionFields,
+                                     FieldsToFetchToken fieldsToFetchToken,
                                      bool isMapReduce)
         {
-            ProjectionFields = projectionFields;
-            FieldsToFetch = fieldsToFetch;
+            ProjectionFields = fieldsToFetchToken?.Projections;
+            FieldsToFetch = fieldsToFetchToken?.FieldsToFetch;
             IsMapReduce = isMapReduce;
             IndexName = indexName;
 
-            if (fieldsToFetch != null && fieldsToFetch.Length > 0)
-                SelectTokens.AddLast(FieldsToFetchToken.Create(fieldsToFetch, projectionFields));
+            if (fieldsToFetchToken != null)
+                SelectTokens.AddLast(fieldsToFetchToken);
 
             FromToken = FromToken.Create(indexName);
 

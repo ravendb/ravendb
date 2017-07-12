@@ -728,7 +728,7 @@ namespace SlowTests.Tests.Linq
             {
                 using (var session = store.OpenSession())
                 {
-                    var query = ((IDocumentQuery<object>) new DocumentQuery<object>(null, null, null, null, false)).Not
+                    var query = ((IDocumentQuery<object>) new DocumentQuery<object>(null, null, null, false)).Not
                         .OpenSubclause()
                         .WhereEquals("IsPublished", true)
                         .AndAlso()

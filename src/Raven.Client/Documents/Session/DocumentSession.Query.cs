@@ -7,6 +7,7 @@
 using System;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session.Tokens;
 
 namespace Raven.Client.Documents.Session
 {
@@ -36,7 +37,7 @@ namespace Raven.Client.Documents.Session
         /// <returns></returns>
         public IDocumentQuery<T> DocumentQuery<T>(string indexName, bool isMapReduce = false)
         {
-            return new DocumentQuery<T>(this, indexName, null, null, isMapReduce);
+            return new DocumentQuery<T>(this, indexName, FieldsToFetchToken.Empty, isMapReduce);
         }
 
         /// <summary>
