@@ -18,10 +18,10 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.Authentication
 {
-    public class AdminCertificatesHandler : AdminRequestHandler
+    public class AdminCertificatesHandler : RequestHandler
     {
 
-        [RavenAction("/admin/certificates", "POST", "/admin/certificates")]
+        [RavenAction("/admin/certificates", "POST", "/admin/certificates", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public async Task Generate()
         {
             // one of the first admin action is to create a certificate, so let
@@ -63,7 +63,7 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        [RavenAction("/admin/certificates", "PUT", "/admin/certificates?name={certificate-name:string}")]
+        [RavenAction("/admin/certificates", "PUT", "/admin/certificates?name={certificate-name:string}", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public async Task Put()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -91,27 +91,24 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        [RavenAction("/admin/certificates", "DELETE", "/admin/certificates?thumbprint={certificate-thumbprint:string}")]
+        [RavenAction("/admin/certificates", "DELETE", "/admin/certificates?thumbprint={certificate-thumbprint:string}", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public async Task Delete()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("thumbprint");
+            var thumbprint = GetQueryStringValueAndAssertIfSingleAndNotEmpty("thumbprint");
 
-             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
-
-                // delete by thumbprint? then we need to send a thumbpring or if we choose to send a name, then need to load by name
-                var res = await ServerStore.DeleteValueInClusterAsync(Constants.Certificates.Prefix + name);
+                var res = await ServerStore.DeleteValueInClusterAsync(Constants.Certificates.Prefix + thumbprint);
                 await ServerStore.Cluster.WaitForIndexNotification(res.Etag);
-             
+
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             }
         }
-
     
-        [RavenAction("/admin/certificates", "GET", "/admin/certificates")]
+        [RavenAction("/admin/certificates", "GET", "/admin/certificates", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public Task GetAll()
         {
-            var name = GetStringQueryString("name", required: false);
+            var thumbprint = GetStringQueryString("thumbprint", required: false);
 
             var start = GetStart();
             var pageSize = GetPageSize();
@@ -125,12 +122,12 @@ namespace Raven.Server.Web.Authentication
                 Tuple<string, BlittableJsonReaderObject>[] certificates = null;
                 try
                 {
-                    if (string.IsNullOrEmpty(name))
+                    if (string.IsNullOrEmpty(thumbprint))
                         certificates = ServerStore.Cluster.ItemsStartingWith(context, Constants.Certificates.Prefix, start, pageSize)
                             .ToArray();
                     else
                     {
-                        var key = Constants.Certificates.Prefix + name;
+                        var key = Constants.Certificates.Prefix + thumbprint;
                         var certificate = ServerStore.Cluster.Read(context, key);
                         if (certificate == null)
                         {
@@ -149,7 +146,6 @@ namespace Raven.Server.Web.Authentication
                         writer.WriteStartObject();
                         writer.WriteArray(context, "Results", certificates, (w, c, cert) =>
                         {
-                            // Do we want to display the names as well?
                             c.Write(w, cert.Item2);
                         });
                         writer.WriteEndObject();

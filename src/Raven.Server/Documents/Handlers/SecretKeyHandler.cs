@@ -10,15 +10,16 @@ using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class SecretKeyHandler : AdminRequestHandler
+    public class SecretKeyHandler : RequestHandler
     {
-        [RavenAction("/admin/secrets", "GET", "/admin/secrets")]
+        [RavenAction("/admin/secrets", "GET", "/admin/secrets", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public Task GetKeys()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -37,7 +38,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/secrets/generate", "GET", "/admin/secrets/generate")]
+        [RavenAction("/admin/secrets/generate", "GET", "/admin/secrets/generate", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public unsafe Task Generate()
         {
             HttpContext.Response.ContentType = "application/base64";
@@ -59,8 +60,8 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/secrets", "POST", "/admin/secrets?name={name:string}&overwrite={overwrite:bool|optional(false)}")]
-        public unsafe Task PutKey()
+        [RavenAction("/admin/secrets", "POST", "/admin/secrets?name={name:string}&overwrite={overwrite:bool|optional(false)}", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
+        public Task PutKey()
         {
             var name = GetStringQueryString("name");
             var overwrite = GetBoolValueQueryString("overwrite", required: false) ?? false;
@@ -76,7 +77,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/secrets/distribute", "POST", "/admin/secrets/distribute?name={name:string}&node={node:string|multiple}")]
+        [RavenAction("/admin/secrets/distribute", "POST", "/admin/secrets/distribute?name={name:string}&node={node:string|multiple}", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public async Task DistributeKeyInCluster()
         {
             ServerStore.EnsureNotPassive();

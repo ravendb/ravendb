@@ -36,6 +36,8 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using System.Reflection;
 using System.Security.Claims;
+using DasMulli.Win32.ServiceUtils;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.Server.Kestrel.Filter;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
@@ -130,7 +132,14 @@ namespace Raven.Server
                             ServerCertificate = ServerCertificateHolder.Certificate,
                             CheckCertificateRevocation = true,
                             ClientCertificateMode = ClientCertificateMode.AllowCertificate,
-                            SslProtocols = SslProtocols.Tls,
+                            SslProtocols = SslProtocols.Tls12,
+                            ClientCertificateValidation = (X509Certificate2 cert, X509Chain chain, SslPolicyErrors errors) => 
+                                // Here we are explicitly ignoring trust chain issues for client certificates
+                                // this is because we don't actually require trust, we just use the certificate
+                                // as a way to authenticate. The admin are going to tell us which specific certs
+                                // we can trust anyway, so we can ignore such errors.
+                                errors == SslPolicyErrors.RemoteCertificateChainErrors || 
+                                errors == SslPolicyErrors.None 
                         };
 
                         options.ConnectionFilter = new AuthenticatingFilter( this,new HttpsConnectionFilter(filterOptions, new NoOpConnectionFilter()));
@@ -343,18 +352,33 @@ namespace Raven.Server
                 _httpsConnectionFilter = httpsConnectionFilter;
             }
 
+            private class DummyHttpRequestFeature : IHttpRequestFeature
+            {
+                public string Protocol { get; set; }
+                public string Scheme { get; set; }
+                public string Method { get; set; }
+                public string PathBase { get; set; }
+                public string Path { get; set; }
+                public string QueryString { get; set; }
+                public string RawTarget { get; set; }
+                public IHeaderDictionary Headers { get; set; }
+                public Stream Body { get; set; }
+            }
+
             public async Task OnConnectionAsync(ConnectionFilterContext context)
             {
                 await _httpsConnectionFilter.OnConnectionAsync(context);
                 var old = context.PrepareRequest;
+
                 var featureCollection = new FeatureCollection();
-                old(featureCollection);
+                featureCollection.Set<IHttpRequestFeature>(new DummyHttpRequestFeature());
+                old?.Invoke(featureCollection);
                 var authenticationStatus = new AuthenticateConnection();
                 
                 //TODO: What about expired certificate?
 
                 var tls = featureCollection.Get<ITlsConnectionFeature>();
-                var certificate = tls.ClientCertificate;
+                var certificate = tls?.ClientCertificate;
                 authenticationStatus.Certificate = certificate;
                 if (certificate == null)
                 {
@@ -369,8 +393,12 @@ namespace Raven.Server
                     using (_server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     {
                         var certKey = Constants.Certificates.Prefix + certificate.Thumbprint;
-                        var permisions = _server.ServerStore.Cluster.Read(ctx, certKey) ?? 
-                            _server.ServerStore.Cluster.GetLocalState(ctx, certKey);
+                        BlittableJsonReaderObject permisions;
+                        using (ctx.OpenReadTransaction())
+                        {
+                            permisions = _server.ServerStore.Cluster.Read(ctx, certKey) ??
+                                         _server.ServerStore.Cluster.GetLocalState(ctx, certKey);
+                        }
                         if (permisions == null)
                         {
                             authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;

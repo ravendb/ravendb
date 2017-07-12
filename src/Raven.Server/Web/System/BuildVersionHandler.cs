@@ -39,7 +39,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/build/version", "GET", "build-version", NoAuthorizationRequired = true)]
+        [RavenAction("/build/version", "GET", "build-version", RequiredAuthorization = AuthorizationStatus.ValidUser)]
         public async Task Get()
         {
             var versionBuffer = VersionBuffer.Value;

@@ -6,26 +6,17 @@
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
+using System.Diagnostics;
 using System.Net;
-using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using System.Threading;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.Extensions.Primitives;
-using Raven.Client;
-using Raven.Client.Exceptions.Security;
-using Raven.Client.Server.Operations.Certificates;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web;
-using Raven.Server.Web.Authentication;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -102,9 +93,9 @@ namespace Raven.Server.Routing
                 return null;
             }
 
-            if (tryMatch.Value.NoAuthorizationRequired == false)
+            if (_ravenServer.Configuration.Security.AuthenticationEnabled == false)
             {
-                var authResult = TryAuthorize(context, _ravenServer.Configuration, reqCtx.Database);
+                var authResult = TryAuthorize(tryMatch.Value, context,  reqCtx.Database);
                 if (authResult == false)
                     return reqCtx.Database?.Name;
             }
@@ -124,21 +115,51 @@ namespace Raven.Server.Routing
             return reqCtx.Database?.Name;
         }
 
-        private bool TryAuthorize(HttpContext context, RavenConfiguration configuration, DocumentDatabase database)
+        private bool TryAuthorize(RouteInformation route,HttpContext context, DocumentDatabase database)
         {
-            if (configuration.Security.AuthenticationEnabled == false)
-                return true;
+            switch (route.AuthorizationStatus)
+            {
+                case AuthorizationStatus.UnauthenticatedClients:
+                    return true;
+                case AuthorizationStatus.ServerAdmin:
+                case AuthorizationStatus.ValidUser:
+                    var feature = context.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
 
+                    switch (feature?.Status)
+                    {
+                        case null:
+                        case AuthenticationStatus.NoCertificateProvided:
+                        case AuthenticationStatus.None:
+                        case AuthenticationStatus.UnfamiliarCertificate:
+                            UnlikelyFailAuthorization(context, database?.Name, feature);
+                            return false;
+                        case AuthenticationStatus.Allowed:
+                            if (route.AuthorizationStatus == AuthorizationStatus.ServerAdmin)
+                                goto case AuthenticationStatus.None;
 
-            var feature = context.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
-            
-            if (feature != null && feature.CanAccess(database?.Name))
-                return true;
+                            if (database == null)
+                                return true;
+                            if (feature.CanAccess(database.Name))
+                                return true;
 
-            return UnlikelyFailAuthorization(context, database, feature);
+                            goto case AuthenticationStatus.None;
+                        case AuthenticationStatus.ServerAdmin:
+                            return true;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                default:
+                    ThrowUnknownAuthStatus(route);
+                    return false; // never hit
+            }
         }
 
-        private bool UnlikelyFailAuthorization(HttpContext context, DocumentDatabase database, RavenServer.AuthenticateConnection feature)
+        private static void ThrowUnknownAuthStatus(RouteInformation route)
+        {
+            throw new ArgumentOutOfRangeException("Unknown route auth status: " + route.AuthorizationStatus);
+        }
+
+        public void UnlikelyFailAuthorization(HttpContext context, string database, RavenServer.AuthenticateConnection feature)
         {
             string message;
             if (feature == null || feature.Status == AuthenticationStatus.NoCertificateProvided)
@@ -151,7 +172,11 @@ namespace Raven.Server.Routing
             }
             else if (feature.Status == AuthenticationStatus.Allowed)
             {
-                message = "The provided client certificate " + feature.Certificate + " is not authorized to access " + (database?.Name ?? "the server");
+                message = "The provided client certificate " + feature.Certificate + " is not authorized to access " + (database ?? "the server");
+            }
+            else if (feature.Status == AuthenticationStatus.ServerAdmin)
+            {
+                message = "The provided client certificate " + feature.Certificate + " does not have ServerAdmin level to access " + (database ?? "the server");
             }
             else
             {
@@ -163,12 +188,11 @@ namespace Raven.Server.Routing
             {
                 DrainRequest(ctx, context);
 
-                string userAgent = context.Request.Headers["User-Agent"];
-                if (userAgent != null && userAgent.Contains("Mozilla"))
+                if (RavenServerStartup.IsHtmlAcceptable(context))
                 {
                     context.Response.StatusCode = (int)HttpStatusCode.Redirect;
                     context.Response.Headers["Location"] = "/studio/auth-error.html?err=" + Uri.EscapeDataString(message);
-                    return false;
+                    return;
                 }
 
                 ctx.Write(writer,
@@ -178,7 +202,6 @@ namespace Raven.Server.Routing
                         ["Message"] = message
                     });
             }
-            return false;
         }
 
         private void DrainRequest(JsonOperationContext ctx, HttpContext context)

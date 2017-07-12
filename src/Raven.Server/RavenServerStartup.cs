@@ -122,7 +122,7 @@ namespace Raven.Server
             return Task.CompletedTask;
         }
 
-        private static bool IsHtmlAcceptable(HttpContext context)
+        public static bool IsHtmlAcceptable(HttpContext context)
         {
             bool result = false;
             var acceptHeaders = context.Request.Headers["Accept"].ToArray();
@@ -299,6 +299,13 @@ namespace Raven.Server
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
                 return;
             }
+
+            if (exception is UnauthorizedAccessException)
+            {
+                response.StatusCode = (int)HttpStatusCode.Forbidden;
+                return;
+            }
+
 
             response.StatusCode = (int)HttpStatusCode.InternalServerError;
         }

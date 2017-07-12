@@ -10,9 +10,9 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.System
 {
-    public class AdminConfigurationHandler : AdminRequestHandler
+    public class AdminConfigurationHandler : RequestHandler
     {
-        [RavenAction("/admin/configuration/client", "PUT")]
+        [RavenAction("/admin/configuration/client", "PUT", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public async Task PutClientConfiguration()
         {
             ServerStore.EnsureNotPassive();
@@ -29,7 +29,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/configuration/client", "GET")]
+        [RavenAction("/admin/configuration/client", "GET", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public Task GetClientConfiguration()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

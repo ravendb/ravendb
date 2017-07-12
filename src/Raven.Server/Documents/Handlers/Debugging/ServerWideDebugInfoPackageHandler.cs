@@ -15,18 +15,19 @@ using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web;
 using Raven.Server.Web.Authentication;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
-    public class ServerWideDebugInfoPackageHandler : AdminRequestHandler
+    public class ServerWideDebugInfoPackageHandler : RequestHandler
     {
         private static readonly string[] EmptyStringArray = new string[0];
 
         //this endpoint is intended to be called by /debug/cluster-info-package only
-        [RavenAction("/debug/remote-cluster-info-package", "GET")]
+        [RavenAction("/admin/debug/remote-cluster-info-package", "GET", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public async Task GetClusterwideInfoPackageForRemote()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
@@ -57,7 +58,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        [RavenAction("/debug/cluster-info-package", "GET", IsDebugInformationEndpoint = true)]
+        [RavenAction("/admin/debug/cluster-info-package", "GET", IsDebugInformationEndpoint = true, RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public async Task GetClusterwideInfoPackage()
         {
             var contentDisposition = $"attachment; filename=Cluster wide debug-info {DateTime.UtcNow}.zip";
@@ -164,7 +165,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        [RavenAction("/debug/info-package", "GET", IsDebugInformationEndpoint = true)]
+        [RavenAction("/admin/debug/info-package", "GET", IsDebugInformationEndpoint = true, RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public async Task GetInfoPackage()
         {
             var contentDisposition = $"attachment; filename=Server wide debug-info {DateTime.UtcNow}.zip";

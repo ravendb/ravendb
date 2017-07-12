@@ -9,7 +9,7 @@ namespace Raven.Server.Web.System
 {
     public class TcpConnectionInfoHandler : RequestHandler
     {
-        [RavenAction("/info/tcp", "GET", "tcp-connections-state", NoAuthorizationRequired = true)]
+        [RavenAction("/info/tcp", "GET", "tcp-connections-state", RequiredAuthorization = AuthorizationStatus.ValidUser)]
         public Task Get()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
