@@ -8,8 +8,8 @@ namespace Sparrow.Json
     {
         public static BlittableJsonTraverser Default = new BlittableJsonTraverser();
 
-        public const char PropertySeparator = '.';
-        public const char CollectionSeparator = ',';
+        private const char PropertySeparator = '.';
+        private const char CollectionSeparator = '[';
 
         public static readonly char[] PropertySeparators =
         {
@@ -57,12 +57,13 @@ namespace Sparrow.Json
                 result = reader;
                 return true;
             }
-
-            var pathSegment = path.SubSegment(indexOfFirstSeparator + 1);
+            
 
             switch (path[indexOfFirstSeparator])
             {
                 case PropertySeparator:
+                    var pathSegment = path.SubSegment(indexOfFirstSeparator + 1);
+
                     var propertyInnerObject = reader as BlittableJsonReaderObject;
                     if (propertyInnerObject != null)
                     {
@@ -78,15 +79,14 @@ namespace Sparrow.Json
                     result = reader;
                     return false;
                 case CollectionSeparator:
+                    leftPath = path.SubSegment(indexOfFirstSeparator + 3);
+
                     var collectionInnerArray = reader as BlittableJsonReaderArray;
                     if (collectionInnerArray != null)
                     {
-                        leftPath = pathSegment;
-                        result = ReadArray(collectionInnerArray, pathSegment);
+                        result = ReadArray(collectionInnerArray, leftPath);
                         return true;
                     }
-
-                    leftPath = pathSegment;
                     result = reader;
                     return false;
                 default:
@@ -128,7 +128,20 @@ namespace Sparrow.Json
                     if (arrayReader != null)
                     {
                         var indexOfFirstSeparatorInSubIndex = pathSegment.IndexOfAny(_separators, 0);
-                        var subSegment = pathSegment.SubSegment(indexOfFirstSeparatorInSubIndex + 1);
+
+                        string subSegment;
+
+                        switch (pathSegment[indexOfFirstSeparatorInSubIndex])
+                        {
+                            case PropertySeparator:
+                                subSegment = pathSegment.SubSegment(indexOfFirstSeparatorInSubIndex + 1);
+                                break;
+                            case CollectionSeparator:
+                                subSegment = pathSegment.SubSegment(indexOfFirstSeparatorInSubIndex + 3);
+                                break;
+                            default:
+                                throw new NotSupportedException($"Unhandled separator character: {pathSegment[indexOfFirstSeparatorInSubIndex]}");
+                        }
 
                         foreach (var nestedItem in ReadArray(arrayReader, subSegment))
                         {

@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Session.Tokens
 
         public override void WriteTo(StringBuilder writer)
         {
-            writer.Append(RavenQuery.EscapeField(_fieldName));
+            writer.Append(_fieldName);
 
             if (_ordering != OrderingType.String)
                 writer.Append($" AS {_ordering.ToString().ToLowerInvariant()}");

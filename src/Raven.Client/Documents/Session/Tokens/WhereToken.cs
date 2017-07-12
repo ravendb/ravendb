@@ -194,7 +194,7 @@ namespace Raven.Client.Documents.Session.Tokens
             if (WhereOperator == WhereOperator.Exists)
                 writer.Append("exists(");
 
-            writer.Append(RavenQuery.EscapeField(FieldName));
+            writer.Append(FieldName);
 
             switch (WhereOperator)
             {

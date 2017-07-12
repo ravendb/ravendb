@@ -42,7 +42,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal(1, definition.Collections.Count);
             Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("Term"));
-            Assert.Equal("Auto/Users/ByTerm", definition.Name);
+            Assert.Equal("Auto/Users/ByTermSortByTerm", definition.Name);
         }
 
         [Fact]
@@ -70,14 +70,14 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("Term"));
             Assert.True(definition.ContainsField("Term2"));
-            Assert.Equal("Auto/Users/ByTermAndTerm2", definition.Name);
+            Assert.Equal("Auto/Users/ByTermAndTerm2SortByTerm2", definition.Name);
         }
 
 
         [Fact]
         public void CanExtractTermsFromComplexQuery()
         {
-            create_dynamic_mapping("+(Term:bar Term2:baz) +Term3:foo -Term4:rob");
+            create_dynamic_mapping("FROM Users WHERE (Term = 'bar' OR Term2 = 'baz') OR Term3 = 'foo' OR NOT Term4 = 'rob'");
 
             var definition = _sut.CreateAutoIndexDefinition();
 
@@ -109,13 +109,13 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void CreateDefinitionSupportsArrayProperties()
         {
-            create_dynamic_mapping("FROM Users WHERE Tags,Name = 'Any'");
+            create_dynamic_mapping("FROM Users WHERE Tags[].Name = 'Any'");
 
             var definition = _sut.CreateAutoIndexDefinition();
 
             Assert.Equal(1, definition.Collections.Count);
             Assert.Equal("Users", definition.Collections.Single());
-            Assert.True(definition.ContainsField("Tags,Name"));
+            Assert.True(definition.ContainsField("Tags[].Name"));
             Assert.Equal("Auto/Users/ByTags_Name", definition.Name);
         }
 

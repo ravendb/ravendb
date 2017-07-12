@@ -485,7 +485,7 @@ namespace Raven.Client.Documents.Linq
             var parameterExpression = GetParameterExpressionIncludingConvertions(expression);
             if (parameterExpression != null)
             {
-                if (_currentPath.EndsWith(","))
+                if (_currentPath.EndsWith("[]."))
                     _currentPath = _currentPath.Substring(0, _currentPath.Length - 1);
                 return new ExpressionInfo(_currentPath, parameterExpression.Type, false);
             }
@@ -720,7 +720,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             if (expression.Arguments.Count >= 2)
             {
                 var oldPath = _currentPath;
-                _currentPath = memberInfo.Path + ",";
+                _currentPath = memberInfo.Path + "[].";
                 VisitExpression(expression.Arguments[1]);
                 _currentPath = oldPath;
             }
@@ -796,7 +796,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
             else if (memberExpression.Type == typeof(string))
             {
-                if (_currentPath.EndsWith(","))
+                if (_currentPath.EndsWith("[]."))
                     _currentPath = _currentPath.Substring(0, _currentPath.Length - 1);
 
                 var memberInfo = GetMember(memberExpression);

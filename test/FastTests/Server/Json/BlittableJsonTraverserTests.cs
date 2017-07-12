@@ -76,7 +76,7 @@ namespace FastTests.Server.Json
                 }
             });
 
-            var read = _sut.Read(doc, "Friends,Name");
+            var read = _sut.Read(doc, "Friends[].Name");
 
             var enumerable = read as IEnumerable<object>;
 
@@ -113,7 +113,7 @@ namespace FastTests.Server.Json
                 }
             });
 
-            var read = _sut.Read(doc, "Friends,Name.First");
+            var read = _sut.Read(doc, "Friends[].Name.First");
 
             var enumerable = read as IEnumerable<object>;
 
@@ -161,7 +161,7 @@ namespace FastTests.Server.Json
                 }
             });
 
-            var read = _sut.Read(doc, "Items,,Bar.Foo");
+            var read = _sut.Read(doc, "Items[].[].Bar.Foo");
 
             var enumerable = read as IEnumerable<object>;
 
@@ -219,7 +219,7 @@ namespace FastTests.Server.Json
                 }
             });
 
-            var read = _sut.Read(doc, "Items,Bar,Foo.Baz");
+            var read = _sut.Read(doc, "Items[].Bar[].Foo.Baz");
 
             var enumerable = read as IEnumerable<object>;
 

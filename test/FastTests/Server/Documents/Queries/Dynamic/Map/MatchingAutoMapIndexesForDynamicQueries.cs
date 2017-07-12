@@ -154,7 +154,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 },
                 new IndexField
                 {
-                    Name = "Friends,Name",
+                    Name = "Friends[].Name",
                     Storage = FieldStorage.No
                 },
             });
