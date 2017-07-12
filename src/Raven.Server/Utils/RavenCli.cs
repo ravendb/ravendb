@@ -587,9 +587,7 @@ namespace Raven.Server.Utils
             var serverUrl = cli._server.WebUrls[0];
             WriteText($"ImportDir for database {args[0]} from dir `{args[1]}` to {serverUrl}", ConsoleColor.Yellow, cli);
 
-            var port = new Uri(serverUrl).Port;
-
-            var url = $@"http://127.0.0.1:{port}/databases/{args[0]}/smuggler/import-dir?dir={args[1]}";
+            var url = $"{serverUrl}/databases/{args[0]}/smuggler/import-dir?dir={args[1]}";
             using (var client = new HttpClient())
             {
                 WriteText("Sending at " + DateTime.UtcNow, TextColor, cli);
