@@ -602,6 +602,14 @@ namespace Raven.Client.Documents.Session
 
         public int CountOfGroupBy => GroupByTokens.Count;
 
+        public void WhereTrue()
+        {
+            AppendOperatorIfNeeded(WhereTokens);
+            NegateIfNeeded();
+
+            WhereTokens.AddLast(TrueToken.Instance);
+        }
+
         IDocumentQueryCustomization IDocumentQueryCustomization.SetHighlighterTags(string preTag, string postTag)
         {
             SetHighlighterTags(preTag, postTag);

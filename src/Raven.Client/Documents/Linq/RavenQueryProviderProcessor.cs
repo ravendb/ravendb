@@ -126,7 +126,7 @@ namespace Raven.Client.Documents.Linq
                             case ExpressionType.Call:
                                 // probably a call to !In() or !string.IsNullOrEmpty()
                                 _documentQuery.OpenSubclause();
-                                //_documentQuery.Where("*:*");
+                                _documentQuery.WhereTrue();
                                 _documentQuery.AndAlso();
                                 _documentQuery.NegateNext();
                                 VisitMethodCall((MethodCallExpression)unaryExpressionOp, negated: true);
@@ -135,7 +135,7 @@ namespace Raven.Client.Documents.Linq
                             default:
                                 //probably the case of !(complex condition)
                                 _documentQuery.OpenSubclause();
-                                //_documentQuery.Where("*:*");
+                                _documentQuery.WhereTrue();
                                 _documentQuery.AndAlso();
                                 _documentQuery.NegateNext();
                                 VisitExpression(unaryExpressionOp);
@@ -286,7 +286,7 @@ namespace Raven.Client.Documents.Linq
                 _documentQuery.WhereBetween(leftMember.Item1.Path, min, max);
             else
             {
-                _documentQuery.WhereGreaterThan(leftMember.Item1.Path, min); // TODO [ppekrol] review, maybe nulls?
+                _documentQuery.WhereGreaterThan(leftMember.Item1.Path, min);
                 _documentQuery.AndAlso();
                 _documentQuery.WhereLessThan(leftMember.Item1.Path, max);
             }
@@ -341,7 +341,7 @@ namespace Raven.Client.Documents.Linq
                 expression.Left.NodeType != ExpressionType.MemberAccess)
             {
                 _documentQuery.OpenSubclause();
-                //_documentQuery.Where("*:*");
+                _documentQuery.WhereTrue();
                 _documentQuery.AndAlso();
                 _documentQuery.NegateNext();
                 VisitExpression(expression.Left);
@@ -765,7 +765,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     if (boolValue)
                     {
                         _documentQuery.OpenSubclause();
-                        //_documentQuery.Where("*:*");
+                        _documentQuery.WhereTrue();
                         _documentQuery.AndAlso();
                         _documentQuery.NegateNext();
                     }

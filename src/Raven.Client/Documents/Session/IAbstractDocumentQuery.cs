@@ -353,5 +353,7 @@ namespace Raven.Client.Documents.Session
         void GroupByCount(string projectedName = null);
 
         int CountOfGroupBy { get; }
+
+        void WhereTrue();
     }
 }
