@@ -143,12 +143,32 @@ namespace Raven.Database.Raft.Controllers
         [RavenRoute("admin/cluster/initialize-new-cluster/{*id}")]
         public HttpResponseMessage InitializeNewCluster(string id)
         {
-            if (string.IsNullOrEmpty(id))
-                ClusterManager.InitializeTopology(isPartOfExistingCluster: true);
-            else
-                ClusterManager.InitializeEmptyTopologyWithId(Guid.Parse(id));
+            var oldClusterManager = SetClusterManagerToNullAndGetOldValue();
+            if (id != null)
+            {
+                oldClusterManager.CleanupAllClusteringData(SystemDatabase);
+            }
+            oldClusterManager?.Dispose();
 
+            var newClusterManager = ClusterManagerFactory.Create(SystemDatabase, DatabasesLandlord);
+
+            if (string.IsNullOrEmpty(id))
+                newClusterManager.InitializeTopology(isPartOfExistingCluster: true);
+            else
+            {
+                newClusterManager.InitializeEmptyTopologyWithId(Guid.Parse(id));
+            }
+
+            ((Reference<ClusterManager>)Configuration.Properties[typeof(ClusterManager)]).Value = newClusterManager;
             return GetEmptyMessage(HttpStatusCode.NoContent);
+        }
+
+        private ClusterManager SetClusterManagerToNullAndGetOldValue()
+        {
+            //making sure nobody contact us while we change the persistent state.
+            ClusterManager oldClusterManager = ((Reference<ClusterManager>) Configuration.Properties[typeof(ClusterManager)]).Value;
+            Configuration.Properties[typeof(ClusterManager)] = new Reference<ClusterManager>();
+            return oldClusterManager;
         }
 
         [HttpPatch]
@@ -159,9 +179,9 @@ namespace Raven.Database.Raft.Controllers
             {
                 return GetMessageWithString("Remove clustering is available on single node clusters only.", HttpStatusCode.BadRequest);
             }
-
+            var oldClusterManager = SetClusterManagerToNullAndGetOldValue();
             // delete Raft persistent storage and init new one
-            ClusterManager.CleanupAllClusteringData(SystemDatabase);
+            oldClusterManager.CleanupAllClusteringData(SystemDatabase);
 
             var newClusterManager = ClusterManagerFactory.Create(SystemDatabase, DatabasesLandlord);
             ((Reference<ClusterManager>) Configuration.Properties[typeof(ClusterManager)]).Value = newClusterManager;
