@@ -154,9 +154,10 @@ namespace Raven.Server.Documents.Handlers
                 var contentType = GetStringQueryString("contentType", false) ?? "";
 
                 AttachmentDetails result;
-                using (Database.DocumentsStorage.AttachmentsStorage.GetTempFile(out Stream file))
+                using (var streamsTempFile = Database.DocumentsStorage.AttachmentsStorage.GetTempFile("put"))
+                using (var stream = streamsTempFile.StartNewStream())
                 {
-                    var hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, RequestBodyStream(), file, Database.DatabaseShutdown);
+                    var hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, RequestBodyStream(), stream, Database.DatabaseShutdown);
                     var etag = GetLongFromHeaders("If-Match");
 
                     var cmd = new MergedPutAttachmentCommand
@@ -165,7 +166,7 @@ namespace Raven.Server.Documents.Handlers
                         ExpectedEtag = etag,
                         DocumentId = id,
                         Name = name,
-                        Stream = file,
+                        Stream = stream,
                         Hash = hash,
                         ContentType = contentType
                     };

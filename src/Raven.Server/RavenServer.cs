@@ -38,9 +38,6 @@ using AccessToken = Raven.Server.Web.Authentication.AccessToken;
 using System.Reflection;
 using Raven.Client.Extensions;
 using Raven.Client.Server.Operations.ApiKeys;
-using Raven.Server.ServerWide.Commands;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Platform;
 
 namespace Raven.Server
 {
@@ -55,7 +52,7 @@ namespace Raven.Server
             setMinThreads(250, 250);
         }
 
-        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<RavenServer>("Raven/Server");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServer>("Raven/Server");
 
         public readonly RavenConfiguration Configuration;
 
@@ -112,13 +109,13 @@ namespace Raven.Server
             }
             catch (Exception e)
             {
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations("Could not open the server store", e);
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Could not open the server store", e);
                 throw;
             }
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info(string.Format("Server store started took {0:#,#;;0} ms", sp.ElapsedMilliseconds));
+            if (Logger.IsInfoEnabled)
+                Logger.Info(string.Format("Server store started took {0:#,#;;0} ms", sp.ElapsedMilliseconds));
 
             sp.Restart();
             ListenToPipe().IgnoreUnobservedExceptions();
@@ -158,13 +155,13 @@ namespace Raven.Server
             }
             catch (Exception e)
             {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Could not configure server", e);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Could not configure server", e);
                 throw;
             }
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info(string.Format("Configuring HTTP server took {0:#,#;;0} ms", sp.ElapsedMilliseconds));
+            if (Logger.IsInfoEnabled)
+                Logger.Info(string.Format("Configuring HTTP server took {0:#,#;;0} ms", sp.ElapsedMilliseconds));
 
             try
             {
@@ -173,15 +170,15 @@ namespace Raven.Server
                 var serverAddressesFeature = _webHost.ServerFeatures.Get<IServerAddressesFeature>();
                 WebUrls = serverAddressesFeature.Addresses.ToArray();
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Initialized Server... {string.Join(", ", WebUrls)}");
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Initialized Server... {string.Join(", ", WebUrls)}");
                 
                 _tcpListenerTask = StartTcpListener();
             }
             catch (Exception e)
             {
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations("Could not start server", e);
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Could not start server", e);
                 throw;
             }
         }
@@ -192,102 +189,52 @@ namespace Raven.Server
             // so we won't generate one per server in our test environment 
             if (Pipe == null)
                 return;
-            
-            while (true)
-            {
-                try
-                {
-                    await Pipe.WaitForConnectionAsync();
-                    using (var reader = new StreamReader(Pipe))
-                    using (var writer = new StreamWriter(Pipe))
-                    {
-                        try
-                        {
-                            var msg = reader.ReadLine();
-                            var tokens = msg.Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries);
-
-                            if (tokens.Length < 1)
-                            {
-                                var reply = "Unknown command";
-                                PipeLogAndReply(writer, reply);
-                                continue;
-                            }
-
-                            switch (tokens[0])
-                            {
-                                case "trust":
-                                    if (tokens.Length < 3)
-                                    {
-                                        PipeLogAndReply(writer, "Expected 'trust' followed by public key and tag but didn't get both of them");
-                                    }
-                                    else
-                                    {
-                                        var k = $"Raven/Sign/Public/{tokens[2]}";
-                                        ServerStore.PutSecretKey(tokens[1], k, true);
-                                        PipeLogAndReply(writer, $"Server {tokens[2]} public key {tokens[1]} was installed successfully");
-                                    }
-                                    break;
-                                case "init":
-                                    var (apiKey, pubKey) = await ServerStore.GetApiKeyAndPublicKey();
-                                    PipeLogAndReply(writer, $"ApiKey: {apiKey}{Environment.NewLine}PublicKe: {pubKey}");
-                                    writer.Flush();
-                                    break;
-                                default:
-                                    PipeLogAndReply(writer, $"Provided command {tokens[0]} isn't supported");
-                                    continue;
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            var msg = "Failed to process pipe command";
-                            if (_logger.IsInfoEnabled)
-                            {
-                                _logger.Info(msg, e);
-                            }
-                            PipeLogAndReply(writer, $"{msg}{Environment.NewLine}{e}");
-                            continue;
-                        }
-                    }
-                }
-                catch (ObjectDisposedException)
-                {
-                    //Server shutting down
-                    return;
-                }
-                catch (Exception e)
-                {
-                    if (_logger.IsInfoEnabled)
-                    {
-                        _logger.Info("Got an exception trying to connect to server pipe", e);
-                    }
-                }
-                try
-                {
-                    // reopen the pipe after every use, since we need to close it properly
-                    Pipe.Dispose();
-                    OpenPipe();
-                }
-                catch (Exception e)
-                {
-                    if (_logger.IsOperationsEnabled)
-                    {
-                        _logger.Operations("Got an exception trying to re-connect to server pipe", e);
-                    }
-                    return;
-                }
-            }
-        }
-
-        private static void PipeLogAndReply(StreamWriter writer, string reply)
-        {
             try
             {
-                writer.Write(reply);
-                writer.Flush();
+                while (true)
+                {
+                    await Pipe.WaitForConnectionAsync();
+                    var reader = new StreamReader(Pipe);
+                    var writer = new StreamWriter(Pipe);
+                    try
+                    {
+                        var cli = new RavenCli();
+                        var restart = cli.Start(this, writer, reader, false, null);
+                        if (restart)
+                        {
+                            writer.WriteLine("Restarting Server...<DELIMETER_RESTART>");
+                            Program.ResetServerMre.Set();
+                            Program.ShutdownServerMre.Set();
+                            // server restarting
+                            return;
+                        }
+
+                        writer.WriteLine("Shutting Down Server...<DELIMETER_RESTART>");
+                        Program.ShutdownServerMre.Set();
+                        // server shutting down
+                        return;
+                    }
+                    catch (Exception e)
+                    {
+                        if (Logger.IsInfoEnabled)
+                        {
+                            Logger.Info("Got an exception inside cli (internal error) while in pipe connection", e);
+                        }
+                    }
+
+                    Pipe.Disconnect();
+                }
             }
-            catch (Exception)
+            catch (ObjectDisposedException)
             {
-                // nothing we can do here
+                //Server shutting down
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                {
+                    Logger.Info("Got an exception trying to connect to server pipe", e);
+                }
             }
         }
 
@@ -356,8 +303,8 @@ namespace Raven.Server
                 var errors = new List<Exception>();
                 foreach (var ipAddress in await GetTcpListenAddresses(host))
                 {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"RavenDB TCP is configured to use {Configuration.Core.TcpServerUrl} and bind to {ipAddress} at {port}");
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"RavenDB TCP is configured to use {Configuration.Core.TcpServerUrl} and bind to {ipAddress} at {port}");
 
                     var listener = new TcpListener(ipAddress, port);
                     status.Listeners.Add(listener);
@@ -370,8 +317,8 @@ namespace Raven.Server
                     {
                         var msg = "Unable to start tcp listener on " + ipAddress + " on port " + port;
                         errors.Add(new IOException(msg, ex));
-                        if (_logger.IsOperationsEnabled)
-                            _logger.Operations(msg, ex);
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations(msg, ex);
                         continue;
                     }
                     successfullyBoundToAtLeastOne = true;
@@ -502,9 +449,9 @@ namespace Raven.Server
                                 ))
                             {
                                 header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
-                                if (_logger.IsInfoEnabled)
+                                if (Logger.IsInfoEnabled)
                                 {
-                                    _logger.Info($"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
+                                    Logger.Info($"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
                                 }
                             }
                             if (TryAuthorize(context, Configuration, tcp.Stream, header) == false)
@@ -512,9 +459,9 @@ namespace Raven.Server
                                 var msg =
                                     $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}" +
                                     $" is not authorized to access {header.DatabaseName ?? "the cluster node"}";
-                                if (_logger.IsInfoEnabled)
+                                if (Logger.IsInfoEnabled)
                                 {
-                                    _logger.Info(msg);
+                                    Logger.Info(msg);
                                 }
                                 throw new UnauthorizedAccessException(msg);
                             }
@@ -667,6 +614,7 @@ namespace Raven.Server
             //since the responses to TCP connections mostly continue to run
             //beyond this point, no sense to dispose the connection now, so set it to null.
             //this way the responders are responsible to dispose the connection and the context                    
+            // ReSharper disable once RedundantAssignment
             tcp = null;
             return false;
         }
@@ -836,9 +784,8 @@ namespace Raven.Server
         public void OpenPipe()
         {
             var pipeName = PipePrefix + Process.GetCurrentProcess().Id;
-
             Pipe = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte,
-                PipeOptions.None, 1024, 1024);
+                PipeOptions.Asynchronous, 1024, 1024);
         }
     }
 }

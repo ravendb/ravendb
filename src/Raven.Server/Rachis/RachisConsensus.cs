@@ -1380,51 +1380,17 @@ namespace Raven.Server.Rachis
         private readonly AsyncManualResetEvent _leadershipTimeChanged = new AsyncManualResetEvent();
         private int _hasTimers;
 
-        public Task WaitForHeartbeat()
+        public async Task WaitForHeartbeat()
         {
             Interlocked.Increment(ref _hasTimers);
             try
             {
-                return _leadershipTimeChanged.WaitAsync();
+                await _leadershipTimeChanged.WaitAsync();
             }
             finally
             {
                 Interlocked.Decrement(ref _hasTimers);
             }
-        }
-
-        public async Task WaitForTimeout(long knownLeaderTime, TimeSpan timeout)
-        {
-            Interlocked.Increment(ref _hasTimers);
-            try
-            {
-                var term = CurrentTerm;
-                var task = _leadershipTimeChanged.WaitAsync(timeout);
-
-                while (true)
-                {
-                    if (term != CurrentTerm)
-                        knownLeaderTime = 0;
-
-                    var timePassed = TimeSpan.FromMilliseconds(_leaderTime - knownLeaderTime);
-                    if (timePassed > timeout)
-                        return;
-
-                    if (await task == false)
-                        return;
-
-                    var remaining = timeout.Subtract(timePassed);
-                    task = _leadershipTimeChanged.WaitAsync(remaining);
-                }
-            }
-            finally
-            {
-                Interlocked.Decrement(ref _hasTimers);
-            }
-        }
-        public Task WaitForTimeout(TimeSpan timeout)
-        {
-            return WaitForTimeout(_leaderTime, timeout);
         }
 
         private long _leaderTime;

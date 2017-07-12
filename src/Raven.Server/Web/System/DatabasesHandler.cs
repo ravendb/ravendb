@@ -24,10 +24,6 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases", "GET")]
         public Task Databases()
         {
-            var dbName = GetQueryStringValue("info");
-            if (dbName != null)
-                return DbInfo(dbName);
-
             var namesOnly = GetBoolValueQueryString("namesOnly", required: false) ?? false;
 
             //TODO: fill all required information (see: RavenDB-5438) - return Raven.Client.Data.DatabasesInfo
@@ -118,29 +114,6 @@ namespace Raven.Server.Web.System
             return url;
         }
 
-        private Task DbInfo(string dbName)
-        {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                context.OpenReadTransaction();
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    var dbId = Constants.Documents.Prefix + dbName;
-                    using (var dbRecord = ServerStore.Cluster.Read(context, dbId, out long etag))
-                    {
-                        if (dbRecord == null)
-                        {
-                            HttpContext.Response.Headers.Remove("Content-Type");
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            return Task.CompletedTask;
-                        }
-                        WriteDatabaseInfo(dbName, dbRecord, context, writer);
-                    }
-                    return Task.CompletedTask;
-                }
-            }
-        }
-
         private void WriteDatabaseInfo(string databaseName, BlittableJsonReaderObject dbRecordBlittable,
             TransactionOperationContext context, BlittableJsonTextWriter writer)
         {
@@ -182,6 +155,7 @@ namespace Raven.Server.Web.System
                         Url = url
                     };
                     nodesTopology.Members.Add(GetNodeId(node));
+                    nodesTopology.Status[member] = new DbGroupNodeStatus { LastStatus = "Ok" };
                 }
                 foreach (var promotable in topology.Promotables)
                 {
@@ -194,6 +168,17 @@ namespace Raven.Server.Web.System
                     };
                     var promotableTask = new PromotableTask(promotable, url, databaseName);
                     nodesTopology.Promotables.Add(GetNodeId(node, topology.WhoseTaskIsIt(promotableTask, ServerStore.IsPassive())));
+
+                    var nodeStatus = new DbGroupNodeStatus();
+                    if (topology.PromotablesStatus.TryGetValue(promotable, out var status))
+                    {
+                        nodeStatus.LastStatus = status;
+                    }
+                    if (topology.DemotionReasons.TryGetValue(promotable, out var reason))
+                    {
+                        nodeStatus.LastError = reason;
+                    }
+                    nodesTopology.Status[promotable] = nodeStatus;
                 }
             }
 
@@ -226,7 +211,7 @@ namespace Raven.Server.Web.System
                 IndexingErrors = db?.IndexStore.GetIndexes().Sum(index => index.GetErrorCount()) ?? 0,
 
                 DocumentsCount = db?.DocumentsStorage.GetNumberOfDocuments() ?? 0,
-                HasVersioningConfiguration = db?.DocumentsStorage.VersioningStorage.Configuration != null,
+                HasRevisionsConfiguration = db?.DocumentsStorage.RevisionsStorage.Configuration != null,
                 HasExpirationConfiguration = db?.ExpiredDocumentsCleaner != null,
                 IndexesCount = db?.IndexStore.GetIndexes().Count() ?? 0,
                 IndexingStatus = indexingStatus,

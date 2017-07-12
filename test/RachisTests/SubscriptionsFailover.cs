@@ -16,7 +16,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Server.Operations;
-using Raven.Client.Server.Versioning;
+using Raven.Client.Server.Revisions;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Rachis;
@@ -162,13 +162,12 @@ namespace RachisTests
             }
         }
 
-        public async Task CreateDistributedVersionedDocuments()
+        public async Task CreateDistributedRevisions()
         {
             const int nodesAmount = 5;
             var leader = await this.CreateRaftClusterAndGetLeader(nodesAmount).ConfigureAwait(false);
 
-
-            var defaultDatabase = "DistributedVersionedSubscription";
+            var defaultDatabase = "DistributedRevisionsSubscription";
 
             await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrls[0]).ConfigureAwait(false);
 
@@ -178,17 +177,16 @@ namespace RachisTests
                 Database = defaultDatabase
             }.Initialize())
             {
-                await SetupVersioning(leader, defaultDatabase).ConfigureAwait(false);
+                await SetupRevisions(leader, defaultDatabase).ConfigureAwait(false);
 
                 var reachedMaxDocCountMre = new AsyncManualResetEvent();
                 var ackSent = new AsyncManualResetEvent();
 
                 var continueMre = new AsyncManualResetEvent();
 
-
                 for (int i = 0; i < 17; i++)
                 {
-                    GenerateDistributedVersionedData(defaultDatabase);
+                    GenerateDistributedRevisionsData(defaultDatabase);
                 }
             }
         }
@@ -196,12 +194,12 @@ namespace RachisTests
         [Theory]
         [InlineData(3)]
         [InlineData(5)]
-        public async Task DistributedVersionedSubscription(int nodesAmount)
+        public async Task DistributedRevisionsSubscription(int nodesAmount)
         {
             var leader = await this.CreateRaftClusterAndGetLeader(nodesAmount).ConfigureAwait(false);
 
 
-            var defaultDatabase = "DistributedVersionedSubscription";
+            var defaultDatabase = "DistributedRevisionsSubscription";
 
             await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrls[0]).ConfigureAwait(false);
 
@@ -212,7 +210,7 @@ namespace RachisTests
                 Database = defaultDatabase
             }.Initialize())
             {
-                await SetupVersioning(leader, defaultDatabase).ConfigureAwait(false);
+                await SetupRevisions(leader, defaultDatabase).ConfigureAwait(false);
 
                 var reachedMaxDocCountMre = new AsyncManualResetEvent();
                 var ackSent = new AsyncManualResetEvent();
@@ -220,22 +218,21 @@ namespace RachisTests
                 var continueMre = new AsyncManualResetEvent();
 
 
-                GenerateDistributedVersionedData(defaultDatabase);
+                GenerateDistributedRevisionsData(defaultDatabase);
 
 
 
-                var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Versioned<User>>()).ConfigureAwait(false);
+                var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Revision<User>>()).ConfigureAwait(false);
 
-                var subscription = store.Subscriptions.Open<Versioned<User>>(new SubscriptionConnectionOptions(subscriptionId)
+                var subscription = store.Subscriptions.Open<Revision<User>>(new SubscriptionConnectionOptions(subscriptionId)
                 {
                     MaxDocsPerBatch = 1,
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(100)
                 });
 
-
                 var docsCount = 0;
-                var versionsCount = 0;
-                var expectedVersionsCount = 0;
+                var revisionsCount = 0;
+                var expectedRevisionsCount = 0;
 
                 subscription.AfterAcknowledgment += async b =>
                 {
@@ -243,7 +240,7 @@ namespace RachisTests
 
                     try
                     {
-                        if (versionsCount == expectedVersionsCount)
+                        if (revisionsCount == expectedRevisionsCount)
                         {
                             continueMre.Reset();
                             ackSent.Set();
@@ -275,7 +272,7 @@ namespace RachisTests
                             {
 
                                 docsCount++;
-                                versionsCount++;
+                                revisionsCount++;
                             }
                             else if (x.Current == null)
                             {
@@ -286,11 +283,11 @@ namespace RachisTests
 
                                 if (x.Current.Age > x.Previous.Age)
                                 {
-                                    versionsCount++;
+                                    revisionsCount++;
                                 }
                             }
 
-                            if (docsCount == nodesAmount && versionsCount == Math.Pow(nodesAmount, 2))
+                            if (docsCount == nodesAmount && revisionsCount == Math.Pow(nodesAmount, 2))
                                 reachedMaxDocCountMre.Set();
                         }
                         catch (Exception)
@@ -300,7 +297,7 @@ namespace RachisTests
                     }
                 });
 
-                expectedVersionsCount = nodesAmount + 2;
+                expectedRevisionsCount = nodesAmount + 2;
                 continueMre.Set();
                 Assert.True(await task.WaitAsync(_reasonableWaitTime).ConfigureAwait(false));
 
@@ -311,7 +308,7 @@ namespace RachisTests
 
                 await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId.ToString()).ConfigureAwait(false);
                 continueMre.Set();
-                expectedVersionsCount += 2;
+                expectedRevisionsCount += 2;
 
 
                 Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false));
@@ -327,20 +324,20 @@ namespace RachisTests
             }
         }
 
-        private async Task SetupVersioning(RavenServer server, string defaultDatabase)
+        private async Task SetupRevisions(RavenServer server, string defaultDatabase)
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                var versioningDoc = new VersioningConfiguration
+                var configuration = new RevisionsConfiguration
                 {
-                    Default = new VersioningCollectionConfiguration
+                    Default = new RevisionsCollectionConfiguration
                     {
                         Active = true,
                         MinimumRevisionsToKeep = 10,
                     },
-                    Collections = new Dictionary<string, VersioningCollectionConfiguration>
+                    Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                     {
-                        ["Users"] = new VersioningCollectionConfiguration
+                        ["Users"] = new RevisionsCollectionConfiguration
                         {
                             Active = true,
                             MinimumRevisionsToKeep = 10
@@ -349,9 +346,9 @@ namespace RachisTests
                 };
 
                 var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(defaultDatabase);
-                var res = await documentDatabase.ServerStore.ModifyDatabaseVersioning(context,
+                var res = await documentDatabase.ServerStore.ModifyDatabaseRevisions(context,
                     defaultDatabase,
-                    EntityToBlittable.ConvertEntityToBlittable(versioningDoc,
+                    EntityToBlittable.ConvertEntityToBlittable(configuration,
                         new DocumentConventions(),
                         context));
 
@@ -363,7 +360,7 @@ namespace RachisTests
             }
         }
 
-        private void GenerateDistributedVersionedData(string defaultDatabase)
+        private void GenerateDistributedRevisionsData(string defaultDatabase)
         {
             IReadOnlyList<ServerNode> nodes;
             using (var store = new DocumentStore
@@ -390,13 +387,13 @@ namespace RachisTests
                     {
                         Urls = server.WebUrls,
                         Database = defaultDatabase,
-                        Conventions = new DocumentConventions()
+                        Conventions = new DocumentConventions
                         {
                             DisableTopologyUpdates = true
                         }
                     })
                     {
-                        var curDocName = $"user {index} version {curVer}";
+                        var curDocName = $"user {index} revision {curVer}";
                         using (var session = (DocumentSession)curStore.OpenSession())
                         {
                             if (curVer == 0)
@@ -410,7 +407,7 @@ namespace RachisTests
                             }
                             else
                             {
-                                User user = session.Load<User>($"users/{index}");
+                                var user = session.Load<User>($"users/{index}");
                                 user.Age = curVer;
                                 user.Name = curDocName;
                                 session.Store(user, $"users/{index}");

@@ -1,23 +1,23 @@
 using System;
-using Raven.Client.Documents.Exceptions.Versioning;
+using Raven.Client.Documents.Exceptions.Revisions;
 using Raven.Server.ServerWide.Context;
 
-namespace Raven.Server.Documents.Versioning
+namespace Raven.Server.Documents.Revisions
 {
-    public class VersioningOperations
+    public class RevisionsOperations
     {
         private readonly DocumentDatabase _database;
 
-        public VersioningOperations(DocumentDatabase database)
+        public RevisionsOperations(DocumentDatabase database)
         {
             _database = database;
         }
 
         public void DeleteRevisionsBefore(string collection, DateTime time)
         {
-            var versioningStorage = _database.DocumentsStorage.VersioningStorage;
-            if (versioningStorage.Configuration == null)
-                throw new VersioningDisabledException();
+            var revisionsStorage = _database.DocumentsStorage.RevisionsStorage;
+            if (revisionsStorage.Configuration == null)
+                throw new RevisionsDisabledException();
             _database.TxMerger.Enqueue(new DeleteRevisionsBeforeCommand(collection, time, _database)).Wait();
         }
 
@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Versioning
 
             public override int Execute(DocumentsOperationContext context)
             {
-                _database.DocumentsStorage.VersioningStorage.DeleteRevisionsBefore(context, _collection, _time);
+                _database.DocumentsStorage.RevisionsStorage.DeleteRevisionsBefore(context, _collection, _time);
                 return 1;
             }
         }

@@ -29,7 +29,7 @@ class collectionsTracker {
             .execute()
             .done(stats => this.collectionsLoaded(stats, db));
 
-        this.configureRevisions(db.hasVersioningConfiguration(), db);
+        this.configureRevisions(db.hasRevisionsConfiguration(), db);
 
         return this.loadStatsTask;
     }

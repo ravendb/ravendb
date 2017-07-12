@@ -30,6 +30,6 @@ namespace Raven.Server.NotificationCenter.Notifications
         ClusterTopologyWarning,
         SwappingHddInsteadOfSsd,
 
-        VersioningConfigurationNotValid,
+        RevisionsConfigurationNotValid,
     }
 }

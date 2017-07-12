@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Replication
                 doc))
                 return;
 
-            if (_conflictResolver.ConflictSolver.ResolveToLatest)
+            if (_conflictResolver.ConflictSolver?.ResolveToLatest == true)
             {
                 if (conflictedChangeVector == null) //precaution
                     throw new InvalidOperationException(
@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Replication
                 if (local != null)
                     conflicts.Add(local);
 
-                var resolved = _conflictResolver.ResolveToLatest(documentsContext, conflicts);
+                var resolved = _conflictResolver.ResolveToLatest(conflicts);
                 _conflictResolver.PutResolvedDocument(documentsContext, resolved);
 
                 return;
@@ -118,7 +118,6 @@ namespace Raven.Server.Documents.Replication
             }
 
             var conflictedDocs = new List<DocumentConflict>(documentsContext.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(documentsContext, id));
-            var isTombstone = false;
 
             if (conflictedDocs.Count == 0)
             {
@@ -133,7 +132,6 @@ namespace Raven.Server.Documents.Replication
                 else if (relevantLocalDoc.Tombstone != null)
                 {
                     conflictedDocs.Add(DocumentConflict.From(relevantLocalDoc.Tombstone));
-                    isTombstone = true;
                 }
             }
 
@@ -153,8 +151,7 @@ namespace Raven.Server.Documents.Replication
                 documentsContext,
                 scriptResolver,
                 conflictedDocs,
-                documentsContext.GetLazyString(collection),
-                isTombstone, out var resolved))
+                documentsContext.GetLazyString(collection), out var resolved))
             {
                 _conflictResolver.PutResolvedDocument(documentsContext, resolved);
                 return true;

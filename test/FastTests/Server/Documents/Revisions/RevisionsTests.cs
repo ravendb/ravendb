@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="Versioning.cs" company="Hibernating Rhinos LTD">
+// <copyright file="RevisionsTests.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -11,7 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Exceptions.Versioning;
+using Raven.Client.Documents.Exceptions.Revisions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Server.Documents;
@@ -20,9 +20,9 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
 
-namespace FastTests.Server.Documents.Versioning
+namespace FastTests.Server.Documents.Revisions
 {
-    public class Versioning : RavenTestBase
+    public class RevisionsTests : RavenTestBase
     {
         [Fact]
         public async Task CanGetAllRevisionsFor()
@@ -30,7 +30,7 @@ namespace FastTests.Server.Documents.Versioning
             var company = new Company { Name = "Company Name" };
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -53,12 +53,12 @@ namespace FastTests.Server.Documents.Versioning
         }
 
         [Fact]
-        public async Task CanCheckIfDocumentIsVersioned()
+        public async Task CanCheckIfDocumentHasRevisions()
         {
             var company = new Company { Name = "Company Name" };
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -69,7 +69,7 @@ namespace FastTests.Server.Documents.Versioning
                     var company3 = await session.LoadAsync<Company>(company.Id);
                     var metadata = session.Advanced.GetMetadataFor(company3);
 
-                    Assert.Equal(DocumentFlags.Versioned.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+                    Assert.Equal(DocumentFlags.HasRevisions.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
                 }
             }
         }
@@ -80,7 +80,7 @@ namespace FastTests.Server.Documents.Versioning
 
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     var companiesRevisions = await session.Advanced.GetRevisionsForAsync<Company>("companies/1");
@@ -90,26 +90,26 @@ namespace FastTests.Server.Documents.Versioning
         }
 
         [Fact]
-        public async Task GetRevisionsOfNotExistKey_WithVersioningDisabled()
+        public async Task GetRevisionsOfNotExistKey_WithRevisionsDisabled()
         {
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    var exception = await Assert.ThrowsAsync<VersioningDisabledException>(async () => await session.Advanced.GetRevisionsForAsync<Company>("companies/1"));
-                    Assert.Contains("Versioning is disabled", exception.Message);
+                    var exception = await Assert.ThrowsAsync<RevisionsDisabledException>(async () => await session.Advanced.GetRevisionsForAsync<Company>("companies/1"));
+                    Assert.Contains("Revisions are disabled", exception.Message);
                 }
             }
         }
 
         [Fact]
-        public async Task CanExcludeEntitiesFromVersioning()
+        public async Task CanExcludeEntitiesFromRevisions()
         {
             var user = new User { Name = "User Name" };
             var comment = new Comment { Name = "foo" };
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(user);
@@ -133,7 +133,7 @@ namespace FastTests.Server.Documents.Versioning
             var company = new Company { Name = "Company Name" };
             using (var store = GetDocumentStore(path: path))
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -168,7 +168,7 @@ namespace FastTests.Server.Documents.Versioning
             var product = new User { Name = "Hibernating" };
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(product);
@@ -204,7 +204,7 @@ namespace FastTests.Server.Documents.Versioning
             var product = new Product { Description = "A fine document db", Quantity = 5 };
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(product);
@@ -237,7 +237,7 @@ namespace FastTests.Server.Documents.Versioning
             var company = new Company { Name = "Company #1" };
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -264,7 +264,7 @@ namespace FastTests.Server.Documents.Versioning
         {
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -328,7 +328,7 @@ namespace FastTests.Server.Documents.Versioning
         {
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Hibernating" }, "users/1");
@@ -366,7 +366,7 @@ namespace FastTests.Server.Documents.Versioning
         {
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database, false);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, false);
 
                 var deletedRevisions = await store.Commands().GetRevisionsBinEntriesAsync(long.MaxValue);
                 Assert.Equal(0, deletedRevisions.Count);
@@ -419,9 +419,9 @@ namespace FastTests.Server.Documents.Versioning
                 dynamic revisions = await store.Commands().GetRevisionsForAsync(id, metadataOnly: true);
                 Assert.Equal(4, revisions.Count);
                 Assert.Equal(DocumentFlags.DeleteRevision.ToString(), revisions[0][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
-                Assert.Equal((DocumentFlags.Versioned | DocumentFlags.Revision).ToString(), revisions[1][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
+                Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision).ToString(), revisions[1][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
                 Assert.Equal(DocumentFlags.DeleteRevision.ToString(), revisions[2][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
-                Assert.Equal((DocumentFlags.Versioned | DocumentFlags.Revision).ToString(), revisions[3][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
+                Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision).ToString(), revisions[3][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
 
                 await store.Admin.SendAsync(new DeleteRevisionsOperation(id, "users/not/exists"));
 
@@ -438,7 +438,7 @@ namespace FastTests.Server.Documents.Versioning
         {
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database, false);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, false);
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddDays(-1);
@@ -470,12 +470,12 @@ namespace FastTests.Server.Documents.Versioning
                 {
                     new AdminJsConsole(database).ApplyScript(new AdminJsScript
                     {
-                        Script = "database.DocumentsStorage.VersioningStorage.Operations.DeleteRevisionsBefore('Users', new Date());"
+                        Script = "database.DocumentsStorage.RevisionsStorage.Operations.DeleteRevisionsBefore('Users', new Date());"
                     });
                 }
                 else
                 {
-                    database.DocumentsStorage.VersioningStorage.Operations.DeleteRevisionsBefore("Users", DateTime.UtcNow);
+                    database.DocumentsStorage.RevisionsStorage.Operations.DeleteRevisionsBefore("Users", DateTime.UtcNow);
                 }
 
                 statistics = store.Admin.Send(new GetStatisticsOperation());

@@ -1,31 +1,31 @@
 using Raven.Client.Server;
-using Raven.Client.Server.Versioning;
+using Raven.Client.Server.Revisions;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class EditVersioningCommand : UpdateDatabaseCommand
+    public class EditRevisionsConfigurationCommand : UpdateDatabaseCommand
     {
-        public VersioningConfiguration Configuration { get; protected set; }
+        public RevisionsConfiguration Configuration { get; protected set; }
 
         public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
         {
-            databaseRecord.Versioning = Configuration;
+            databaseRecord.Revisions = Configuration;
         }
 
-        public EditVersioningCommand() : base(null)
+        public EditRevisionsConfigurationCommand() : base(null)
         {
         }
 
-        public EditVersioningCommand(VersioningConfiguration configuration, string databaseName) : base(databaseName)
+        public EditRevisionsConfigurationCommand(RevisionsConfiguration configuration, string databaseName) : base(databaseName)
         {
             Configuration = configuration;
         }
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            record.Versioning = Configuration;
+            record.Revisions = Configuration;
             return null;
         }
 

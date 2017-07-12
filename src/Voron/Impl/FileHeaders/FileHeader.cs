@@ -22,6 +22,7 @@ namespace Voron.Impl.FileHeaders
         /// </summary>
         [FieldOffset(0)]
         public ulong MagicMarker;
+
         /// <summary>
         /// The version of the data, used for versioning / conflicts
         /// </summary>

@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
-using System.ServiceModel;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,12 +18,10 @@ using Raven.Client.Json;
 using Raven.Client.Server;
 using Raven.Client.Server.ETL;
 using Raven.Client.Server.Operations;
-using Raven.Client.Server.Operations.ApiKeys;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
-using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Rachis;
 using Raven.Server.NotificationCenter.Notifications;
@@ -180,12 +177,7 @@ namespace Raven.Server.ServerWide
                             }
                             foreach (var node in nodesChanges.addedValues)
                             {
-                                var task = ClusterMaintenanceSupervisor.AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key), clusterTopology.ApiKey).ContinueWith(t =>
-                                {
-                                    if (Logger.IsInfoEnabled)
-                                        Logger.Info($"ClusterMaintenanceSupervisor() => Failed to add to cluster node key = {node.Key}", t.Exception);
-                                }, TaskContinuationOptions.OnlyOnFaulted);
-                                GC.KeepAlive(task);
+                                ClusterMaintenanceSupervisor.AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key), clusterTopology.ApiKey);
                             }
 
                             var leaderChanged = _engine.WaitForLeaveState(RachisConsensus.State.Leader);
@@ -466,7 +458,7 @@ namespace Raven.Server.ServerWide
 
         }
 
-        private unsafe bool TryLoadAuthenticationKeyPairs(TransactionOperationContext ctx)
+        private bool TryLoadAuthenticationKeyPairs(TransactionOperationContext ctx)
         {
             using (ctx.OpenReadTransaction())
             {
@@ -547,7 +539,7 @@ namespace Raven.Server.ServerWide
                     {
                         nodesStatuses = new Dictionary<string, NodeStatus>
                         {
-                            [leaderTag] = new NodeStatus {ConnectionStatus = "Connected"}
+                            [leaderTag] = new NodeStatus { Connected = true } 
                         };
                     }
                     break;
@@ -810,7 +802,7 @@ namespace Raven.Server.ServerWide
         {
             var deleteTaskCommand = 
                 taskType == OngoingTaskType.Subscription ? 
-                    (CommandBase)new DeleteSubscriptionCommand(dbName){SubscriptionName = taskName } : 
+                    (CommandBase)new DeleteSubscriptionCommand(dbName, taskName): 
                     new DeleteOngoingTaskCommand(taskId, taskType, dbName);
 
             return SendToLeaderAsync(deleteTaskCommand);
@@ -910,10 +902,10 @@ namespace Raven.Server.ServerWide
             return etlType;
         }
 
-        public Task<(long, object)> ModifyDatabaseVersioning(JsonOperationContext context, string name, BlittableJsonReaderObject configurationJson)
+        public Task<(long, object)> ModifyDatabaseRevisions(JsonOperationContext context, string name, BlittableJsonReaderObject configurationJson)
         {
-            var editVersioning = new EditVersioningCommand(JsonDeserializationCluster.VersioningConfiguration(configurationJson), name);
-            return SendToLeaderAsync(editVersioning);
+            var editRevisions = new EditRevisionsConfigurationCommand(JsonDeserializationCluster.RevisionsConfiguration(configurationJson), name);
+            return SendToLeaderAsync(editRevisions);
         }
 
         public async Task<(long, object)> AddConnectionString(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject connectionString)
@@ -1209,7 +1201,7 @@ namespace Raven.Server.ServerWide
                     {
                         await Task.WhenAny(logChange, timeoutTask);
                         if (logChange.IsCompleted == false)
-                            ThrowTimeoutException();
+                            ThrowTimeoutException(cmd);
 
                         continue;
                     }
@@ -1227,7 +1219,7 @@ namespace Raven.Server.ServerWide
 
                 await Task.WhenAny(logChange, timeoutTask);
                 if (logChange.IsCompleted == false)
-                    ThrowTimeoutException();
+                    ThrowTimeoutException(cmd);
             }
         }
 
@@ -1237,9 +1229,9 @@ namespace Raven.Server.ServerWide
                                             "Passive nodes aren't members of a cluster and require admin action (such as creating a db) to indicate that this node should create its own cluster");
         }
 
-        private static void ThrowTimeoutException()
+        private void ThrowTimeoutException(CommandBase cmd)
         {
-            throw new TimeoutException("Could not send command to leader because there is no leader, and we timed out waiting for one");
+            throw new TimeoutException($"Could not send command {cmd.GetType().FullName} from {NodeTag} to leader because there is no leader, and we timed out waiting for one after {Engine.OperationTimeout}");
         }
 
         private async Task<(long Etag, object Result)> SendToNodeAsync(string engineLeaderTag, CommandBase cmd)
@@ -1399,71 +1391,7 @@ namespace Raven.Server.ServerWide
 
         }
 
-        private const string SystemApiKey = "Raven:System";
-        public async Task<(string ApiKey, string PublicKey)> GetApiKeyAndPublicKey()
-        {
-            TransactionOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            using (context.OpenReadTransaction())
-            {
-                var key = Cluster.Read(context, SystemApiKey);
-                string keyFullName;
-                if (key == null)
-                {
-                    EnsureNotPassive();
-                    //making sure we are leaders, we might be followers and fail but that is okay.                    
-                    if (await Engine.WaitForState(RachisConsensus.State.Leader).WaitWithTimeout(TimeSpan.FromSeconds(5)) == false)
-                    {
-                        var msg = "Was requested to get api key and public key but i haven't became leader after 5 seconds";
-                        if (Logger.IsInfoEnabled)
-                        {
-                            Logger.Info(msg);
-                        }
-                        throw new TimeoutException(msg);
-                    }
-                    var secret = GenerateRandomSecret();
-                    var defintions = new ApiKeyDefinition
-                    {
-                        Enabled = true,
-                        ResourcesAccessMode = new Dictionary<string, AccessMode> { { "*",AccessMode.Admin} },
-                        Secret = secret,
-                        ServerAdmin = true
-                    };
-                    var createApiKey = new PutApiKeyCommand(SystemApiKey, defintions);
-                    var index = (await Engine.PutAsync(createApiKey)).Etag;
-                    if (await Engine.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index).WaitWithTimeout(TimeSpan.FromSeconds(5)) == false)
-                    {
-                        var msg = "Waited for 5 seconds for Raven/System to be commited but it wasn't";
-                        if (Logger.IsInfoEnabled)
-                        {
-                            Logger.Info(msg);
-                        }
-                        throw new TimeoutException(msg);
-                    }
-                    keyFullName = $"Key={SystemApiKey}/{secret}";
-                }
-                else
-                {
-                    var desKey = JsonDeserializationServer.ApiKeyDefinition(key);
-                    keyFullName = $"Key={SystemApiKey}/{desKey.Secret}";
-                }
-                return (keyFullName, Convert.ToBase64String(SignPublicKey));
-            }            
-        }
-
-        private const string secretCharacters = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        private string GenerateRandomSecret()
-        {
-            var rand = new Random();
-            var secretLength = (int)(22 * rand.NextDouble()) + 10;
-            var sb = new StringBuilder();
-            for (int i = 0; i < secretLength; i++)
-            {
-                sb.Append(secretCharacters[rand.Next(secretCharacters.Length)]);
-            }
-            return sb.ToString();
-        }
-        
+   
         public bool HasClientConfigurationChanged(long index)
         {
             if (index < 0)

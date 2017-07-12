@@ -52,7 +52,7 @@ class saveSubscriptionTaskCommand extends commandBase {
             Criteria: {
                 Collection: this.subscriptionSettings.Collection,
                 Script: this.subscriptionSettings.Script,
-                IsVersioned: this.subscriptionSettings.IsVersioned
+                IncludeRevisions: this.subscriptionSettings.IncludeRevisions
             }
         };
 

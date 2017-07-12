@@ -578,7 +578,7 @@ namespace Raven.Server.Documents
             if (context.Transaction.ModifiedSystemDocuments)
                 // a transaction that modified system documents may cause us to 
                 // do certain actions (for example, initialize trees for versioning)
-                // which we can't realy do if we are starting another transaction
+                // which we can't really do if we are starting another transaction
                 // immediately. This way, we skip this optimization for this
                 // kind of work
                 return PendingOperations.ModifiedSystemDocuments;

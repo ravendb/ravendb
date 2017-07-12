@@ -151,8 +151,7 @@ namespace Raven.Server.Documents.Replication
 
         private void OutgoingHandlerRemoved(OutgoingReplicationHandler handler)
         {
-            ReplicationHandlerAndPerformanceStatsList<OutgoingReplicationHandler, OutgoingReplicationStatsAggregator> stats;
-            if (_outgoing.TryRemove(handler, out stats))
+            if (_outgoing.TryRemove(handler, out ReplicationHandlerAndPerformanceStatsList<OutgoingReplicationHandler, OutgoingReplicationStatsAggregator> stats))
                 stats.Handler.DocumentsSend -= OutgoingDocumentsSend;
         }
 
@@ -168,8 +167,7 @@ namespace Raven.Server.Documents.Replication
 
         private void OutgoingDocumentsSend(OutgoingReplicationHandler handler)
         {
-            ReplicationHandlerAndPerformanceStatsList<OutgoingReplicationHandler, OutgoingReplicationStatsAggregator> stats;
-            if (_outgoing.TryGetValue(handler, out stats) == false)
+            if (_outgoing.TryGetValue(handler, out ReplicationHandlerAndPerformanceStatsList<OutgoingReplicationHandler, OutgoingReplicationStatsAggregator> stats) == false)
             {
                 // possible?
                 return;

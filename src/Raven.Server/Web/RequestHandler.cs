@@ -335,20 +335,10 @@ namespace Raven.Server.Web
         protected string GetQueryStringValueAndAssertIfSingleAndNotEmpty(string name)
         {
             var values = HttpContext.Request.Query[name];
-            if (values.Count != 1)
-                InvalidCountOfValues(name);
-            if (string.IsNullOrWhiteSpace(values[0]))
+            if (values.Count == 0 || string.IsNullOrWhiteSpace(values[0]))
                 InvalidEmptyValue(name);
-
-            return values[0];
-        }
-
-        //TODO - Temporary for old client test. need to be deleted .
-        protected string GetQueryStringValue(string name)
-        {
-            var values = HttpContext.Request.Query[name];
-            if (values.Count != 1)
-                return null;
+            if (values.Count > 1)
+                InvalidCountOfValues(name);
             return values[0];
         }
 

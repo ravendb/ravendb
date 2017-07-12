@@ -1,164 +1,95 @@
 ﻿using System;
-using System.Diagnostics;
-using System.IO;
-using System.IO.Pipes;
-using Jint;
-using Org.BouncyCastle.Pkix;
-using Raven.Server;
-using Raven.Server.ServerWide;
-using Raven.Server.Utils;
-using Sparrow;
-using Voron;
-using Voron.Impl.Compaction;
+using System.Text;
 
 namespace rvn
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static int Main(string[] args)
         {
-            //TODO: Need proper error messages
+            if (args.Length == 0 || args[0].Equals("-h") || args[0].Equals("--help"))
+                PrintUsageAndExit();
+            if (args[0].Equals("--offline-help"))
+                PrintUsageAndExit(true);
 
-            var command = args[1].ToLowerInvariant();
-            var path = args[2];
 
-            //ValidatePath(path);
-
-            switch (command)
+            switch (args[0])
             {
-                case "encrypt":
-                    EncryptServerStore(path);
+                case "admin-channel":
+                    if (args.Length > 2)
+                        PrintInvalidUsageAndExit($"Invalid number of argumets passed to {args[0]}");
+                    var pid = args.Length == 2 ? (int?)Convert.ToInt32(args[1]) : null;
+                    AdminChannel.Connect(pid);
                     break;
-                case "get-key":
-                    var base64Key = RecoverServerStoreKey(path);
-                    Console.WriteLine("Secret Key:");
-                    Console.WriteLine(base64Key);
+
+                case "offline-operation":
+                    if (args.Length < 2)
+                        PrintInvalidUsageAndExit($"No command after '{args[0]}'");
+
+                    switch (args[1])
+                    {
+                        case "get-key":
+                            if (args.Length != 3)
+                                PrintInvalidUsageAndExit($"Invalid number of argumets passed to '{args[0]}' '{args[1]}' command");
+                            WriteLine(OfflineOperations.GetKey(args[2]));
+                            break;
+                        case "put-key":
+                            if (args.Length != 3)
+                                PrintInvalidUsageAndExit($"Invalid number of argumets passed to '{args[0]}' '{args[1]}' command");
+                            WriteLine(OfflineOperations.PutKey(args[2]));
+                            break;
+                        case "init-keys":
+                            if (args.Length != 2)
+                                PrintInvalidUsageAndExit($"Invalid number of argumets passed to '{args[0]}' '{args[1]}' command");
+                            WriteLine(OfflineOperations.InitKeys());
+                            break;
+                        case "trust":
+                            if (args.Length != 4)
+                                PrintInvalidUsageAndExit($"Invalid number of argumets passed to '{args[0]}' '{args[1]}' command");
+                            WriteLine(OfflineOperations.Trust(args[2], args[3]));
+                            break;
+                        case "encrypt":
+                            if (args.Length != 3)
+                                PrintInvalidUsageAndExit($"Invalid number of argumets passed to '{args[0]}' '{args[1]}' command");
+                            WriteLine(OfflineOperations.Encrypt(args[2]));
+                            break;
+                        case "decrypt":
+                            if (args.Length != 3)
+                                PrintInvalidUsageAndExit($"Invalid number of argumets passed to '{args[0]}' '{args[1]}' command");
+                            WriteLine(OfflineOperations.Decrypt(args[2]));
+                            break;
+                        default:
+                            PrintInvalidUsageAndExit($"Unknown '{args[1]}' command after '{args[0]}'");
+                            break;
+                    }
                     break;
-                case "put-key":
-                    Console.WriteLine("Please enter the secret key: ");
-                    var key = Console.ReadLine();
-                    ValidateKey(key);
-                    InstallServerStoreKey(path, key);
-                    break;
-                case "init":
-                    PrintFirstApiKeyAndPublicKey(path);
-                    break;
-                case "trust":
-                    Trust(args[2], args[3], args[4]);
-                    break;
-                case "decrypt":
-                    DecryptServerStore(path);
-                    break;
+
                 default:
-                    PrintUsage("Invalid command...");
-                    return;
-            }
-
-            Console.WriteLine("Done.");
-        }
-
-        /// <summary>
-        /// Request Raven to trust the provided public key for provided server tag
-        /// </summary>
-        /// <param name="pid">Raven server process id</param>
-        /// <param name="key">The public key you wish to install</param>
-        /// <param name="tag">The tag of the server you wish to install the public key to</param>
-        private static void Trust(string pid, string key, string tag)
-        {
-            try
-            {
-                var pipeName = RavenServer.PipePrefix + pid;
-                using (var client = new NamedPipeClientStream(pipeName))
-                {
-                    var writer = new StreamWriter(client);
-                    var reader = new StreamReader(client);
-                    client.Connect(3000);
-                    writer.WriteLine($"trust {key} {tag}");
-                    writer.Flush();
-                    ReadResponseFromServer(reader);
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Extract the system api key and public key of the leader of the cluster (or passive that will become leader)
-        /// </summary>
-        /// <param name="pid">Raven server process id</param>
-        private static void PrintFirstApiKeyAndPublicKey(string pid)
-        {
-            try
-            {
-                var pipeName = RavenServer.PipePrefix + pid;
-                using (var client = new NamedPipeClientStream(pipeName))
-                {
-                    var reader = new StreamReader(client);
-                    var writer = new StreamWriter(client);
-                    client.Connect(3000);
-                    writer.WriteLine("init");
-                    writer.Flush();
-
-                    ReadResponseFromServer(reader);
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
-        }
-
-        private static void ReadResponseFromServer(StreamReader reader)
-        {
-            bool hasInput = false;
-            while (true)
-            {
-                string line;
-                try
-                {
-                    line = reader.ReadLine();
-                    if (line == null)
-                        break;
-                }
-                catch (IOException)
-                {
-                    if (hasInput == false)
-                        throw;
+                    PrintInvalidUsageAndExit($"Unkown command '{args[0]}' passed to rvn");
                     break;
-                }
-                Console.WriteLine(line);
-                hasInput = true;
+
             }
+
+            return 0;
         }
 
-        private static void ValidatePath(string dirPath)
+        private static void WriteLine(string s)
         {
-            if (dirPath == null)
-                throw new ArgumentNullException(nameof(dirPath));
-            if (!Directory.Exists(dirPath))
-                throw new DirectoryNotFoundException(dirPath);
+            Console.WriteLine(s);
+            Console.Out.Flush();
         }
 
-        private static void ValidateKey(string key)
+        private static void PrintUsageAndExit(bool offlineHelp = false)
         {
-            if (string.IsNullOrEmpty(key))
-                throw new ArgumentNullException(nameof(key));
-        }
-
-        private static void PrintUsage(string error = null)
-        {
-            Console.WriteLine(error ?? "");
-            Console.WriteLine(@"
-Server Store Encryption & Backup utility for RavenDB
-----------------------------------------------
-Copyright (C) 2008 - {0} - Hibernating Rhinos
-----------------------------------------------", DateTime.UtcNow.Year);
-
-            Console.WriteLine(@"
+            var nl = Environment.NewLine;
+            var sb = new StringBuilder($"Usage:{nl}");
+            sb.Append($"\trvn <command> [options]{nl}{nl}");
+            sb.Append($"\tcommand:\tadmin-channel [PID]\tNamed Pipe Connection to RavenDB with PID. If PID ommited - will try auto pid discovery{nl}");
+            sb.Append($"\t\t\toffline-operations <operation-command> [args]{nl}{nl}");
+            if (offlineHelp == false)
+                sb.Append($"\tFor information about offline-operations type : rvn --offline-help{nl}");
+            else
+                sb.Append(@"
 Description: 
     This utility lets you manage RavenDB offline operations, such as setting encryption mode for the server store.
 
@@ -201,85 +132,22 @@ In order to backup the files (for any user) and possibly transfer them to a diff
         for the current OS user. This is typically used as part of the restore process of an encrypted server store on a new machine.
 
 ");
+            Console.WriteLine(sb);
+            Environment.Exit(1);
         }
 
-        private static void EncryptServerStore(string srcDir)
+        private static void PrintInvalidUsageAndExit(string str)
         {
-            var masterKey = Sodium.GenerateMasterKey();
-            var dstDir = Path.Combine(Path.GetDirectoryName(srcDir), "Temp.Encryption");
-
-            var srcOptions = StorageEnvironmentOptions.ForPath(srcDir);
-            var dstOptions = StorageEnvironmentOptions.ForPath(dstDir);
-
-            dstOptions.MasterKey = masterKey;
-
-            var entropy = Sodium.GenerateRandomBuffer(256);
-            var protect = SecretProtection.Protect(masterKey, entropy);
-
-            StorageCompaction.Execute(srcOptions, (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)dstOptions);
-
-            using (var f = File.OpenWrite(Path.Combine(dstDir, "secret.key.encrypted")))
-            {
-                f.Write(protect, 0, protect.Length);
-                f.Write(entropy, 0, entropy.Length);
-                f.Flush();
-            }
-
-            IOExtensions.DeleteDirectory(srcDir);
-            Directory.Move(dstDir, srcDir);
-        }
-
-        private static string RecoverServerStoreKey(string srcDir)
-        {
-            var keyPath = Path.Combine(srcDir, "secret.key.encrypted");
-            if (File.Exists(keyPath) == false)
-                return null;
-
-            var buffer = File.ReadAllBytes(keyPath);
-            var secret = new byte[buffer.Length - 32];
-            var entropy = new byte[32];
-            Array.Copy(buffer, 0, secret, 0, buffer.Length - 32);
-            Array.Copy(buffer, buffer.Length - 32, entropy, 0, 32);
-
-            var key = SecretProtection.Unprotect(secret, entropy);
-            return Convert.ToBase64String(key);
-        }
-
-        private static void InstallServerStoreKey(string dstDir, string base64Key)
-        {
-            var entropy = Sodium.GenerateRandomBuffer(256);
-            var secret = Convert.FromBase64String(base64Key);
-            var protect = SecretProtection.Protect(secret, entropy);
-
-            using (var f = File.OpenWrite(Path.Combine(dstDir, "secret.key.encrypted")))
-            {
-                f.Write(protect, 0, protect.Length);
-                f.Write(entropy, 0, entropy.Length);
-                f.Flush();
-            }
-        }
-
-        private static void DecryptServerStore(string srcDir)
-        {
-            var dstDir = Path.Combine(Path.GetDirectoryName(srcDir), "Temp.Decryption");
-
-            var bytes = File.ReadAllBytes(Path.Combine(srcDir, "secret.key.encrypted"));
-            var secret = new byte[bytes.Length - 32];
-            var entropy = new byte[32];
-            Array.Copy(bytes, 0, secret, 0, bytes.Length - 32);
-            Array.Copy(bytes, bytes.Length - 32, entropy, 0, 32);
-
-            var srcOptions = StorageEnvironmentOptions.ForPath(srcDir);
-            var dstOptions = StorageEnvironmentOptions.ForPath(dstDir);
-
-            srcOptions.MasterKey = SecretProtection.Unprotect(secret, entropy);
-
-            StorageCompaction.Execute(srcOptions, (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)dstOptions);
-
-            IOExtensions.DeleteDirectory(srcDir);
-            Directory.Move(dstDir, srcDir);
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("ERROR: " + str);
+            Console.ResetColor();
+            Console.WriteLine("For info type : rvn --help");
+            Console.WriteLine();
+            Console.Out.Flush();
+            Environment.Exit(1);
         }
 
 
     }
 }
+

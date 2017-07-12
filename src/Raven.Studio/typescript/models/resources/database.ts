@@ -9,7 +9,7 @@ class database {
     errored = ko.observable<boolean>(false);
     isAdminCurrentTenant = ko.observable<boolean>(false);
     relevant = ko.observable<boolean>(true);
-    hasVersioningConfiguration = ko.observable<boolean>(false);
+    hasRevisionsConfiguration = ko.observable<boolean>(false);
 
     private clusterNodeTag: KnockoutObservable<string>;
 
@@ -32,7 +32,7 @@ class database {
     }
 
     updateUsing(incomingCopy: Raven.Client.Server.Operations.DatabaseInfo) {
-        this.hasVersioningConfiguration(incomingCopy.HasVersioningConfiguration);
+        this.hasRevisionsConfiguration(incomingCopy.HasRevisionsConfiguration);
         this.isAdminCurrentTenant(incomingCopy.IsAdmin);
         this.name = incomingCopy.Name;
         this.disabled(incomingCopy.Disabled);

@@ -18,7 +18,7 @@ using Raven.Client.Server;
 using Raven.Client.Server.ETL;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.PeriodicBackup;
-using Raven.Client.Server.Versioning;
+using Raven.Client.Server.Revisions;
 using Raven.Server.Commercial;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
@@ -180,8 +180,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DatabaseSmugglerOptions));
             scripter.AddType(typeof(SmugglerResult));
 
-            // versioning
-            scripter.AddType(typeof(VersioningConfiguration));
+            // revisions
+            scripter.AddType(typeof(RevisionsConfiguration));
 
             // etl
             scripter.AddType(typeof(RavenEtlConfiguration));

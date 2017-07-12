@@ -1,20 +1,20 @@
 //-----------------------------------------------------------------------
-// <copyright file="Versioning.cs" company="Hibernating Rhinos LTD">
+// <copyright file="RevisionsConfiguration.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
 
-namespace Raven.Client.Server.Versioning
+namespace Raven.Client.Server.Revisions
 {
-    public class VersioningConfiguration
+    public class RevisionsConfiguration
     {
-        public VersioningCollectionConfiguration Default { get; set; }
+        public RevisionsCollectionConfiguration Default { get; set; }
 
-        public Dictionary<string, VersioningCollectionConfiguration> Collections { get; set; }
+        public Dictionary<string, RevisionsCollectionConfiguration> Collections { get; set; }
 
-        public bool Equals(VersioningConfiguration other)
+        public bool Equals(RevisionsConfiguration other)
         {
             if (other == null)
                 return false;
@@ -22,7 +22,7 @@ namespace Raven.Client.Server.Versioning
                 return false;
             foreach (var keyValue in Collections)
             {
-                VersioningCollectionConfiguration val;
+                RevisionsCollectionConfiguration val;
                 if (other.Collections.TryGetValue(keyValue.Key, out val) == false)
                     return false;
                 if (keyValue.Value.Equals(val) == false)
@@ -41,7 +41,7 @@ namespace Raven.Client.Server.Versioning
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((VersioningConfiguration)obj);
+            return Equals((RevisionsConfiguration)obj);
         }
 
         public override int GetHashCode()

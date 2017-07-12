@@ -22,6 +22,8 @@ namespace Raven.Client.Documents.Replication.Messages
         public string MessageType { get; set; }
         public ChangeVectorEntry[] ChangeVector { get; set; }
         public string DatabaseId { get; set; }
+        
+        public long CurrentEtag { get; set; }
     }
     public struct ChangeVectorEntry : IComparable<ChangeVectorEntry>
     {

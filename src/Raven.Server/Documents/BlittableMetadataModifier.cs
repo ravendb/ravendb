@@ -32,8 +32,8 @@ namespace Raven.Server.Documents
 
         private readonly FastList<AllocatedMemoryData> _allocations = new FastList<AllocatedMemoryData>();
 
-        private const string HistoricalRevisionState = "Historical";
-        private const string VersionedDocumentState = "Current";
+        private const string LegacyRevisionState = "Historical";
+        private const string LegacyHasRevisionsDocumentState = "Current";
         
         private DocumentFlags ReadFlags(JsonParserState state)
         {
@@ -502,10 +502,10 @@ namespace Raven.Server.Documents
                     {
                         switch (CreateLazyStringValueFromParserState(state))
                         {
-                            case VersionedDocumentState:
-                                NonPersistentFlags |= NonPersistentDocumentFlags.LegacyVersioned;
+                            case LegacyHasRevisionsDocumentState:
+                                NonPersistentFlags |= NonPersistentDocumentFlags.LegacyHasRevisions;
                                 break;
-                            case HistoricalRevisionState:
+                            case LegacyRevisionState:
                                 NonPersistentFlags |= NonPersistentDocumentFlags.LegacyRevision;
                                 break;
                         }
@@ -568,10 +568,10 @@ namespace Raven.Server.Documents
 
                     switch (CreateLazyStringValueFromParserState(state))
                     {
-                        case VersionedDocumentState:
-                            NonPersistentFlags |= NonPersistentDocumentFlags.LegacyVersioned;
+                        case LegacyHasRevisionsDocumentState:
+                            NonPersistentFlags |= NonPersistentDocumentFlags.LegacyHasRevisions;
                             break;
-                        case HistoricalRevisionState:
+                        case LegacyRevisionState:
                             NonPersistentFlags |= NonPersistentDocumentFlags.LegacyRevision;
                             break;
                     }

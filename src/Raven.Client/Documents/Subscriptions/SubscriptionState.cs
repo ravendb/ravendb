@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Subscriptions
                 {
                     [nameof(SubscriptionCriteria.Collection)] = Criteria.Collection,
                     [nameof(SubscriptionCriteria.Script)] = Criteria.Script,
-                    [nameof(SubscriptionCriteria.IsVersioned)] = Criteria.IsVersioned
+                    [nameof(SubscriptionCriteria.IncludeRevisions)] = Criteria.IncludeRevisions
                 },
                 [nameof(ChangeVector)] = ChangeVector,
                 [nameof(SubscriptionId)] = SubscriptionId,
