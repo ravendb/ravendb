@@ -51,13 +51,7 @@ namespace Indexing.Benchmark
                 public double Total { get; set; }
             }
 
-            public override string IndexName
-            {
-                get
-                {
-                    return "Orders/Totals";
-                }
-            }
+            public override string IndexName => "Orders/Totals";
 
             public override IndexDefinition CreateIndexDefinition()
             {
