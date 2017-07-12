@@ -253,29 +253,38 @@ namespace Raven.Server.Documents.Revisions
 
                     if (fromReplication)
                     {
-                        void PutFromRevision() => _documentsStorage.Put(context, id, null, document, lastModifiedTicks, changeVector, 
-                            flags & ~DocumentFlags.Revision, nonPersistentFlags | NonPersistentDocumentFlags.FromRevision);
-
-                        try
+                        void PutFromRevisionIfChangeVectorIsGreater()
                         {
-                            var hasDoc = _documentsStorage.GetTableValueReaderForDocument(context, lowerId, out TableValueReader tvr);
+                            bool hasDoc;
+                            TableValueReader tvr;
+                            try
+                            {
+                                hasDoc = _documentsStorage.GetTableValueReaderForDocument(context, lowerId, out tvr);
+                            }
+                            catch (DocumentConflictException)
+                            {
+                                // Do not modify the document.
+                                return;
+                            }
+
                             if (hasDoc == false)
                             {
                                 PutFromRevision();
+                                return;
                             }
-                            else
+
+                            var docChangeVector = TableValueToChangeVector(ref tvr, (int)DocumentsTable.ChangeVector);
+                            if (changeVector.GreaterThan(docChangeVector))
+                                PutFromRevision();
+
+                            void PutFromRevision()
                             {
-                                var docChangeVector = TableValueToChangeVector(ref tvr, (int)DocumentsTable.ChangeVector);
-                                if (changeVector.GreaterThan(docChangeVector))
-                                {
-                                    PutFromRevision();
-                                }
+                                _documentsStorage.Put(context, id, null, document, lastModifiedTicks, changeVector,
+                                    flags & ~DocumentFlags.Revision, nonPersistentFlags | NonPersistentDocumentFlags.FromRevision);
                             }
                         }
-                        catch (DocumentConflictException)
-                        {
-                            // Do not modify the document.
-                        }
+
+                        PutFromRevisionIfChangeVectorIsGreater();
                     }
 
                     flags |= DocumentFlags.Revision;
@@ -488,23 +497,30 @@ namespace Raven.Server.Documents.Revisions
             var fromReplication = (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) == NonPersistentDocumentFlags.FromReplication;
             if (fromReplication)
             {
-                try
+                void DeleteFromRevisionIfChangeVectorIsGreater()
                 {
-                    var hasDoc = _documentsStorage.GetTableValueReaderForDocument(context, lowerId, out TableValueReader tvr);
-                    if (hasDoc)
+                    TableValueReader tvr;
+                    try
                     {
-                        var docChangeVector = TableValueToChangeVector(ref tvr, (int)DocumentsTable.ChangeVector);
-                        if (changeVector.GreaterThan(docChangeVector))
-                        {
-                            _documentsStorage.Delete(context, lowerId, id, null, lastModifiedTicks, changeVector, collectionName,
-                                nonPersistentFlags | NonPersistentDocumentFlags.FromRevision);
-                        }
+                        var hasDoc = _documentsStorage.GetTableValueReaderForDocument(context, lowerId, out tvr);
+                        if (hasDoc == false)
+                            return;
+                    }
+                    catch (DocumentConflictException)
+                    {
+                        // Do not modify the document.
+                        return;
+                    }
+
+                    var docChangeVector = TableValueToChangeVector(ref tvr, (int)DocumentsTable.ChangeVector);
+                    if (changeVector.GreaterThan(docChangeVector))
+                    {
+                        _documentsStorage.Delete(context, lowerId, id, null, lastModifiedTicks, changeVector, collectionName,
+                            nonPersistentFlags | NonPersistentDocumentFlags.FromRevision);
                     }
                 }
-                catch (DocumentConflictException)
-                {
-                    // Do not modify the document.
-                }
+
+                DeleteFromRevisionIfChangeVectorIsGreater();
             }
 
             var newEtag = _database.DocumentsStorage.GenerateNextEtag();
