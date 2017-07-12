@@ -543,6 +543,13 @@ namespace Raven.Server.Documents
             return tree.ReadStream(hashSlice);
         }
 
+        public Stream GetAttachmentStream(DocumentsOperationContext context, Slice hashSlice, out string tag)
+        {
+            var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
+            tag = tree.GetStreamTag(hashSlice);
+            return tree.ReadStream(hashSlice);
+        }
+
         private long GetAttachmentStreamLength(DocumentsOperationContext context, Slice hashSlice)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
