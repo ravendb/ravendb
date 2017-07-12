@@ -98,11 +98,11 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public Stream GetAttachmentStream(LazyStringValue hash)
+        public Stream GetAttachmentStream(LazyStringValue hash, out string tag)
         {
             using (Slice.External(_context.Allocator, hash, out Slice hashSlice))
             {
-                return _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(_context, hashSlice);
+                return _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(_context, hashSlice, out tag);
             }
         }
 
