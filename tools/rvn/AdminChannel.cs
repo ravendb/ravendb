@@ -4,9 +4,11 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using Raven.Server;
+using Sparrow.Platform;
 using static Raven.Client.Util.CliDelimiter;
 
 namespace rvn
@@ -30,6 +32,16 @@ namespace rvn
                 {
                     var pipeName = RavenServer.PipePrefix + pid;
                     var client = new NamedPipeClientStream(pipeName);
+                    if (PlatformDetails.RunningOnPosix) // TODO: remove this if and after https://github.com/dotnet/corefx/issues/22141 (both in RavenServer.cs and AdminChannel.cs)
+                    {
+                        var pathField = client.GetType().GetField("_normalizedPipePath", BindingFlags.NonPublic | BindingFlags.Instance);
+                        if (pathField == null)
+                        {
+                            throw new InvalidOperationException("Unable to set the proper path for the admin pipe, admin channel will not be available");
+                        }
+                        var pipeDir = Path.Combine(Path.GetTempPath(), "ravendb-pipe"); ;
+                        pathField.SetValue(client, Path.Combine(pipeDir, pipeName));
+                    }
                     try
                     {
                         client.Connect(3000);
