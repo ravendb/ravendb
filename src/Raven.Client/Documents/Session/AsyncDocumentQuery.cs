@@ -486,6 +486,12 @@ namespace Raven.Client.Documents.Session
             return CreateDocumentQueryInternal<TResult>(Transformer, FieldsToFetch, ProjectionFields);
         }
 
+        IAsyncGroupByDocumentQuery<T> IAsyncDocumentQuery<T>.GroupBy(string fieldName, params string[] fieldNames)
+        {
+            GroupBy(fieldName, fieldNames);
+            return new AsyncGroupByDocumentQuery<T>(this);
+        }
+
         /// <summary>
         /// Order the results by the specified fields
         /// The fields are the names of the fields to sort, defaulting to sorting by ascending.
@@ -1084,7 +1090,7 @@ namespace Raven.Client.Documents.Session
 
         private AsyncDocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(string transformer, string[] fieldsToFetch, string[] projectionFields)
         {
-            var asyncDocumentQuery = new AsyncDocumentQuery<TResult>(
+            var query = new AsyncDocumentQuery<TResult>(
                 TheSession,
                 IndexName,
                 fieldsToFetch,
@@ -1094,6 +1100,7 @@ namespace Raven.Client.Documents.Session
                 PageSize = PageSize,
                 WhereTokens = new LinkedList<QueryToken>(WhereTokens.Select(x => x.Clone())),
                 OrderByTokens = new LinkedList<QueryToken>(OrderByTokens.Select(x => x.Clone())),
+                GroupByTokens = new LinkedList<QueryToken>(GroupByTokens.Select(x => x.Clone())),
                 QueryParameters = QueryParameters,
                 Start = Start,
                 Timeout = Timeout,
@@ -1101,7 +1108,6 @@ namespace Raven.Client.Documents.Session
                 QueryStats = QueryStats,
                 TheWaitForNonStaleResults = TheWaitForNonStaleResults,
                 TheWaitForNonStaleResultsAsOfNow = TheWaitForNonStaleResultsAsOfNow,
-                DynamicMapReduceFields = DynamicMapReduceFields,
                 AllowMultipleIndexEntriesForSameDocumentToResultTransformer = AllowMultipleIndexEntriesForSameDocumentToResultTransformer,
                 Negate = Negate,
                 TransformResultsFunc = TransformResultsFunc,
@@ -1128,11 +1134,30 @@ namespace Raven.Client.Documents.Session
                 ShouldExplainScores = ShouldExplainScores
             };
 
-            if (IsDistinct)
-                asyncDocumentQuery.Distinct();
+            var before = true;
+            var fieldsToFetchToken = query.SelectTokens.First;
+            foreach (var token in SelectTokens)
+            {
+                if (fieldsToFetchToken == null)
+                {
+                    query.SelectTokens.AddLast(token.Clone());
+                    continue;
+                }
 
-            asyncDocumentQuery.AfterQueryExecuted(AfterQueryExecutedCallback);
-            return asyncDocumentQuery;
+                if (token is FieldsToFetchToken)
+                {
+                    before = false;
+                    continue;
+                }
+
+                if (before)
+                    query.SelectTokens.AddBefore(fieldsToFetchToken, token.Clone());
+                else
+                    query.SelectTokens.AddLast(token.Clone());
+            }
+
+            query.AfterQueryExecuted(AfterQueryExecutedCallback);
+            return query;
         }
     }
 }

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session.Tokens;
 
 namespace Raven.Client.Documents.Session
 {
@@ -344,11 +344,14 @@ namespace Raven.Client.Documents.Session
 
         void SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val);
 
-        /// <summary>
-        /// Adds a dynamic query field to the query
-        /// </summary>
-        void AddMapReduceField(DynamicMapReduceField field);
+        void GroupBy(string fieldName, params string[] fieldNames);
 
-        DynamicMapReduceField[] GetGroupByFields();
+        void GroupByKey(string fieldName = null, string projectedName = null);
+
+        void GroupBySum(string fieldName, string projectedName = null);
+
+        void GroupByCount(string projectedName = null);
+
+        int CountOfGroupBy { get; }
     }
 }

@@ -8,7 +8,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -23,7 +22,6 @@ using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
-using Sparrow.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
@@ -92,11 +90,6 @@ namespace Raven.Client.Documents.Session
         protected readonly InMemoryDocumentSessionOperations TheSession;
 
         /// <summary>
-        /// The fields of dynamic map-reduce query
-        /// </summary>
-        protected DynamicMapReduceField[] DynamicMapReduceFields = new DynamicMapReduceField[0];
-
-        /// <summary>
         ///   The fields to highlight
         /// </summary>
         protected List<HighlightedField> HighlightedFields = new List<HighlightedField>();
@@ -128,6 +121,8 @@ namespace Raven.Client.Documents.Session
         protected readonly FromToken FromToken;
 
         protected LinkedList<QueryToken> WhereTokens = new LinkedList<QueryToken>();
+
+        protected LinkedList<QueryToken> GroupByTokens = new LinkedList<QueryToken>();
 
         protected LinkedList<QueryToken> OrderByTokens = new LinkedList<QueryToken>();
 
@@ -202,7 +197,7 @@ namespace Raven.Client.Documents.Session
         public IDocumentSession Session => (IDocumentSession)TheSession;
         public IAsyncDocumentSession AsyncSession => (IAsyncDocumentSession)TheSession;
 
-        public bool IsDynamicMapReduce => DynamicMapReduceFields.Length > 0;
+        public bool IsDynamicMapReduce => GroupByTokens.Count > 0;
 
         protected Action<QueryResult> AfterQueryExecutedCallback;
         protected AfterStreamExecutedDelegate AfterStreamExecutedCallback;
@@ -541,22 +536,19 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        IDocumentQueryCustomization IDocumentQueryCustomization.Highlight(
-            string fieldName, int fragmentLength, int fragmentCount, string fragmentsField)
+        IDocumentQueryCustomization IDocumentQueryCustomization.Highlight(string fieldName, int fragmentLength, int fragmentCount, string fragmentsField)
         {
             Highlight(fieldName, fragmentLength, fragmentCount, fragmentsField);
             return this;
         }
 
-        IDocumentQueryCustomization IDocumentQueryCustomization.Highlight(
-            string fieldName, int fragmentLength, int fragmentCount, out FieldHighlightings fieldHighlightings)
+        IDocumentQueryCustomization IDocumentQueryCustomization.Highlight(string fieldName, int fragmentLength, int fragmentCount, out FieldHighlightings fieldHighlightings)
         {
             Highlight(fieldName, fragmentLength, fragmentCount, out fieldHighlightings);
             return this;
         }
 
-        IDocumentQueryCustomization IDocumentQueryCustomization.Highlight(
-            string fieldName, string fieldKeyName, int fragmentLength, int fragmentCount, out FieldHighlightings fieldHighlightings)
+        IDocumentQueryCustomization IDocumentQueryCustomization.Highlight(string fieldName, string fieldKeyName, int fragmentLength, int fragmentCount, out FieldHighlightings fieldHighlightings)
         {
             Highlight(fieldName, fieldKeyName, fragmentLength, fragmentCount, out fieldHighlightings);
             return this;
@@ -568,17 +560,47 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        public void AddMapReduceField(DynamicMapReduceField field)
+        public void GroupBy(string fieldName, params string[] fieldNames)
         {
-            IsMapReduce = true;
+            if (FromToken.IsDynamic == false)
+                throw new InvalidOperationException("GroupBy only works with dynamic queries.");
 
-            DynamicMapReduceFields = DynamicMapReduceFields.Concat(new[] { field }).ToArray();
+            fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
+
+            GroupByTokens.AddLast(GroupByToken.Create(fieldName));
+
+            if (fieldNames == null || fieldNames.Length <= 0)
+                return;
+
+            foreach (var name in fieldNames)
+            {
+                fieldName = EnsureValidFieldName(name, isNestedPath: false);
+
+                GroupByTokens.AddLast(GroupByToken.Create(fieldName));
+            }
         }
 
-        public DynamicMapReduceField[] GetGroupByFields()
+        public void GroupByKey(string fieldName = null, string projectedName = null)
         {
-            return DynamicMapReduceFields.Where(x => x.IsGroupBy).ToArray();
+            if (fieldName != null)
+                fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
+
+            SelectTokens.AddLast(GroupByKeyToken.Create(fieldName, projectedName));
         }
+
+        public void GroupBySum(string fieldName, string projectedName = null)
+        {
+            fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
+
+            SelectTokens.AddLast(GroupBySumToken.Create(fieldName, projectedName));
+        }
+
+        public void GroupByCount(string projectedName = null)
+        {
+            SelectTokens.AddLast(GroupByCountToken.Create(projectedName));
+        }
+
+        public int CountOfGroupBy => GroupByTokens.Count;
 
         IDocumentQueryCustomization IDocumentQueryCustomization.SetHighlighterTags(string preTag, string postTag)
         {
@@ -1352,6 +1374,7 @@ If you really want to do in memory filtering on the data returned from the query
 
             BuildSelect(queryText);
             BuildFrom(queryText);
+            BuildGroupBy(queryText);
             BuildWhere(queryText);
             BuildOrderBy(queryText);
 
@@ -1521,7 +1544,11 @@ If you really want to do in memory filtering on the data returned from the query
             var token = SelectTokens.First;
             while (token != null)
             {
+                if (token.Previous != null && token.Previous.Value is DistinctToken == false)
+                    writer.Append(",");
+
                 AddSpaceIfNeeded(token.Previous?.Value, token.Value, writer);
+
                 token.Value.WriteTo(writer);
 
                 token = token.Next;
@@ -1546,6 +1573,26 @@ If you really want to do in memory filtering on the data returned from the query
             while (token != null)
             {
                 AddSpaceIfNeeded(token.Previous?.Value, token.Value, writer);
+                token.Value.WriteTo(writer);
+
+                token = token.Next;
+            }
+        }
+
+        private void BuildGroupBy(StringBuilder writer)
+        {
+            if (GroupByTokens.Count == 0)
+                return;
+
+            writer
+                .Append(" GROUP BY ");
+
+            var token = GroupByTokens.First;
+            while (token != null)
+            {
+                if (token.Previous != null)
+                    writer.Append(", ");
+
                 token.Value.WriteTo(writer);
 
                 token = token.Next;
@@ -1651,20 +1698,7 @@ If you really want to do in memory filtering on the data returned from the query
                 return fieldName;
 
             if (IsMapReduce)
-            {
-                if (IsDynamicMapReduce)
-                {
-                    string name;
-                    var rangeType = FieldUtil.GetRangeTypeFromFieldName(fieldName, out name);
-
-                    var renamedField = DynamicMapReduceFields.FirstOrDefault(x => x.ClientSideName == name);
-
-                    if (renamedField != null)
-                        return FieldUtil.ApplyRangeSuffixIfNecessary(renamedField.Name, rangeType);
-                }
-
                 return fieldName;
-            }
 
             foreach (var rootType in RootTypes)
             {

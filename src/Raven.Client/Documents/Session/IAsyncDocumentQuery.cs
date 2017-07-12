@@ -147,5 +147,7 @@ namespace Raven.Client.Documents.Session
         /// Changes the return type of the query
         /// </summary>
         IAsyncDocumentQuery<TResult> OfType<TResult>();
+
+        IAsyncGroupByDocumentQuery<T> GroupBy(string fieldName, params string[] fieldNames);
     }
 }

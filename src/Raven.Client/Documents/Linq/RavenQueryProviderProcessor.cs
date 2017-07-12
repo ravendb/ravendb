@@ -1339,11 +1339,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 case ExpressionType.MemberAccess:
                     var singleGroupByFieldName = GetSelectPath(_linqPathProvider.GetMemberExpression(lambdaExpression));
 
-                    _documentQuery.AddMapReduceField(new DynamicMapReduceField
-                    {
-                        Name = singleGroupByFieldName,
-                        IsGroupBy = true
-                    });
+                    _documentQuery.GroupBy(singleGroupByFieldName);
                     break;
                 case ExpressionType.New:
                     var newExpression = ((NewExpression)body);
@@ -1352,13 +1348,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     {
                         var originalField = GetSelectPath((MemberExpression)newExpression.Arguments[index]);
 
-                        _documentQuery.AddMapReduceField(new DynamicMapReduceField
-                        {
-                            Name = originalField,
-                            IsGroupBy = true
-                        });
-
-                        AddGroupByFieldToRenameIfNeeded(newExpression.Members[index], originalField);
+                        _documentQuery.GroupBy(originalField);
                     }
                     break;
                 case ExpressionType.MemberInit:
@@ -1373,13 +1363,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                         var originalField = GetSelectPath((MemberExpression)field.Expression);
 
-                        _documentQuery.AddMapReduceField(new DynamicMapReduceField
-                        {
-                            Name = originalField,
-                            IsGroupBy = true
-                        });
-
-                        AddGroupByFieldToRenameIfNeeded(field.Member, originalField);
+                        _documentQuery.GroupBy(originalField);
                     }
                     break;
                 default:
@@ -1535,7 +1519,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     if (entireExpression.Parameters[0].Name == parameterExpression.Name)
                     {
-                        AddGroupByFieldToRenameIfNeeded(fieldMember);
+                        throw new NotImplementedException();
+                        //AddGroupByFieldToRenameIfNeeded(fieldMember);
                     }
                     break;
                 case ExpressionType.MemberAccess:
@@ -1545,10 +1530,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     if ("Key".Equals(name, StringComparison.Ordinal))
                     {
-                        if (_documentQuery.GetGroupByFields().Length > 1)
+                        if (_documentQuery.CountOfGroupBy > 1)
                             throw new NotSupportedException("Cannot specify composite key of GroupBy directly in Select statement. Specify each field of the key separately.");
 
-                        AddGroupByFieldToRenameIfNeeded(fieldMember);
+                        var projectedName = ExtractProjectedName(fieldMember);
+
+                        _documentQuery.GroupByKey(null, projectedName);
                     }
                     else if (name.StartsWith("Key.", StringComparison.Ordinal))
                     {
@@ -1557,7 +1544,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         if (compositeGroupBy.Length > 2)
                             throw new NotSupportedException("Nested fields inside composite GroupBy keys are not supported");
 
-                        AddGroupByFieldToRenameIfNeeded(fieldMember, compositeGroupBy[1]);
+                        var fieldName = compositeGroupBy[1];
+                        var projectedName = ExtractProjectedName(fieldMember);
+
+                        _documentQuery.GroupByKey(fieldName, projectedName);
                     }
                     break;
                 case ExpressionType.Call:
@@ -1570,46 +1560,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
         }
 
-        private void AddGroupByFieldToRenameIfNeeded(MemberInfo field, string originalFieldName = null)
+        private static string ExtractProjectedName(MemberInfo fieldMember)
         {
-            var groupByKey = GetSelectPath(field);
+            if (fieldMember == null)
+                return null;
 
-            var groupByFields = _documentQuery.GetGroupByFields();
-
-            DynamicMapReduceField groupByField;
-
-            if (originalFieldName == null)
-            {
-                if (groupByFields.Length != 1)
-                    throw new NotSupportedException("We only support grouping by single field");
-
-                groupByField = groupByFields[0];
-            }
-            else
-            {
-                if (originalFieldName.Equals(groupByKey, StringComparison.Ordinal)) // already renamed inside GroupBy
-                    return;
-
-                groupByField = groupByFields.Single(x => x.Name.Equals(originalFieldName, StringComparison.Ordinal));
-            }
-
-            if (groupByKey.Equals(groupByField.Name, StringComparison.Ordinal) == false)
-            {
-                FieldsToRename.Add(new RenamedField
-                {
-                    NewField = groupByKey,
-                    OriginalField = groupByField.Name
-                });
-
-                groupByField.ClientSideName = groupByKey;
-            }
+            return GetSelectPath(fieldMember);
         }
 
         private void AddMapReduceField(MethodCallExpression mapReduceOperationCall, MemberInfo memberInfo, Expression elementSelectorPath)
         {
             if (mapReduceOperationCall.Method.DeclaringType != typeof(Enumerable))
-                throw new NotSupportedException(
-                    $"Unsupported method in select of dynamic map reduce query: {mapReduceOperationCall.Method.Name} of type {mapReduceOperationCall.Method.DeclaringType}");
+                throw new NotSupportedException($"Unsupported method in select of dynamic map reduce query: {mapReduceOperationCall.Method.Name} of type {mapReduceOperationCall.Method.DeclaringType}");
 
             FieldMapReduceOperation mapReduceOperation;
             if (Enum.TryParse(mapReduceOperationCall.Method.Name, out mapReduceOperation) == false)
@@ -1683,38 +1645,24 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 }
             }
 
-            if (mapReduceOperation == FieldMapReduceOperation.Count && mapReduceField != "Count")
+            if (mapReduceOperation == FieldMapReduceOperation.Count)
             {
-                if (renamedField == null)
-                    renamedField = mapReduceField;
-
-                mapReduceField = "Count";
+                _documentQuery.GroupByCount(renamedField);
+                return;
             }
 
-            var dynamicMapReduceField = new DynamicMapReduceField
+            if (mapReduceOperation == FieldMapReduceOperation.Sum)
             {
-                Name = mapReduceField,
-                OperationType = mapReduceOperation
-            };
-
-            if (renamedField != null && mapReduceField != renamedField)
-            {
-                FieldsToRename.Add(new RenamedField
-                {
-                    NewField = renamedField,
-                    OriginalField = mapReduceField
-                });
-
-                dynamicMapReduceField.ClientSideName = renamedField;
+                _documentQuery.GroupBySum(mapReduceField, renamedField);
+                return;
             }
 
-            _documentQuery.AddMapReduceField(dynamicMapReduceField);
+            throw new NotSupportedException($"Map-Reduce operation '{mapReduceOperation}' in '{mapReduceOperationCall}' is not supported.");
         }
 
-        private string GetSelectPath(MemberInfo member)
+        private static string GetSelectPath(MemberInfo member)
         {
             return LinqPathProvider.HandlePropertyRenames(member, member.Name);
-
         }
 
         private string GetSelectPath(MemberExpression expression)
