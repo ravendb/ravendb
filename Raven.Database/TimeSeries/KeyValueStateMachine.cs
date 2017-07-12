@@ -343,6 +343,11 @@ namespace Raven.Database.TimeSeries
             }
         }
 
+        public void Danger__SetLastApplied(long postion)
+        {
+            LastAppliedIndex = postion;
+        }
+
         private void Apply(IEnumerable<KeyValueOperation> ops, long commandIndex)
         {
             using (var tx = _storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))

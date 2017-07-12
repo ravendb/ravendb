@@ -34,5 +34,11 @@ namespace Rachis.Interfaces
         /// Nothing else may access the state machine when this is running, this is guranteed by Raft.
         /// </summary>
         void ApplySnapshot(long term, long index, Stream stream);
+
+        /// <summary>
+        /// this method is intended to be use for emergency fixes of the cluster state using the JS admin console
+        /// it will set the last applied index to the given posion so we can replay the log 
+        /// </summary>
+        void Danger__SetLastApplied(long postion);
     }
 }

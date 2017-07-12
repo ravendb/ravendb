@@ -1001,6 +1001,15 @@ namespace Rachis
             var leader = StateBehavior as LeaderStateBehavior;
             return leader?.GetMaxIndexOnQuorumInternal();
         }
+
+        public void Danger__CutLogAtPosition(long postion)
+        {
+            PersistentState.AppendToLog(this, new List<LogEntry>(), postion);
+            if (postion < StateMachine.LastAppliedIndex)
+            {
+                StateMachine.Danger__SetLastApplied(postion);
+            }
+        }
     }
 
     public class ProposingCandidacyResult : EventArgs
