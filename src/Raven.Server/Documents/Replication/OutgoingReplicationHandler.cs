@@ -209,10 +209,10 @@ namespace Raven.Server.Documents.Replication
                             while (true)
                             {
 #if DEBUG
-                                if (_parent.WaitFormTest != null)
+                                if (_parent.DebugWaitAndRunReplicationOnce != null)
                                 {
-                                    _parent.WaitFormTest.WaitAsync().Wait(_cts.Token);
-                                    _parent.WaitFormTest.Reset();
+                                    _parent.DebugWaitAndRunReplicationOnce.WaitAsync().Wait(_cts.Token);
+                                    _parent.DebugWaitAndRunReplicationOnce.Reset();
                                 }
 #endif
 

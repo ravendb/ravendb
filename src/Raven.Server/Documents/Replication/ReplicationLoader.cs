@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Replication
         public event Action<OutgoingReplicationHandler> OutgoingReplicationRemoved;
 
 #if DEBUG
-        public AsyncManualResetEvent WaitFormTest;
+        public AsyncManualResetEvent DebugWaitAndRunReplicationOnce;
 #endif
 
         public readonly DocumentDatabase Database;

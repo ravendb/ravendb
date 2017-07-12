@@ -283,9 +283,8 @@ namespace Raven.Server.Smuggler.Documents
                         foreach (var attachment in documentType.Attachments)
                         {
                             using (attachment)
-                            using (Slice.From(context.Allocator, "Smuggler", out Slice tag)) // TODO: Export the tag also
                             {
-                                _database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, tag, attachment.Base64Hash, attachment.Stream);
+                                _database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, attachment.Tag, attachment.Base64Hash, attachment.Stream);
                             }
                         }
                     }

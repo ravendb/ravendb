@@ -379,7 +379,8 @@ namespace Raven.Server.Smuggler.Documents
         public unsafe void ProcessAttachmentStream(DocumentsOperationContext context, BlittableJsonReaderObject data, ref DocumentItem.AttachmentStream attachment)
         {
             if (data.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
-                data.TryGet(nameof(AttachmentName.Size), out long size) == false)
+                data.TryGet(nameof(AttachmentName.Size), out long size) == false ||
+                data.TryGet(nameof(DocumentItem.AttachmentStream.Tag), out LazyStringValue tag) == false)
                 throw new ArgumentException($"Data of attachment stream is not valid: {data}");
 
             if (_writeBuffer == null)
@@ -387,6 +388,7 @@ namespace Raven.Server.Smuggler.Documents
 
             attachment.Data = data;
             attachment.Base64HashDispose = Slice.External(context.Allocator, hash, out attachment.Base64Hash);
+            attachment.TagDispose = Slice.External(context.Allocator, tag, out attachment.Tag);
 
             while (size > 0)
             {

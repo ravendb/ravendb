@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Replication;
-using Raven.Client.Util;
 using Raven.Server.Utils.Stats;
 
 namespace Raven.Server.Documents.Replication
@@ -121,6 +119,11 @@ namespace Raven.Server.Documents.Replication
             _stats.AttachmentTombstoneReadCount++;
         }
 
+        public void RecordRevisionTombstoneRead()
+        {
+            _stats.RevisionTombstoneReadCount++;
+        }
+
         public void RecordAttachmentRead()
         {
             _stats.AttachmentReadCount++;
@@ -152,5 +155,6 @@ namespace Raven.Server.Documents.Replication
         public int DocumentTombstoneReadCount;
         public int AttachmentTombstoneReadCount;
         public int AttachmentReadCount;
+        public int RevisionTombstoneReadCount;
     }
 }

@@ -91,8 +91,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var itemsToSend = new List<IndexingStatsAggregator>(performance.Count);
 
-                IndexingStatsAggregator stat;
-                while (performance.TryTake(out stat))
+                while (performance.TryTake(out IndexingStatsAggregator stat))
                     itemsToSend.Add(stat);
 
                 var latestStats = index.GetLatestIndexingStat();

@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Replication
         public LazyStringValue ContentType;
         public Slice Base64Hash;
         public Stream Stream;
-        
+
         #endregion
 
         public static ReplicationBatchItem From(Document doc)
@@ -67,6 +67,10 @@ namespace Raven.Server.Documents.Replication
                     break;
                 case DocumentTombstone.TombstoneType.Attachment:
                     item.Type = ReplicationItemType.AttachmentTombstone;
+                    break;
+                case DocumentTombstone.TombstoneType.Revision:
+                    item.Type = ReplicationItemType.RevisionTombstone;
+                    item.Collection = doc.Collection;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(doc.Type));
@@ -114,6 +118,7 @@ namespace Raven.Server.Documents.Replication
             Attachment = 3,
             AttachmentStream = 4,
             AttachmentTombstone = 5,
+            RevisionTombstone = 6,
         }
     }
 }

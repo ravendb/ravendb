@@ -575,7 +575,8 @@ namespace Raven.Server.Documents.Replication
                     ContentTypeDispose.Dispose();
                     Base64HashDispose.Dispose();
                 }
-                else if (Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
+                else if (Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone ||
+                         Type == ReplicationBatchItem.ReplicationItemType.RevisionTombstone)
                 {
                     KeyDispose.Dispose();
                 }
@@ -648,6 +649,20 @@ namespace Raven.Server.Documents.Replication
                     {
                         var keySize = *(int*)ReadExactly(sizeof(int));
                         item.KeyDispose = Slice.From(context.Allocator, ReadExactly(keySize), keySize, out item.Key);
+                    }
+                }
+                else if (item.Type == ReplicationBatchItem.ReplicationItemType.RevisionTombstone)
+                {
+                    stats.RecordRevisionTombstoneRead();
+
+                    using (tombstoneRead.Start())
+                    {
+                        var keySize = *(int*)ReadExactly(sizeof(int));
+                        item.KeyDispose = Slice.From(context.Allocator, ReadExactly(keySize), keySize, out item.Key);
+
+                        var collectionSize = *(int*)ReadExactly(sizeof(int));
+                        Debug.Assert(collectionSize > 0);
+                        item.Collection = Encoding.UTF8.GetString(ReadExactly(collectionSize), collectionSize);
                     }
                 }
                 else
@@ -844,6 +859,12 @@ namespace Raven.Server.Documents.Replication
                                 if (_incoming._log.IsInfoEnabled)
                                     _incoming._log.Info($"AttachmentDELETE '{item.Key}', with change vector = {_changeVector.Format()}");
                                 database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, item.Key, false, "$fromReplication", null, _changeVector);
+                            }
+                            else if (item.Type == ReplicationBatchItem.ReplicationItemType.RevisionTombstone)
+                            {
+                                if (_incoming._log.IsInfoEnabled)
+                                    _incoming._log.Info($"RevisionDELETE '{item.Key}', with change vector = {_changeVector.Format()}");
+                                database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, item.Key, item.Collection, _changeVector);
                             }
                             else
                             {
