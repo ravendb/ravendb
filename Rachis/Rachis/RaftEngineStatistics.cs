@@ -33,7 +33,7 @@ namespace Rachis
         }
 
         public LogEntry LastLogEntry { get; set; }
-
+        public List<LogEntry> LastLogsEntries { get; set; }
         public long CommitIndex { get; set; }
         private ConcurrentDictionary<long, DateTime> IndexesToAppendTimes = new ConcurrentDictionary<long, DateTime>(); 
         public ConcurrentQueue<TimeoutInformation> TimeOuts { get; }

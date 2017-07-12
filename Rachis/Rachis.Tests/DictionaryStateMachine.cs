@@ -91,6 +91,11 @@ namespace Rachis.Tests
             };
         }
 
+        public void Danger__SetLastApplied(long postion)
+        {
+            LastAppliedIndex = postion;
+        }
+
         public void Dispose()
         {
             //nothing to do

@@ -267,6 +267,11 @@ namespace Raven.Database.Raft.Storage
 
         }
 
+        public void Danger__SetLastApplied(long postion)
+        {
+            LastAppliedIndex = postion;
+        }
+
         private void UpdateLastAppliedIndex(long index, IStorageActionsAccessor accessor)
         {
             accessor.Lists.Set("Raven/Cluster", "Status", new RavenJObject

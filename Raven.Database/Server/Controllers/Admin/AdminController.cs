@@ -87,6 +87,7 @@ namespace Raven.Database.Server.Controllers.Admin
             statistics.CommitIndex = ClusterManager.Engine.CommitIndex;
             statistics.CurrentTerm = ClusterManager.Engine.PersistentState.CurrentTerm;
             statistics.LastLogEntry = ClusterManager.Engine.PersistentState.LastLogEntry();
+            statistics.LastLogsEntries = ClusterManager.Engine.PersistentState.LastLogsEntries().ToList();
             statistics.CurrentLeader = ClusterManager.Engine.CurrentLeader;
             statistics.FollowersStatistics = ClusterManager.Engine.GetFollowerStatistics();
             return GetMessageWithObject(ClusterManager.Engine.EngineStatistics);
