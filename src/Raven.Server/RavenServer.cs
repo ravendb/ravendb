@@ -730,36 +730,42 @@ namespace Raven.Server
                     return;
 
                 Disposed = true;
-                Pipe?.Dispose();
-                Metrics?.Dispose();
-                _webHost?.Dispose();
+                var ea = new ExceptionAggregator("Failed to properly close RavenServer");
+
+                ea.Execute(() => Pipe?.Dispose());
+                ea.Execute(() => Metrics?.Dispose());
+                ea.Execute(() => _webHost?.Dispose());
                 if (_tcpListenerTask != null)
                 {
-                    if (_tcpListenerTask.IsCompleted)
+                    ea.Execute(() =>
                     {
-                        CloseTcpListeners(_tcpListenerTask.Result.Listeners);
-                    }
-                    else
-                    {
-                        if (_tcpListenerTask.Exception != null)
+                        if (_tcpListenerTask.IsCompleted)
                         {
-                            if (_tcpLogger.IsInfoEnabled)
-                                _tcpLogger.Info("Cannot dispose of tcp server because it has errored", _tcpListenerTask.Exception);
+                            CloseTcpListeners(_tcpListenerTask.Result.Listeners);
                         }
                         else
                         {
-                            _tcpListenerTask.ContinueWith(t =>
+                            if (_tcpListenerTask.Exception != null)
                             {
-                                CloseTcpListeners(t.Result.Listeners);
-                            }, TaskContinuationOptions.OnlyOnRanToCompletion);
+                                if (_tcpLogger.IsInfoEnabled)
+                                    _tcpLogger.Info("Cannot dispose of tcp server because it has errored", _tcpListenerTask.Exception);
+                            }
+                            else
+                            {
+                                _tcpListenerTask.ContinueWith(t =>
+                                {
+                                    CloseTcpListeners(t.Result.Listeners);
+                                }, TaskContinuationOptions.OnlyOnRanToCompletion);
+                            }
                         }
-                    }
+                    });
                 }
 
-                ServerStore?.Dispose();
-                ServerMaintenanceTimer?.Dispose();
+                ea.Execute(() => ServerStore?.Dispose());
+                ea.Execute(() => ServerMaintenanceTimer?.Dispose());
+                ea.Execute(() => AfterDisposal?.Invoke());
 
-                AfterDisposal?.Invoke();
+                ea.ThrowIfNeeded();
             }
         }
 
