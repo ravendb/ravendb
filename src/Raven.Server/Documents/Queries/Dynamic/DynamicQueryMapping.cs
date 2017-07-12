@@ -115,7 +115,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             if (query.Fields.Where != null)
             {
-                foreach (var field in query.Fields.Where.Fields)
+                foreach (var field in query.Fields.Where.SingleValueFields)
                 {
                     var fieldName = field.Key;
 

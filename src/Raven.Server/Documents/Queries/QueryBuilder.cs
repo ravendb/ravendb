@@ -66,87 +66,117 @@ namespace Raven.Server.Documents.Queries
                 case OperatorType.LessThen:
                 case OperatorType.LessThenEqual:
                 case OperatorType.GreaterThenEqual:
-                    var fieldName = QueryExpression.Extract(query, expression.Field);
-                    var (value, valueType) = whereFields[fieldName];
-
-                    var luceneFieldName = IndexField.ReplaceInvalidCharactersInFieldName(fieldName);
-
-                    FieldName.FieldType fieldType = FieldName.FieldType.String;
-
-                    switch (valueType)
                     {
-                        case ValueTokenType.String:
-                            fieldType = FieldName.FieldType.String;
-                            break;
-                        case ValueTokenType.Double:
-                            luceneFieldName += Client.Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble;
-                            fieldType = FieldName.FieldType.Double;
-                            break;
-                        case ValueTokenType.Long:
-                            luceneFieldName += Client.Constants.Documents.Indexing.Fields.RangeFieldSuffixLong;
-                            fieldType = FieldName.FieldType.Long;
-                            break;
-                    }
+                        var fieldName = QueryExpression.Extract(query, expression.Field);
+                        var (value, valueType) = whereFields.SingleValueFields[fieldName];
 
-                    if (expression.Type == OperatorType.Equal && fieldType == FieldName.FieldType.String)
-                    {
+                        var luceneFieldName = IndexField.ReplaceInvalidCharactersInFieldName(fieldName);
+
+                        FieldName.FieldType fieldType = FieldName.FieldType.String;
+
+                        switch (valueType)
+                        {
+                            case ValueTokenType.String:
+                                fieldType = FieldName.FieldType.String;
+                                break;
+                            case ValueTokenType.Double:
+                                luceneFieldName += Client.Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble;
+                                fieldType = FieldName.FieldType.Double;
+                                break;
+                            case ValueTokenType.Long:
+                                luceneFieldName += Client.Constants.Documents.Indexing.Fields.RangeFieldSuffixLong;
+                                fieldType = FieldName.FieldType.Long;
+                                break;
+                        }
+
+                        if (expression.Type == OperatorType.Equal && fieldType == FieldName.FieldType.String)
+                        {
+                            return new FieldLuceneASTNode()
+                            {
+                                FieldName = new FieldName(luceneFieldName, fieldType),
+                                Node = CreateTermNode(value, valueType)
+                            };
+                        }
+
+                        RangeLuceneASTNode rangeNode = new RangeLuceneASTNode()
+                        {
+                            InclusiveMin = false,
+                            InclusiveMax = false,
+                            RangeMin = WildCardTerm,
+                            RangeMax = NullTerm
+                        };
+
+                        switch (expression.Type)
+                        {
+                            case OperatorType.Equal:
+                                rangeNode.InclusiveMin = true;
+                                rangeNode.InclusiveMax = true;
+                                var node = CreateTermNode(value, valueType);
+                                rangeNode.RangeMin = node;
+                                rangeNode.RangeMax = node;
+                                break;
+                            case OperatorType.LessThen:
+                                rangeNode.RangeMax = CreateTermNode(value, valueType);
+                                break;
+                            case OperatorType.GreaterThen:
+                                rangeNode.RangeMin = CreateTermNode(value, valueType);
+                                break;
+                            case OperatorType.LessThenEqual:
+                                rangeNode.InclusiveMax = true;
+                                rangeNode.RangeMax = CreateTermNode(value, valueType);
+                                break;
+                            case OperatorType.GreaterThenEqual:
+                                rangeNode.InclusiveMin = true;
+                                rangeNode.RangeMin = CreateTermNode(value, valueType);
+                                break;
+                            default:
+                                break;
+                        }
+
                         return new FieldLuceneASTNode()
                         {
                             FieldName = new FieldName(luceneFieldName, fieldType),
-                            Node = CreateTermNode(value, valueType)
+                            Node = rangeNode
                         };
                     }
-
-                    RangeLuceneASTNode rangeNode = new RangeLuceneASTNode()
+                case OperatorType.Between:
                     {
-                        InclusiveMin = false,
-                        InclusiveMax = false,
-                        RangeMin = WildCardTerm,
-                        RangeMax = NullTerm
-                    };
+                        var fieldName = QueryExpression.Extract(query, expression.Field);
 
-                    switch (expression.Type)
-                    {
-                        case OperatorType.Equal:
-                            rangeNode.InclusiveMin = true;
-                            rangeNode.InclusiveMax = true;
-                            var node = CreateTermNode(value, valueType);
-                            rangeNode.RangeMin = node;
-                            rangeNode.RangeMax = node;
-                            break;
-                        case OperatorType.LessThen:
-                            rangeNode.RangeMax = CreateTermNode(value, valueType);
-                            break;
-                        case OperatorType.GreaterThen:
-                            rangeNode.RangeMin = CreateTermNode(value, valueType);
-                            break;
-                        case OperatorType.LessThenEqual:
-                            rangeNode.InclusiveMax = true;
-                            rangeNode.RangeMax = CreateTermNode(value, valueType);
-                            break;
-                        case OperatorType.GreaterThenEqual:
-                            rangeNode.InclusiveMin = true;
-                            rangeNode.RangeMin = CreateTermNode(value, valueType);
-                            break;
-                        default:
-                            break;
+                        var (values, valuesType) = whereFields.MultipleValuesFields[fieldName];
+
+                        var luceneFieldName = IndexField.ReplaceInvalidCharactersInFieldName(fieldName);
+
+                        FieldName.FieldType fieldType = FieldName.FieldType.String;
+
+                        // TODO arek - duplicated  code
+                        switch (valuesType)
+                        {
+                            case ValueTokenType.String:
+                                fieldType = FieldName.FieldType.String;
+                                break;
+                            case ValueTokenType.Double:
+                                luceneFieldName += Client.Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble;
+                                fieldType = FieldName.FieldType.Double;
+                                break;
+                            case ValueTokenType.Long:
+                                luceneFieldName += Client.Constants.Documents.Indexing.Fields.RangeFieldSuffixLong;
+                                fieldType = FieldName.FieldType.Long;
+                                break;
+                        }
+
+                        return new FieldLuceneASTNode()
+                        {
+                            FieldName = new FieldName(luceneFieldName, fieldType),
+                            Node = new RangeLuceneASTNode()
+                            {
+                                InclusiveMin = true,
+                                InclusiveMax = true,
+                                RangeMin = CreateTermNode(values[0], valuesType),
+                                RangeMax = CreateTermNode(values[1], valuesType)
+                            }
+                        };
                     }
-
-                    return new FieldLuceneASTNode()
-                    {
-                        FieldName = new FieldName(luceneFieldName, fieldType),
-                        Node = rangeNode
-                    };
-                //case OperatorType.Between:
-                //    writer.WritePropertyName("Field");
-                //    WriteValue(query, writer, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
-                //    writer.WritePropertyName("Min");
-                //    WriteValue(query, writer, First.TokenStart, First.TokenLength, First.EscapeChars,
-                //        First.Type == ValueTokenType.Double || First.Type == ValueTokenType.Long);
-                //    writer.WritePropertyName("Max");
-                //    WriteValue(query, writer, Second.TokenStart, Second.TokenLength, Second.EscapeChars,
-                //        Second.Type == ValueTokenType.Double || Second.Type == ValueTokenType.Long);
-                //    break;
                 //case OperatorType.In:
                 //    writer.WritePropertyName("Field");
                 //    WriteValue(query, writer, Field.TokenStart, Field.TokenLength, Field.EscapeChars);

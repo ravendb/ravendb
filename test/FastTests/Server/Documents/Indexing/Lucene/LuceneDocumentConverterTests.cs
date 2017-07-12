@@ -216,7 +216,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             {
                 new IndexField
                 {
-                    Name = "Friends,Name",
+                    Name = "Friends[].Name",
                     Storage = FieldStorage.No
                 },
             });

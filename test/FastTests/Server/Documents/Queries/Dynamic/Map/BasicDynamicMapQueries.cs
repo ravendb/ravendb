@@ -1,12 +1,9 @@
-﻿using System;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.Client;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
-using Raven.Client.Util;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -39,7 +36,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Fact]
-        public async Task Numeric_where_clause()
+        public async Task Numeric_where_equals_clause()
         {
             using (var store = GetDocumentStore())
             {
@@ -54,6 +51,29 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 using (var session = store.OpenSession())
                 {
                     var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Age == 50).ToList();
+
+                    Assert.Equal(1, users.Count);
+                    Assert.Equal("Bar", users[0].Name);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Numeric_between_clause()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Foo", Age = 40 });
+                    await session.StoreAsync(new User { Name = "Bar", Age = 50 });
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Age >= 50 && x.Age <= 60).ToList();
 
                     Assert.Equal(1, users.Count);
                     Assert.Equal("Bar", users[0].Name);

@@ -227,63 +227,51 @@ namespace Raven.Server.Documents.Queries
                 {
                     var fieldName = QueryExpression.Extract(Parsed.QueryText, whereField.Field);
 
-                    if (whereField.Value.Type == ValueTokenType.Parameter)
+                    if (whereField.SingleValue != null)
                     {
-                        var parameterName = QueryExpression.Extract(Parsed.QueryText, whereField.Value);
+                        var singleValueToken = whereField.SingleValue;
 
-                        var index = QueryParameters.GetPropertyIndex(parameterName);
-
-                        QueryParameters.GetPropertyByIndex(index, ref propertyDetails);
-
-                        string value = null;
-                        ValueTokenType type;
-
-                        switch (propertyDetails.Token)
+                        if (whereField.Type == ValueTokenType.Parameter)
+                            result.Where.Add(fieldName, GetParameterValueAndType(singleValueToken, ref propertyDetails));
+                        else
                         {
-                            case BlittableJsonToken.Integer:
-                                value = propertyDetails.Value.ToString();
-                                type = ValueTokenType.Long;
-                                break;
-                            case BlittableJsonToken.LazyNumber:
-                                value = propertyDetails.Value.ToString();
-                                type = ValueTokenType.Double;
-                                break;
-                            case BlittableJsonToken.String:
-                            case BlittableJsonToken.CompressedString:
-                                value = propertyDetails.Value.ToString();
-                                type = ValueTokenType.String;
-                                break;
-                            case BlittableJsonToken.Boolean:
-                                var booleanValue = (bool)propertyDetails.Value;
+                            string value;
+                            switch (singleValueToken.Type)
+                            {
+                                case ValueTokenType.String:
+                                    value = QueryExpression.Extract(Parsed.QueryText, singleValueToken.TokenStart + 1, singleValueToken.TokenLength - 2, singleValueToken.EscapeChars);
+                                    break;
+                                default:
+                                    value = QueryExpression.Extract(Parsed.QueryText, singleValueToken);
+                                    break;
+                            }
 
-                                if (booleanValue)
-                                    type = ValueTokenType.True;
-                                else
-                                    type = ValueTokenType.False;
-                                break;
-                            case BlittableJsonToken.Null:
-                                type = ValueTokenType.Null;
-                                break;
-                            default:
-                                throw new ArgumentException($"Unhandled token: {propertyDetails.Token}");
+                            result.Where.Add(fieldName, (value, singleValueToken.Type));
                         }
-
-                        result.Where.Add(fieldName, value, type);
                     }
                     else
                     {
-                        string value;
-                        switch (whereField.Value.Type)
+                        if (whereField.Type == ValueTokenType.Parameter)
                         {
-                            case ValueTokenType.String:
-                                value = QueryExpression.Extract(Parsed.QueryText, whereField.Value.TokenStart + 1, whereField.Value.TokenLength - 2, whereField.Value.EscapeChars);
-                                break;
-                            default:
-                                value = QueryExpression.Extract(Parsed.QueryText, whereField.Value);
-                                break;
-                        }
+                            var values = new List<string>(whereField.Values.Count);
+                            ValueTokenType valuesType = 0;
 
-                        result.Where.Add(fieldName, value, whereField.Value.Type);
+                            foreach (var item in whereField.Values)
+                            {
+                                var valueTypePair = GetParameterValueAndType(item, ref propertyDetails);
+
+                                values.Add(valueTypePair.Value);
+
+                                valuesType = valueTypePair.Type;
+                            }
+
+                            result.Where.Add(fieldName, values, valuesType);
+                        }
+                        else
+                        {
+                            throw new NotImplementedException("TODO arek - support non parametrized queries that WHERE clause has multiple fields e.g. WHERE Age BETWEEN 30 AND 35");
+                        }
+                        
                     }
                 }
             }
@@ -301,11 +289,66 @@ namespace Raven.Server.Documents.Queries
             return result;
         }
 
-        private IEnumerable<(FieldToken Field, ValueToken Value)> GetFieldValueTokens(QueryExpression expression)
+        private (string Value, ValueTokenType Type) GetParameterValueAndType(ValueToken valueToken, ref BlittableJsonReaderObject.PropertyDetails propertyDetails)
+        {
+            var parameterName = QueryExpression.Extract(Parsed.QueryText, valueToken);
+
+            var index = QueryParameters.GetPropertyIndex(parameterName);
+
+            QueryParameters.GetPropertyByIndex(index, ref propertyDetails);
+
+            switch (propertyDetails.Token)
+            {
+                case BlittableJsonToken.Integer:
+                    return (propertyDetails.Value.ToString(), ValueTokenType.Long);
+                case BlittableJsonToken.LazyNumber:
+                    return (propertyDetails.Value.ToString(), ValueTokenType.Double);
+                case BlittableJsonToken.String:
+                case BlittableJsonToken.CompressedString:
+                    return (propertyDetails.Value.ToString(), ValueTokenType.String);
+                case BlittableJsonToken.Boolean:
+                    var booleanValue = (bool)propertyDetails.Value;
+
+                    if (booleanValue)
+                        return (null, ValueTokenType.True);
+                    else
+                        return (null, ValueTokenType.False);
+                case BlittableJsonToken.Null:
+                    return (null, ValueTokenType.Null);
+                default:
+                    throw new ArgumentException($"Unhandled token: {propertyDetails.Token}");
+            }
+        }
+
+        private IEnumerable<(FieldToken Field, ValueTokenType Type, ValueToken SingleValue, List<ValueToken> Values)> GetFieldValueTokens(QueryExpression expression)
         {
             if (expression.Field != null)
             {
-                yield return (expression.Field, expression.Value ?? expression.First);
+                switch (expression.Type)
+                {
+                    case OperatorType.Equal:
+                    case OperatorType.LessThen:
+                    case OperatorType.GreaterThen:
+                    case OperatorType.LessThenEqual:
+                    case OperatorType.GreaterThenEqual:
+                        var value = expression.Value ?? expression.First;
+                        yield return (expression.Field, value.Type, value, null);
+                        yield break;
+                    case OperatorType.Between:
+                        // TODO arek - can queries have some values parametrized while not all of them?
+                        yield return (expression.Field, expression.First.Type, null, new List<ValueToken>(2) { expression.First, expression.Second });
+                        yield break;
+                    //case OperatorType.In:
+                    //case OperatorType.Method:
+                    //case OperatorType.And:
+                    //case OperatorType.AndNot:
+                    //case OperatorType.Or:
+                    //case OperatorType.OrNot:
+                    //case OperatorType.Field:
+                    default:
+                        break;
+                }
+
                 yield break;
             }
 
