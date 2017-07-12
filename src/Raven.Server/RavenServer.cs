@@ -36,8 +36,12 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using AccessToken = Raven.Server.Web.Authentication.AccessToken;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using Raven.Client.Extensions;
 using Raven.Client.Server.Operations.ApiKeys;
+using Sparrow.Platform;
+using Sparrow.Platform.Posix;
+using Voron.Platform.Posix;
 
 namespace Raven.Server
 {
@@ -789,9 +793,56 @@ namespace Raven.Server
         public const string PipePrefix = "raven-control-pipe-";
         public void OpenPipe()
         {
+            var pipeDir = Path.Combine(Path.GetTempPath(), "ravendb-pipe");
+
+            if (PlatformDetails.RunningOnPosix)
+            {
+                try
+                {
+                    if (Directory.Exists(pipeDir) == false)
+                    {
+                        const FilePermissions mode = FilePermissions.S_IRWXU;
+                        var rc = Syscall.mkdir(pipeDir, (ushort)mode);
+                        if (rc != 0)
+                            throw new IOException($"Unable to create directory {pipeDir} with permission {mode}. LastErr={Marshal.GetLastWin32Error()}");
+                    }
+
+
+
+
+                    foreach (var pipeFile in Directory.GetFiles(pipeDir, PipePrefix + "*"))
+                    {
+                        try
+                        {
+                            File.Delete(pipeFile);
+                        }
+                        catch (Exception e)
+                        {
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info("Unable to delete old pipe file " + pipeFile, e);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info("Unable to list old pipe files for deletion", ex);
+                }
+            }
+
             var pipeName = PipePrefix + Process.GetCurrentProcess().Id;
             Pipe = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte,
                 PipeOptions.Asynchronous, 1024, 1024);
+
+            if (PlatformDetails.RunningOnPosix) // TODO: remove this if and after https://github.com/dotnet/corefx/issues/22141 (both in RavenServer.cs and AdminChannel.cs)
+            {
+                var pathField = Pipe.GetType().GetField("_path", BindingFlags.NonPublic | BindingFlags.Instance);
+                if (pathField == null)
+                {
+                    throw new InvalidOperationException("Unable to set the proper path for the admin pipe, admin channel will not be available");
+                }
+                pathField.SetValue(Pipe, Path.Combine(pipeDir, pipeName));
+            }
         }
     }
 }

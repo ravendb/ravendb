@@ -88,7 +88,16 @@ namespace Raven.Server
                     {
                         try
                         {
-                            server.OpenPipe();
+                            try
+                            {
+                                server.OpenPipe();
+                            }
+                            catch (Exception e)
+                            {
+                                if (Logger.IsInfoEnabled)
+                                    Logger.Info("Unable to OpenPipe. Admin Channel will not be available to the user", e);
+                                Console.WriteLine("Warning: Admin Channel is not available");
+                            }
                             server.Initialize();
 
                             if (CommandLineSwitches.PrintServerId)
