@@ -22,7 +22,7 @@ namespace SlowTests.Server.Documents.Revisions
             {
                 var database1 = await GetDocumentDatabaseInstanceFor(store1);
                 database1.Configuration.Replication.MaxItemsCount = 1;
-                database1.ReplicationLoader.WaitFormTest = new AsyncManualResetEvent();
+                database1.ReplicationLoader.DebugWaitAndRunReplicationOnce = new AsyncManualResetEvent();
 
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, false);
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database, false);
@@ -75,7 +75,7 @@ namespace SlowTests.Server.Documents.Revisions
 
                 await SetupReplicationAsync(store1, store2);
 
-                database1.ReplicationLoader.WaitFormTest.Set();
+                database1.ReplicationLoader.DebugWaitAndRunReplicationOnce.Set();
                 using (var session = store2.OpenAsyncSession())
                 {
                     Assert.True(WaitForDocument<User>(store2, "users/michael", u => u.Balance == 10));
@@ -85,7 +85,7 @@ namespace SlowTests.Server.Documents.Revisions
                     Assert.Equal(10, oren.Balance);
                 }
 
-                database1.ReplicationLoader.WaitFormTest.Set();
+                database1.ReplicationLoader.DebugWaitAndRunReplicationOnce.Set();
                 using (var session = store2.OpenAsyncSession())
                 {
                     Assert.True(WaitForDocument<User>(store2, "users/michael", u => u.Balance == 0));
@@ -95,7 +95,7 @@ namespace SlowTests.Server.Documents.Revisions
                     Assert.Equal(10, oren.Balance);
                 }
 
-                database1.ReplicationLoader.WaitFormTest.Set();
+                database1.ReplicationLoader.DebugWaitAndRunReplicationOnce.Set();
                 using (var session = store2.OpenAsyncSession())
                 {
                     Assert.True(WaitForDocument<User>(store2, "users/oren", u => u.Balance == 15));
@@ -105,7 +105,7 @@ namespace SlowTests.Server.Documents.Revisions
                     Assert.Equal(0, michael.Balance);
                 }
 
-                database1.ReplicationLoader.WaitFormTest.Set();
+                database1.ReplicationLoader.DebugWaitAndRunReplicationOnce.Set();
                 using (var session = store2.OpenAsyncSession())
                 {
                     Assert.True(WaitForDocument<User>(store2, "users/oren", u => u.Balance == 20));
@@ -115,7 +115,7 @@ namespace SlowTests.Server.Documents.Revisions
                     Assert.Null(michael);
                 }
 
-                database1.ReplicationLoader.WaitFormTest.Set();
+                database1.ReplicationLoader.DebugWaitAndRunReplicationOnce.Set();
                 using (var session = store2.OpenAsyncSession())
                 {
                     Assert.True(WaitForDocument<User>(store2, "users/oren", u => u.Balance == 10));
