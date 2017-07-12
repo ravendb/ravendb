@@ -226,7 +226,7 @@ namespace Raven.Server.Documents
                             largestEtag = conflict.Etag;
                         conflictRecords.Add(new GetConflictsResult.Conflict
                         {
-                            ChangeVector = conflict.ChangeVector
+                            ChangeVector = conflict.ChangeVector.ToJson()
                         });
                     }
 

@@ -61,7 +61,6 @@ namespace Raven.Server.Documents
                     [Constants.Documents.Metadata.Key] = mutatedMetadata = new DynamicJsonValue()
                 };
             }
-
             mutatedMetadata[Constants.Documents.Metadata.Id] = Id;
             if (ChangeVector != null)
                 mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector.ToJson();

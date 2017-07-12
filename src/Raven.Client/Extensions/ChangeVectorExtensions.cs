@@ -106,22 +106,6 @@ namespace Raven.Client.Extensions
             return result;
         }
 
-        public static ChangeVectorEntry[] ToChangeVector(this string str)
-        {
-            if (str == null)
-            {
-                return null;
-            }
-
-            var entries = str.Split(',');
-            var changeVector = new ChangeVectorEntry[entries.Length];
-            for (var index = 0; index < entries.Length; index++)
-            {
-                changeVector[index] = ChangeVectorEntry.FromString(entries[index]);
-            }
-            return changeVector;
-        }
-
         public static string ToJson(this ChangeVectorEntry[] self)
         {
             if (self == null)

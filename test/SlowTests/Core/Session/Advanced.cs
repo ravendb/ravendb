@@ -1,10 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Exceptions;
-using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Sparrow.Json.Parsing;
 using Xunit;
 

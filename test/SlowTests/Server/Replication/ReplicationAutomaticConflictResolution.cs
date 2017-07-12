@@ -13,6 +13,7 @@ using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;

@@ -44,7 +44,7 @@ namespace FastTests.Client.Subscriptions
                 }
 
                 User user;
-                Assert.True(users.TryTake(out user, 1000));
+                Assert.True(users.TryTake(out user, 1000000));
             }
         }
     }

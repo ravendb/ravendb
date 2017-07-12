@@ -10,6 +10,7 @@ using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Exceptions;
+using Raven.Client.Util;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
@@ -98,9 +99,11 @@ namespace SlowTests.Server.Replication
 
                     var conflicts = destination.Commands().GetConflictsFor("docs/1");
                     Assert.Equal(2, conflicts.Length);
-                    Assert.NotEqual(conflicts[0].ChangeVector[0].DbId, conflicts[1].ChangeVector[0].DbId);
-                    Assert.Equal(1, conflicts[0].ChangeVector[0].Etag);
-                    Assert.Equal(1, conflicts[1].ChangeVector[0].Etag);
+                    var cv1 = conflicts[0].ChangeVector.ToChangeVector();
+                    var cv2 = conflicts[1].ChangeVector.ToChangeVector();
+                    Assert.NotEqual(cv1[0].DbId, cv2[0].DbId);
+                    Assert.Equal(1, cv1[0].Etag);
+                    Assert.Equal(1, cv2[0].Etag);
                 }
             }
         }
@@ -127,9 +130,11 @@ namespace SlowTests.Server.Replication
 
                     conflicts = destination.Commands().GetConflictsFor("docs/1");
                     Assert.Equal(2, conflicts.Length);
-                    Assert.NotEqual(conflicts[0].ChangeVector[0].DbId, conflicts[1].ChangeVector[0].DbId);
-                    Assert.Equal(1, conflicts[0].ChangeVector[0].Etag);
-                    Assert.Equal(1, conflicts[1].ChangeVector[0].Etag);
+                    var cv1 = conflicts[0].ChangeVector.ToChangeVector();
+                    var cv2 = conflicts[1].ChangeVector.ToChangeVector();
+                    Assert.NotEqual(cv1[0].DbId, cv2[0].DbId);
+                    Assert.Equal(1, cv1[0].Etag);
+                    Assert.Equal(1, cv2[0].Etag);
                 }
 
                 Assert.Throws<DocumentConflictException>(() => destination.Commands().Get("docs/1"));

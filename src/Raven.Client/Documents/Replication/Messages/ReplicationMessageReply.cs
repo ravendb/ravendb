@@ -39,23 +39,7 @@ namespace Raven.Client.Documents.Replication.Messages
             //TODO: Fix this allocation mess
             sb.Append(Convert.ToBase64String(DbId.ToByteArray()));
         }
-        // TODO: don't use regex
-        private static readonly Regex Regex = new Regex(@"(?<node>\w+):(?<etag>\d+)-(?<dbId>.+)", RegexOptions.Compiled);
-        public static ChangeVectorEntry FromString(string str)
-        {
-            var match = Regex.Match(str);
-            if (match == null)
-            {
-                throw new InvalidDataException($"Unable to parse the change vector string {str}.");
-            }
-            var groups = match.Groups;
-            return new ChangeVectorEntry
-            {
-                DbId = new Guid(Convert.FromBase64String(groups["dbId"].Value)),
-                Etag = Int32.Parse(groups["etag"].Value),
-                NodeTag = ChangeVectorExtensions.FromBase26(groups["node"].Value)
-            };
-        }
+        
         public override string ToString()
         {
             var sb = new StringBuilder();

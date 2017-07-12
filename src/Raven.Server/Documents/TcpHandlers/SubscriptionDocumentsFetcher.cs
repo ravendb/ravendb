@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Net;
 using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Util;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
