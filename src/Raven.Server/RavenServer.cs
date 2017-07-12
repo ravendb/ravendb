@@ -36,8 +36,12 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using AccessToken = Raven.Server.Web.Authentication.AccessToken;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using Raven.Client.Extensions;
 using Raven.Client.Server.Operations.ApiKeys;
+using Sparrow.Platform;
+using Sparrow.Platform.Posix;
+using Voron.Platform.Posix;
 
 namespace Raven.Server
 {
@@ -730,36 +734,42 @@ namespace Raven.Server
                     return;
 
                 Disposed = true;
-                Pipe?.Dispose();
-                Metrics?.Dispose();
-                _webHost?.Dispose();
+                var ea = new ExceptionAggregator("Failed to properly close RavenServer");
+
+                ea.Execute(() => Pipe?.Dispose());
+                ea.Execute(() => Metrics?.Dispose());
+                ea.Execute(() => _webHost?.Dispose());
                 if (_tcpListenerTask != null)
                 {
-                    if (_tcpListenerTask.IsCompleted)
+                    ea.Execute(() =>
                     {
-                        CloseTcpListeners(_tcpListenerTask.Result.Listeners);
-                    }
-                    else
-                    {
-                        if (_tcpListenerTask.Exception != null)
+                        if (_tcpListenerTask.IsCompleted)
                         {
-                            if (_tcpLogger.IsInfoEnabled)
-                                _tcpLogger.Info("Cannot dispose of tcp server because it has errored", _tcpListenerTask.Exception);
+                            CloseTcpListeners(_tcpListenerTask.Result.Listeners);
                         }
                         else
                         {
-                            _tcpListenerTask.ContinueWith(t =>
+                            if (_tcpListenerTask.Exception != null)
                             {
-                                CloseTcpListeners(t.Result.Listeners);
-                            }, TaskContinuationOptions.OnlyOnRanToCompletion);
+                                if (_tcpLogger.IsInfoEnabled)
+                                    _tcpLogger.Info("Cannot dispose of tcp server because it has errored", _tcpListenerTask.Exception);
+                            }
+                            else
+                            {
+                                _tcpListenerTask.ContinueWith(t =>
+                                {
+                                    CloseTcpListeners(t.Result.Listeners);
+                                }, TaskContinuationOptions.OnlyOnRanToCompletion);
+                            }
                         }
-                    }
+                    });
                 }
 
-                ServerStore?.Dispose();
-                ServerMaintenanceTimer?.Dispose();
+                ea.Execute(() => ServerStore?.Dispose());
+                ea.Execute(() => ServerMaintenanceTimer?.Dispose());
+                ea.Execute(() => AfterDisposal?.Invoke());
 
-                AfterDisposal?.Invoke();
+                ea.ThrowIfNeeded();
             }
         }
 
@@ -783,9 +793,56 @@ namespace Raven.Server
         public const string PipePrefix = "raven-control-pipe-";
         public void OpenPipe()
         {
+            var pipeDir = Path.Combine(Path.GetTempPath(), "ravendb-pipe");
+
+            if (PlatformDetails.RunningOnPosix)
+            {
+                try
+                {
+                    if (Directory.Exists(pipeDir) == false)
+                    {
+                        const FilePermissions mode = FilePermissions.S_IRWXU;
+                        var rc = Syscall.mkdir(pipeDir, (ushort)mode);
+                        if (rc != 0)
+                            throw new IOException($"Unable to create directory {pipeDir} with permission {mode}. LastErr={Marshal.GetLastWin32Error()}");
+                    }
+
+
+
+
+                    foreach (var pipeFile in Directory.GetFiles(pipeDir, PipePrefix + "*"))
+                    {
+                        try
+                        {
+                            File.Delete(pipeFile);
+                        }
+                        catch (Exception e)
+                        {
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info("Unable to delete old pipe file " + pipeFile, e);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info("Unable to list old pipe files for deletion", ex);
+                }
+            }
+
             var pipeName = PipePrefix + Process.GetCurrentProcess().Id;
             Pipe = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte,
                 PipeOptions.Asynchronous, 1024, 1024);
+
+            if (PlatformDetails.RunningOnPosix) // TODO: remove this if and after https://github.com/dotnet/corefx/issues/22141 (both in RavenServer.cs and AdminChannel.cs)
+            {
+                var pathField = Pipe.GetType().GetField("_path", BindingFlags.NonPublic | BindingFlags.Instance);
+                if (pathField == null)
+                {
+                    throw new InvalidOperationException("Unable to set the proper path for the admin pipe, admin channel will not be available");
+                }
+                pathField.SetValue(Pipe, Path.Combine(pipeDir, pipeName));
+            }
         }
     }
 }

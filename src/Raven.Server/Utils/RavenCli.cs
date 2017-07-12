@@ -8,14 +8,13 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using Raven.Client.Documents;
-using Raven.Client.Exceptions.Database;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Debugging;
-using Raven.Server.Rachis;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -100,12 +99,12 @@ namespace Raven.Server.Utils
             Help,
             Logo,
             Experimental,
-            AdminScript,
+            Script,
             ImportDir,
             CreateDb,
             Logout,
             Print,
-            
+
             UnknownCommand
         }
 
@@ -363,20 +362,21 @@ namespace Raven.Server.Utils
             {
                 case "on":
                     TimeoutEvent.Disable = false;
-                    WriteText("Timer enabled", ConsoleColor.Green, cli);
+                    WriteText("Timer enabled", TextColor, cli);
                     break;
                 case "off":
                     TimeoutEvent.Disable = true;
-                    WriteText("Timer disabled", ConsoleColor.Green, cli);
+                    WriteText("Timer disabled", TextColor, cli);
                     break;
                 case "fire":
                     cli._server.ServerStore.Engine.Timeout.ExecuteTimeoutBehavior();
-                    WriteText("Timer fired", ConsoleColor.Green, cli);
+                    WriteText("Timer fired", TextColor, cli);
                     break;
             }
 
             return true;
         }
+
         private static bool CommandLog(List<string> args, RavenCli cli)
         {
             switch (args.First())
@@ -457,28 +457,39 @@ namespace Raven.Server.Utils
             return isOn; // here rc is not an exit code, it is a setter to _experimental
         }
 
-        private static bool CommandAdminScript(List<string> args, RavenCli cli)
+        private static bool CommandScript(List<string> args, RavenCli cli)
         {
-            // TODO: ADIADI : Replace the entire usage of this command into : adminScript <database|server> [databaseName]
-            if (args.Count != 2)
+            // script <database|server> [databaseName]
+            if (args.Count < 1 || args.Count > 2)
             {
-                WriteError("Invalid number of arguments passed to adminScript", cli);
+                WriteError("Invalid number of arguments passed to script", cli);
                 return false;
             }
 
-            var databaseName = args[0];
             bool isServerScript = false;
-            if (args[1].Equals("true", StringComparison.OrdinalIgnoreCase))
-                isServerScript = true;
-            else if (args[1].Equals("false", StringComparison.OrdinalIgnoreCase) == false)
-            {
-                WriteError($"Invalid arguments 'server-script' ('{args[1]}') passed to adminScript. Must be true or false", cli);
-                return false;
-            }
-
             DocumentDatabase database = null;
-            if (isServerScript == false)
-                database = cli._server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
+            switch (args[0].ToLower())
+            {
+                case "database":
+                    if (args.Count != 2)
+                    {
+                        WriteError("Invalid number of arguments passed to script - missing database name", cli);
+                        return false;
+                    }
+                    database = cli._server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(args[1]).Result;
+                    if (database == null)
+                    {
+                        WriteError($"Cannot find database named '{args[1]}'", cli);
+                        return false;
+                    }
+                    break;
+                case "server":
+                    isServerScript = true;
+                    break;
+                default:
+                    WriteError($"Invalid arguments '{args[0]}' passed to script", cli);
+                    return false;
+            }
 
             var jsCli = new JavaScriptCli();
             if (jsCli.CreateScript(cli._reader, cli._writer, cli._consoleColoring, database, cli._server) == false)
@@ -497,22 +508,12 @@ namespace Raven.Server.Utils
                     var console = new AdminJsConsole(cli._server);
                     result = console.ApplyServerScript(adminJsScript);
                 }
-                else if (string.IsNullOrWhiteSpace(databaseName) == false)
+                else
                 {
-                    //database script
-                    if (database == null)
-                    {
-                        DatabaseDoesNotExistException.Throw(databaseName);
-                    }
-
                     var console = new AdminJsConsole(database);
                     result = console.ApplyScript(adminJsScript);
                 }
-                else
-                {
-                    WriteError($"database `{databaseName} not found, and 'server-script' set to false. Can't determine what to apply this script on", cli);
-                    return false;
-                }
+
 
                 string str;
                 if (result == null || result is DynamicJsonValue)
@@ -537,7 +538,7 @@ namespace Raven.Server.Utils
                         writer.Flush();
                     }
 
-                    str = Encoding.UTF8.GetString(ms.ToArray());                    
+                    str = Encoding.UTF8.GetString(ms.ToArray());
                 }
                 else
                     str = result.ToString();
@@ -586,9 +587,7 @@ namespace Raven.Server.Utils
             var serverUrl = cli._server.WebUrls[0];
             WriteText($"ImportDir for database {args[0]} from dir `{args[1]}` to {serverUrl}", ConsoleColor.Yellow, cli);
 
-            var port = new Uri(serverUrl).Port;
-
-            var url = $@"http://127.0.0.1:{port}/databases/{args[0]}/smuggler/import-dir?dir={args[1]}";
+            var url = $"{serverUrl}/databases/{args[0]}/smuggler/import-dir?dir={args[1]}";
             using (var client = new HttpClient())
             {
                 WriteText("Sending at " + DateTime.UtcNow, TextColor, cli);
@@ -635,17 +634,17 @@ namespace Raven.Server.Utils
                 new[] {"helpPrompt", "Detailed prompt command usage"},
                 new[] {"clear", "Clear screen"},
                 new[] {"stats", "Online server's memory consumption stats, request ratio and documents count"},
-                new[] {"log [http-]< on | off >", "set log on or off. http-on/off can be selected to filter log output"},
+                new[] {"log [http-]<on|off>", "set log on or off. http-on/off can be selected to filter log output"},
                 new[] {"info", "Print system info and current stats"},
                 new[] {"logo [no-clear]", "Clear screen and print initial logo"},
                 new[] {"gc [gen]", "Collect garbage of specified gen : 0, 1 or default 2"},
                 new[] {"lowMem", "Simulate Low-Memory event"},
-                new[] {"experimental <on | off>", "Set if to allow experimental cli commands. WARNING: Use with care!"},
-                new[] {"adminScript <d> <m>", "Execute script on database 'd'. if 'm' is true, database name is ignored for server-script. WARNING: Use with care!"},
+                new[] {"timer <on|off|fire>", "enable or disable candidate selection timer (Rachis), or fire timeout immediately"},
+                new[] {"experimental <on|off>", "Set if to allow experimental cli commands. WARNING: Use with care!"},
+                new[] {"sript <server|database> [database]", "Execute script on server or specified database. WARNING: Use with care!"},
                 new[] {"logout", "Logout (applicable only on piped connection)"},
                 new[] {"resetServer", "Restarts the server (shutdown and re-run)"},
                 new[] {"shutdown", "Shutdown the server"},
-                new[] {"timer", "<on | off | fire>"},
                 new[] {"help", "This help screen"}
             };
 
@@ -665,7 +664,7 @@ namespace Raven.Server.Utils
             foreach (var cmd in commandDescription)
             {
                 WriteText("\t" + cmd[0], ConsoleColor.Yellow, cli, newLine: false);
-                WriteText(new string(' ', 29 - cmd[0].Length) + cmd[1], ConsoleColor.DarkYellow, cli);
+                WriteText(new string(' ', 41 - cmd[0].Length) + cmd[1], ConsoleColor.DarkYellow, cli);
             }
             WriteText("", TextColor, cli);
 
@@ -690,13 +689,13 @@ namespace Raven.Server.Utils
             [Command.Stats] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandStats },
             [Command.Gc] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandGc },
             [Command.Log] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandLog },
-            [Command.Timer] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandTimer },
             [Command.Clear] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandClear },
             [Command.Info] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandInfo },
             [Command.Logo] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLogo },
             [Command.Experimental] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandExperimental },
-            [Command.AdminScript] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandAdminScript },
+            [Command.Script] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandScript },
             [Command.LowMem] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLowMem },
+            [Command.Timer] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandTimer },
             [Command.ResetServer] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandResetServer },
             [Command.Logout] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLogout },
             [Command.Shutdown] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandShutdown },
@@ -862,7 +861,7 @@ namespace Raven.Server.Utils
                         }
                         lastRc = cmd.DelegateFync.Invoke(parsedCommand.Args, this);
 
-                        if (parsedCommand.Command == Command.Prompt && lastRc )
+                        if (parsedCommand.Command == Command.Prompt && lastRc)
                             _promptArgs = parsedCommand.Args;
                         else if (parsedCommand.Command == Command.Experimental)
                         {
@@ -890,7 +889,7 @@ namespace Raven.Server.Utils
                             }
 
                             WriteText("Server is not running as Service. Restart from a remote connection is not allowed." + Environment.NewLine +
-                                    "Restart the server from it's main console" + Environment.NewLine, WarningColor, this);
+                                      "Restart the server from it's main console" + Environment.NewLine, WarningColor, this);
                         }
                         if (parsedCommand.Command == Command.Shutdown)
                         {
@@ -926,7 +925,7 @@ namespace Raven.Server.Utils
                 }
             }
             _writer.Flush();
-            
+
             // we are logging out from cli
             Debug.Assert(_consoleColoring == false);
             return false;
@@ -1094,7 +1093,7 @@ namespace Raven.Server.Utils
             }
 
             return true;
-        }        
+        }
     }
 
     internal class JavaScriptCli
@@ -1125,7 +1124,8 @@ namespace Raven.Server.Utils
             while (true)
             {
                 writer.Write(">>> ");
-                writer.Write(CliDelimiter.GetDelimiterString(CliDelimiter.Delimiter.ReadLine));
+                if (consoleColoring == false)
+                    writer.Write(CliDelimiter.GetDelimiterString(CliDelimiter.Delimiter.ReadLine));
                 writer.Flush();
 
                 var line = reader.ReadLine();

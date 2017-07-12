@@ -669,14 +669,6 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal(name, attachment.Details.Name);
                     if (name == names[0])
                     {
-                        if (expectedCount == 1)
-                            Assert.Equal(4, attachment.Details.Etag);
-                        else if (expectedCount == 2)
-                            Assert.Equal(10, attachment.Details.Etag);
-                        else if (expectedCount == 3)
-                            Assert.Equal(19, attachment.Details.Etag);
-                        else
-                            throw new ArgumentOutOfRangeException(nameof(i));
                         Assert.Equal(new byte[] { 1, 2, 3 }, readBuffer.Take(3));
                         Assert.Equal("image/png", attachment.Details.ContentType);
                         Assert.Equal(3, attachmentStream.Position);
@@ -684,12 +676,6 @@ namespace SlowTests.Client.Attachments
                     }
                     else if (name == names[1])
                     {
-                        if (expectedCount == 2)
-                            Assert.Equal(9, attachment.Details.Etag);
-                        else if (expectedCount == 3)
-                            Assert.Equal(17, attachment.Details.Etag);
-                        else
-                            throw new ArgumentOutOfRangeException(nameof(i));
                         Assert.Equal(new byte[] { 10, 20, 30, 40, 50 }, readBuffer.Take(5));
                         Assert.Equal("ImGgE/jPeG", attachment.Details.ContentType);
                         Assert.Equal(5, attachmentStream.Position);
@@ -697,10 +683,6 @@ namespace SlowTests.Client.Attachments
                     }
                     else if (name == names[2])
                     {
-                        if (expectedCount == 3)
-                            Assert.Equal(18, attachment.Details.Etag);
-                        else
-                            throw new ArgumentOutOfRangeException(nameof(i));
                         Assert.Equal(new byte[] { 1, 2, 3, 4, 5 }, readBuffer.Take(5));
                         Assert.Equal("", attachment.Details.ContentType);
                         Assert.Equal(5, attachmentStream.Position);

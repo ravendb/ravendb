@@ -236,7 +236,7 @@ namespace FastTests.Server.Documents.Revisions
 
                 statistics = store2.Admin.Send(new GetStatisticsOperation());
                 Assert.Equal(useSession ? 3 : 2, statistics.CountOfDocuments);
-                Assert.Equal(4, statistics.CountOfRevisionDocuments); // This is not correct. Should be zero. See: RavenDB-7543
+                Assert.Equal(0, statistics.CountOfRevisionDocuments); 
             }
         }
 
