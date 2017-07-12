@@ -456,25 +456,11 @@ namespace Raven.Server.Documents.Replication
                 if (status != ConflictsStorage.ConflictStatus.AlreadyMerged)
                     return 0;
 
-                var length = context.LastDatabaseChangeVector.Length;
-                for (var i = 0; i < length; i++)
-                {
-                    if(_dbid  != context.LastDatabaseChangeVector[i].DbId)
-                        continue;
 
-                    context.LastDatabaseChangeVector[i].Etag = Math.Max(context.LastDatabaseChangeVector[i].Etag,
-                        _replicationBatchReply.CurrentEtag);
-                    return 1;
-                }
-
-                Array.Resize(ref context.LastDatabaseChangeVector, length + 1);
-                context.LastDatabaseChangeVector[length] = new ChangeVectorEntry
-                {
-                    DbId = _dbid,
-                    Etag = _replicationBatchReply.CurrentEtag
-                };
-                return 1;
+                return context.UpdateLastDatabaseChangeVector(_dbid, _replicationBatchReply.CurrentEtag) ? 1 : 0;
             }
+
+            
         }
         
         private void UpdateDestinationChangeVectorHeartbeat(ReplicationMessageReply replicationBatchReply)
