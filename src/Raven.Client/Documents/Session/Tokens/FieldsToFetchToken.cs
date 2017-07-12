@@ -10,12 +10,6 @@ namespace Raven.Client.Documents.Session.Tokens
 
         private FieldsToFetchToken(string[] fieldsToFetch, string[] projections)
         {
-            if (fieldsToFetch == null || fieldsToFetch.Length == 0)
-                throw new ArgumentNullException(nameof(fieldsToFetch));
-
-            if (projections != null && projections.Length != fieldsToFetch.Length)
-                throw new ArgumentNullException(nameof(projections), "Length of projections must be the same as length of fields to fetch.");
-
             FieldsToFetch = fieldsToFetch;
             Projections = projections;
         }
@@ -24,6 +18,12 @@ namespace Raven.Client.Documents.Session.Tokens
 
         public static FieldsToFetchToken Create(string[] fieldsToFetch, string[] projections)
         {
+            if (fieldsToFetch == null || fieldsToFetch.Length == 0)
+                throw new ArgumentNullException(nameof(fieldsToFetch));
+
+            if (projections != null && projections.Length != fieldsToFetch.Length)
+                throw new ArgumentNullException(nameof(projections), "Length of projections must be the same as length of fields to fetch.");
+
             return new FieldsToFetchToken(fieldsToFetch, projections);
         }
 

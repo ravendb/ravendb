@@ -1139,19 +1139,16 @@ namespace Raven.Client.Documents.Session
 
             foreach (var token in SelectTokens)
             {
-                if (fieldsToFetchToken == null)
-                {
-                    query.SelectTokens.AddLast(token.Clone());
-                    continue;
-                }
-
                 if (token is FieldsToFetchToken)
                 {
+                    if (fieldsToFetchToken == null)
+                        continue;
+
                     query.SelectTokens.AddLast(fieldsToFetchToken);
                     continue;
                 }
 
-                query.SelectTokens.AddLast(fieldsToFetchToken);
+                query.SelectTokens.AddLast(token.Clone());
             }
 
             query.AfterQueryExecuted(AfterQueryExecutedCallback);
