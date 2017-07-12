@@ -138,7 +138,7 @@ namespace Raven.Server.Documents
                 IsGlobal = true,
                 Name = AllTombstonesEtagsSlice
             });
-            TombstonesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef()
+            TombstonesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = (int)TombstoneTable.DeletedEtag,
                 IsGlobal = false,
@@ -879,6 +879,10 @@ namespace Raven.Server.Documents
                 result.Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
                 result.LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr);
             }
+            else if (result.Type == DocumentTombstone.TombstoneType.Revision)
+            {
+                result.Collection = TableValueToString(context, (int)TombstoneTable.Collection, ref tvr);
+            }
 
             return result;
         }
@@ -1135,23 +1139,21 @@ namespace Raven.Server.Documents
 
             fixed (ChangeVectorEntry* pChangeVector = changeVector)
             {
+                var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
+                    collectionName.GetTableName(CollectionTableType.Tombstones));
                 using (Slice.From(context.Allocator, collectionName.Name, out Slice collectionSlice))
+                using (table.Allocate(out TableValueBuilder tvb))
                 {
-                    var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
-                        collectionName.GetTableName(CollectionTableType.Tombstones));
-                    using (table.Allocate(out TableValueBuilder tvb))
-                    {
-                        tvb.Add(lowerId);
-                        tvb.Add(Bits.SwapBytes(newEtag));
-                        tvb.Add(Bits.SwapBytes(documentEtag));
-                        tvb.Add(context.GetTransactionMarker());
-                        tvb.Add((byte)DocumentTombstone.TombstoneType.Document);
-                        tvb.Add(collectionSlice);
-                        tvb.Add((int)flags);
-                        tvb.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
-                        tvb.Add(lastModifiedTicks);
-                        table.Insert(tvb);
-                    }
+                    tvb.Add(lowerId);
+                    tvb.Add(Bits.SwapBytes(newEtag));
+                    tvb.Add(Bits.SwapBytes(documentEtag));
+                    tvb.Add(context.GetTransactionMarker());
+                    tvb.Add((byte)DocumentTombstone.TombstoneType.Document);
+                    tvb.Add(collectionSlice);
+                    tvb.Add((int)flags);
+                    tvb.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
+                    tvb.Add(lastModifiedTicks);
+                    table.Insert(tvb);
                 }
             }
             return (newEtag, changeVector);
@@ -1310,7 +1312,8 @@ namespace Raven.Server.Documents
         {
             string tableName;
 
-            if (collection == AttachmentsStorage.AttachmentsTombstones)
+            if (collection == AttachmentsStorage.AttachmentsTombstones || 
+                collection == RevisionsStorage.RevisionsTombstones)
             {
                 tableName = collection;
             }
@@ -1336,6 +1339,7 @@ namespace Raven.Server.Documents
         public IEnumerable<string> GetTombstoneCollections(Transaction transaction)
         {
             yield return AttachmentsStorage.AttachmentsTombstones;
+            yield return RevisionsStorage.RevisionsTombstones;
 
             using (var it = transaction.LowLevelTransaction.RootObjects.Iterate(false))
             {

@@ -127,6 +127,11 @@ namespace Raven.Server.Documents.Replication
             _stats.AttachmentTombstoneOutputCount++;
         }
 
+        public void RecordRevisionTombstoneOutput()
+        {
+            _stats.RevisionTombstoneOutputCount++;
+        }
+
         public void RecordDocumentOutput(long sizeInBytes)
         {
             _stats.DocumentOutputCount++;
@@ -180,6 +185,7 @@ namespace Raven.Server.Documents.Replication
         public Size AttachmentOutputSize;
 
         public int AttachmentTombstoneOutputCount;
+        public int RevisionTombstoneOutputCount;
         public int DocumentTombstoneOutputCount;
 
         public int DocumentOutputCount;

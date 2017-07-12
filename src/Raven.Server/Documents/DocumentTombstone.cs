@@ -30,6 +30,7 @@ namespace Raven.Server.Documents
         {
             Document = 1,
             Attachment = 2,
+            Revision = 3,
         }
 
         public DynamicJsonValue ToJson()
@@ -40,12 +41,12 @@ namespace Raven.Server.Documents
                 [nameof(Etag)] = Etag,
                 [nameof(DeletedEtag)] = DeletedEtag,
                 [nameof(Type)] = Type.ToString(),
+                [nameof(ChangeVector)] = ChangeVector.ToString(),
             };
 
-            if (Type == TombstoneType.Document)
+            if (Type != TombstoneType.Attachment)
             {
                 json[nameof(Collection)] = Collection.ToString();
-                json[nameof(ChangeVector)] = ChangeVector.ToString();
             }
 
             return json;
