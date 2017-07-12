@@ -188,8 +188,6 @@ namespace Raven.TestDriver
                 throw new InvalidOperationException("Unable to start server, log is: " + Environment.NewLine + sb);
             }
             
-            Console.WriteLine(url);
-
             output.ReadToEndAsync()
                 .ContinueWith(x => GC.KeepAlive(x.Exception)); // just discard any other output
 

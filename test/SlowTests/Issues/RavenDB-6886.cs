@@ -262,7 +262,6 @@ namespace SlowTests.Issues
 
                 Parallel.For(0, 5, _ =>
                 {
-                    Console.Write(".");
                     Parallel.Invoke(() =>
                         {
                             using (var session = leaderStore.OpenSession())
