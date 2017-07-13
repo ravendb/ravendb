@@ -57,6 +57,7 @@
     <PackageReference Include="System.Threading.Thread" Version="4.0.0" />
     <PackageReference Include="System.Threading.Timer" Version="4.0.1" />
     <PackageReference Include="System.Xml.XDocument" Version="4.0.11" />
+    <PackageReference Include="System.Runtime.Serialization.Formatters" Version="4.3.0" />
   </ItemGroup>
 
   <ItemGroup>
