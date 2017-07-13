@@ -89,7 +89,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    using (var enumerator = session.Advanced.Stream<TestDocumentTransformer.Output>(new ChangeVectorEntry[0], transformer: transformer.TransformerName))
+                    using (var enumerator = session.Advanced.Stream<TestDocumentTransformer.Output>(fromChangeVector:null, transformer: transformer.TransformerName))
                     {
                         var count = 0;
                         while (enumerator.MoveNext())
@@ -113,7 +113,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    using (var enumerator = session.Advanced.Stream<TestDocumentTransformer2.Output>(new ChangeVectorEntry[0], transformer: transformer2.TransformerName))
+                    using (var enumerator = session.Advanced.Stream<TestDocumentTransformer2.Output>(fromChangeVector:null, transformer: transformer2.TransformerName))
                     {
                         var count = 0;
                         while (enumerator.MoveNext())

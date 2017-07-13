@@ -75,7 +75,7 @@ namespace SlowTests.Core.Streaming
                 var ids = new List<KeyValuePair<string, string>>();
                 using (var session = store.OpenSession())
                 {
-                    using (var reader = session.Advanced.Stream<User>(changeVectorEntries))
+                    using (var reader = session.Advanced.Stream<User>(fromChangeVector:changeVectorEntries))
                     {
                         while (reader.MoveNext())
                         {

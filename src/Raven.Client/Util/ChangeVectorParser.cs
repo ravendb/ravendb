@@ -27,9 +27,9 @@ namespace Raven.Client.Util
 
         private static long ParseEtag(string changeVector, int start, int end)
         {
-            int etag = changeVector[end] - '0';
+            int etag = changeVector[start] - '0';
 
-            for (int i = end - 1; i >= start; i--)
+            for (int i = start + 1; i <= end; i++)
             {
                 etag *= 10;
                 etag += changeVector[i] - '0';

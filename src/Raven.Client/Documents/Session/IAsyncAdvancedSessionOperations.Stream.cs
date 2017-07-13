@@ -48,7 +48,7 @@ namespace Raven.Client.Documents.Session
         /// <param name="transformer">name of a transformer that should be used to transform the results</param>
         /// <param name="transformerParameters">parameters that will be passed to transformer</param>
         /// <param name="token">The cancellation token.</param>
-        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(ChangeVectorEntry[] fromChangeVector, int start = 0, int pageSize = int.MaxValue, string transformer = null, Dictionary<string, object> transformerParameters = null, CancellationToken token = default(CancellationToken));
+        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string fromChangeVector, int start = 0, int pageSize = int.MaxValue, string transformer = null, Dictionary<string, object> transformerParameters = null, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Stream the results of documents search to the client, converting them to CLR types along the way.

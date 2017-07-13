@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Http;
 using Raven.Client.Server;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis;
@@ -258,7 +259,7 @@ namespace Raven.Server.ServerWide.Maintenance
                    promotableClusterStats.LastReport.TryGetValue(dbName, out var promotableDbStats) == false)
                     continue;
 
-                var status = ConflictsStorage.GetConflictStatus(mentorPrevDbStats.LastChangeVector, promotableDbStats.LastChangeVector);
+                var status = ConflictsStorage.GetConflictStatus(mentorPrevDbStats.LastChangeVector.ToChangeVector(), promotableDbStats.LastChangeVector.ToChangeVector());
                 if (status == ConflictsStorage.ConflictStatus.AlreadyMerged)
                 {
                     if (previousClusterStats.TryGetValue(promotable, out var promotablePrevClusterStats) == false ||

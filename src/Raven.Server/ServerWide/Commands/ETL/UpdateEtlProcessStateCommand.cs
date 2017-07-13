@@ -16,7 +16,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public long LastProcessedEtag { get; set; }
 
-        public ChangeVectorEntry[] ChangeVector { get; set; }
+        public string ChangeVector { get; set; }
 
         public string NodeTag { get; set; }
 
@@ -25,7 +25,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
             // for deserialization
         }
 
-        public UpdateEtlProcessStateCommand(string databaseName, string configurationName, string transformationName, long lastProcessedEtag, ChangeVectorEntry[] changeVector,
+        public UpdateEtlProcessStateCommand(string databaseName, string configurationName, string transformationName, long lastProcessedEtag, string changeVector,
             string nodeTag) : base(databaseName)
         {
             ConfigurationName = configurationName;
@@ -68,7 +68,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
             json[nameof(TransformationName)] = TransformationName;
             json[nameof(LastProcessedEtag)] = LastProcessedEtag;
             json[nameof(NodeTag)] = NodeTag;
-            json[nameof(ChangeVector)] = ChangeVector?.ToJson();
+            json[nameof(ChangeVector)] = ChangeVector;
         }
     }
 }

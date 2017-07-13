@@ -153,7 +153,7 @@ namespace Raven.Client.Documents.Session
             return StreamAsync(indexQuery, token);
         }
 
-        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(ChangeVectorEntry[] fromChangeVector, int start = 0, int pageSize = int.MaxValue, string transformer = null, Dictionary<string, object> transformerParameters = null, CancellationToken token = default(CancellationToken))
+        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string fromChangeVector, int start = 0, int pageSize = int.MaxValue, string transformer = null, Dictionary<string, object> transformerParameters = null, CancellationToken token = default(CancellationToken))
         {
             return StreamAsync<T>(fromChangeVector, startsWith: null, matches: null, start: start, pageSize: pageSize, transformer: transformer, transformerParameters: transformerParameters, token: token);
         }
@@ -164,7 +164,7 @@ namespace Raven.Client.Documents.Session
             return StreamAsync<T>(fromChangeVector: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, startAfter: startAfter, transformer: transformer, transformerParameters: transformerParameters, token: token);
         }
 
-        private async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(ChangeVectorEntry[] fromChangeVector, string startsWith, string matches, int start, int pageSize, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null, CancellationToken token = default(CancellationToken))
+        private async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string fromChangeVector, string startsWith, string matches, int start, int pageSize, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null, CancellationToken token = default(CancellationToken))
         {
             var streamOperation = new StreamOperation(this);
             var command = streamOperation.CreateRequest(fromChangeVector, startsWith, matches, start, pageSize, null, startAfter, transformer,

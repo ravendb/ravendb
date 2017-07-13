@@ -21,7 +21,7 @@ namespace SlowTests.MailingList
                 CreateSomeData(store);
                 using (var session = store.OpenSession())
                 {
-                    using (var enumerator = session.Advanced.Stream<dynamic>("foos/"))
+                    using (var enumerator = session.Advanced.Stream<dynamic>(startsWith:"foos/"))
                     {
                         enumerator.MoveNext(); // should allow to dispose & move on
                     }

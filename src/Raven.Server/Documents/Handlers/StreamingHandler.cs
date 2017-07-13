@@ -44,11 +44,11 @@ namespace Raven.Server.Documents.Handlers
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                var etag = GetLongQueryString("etag", false);
+                var changeVector = GetLongQueryString("ChangeVector", false);
                 IEnumerable<Document> documents;
-                if (etag != null)
+                if (changeVector != null)
                 {
-                    documents = Database.DocumentsStorage.GetDocumentsFrom(context, etag.Value, start, pageSize);
+                    documents = Database.DocumentsStorage.GetDocumentsFrom(context, changeVector.Value, start, pageSize);
                 }
                 else if (HttpContext.Request.Query.ContainsKey("startsWith"))
                 {

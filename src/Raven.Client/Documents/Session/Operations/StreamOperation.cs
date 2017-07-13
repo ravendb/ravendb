@@ -54,7 +54,7 @@ namespace Raven.Client.Documents.Session.Operations
             return new StreamCommand(path, string.IsNullOrWhiteSpace(query.Transformer) == false);
         }
 
-        public StreamCommand CreateRequest(ChangeVectorEntry[] fromChangeVector, string startsWith, string matches, int start, int pageSize, string exclude, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null)
+        public StreamCommand CreateRequest(string fromChangeVector, string startsWith, string matches, int start, int pageSize, string exclude, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null)
         {
             if (fromChangeVector != null && startsWith != null)
                 throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");

@@ -26,7 +26,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var enumerator = session.Advanced.Stream<object>(new ChangeVectorEntry[0]);
+                    var enumerator = session.Advanced.Stream<object>(fromChangeVector:null);
 
                     var count = 0;
                     while (enumerator.MoveNext())
@@ -55,7 +55,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var enumerator = session.Advanced.Stream<object>(new ChangeVectorEntry[0]);
+                    var enumerator = session.Advanced.Stream<object>(fromChangeVector:null);
 
                     while (enumerator.MoveNext())
                     {

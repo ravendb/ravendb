@@ -60,7 +60,7 @@ namespace Raven.Client.Documents.Session
         /// <param name="pageSize">maximum number of documents that will be retrieved</param>
         /// <param name="transformer">name of a transformer that should be used to transform the results</param>
         /// <param name="transformerParameters">parameters that will be passed to transformer</param>
-        IEnumerator<StreamResult<T>> Stream<T>(ChangeVectorEntry[] fromChangeVector, int start = 0, int pageSize = int.MaxValue, string transformer = null, Dictionary<string, object> transformerParameters = null);
+        IEnumerator<StreamResult<T>> Stream<T>(string fromChangeVector, int start = 0, int pageSize = int.MaxValue, string transformer = null, Dictionary<string, object> transformerParameters = null);
 
         /// <summary>
         ///     Stream the results of documents search to the client, converting them to CLR types along the way.

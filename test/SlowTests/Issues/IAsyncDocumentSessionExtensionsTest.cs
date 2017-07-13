@@ -34,7 +34,7 @@ namespace SlowTests.Issues
                 int count = 0;
                 using (var session = store.OpenAsyncSession())
                 {
-                    using (var reader = await session.Advanced.StreamAsync<User>("users/"))
+                    using (var reader = await session.Advanced.StreamAsync<User>(startsWith:"users/"))
                     {
                         while (await reader.MoveNextAsync())
                         {
@@ -67,7 +67,7 @@ namespace SlowTests.Issues
                 int count = 0;
                 using (var session = store.OpenSession())
                 {
-                    using (var reader = session.Advanced.Stream<User>("users/"))
+                    using (var reader = session.Advanced.Stream<User>(startsWith:"users/"))
                     {
                         while (reader.MoveNext())
                         {

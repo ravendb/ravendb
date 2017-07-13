@@ -133,7 +133,7 @@ namespace Raven.Client.Documents.Session
             return streamResult;
         }
 
-        public IEnumerator<StreamResult<T>> Stream<T>(ChangeVectorEntry[] fromChangeVector, int start = 0, int pageSize = int.MaxValue, string transformer = null, Dictionary<string, object> transformerParameters = null)
+        public IEnumerator<StreamResult<T>> Stream<T>(string fromChangeVector, int start = 0, int pageSize = int.MaxValue, string transformer = null, Dictionary<string, object> transformerParameters = null)
         {
             return Stream<T>(fromChangeVector, startsWith: null, matches: null, start: start, pageSize: pageSize,
                 startAfter: null, transformer: transformer, transformerParameters: transformerParameters);
@@ -147,7 +147,7 @@ namespace Raven.Client.Documents.Session
                 startAfter: startAfter, transformer: transformer, transformerParameters: transformerParameters);
         }
 
-        private IEnumerator<StreamResult<T>> Stream<T>(ChangeVectorEntry[] fromChangeVector, string startsWith, string matches, int start, int pageSize, string startAfter, string transformer, Dictionary<string, object> transformerParameters)
+        private IEnumerator<StreamResult<T>> Stream<T>(string fromChangeVector, string startsWith, string matches, int start, int pageSize, string startAfter, string transformer, Dictionary<string, object> transformerParameters)
         {
             var streamOperation = new StreamOperation(this);
             var command = streamOperation.CreateRequest(fromChangeVector, startsWith, matches, start, pageSize, null, startAfter, transformer,

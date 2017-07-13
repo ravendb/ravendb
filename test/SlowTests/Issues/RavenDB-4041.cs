@@ -30,7 +30,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var enumerator = session.Advanced.Stream<Customer>("customers/");
+                    var enumerator = session.Advanced.Stream<Customer>(startsWith:"customers/");
 
                     while (enumerator.MoveNext())
                     {
@@ -66,7 +66,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var enumerator = await session.Advanced.StreamAsync<Customer>("customers/");
+                    var enumerator = await session.Advanced.StreamAsync<Customer>(startsWith:"customers/");
 
                     while (await enumerator.MoveNextAsync())
                     {

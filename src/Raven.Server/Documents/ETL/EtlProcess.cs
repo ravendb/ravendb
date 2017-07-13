@@ -6,9 +6,11 @@ using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions.Patching;
+using Raven.Client.Extensions;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Client.Server.ETL;
+using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.NotificationCenter.Notifications;
@@ -22,6 +24,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Utils;
+using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.ETL
 {
@@ -438,7 +441,7 @@ namespace Raven.Server.Documents.ETL
                     if (didWork)
                     {
                         var command = new UpdateEtlProcessStateCommand(Database.Name, Configuration.Name, Transformation.Name, Statistics.LastProcessedEtag,
-                            ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector),
+                            ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector.ToChangeVector()).ToJson(),
                             _serverStore.NodeTag);
 
                         var sendToLeaderTask = _serverStore.SendToLeaderAsync(command);
@@ -491,7 +494,7 @@ namespace Raven.Server.Documents.ETL
         {
             var conflictStatus = ConflictsStorage.GetConflictStatus(
                 remote: item.ChangeVector,
-                local: state.ChangeVector);
+                local: state.ChangeVector.ToChangeVector());
 
             return conflictStatus == ConflictsStorage.ConflictStatus.AlreadyMerged;
         }

@@ -27,7 +27,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var count = 0;
-                    using (var streamDocs = session.Advanced.Stream<object>(new ChangeVectorEntry[0]))
+                    using (var streamDocs = session.Advanced.Stream<object>(fromChangeVector:null))
                     {
                         while (streamDocs.MoveNext())
                         {
