@@ -60,6 +60,14 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             itemRouteToHighlight: 'databases/tasks/ongoingTasks'
         }),
         new leafMenuItem({
+            route: 'databases/tasks/editPeriodicBackupTask', 
+            moduleId: 'viewmodels/database/tasks/editPeriodicBackupTask',
+            title: 'Create Backup Task',
+            nav: false,
+            dynamicHash: editExternalReplicationTaskUrl,
+            itemRouteToHighlight: 'databases/tasks/ongoingTasks'
+        }),
+        new leafMenuItem({
             route: 'databases/tasks/editSubscriptionTask',
             moduleId: 'viewmodels/database/tasks/editSubscriptionTask',
             title: 'Create Subscription Task',

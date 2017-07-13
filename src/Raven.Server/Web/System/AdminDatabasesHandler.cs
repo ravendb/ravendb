@@ -6,7 +6,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -16,6 +16,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Client.Server.Commands;
 using Raven.Client.Server.ETL;
@@ -30,6 +31,8 @@ using Sparrow.Json.Parsing;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.PeriodicBackup.Aws;
+using Raven.Server.Documents.PeriodicBackup.Azure;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Web.System
@@ -313,6 +316,34 @@ namespace Raven.Server.Web.System
             await DatabaseConfigurations(ServerStore.ModifyDatabaseRevisions, "read-revisions-config");
         }
 
+        [RavenAction("/admin/periodic-backup", "GET", "/admin/periodic-backup?name={databaseName:string}")]
+        public Task GetPeriodicBackup()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            var taskId = GetLongQueryString("taskId", required: true);
+            if (taskId == 0)
+                throw new ArgumentException("Task ID cannot be 0");
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out _);
+                var periodicBackup = databaseRecord.PeriodicBackups.FirstOrDefault(x => x.TaskId == taskId);
+                if (periodicBackup == null)
+                    throw new InvalidOperationException($"Periodic backup task ID: {taskId} doesn't exist");
+
+                var databaseRecordBlittable = EntityToBlittable.ConvertEntityToBlittable(periodicBackup, DocumentConventions.Default, context);
+                context.Write(writer, databaseRecordBlittable);
+                writer.Flush();
+            }
+
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/admin/periodic-backup/update", "POST", "/admin/config-periodic-backup?name={databaseName:string}")]
         public async Task UpdatePeriodicBackup()
         {
@@ -348,12 +379,13 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/periodic-backup/status", "GET", "/admin/delete-periodic-status?name={databaseName:string}")]
         public Task GetPeriodicBackupStatus()
         {
-            var taskId = GetLongQueryString("taskId", required: true);
-            Debug.Assert(taskId != 0);
-
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
+
+            var taskId = GetLongQueryString("taskId", required: true);
+            if (taskId == 0)
+                throw new ArgumentException("Task ID cannot be 0");
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -369,6 +401,144 @@ namespace Raven.Server.Web.System
             }
 
             return Task.CompletedTask;
+        }
+
+        [RavenAction("/admin/periodic-backup/test-credentials", "POST", "/admin/periodic-backup/test-credentials?type={connectionType:string}")]
+        public async Task TestPerioidicBackupCredentials()
+        {
+            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+
+            if (Enum.TryParse(type, out PeriodicBackupTestConnectionType connectionType) == false)
+                throw new ArgumentException($"Unkown backup connection: {type}");
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var connectionInfo = await context.ReadForMemoryAsync(RequestBodyStream(), "test-connection");
+                switch (connectionType)
+                {
+                    case PeriodicBackupTestConnectionType.S3:
+                        var s3Settings = JsonDeserializationClient.S3Settings(connectionInfo);
+                        using (var awsClient = new RavenAwsS3Client(s3Settings.AwsAccessKey, s3Settings.AwsSecretKey, s3Settings.AwsRegionName))
+                        {
+                            await awsClient.TestConncection();
+                        }
+                        break;
+                    case PeriodicBackupTestConnectionType.Glacier:
+                        var glacierSettings = JsonDeserializationClient.GlacierSettings(connectionInfo);
+                        using (var galcierClient = new RavenAwsGlacierClient(glacierSettings.AwsAccessKey, glacierSettings.AwsSecretKey, glacierSettings.AwsRegionName))
+                        {
+                            await galcierClient.TestConncection();
+                        }
+                        break;
+                    case PeriodicBackupTestConnectionType.Azure:
+                        var azureSettings = JsonDeserializationClient.AzureSettings(connectionInfo);
+                        using (var azureClient = new RavenAzureClient(azureSettings.AccountName, azureSettings.AccountKey, azureSettings.StorageContainer))
+                        {
+                            await azureClient.TestConncection();
+                        }
+                        break;
+                    case PeriodicBackupTestConnectionType.Local:
+                    case PeriodicBackupTestConnectionType.None:
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+        }
+
+        [RavenAction("/admin/get-restore-points", "POST", "/admin/get-restore-points")]
+        public async Task GetRestorePoints()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var restorePathBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore-path");
+                var restorePathJson = JsonDeserializationServer.DatabaseRestorePath(restorePathBlittable);
+
+                var restorePoints = new RestorePoints();
+
+                var directories = Directory.GetDirectories(restorePathJson.Path).OrderBy(x => x).ToList();
+                if (directories.Count == 0)
+                {
+                    // no folders in directory
+                    // will scan the directory for backup files
+                    ScanDirectoryForMatchingFiles(restorePathJson.Path, restorePoints.List);
+                }
+
+                foreach (var directory in directories)
+                {
+                    ScanDirectoryForMatchingFiles(directory, restorePoints.List);
+                }
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    var blittable = EntityToBlittable.ConvertEntityToBlittable(restorePoints, DocumentConventions.Default, context);
+                    context.Write(writer, blittable);
+                    writer.Flush();
+                }
+            }
+        }
+
+        private static void ScanDirectoryForMatchingFiles(string directoryPath, List<RestorePoint> restorePoints)
+        {
+            var files = Directory.GetFiles(directoryPath)
+                .Where(filePath =>
+                {
+                    var extension = Path.GetExtension(filePath);
+                    return
+                        Constants.Documents.PeriodicBackup.IncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
+                        Constants.Documents.PeriodicBackup.FullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
+                        Constants.Documents.PeriodicBackup.SnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
+                })
+                .OrderBy(x => x);
+
+            var filesCount = 0;
+            var firstFile = true;
+            var snapshotRestore = false;
+            foreach (var filePath in files)
+            {
+                var extension = Path.GetExtension(filePath);
+                var isSnapshot = Constants.Documents.PeriodicBackup.SnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
+                if (firstFile)
+                {
+                    snapshotRestore = isSnapshot;
+                }
+                else if (isSnapshot)
+                {
+                    throw new InvalidOperationException($"Cannot have a snapshot backup file ({Path.GetFileName(filePath)}) after other backup files!");
+                }
+
+                firstFile = false;
+                filesCount++;
+
+                var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
+                var fileDate = TryExtractDateFromFileName(fileNameWithoutExtension);
+                restorePoints.Insert(0, new RestorePoint
+                {
+                    Key = fileDate,
+                    Details = new RestorePointDetails
+                    {
+                        Location = directoryPath,
+                        FileName = Path.GetFileName(filePath),
+                        IsSnapshotRestore = snapshotRestore,
+                        FilesToRestore = filesCount
+                    }
+                });
+            }
+        }
+
+        private static string TryExtractDateFromFileName(string fileName)
+        {
+            DateTime result;
+            if (DateTime.TryParseExact(
+                    fileName,
+                    PeriodicBackupRunner.DateTimeFormat,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out result) == false)
+            {
+                return fileName;
+            }
+
+            return result.ToString("yyyy/MM/dd HH:mm");
         }
 
         [RavenAction("/admin/database-restore", "POST", "/admin/database-restore")]
@@ -404,7 +574,8 @@ namespace Raven.Server.Web.System
                         if (key.Length != 256 / 8)
                             throw new InvalidOperationException($"The size of the key must be 256 bits, but was {key.Length * 8} bits.");
 
-                        if (NotUsingHttps(clusterTopology.GetUrlFromTag(ServerStore.NodeTag)))
+                        var isEncrypted = string.IsNullOrWhiteSpace(restoreConfigurationJson.EncryptionKey) == false;
+                        if (isEncrypted && NotUsingHttps(clusterTopology.GetUrlFromTag(ServerStore.NodeTag)))
                             throw new InvalidOperationException("Cannot restore an encrypted database to a node which doesn't support SSL!");
                     }
                 }

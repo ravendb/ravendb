@@ -460,11 +460,19 @@ namespace Raven.Server.Smuggler.Documents
                 return false;
 
             // skipping "Raven/Replication/DatabaseIdsCache" and
-            // "Raven/Replication/Sources/{GUID}"
-            if (document.Id.Size != 34 && document.Id.Size != 62)
+            // "Raven/Replication/Sources/{GUID}" and
+            // "Raven/Backup/Periodic/Setup" and
+            // "Raven/Backup/Status"
+            if (document.Id.Size != 34 && document.Id.Size != 62 &&
+                document.Id.Size != 27 && document.Id.Size != 19)
+                return false;
+
+            if (document.Id.StartsWith("Raven/") == false)
                 return false;
 
             return document.Id == "Raven/Replication/DatabaseIdsCache" ||
+                   document.Id == "Raven/Backup/Periodic/Setup" ||
+                   document.Id == "Raven/Backup/Status" ||
                    document.Id.StartsWith("Raven/Replication/Sources/");
         }
 

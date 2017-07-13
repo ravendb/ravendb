@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 {
     public abstract class RavenStorageClient : IDisposable
     {
-        private readonly List<HttpClient> clients = new List<HttpClient>();
+        private readonly List<HttpClient> _clients = new List<HttpClient>();
 
         protected HttpClient GetClient(TimeSpan? timeout = null)
         {
@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 Timeout = timeout ?? TimeSpan.FromSeconds(120)
             };
 
-            clients.Add(client);
+            _clients.Add(client);
 
             return client;
         }
@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             var exceptions = new List<Exception>();
 
-            foreach (var client in clients)
+            foreach (var client in _clients)
             {
                 try
                 {

@@ -52,6 +52,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public ICollection<PeriodicBackup> PeriodicBackups => _periodicBackups.Values;
 
+        public static string DateTimeFormat => "yyyy-MM-dd-HH-mm";
+
         public PeriodicBackupRunner(DocumentDatabase database, ServerStore serverStore)
         {
             _database = database;
@@ -136,7 +138,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             var isFullBackup = IsFullBackup(backupStatus, configuration, nextFullBackup, nextIncrementalBackup);
             var nextBackupDateTime = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup);
             TimeSpan nextBackupTimeSpan;
-            if (isFullBackup)
+            if (isFullBackup && backupStatus.LastFullBackup == null)
             {
                 // it's a full backup and there was no previous backup
                 nextBackupTimeSpan = TimeSpan.Zero;
@@ -194,8 +196,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     var backupToLocalFolder = CanBackupUsing(configuration.LocalSettings);
 
-                    var now = SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture);
-
+                    var now = SystemTime.UtcNow.ToString(DateTimeFormat, CultureInfo.InvariantCulture);
 
                     if (status.LocalBackup == null)
                         status.LocalBackup = new LocalBackup();
@@ -245,6 +246,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                             if (_logger.IsInfoEnabled)
                                 _logger.Info("Skipping incremental backup because " +
                                              $"last etag ({currentLastEtag}) hasn't changed since last backup");
+
+                            status.DurationInMs = totalSw.ElapsedMilliseconds;
+                            status.LastIncrementalBackup = backupStarted;
+
+                            await WriteStatus(status);
                             return;
                         }
                     }
@@ -577,7 +583,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private async Task UploadToAzure(AzureSettings settings, string backupPath, string fileName, string archiveDecription)
         {
-            using (var client = new RavenAzureClient(settings.StorageAccount, settings.StorageKey, settings.StorageContainer))
+            using (var client = new RavenAzureClient(settings.AccountName, settings.AccountKey, settings.StorageContainer))
             {
                 await client.PutContainer();
                 using (var fileStream = File.OpenRead(backupPath))
@@ -865,10 +871,11 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             if (existingBackupState.Configuration.Equals(newConfiguration))
             {
-                // the username/password for the cloud backups
-                // or the backup frequency might have changed,
+                // the username/password for the cloud backups might have changed,
                 // and it will be reloaded on the next backup re-scheduling
                 existingBackupState.Configuration = newConfiguration;
+                if (taskState == TaskStatus.ActiveByCurrentNode)
+                    existingBackupState.BackupTimer = GetTimer(newConfiguration);
                 return;
             }
 
@@ -901,6 +908,21 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             if (configuration.Disabled)
                 return TaskStatus.Disabled;
+
+            if (CanBackupUsing(configuration.LocalSettings) == false &&
+                CanBackupUsing(configuration.S3Settings) == false &&
+                CanBackupUsing(configuration.GlacierSettings) == false &&
+                CanBackupUsing(configuration.AzureSettings) == false)
+            {
+                var message = $"All backup destinations are disabled for backup task id: {configuration.TaskId}";
+                _database.NotificationCenter.Add(AlertRaised.Create(
+                    "Periodic Backup",
+                    message,
+                    AlertType.PeriodicBackup,
+                    NotificationSeverity.Info));
+
+                return TaskStatus.Disabled;
+            }
 
             var whoseTaskIsIt = databaseRecord.Topology.WhoseTaskIsIt(configuration, _serverStore.IsPassive());
             if (whoseTaskIsIt == null)

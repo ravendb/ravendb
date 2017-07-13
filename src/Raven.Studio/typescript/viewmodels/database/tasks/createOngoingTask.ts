@@ -17,6 +17,13 @@ class createOngoingTask extends dialogViewModelBase {
         this.close();
     }
 
+    newBackupTask() {
+        eventsCollector.default.reportEvent("PeriodicBackup", "new");
+        const url = appUrl.forEditPeriodicBackupTask(this.activeDatabase());
+        router.navigate(url);
+        this.close();
+    }
+
     newSubscriptionTask(task: createOngoingTask) {
         eventsCollector.default.reportEvent("Subscription", "new");
         const url = appUrl.forEditSubscription(this.activeDatabase());
@@ -31,11 +38,6 @@ class createOngoingTask extends dialogViewModelBase {
 
     newSqlEtlTask() {
         alert("NewSqlEtlTask");
-        // ...
-    }
-
-    newBackupTask() {
-        alert("NewBackupTask");
         // ...
     }
 }

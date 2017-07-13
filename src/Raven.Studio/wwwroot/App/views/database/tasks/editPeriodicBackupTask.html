@@ -1,0 +1,235 @@
+<div class="content-margin" data-bind="with: configuration">
+    <div class="toolbar" data-bind="with: $root">
+        <button data-bind="click: savePeriodicBackup" class="btn btn-primary">
+            <i class="icon-save"></i> <span>Save</span>
+        </button>
+        <button data-bind="click: cancelOperation" class="btn btn-default">
+            <i class="icon-cancel"></i><span>Cancel</span>
+        </button>
+    </div>
+    <div class="panel">
+        <div class="padding">
+            <div class="row flex-row margin-bottom">
+                <label class="control-label col-sm-4 col-lg-2">Task name</label>
+                <div class="col-sm-4 col-lg-4">
+                    <input data-bind="value: name" id="taskName" type="text" class="form-control" placeholder="Enter a descriptive name for the periodic backup task"/>
+                </div>
+            </div>
+            <div class="row flex-row margin-bottom">
+                <label class="control-label col-sm-4 col-lg-2">Backup type <i class="icon-info text-info"></i></label>
+                <div class="col-sm-4 col-lg-4" data-bind="validationElement: backupType, validationOptions: { insertMessages: false }">
+                    <div class="dropdown btn-block">
+                        <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
+                            <span data-bind="text: backupType() || 'Select backup type..', textinput: backupType"></span>
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu max-height" data-bind="foreach: backupOptions">
+                            <li><a href="#" data-bind="text: $data, click: $parent.useBackupType.bind($parent, $data)"></a></li>
+                        </ul>
+                    </div>
+                    <span class="help-block" data-bind="validationMessage: backupType"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <h3>Schedule <i class="icon-info text-info"></i></h3>
+    <div class="panel">
+        <div class="padding">
+            <div class="row flex-row margin-bottom">
+                <label class="control-label col-xs-12 col-sm-4 col-lg-2">Full</label>
+                <div class="col-xs-6 col-sm-4 col-lg-4" data-bind="validationElement: fullBackupFrequency">
+                    <input data-bind="value: fullBackupFrequency" type="text" class="form-control" placeholder="Cron expression, e.g. * *\24 * * *" />
+                </div>
+                <div class="col-xs-6 col-sm-4">TODO: every 5 hours</div>
+            </div>
+            <div class="row flex-row margin-bottom">
+                <label class="control-label col-xs-12 col-sm-4 col-lg-2">Inceremental</label>
+                <div class="col-xs-6 col-sm-4 col-lg-4" data-bind="validationElement: incrementalBackupFrequency">
+                    <input data-bind="value: incrementalBackupFrequency" type="text" class="form-control" placeholder="Cron expression, e.g. *\5 * * * *" />
+                </div>
+                <div class="col-xs-6 col-sm-4">TODO: every 10 minustes</div>
+            </div>
+        </div>
+    </div>
+    <h3>Destination <i class="icon-info text-info"></i></h3>
+
+    <div class="panel" data-bind="with: localSettings">
+        <div class="padding">
+            <div class="toggle" data-toggle="collapse" data-target="#collapseLocal">
+                <input id="toggle-local" type="checkbox" data-bind="checked: enabled">
+                <label for="toggle-local">
+                    Local
+                </label>
+            </div>
+            <div class="row" data-bind="css: { 'collapse': !enabledOneTimeValue, 'in': enabledOneTimeValue }" id="collapseLocal">
+                <div class="col-sm-8 col-lg-6 margin-top">
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Backup directory</label>
+                        <div class=" col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: folderPath">
+                            <input data-bind="value: folderPath", type="text" class="form-control" placeholder="Full directory backup path"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="panel" data-bind="with: s3Settings">
+        <div class="padding">
+            <div class="toggle" data-toggle="collapse" data-target="#collapseAmazonS3">
+                <input id="toggle-amazons3" type="checkbox" data-bind="checked: enabled">
+                <label for="toggle-amazons3">
+                    Amazon S3
+                </label>
+            </div>
+            <div class="row collapse" id="collapseAmazonS3">
+                <div class="col-sm-8 col-lg-6 margin-top">
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label  col-xs-12 col-sm-6 col-lg-4">Bucket name 
+                            <span id="s3-info"><i class="icon-info text-info"></i></span>
+                        </label>
+                        <div class=" col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: bucketName">
+                            <input data-bind="value: bucketName" type="text" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label  col-xs-12 col-sm-6 col-lg-4">Remote folder name</label>
+                        <div class=" col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: remoteFolderName">
+                            <input data-bind="value: remoteFolderName" type="text" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region<i class="icon-info text-info"></i></label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsRegionName, validationOptions: { insertMessages: false }">
+                            <div class="dropdown btn-block">
+                                <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
+                                    <span data-bind="text: awsRegionLocation() || 'Select AWS region..', textinput: awsRegionLocation"></span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu max-height" data-bind="foreach: availableAwsRegionEndpoints">
+                                    <li><a href="#" data-bind="text: $data.label, click: $parent.useAwsRegion.bind($parent, $data)"></a></li>
+                                </ul>
+                            </div>
+                            <span class="help-block" data-bind="validationMessage: awsRegionName"></span>
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label  col-xs-12 col-sm-6 col-lg-4">Access key</label>
+                        <div class=" col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsAccessKey">
+                            <input data-bind="value: awsAccessKey" class="form-control"/>
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label  col-xs-12 col-sm-6 col-lg-4">Secret key</label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsSecretKey">
+                            <input data-bind="value: awsSecretKey" type="password" class="form-control"/>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <button data-bind="click: _.partial($root.testCredentials, $data), disable: isTestingCredentials" class="btn btn-info">
+                            <i data-bind="css: { 'icon-rocket': !isTestingCredentials(), 'btn-spinner': isTestingCredentials }"></i>
+                            &nbsp;&nbsp;<span>Test credentials</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="panel" data-bind="with: azureSettings">
+        <div class="padding">
+            <div class="toggle" data-bind="css: {'collapsed': !enabledOneTimeValue }" data-toggle="collapse" data-target="#collapseAzure">
+                <input id="toggle-azure" type="checkbox" data-bind="checked: enabled">
+                <label for="toggle-azure">
+                    Azure
+                </label>
+            </div>
+            <div class="row" data-bind="css: { 'collapse': !enabledOneTimeValue, 'in': enabledOneTimeValue }" id="collapseAzure">
+                <div class="col-sm-8 col-lg-6 margin-top">
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label  col-xs-12 col-sm-6 col-lg-4">Storage container</label>
+                        <div class=" col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: storageContainer">
+                            <input data-bind="value: storageContainer" type="text" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label  col-xs-12 col-sm-6 col-lg-4">Remote folder name</label>
+                        <div class=" col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: remoteFolderName">
+                            <input data-bind="value: remoteFolderName" type="text" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label  col-xs-12 col-sm-6 col-lg-4">Account name</label>
+                        <div class=" col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: accountName">
+                            <input data-bind="value: accountName" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label  col-xs-12 col-sm-6 col-lg-4">Account key</label>
+                        <div class=" col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: accountKey">
+                            <input data-bind="value: accountKey" type="password" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <button data-bind="click: _.partial($root.testCredentials, $data), disable: isTestingCredentials" class="btn btn-info">
+                            <i data-bind="css: { 'icon-rocket': !isTestingCredentials(), 'btn-spinner': isTestingCredentials }"></i>
+                            &nbsp;&nbsp;<span>Test credentials</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <div class="panel" data-bind="with: glacierSettings">
+        <div class="padding">
+            <div class="toggle" data-toggle="collapse" data-target="#collapseGlacier">
+                <input id="toggle-amazonglacier" type="checkbox" data-bind="checked: enabled">
+                <label for="toggle-amazonglacier">
+                    Amazon Glacier
+                </label>
+            </div>
+            <div class="row" data-bind="css: { 'collapse': !enabledOneTimeValue, 'in': enabledOneTimeValue }" id="collapseGlacier">
+                <div class="col-sm-8 col-lg-6 margin-top">
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Vault name <i class="icon-info text-info"></i></label>
+                        <div class=" col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: vaultName">
+                            <input data-bind="value: vaultName" type="text" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region name <i class="icon-info text-info"></i></label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsRegionName, validationOptions: { insertMessages: false }">
+                            <div class="dropdown btn-block">
+                                <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
+                                    <span data-bind="text: awsRegionLocation() || 'Select AWS region..', textinput: awsRegionLocation"></span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu max-height" data-bind="foreach: availableAwsRegionEndpoints">
+                                    <li><a href="#" data-bind="text: $data.label, click: $parent.useAwsRegion.bind($parent, $data)"></a></li>
+                                </ul>
+                            </div>
+                            <span class="help-block" data-bind="validationMessage: awsRegionName"></span>
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label  col-xs-12 col-sm-6 col-lg-4">Access key</label>
+                        <div class=" col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsAccessKey">
+                            <input data-bind="value: awsAccessKey" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label  col-xs-12 col-sm-6 col-lg-4">Secret key</label>
+                        <div class=" col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsSecretKey">
+                            <input data-bind="value: awsSecretKey" type="password" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <button data-bind="click: _.partial($root.testCredentials, $data), disable: isTestingCredentials" class="btn btn-info">
+                            <i data-bind="css: { 'icon-rocket': !isTestingCredentials(), 'btn-spinner': isTestingCredentials }"></i>
+                            &nbsp;&nbsp;<span>Test credentials</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

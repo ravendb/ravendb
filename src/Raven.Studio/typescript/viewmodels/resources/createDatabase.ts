@@ -3,13 +3,13 @@ import database = require("models/resources/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import databasesManager = require("common/shell/databasesManager");
 import createDatabaseCommand = require("commands/resources/createDatabaseCommand");
+import restoreDatabaseFromBackupCommand = require("commands/resources/restoreDatabaseFromBackupCommand");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 import generateSecretCommand = require("commands/database/secrets/generateSecretCommand");
 import distributeSecretCommand = require("commands/database/secrets/distributeSecretCommand");
 import clusterTopology = require("models/database/cluster/clusterTopology");
 import clusterNode = require("models/database/cluster/clusterNode");
 import copyToClipboard = require("common/copyToClipboard");
-
 import databaseCreationModel = require("models/resources/creation/databaseCreationModel");
 import eventsCollector = require("common/eventsCollector");
 import fileDownloader = require("common/fileDownloader");
@@ -47,9 +47,11 @@ class createDatabase extends dialogViewModelBase {
     // currently displayed QR Code
     private qrCode: any;
 
-    constructor() {
+    constructor(isFromBackup: boolean) {
         super();
 
+        this.databaseModel.isFromBackup = isFromBackup;
+        
         this.bindToCurrentInstance("showAdvancedConfigurationFor", "toggleSelectAll", "copyEncryptionKeyToClipboard");
     }
 
@@ -84,6 +86,10 @@ class createDatabase extends dialogViewModelBase {
             // reset confirmation
             this.databaseModel.encryption.confirmation(false);
         });
+
+        if (this.databaseModel.isFromBackup) {
+            this.databaseModel.replication.replicationFactor(1);
+        }
     }
 
     private onTopologyLoaded(topology: clusterTopology) {
@@ -150,7 +156,11 @@ class createDatabase extends dialogViewModelBase {
     }
 
     createDatabase() {
-        eventsCollector.default.reportEvent('database', 'create');
+        if (this.databaseModel.isFromBackup) {
+            eventsCollector.default.reportEvent("database", "restore");
+        } else {
+            eventsCollector.default.reportEvent("database", "create");
+        }
 
         const globalValid = this.isValid(this.databaseModel.globalValidationGroup);
 
@@ -165,13 +175,18 @@ class createDatabase extends dialogViewModelBase {
         const allValid = globalValid && _.every(sectionsValidityList, x => !!x);
 
         if (allValid) {
-            this.createDatabaseInternal();
-        } else {
-            const firstInvalidSection = sectionsValidityList.indexOf(false);
-            if (firstInvalidSection !== -1) {
-                const sectionToShow = this.databaseModel.configurationSections[firstInvalidSection].name;
-                this.showAdvancedConfigurationFor(sectionToShow);
+            if (this.databaseModel.isFromBackup) {
+                this.createDatabaseFromBackup();
+            } else {
+                this.createDatabaseInternal();
             }
+            return;
+        }
+
+        const firstInvalidSection = sectionsValidityList.indexOf(false);
+        if (firstInvalidSection !== -1) {
+            const sectionToShow = this.databaseModel.configurationSections[firstInvalidSection].name;
+            this.showAdvancedConfigurationFor(sectionToShow);
         }
     }
 
@@ -210,6 +225,19 @@ class createDatabase extends dialogViewModelBase {
                     });
             })
             .fail(() => this.spinners.create(false));
+    }
+
+    private createDatabaseFromBackup(): JQueryPromise<operationIdDto> {
+        this.spinners.create(true);
+
+        const restoreDocument = this.databaseModel.toRestoreDocumentDto();
+
+        return new restoreDatabaseFromBackupCommand(restoreDocument)
+            .execute()
+            .always(() => {
+                dialog.close(this);
+                this.spinners.create(false);
+            });
     }
 
     private configureEncryptionIfNeeded(databaseName: string, encryptionKey: string): JQueryPromise<void> {

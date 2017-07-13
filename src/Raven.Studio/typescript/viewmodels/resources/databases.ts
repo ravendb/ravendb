@@ -45,7 +45,7 @@ class databases extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("toggleDatabase", "togglePauseDatabaseIndexing", "toggleDisableDatabaseIndexing", "deleteDatabase", "activateDatabase");
+        this.bindToCurrentInstance("newDatabase", "toggleDatabase", "togglePauseDatabaseIndexing", "toggleDisableDatabaseIndexing", "deleteDatabase", "activateDatabase");
 
         this.initObservables();
     }
@@ -219,8 +219,8 @@ class databases extends viewModelBase {
         return appUrl.forIndexes(dbInfo);
     } 
 
-    periodicExportUrl(dbInfo: databaseInfo): string {
-        return appUrl.forPeriodicExport(dbInfo);
+    periodicBackupUrl(dbInfo: databaseInfo): string {
+        return appUrl.forEditPeriodicBackupTask(dbInfo);
     }
 
     manageDatabaseGroupUrl(dbInfo: databaseInfo): string {
@@ -399,8 +399,8 @@ class databases extends viewModelBase {
             });
     }
 
-    newDatabase() {
-        const createDbView = new createDatabase();
+    newDatabase(isFromBackup: boolean) {
+        const createDbView = new createDatabase(isFromBackup);
         app.showBootstrapDialog(createDbView);
     }
 
@@ -412,10 +412,6 @@ class databases extends viewModelBase {
         this.databasesManager.activate(db);
 
         this.updateDatabaseInfo(db.name);
-    }
-
-    createNewDatabase() {
-        this.newDatabase();
     }
 
     createIsLocalDatabaseObservable(dbName: string) {
