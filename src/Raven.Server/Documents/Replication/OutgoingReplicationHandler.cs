@@ -352,13 +352,9 @@ namespace Raven.Server.Documents.Replication
                     ThrowConnectionClosed();
                 }
                 var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(replicationTcpConnectReplyMessage.Document);
-                switch (headerResponse.Status)
+                if(headerResponse.AuthorizationSuccessful == false)
                 {
-                    case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
-                        //All good nothing to do
-                        break;
-                    default:
-                        throw new UnauthorizedAccessException($"{Destination.FromString()} replied with failure {headerResponse.Status}");
+                    throw new UnauthorizedAccessException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
                 }
             }
         }

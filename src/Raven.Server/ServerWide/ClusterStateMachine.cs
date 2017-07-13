@@ -747,14 +747,9 @@ namespace Raven.Server.ServerWide
                     {
 
                         var reply = JsonDeserializationServer.TcpConnectionHeaderResponse(response);
-                        switch (reply.Status)
+                        if(reply.AuthorizationSuccessful == false)
                         {
-                            case TcpConnectionHeaderResponse.AuthorizationStatus.Forbidden:
-                                throw AuthorizationException.Forbidden("Server");
-                            case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
-                                break;
-                            default:
-                                throw new InvalidOperationException($"Unexpected server response {reply.Status} when connecting to {url} {DatabaseName}");
+                            throw AuthorizationException.Forbidden(reply.Message);
                         }
                     }
                 }

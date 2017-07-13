@@ -8,8 +8,6 @@ namespace Raven.Client.Server.ETL
 
         public string Database { get; set; }
 
-        public string ApiKey { get; set; }
-
         public string Url
         {
             get => _url;

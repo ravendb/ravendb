@@ -8,7 +8,6 @@ namespace Raven.Client.Server
 {
     public class ExternalReplication : ReplicationNode, IDatabaseTask, IDynamicJsonValueConvertible
     {
-        public string ApiKey;
         public long TaskId;
         public string Name;
 
@@ -70,7 +69,6 @@ namespace Raven.Client.Server
         {
             var json = base.ToJson();
             json[nameof(TaskId)] = TaskId;
-            json[nameof(ApiKey)] = ApiKey;
             json[nameof(Name)] = Name;
             return json;
         }

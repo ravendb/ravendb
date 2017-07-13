@@ -252,14 +252,10 @@ namespace Raven.Server.ServerWide.Maintenance
                     using (var responseJson = await ctx.ReadForMemoryAsync(connection, _readStatusUpdateDebugString + "/Read-Handshake-Response", _token))
                     {
                         var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(responseJson);
-                        switch (headerResponse.Status)
+                        if (headerResponse.AuthorizationSuccessful == false)
                         {
-                            case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
-                                //All good nothing to do
-                                break;
-                            default:
-                                throw new UnauthorizedAccessException(
-                                    $"Node with ClusterTag = {ClusterTag} replied to initial handshake with authorization failure {headerResponse.Status}");
+                            throw new UnauthorizedAccessException(
+                                $"Node with ClusterTag = {ClusterTag} replied to initial handshake with authorization failure {headerResponse.Message}");
                         }
                     }
 

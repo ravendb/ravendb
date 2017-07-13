@@ -80,7 +80,6 @@ namespace FastTests
             string path = null,
             Action<DatabaseRecord> modifyDatabaseRecord = null,
             Func<string, string> modifyName = null,
-            string apiKey = null,
             bool ignoreDisabledDatabase = false,
             int replicationFactor = 1,
             RavenServer defaultServer = null,

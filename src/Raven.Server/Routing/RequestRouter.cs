@@ -93,7 +93,7 @@ namespace Raven.Server.Routing
                 return null;
             }
 
-            if (_ravenServer.Configuration.Security.AuthenticationEnabled == false)
+            if (_ravenServer.Configuration.Security.AuthenticationEnabled)
             {
                 var authResult = TryAuthorize(tryMatch.Value, context,  reqCtx.Database);
                 if (authResult == false)

@@ -8,7 +8,6 @@
             BulkInsert,
             Subscription,
             Replication,
-            TopologyDiscovery,
             Cluster,
             Heartbeats
         }

@@ -133,16 +133,16 @@ namespace Raven.Server
                             CheckCertificateRevocation = true,
                             ClientCertificateMode = ClientCertificateMode.AllowCertificate,
                             SslProtocols = SslProtocols.Tls12,
-                            ClientCertificateValidation = (X509Certificate2 cert, X509Chain chain, SslPolicyErrors errors) => 
+                            ClientCertificateValidation = (X509Certificate2 cert, X509Chain chain, SslPolicyErrors errors) =>
                                 // Here we are explicitly ignoring trust chain issues for client certificates
                                 // this is because we don't actually require trust, we just use the certificate
                                 // as a way to authenticate. The admin are going to tell us which specific certs
                                 // we can trust anyway, so we can ignore such errors.
-                                errors == SslPolicyErrors.RemoteCertificateChainErrors || 
-                                errors == SslPolicyErrors.None 
+                                errors == SslPolicyErrors.RemoteCertificateChainErrors ||
+                                errors == SslPolicyErrors.None
                         };
 
-                        options.ConnectionFilter = new AuthenticatingFilter( this,new HttpsConnectionFilter(filterOptions, new NoOpConnectionFilter()));
+                        options.ConnectionFilter = new AuthenticatingFilter(this, new HttpsConnectionFilter(filterOptions, new NoOpConnectionFilter()));
                     };
 
                     // Enforce https in all network activities
@@ -309,7 +309,7 @@ namespace Raven.Server
             private HashSet<string> _caseSensitiveAuthorizedDatabases = new HashSet<string>();
             public X509Certificate2 Certificate;
             public CertificateDefinition Definition;
-            
+
             public bool CanAccess(string db)
             {
                 if (Status == AuthenticationStatus.ServerAdmin)
@@ -373,55 +373,12 @@ namespace Raven.Server
                 var featureCollection = new FeatureCollection();
                 featureCollection.Set<IHttpRequestFeature>(new DummyHttpRequestFeature());
                 old?.Invoke(featureCollection);
-                var authenticationStatus = new AuthenticateConnection();
-                
+
                 //TODO: What about expired certificate?
 
                 var tls = featureCollection.Get<ITlsConnectionFeature>();
                 var certificate = tls?.ClientCertificate;
-                authenticationStatus.Certificate = certificate;
-                if (certificate == null)
-                {
-                    authenticationStatus.Status = AuthenticationStatus.NoCertificateProvided;
-                }
-                else if (certificate.Equals(_server.ServerCertificateHolder.Certificate))
-                {
-                    authenticationStatus.Status = AuthenticationStatus.ServerAdmin;
-                }
-                else
-                {
-                    using (_server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                    {
-                        var certKey = Constants.Certificates.Prefix + certificate.Thumbprint;
-                        BlittableJsonReaderObject permisions;
-                        using (ctx.OpenReadTransaction())
-                        {
-                            permisions = _server.ServerStore.Cluster.Read(ctx, certKey) ??
-                                         _server.ServerStore.Cluster.GetLocalState(ctx, certKey);
-                        }
-                        if (permisions == null)
-                        {
-                            authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
-                        }
-                        else
-                        {
-                            var definition = JsonDeserializationServer.CertificateDefinition(permisions);
-                            authenticationStatus.Definition = definition;
-                            if (definition.ServerAdmin)
-                            {
-                                authenticationStatus.Status = AuthenticationStatus.ServerAdmin;
-                            }
-                            else
-                            {
-                                authenticationStatus.Status = AuthenticationStatus.Allowed;
-                                foreach (var database in definition.Databases)
-                                {
-                                    authenticationStatus.AuthorizedDatabases.Add(database);
-                                }
-                            }
-                        }
-                    }
-                }
+                var authenticationStatus = _server.AuthenticateConnectionCertificate(certificate);
 
                 // build the token
                 context.PrepareRequest = features =>
@@ -430,7 +387,57 @@ namespace Raven.Server
                     features.Set<IHttpAuthenticationFeature>(authenticationStatus);
                 };
             }
+
         }
+
+        private AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate)
+        {
+            var authenticationStatus = new AuthenticateConnection { Certificate = certificate };
+            if (certificate == null)
+            {
+                authenticationStatus.Status = AuthenticationStatus.NoCertificateProvided;
+            }
+            else if (certificate.Equals(ServerCertificateHolder.Certificate))
+            {
+                authenticationStatus.Status = AuthenticationStatus.ServerAdmin;
+            }
+            else
+            {
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                {
+                    var certKey = Constants.Certificates.Prefix + certificate.Thumbprint;
+                    BlittableJsonReaderObject cert;
+                    using (ctx.OpenReadTransaction())
+                    {
+                        cert = ServerStore.Cluster.Read(ctx, certKey) ??
+                               ServerStore.Cluster.GetLocalState(ctx, certKey);
+                    }
+                    if (cert == null)
+                    {
+                        authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
+                    }
+                    else
+                    {
+                        var definition = JsonDeserializationServer.CertificateDefinition(cert);
+                        authenticationStatus.Definition = definition;
+                        if (definition.ServerAdmin)
+                        {
+                            authenticationStatus.Status = AuthenticationStatus.ServerAdmin;
+                        }
+                        else
+                        {
+                            authenticationStatus.Status = AuthenticationStatus.Allowed;
+                            foreach (var database in definition.Databases)
+                            {
+                                authenticationStatus.AuthorizedDatabases.Add(database);
+                            }
+                        }
+                    }
+                }
+            }
+            return authenticationStatus;
+        }
+
 
         public string[] WebUrls { get; set; }
 
@@ -460,7 +467,7 @@ namespace Raven.Server
                         break;
                 }
 
-                if(pk == null)
+                if (pk == null)
                     throw new EncryptionException("Unable to find the private key in the provided certificate: " + config.CertificatePath);
 
 
@@ -658,24 +665,41 @@ namespace Raven.Server
                                 // a maximum of 2 KB for the header is big enough to include any valid header that
                                 // we can currently think of
                                 maxSize: 1024 * 2
-                                ))
+                            ))
                             {
                                 header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
                                 if (_logger.IsInfoEnabled)
                                 {
-                                    _logger.Info($"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
+                                    _logger.Info(
+                                        $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
                                 }
                             }
-                            if (TryAuthorize(context, Configuration, tcp.Stream, header) == false)
+                            var authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
+                            
+
+                            using (var writer = new BlittableJsonTextWriter(context, stream))
                             {
-                                var msg =
-                                    $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}" +
-                                    $" is not authorized to access {header.DatabaseName ?? "the cluster node"}";
+                                writer.WriteStartObject();
+                                writer.WritePropertyName(nameof(TcpConnectionHeaderResponse.AuthorizationSuccessful));
+                                writer.WriteBool(authSuccessful);
+                                if (err != null)
+                                {
+                                    writer.WriteComma();
+                                    writer.WritePropertyName(nameof(TcpConnectionHeaderResponse.Message));
+                                    writer.WriteString(err);
+                                }
+                                writer.WriteEndObject();
+                                writer.Flush();
+                            }
+
+                            if (authSuccessful == false)
+                            {
                                 if (_logger.IsInfoEnabled)
                                 {
-                                    _logger.Info(msg);
+                                    _logger.Info($"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}" +
+                                                 $" is not authorized to access {header.DatabaseName ?? "the cluster node"} because {err}");
                                 }
-                                throw new UnauthorizedAccessException(msg);
+                                return; // cannot proceed
                             }
                         }
 
@@ -847,15 +871,56 @@ namespace Raven.Server
                            errors == SslPolicyErrors.RemoteCertificateNotAvailable;
                 });
                 stream = sslStream;
+
                 await sslStream.AuthenticateAsServerAsync(ServerCertificateHolder.Certificate, true, SslProtocols.Tls12, false);
             }
 
             return stream;
         }
 
-        private bool TryAuthorize(JsonOperationContext context, RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header)
+        private bool TryAuthorize(RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header, out string msg)
         {
-            return true;
+            msg = null;
+            if (configuration.Security.AuthenticationEnabled == false)
+            {
+
+                return true;
+            }
+
+            if (!(stream is SslStream sslStream))
+            {
+                msg = "TCP connection is required to use SSL when authentication is enabled";
+                return false;
+            }
+
+            var auth = AuthenticateConnectionCertificate((X509Certificate2)sslStream.RemoteCertificate);
+
+            switch (auth.Status)
+            {
+                case AuthenticationStatus.ServerAdmin:
+                    msg = "Admin can do it all";
+                    return true;
+                case AuthenticationStatus.Allowed:
+                    switch (header.Operation)
+                    {
+                        case TcpConnectionHeaderMessage.OperationTypes.Cluster:
+                        case TcpConnectionHeaderMessage.OperationTypes.Heartbeats:
+                            msg = header.Operation + " is a server wide operation and the certificate " + sslStream.RemoteCertificate + "is not ServerAdmin";
+                            return false;
+                        case TcpConnectionHeaderMessage.OperationTypes.BulkInsert:
+                        case TcpConnectionHeaderMessage.OperationTypes.Subscription:
+                        case TcpConnectionHeaderMessage.OperationTypes.Replication:
+                            if (auth.CanAccess(header.DatabaseName))
+                                return true;
+                            msg = "The certificate " + sslStream.RemoteCertificate + " does not allow access to " + header.DatabaseName;
+                            return false;
+                        default:
+                            throw new InvalidOperationException("Unknown operation " + header.Operation);
+                    }
+                default:
+                    msg = "Cannot allow access to a certificate with status: " + auth.Status;
+                    return false;
+            }
         }
 
         private static void ThrowDatabaseShutdown(DocumentDatabase database)

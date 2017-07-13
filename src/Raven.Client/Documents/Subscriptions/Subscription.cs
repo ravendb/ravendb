@@ -342,16 +342,8 @@ namespace Raven.Client.Documents.Subscriptions
                 using (var response = context.ReadForMemory(_stream, "Subscription/tcp-header-response"))
                 {
                     var reply = JsonDeserializationClient.TcpConnectionHeaderResponse(response);
-                    switch (reply.Status)
-                    {
-                        case TcpConnectionHeaderResponse.AuthorizationStatus.Forbidden:
-                        case TcpConnectionHeaderResponse.AuthorizationStatus.ForbiddenReadOnly:
-                            throw AuthorizationException.Forbidden($"Cannot access database {databaseName} because we got a Forbidden authorization status");
-                        case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
-                            break;
-                        default:
-                            throw new InvalidOperationException($"Unexpected reply from the server {reply.Status} when connecting to {databaseName}");
-                    }
+                    if (reply.AuthorizationSuccessful == false)
+                        throw AuthorizationException.Forbidden($"Cannot access database {databaseName} because " + reply.Message);
                 }
                 await _stream.WriteAsync(options, 0, options.Length).ConfigureAwait(false);
 
