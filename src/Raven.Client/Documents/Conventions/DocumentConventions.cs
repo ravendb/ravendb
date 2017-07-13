@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Client.Util;
@@ -44,11 +45,15 @@ namespace Raven.Client.Documents.Conventions
         public Action<object, StreamWriter> SerializeEntityToJsonStream;
         private ClientConfiguration _originalConfiguration;
 
+        public ReadBalanceBehavior ReadBalanceBehavior;
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="DocumentConventions" /> class.
         /// </summary>
         public DocumentConventions()
         {
+            ReadBalanceBehavior = ReadBalanceBehavior.None;
+
             FindIdentityProperty = q => q.Name == "Id";
             IdentityPartsSeparator = "/";
             FindIdentityPropertyNameFromEntityName = entityName => "Id";

@@ -39,7 +39,7 @@ namespace Raven.Client.Http
         {
             var executor = new ClusterRequestExecutor(apiKey, DocumentConventions.Default)
             {
-                _nodeSelector = new NodeSelector(new Topology
+                _nodeSelector = new FailoverNodeSelector(new Topology
                 {
                     Etag = -1,
                     Nodes = new List<ServerNode>
@@ -57,9 +57,9 @@ namespace Raven.Client.Http
             return executor;
         }
 
-        public static ClusterRequestExecutor Create(string[] urls, string apiKey)
+        public static ClusterRequestExecutor Create(string[] urls, string apiKey, DocumentConventions conventions = null)
         {
-            var executor = new ClusterRequestExecutor(apiKey, DocumentConventions.Default)
+            var executor = new ClusterRequestExecutor(apiKey, conventions ?? DocumentConventions.Default)
             {
                 _disableClientConfigurationUpdates = true
             };
@@ -109,7 +109,7 @@ namespace Raven.Client.Http
                     };
                     if (_nodeSelector == null)
                     {
-                        _nodeSelector = new NodeSelector(newTopology);
+                        _nodeSelector = new FailoverNodeSelector(newTopology);
                     }
                     else if (_nodeSelector.OnUpdateTopology(newTopology))
                     {
@@ -144,7 +144,7 @@ namespace Raven.Client.Http
             if (cachedTopology == null)
                 return false;
 
-            _nodeSelector = new NodeSelector(new Topology
+            _nodeSelector = new FailoverNodeSelector(new Topology
             {
                 Nodes = new List<ServerNode>(
                     from member in cachedTopology.Topology.Members
