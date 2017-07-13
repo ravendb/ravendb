@@ -472,6 +472,12 @@ namespace Raven.Server.Documents
                 if (TryGetNextOperation(previousOperation, out op, ref meter) == false)
                     break;
 
+                // RavenDB-7732 - Even if we merged multiple seprate operations into 
+                // a single transaction in Voron, we're still going to have a separate
+                // tx marker for them for the purpose of replication, to avoid creating
+                // overly large replication batches.
+                context.TransactionMarkerOffset++;
+
                 pendingOps.Add(op);
                 meter.IncrementCounter(1);
                 meter.IncreamentCommands(op.Execute(context));

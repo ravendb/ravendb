@@ -60,5 +60,6 @@
     <Folder Include="Server\Documents\Patching" />
     <Folder Include="Server\Documents\PeriodicBackup" />
     <Folder Include="Server\Documents\PeriodicBackup" />
+    <Folder Include="Server\Documents\Revisions" />
   </ItemGroup>
 </Project>

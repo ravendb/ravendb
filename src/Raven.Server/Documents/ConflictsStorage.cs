@@ -643,7 +643,7 @@ namespace Raven.Server.Documents
                 }
 
                 var etag = _documentsStorage.GenerateNextEtag();
-
+                context.UpdateLastDatabaseChangeVector(_documentDatabase.DbId, etag);
                 fixed (ChangeVectorEntry* pChangeVector = incomingChangeVector)
                 {
                     byte* doc = null;
