@@ -6,13 +6,11 @@ using System.Text;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Session;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
-using Raven.Client.Util;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations
 {
@@ -80,17 +78,14 @@ namespace Raven.Client.Documents.Operations
         {
             private readonly JsonOperationContext _context;
             private readonly DocumentConventions _conventions;
-            private readonly BlittableJsonReaderObject _queryToDelete;
+            private readonly IndexQuery _queryToDelete;
             private readonly QueryOperationOptions _options;
 
             public DeleteByIndexCommand(DocumentConventions conventions, JsonOperationContext context, IndexQuery queryToDelete, QueryOperationOptions options = null)
             {
-                if (queryToDelete == null)
-                    throw new ArgumentNullException(nameof(queryToDelete));
-
                 _context = context ?? throw new ArgumentNullException(nameof(context));
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
-                _queryToDelete = EntityToBlittable.ConvertEntityToBlittable(queryToDelete, conventions, context);
+                _queryToDelete = queryToDelete ?? throw new ArgumentNullException(nameof(queryToDelete));
                 _options = options ?? new QueryOperationOptions();
             }
 
@@ -121,7 +116,7 @@ namespace Raven.Client.Documents.Operations
                         {
                             using (var writer = new BlittableJsonTextWriter(_context, stream))
                             {
-                                writer.WriteObject(_queryToDelete);
+                                writer.WriteIndexQuery(_conventions, _context, _queryToDelete);
                             }
                         }
                     )

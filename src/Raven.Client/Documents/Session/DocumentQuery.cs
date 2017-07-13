@@ -1003,7 +1003,7 @@ namespace Raven.Client.Documents.Session
             var q = GetIndexQuery();
             var query = FacetQuery.Create(IndexName, q, facetSetupDoc, null, facetStart, facetPageSize, Conventions);
 
-            var command = new GetFacetsCommand(TheSession.Context, query);
+            var command = new GetFacetsCommand(Conventions, TheSession.Context, query);
             TheSession.RequestExecutor.Execute(command, TheSession.Context);
 
             return command.Result;
@@ -1014,7 +1014,7 @@ namespace Raven.Client.Documents.Session
             var q = GetIndexQuery();
             var query = FacetQuery.Create(IndexName, q, null, facets, facetStart, facetPageSize, Conventions);
 
-            var command = new GetFacetsCommand(TheSession.Context, query);
+            var command = new GetFacetsCommand(Conventions, TheSession.Context, query);
             TheSession.RequestExecutor.Execute(command, TheSession.Context);
 
             return command.Result;

@@ -7,6 +7,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
@@ -76,20 +77,20 @@ namespace Raven.Client.Documents.Operations
 
         private class PatchByIndexCommand : RavenCommand<OperationIdResult>
         {
+            private readonly DocumentConventions _conventions;
             private readonly JsonOperationContext _context;
-            private readonly BlittableJsonReaderObject _queryToUpdate;
+            private readonly IndexQuery _queryToUpdate;
             private readonly BlittableJsonReaderObject _patch;
             private readonly QueryOperationOptions _options;
 
             public PatchByIndexCommand(DocumentConventions conventions, JsonOperationContext context, IndexQuery queryToUpdate, PatchRequest patch, QueryOperationOptions options = null)
             {
-                if (queryToUpdate == null)
-                    throw new ArgumentNullException(nameof(queryToUpdate));
                 if (patch == null)
                     throw new ArgumentNullException(nameof(patch));
 
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _context = context ?? throw new ArgumentNullException(nameof(context));
-                _queryToUpdate = EntityToBlittable.ConvertEntityToBlittable(queryToUpdate, conventions, _context);
+                _queryToUpdate = queryToUpdate ?? throw new ArgumentNullException(nameof(queryToUpdate));
                 _patch = EntityToBlittable.ConvertEntityToBlittable(patch, conventions, _context);
                 _options = options ?? new QueryOperationOptions();
             }
@@ -124,7 +125,7 @@ namespace Raven.Client.Documents.Operations
                                 writer.WriteStartObject();
 
                                 writer.WritePropertyName("Query");
-                                writer.WriteObject(_queryToUpdate);
+                                writer.WriteIndexQuery(_conventions, _context, _queryToUpdate);
                                 writer.WriteComma();
 
                                 writer.WritePropertyName("Patch");

@@ -35,6 +35,9 @@ namespace Raven.Client.Documents.Operations
 
             public GetMultiFacetsCommand(JsonOperationContext context, HttpCache cache, FacetQuery[] queries)
             {
+                throw new NotImplementedException();
+
+                /*
                 var commands = new List<GetRequest>();
                 foreach (var q in queries)
                 {
@@ -50,6 +53,7 @@ namespace Raven.Client.Documents.Operations
 
                 _command = new MultiGetCommand(context, cache, commands);
                 ResponseType = RavenCommandResponseType.Raw;
+                */
             }
 
             public override bool IsReadRequest => true;

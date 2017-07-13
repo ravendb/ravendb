@@ -3,6 +3,7 @@ using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Session;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
@@ -12,18 +13,15 @@ namespace Raven.Client.Documents.Commands
 {
     public class MoreLikeThisCommand : RavenCommand<MoreLikeThisQueryResult>
     {
+        private readonly DocumentConventions _conventions;
         private readonly JsonOperationContext _context;
-        private readonly BlittableJsonReaderObject _query;
+        private readonly MoreLikeThisQuery _query;
 
         public MoreLikeThisCommand(DocumentConventions conventions, JsonOperationContext context, MoreLikeThisQuery query)
         {
-            if (conventions == null)
-                throw new ArgumentNullException(nameof(conventions));
-            if (query == null)
-                throw new ArgumentNullException(nameof(query));
-
+            _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
             _context = context ?? throw new ArgumentNullException(nameof(context));
-            _query = EntityToBlittable.ConvertEntityToBlittable(query, conventions, context);
+            _query = query ?? throw new ArgumentNullException(nameof(query));
         }
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
@@ -35,7 +33,7 @@ namespace Raven.Client.Documents.Commands
                     {
                         using (var writer = new BlittableJsonTextWriter(_context, stream))
                         {
-                            writer.WriteObject(_query);
+                            writer.WriteMoreLikeThisQuery(_conventions, _context, _query);
                         }
                     }
                 )

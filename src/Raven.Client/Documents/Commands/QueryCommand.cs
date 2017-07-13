@@ -3,7 +3,7 @@ using System.Net.Http;
 using System.Text;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Session;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
@@ -15,18 +15,15 @@ namespace Raven.Client.Documents.Commands
     {
         private readonly DocumentConventions _conventions;
         private readonly JsonOperationContext _context;
-        private readonly BlittableJsonReaderObject _indexQuery;
+        private readonly IndexQuery _indexQuery;
         private readonly bool _metadataOnly;
         private readonly bool _indexEntriesOnly;
 
         public QueryCommand(DocumentConventions conventions, JsonOperationContext context, IndexQuery indexQuery, bool metadataOnly = false, bool indexEntriesOnly = false)
         {
-            if (indexQuery == null)
-                throw new ArgumentNullException(nameof(indexQuery));
-
             _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
             _context = context ?? throw new ArgumentNullException(nameof(context));
-            _indexQuery = EntityToBlittable.ConvertEntityToBlittable(indexQuery, conventions, context);
+            _indexQuery = indexQuery ?? throw new ArgumentNullException(nameof(indexQuery));
             _metadataOnly = metadataOnly;
             _indexEntriesOnly = indexEntriesOnly;
 
@@ -57,7 +54,7 @@ namespace Raven.Client.Documents.Commands
                     {
                         using (var writer = new BlittableJsonTextWriter(_context, stream))
                         {
-                            writer.WriteObject(_indexQuery);
+                            writer.WriteIndexQuery(_conventions, _context, _indexQuery);
                         }
                     }
                 )

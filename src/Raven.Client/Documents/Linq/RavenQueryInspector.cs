@@ -203,7 +203,7 @@ namespace Raven.Client.Documents.Linq
             var q = GetIndexQuery(false);
             var query = FacetQuery.Create(_indexName, q, facetSetupDoc, null, start, pageSize, Session.Conventions);
 
-            var command = new GetFacetsCommand(_session.Context, query);
+            var command = new GetFacetsCommand(_session.Conventions, _session.Context, query);
             _session.RequestExecutor.Execute(command, _session.Context);
             return command.Result;
         }
@@ -212,7 +212,7 @@ namespace Raven.Client.Documents.Linq
         {
             var q = GetIndexQuery(false);
             var query = FacetQuery.Create(_indexName, q, null, facets, start, pageSize, Session.Conventions);
-            var command = new GetFacetsCommand(_session.Context, query);
+            var command = new GetFacetsCommand(_session.Conventions, _session.Context, query);
             _session.RequestExecutor.Execute(command, _session.Context);
             return command.Result;
         }
@@ -222,7 +222,7 @@ namespace Raven.Client.Documents.Linq
             var q = GetIndexQuery();
             var query = FacetQuery.Create(_indexName, q, facetSetupDoc, null, start, pageSize, Session.Conventions);
 
-            var command = new GetFacetsCommand(_session.Context, query);
+            var command = new GetFacetsCommand(_session.Conventions, _session.Context, query);
             await _session.RequestExecutor.ExecuteAsync(command, _session.Context, token).ConfigureAwait(false);
 
             return command.Result;
@@ -233,7 +233,7 @@ namespace Raven.Client.Documents.Linq
             var q = GetIndexQuery();
             var query = FacetQuery.Create(_indexName, q, null, facets, start, pageSize, Session.Conventions);
 
-            var command = new GetFacetsCommand(_session.Context, query);
+            var command = new GetFacetsCommand(_session.Conventions, _session.Context, query);
             await _session.RequestExecutor.ExecuteAsync(command, _session.Context, token).ConfigureAwait(false);
 
             return command.Result;

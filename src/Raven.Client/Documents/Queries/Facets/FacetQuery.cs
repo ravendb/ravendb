@@ -7,17 +7,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
-using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Util;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Queries.Facets
 {
-    public class FacetQuery : IndexQueryBase
+    public class FacetQuery : IndexQueryBase<Dictionary<string, object>>
     {
         public string[] FieldsToFetch { get; set; }
 
@@ -26,9 +22,6 @@ namespace Raven.Client.Documents.Queries.Facets
         public string DefaultField { get; set; }
 
         public bool IsDistinct { get; set; }
-
-        private IReadOnlyList<Facet> _facets;
-        private DynamicJsonValue _facetsAsDynamicJson;
 
         /// <summary>
         /// Index name to run facet query on.
@@ -43,64 +36,7 @@ namespace Raven.Client.Documents.Queries.Facets
         /// <summary>
         /// List of facets (mutually exclusive with FacetSetupDoc).
         /// </summary>
-        public IReadOnlyList<Facet> Facets
-        {
-            get => _facets;
-            set
-            {
-                _facets = value;
-                _facetsAsDynamicJson = null;
-            }
-        }
-
-        public HttpMethod CalculateHttpMethod()
-        {
-            if (Facets == null || Facets.Count == 0)
-                return HttpMethod.Get;
-
-            if (_facetsAsDynamicJson == null)
-                _facetsAsDynamicJson = SerializeFacetsToDynamicJson(Facets);
-
-            return HttpMethod.Post;
-        }
-
-        public DynamicJsonValue GetFacetsAsJson()
-        {
-            return _facetsAsDynamicJson ?? (_facetsAsDynamicJson = SerializeFacetsToDynamicJson(Facets));
-        }
-
-        public string GetQueryString(HttpMethod method)
-        {
-            var path = new StringBuilder();
-
-            if (Start != 0)
-                path.Append("&start=").Append(Start);
-
-            if (PageSizeSet)
-                path.Append("&pageSize=").Append(PageSize);
-
-            if (string.IsNullOrEmpty(Query) == false)
-                path.Append("&query=").Append(EscapingHelper.EscapeLongDataString(Query));
-
-            if (CutoffEtag != null)
-                path.Append("&cutOffEtag=").Append(CutoffEtag);
-
-            if (WaitForNonStaleResultsAsOfNow)
-                path.Append("&waitForNonStaleResultsAsOfNow=true");
-
-            if (WaitForNonStaleResultsTimeout != null)
-                path.AppendLine("&waitForNonStaleResultsTimeout=" + WaitForNonStaleResultsTimeout);
-
-            if (string.IsNullOrWhiteSpace(FacetSetupDoc) == false)
-                path.Append("&facetDoc=").Append(FacetSetupDoc);
-
-            if (method == HttpMethod.Get && Facets != null && Facets.Count > 0)
-                path.Append("&facets=").Append(GetFacetsAsJson());
-
-            path.Append("&op=facets");
-
-            return path.ToString();
-        }
+        public IReadOnlyList<Facet> Facets { get; set; }
 
 #if !NET46
         public static FacetQuery Parse(IQueryCollection query, int start, int pageSize, DocumentConventions conventions)
@@ -131,7 +67,7 @@ namespace Raven.Client.Documents.Queries.Facets
         }
 #endif
 
-        public static FacetQuery Create(string indexName, IndexQueryBase query, string facetSetupDoc, List<Facet> facets, int start, int? pageSize, DocumentConventions conventions)
+        public static FacetQuery Create(string indexName, IndexQueryBase<Dictionary<string, object>> query, string facetSetupDoc, List<Facet> facets, int start, int? pageSize, DocumentConventions conventions)
         {
             var result = new FacetQuery
             {
@@ -150,18 +86,6 @@ namespace Raven.Client.Documents.Queries.Facets
                 result.PageSize = pageSize.Value;
 
             return result;
-        }
-
-        private static DynamicJsonValue SerializeFacetsToDynamicJson(IEnumerable<Facet> facets)
-        {
-            var array = new DynamicJsonArray();
-            foreach (var facet in facets)
-                array.Add(facet.ToJson());
-
-            return new DynamicJsonValue
-            {
-                ["Facets"] = array
-            };
         }
     }
 }

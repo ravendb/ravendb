@@ -21,14 +21,12 @@ namespace Raven.Client.Documents.Queries
         }
     }
 
-    public abstract class IndexQuery<T> : IndexQueryBase, IEquatable<IndexQuery<T>>
+    public abstract class IndexQuery<T> : IndexQueryBase<T>, IEquatable<IndexQuery<T>>
     {
         /// <summary>
         /// Parameters that will be passed to transformer (if specified).
         /// </summary>
         public T TransformerParameters { get; set; }
-
-        public T QueryParameters { get; set; }
 
         /// <summary>
         /// If set to <c>true</c>, this property will send multiple index entries from the same document (assuming the index project them)
@@ -150,7 +148,7 @@ namespace Raven.Client.Documents.Queries
         }
     }
 
-    public abstract class IndexQueryBase : IIndexQuery, IEquatable<IndexQueryBase>
+    public abstract class IndexQueryBase<T> : IIndexQuery, IEquatable<IndexQueryBase<T>>
     {
         private int _pageSize = int.MaxValue;
 
@@ -163,6 +161,8 @@ namespace Raven.Client.Documents.Queries
         /// Actual query that will be performed (Lucene syntax).
         /// </summary>
         public string Query { get; set; }
+
+        public T QueryParameters { get; set; }
 
         /// <summary>
         /// Number of records that should be skipped.
@@ -215,7 +215,7 @@ namespace Raven.Client.Documents.Queries
             return Query;
         }
 
-        public virtual bool Equals(IndexQueryBase other)
+        public virtual bool Equals(IndexQueryBase<T> other)
         {
             if (ReferenceEquals(null, other))
                 return false;
@@ -254,12 +254,12 @@ namespace Raven.Client.Documents.Queries
             }
         }
 
-        public static bool operator ==(IndexQueryBase left, IndexQueryBase right)
+        public static bool operator ==(IndexQueryBase<T> left, IndexQueryBase<T> right)
         {
             return Equals(left, right);
         }
 
-        public static bool operator !=(IndexQueryBase left, IndexQueryBase right)
+        public static bool operator !=(IndexQueryBase<T> left, IndexQueryBase<T> right)
         {
             return Equals(left, right) == false;
         }

@@ -1,3 +1,4 @@
+using System;
 using System.Net.Http;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Queries;
@@ -18,6 +19,9 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 
         public GetRequest CreateRequest()
         {
+            throw new NotImplementedException();
+
+            /*
             var method = _query.CalculateHttpMethod();
             return new GetRequest
             {
@@ -26,6 +30,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
                 Method = method.Method,
                 Content = method == HttpMethod.Post ? _query.GetFacetsAsJson() : null
             };
+            */
         }
 
         public object Result { get; private set; }
