@@ -53,23 +53,7 @@ namespace SlowTests.Server.Documents.Queries
                 ReduceErrors = 900
             });
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
-            {
-                Query = "",
-                //DynamicMapReduceFields = new[]
-                //{
-                //    new DynamicMapReduceField
-                //    {
-                //        Name = "Count",
-                //        OperationType = FieldMapReduceOperation.Count
-                //    },
-                //    new DynamicMapReduceField
-                //    {
-                //        Name = "Location",
-                //        IsGroupBy = true
-                //    }
-                //}
-            });
+            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("SELECT count() FROM Users GROUP BY Location"));
 
             var result = _sut.Match(dynamicQuery);
 

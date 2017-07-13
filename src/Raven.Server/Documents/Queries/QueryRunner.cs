@@ -346,7 +346,6 @@ namespace Raven.Server.Documents.Queries
                 Start = query.Start,
                 WaitForNonStaleResultsTimeout = options.StaleTimeout,
                 PageSize = int.MaxValue,
-                SortedFields = query.SortedFields,
                 HighlighterPreTags = query.HighlighterPreTags,
                 HighlighterPostTags = query.HighlighterPostTags,
                 HighlightedFields = query.HighlightedFields,

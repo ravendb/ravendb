@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             int previousBaseQueryMatches = 0, currentBaseQueryMatches;
 
             var firstSubDocumentQuery = GetLuceneQuery(subQueries[0], query.DefaultOperator, query.DefaultField, _analyzer);
-            var sort = GetSort(query.SortedFields);
+            var sort = GetSort(query);
 
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
             {
@@ -270,44 +270,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             return false;
-        }
-
-        private static Sort GetSort(SortedField[] sortedFields)
-        {
-            if (sortedFields == null || sortedFields.Length == 0)
-                return null;
-
-            return new Sort(sortedFields.Select(x =>
-            {
-                var sortOptions = SortOptions.String;
-
-                if (x.Field == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
-                    return SortField.FIELD_SCORE;
-
-                if (InvariantCompare.IsPrefix(x.Field, Constants.Documents.Indexing.Fields.AlphaNumericFieldName, CompareOptions.None))
-                {
-                    var customFieldName = SortFieldHelper.ExtractName(x.Field);
-                    if (customFieldName.IsNullOrWhiteSpace())
-                        throw new InvalidOperationException("Alphanumeric sort: cannot figure out what field to sort on!");
-
-                    var anSort = new AlphaNumericComparatorSource();
-                    return new SortField(customFieldName, anSort, x.Descending);
-                }
-
-                if (InvariantCompare.IsPrefix(x.Field, Constants.Documents.Indexing.Fields.RandomFieldName, CompareOptions.None))
-                {
-                    var customFieldName = SortFieldHelper.ExtractName(x.Field);
-                    if (customFieldName.IsNullOrWhiteSpace()) // truly random
-                        return new RandomSortField(Guid.NewGuid().ToString());
-
-                    return new RandomSortField(customFieldName);
-                }
-
-                if (InvariantCompare.IsSuffix(x.Field, Constants.Documents.Indexing.Fields.RangeFieldSuffix, CompareOptions.None))
-                    sortOptions = SortOptions.Numeric;
-
-                return new SortField(IndexField.ReplaceInvalidCharactersInFieldName(x.Field), (int)sortOptions, x.Descending);
-            }).ToArray());
         }
         
         private Sort GetSort(IndexQueryServerSide query)
@@ -477,7 +439,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var position = query.Start;
 
             var luceneQuery = GetLuceneQuery(query.Query, query.DefaultOperator, query.DefaultField, _analyzer);
-            var sort = GetSort(query.SortedFields);
+            var sort = GetSort(query);
 
             var search = ExecuteQuery(luceneQuery, query.Start, docsToGet, sort);
             var termsDocs = IndexedTerms.ReadAllEntriesFromIndex(_searcher.IndexReader, documentsContext, _state);

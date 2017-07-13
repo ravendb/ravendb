@@ -17,8 +17,6 @@ namespace Raven.Server.Documents.Queries
     {
         private string _indexName;
 
-        public SortedField[] SortedFields { get; set; }
-
         public string[] FieldsToFetch { get; set; }
 
         public QueryOperator DefaultOperator { get; set; }
@@ -161,9 +159,6 @@ namespace Raven.Server.Documents.Queries
                             break;
                         case "defaultField":
                             result.DefaultField = item.Value;
-                            break;
-                        case "sort":
-                            result.SortedFields = item.Value.Select(y => new SortedField(y)).ToArray();
                             break;
                         case "include":
                             if (includes == null)
@@ -310,7 +305,6 @@ namespace Raven.Server.Documents.Queries
                         {
                             throw new NotImplementedException("TODO arek - support non parametrized queries that WHERE clause has multiple fields e.g. WHERE Age BETWEEN 30 AND 35");
                         }
-
                     }
                 }
             }

@@ -576,7 +576,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
                 {
-                    var queryResult = await index.Query(new IndexQueryServerSide() { SortedFields = new[] { new SortedField("Location") } }, context, OperationCancelToken.None);
+                    var queryResult = await index.Query(new IndexQueryServerSide("FROM Users ORDER BY Location"), context, OperationCancelToken.None);
 
                     var results = queryResult.Results;
 

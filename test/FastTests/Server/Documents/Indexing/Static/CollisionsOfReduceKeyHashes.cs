@@ -252,13 +252,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     tx.Commit();
                 }
 
-                queryResult = await index.Query(new IndexQueryServerSide
-                    {
-                        SortedFields = new[]
-                        {
-                            new SortedField("Location"),
-                        }
-                    },
+                queryResult = await index.Query(new IndexQueryServerSide("FROM Users ORDER BY Location"),
                     DocumentsOperationContext.ShortTermSingleUse(database),
                     OperationCancelToken.None);
 

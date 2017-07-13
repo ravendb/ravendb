@@ -12,6 +12,8 @@ namespace Raven.Server.Documents.Queries
 
     public class WhereFields
     {
+        public readonly List<string> AllFieldNames = new List<string>();
+
         public readonly Dictionary<string, (string Value, ValueTokenType ValueType)> SingleValueFields = new Dictionary<string, (string Value, ValueTokenType ValueType)>();
 
         public readonly Dictionary<string, (List<string> Values, ValueTokenType ValueType)> MultipleValuesFields = new Dictionary<string, (List<string> Value, ValueTokenType ValueType)>();
@@ -19,11 +21,13 @@ namespace Raven.Server.Documents.Queries
         public void Add(string fieldName, (string, ValueTokenType) value)
         {
             SingleValueFields[fieldName] = value;
+            AllFieldNames.Add(fieldName);
         }
 
         public void Add(string fieldName, List<string> values, ValueTokenType valuesType)
         {
             MultipleValuesFields[fieldName] = (values, valuesType);
+            AllFieldNames.Add(fieldName);
         }
     }
 }

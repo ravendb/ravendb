@@ -88,16 +88,16 @@ namespace Raven.Server.Documents.Queries
 
             private static Sort ExtractSortFromQuery(IndexQueryServerSide query)
             {
-                if (query.SortedFields == null || query.SortedFields.Length == 0)
+                if (query.Fields.OrderBy == null)
                     return null;
 
-                Debug.Assert(query.SortedFields.Length == 1);
+                Debug.Assert(query.Fields.OrderBy.Count == 1);
 
-                var randomField = query.SortedFields[0];
+                var randomField = query.Fields.OrderBy[0];
 
-                Debug.Assert(randomField.Field.StartsWith(Constants.Documents.Indexing.Fields.RandomFieldName));
+                Debug.Assert(randomField.Name.StartsWith(Constants.Documents.Indexing.Fields.RandomFieldName));
 
-                var customFieldName = SortFieldHelper.ExtractName(randomField.Field);
+                var customFieldName = SortFieldHelper.ExtractName(randomField.Name);
 
                 if (customFieldName.IsNullOrWhiteSpace())
                     return new Sort(null);

@@ -98,11 +98,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
             SortDescriptors = extendedSortDescriptors.ToArray();
         }
 
-        public static DynamicQueryMapping Create(string index, IndexQueryServerSide query)
-        {
-            throw new NotImplementedException("TODO arek - remove this method");
-        }
-
         public static DynamicQueryMapping Create(IndexQueryServerSide query)
         {
             var result = new DynamicQueryMapping

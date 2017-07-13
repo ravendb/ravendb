@@ -153,7 +153,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void CreateDefinitionForQueryWithNestedFieldsAndStringSortingSet()
         {
-            create_dynamic_mapping("FROM Users WHERE StartsWith(Name, 'a') ORDER BY Address.Country");
+            create_dynamic_mapping("FROM Users WHERE StartsWith(Name, 'a') ORDER BY Address.Country ASC");
 
             var definition = _sut.CreateAutoIndexDefinition();
 

@@ -590,34 +590,6 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(query.SortedFields));
-            writer.WriteStartArray();
-            if (query.SortedFields != null)
-            {
-                isFirstInternal = true;
-                foreach (var field in query.SortedFields)
-                {
-                    if (isFirstInternal == false)
-                        writer.WriteComma();
-
-                    isFirstInternal = false;
-
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName(nameof(field.Field));
-                    writer.WriteString(field.Field);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(field.Descending));
-                    writer.WriteBool(field.Descending);
-                    writer.WriteComma();
-
-                    writer.WriteEndObject();
-                }
-            }
-            writer.WriteEndArray();
-            writer.WriteComma();
-
             writer.WritePropertyName(nameof(query.TransformerParameters));
             writer.WriteStartObject();
             if (query.TransformerParameters != null)

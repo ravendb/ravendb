@@ -1609,7 +1609,7 @@ namespace Raven.Server.Documents.Indexes
 
             MarkQueried(DocumentDatabase.Time.GetUtcNow());
 
-            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query, query.SortedFields);
+            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query);
 
             Transformer transformer = null;
             if (string.IsNullOrEmpty(query.Transformer) == false)
@@ -1754,7 +1754,11 @@ namespace Raven.Server.Documents.Indexes
 
             MarkQueried(DocumentDatabase.Time.GetUtcNow());
 
-            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query, null);
+            // TODO arek
+            //AssertQueryDoesNotContainFieldsThatAreNotIndexed(query);
+
+            if ("".Length == 0)
+                throw new NotImplementedException("TODO arek - faceted queries");
 
             using (var marker = MarkQueryAsRunning(query, token))
 
@@ -1962,7 +1966,7 @@ namespace Raven.Server.Documents.Indexes
 
             MarkQueried(DocumentDatabase.Time.GetUtcNow());
 
-            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query, query.SortedFields);
+            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query);
 
             using (var marker = MarkQueryAsRunning(query, token))
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
@@ -2042,27 +2046,26 @@ namespace Raven.Server.Documents.Indexes
             throw new InvalidOperationException($"Index '{Name} ({Etag})' is currently being compacted.");
         }
 
-        private void AssertQueryDoesNotContainFieldsThatAreNotIndexed(IndexQueryBase<BlittableJsonReaderObject> query, SortedField[] sortedFields)
+        private void AssertQueryDoesNotContainFieldsThatAreNotIndexed(IndexQueryServerSide query)
         {
-            if (string.IsNullOrWhiteSpace(query.Query) == false)
+            if (query.Fields.Where != null)
             {
-                var setOfFields = new HashSet<string>();  // TODO arek - get query fields
-                foreach (var field in setOfFields)
+                foreach (var field in query.Fields.Where.AllFieldNames)
                 {
                     var f = field;
 
                     if (IndexPersistence.ContainsField(f) == false &&
                         IndexPersistence.ContainsField("_") == false)
                         // the catch all field name means that we have dynamic fields names
-                        throw new ArgumentException("The field '" + f +
-                                                    "' is not indexed, cannot query on fields that are not indexed");
+                        throw new ArgumentException($"The field '{f}' is not indexed, cannot query on fields that are not indexed");
                 }
             }
-            if (sortedFields != null)
+
+            if (query.Fields.OrderBy != null)
             {
-                foreach (var sortedField in sortedFields)
+                foreach (var sortedField in query.Fields.OrderBy)
                 {
-                    var f = sortedField.Field;
+                    var f = sortedField.Name;
                     if (f == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
                         continue;
 
