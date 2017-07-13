@@ -6,6 +6,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
@@ -26,34 +27,21 @@ namespace Raven.Client.Documents.Operations
 
         public RavenCommand<FacetedQueryResult[]> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new GetMultiFacetsCommand(context, cache, _queries);
+            return new GetMultiFacetsCommand(conventions, context, cache, _queries);
         }
 
         private class GetMultiFacetsCommand : RavenCommand<FacetedQueryResult[]>
         {
             private readonly MultiGetCommand _command;
 
-            public GetMultiFacetsCommand(JsonOperationContext context, HttpCache cache, FacetQuery[] queries)
+            public GetMultiFacetsCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache, FacetQuery[] queries)
             {
-                throw new NotImplementedException();
-
-                /*
                 var commands = new List<GetRequest>();
                 foreach (var q in queries)
-                {
-                    var method = q.CalculateHttpMethod();
-                    commands.Add(new GetRequest
-                    {
-                        Url = "/queries/" + q.IndexName,
-                        Query = "?" + q.GetQueryString(method),
-                        Method = method.Method,
-                        Content = method == HttpMethod.Post ? q.GetFacetsAsJson() : null
-                    });
-                }
+                    commands.Add(new LazyFacetsOperation(conventions, q).CreateRequest());
 
                 _command = new MultiGetCommand(context, cache, commands);
                 ResponseType = RavenCommandResponseType.Raw;
-                */
             }
 
             public override bool IsReadRequest => true;

@@ -5,9 +5,12 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Net.Http;
 using Raven.Client.Documents.Commands.MultiGet;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.MoreLikeThis;
+using Raven.Client.Extensions;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
 
@@ -17,24 +20,26 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
     {
         private readonly MoreLikeThisQuery _query;
         private readonly MoreLikeThisOperation _operation;
+        private DocumentConventions _conventions;
 
         public LazyMoreLikeThisOperation(InMemoryDocumentSessionOperations session, MoreLikeThisQuery query)
         {
-            _query = query;
+            if (session == null)
+                throw new ArgumentNullException(nameof(session));
+
+            _query = query ?? throw new ArgumentNullException(nameof(query));
+            _conventions = session.Conventions;
             _operation = new MoreLikeThisOperation(session, query);
         }
 
         public GetRequest CreateRequest()
         {
-            throw new NotImplementedException();
-
-            //var uri = _query.GetRequestUri();
-            //var separator = uri.IndexOf('?');
-            //return new GetRequest
-            //{
-            //    Url = uri.Substring(0, separator),
-            //    Query = uri.Substring(separator, uri.Length - separator - 1)
-            //};
+            return new GetRequest
+            {
+                Url = "/queries?op=facets",
+                Method = HttpMethod.Post,
+                Content = new MoreLikeThisQueryContent(_conventions, _query)
+            };
         }
 
         public object Result { get; private set; }
@@ -60,6 +65,23 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             _operation.SetResult(result);
 
             Result = _operation.Complete<T>();
+        }
+
+        private class MoreLikeThisQueryContent : GetRequest.IContent
+        {
+            private readonly DocumentConventions _conventions;
+            private readonly MoreLikeThisQuery _query;
+
+            public MoreLikeThisQueryContent(DocumentConventions conventions, MoreLikeThisQuery query)
+            {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+                _query = query ?? throw new ArgumentNullException(nameof(query));
+            }
+
+            public void WriteContent(BlittableJsonTextWriter writer, JsonOperationContext context)
+            {
+                writer.WriteMoreLikeThisQuery(_conventions, context, _query);
+            }
         }
     }
 }

@@ -32,41 +32,65 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
             var request = new HttpRequestMessage
             {
-                Method = HttpMethod.Post
-            };
-
-            var commands = new List<DynamicJsonValue>();
-            foreach (var command in _commands)
-            {
-                var cacheKey = GetCacheKey(command, out string _);
-                using (_cache.Get(_context, cacheKey, out string cachedChangeVector, out BlittableJsonReaderObject _))
+                Method = HttpMethod.Post,
+                Content = new BlittableJsonContent(stream =>
                 {
-                    var headers = new DynamicJsonValue();
+                    using (var writer = new BlittableJsonTextWriter(_context, stream))
+                    {
+                        writer.WriteStartObject();
+                        writer.WriteArray(_context, "Requests", _commands, (w, c, command) =>
+                        {
+                            var cacheKey = GetCacheKey(command, out string _);
+                            using (_cache.Get(c, cacheKey, out long cachedEtag, out var _))
+                            {
+                                var headers = new DynamicJsonValue();
                     if (cachedChangeVector != null)
                         headers["If-None-Match"] = $"\"{cachedChangeVector}\"";
 
-                    foreach (var header in command.Headers)
-                        headers[header.Key] = header.Value;
-                    commands.Add(new DynamicJsonValue
-                    {
-                        [nameof(GetRequest.Url)] = $"/databases/{node.Database}{command.Url}",
-                        [nameof(GetRequest.Query)] = $"{command.Query}",
-                        [nameof(GetRequest.Method)] = command.Method,
-                        [nameof(GetRequest.Headers)] = headers,
-                        [nameof(GetRequest.Content)] = command.Content
-                    });
-                }
-            }
+                                foreach (var header in command.Headers)
+                                    headers[header.Key] = header.Value;
 
-            request.Content = new BlittableJsonContent(stream =>
-            {
-                using (var writer = new BlittableJsonTextWriter(_context, stream))
-                {
-                    writer.WriteStartObject();
-                    writer.WriteArray("Requests", commands, _context);
-                    writer.WriteEndObject();
-                }
-            });
+                                w.WriteStartObject();
+
+                                w.WritePropertyName(nameof(GetRequest.Url));
+                                w.WriteString($"/databases/{node.Database}{command.Url}");
+                                w.WriteComma();
+
+                                w.WritePropertyName(nameof(GetRequest.Query));
+                                w.WriteString(command.Query);
+                                w.WriteComma();
+
+                                w.WritePropertyName(nameof(GetRequest.Method));
+                                w.WriteString(command.Method.Method);
+                                w.WriteComma();
+
+                                w.WritePropertyName(nameof(GetRequest.Headers));
+                                w.WriteStartObject();
+                                var first = true;
+                                foreach (var kvp in command.Headers)
+                                {
+                                    if (first == false)
+                                        w.WriteComma();
+
+                                    first = false;
+                                    w.WritePropertyName(kvp.Key);
+                                    w.WriteString(kvp.Value);
+                                }
+                                w.WriteEndObject();
+                                w.WriteComma();
+
+                                w.WritePropertyName(nameof(GetRequest.Content));
+                                if (command.Content != null)
+                                    command.Content.WriteContent(w, c);
+                                else
+                                    w.WriteNull();
+
+                                w.WriteEndObject();
+                            }
+                        });
+                    }
+                })
+            };
 
             url = $"{_baseUrl}/multi_get";
 

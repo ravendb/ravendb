@@ -963,7 +963,7 @@ namespace Raven.Client.Documents.Session
             var q = GetIndexQuery();
             var query = FacetQuery.Create(IndexName, q, facetSetupDoc, null, facetStart, facetPageSize, Conventions);
 
-            var lazyFacetsOperation = new LazyFacetsOperation(query);
+            var lazyFacetsOperation = new LazyFacetsOperation(Conventions, query);
             return ((AsyncDocumentSession)TheSession).AddLazyOperation<FacetedQueryResult>(lazyFacetsOperation, null, token);
         }
 
@@ -972,7 +972,7 @@ namespace Raven.Client.Documents.Session
             var q = GetIndexQuery();
             var query = FacetQuery.Create(IndexName, q, null, facets, facetStart, facetPageSize, Conventions);
 
-            var lazyFacetsOperation = new LazyFacetsOperation(query);
+            var lazyFacetsOperation = new LazyFacetsOperation(Conventions, query);
             return ((AsyncDocumentSession)TheSession).AddLazyOperation<FacetedQueryResult>(lazyFacetsOperation, null, token);
         }
 
