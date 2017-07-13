@@ -25,6 +25,73 @@ namespace Raven.Client.Documents.Subscriptions
 
     public class SubscriptionCriteria<T>
     {
+        private class LinqMethodsSupport : JavascriptConversionExtension
+        {
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                var methodCallExpression = context.Node as MethodCallExpression;
+                var methodName = methodCallExpression?
+                    .Method.Name;
+
+                if (methodName == null)
+                    return;
+
+                string newName;
+                switch (methodName)
+                {
+                    case "Any":
+                        newName = "some";
+                        break;
+                    case "All":
+                        newName = "every";
+                        break;
+                    case "Select":
+                        newName = "map";
+                        break;
+                    case "Where":
+                        newName = "filter";
+                        break;
+                    case "Contains":
+                        newName = "indexOf";
+                        break;
+                    default:
+                        return;
+
+                }
+                var javascriptWriter = context.GetWriter();
+
+                var obj = methodCallExpression.Arguments[0] as MemberExpression;
+                if (obj == null)
+                {
+                    if (methodCallExpression.Arguments[0] is MethodCallExpression innerMethodCall)
+                    {
+                        context.PreventDefault();
+                        context.Visitor.Visit(innerMethodCall);
+                        javascriptWriter.Write($".{newName}");
+                    }
+                    else return;
+                }
+                else
+                {
+                    context.PreventDefault();
+                    javascriptWriter.Write($"this.{obj.Member.Name}.{newName}");
+                }
+
+                if (methodCallExpression.Arguments.Count < 2)
+                    return;
+
+                javascriptWriter.Write("(");
+                context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                javascriptWriter.Write(")");
+
+                if (newName == "indexOf")
+                {
+                    javascriptWriter.Write(">=0");
+                }
+            }
+        }
+
+
         private class SubscriptionCriteriaConvertor : JavascriptConversionExtension
         {
             public ParameterExpression Parameter;
@@ -46,8 +113,14 @@ namespace Raven.Client.Documents.Subscriptions
                         javascriptWriter.Write(node.Member.Name);
                         return;
                     }
-
-                    context.Visitor.Visit(node.Expression as MemberExpression);
+                    if (node.Expression is MemberExpression member)
+                    {
+                        context.Visitor.Visit(member);
+                    }
+                    else
+                    {
+                        context.Visitor.Visit(node.Expression);
+                    }
                     javascriptWriter.Write(".");
                     javascriptWriter.Write(node.Member.Name);
                 }
@@ -59,8 +132,10 @@ namespace Raven.Client.Documents.Subscriptions
         {
             var script = predicate.CompileToJavascript(
                 new JavascriptCompilationOptions(
-                    JsCompilationFlags.BodyOnly, 
-                    new SubscriptionCriteriaConvertor { Parameter = predicate.Parameters[0] }));
+                    JsCompilationFlags.BodyOnly,
+                    new LinqMethodsSupport(),
+                    new SubscriptionCriteriaConvertor { Parameter = predicate.Parameters[0] }
+                    ));
             Script = $"return {script};";
         }
         
