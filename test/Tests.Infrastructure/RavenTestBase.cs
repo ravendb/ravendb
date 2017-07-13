@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -85,7 +86,8 @@ namespace FastTests
             RavenServer defaultServer = null,
             bool waitForDatabasesToBeCreated = false,
             bool deleteDatabaseWhenDisposed = true,
-            bool createDatabase = true)
+            bool createDatabase = true,
+            X509Certificate2 certificate = null)
         {
             try
             {
@@ -130,7 +132,8 @@ namespace FastTests
                     var store = new DocumentStore
                     {
                         Urls = UseFiddler(defaultServer.WebUrls),
-                        Database = name
+                        Database = name,
+                        Certificate = certificate
                     };
                     ModifyStore(store);
                     store.Initialize();

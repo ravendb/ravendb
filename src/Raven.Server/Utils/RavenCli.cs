@@ -5,14 +5,19 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
+using Raven.Client.Server.Operations.Certificates;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
@@ -178,6 +183,38 @@ namespace Raven.Server.Utils
             writer.Flush();
             return true;
         }
+        
+
+        private static bool CommandAddServerCert(List<string> args, TextWriter writer, TextReader reader, bool consoleColoring, RavenServer server)
+        {
+            var path = args.First();
+
+            var cert = args.Count != 1 ? new X509Certificate2(path, args[1]) : new X509Certificate2(path);
+            ResetColor(consoleColoring);
+            writer.Write("Successfully read certificate: " + cert.Thumbprint);
+            writer.Write(cert.ToString());
+            var certKey = Constants.Certificates.Prefix + cert.Thumbprint;
+
+            using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            {
+                var json = new CertificateDefinition
+                {
+                    // this does not include the private key, that is only for the client
+                    Certificate = Convert.ToBase64String(cert.Export(X509ContentType.Cert)),
+                    Databases = null,
+                    ServerAdmin = true,
+                    Thumbprint = cert.Thumbprint
+                }.ToJson();
+
+                BlittableJsonReaderObject certificate = ctx.ReadObject(json, "Server/Certificate/Definition");
+                using (ctx.OpenWriteTransaction())
+                {
+                    server.ServerStore.Cluster.PutLocalState(ctx, certKey, certificate);
+                }
+            }
+
+            return true;
+        }
 
         private static bool CommandGc(List<string> args, TextWriter writer, TextReader reader, bool consoleColoring, RavenServer server)
         {
@@ -335,6 +372,7 @@ namespace Raven.Server.Utils
                 new[] {"stats", "Online server's memory consumption stats, request ratio and documents count"},
                 new[] {"resetServer", "Restarts the server (quits and re-run)"},
                 new[] {"gc <gen>", "Collect garbage of specified gen (0-2)"},
+                new[] {"addServerCert <path> [password]", "Register the certificate as a trusted certificate of a cluster member"},
                 new[] {"log <on | off | http-off>", "set log on or off. http-off can be selected to filter log output"},
                 new[] {"info", "Print system info and current stats"},
                 new[] {"logo [no-clear]", "Clear screen and print initial logo"},
@@ -418,6 +456,7 @@ namespace Raven.Server.Utils
             [Command.HelpPrompt] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandHelpPrompt },
             [Command.Stats] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandStats },
             [Command.Gc] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandGc },
+            [Command.AddServerCert] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandAddServerCert },
             [Command.Log] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandLog },
             [Command.Clear] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandClear },
             [Command.Info] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandInfo },
@@ -450,6 +489,7 @@ namespace Raven.Server.Utils
             Stats,
             Info,
             Gc,
+            AddServerCert,
             LowMem,
             Help,
             Logo,

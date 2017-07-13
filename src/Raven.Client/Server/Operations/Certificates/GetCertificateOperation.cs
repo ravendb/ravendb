@@ -34,7 +34,7 @@ namespace Raven.Client.Server.Operations.Certificates
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/certificatess?name=" + Uri.EscapeDataString(_name);
+                url = $"{node.Url}/admin/certificates?name=" + Uri.EscapeDataString(_name);
 
                 var request = new HttpRequestMessage
                 {

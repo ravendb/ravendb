@@ -36,4 +36,8 @@ namespace Raven.Client.Documents.Operations
     internal class GetCertificatesResponse : ResultsResponse<CertificateDefinition>
     {
     }
+
+    internal class GetClientCertificatesResponse : ResultsResponse<CertificateRawData>
+    {
+    }
 }

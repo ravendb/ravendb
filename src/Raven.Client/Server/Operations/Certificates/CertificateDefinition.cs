@@ -22,4 +22,9 @@ namespace Raven.Client.Server.Operations.Certificates
             };
         }
     }
+
+    public class CertificateRawData
+    {
+        public byte[] RawData;
+    }
 }
