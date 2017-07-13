@@ -17,6 +17,7 @@ import disableOngoingTaskConfirm = require("viewmodels/database/tasks/disableOng
 import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
 import deleteOngoingTaskCommand = require("commands/database/tasks/deleteOngoingTaskCommand");
 import toggleOngoingTaskCommand = require("commands/database/tasks/toggleOngoingTaskCommand");
+import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 
 type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "Backup" | "Subscription";
 
@@ -42,7 +43,7 @@ class ongoingTasks extends viewModelBase {
     
     constructor() {
         super();
-        this.bindToCurrentInstance("confirmRemoveOngoingTask", "confirmEnableOngoingTask", "confirmDisableOngoingTask");
+        this.bindToCurrentInstance("confirmRemoveOngoingTask", "confirmEnableOngoingTask", "confirmDisableOngoingTask", "refreshOngoingTaskInfo");
 
         this.initObservables();
     }
@@ -180,8 +181,16 @@ class ongoingTasks extends viewModelBase {
     }
 
     refreshOngoingTaskInfo(model: ongoingTaskModel) {
-        alert("TBD - Refresh task info...");
-        // TODO...
+        new ongoingTaskInfoCommand(this.activeDatabase(), "Subscription", model.taskId, model.taskName())
+            .execute()
+            .done((result: Raven.Client.Documents.Subscriptions.SubscriptionState) => {
+                let subscriptionItem = _.find(this.subscriptionTasks(), x => x.taskName() === result.SubscriptionName);
+
+                subscriptionItem.collection(result.Criteria.Collection); 
+                subscriptionItem.timeOfLastClientActivity(result.TimeOfLastClientActivity); 
+                subscriptionItem.taskState(result.Disabled ? 'Disabled' : 'Enabled'); 
+                // TODO: should 'responsibleNode' be added to subscriptionState class ? Or should we put one refersh button for all tasks and then it won't be needed - to be discussed
+            });
     }
 
     disconnectClientFromSubscription(model: ongoingTaskModel) {
