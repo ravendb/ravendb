@@ -859,7 +859,7 @@ If you really want to do in memory filtering on the data returned from the query
 
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
-            WhereTokens.AddLast(WhereToken.In(fieldName, AddQueryParameter(fieldName, TransformEnumerable(fieldName, UnpackEnumerable(values)))));
+            WhereTokens.AddLast(WhereToken.In(fieldName, AddQueryParameter(fieldName, TransformEnumerable(fieldName, UnpackEnumerable(values)).ToArray())));
         }
 
         /// <summary>
@@ -1421,7 +1421,7 @@ If you really want to do in memory filtering on the data returned from the query
 
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
-            WhereTokens.AddLast(WhereToken.ContainsAny(fieldName, AddQueryParameter(fieldName, TransformEnumerable(fieldName, UnpackEnumerable(values)))));
+            WhereTokens.AddLast(WhereToken.ContainsAny(fieldName, AddQueryParameter(fieldName, TransformEnumerable(fieldName, UnpackEnumerable(values)).ToArray())));
         }
 
         public void ContainsAll(string fieldName, IEnumerable<object> values)
@@ -1431,7 +1431,7 @@ If you really want to do in memory filtering on the data returned from the query
 
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
-            WhereTokens.AddLast(WhereToken.ContainsAll(fieldName, AddQueryParameter(fieldName, TransformEnumerable(fieldName, UnpackEnumerable(values)))));
+            WhereTokens.AddLast(WhereToken.ContainsAll(fieldName, AddQueryParameter(fieldName, TransformEnumerable(fieldName, UnpackEnumerable(values)).ToArray())));
         }
 
         public void AddRootType(Type type)
@@ -1764,7 +1764,7 @@ If you really want to do in memory filtering on the data returned from the query
 
             if (type == typeof(string))
             {
-                var valueAsString = RavenQuery.Escape((string)whereParams.Value, whereParams.AllowWildcards && whereParams.IsAnalyzed, whereParams.IsAnalyzed);
+                var valueAsString = (string)whereParams.Value;
                 return whereParams.IsAnalyzed ? valueAsString : string.Concat("[[", valueAsString, "]]");
             }
 
@@ -1784,11 +1784,11 @@ If you really want to do in memory filtering on the data returned from the query
                 return whereParams.Value;
 
             if (whereParams.Value is ValueType)
-                return RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture), whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
+                return Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture);
 
             var result = GetImplicitStringConversion(whereParams.Value.GetType());
             if (result != null)
-                return RavenQuery.Escape(result(whereParams.Value), whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
+                return result(whereParams.Value);
 
             return whereParams.Value;
 

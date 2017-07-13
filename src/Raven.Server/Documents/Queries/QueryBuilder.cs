@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using Lucene.Net.Analysis;
@@ -14,8 +15,8 @@ namespace Raven.Server.Documents.Queries
 {
     public static class QueryBuilder
     {
-        private static TermLuceneASTNode WildCardTerm = new TermLuceneASTNode() { Term = "*", Type = TermLuceneASTNode.TermType.WildCardTerm };
-        private static TermLuceneASTNode NullTerm = new TermLuceneASTNode() { Term = "NULL", Type = TermLuceneASTNode.TermType.Null };
+        private static readonly TermLuceneASTNode WildCardTerm = new TermLuceneASTNode() { Term = "*", Type = TermLuceneASTNode.TermType.WildCardTerm };
+        private static readonly TermLuceneASTNode NullTerm = new TermLuceneASTNode() { Term = "NULL", Type = TermLuceneASTNode.TermType.Null };
 
         public static bool UseLuceneASTParser { get; set; } = true;
 
@@ -112,8 +113,6 @@ namespace Raven.Server.Documents.Queries
                                 rangeNode.InclusiveMin = true;
                                 rangeNode.RangeMin = CreateTermNode(value, valueType);
                                 break;
-                            default:
-                                break;
                         }
 
                         return new FieldLuceneASTNode()
@@ -142,18 +141,27 @@ namespace Raven.Server.Documents.Queries
                             }
                         };
                     }
-                //case OperatorType.In:
-                //    writer.WritePropertyName("Field");
-                //    WriteValue(query, writer, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
-                //    writer.WritePropertyName("Values");
-                //    writer.WriteStartArray();
-                //    foreach (var value in Values)
-                //    {
-                //        WriteValue(query, writer, value.TokenStart, value.TokenLength, value.EscapeChars,
-                //            value.Type == ValueTokenType.Double || value.Type == ValueTokenType.Long);
-                //    }
-                //    writer.WriteEndArray();
-                //break;
+                case OperatorType.In:
+                {
+                    var fieldName = QueryExpression.Extract(query, expression.Field);
+
+                    var (values, valuesType) = whereFields.MultipleValuesFields[fieldName];
+
+                    var luceneFieldName = GetLuceneField(fieldName, valuesType).LuceneFieldName;
+
+                    var matches = new List<TermLuceneASTNode>(values.Count);
+
+                    for (int i = 0; i < values.Count; i++)
+                    {
+                        matches.Add(CreateTermNode(values[i], valuesType));
+                    }
+
+                    return new MethodLuceneASTNode($"@in<{luceneFieldName}>", matches)
+                    {
+                        FieldName = luceneFieldName,
+                        MethodName = "in"
+                    };
+                }
                 case OperatorType.And:
                     return new OperatorLuceneASTNode(ToLuceneNode(query, expression.Left, whereFields), ToLuceneNode(query, expression.Right, whereFields), OperatorLuceneASTNode.Operator.AND,
                         true);

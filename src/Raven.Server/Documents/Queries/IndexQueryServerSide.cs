@@ -373,18 +373,13 @@ namespace Raven.Server.Documents.Queries
                         // TODO arek - can queries have some values parametrized while not all of them?
                         yield return (expression.Field, expression.First.Type, null, new List<ValueToken>(2) { expression.First, expression.Second });
                         yield break;
-                    //case OperatorType.In:
-                    //case OperatorType.Method:
-                    //case OperatorType.And:
-                    //case OperatorType.AndNot:
-                    //case OperatorType.Or:
-                    //case OperatorType.OrNot:
-                    //case OperatorType.Field:
+                    case OperatorType.In:
+                        // TODO arek - expression.Values[0].Type
+                        yield return (expression.Field, expression.Values[0].Type, null, expression.Values);
+                        yield break;
                     default:
-                        break;
+                        throw new ArgumentException(expression.Type.ToString());
                 }
-
-                yield break;
             }
 
             foreach (var field in GetFieldValueTokens(expression.Left))
