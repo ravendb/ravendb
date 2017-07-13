@@ -81,10 +81,10 @@ namespace Raven.Server.Documents.Queries.Faceted
                         result.CutoffEtag = (long?)propertyDetails.Value;
                         break;
                     case nameof(PageSize):
-                        result.PageSize = (int)propertyDetails.Value;
+                        result.PageSize = (int)(long)propertyDetails.Value;
                         break;
                     case nameof(Start):
-                        result.Start = (int)propertyDetails.Value;
+                        result.Start = (int)(long)propertyDetails.Value;
                         break;
                     case nameof(WaitForNonStaleResultsTimeout):
                         if (propertyDetails.Value != null)

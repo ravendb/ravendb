@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Queries.MoreLikeThis;
@@ -24,31 +25,31 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
                 {
                     case nameof(MinimumWordLength):
                         if (propertyDetails.Value != null)
-                            result.MinimumWordLength = (int)propertyDetails.Value;
+                            result.MinimumWordLength = (int)(long)propertyDetails.Value;
                         break;
                     case nameof(MinimumTermFrequency):
                         if (propertyDetails.Value != null)
-                            result.MinimumTermFrequency = (int)propertyDetails.Value;
+                            result.MinimumTermFrequency = (int)(long)propertyDetails.Value;
                         break;
                     case nameof(MinimumDocumentFrequency):
                         if (propertyDetails.Value != null)
-                            result.MinimumDocumentFrequency = (int)propertyDetails.Value;
+                            result.MinimumDocumentFrequency = (int)(long)propertyDetails.Value;
                         break;
                     case nameof(MaximumDocumentFrequency):
                         if (propertyDetails.Value != null)
-                            result.MaximumDocumentFrequency = (int)propertyDetails.Value;
+                            result.MaximumDocumentFrequency = (int)(long)propertyDetails.Value;
                         break;
                     case nameof(MaximumQueryTerms):
                         if (propertyDetails.Value != null)
-                            result.MaximumQueryTerms = (int)propertyDetails.Value;
+                            result.MaximumQueryTerms = (int)(long)propertyDetails.Value;
                         break;
                     case nameof(MaximumNumberOfTokensParsed):
                         if (propertyDetails.Value != null)
-                            result.MaximumNumberOfTokensParsed = (int)propertyDetails.Value;
+                            result.MaximumNumberOfTokensParsed = (int)(long)propertyDetails.Value;
                         break;
                     case nameof(MaximumDocumentFrequencyPercentage):
                         if (propertyDetails.Value != null)
-                            result.MaximumDocumentFrequencyPercentage = (int)propertyDetails.Value;
+                            result.MaximumDocumentFrequencyPercentage = (int)(long)propertyDetails.Value;
                         break;
                     case nameof(StopWordsDocumentId):
                             result.StopWordsDocumentId = propertyDetails.Value?.ToString();
@@ -60,7 +61,7 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
                         result.DocumentId = propertyDetails.Value?.ToString();
                         break;
                     case nameof(PageSize):
-                        result.PageSize = (int)propertyDetails.Value;
+                        result.PageSize = (int)(long)propertyDetails.Value;
                         break;
                     case nameof(Transformer):
                         result.Transformer = propertyDetails.Value?.ToString();
@@ -74,7 +75,7 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
                         break;
                     case nameof(BoostFactor):
                         if (propertyDetails.Value != null)
-                            result.BoostFactor = (float)propertyDetails.Value;
+                            result.BoostFactor = ((LazyNumberValue)propertyDetails.Value).ToSingle(CultureInfo.InvariantCulture);
                         break;
                     case nameof(Includes):
                         var includesArray = propertyDetails.Value as BlittableJsonReaderArray;
