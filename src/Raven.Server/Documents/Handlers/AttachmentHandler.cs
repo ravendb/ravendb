@@ -14,6 +14,7 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -83,10 +84,10 @@ namespace Raven.Server.Documents.Handlers
                         Enum.TryParse(typeString, out type) == false)
                         throw new ArgumentException("The 'Type' field in the body request is mandatory");
 
-                    if (request.TryGet("ChangeVector", out BlittableJsonReaderArray changeVectorArray) == false)
+                    if (request.TryGet("ChangeVector", out string changeVectorString) == false)
                         throw new ArgumentException("The 'ChangeVector' field in the body request is mandatory");
 
-                    changeVector = changeVectorArray.ToVector();
+                    changeVector = changeVectorString.ToChangeVector();
                 }
 
                 var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, type, changeVector);

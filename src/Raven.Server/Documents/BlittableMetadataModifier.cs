@@ -597,7 +597,7 @@ namespace Raven.Server.Documents
                         return false;
 
                     if (state.CurrentTokenType != JsonParserToken.String)
-                        ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.Id, state);
+                        ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.ChangeVector, state);
                     ChangeVector = CreateLazyStringValueFromParserState(state);
 
                     break;
@@ -628,11 +628,6 @@ namespace Raven.Server.Documents
         private static void ThrowInvalidReplicationHistoryType(JsonParserState state)
         {
             throw new InvalidDataException($"Expected property @metadata.Raven-Replication-History to have array type, but was: {state.CurrentTokenType}");
-        }
-
-        private static void ThrowInvalidChangeVectorType(JsonParserState state)
-        {
-            throw new InvalidDataException($"Expected property @metadata.@change-vector to have array type, but was: {state.CurrentTokenType}");
         }
 
         public void Dispose()
