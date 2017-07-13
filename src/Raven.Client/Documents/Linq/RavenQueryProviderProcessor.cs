@@ -1056,7 +1056,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         if (expression.Arguments.Count == 1 && expression.Arguments[0].Type == typeof(string))
                         {
                             _documentQuery.OpenSubclause();
-                            //_documentQuery.Where("*:*");
+                            _documentQuery.WhereTrue();
                             _documentQuery.AndAlso();
                             _documentQuery.NegateNext();
                             VisitIsNullOrEmpty(expression);

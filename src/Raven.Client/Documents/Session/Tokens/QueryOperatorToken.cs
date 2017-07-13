@@ -26,10 +26,5 @@ namespace Raven.Client.Documents.Session.Tokens
 
             writer.Append("OR");
         }
-
-        public override QueryToken Clone()
-        {
-            return this;
-        }
     }
 }

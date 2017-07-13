@@ -35,10 +35,5 @@ namespace Raven.Client.Documents.Session.Tokens
                 .Append(" as ")
                 .Append(_projectedName);
         }
-
-        public override QueryToken Clone()
-        {
-            return this;
-        }
     }
 }

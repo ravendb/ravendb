@@ -14,10 +14,5 @@ namespace Raven.Client.Documents.Session.Tokens
         {
             writer.Append("INTERSECT");
         }
-
-        public override QueryToken Clone()
-        {
-            return this;
-        }
     }
 }

@@ -50,10 +50,5 @@ namespace Raven.Client.Documents.Session.Tokens
                 .Append(IndexName)
                 .Append("'");
         }
-
-        public override QueryToken Clone()
-        {
-            return this;
-        }
     }
 }

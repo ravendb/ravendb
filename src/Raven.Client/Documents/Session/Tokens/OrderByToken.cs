@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using Raven.Client.Documents.Queries;
 
 namespace Raven.Client.Documents.Session.Tokens
 {
@@ -34,11 +33,6 @@ namespace Raven.Client.Documents.Session.Tokens
                 writer.Append($" AS {_ordering.ToString().ToLowerInvariant()}");
 
             writer.Append(_descending ? " DESC" : " ASC");
-        }
-
-        public override QueryToken Clone()
-        {
-            return this;
         }
     }
 }

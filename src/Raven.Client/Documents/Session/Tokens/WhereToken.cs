@@ -5,9 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Diagnostics;
 using System.Text;
-using Raven.Client.Documents.Queries;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Session.Tokens
@@ -179,20 +177,24 @@ namespace Raven.Client.Documents.Session.Tokens
             if (Proximity.HasValue)
                 writer.Append("proximity(");
 
-            if (WhereOperator == WhereOperator.Search)
-                writer.Append("search(");
-
-            if (WhereOperator == WhereOperator.Lucene)
-                writer.Append("lucene(");
-
-            if (WhereOperator == WhereOperator.StartsWith)
-                writer.Append("startsWith(");
-
-            if (WhereOperator == WhereOperator.EndsWith)
-                writer.Append("endsWith(");
-
-            if (WhereOperator == WhereOperator.Exists)
-                writer.Append("exists(");
+            switch (WhereOperator)
+            {
+                case WhereOperator.Search:
+                    writer.Append("search(");
+                    break;
+                case WhereOperator.Lucene:
+                    writer.Append("lucene(");
+                    break;
+                case WhereOperator.StartsWith:
+                    writer.Append("startsWith(");
+                    break;
+                case WhereOperator.EndsWith:
+                    writer.Append("endsWith(");
+                    break;
+                case WhereOperator.Exists:
+                    writer.Append("exists(");
+                    break;
+            }
 
             writer.Append(FieldName);
 
@@ -278,21 +280,6 @@ namespace Raven.Client.Documents.Session.Tokens
                     .Append(Boost.Value.ToInvariantString())
                     .Append(")");
             }
-        }
-
-        public override QueryToken Clone()
-        {
-            return new WhereToken
-            {
-                ParameterName = ParameterName,
-                FieldName = FieldName,
-                Boost = Boost,
-                Proximity = Proximity,
-                WhereOperator = WhereOperator,
-                Fuzzy = Fuzzy,
-                FromParameterName = FromParameterName,
-                ToParameterName = ToParameterName
-            };
         }
     }
 }

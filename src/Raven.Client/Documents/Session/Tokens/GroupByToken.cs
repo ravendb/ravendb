@@ -22,10 +22,5 @@ namespace Raven.Client.Documents.Session.Tokens
             writer
                 .Append(RavenQuery.EscapeField(_fieldName));
         }
-
-        public override QueryToken Clone()
-        {
-            return this;
-        }
     }
 }

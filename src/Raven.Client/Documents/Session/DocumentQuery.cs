@@ -1124,9 +1124,9 @@ namespace Raven.Client.Documents.Session
                 IsMapReduce)
             {
                 PageSize = PageSize,
-                WhereTokens = new LinkedList<QueryToken>(WhereTokens.Select(x => x.Clone())),
-                OrderByTokens = new LinkedList<QueryToken>(OrderByTokens.Select(x => x.Clone())),
-                GroupByTokens = new LinkedList<QueryToken>(GroupByTokens.Select(x => x.Clone())),
+                WhereTokens = WhereTokens,
+                OrderByTokens = OrderByTokens,
+                GroupByTokens = GroupByTokens,
                 QueryParameters = QueryParameters,
                 Start = Start,
                 Timeout = Timeout,
@@ -1174,7 +1174,7 @@ namespace Raven.Client.Documents.Session
                     continue;
                 }
 
-                query.SelectTokens.AddLast(token.Clone());
+                query.SelectTokens.AddLast(token);
             }
 
             query.AfterQueryExecuted(AfterQueryExecutedCallback);
