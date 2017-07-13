@@ -211,7 +211,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     {
                         // This is not a failure, we are just ahead of when we expected to. 
                         if (EtagUtil.IsGreaterThan(docEtag, untilEtag))
+                        {
+                            lastDocEtag = untilEtag;
                             break;
+                        }     
                     }
 
                     var key = GetKeyFromCurrent(iterator);

@@ -375,6 +375,12 @@ namespace Raven.Database.Prefetching
                         if (log.IsDebugEnabled)
                             log.Debug("Didn't load any documents from previous batches. Loading documents directly from disk.");
 
+                        if (firstEtagInQueue != null && nextEtagToIndex.CompareTo(firstEtagInQueue) > 0)
+                        {
+                            // next etag to index isn't in the queue and bigger than the first etag in queue
+                            firstEtagInQueue = null;
+                        }
+
                         //if there has been no results, AND no future batch that we can wait for, then we just load directly from disk
                         LoadDocumentsFromDisk(etag, firstEtagInQueue); // here we _intentionally_ use the current etag, not the next one
                     }
