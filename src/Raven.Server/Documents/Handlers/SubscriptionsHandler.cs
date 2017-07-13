@@ -10,20 +10,15 @@ using Sparrow.Json;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Conventions;
 using System.Linq;
-using Raven.Client;
 using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.Web.Studio;
 
 namespace Raven.Server.Documents.Handlers
 {
     public class SubscriptionsHandler : DatabaseRequestHandler
     {
-        [ThreadStatic]
-        private static BlittableJsonReaderObject.PropertiesInsertionBuffer _buffers;
-
         [RavenAction("/databases/*/subscriptions/try", "POST", "/databases/{databaseName:string}/subscriptions/try")]
         public async Task Try()
         {
@@ -63,14 +58,10 @@ namespace Raven.Server.Documents.Handlers
                     writer.WritePropertyName("Results");
                     writer.WriteStartArray();
 
-                    var columns = new HashSet<LazyStringValue>();
                     using (context.OpenReadTransaction())
                     {
                         var first = true;
 
-                        if (_buffers == null)
-                            _buffers = new BlittableJsonReaderObject.PropertiesInsertionBuffer();
-                       
                         foreach (var itemDetails in fetcher.GetDataToSend(context, state, patch, 0))
                         {
                             if (first == false)
@@ -79,8 +70,6 @@ namespace Raven.Server.Documents.Handlers
                             if (itemDetails.Exception == null)
                             {
                                 writer.WriteDocument(context, itemDetails.Doc);
-                                
-                                StudioCollectionsHandler.FetchColumnNames(itemDetails.Doc.Data, columns, _buffers);
                             }
                             else
                             {
@@ -97,15 +86,9 @@ namespace Raven.Server.Documents.Handlers
 
                             first = false;
                         }
-
-                        StudioCollectionsHandler.RemoveMetadata(context, columns);
                     }
 
                     writer.WriteEndArray();
-
-                    writer.WriteComma();
-                    writer.WriteArray("AvailableColumns", columns);
-
                     writer.WriteEndObject();
                 }
             }

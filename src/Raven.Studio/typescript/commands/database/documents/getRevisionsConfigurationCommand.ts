@@ -19,6 +19,7 @@ class getVersioningCommand extends commandBase {
                     deferred.resolve(null);
                 } else {
                     deferred.reject(xhr);
+                    this.reportError("Failed to get revisions information", xhr.responseText, xhr.statusText);
                 }
                 
             });

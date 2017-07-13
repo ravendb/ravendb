@@ -28,10 +28,6 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
         this.editViewUpdate(dto);
         this.editViewInitializeObservables(); 
         this.editViewInitValidation();
-
-        if (this.collection()) {
-            this.getCollectionRevisionsSettings();
-        }
     }
 
     editViewInitializeObservables() {
@@ -73,7 +69,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
             required: true,
             validation: [
                 {
-                    validator: (val: string) => { return _.find(this.collections(), (x) => { return x.name === val; }); },
+                    validator: (val: string) => _.find(this.collections(), x => x.name === val),
                     message: "Collection doesn't exist"
                 }
             ]
@@ -82,7 +78,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
         this.includeRevisions.extend({
             validation: [
                 {
-                    validator: (val: boolean) => !(this.includeRevisions() && !this.areRevisionsDefinedForCollection()),
+                    validator: (val: boolean) => !this.includeRevisions() || this.areRevisionsDefinedForCollection(),
                     message: "Revisions are not set for this collection"
                 }]
         });
@@ -94,36 +90,31 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
     }
 
     // Get the collections that have 'Revisons' set for them
-    private getCollectionRevisionsSettings() {
-        let revisionIsSet: boolean = false;
-
-        let deferred = $.Deferred();
-        new getRevisionsConfigurationCommand(this.activeDatabase())
+    getCollectionRevisionsSettings() {
+        return new getRevisionsConfigurationCommand(this.activeDatabase())
             .execute()
             .done((revisionsConfig: Raven.Client.Server.Versioning.VersioningConfiguration) => {
                 if (revisionsConfig) {
+                    let revisionIsSet: boolean = false;
 
                     // 1. Check for Default configuration
                     if (revisionsConfig.Default && revisionsConfig.Default.Active) {
                         revisionIsSet = true;
-                    } else {
-                        // 2. Check for specific collections configuration
-                        for (var key in revisionsConfig.Collections) {
-                            if (revisionsConfig.Collections.hasOwnProperty(key)) {
-                                if (key === this.collection() && revisionsConfig.Collections[key].Active) {
-                                    revisionIsSet = true;
-                                }
-                            }
-                        };
                     }
-                }
-            })
-           .always(() => {
-               deferred.resolve();
-               this.areRevisionsDefinedForCollection(revisionIsSet);
-            });
 
-        return deferred;
+                    // 2. Check for specific collections configuration
+                    for (var key in revisionsConfig.Collections) {
+                        if (revisionsConfig.Collections.hasOwnProperty(key)) {
+                            if (key === this.collection()) {
+                                revisionIsSet = revisionsConfig.Collections[key].Active;
+                                break;
+                            }
+                        }
+                    };
+
+                    this.areRevisionsDefinedForCollection(revisionIsSet);
+                }
+            });
     }
 
     static empty(): ongoingTaskSubscriptionEditModel {
