@@ -8,7 +8,7 @@ class queryCriteria {
     useAndOperator = ko.observable<boolean>(false);
     showFields = ko.observable<boolean>(false);
     indexEntries = ko.observable<boolean>(false);
-    queryText = ko.observable<string>("");
+    queryText = ko.observable<string>("FROM @all_docs");
     transformer = ko.observable<string>();
     transformerParameters = ko.observableArray<transformerParamDto>();
     sorts = ko.observableArray<querySort>([]);
@@ -106,7 +106,7 @@ class queryCriteria {
     }
 
     setSelectedIndex(indexName: string) {
-        this.queryText("");
+        this.queryText("FROM @all_docs");
         this.selectedIndex(indexName);
         this.transformer(null);
         this.transformerParameters([]);

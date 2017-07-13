@@ -18,7 +18,7 @@ class queryIndexCommand extends commandBase {
 
     getUrl() {
         const criteria = this.criteria;
-        const url = endpoints.databases.queries.queries$ + criteria.selectedIndex();
+        const url = endpoints.databases.queries.queries;
         const resultsTransformerUrlFragment = criteria.getTransformerQueryUrlPart();
 
         const urlArgs = this.urlEncodeArgs({

@@ -76,9 +76,28 @@ namespace Raven.Server.Documents.Queries.Parser
             return result;
         }
 
-        public bool Identifier(bool skipWhitspace = true)
+        public bool FromIdentifier(bool skipWhitespace = true)
         {
-            if (SkipWhitespace(skipWhitspace) == false)
+            if (SkipWhitespace(skipWhitespace) == false)
+                return false;
+
+            if (TryPeek('@', skipWhitespace: false) == false)
+                return Identifier(skipWhitespace: false);
+
+            var pos = _pos;
+            _pos++;
+
+            if (Identifier(skipWhitespace: false) == false)
+                return false;
+
+            TokenStart = pos;
+            TokenLength += 1;
+            return true;
+        }
+
+        public bool Identifier(bool skipWhitespace = true)
+        {
+            if (SkipWhitespace(skipWhitespace) == false)
                 return false;
             if (char.IsLetter(_q[_pos]) == false)
                 return false;
@@ -130,7 +149,6 @@ namespace Raven.Server.Documents.Queries.Parser
             if (SkipWhitespace(skipWhitespace) == false)
                 return false;
 
-
             if (_q[_pos] != match)
                 return false;
             _pos++;
@@ -142,7 +160,6 @@ namespace Raven.Server.Documents.Queries.Parser
         {
             if (SkipWhitespace(skipWhitespace) == false)
                 return false;
-
 
             return _q[_pos] == match;
         }

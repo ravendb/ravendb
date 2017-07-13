@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Queries.Parser
             bool index = false;
             if (Scanner.TryScan('(')) // FROM ( Collection, filter )
             {
-                if (!Scanner.Identifier() && !Scanner.String())
+                if (!Scanner.FromIdentifier() && !Scanner.String())
                     ThrowParseException("Expected FROM source");
 
                 field = new FieldToken
@@ -193,7 +193,7 @@ namespace Raven.Server.Documents.Queries.Parser
             }
             else
             {
-                if (!Scanner.Identifier() && !Scanner.String())
+                if (!Scanner.FromIdentifier() && !Scanner.String())
                     ThrowParseException("Expected FROM source");
                 
                 field = new FieldToken

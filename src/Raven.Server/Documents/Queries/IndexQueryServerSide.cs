@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Queries
 
         public static IndexQueryServerSide Create(BlittableJsonReaderObject json)
         {
-            if (json.TryGet(nameof(Query), out string query) == false || string.IsNullOrEmpty(query))
+            if (json.TryGet(nameof(Query), out string query) == false || string.IsNullOrWhiteSpace(query))
                 throw new InvalidOperationException($"Index query does not contain '{nameof(Query)}' field.");
 
             var result = new IndexQueryServerSide(query);
@@ -120,7 +120,10 @@ namespace Raven.Server.Documents.Queries
 
         public static IndexQueryServerSide Create(HttpContext httpContext, int start, int pageSize, JsonOperationContext context)
         {
-            var result = new IndexQueryServerSide
+            if (httpContext.Request.Query.TryGetValue("query", out var query) == false || query.Count == 0 || string.IsNullOrWhiteSpace(query[0]))
+                throw new InvalidOperationException("Missing mandatory query string parameter 'query'.");
+
+            var result = new IndexQueryServerSide(EscapingHelper.UnescapeLongDataString(query[0]))
             {
                 // all defaults which need to have custom value
                 Start = start,
@@ -136,13 +139,7 @@ namespace Raven.Server.Documents.Queries
                     switch (item.Key)
                     {
                         case "query":
-                            result.Query = EscapingHelper.UnescapeLongDataString(item.Value[0]);
-
-                            var qp = new QueryParser();
-                            qp.Init(result.Query);
-
-                            result.Parsed = qp.Parse();
-                            break;
+                            continue;
                         case RequestHandler.StartParameter:
                         case RequestHandler.PageSizeParameter:
                             break;
@@ -211,11 +208,6 @@ namespace Raven.Server.Documents.Queries
 
             if (transformerParameters != null)
                 result.TransformerParameters = context.ReadObject(transformerParameters, "transformer/parameters");
-
-            if (result.Query == null)
-            {
-                result.Query = string.Empty;
-            }
 
             return result;
         }
