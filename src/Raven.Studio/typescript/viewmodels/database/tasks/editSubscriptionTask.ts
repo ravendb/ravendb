@@ -45,7 +45,7 @@ class editSubscriptionTask extends viewModelBase {
 
     activate(args: any) { 
         super.activate(args);
-        var deferred = $.Deferred();
+        const deferred = $.Deferred<void>();
 
         if (args.taskId) { 
 
@@ -56,7 +56,13 @@ class editSubscriptionTask extends viewModelBase {
                 .execute()
                 .done((result: Raven.Client.Documents.Subscriptions.SubscriptionState) => {
                     this.editedSubscription(new ongoingTaskSubscriptionEdit(result));
-                    deferred.resolve();
+
+                    if (this.editedSubscription().collection()) {
+                        this.editedSubscription().getCollectionRevisionsSettings()
+                            .done(() => deferred.resolve());
+                    } else {
+                        deferred.resolve();
+                    }
                 })
                 .fail(() => router.navigate(appUrl.forOngoingTasks(this.activeDatabase())));
         }
@@ -85,11 +91,11 @@ class editSubscriptionTask extends viewModelBase {
             return this.dirtyFlag().isDirty();
         });   
 
-        this.canOpenTestArea = ko.computed(() => {
+        this.canOpenTestArea = ko.pureComputed(() => {
             return this.isValid(this.editedSubscription().validationGroup);
         });
 
-        this.canRunTest = ko.computed(() => {
+        this.canRunTest = ko.pureComputed(() => {
                 return this.isValid(this.editedSubscription().validationGroup) && this.testResultsLimit() >= 1;
         });
     }
@@ -106,7 +112,7 @@ class editSubscriptionTask extends viewModelBase {
             "   Customer: {\r\n" +
             "        Name: customer.Name,\r\n" +
             "        Email: customer.Email\r\n" +
-            "});",
+            "};",
             (Prism.languages as any).javascript);
             
          $("#scriptInfo").popover({
@@ -220,7 +226,7 @@ class editSubscriptionTask extends viewModelBase {
         const dtoDataFromUI = this.editedSubscription().dataFromUI();
         const resultsLimit = this.testResultsLimit() ? this.testResultsLimit() : 1;
 
-        return new testSubscriptionTaskCommand(this.activeDatabase(), dtoDataFromUI, resultsLimit, this.editedSubscription().taskId)
+        return new testSubscriptionTaskCommand(this.activeDatabase(), dtoDataFromUI, resultsLimit)
             .execute();
     }
 

@@ -15,7 +15,7 @@ class editExternalReplicationTask extends viewModelBase {
 
     activate(args: any) { 
         super.activate(args);
-        var deferred = $.Deferred();
+        const deferred = $.Deferred<void>();
 
         if (args.taskId) {
             // 1. Editing an existing task
