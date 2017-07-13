@@ -15,11 +15,15 @@ using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Web.Studio;
 
 namespace Raven.Server.Documents.Handlers
 {
     public class SubscriptionsHandler : DatabaseRequestHandler
     {
+        [ThreadStatic]
+        private static BlittableJsonReaderObject.PropertiesInsertionBuffer _buffers;
+
         [RavenAction("/databases/*/subscriptions/try", "POST", "/databases/{databaseName:string}/subscriptions/try")]
         public async Task Try()
         {
@@ -39,10 +43,10 @@ namespace Raven.Server.Documents.Handlers
                     throw new ArgumentException("Collection must be specified");
 
                 var pageSize = GetIntValueQueryString("pageSize", required: true) ?? 1;
-                var etag = GetLongQueryString("etag", required: false) ?? 0;
 
                 var fetcher = new SubscriptionDocumentsFetcher(Database, pageSize, -0x42, 
                     new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort));
+
                 var state = new SubscriptionState
                 {
                     ChangeVector = tryout.ChangeVector,
@@ -58,12 +62,16 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
                     writer.WriteStartArray();
-                    
+
+                    var columns = new HashSet<LazyStringValue>();
                     using (context.OpenReadTransaction())
                     {
                         var first = true;
-                        
-                        foreach (var itemDetails in fetcher.GetDataToSend(context, state, etag, patch))
+
+                        if (_buffers == null)
+                            _buffers = new BlittableJsonReaderObject.PropertiesInsertionBuffer();
+                       
+                        foreach (var itemDetails in fetcher.GetDataToSend(context, state, patch, 0))
                         {
                             if (first == false)
                                 writer.WriteComma();
@@ -71,6 +79,8 @@ namespace Raven.Server.Documents.Handlers
                             if (itemDetails.Exception == null)
                             {
                                 writer.WriteDocument(context, itemDetails.Doc);
+                                
+                                StudioCollectionsHandler.FetchColumnNames(itemDetails.Doc.Data, columns, _buffers);
                             }
                             else
                             {
@@ -87,9 +97,15 @@ namespace Raven.Server.Documents.Handlers
 
                             first = false;
                         }
+
+                        StudioCollectionsHandler.RemoveMetadata(context, columns);
                     }
-                    
+
                     writer.WriteEndArray();
+
+                    writer.WriteComma();
+                    writer.WriteArray("AvailableColumns", columns);
+
                     writer.WriteEndObject();
                 }
             }

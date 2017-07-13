@@ -378,7 +378,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         using (TcpConnection.ContextPool.AllocateOperationContext(out context))
                         using (var writer = new BlittableJsonTextWriter(context, _buffer))
                         {
-                            foreach (var result in fetcher.GetDataToSend(docsContext, subscription, startEtag, patch))
+                            foreach (var result in fetcher.GetDataToSend(docsContext, subscription, patch, startEtag))
                             {
                                 startEtag = result.Doc.Etag;
                                 lastChangeVector = ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, subscription.ChangeVector);
