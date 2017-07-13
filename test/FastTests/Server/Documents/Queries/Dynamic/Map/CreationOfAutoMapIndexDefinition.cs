@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Queries;
@@ -255,6 +254,21 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             var countField = definition.GetField("Count");
             Assert.Equal(SortOptions.Numeric, countField.Sort);
+        }
+
+        [Fact]
+        public void OrderingSpecifiedUsing_AS_AfterOrderBy()
+        {
+            create_dynamic_mapping("FROM Users WHERE Age > 40 ORDER BY Age AS string");
+
+            var definition = _sut.CreateAutoIndexDefinition();
+
+            Assert.Equal(1, definition.Collections.Count);
+            Assert.Equal("Users", definition.Collections.Single());
+            Assert.True(definition.ContainsField("Age"));
+            Assert.Equal("Auto/Users/ByAge", definition.Name);
+            var nameField = definition.GetField("Age");
+            Assert.Equal(SortOptions.String, nameField.Sort);
         }
 
         private void create_dynamic_mapping(string query)

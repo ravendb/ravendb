@@ -171,27 +171,23 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     if (InvariantCompare.IsPrefix(fieldName, Constants.Documents.Indexing.Fields.AlphaNumericFieldName, CompareOptions.None))
                         fieldName = SortFieldHelper.ExtractName(fieldName);
 
-                    if (sorting.TryGetValue(fieldName, out var _) == false)
+                    if (sorting.TryGetValue(fieldName, out var existingSort) == false)
                     {
-                        SortOptions sortType = SortOptions.String;
-
-                        switch (field.OrderingType)
-                        {
-                            case OrderByFieldType.Implicit:
-                            case OrderByFieldType.String:
-                                sortType = SortOptions.String;
-                                break;
-                            case OrderByFieldType.Long:
-                            case OrderByFieldType.Double:
-                                sortType = SortOptions.Numeric;
-                                break;
-                        }
-
                         sorting[field.Name] = new DynamicSortInfo()
                         {
-                            FieldType = sortType,
+                            FieldType = GetSortType(field.OrderingType),
                             Name = fieldName
                         };
+                    }
+                    else
+                    {
+                        // sorting was set based on the type of variable in WHERE
+
+                        if (field.OrderingType != OrderByFieldType.Implicit)
+                        {
+                            // but ORDER BY ... AS ... was set explicitly
+                            existingSort.FieldType = GetSortType(field.OrderingType);
+                        }
                     }
 
                     fields[field.Name] = new DynamicQueryMappingItem(fieldName, FieldMapReduceOperation.None);
@@ -221,6 +217,21 @@ namespace Raven.Server.Documents.Queries.Dynamic
             result.HighlightedFields = query.HighlightedFields.EmptyIfNull().Select(x => x.Field).ToArray();
 
             return result;
+        }
+
+        private static SortOptions GetSortType(OrderByFieldType ordering)
+        {
+            switch (ordering)
+            {
+                case OrderByFieldType.Implicit:
+                case OrderByFieldType.String:
+                    return SortOptions.String;
+                case OrderByFieldType.Long:
+                case OrderByFieldType.Double:
+                    return SortOptions.Numeric;
+                default:
+                    throw new ArgumentException(ordering.ToString());
+            }
         }
     }
 }
