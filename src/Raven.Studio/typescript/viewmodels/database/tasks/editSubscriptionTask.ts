@@ -224,7 +224,7 @@ class editSubscriptionTask extends viewModelBase {
 
     private fetchTestDocuments(start: number, take: number): JQueryPromise<pagedResult<documentObject>> {
         const dtoDataFromUI = this.editedSubscription().dataFromUI();
-        const resultsLimit = this.testResultsLimit() ? this.testResultsLimit() : 1;
+        const resultsLimit = this.testResultsLimit() || 1;
 
         return new testSubscriptionTaskCommand(this.activeDatabase(), dtoDataFromUI, resultsLimit)
             .execute();
