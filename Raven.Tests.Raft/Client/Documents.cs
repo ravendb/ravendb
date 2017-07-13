@@ -40,6 +40,7 @@ namespace Raven.Tests.Raft.Client
 
         private void CanReadFromMultipleServersInternal(int numberOfNodes, FailoverBehavior failoverBehavior)
         {
+           
             var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.FailoverBehavior = failoverBehavior);
 
             SetupClusterConfiguration(clusterStores);
@@ -79,11 +80,12 @@ namespace Raven.Tests.Raft.Client
                     Enumerable.Range(0, numberOfNodes).ForEach(j => store.DatabaseCommands.Get($"keys/{j}"));
                 }
             }
-
             servers.ForEach(server =>
             {
-                Assert.True(server.Options.RequestManager.NumberOfRequests >= numberOfNodes);
+               Assert.True(server.Options.RequestManager.NumberOfRequests >= numberOfNodes);
             });
+
+            servers.Clear();
         }
 
         [Theory]
