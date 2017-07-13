@@ -651,14 +651,17 @@ namespace Raven.Database.Prefetching
                 var totalSize = 0L;
                 var largestDocSize = 0L;
                 string largestDocKey = null;
+                var numberOfItemsToProcessInSingleBatch = GetNumberOfItemsToProcessInSingleBatch();
+                Etag lastDocumentReadEtag = null;
                 jsonDocs = actions.Documents
                     .GetDocumentsAfter(
                         etag,
-                        GetNumberOfItemsToProcessInSingleBatch(),
+                        numberOfItemsToProcessInSingleBatch,
                         cancellationToken,
                         maxSize,
                         untilEtag,
                         autoTuner.FetchingDocumentsFromDiskTimeout,
+                        lastProcessedDocument: x => lastDocumentReadEtag = x,
                         earlyExit: earlyExit
                     )
                     .Where(x => x != null)
@@ -675,6 +678,11 @@ namespace Raven.Database.Prefetching
                         return doc;
                     })
                     .ToList();
+
+                if (jsonDocs.Count == 0 && lastDocumentReadEtag != null)
+                {
+                    jsonDocs = actions.Documents.GetDocumentsAfter(lastDocumentReadEtag,numberOfItemsToProcessInSingleBatch, cancellationToken).ToList();
+                }
 
                 loadTimes.Enqueue(new DiskFetchPerformanceStats
                 {
