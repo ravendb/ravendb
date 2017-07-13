@@ -2,7 +2,6 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 import document = require("models/database/documents/document");
-import documentsPreviewCommand = require("commands/database/documents/getDocumentsPreviewCommand");
 
 class testSubscriptionTaskCommand extends commandBase {
 
@@ -36,7 +35,7 @@ class testSubscriptionTaskCommand extends commandBase {
             .done((dto: resultsDto<documentDto>) => { 
 
                 const result = {
-                    items: dto.Results.map(x => this.mapToDocument(x)),
+                    items: dto.Results.map(x => new document(x)),
                     totalResultCount: dto.Results.length
                 } as pagedResult<document>;
 
@@ -45,31 +44,6 @@ class testSubscriptionTaskCommand extends commandBase {
             .fail(response => testTask.reject(response));
 
         return testTask;
-    }
-
-    private mapToDocument(docDto: documentDto) {
-        const doc = new document(docDto);
-
-        const metadata = doc.__metadata as any;
-
-        const objectStubs = metadata[documentsPreviewCommand.ObjectStubsKey] as string[];
-        if (objectStubs) {
-            objectStubs.forEach(stub => (doc as any)[stub] = {});
-        }
-
-        const arrayStubs = metadata[documentsPreviewCommand.ArrayStubsKey] as string[];
-        if (arrayStubs) {
-            arrayStubs.forEach(stub => (doc as any)[stub] = []);
-        }
-
-        const trimmedValues = metadata[documentsPreviewCommand.TrimmedValueKey] as string[];
-        if (trimmedValues) {
-            trimmedValues.forEach(trimmedKey => {
-                (doc as any)[trimmedKey] += "...";
-            });
-        }
-
-        return doc;
     }
 }
 

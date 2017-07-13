@@ -44,7 +44,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
         });
 
         this.collection.subscribe(() => { this.getCollectionRevisionsSettings(); });
-        this.includeRevisions.subscribe(() => { if (this.includeRevisions()) { this.getCollectionRevisionsSettings(); } });
+        this.includeRevisions.subscribe(include => { if (include) { this.getCollectionRevisionsSettings(); } });
     }
 
     editViewUpdate(dto: Raven.Client.Documents.Subscriptions.SubscriptionState) {
