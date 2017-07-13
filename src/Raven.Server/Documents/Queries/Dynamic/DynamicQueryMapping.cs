@@ -117,31 +117,40 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 foreach (var field in query.Fields.Where.SingleValueFields)
                 {
-                    var fieldName = field.Key;
+                    AddField(field.Key, field.Value.ValueType);
+                }
 
+                foreach (var field in query.Fields.Where.MultipleValuesFields)
+                {
+                    AddField(field.Key, field.Value.ValueType);
+                }
+
+                void AddField(string fieldName, ValueTokenType valueType)
+                {
                     if (fieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
-                        continue;
+                        return;
 
                     fields[fieldName] = new DynamicQueryMappingItem(fieldName, FieldMapReduceOperation.None);
 
-                    switch (field.Value.ValueType)
+                    switch (valueType)
                     {
                         case ValueTokenType.Double:
                         case ValueTokenType.Long:
+                        {
+                            if (fieldName == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
+                                return;
+
+                            if (InvariantCompare.IsPrefix(fieldName, Constants.Documents.Indexing.Fields.RandomFieldName, CompareOptions.None))
+                                return;
+
+                            sorting[fieldName] = (new DynamicSortInfo()
                             {
-                                if (fieldName == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
-                                    continue;
-
-                                if (InvariantCompare.IsPrefix(fieldName, Constants.Documents.Indexing.Fields.RandomFieldName, CompareOptions.None))
-                                    continue;
-
-                                sorting[fieldName] = (new DynamicSortInfo()
-                                {
-                                    Name = fieldName,
-                                    FieldType = SortOptions.Numeric
-                                });
-                                break;
-                            }
+                                Name = fieldName,
+                                FieldType = SortOptions.Numeric
+                            });
+                            
+                            break;
+                        }
                     }
                 }
             }

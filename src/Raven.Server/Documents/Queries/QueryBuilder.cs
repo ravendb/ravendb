@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Text;
 using Lucene.Net.Analysis;
 using Lucene.Net.QueryParsers;
@@ -69,25 +70,7 @@ namespace Raven.Server.Documents.Queries
                     {
                         var fieldName = QueryExpression.Extract(query, expression.Field);
                         var (value, valueType) = whereFields.SingleValueFields[fieldName];
-
-                        var luceneFieldName = IndexField.ReplaceInvalidCharactersInFieldName(fieldName);
-
-                        FieldName.FieldType fieldType = FieldName.FieldType.String;
-
-                        switch (valueType)
-                        {
-                            case ValueTokenType.String:
-                                fieldType = FieldName.FieldType.String;
-                                break;
-                            case ValueTokenType.Double:
-                                luceneFieldName += Client.Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble;
-                                fieldType = FieldName.FieldType.Double;
-                                break;
-                            case ValueTokenType.Long:
-                                luceneFieldName += Client.Constants.Documents.Indexing.Fields.RangeFieldSuffixLong;
-                                fieldType = FieldName.FieldType.Long;
-                                break;
-                        }
+                        var (luceneFieldName, fieldType) = GetLuceneField(fieldName, valueType);
 
                         if (expression.Type == OperatorType.Equal && fieldType == FieldName.FieldType.String)
                         {
@@ -142,28 +125,10 @@ namespace Raven.Server.Documents.Queries
                 case OperatorType.Between:
                     {
                         var fieldName = QueryExpression.Extract(query, expression.Field);
-
+                        
                         var (values, valuesType) = whereFields.MultipleValuesFields[fieldName];
 
-                        var luceneFieldName = IndexField.ReplaceInvalidCharactersInFieldName(fieldName);
-
-                        FieldName.FieldType fieldType = FieldName.FieldType.String;
-
-                        // TODO arek - duplicated  code
-                        switch (valuesType)
-                        {
-                            case ValueTokenType.String:
-                                fieldType = FieldName.FieldType.String;
-                                break;
-                            case ValueTokenType.Double:
-                                luceneFieldName += Client.Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble;
-                                fieldType = FieldName.FieldType.Double;
-                                break;
-                            case ValueTokenType.Long:
-                                luceneFieldName += Client.Constants.Documents.Indexing.Fields.RangeFieldSuffixLong;
-                                fieldType = FieldName.FieldType.Long;
-                                break;
-                        }
+                        var (luceneFieldName, fieldType) = GetLuceneField(fieldName, valuesType);
 
                         return new FieldLuceneASTNode()
                         {
@@ -228,6 +193,28 @@ namespace Raven.Server.Documents.Queries
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+        }
+
+        private static (string LuceneFieldName, FieldName.FieldType LuceneFieldType) GetLuceneField(string fieldName, ValueTokenType valueType)
+        {
+            fieldName = IndexField.ReplaceInvalidCharactersInFieldName(fieldName);
+
+            switch (valueType)
+            {
+                case ValueTokenType.String:
+                    return (fieldName, FieldName.FieldType.String);
+                case ValueTokenType.Double:
+                    return (fieldName + Client.Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble, FieldName.FieldType.Double); // TODO arek - avoid +
+                case ValueTokenType.Long:
+                    return (fieldName + Client.Constants.Documents.Indexing.Fields.RangeFieldSuffixLong, FieldName.FieldType.Long); // TODO arek - avoid +
+                default:
+                    ThrowUnhandledValueTokenType(valueType);
+                    break;
+            }
+
+            Debug.Assert(false);
+
+            return (null, FieldName.FieldType.String);
         }
 
         private static TermLuceneASTNode CreateTermNode(string value, ValueTokenType valueType)
@@ -373,6 +360,11 @@ namespace Raven.Server.Documents.Queries
             }
 
             return buffer.ToString();
+        }
+
+        private static void ThrowUnhandledValueTokenType(ValueTokenType type)
+        {
+            throw new NotSupportedException($"Unhandled toke type: {type}");
         }
     }
 }

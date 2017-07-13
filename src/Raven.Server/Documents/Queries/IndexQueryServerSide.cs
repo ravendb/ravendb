@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Queries;
@@ -292,7 +293,7 @@ namespace Raven.Server.Documents.Queries
                         if (whereField.Type == ValueTokenType.Parameter)
                         {
                             var values = new List<string>(whereField.Values.Count);
-                            ValueTokenType valuesType = 0;
+                            ValueTokenType? valuesType = null;
 
                             foreach (var item in whereField.Values)
                             {
@@ -300,10 +301,18 @@ namespace Raven.Server.Documents.Queries
 
                                 values.Add(valueTypePair.Value);
 
-                                valuesType = valueTypePair.Type;
+                                if (valuesType == null)
+                                    valuesType = valueTypePair.Type;
+                                else
+                                {
+                                    if (valuesType.Value != valueTypePair.Type && TryHandleIncompatibleTypes(ref valuesType, valueTypePair.Type) == false)
+                                        ThrowIncompatibleTypesInQueryParameters(fieldName, whereField.Values.Select(x => GetParameterValueAndType(x, ref propertyDetails)));
+                                }
                             }
 
-                            result.Where.Add(fieldName, values, valuesType);
+                            Debug.Assert(valuesType != null);
+
+                            result.Where.Add(fieldName, values, valuesType.Value);
                         }
                         else
                         {
@@ -399,6 +408,26 @@ namespace Raven.Server.Documents.Queries
             {
                 yield return field;
             }
+        }
+
+        private static bool TryHandleIncompatibleTypes(ref ValueTokenType? valuesType, ValueTokenType type)
+        {
+            if (valuesType.Value == ValueTokenType.Long && type == ValueTokenType.Double)
+            {
+                valuesType = ValueTokenType.Double;
+                return true;
+            }
+
+            if (valuesType.Value == ValueTokenType.Double && type == ValueTokenType.Long)
+                return true;
+
+            return false;
+        }
+
+        private static void ThrowIncompatibleTypesInQueryParameters(string fieldName, IEnumerable<(string Value, ValueTokenType Type)> parameters)
+        {
+            throw new InvalidOperationException($"Incompatible types of parameters in WHERE clause on '{fieldName}' field: " +
+                                                $"{string.Join(",", parameters.Select(x => $"{x.Value}({x.Type})"))}");
         }
     }
 }
