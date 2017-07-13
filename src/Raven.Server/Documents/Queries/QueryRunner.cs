@@ -15,6 +15,7 @@ using Raven.Client.Util.RateLimiting;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.Documents.Queries.Faceted;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.TransactionCommands;
@@ -81,7 +82,7 @@ namespace Raven.Server.Documents.Queries
             await index.StreamQuery(response, writer, query, _documentsContext, token);
         }
 
-        public Task<FacetedQueryResult> ExecuteFacetedQuery(FacetQuery query, long? facetsEtag, long? existingResultEtag, OperationCancelToken token)
+        public Task<FacetedQueryResult> ExecuteFacetedQuery(FacetQueryServerSide query, long? facetsEtag, long? existingResultEtag, OperationCancelToken token)
         {
             if (query.FacetSetupDoc != null)
             {
@@ -107,12 +108,10 @@ namespace Raven.Server.Documents.Queries
                 query.Facets = facetSetup.Facets;
             }
 
-            throw new NotImplementedException("TODO arek - looks like we need to introduce FacetQueryServerSide");
-
-            // return ExecuteFacetedQuery("TODO arek", query, facetsEtag.Value, existingResultEtag, token);
+            return ExecuteFacetedQuery(query.IndexName, query, facetsEtag.Value, existingResultEtag, token);
         }
 
-        private async Task<FacetedQueryResult> ExecuteFacetedQuery(string indexName, FacetQuery query, long facetsEtag, long? existingResultEtag, OperationCancelToken token)
+        private async Task<FacetedQueryResult> ExecuteFacetedQuery(string indexName, FacetQueryServerSide query, long facetsEtag, long? existingResultEtag, OperationCancelToken token)
         {
             var index = GetIndex(indexName);
             if (existingResultEtag.HasValue)

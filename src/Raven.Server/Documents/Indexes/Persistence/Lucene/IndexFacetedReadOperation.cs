@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _searcher = _currentStateHolder.GetIndexSearcher(_state);
         }
 
-        public Dictionary<string, FacetResult> FacetedQuery(FacetQuery query, JsonOperationContext context, CancellationToken token)
+        public Dictionary<string, FacetResult> FacetedQuery(FacetQueryServerSide query, JsonOperationContext context, CancellationToken token)
         {
             var results = FacetedQueryParser.Parse(query.Facets, out Dictionary<string, Facet> defaultFacets, out Dictionary<string, List<FacetedQueryParser.ParsedRange>> rangeFacets);
 
@@ -194,7 +194,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return results;
         }
 
-        private static unsafe uint CalculateQueryFieldsHash(FacetQuery query, JsonOperationContext context)
+        private static unsafe uint CalculateQueryFieldsHash(FacetQueryServerSide query, JsonOperationContext context)
         {
             uint hash = 0;
 
@@ -209,7 +209,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return hash;
         }
 
-        private void UpdateFacetResults(Dictionary<string, FacetResult> results, FacetQuery query, Dictionary<string, Facet> facets, Dictionary<string, Dictionary<string, FacetValue>> facetsByName)
+        private void UpdateFacetResults(Dictionary<string, FacetResult> results, FacetQueryServerSide query, Dictionary<string, Facet> facets, Dictionary<string, Dictionary<string, FacetValue>> facetsByName)
         {
             foreach (var facet in facets.Values)
             {
@@ -371,7 +371,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         /// <summary>
         /// This method expects both lists to be sorted
         /// </summary>
-        private IntersectDocs GetIntersectedDocuments(ArraySegment<int> a, ArraySegment<int> b, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen, FacetQuery query, uint fieldsHash, bool needToApplyAggregation, JsonOperationContext context)
+        private IntersectDocs GetIntersectedDocuments(ArraySegment<int> a, ArraySegment<int> b, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen, FacetQueryServerSide query, uint fieldsHash, bool needToApplyAggregation, JsonOperationContext context)
         {
             ArraySegment<int> n, m;
             if (a.Count > b.Count)
@@ -445,7 +445,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool IsDistinctValue(int docId, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen, FacetQuery query, uint fieldsHash, JsonOperationContext context)
+        private bool IsDistinctValue(int docId, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen, FacetQueryServerSide query, uint fieldsHash, JsonOperationContext context)
         {
             var fields = _currentStateHolder.GetFieldsValues(docId, fieldsHash, query.FieldsToFetch, context, _state);
             return alreadySeen.Add(fields);

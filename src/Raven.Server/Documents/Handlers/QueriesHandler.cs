@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Handlers
 
                 if (string.Equals(operation, "facets", StringComparison.OrdinalIgnoreCase))
                 {
-                    await FacetedQuery(context, token).ConfigureAwait(false);
+                    await FacetedQuery(context, token, HttpMethod.Post).ConfigureAwait(false);
                     return;
                 }
 
@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Handlers
 
                 if (string.Equals(operation, "facets", StringComparison.OrdinalIgnoreCase))
                 {
-                    await FacetedQuery(context, token).ConfigureAwait(false);
+                    await FacetedQuery(context, token, HttpMethod.Get).ConfigureAwait(false);
                     return;
                 }
 
@@ -99,9 +99,9 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private async Task FacetedQuery(DocumentsOperationContext context, OperationCancelToken token)
+        private async Task FacetedQuery(DocumentsOperationContext context, OperationCancelToken token, HttpMethod method)
         {
-            var query = FacetQuery.Parse(HttpContext.Request.Query, GetStart(), GetPageSize(), DocumentConventions.Default);
+            var query = GetFacetQuery(context, method);
 
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
             long? facetsEtag = null;
@@ -214,6 +214,21 @@ namespace Raven.Server.Documents.Handlers
             // read from cache here
 
             return MoreLikeThisQueryServerSide.Create(indexQueryJson);
+        }
+
+        private FacetQueryServerSide GetFacetQuery(JsonOperationContext context, HttpMethod method)
+        {
+            if (method == HttpMethod.Get)
+            {
+                //FacetQueryServerSide.Parse(HttpContext, GetStart(), GetPageSize(), context);
+                throw new NotImplementedException();
+            }
+
+            var indexQueryJson = context.ReadForMemory(RequestBodyStream(), "facet/query");
+
+            // read from cache here
+
+            return FacetQueryServerSide.Create(indexQueryJson);
         }
 
         private void Suggest(DocumentsOperationContext context, string indexName, OperationCancelToken token)

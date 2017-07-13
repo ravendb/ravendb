@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
@@ -51,31 +50,69 @@ namespace Raven.Server.Documents.Queries
 
             var result = new IndexQueryServerSide(query);
 
-            result.AllowMultipleIndexEntriesForSameDocumentToResultTransformer = json.GetWithoutThrowingOnError<bool>(nameof(result.AllowMultipleIndexEntriesForSameDocumentToResultTransformer));
-            result.CutoffEtag = json.GetWithoutThrowingOnError<long?>(nameof(result.CutoffEtag));
-            result.DisableCaching = json.GetWithoutThrowingOnError<bool>(nameof(result.DisableCaching));
-            result.ExplainScores = json.GetWithoutThrowingOnError<bool>(nameof(result.ExplainScores));
-            result.PageSize = json.GetWithoutThrowingOnError<int>(nameof(result.PageSize));
-            result.Start = json.GetWithoutThrowingOnError<int>(nameof(result.Start));
-            result.ShowTimings = json.GetWithoutThrowingOnError<bool>(nameof(result.ShowTimings));
-            result.SkipDuplicateChecking = json.GetWithoutThrowingOnError<bool>(nameof(result.SkipDuplicateChecking));
-            result.Transformer = json.GetWithoutThrowingOnError<string>(nameof(result.Transformer));
-            result.WaitForNonStaleResultsTimeout = json.GetWithoutThrowingOnError<TimeSpan?>(nameof(result.WaitForNonStaleResultsTimeout));
-            result.WaitForNonStaleResults = json.GetWithoutThrowingOnError<bool>(nameof(result.WaitForNonStaleResults));
-            result.WaitForNonStaleResultsAsOfNow = json.GetWithoutThrowingOnError<bool>(nameof(result.WaitForNonStaleResultsAsOfNow));
-
-            if (json.TryGet(nameof(result.Includes), out BlittableJsonReaderArray includesArray) && includesArray != null && includesArray.Length > 0)
+            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+            foreach (var propertyIndex in json.GetPropertiesByInsertionOrder())
             {
-                result.Includes = new string[includesArray.Length];
-                for (var i = 0; i < includesArray.Length; i++)
-                    result.Includes[i] = includesArray.GetStringByIndex(i);
+                json.GetPropertyByIndex(propertyIndex, ref propertyDetails);
+
+                switch (propertyDetails.Name)
+                {
+                    case nameof(Query):
+                        continue;
+                    case nameof(AllowMultipleIndexEntriesForSameDocumentToResultTransformer):
+                        result.AllowMultipleIndexEntriesForSameDocumentToResultTransformer = (bool)propertyDetails.Value;
+                        break;
+                    case nameof(CutoffEtag):
+                        result.CutoffEtag = (long?)propertyDetails.Value;
+                        break;
+                    case nameof(DisableCaching):
+                        result.DisableCaching = (bool)propertyDetails.Value;
+                        break;
+                    case nameof(ExplainScores):
+                        result.ExplainScores = (bool)propertyDetails.Value;
+                        break;
+                    case nameof(PageSize):
+                        result.PageSize = (int)propertyDetails.Value;
+                        break;
+                    case nameof(Start):
+                        result.Start = (int)propertyDetails.Value;
+                        break;
+                    case nameof(ShowTimings):
+                        result.ShowTimings = (bool)propertyDetails.Value;
+                        break;
+                    case nameof(SkipDuplicateChecking):
+                        result.SkipDuplicateChecking = (bool)propertyDetails.Value;
+                        break;
+                    case nameof(Transformer):
+                        result.Transformer = propertyDetails.Value.ToString();
+                        break;
+                    case nameof(WaitForNonStaleResultsTimeout):
+                        if (propertyDetails.Value != null)
+                            result.WaitForNonStaleResultsTimeout = TimeSpan.Parse(propertyDetails.Value.ToString());
+                        break;
+                    case nameof(WaitForNonStaleResults):
+                        result.WaitForNonStaleResults = (bool)propertyDetails.Value;
+                        break;
+                    case nameof(WaitForNonStaleResultsAsOfNow):
+                        result.WaitForNonStaleResultsAsOfNow = (bool)propertyDetails.Value;
+                        break;
+                    case nameof(Includes):
+                        var includesArray = propertyDetails.Value as BlittableJsonReaderArray;
+                        if (includesArray == null || includesArray.Length == 0)
+                            continue;
+
+                        result.Includes = new string[includesArray.Length];
+                        for (var i = 0; i < includesArray.Length; i++)
+                            result.Includes[i] = includesArray.GetStringByIndex(i);
+                        break;
+                    case nameof(QueryParameters):
+                        result.QueryParameters = (BlittableJsonReaderObject)propertyDetails.Value;
+                        break;
+                    case nameof(TransformerParameters):
+                        result.TransformerParameters = (BlittableJsonReaderObject)propertyDetails.Value;
+                        break;
+                }
             }
-
-            if (json.TryGet(nameof(result.QueryParameters), out BlittableJsonReaderObject qp))
-                result.QueryParameters = qp;
-
-            if (json.TryGet(nameof(result.TransformerParameters), out BlittableJsonReaderObject tp))
-                result.TransformerParameters = tp;
 
             return result;
         }
@@ -272,7 +309,7 @@ namespace Raven.Server.Documents.Queries
                         {
                             throw new NotImplementedException("TODO arek - support non parametrized queries that WHERE clause has multiple fields e.g. WHERE Age BETWEEN 30 AND 35");
                         }
-                        
+
                     }
                 }
             }
