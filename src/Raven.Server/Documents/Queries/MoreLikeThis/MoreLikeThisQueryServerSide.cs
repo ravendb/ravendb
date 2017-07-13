@@ -15,38 +15,90 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
         {
             var result = new MoreLikeThisQueryServerSide();
 
-            result.MinimumWordLength = json.GetWithoutThrowingOnError<int?>(nameof(result.MinimumWordLength));
-            result.MinimumTermFrequency = json.GetWithoutThrowingOnError<int?>(nameof(result.MinimumTermFrequency));
-            result.MinimumDocumentFrequency = json.GetWithoutThrowingOnError<int?>(nameof(result.MinimumDocumentFrequency));
-            result.StopWordsDocumentId = json.GetWithoutThrowingOnError<string>(nameof(result.StopWordsDocumentId));
-            result.MaximumQueryTerms = json.GetWithoutThrowingOnError<int?>(nameof(result.MaximumQueryTerms));
-            result.MaximumNumberOfTokensParsed = json.GetWithoutThrowingOnError<int?>(nameof(result.MaximumNumberOfTokensParsed));
-            result.MaximumDocumentFrequencyPercentage = json.GetWithoutThrowingOnError<int?>(nameof(result.MaximumDocumentFrequencyPercentage));
-            result.PageSize = json.GetWithoutThrowingOnError<int>(nameof(result.PageSize));
-            result.MaximumDocumentFrequency = json.GetWithoutThrowingOnError<int>(nameof(result.MaximumDocumentFrequency));
-            result.IndexName = json.GetWithoutThrowingOnError<string>(nameof(result.IndexName));
-            result.DocumentId = json.GetWithoutThrowingOnError<string>(nameof(result.DocumentId));
-            result.Transformer = json.GetWithoutThrowingOnError<string>(nameof(result.Transformer));
-            result.AdditionalQuery = json.GetWithoutThrowingOnError<string>(nameof(result.Transformer));
-            result.Boost = json.GetWithoutThrowingOnError<bool>(nameof(result.Boost));
-            result.BoostFactor = json.GetWithoutThrowingOnError<float?>(nameof(result.BoostFactor));
-
-            if (json.TryGet(nameof(result.Includes), out BlittableJsonReaderArray includesArray) && includesArray != null && includesArray.Length > 0)
+            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+            foreach (var propertyIndex in json.GetPropertiesByInsertionOrder())
             {
-                result.Includes = new string[includesArray.Length];
-                for (var i = 0; i < includesArray.Length; i++)
-                    result.Includes[i] = includesArray.GetStringByIndex(i);
-            }
+                json.GetPropertyByIndex(propertyIndex, ref propertyDetails);
 
-            if (json.TryGet(nameof(result.Fields), out BlittableJsonReaderArray fieldsArray) && fieldsArray != null && fieldsArray.Length > 0)
-            {
-                result.Fields = new string[fieldsArray.Length];
-                for (var i = 0; i < fieldsArray.Length; i++)
-                    result.Fields[i] = fieldsArray.GetStringByIndex(i);
-            }
+                switch (propertyDetails.Name)
+                {
+                    case nameof(MinimumWordLength):
+                        if (propertyDetails.Value != null)
+                            result.MinimumWordLength = (int)propertyDetails.Value;
+                        break;
+                    case nameof(MinimumTermFrequency):
+                        if (propertyDetails.Value != null)
+                            result.MinimumTermFrequency = (int)propertyDetails.Value;
+                        break;
+                    case nameof(MinimumDocumentFrequency):
+                        if (propertyDetails.Value != null)
+                            result.MinimumDocumentFrequency = (int)propertyDetails.Value;
+                        break;
+                    case nameof(MaximumDocumentFrequency):
+                        if (propertyDetails.Value != null)
+                            result.MaximumDocumentFrequency = (int)propertyDetails.Value;
+                        break;
+                    case nameof(MaximumQueryTerms):
+                        if (propertyDetails.Value != null)
+                            result.MaximumQueryTerms = (int)propertyDetails.Value;
+                        break;
+                    case nameof(MaximumNumberOfTokensParsed):
+                        if (propertyDetails.Value != null)
+                            result.MaximumNumberOfTokensParsed = (int)propertyDetails.Value;
+                        break;
+                    case nameof(MaximumDocumentFrequencyPercentage):
+                        if (propertyDetails.Value != null)
+                            result.MaximumDocumentFrequencyPercentage = (int)propertyDetails.Value;
+                        break;
+                    case nameof(StopWordsDocumentId):
+                            result.StopWordsDocumentId = propertyDetails.Value?.ToString();
+                        break;
+                    case nameof(IndexName):
+                        result.IndexName = propertyDetails.Value?.ToString();
+                        break;
+                    case nameof(DocumentId):
+                        result.DocumentId = propertyDetails.Value?.ToString();
+                        break;
+                    case nameof(PageSize):
+                        result.PageSize = (int)propertyDetails.Value;
+                        break;
+                    case nameof(Transformer):
+                        result.Transformer = propertyDetails.Value?.ToString();
+                        break;
+                    case nameof(AdditionalQuery):
+                        result.AdditionalQuery = propertyDetails.Value?.ToString();
+                        break;
+                    case nameof(Boost):
+                        if (propertyDetails.Value != null)
+                            result.Boost = (bool)propertyDetails.Value;
+                        break;
+                    case nameof(BoostFactor):
+                        if (propertyDetails.Value != null)
+                            result.BoostFactor = (float)propertyDetails.Value;
+                        break;
+                    case nameof(Includes):
+                        var includesArray = propertyDetails.Value as BlittableJsonReaderArray;
+                        if (includesArray == null || includesArray.Length == 0)
+                            continue;
 
-            if (json.TryGet(nameof(result.TransformerParameters), out BlittableJsonReaderObject tp))
-                result.TransformerParameters = tp;
+                        result.Includes = new string[includesArray.Length];
+                        for (var i = 0; i < includesArray.Length; i++)
+                            result.Includes[i] = includesArray.GetStringByIndex(i);
+                        break;
+                    case nameof(Fields):
+                        var fieldsArray = propertyDetails.Value as BlittableJsonReaderArray;
+                        if (fieldsArray == null || fieldsArray.Length == 0)
+                            continue;
+
+                        result.Fields = new string[fieldsArray.Length];
+                        for (var i = 0; i < fieldsArray.Length; i++)
+                            result.Fields[i] = fieldsArray.GetStringByIndex(i);
+                        break;
+                    case nameof(TransformerParameters):
+                        result.TransformerParameters = (BlittableJsonReaderObject)propertyDetails.Value;
+                        break;
+                }
+            }
 
             return result;
         }

@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Queries
                         result.SkipDuplicateChecking = (bool)propertyDetails.Value;
                         break;
                     case nameof(Transformer):
-                        result.Transformer = propertyDetails.Value.ToString();
+                        result.Transformer = propertyDetails.Value?.ToString();
                         break;
                     case nameof(WaitForNonStaleResultsTimeout):
                         if (propertyDetails.Value != null)

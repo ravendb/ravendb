@@ -51,7 +51,7 @@ namespace Sparrow.Json
             _buffer = buffer;
             _mem = mem; // get beginning of memory pointer
             _size = size; // get document size
-            
+
             NoCache = NoCache;
 
             byte offset;
@@ -71,13 +71,13 @@ namespace Sparrow.Json
             _metadataPtr = objStartOffset + mem + propCountOffset;
             // get pointer to current objects property tags metadata collection
 
-            var currentType = (BlittableJsonToken) (*(mem + size - sizeof(byte)));
+            var currentType = (BlittableJsonToken)(*(mem + size - sizeof(byte)));
             // get current type byte flags
 
             // analyze main object type and it's offset and propertyIds flags
             _currentOffsetSize = ProcessTokenOffsetFlags(currentType);
             _currentPropertyIdSize = ProcessTokenPropertyFlags(currentType);
-        }        
+        }
 
         private static void ThrowOnZeroSize(int size)
         {
@@ -90,7 +90,7 @@ namespace Sparrow.Json
         private void SetupPropertiesAccess(byte* mem, int propsOffset)
         {
             _propNames = (mem + propsOffset);
-            var propNamesOffsetFlag = (BlittableJsonToken) (*_propNames);
+            var propNamesOffsetFlag = (BlittableJsonToken)(*_propNames);
             switch (propNamesOffsetFlag)
             {
                 case BlittableJsonToken.OffsetSizeByte:
@@ -109,7 +109,7 @@ namespace Sparrow.Json
         }
 
         public BlittableJsonReaderObject(int pos, BlittableJsonReaderObject parent, BlittableJsonToken type)
-            : base (parent._context)
+            : base(parent._context)
         {
             _parent = parent;
             _mem = parent._mem;
@@ -118,7 +118,7 @@ namespace Sparrow.Json
 
             NoCache = parent.NoCache;
 
-            var propNamesOffsetFlag = (BlittableJsonToken) (*_propNames);
+            var propNamesOffsetFlag = (BlittableJsonToken)(*_propNames);
 
             if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeByte)
                 _propNamesDataOffsetSize = sizeof(byte);
@@ -164,7 +164,7 @@ namespace Sparrow.Json
             }
         }
 
-        public ulong DebugHash => Hashing.XXHash64.Calculate(_mem, (ulong) _size);
+        public ulong DebugHash => Hashing.XXHash64.Calculate(_mem, (ulong)_size);
 
 
         /// <summary>
@@ -197,13 +197,13 @@ namespace Sparrow.Json
 
         private LazyStringValue GetPropertyName(int propertyId)
         {
-            var propertyNameOffsetPtr = _propNames + sizeof(byte) + propertyId*_propNamesDataOffsetSize;
+            var propertyNameOffsetPtr = _propNames + sizeof(byte) + propertyId * _propNamesDataOffsetSize;
             var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
 
             // Get the relative "In Document" position of the property Name
             var propRelativePos = _propNames - propertyNameOffset - _mem;
 
-            var propertyName = ReadStringLazily((int) propRelativePos);
+            var propertyName = ReadStringLazily((int)propRelativePos);
             return propertyName;
         }
 
@@ -216,15 +216,6 @@ namespace Sparrow.Json
                     throw new ArgumentException($"Member named {name} does not exist");
                 return result;
             }
-        }
-
-        public T GetWithoutThrowingOnError<T>(string name)
-        {
-            if (TryGetMember(name, out object resultAsObject) == false)
-                return default(T);
-
-            ConvertType(resultAsObject, out T result);
-            return result;
         }
 
         public bool TryGet<T>(string name, out T obj)
@@ -242,7 +233,7 @@ namespace Sparrow.Json
             {
                 obj = default(T);
                 return false;
-            }   
+            }
         }
 
         public bool TryGet<T>(StringSegment name, out T obj)
@@ -265,7 +256,7 @@ namespace Sparrow.Json
 
         private static void ThrowFormatException(object value, string fromType, string toType, Exception e)
         {
-            throw new FormatException($"Could not convert {fromType} ('{value}') to {toType}",e);
+            throw new FormatException($"Could not convert {fromType} ('{value}') to {toType}", e);
         }
 
         internal static void ConvertType<T>(object result, out T obj)
@@ -325,7 +316,7 @@ namespace Sparrow.Json
                         if (result is LazyStringValue lazyStringValue && lazyStringValue != null)
                         {
                             obj = (T)Convert.ChangeType(lazyStringValue.ToString(), type);
-                        } 
+                        }
                         else if (result is LazyNumberValue lazyNumberValue && lazyNumberValue != null)
                         {
                             obj = (T)Convert.ChangeType(lazyNumberValue, type);
@@ -349,7 +340,7 @@ namespace Sparrow.Json
                 }
                 catch (Exception e)
                 {
-                    ThrowFormatException(result, result.GetType().FullName, type.FullName,e);
+                    ThrowFormatException(result, result.GetType().FullName, type.FullName, e);
                 }
             }
         }
@@ -458,7 +449,7 @@ namespace Sparrow.Json
                 goto ThrowDisposed;
 
             bool opResult = true;
-            
+
             // try get value from cache, works only with Blittable types, other objects are not stored for now
             if (_objectsPathCache != null && _objectsPathCache.TryGetValue(name, out result))
                 goto Return;
@@ -585,7 +576,7 @@ namespace Sparrow.Json
                 mid = max;
 
             do
-            {               
+            {
                 var propertyIntPtr = metadataPtr + (mid) * metadataSize;
 
                 var propertyId = ReadNumber(propertyIntPtr + currentOffsetSize, currentPropertyIdSize);
@@ -645,7 +636,7 @@ namespace Sparrow.Json
 
         public int GetPropertiesByInsertionOrder(PropertiesInsertionBuffer buffers)
         {
-            if(_metadataPtr == null)
+            if (_metadataPtr == null)
                 ThrowObjectDisposed();
 
             if (buffers.Properties == null ||
@@ -755,7 +746,7 @@ namespace Sparrow.Json
 
         public void CopyTo(byte* ptr)
         {
-            if(_parent != null)
+            if (_parent != null)
                 InvalidAttemptToCopyNestedObject();
             Memory.Copy(ptr, _mem, _size);
         }
@@ -1010,7 +1001,7 @@ namespace Sparrow.Json
                 var prop = new PropertyDetails();
                 GetPropertyByIndex(i, ref prop);
                 writer.WritePropertyName(prop.Name);
-                writer.WriteValue(ProcessTokenTypeFlags(prop.Token),prop.Value);
+                writer.WriteValue(ProcessTokenTypeFlags(prop.Token), prop.Value);
             }
         }
 
@@ -1053,7 +1044,7 @@ namespace Sparrow.Json
         {
             throw new InvalidDataException("Number of properties not valid");
         }
-        
+
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj))

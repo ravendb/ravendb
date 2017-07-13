@@ -1,14 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes.IndexMerging;
@@ -102,37 +99,14 @@ namespace Raven.Server.Documents.Handlers
         private async Task FacetedQuery(DocumentsOperationContext context, OperationCancelToken token, HttpMethod method)
         {
             var query = GetFacetQuery(context, method);
+            if (query.FacetQuery.FacetSetupDoc == null && (query.FacetQuery.Facets == null || query.FacetQuery.Facets.Count == 0))
+                throw new InvalidOperationException("One of the required parameters (facetDoc or facets) was not specified.");
 
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
-            long? facetsEtag = null;
-            if (query.FacetSetupDoc == null)
-            {
-                KeyValuePair<List<Facet>, long> facets;
-                if (HttpContext.Request.Method == HttpMethod.Post.Method)
-                {
-                    var input = await context.ReadForMemoryAsync(RequestBodyStream(), "facets");
-                    if (input.TryGet("Facets", out BlittableJsonReaderArray array) == false)
-                        ThrowRequiredPropertyNameInRequest("Facets");
-                    facets = FacetedQueryParser.ParseFromJson(array);
-                }
-                else if (HttpContext.Request.Method == HttpMethod.Get.Method)
-                {
-                    var f = GetStringQueryString("facets");
-                    if (string.IsNullOrWhiteSpace(f))
-                        throw new InvalidOperationException("One of the required parameters (facetDoc or facets) was not specified.");
-
-                    facets = await FacetedQueryParser.ParseFromStringAsync(f, context);
-                }
-                else
-                    throw new NotSupportedException($"Unsupported HTTP method '{HttpContext.Request.Method}' for Faceted Query.");
-
-                facetsEtag = facets.Value;
-                query.Facets = facets.Key;
-            }
 
             var runner = new QueryRunner(Database, context);
 
-            var result = await runner.ExecuteFacetedQuery(query, facetsEtag, existingResultEtag, token);
+            var result = await runner.ExecuteFacetedQuery(query.FacetQuery, query.FacetsEtag, existingResultEtag, token);
 
             if (result.NotModified)
             {
@@ -216,7 +190,7 @@ namespace Raven.Server.Documents.Handlers
             return MoreLikeThisQueryServerSide.Create(indexQueryJson);
         }
 
-        private FacetQueryServerSide GetFacetQuery(JsonOperationContext context, HttpMethod method)
+        private (FacetQueryServerSide FacetQuery, long? FacetsEtag) GetFacetQuery(JsonOperationContext context, HttpMethod method)
         {
             if (method == HttpMethod.Get)
             {

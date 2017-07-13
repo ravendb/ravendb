@@ -178,7 +178,7 @@ namespace Raven.Server.Documents.Queries.Faceted
             }
         }
 
-        public static async Task<KeyValuePair<List<Facet>, long>> ParseFromStringAsync(string facetsArrayAsString, JsonOperationContext context)
+        public static async Task<(List<Facet> Facets, long FacetsEtag)> ParseFromStringAsync(string facetsArrayAsString, JsonOperationContext context)
         {
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(facetsArrayAsString)))
             {
@@ -189,14 +189,14 @@ namespace Raven.Server.Documents.Queries.Faceted
             }
         }
 
-        public static unsafe KeyValuePair<List<Facet>, long> ParseFromJson(BlittableJsonReaderArray array)
+        public static unsafe (List<Facet> Facets, long FacetsEtag) ParseFromJson(BlittableJsonReaderArray array)
         {
             var results = new List<Facet>();
 
             foreach (BlittableJsonReaderObject facetAsJson in array)
                 results.Add(JsonDeserializationServer.Facet(facetAsJson));
 
-            return new KeyValuePair<List<Facet>, long>(results, Hashing.XXHash32.Calculate(array.Parent.BasePointer, array.Parent.Size));
+            return (results, Hashing.XXHash32.Calculate(array.Parent.BasePointer, array.Parent.Size));
         }
     }
 }
