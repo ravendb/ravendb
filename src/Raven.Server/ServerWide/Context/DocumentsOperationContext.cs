@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents;
 using Sparrow.LowMemory;
@@ -13,6 +14,18 @@ namespace Raven.Server.ServerWide.Context
 
         internal ChangeVectorEntry[] LastDatabaseChangeVector;
         internal Dictionary<string, long> LastReplicationEtagFrom;
+
+        protected override void Reset(bool forceResetLongLivedAllocator = false)
+        {
+            base.Reset(forceResetLongLivedAllocator);
+            
+            // make sure that we don't remember an old value here from a previous
+            // tx. This can be an issue if we resort to context stealing from 
+            // other threads, so we are going the safe route and ensuring that 
+            // we always create a new instance
+            LastDatabaseChangeVector = null;
+            LastReplicationEtagFrom = null;
+        }
 
         public static DocumentsOperationContext ShortTermSingleUse(DocumentDatabase documentDatabase)
         {
@@ -65,6 +78,31 @@ namespace Raven.Server.ServerWide.Context
             return Transaction?.InnerTransaction.LowLevelTransaction.Id !=
                    _documentDatabase.DocumentsStorage.Environment.CurrentReadTransactionId ;
 
+        }
+
+        public bool UpdateLastDatabaseChangeVector(Guid dbId, long etag)
+        {
+            Debug.Assert(LastDatabaseChangeVector != null);
+            var length = LastDatabaseChangeVector.Length;
+            for (var i = 0; i < length; i++)
+            {
+                if (dbId != LastDatabaseChangeVector[i].DbId)
+                    continue;
+
+                if (LastDatabaseChangeVector[i].Etag <= etag)
+                    return false;
+                
+                LastDatabaseChangeVector[i].Etag = etag;
+                return true;
+            }
+
+            Array.Resize(ref LastDatabaseChangeVector, length + 1);
+            LastDatabaseChangeVector[length] = new ChangeVectorEntry
+            {
+                DbId = dbId,
+                Etag = etag
+            };
+            return true;
         }
     }
 }

@@ -2,7 +2,6 @@
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Server.Versioning;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using System;
@@ -10,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading;
+using Raven.Client.Server.Revisions;
 using Xunit;
 
 namespace FastTests.Client.Subscriptions
@@ -73,36 +73,36 @@ namespace FastTests.Client.Subscriptions
         }
 
         [Fact]
-        public void ValidateFailedVersioningSubscriptionScriptExceptionHandling()
+        public void ValidateFailedRevisionsSubscriptionScriptExceptionHandling()
         {
             using (var store = GetDocumentStore())
             {
 
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
-                    var versioningDoc = new VersioningConfiguration
+                    var configuration = new RevisionsConfiguration
                     {
-                        Default = new VersioningCollectionConfiguration
+                        Default = new RevisionsCollectionConfiguration
                         {
                             Active = true,
                             MinimumRevisionsToKeep = 5,
                         },
-                        Collections = new Dictionary<string, VersioningCollectionConfiguration>
+                        Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                         {
-                            ["Users"] = new VersioningCollectionConfiguration
+                            ["Users"] = new RevisionsCollectionConfiguration
                             {
                                 Active = true
                             },
-                            ["Dons"] = new VersioningCollectionConfiguration
+                            ["Dons"] = new RevisionsCollectionConfiguration
                             {
                                 Active = true,
                             }
                         }
                     };
 
-                    AsyncHelpers.RunSync(() => Server.ServerStore.ModifyDatabaseVersioning(context,
+                    AsyncHelpers.RunSync(() => Server.ServerStore.ModifyDatabaseRevisions(context,
                         store.Database,
-                        EntityToBlittable.ConvertEntityToBlittable(versioningDoc,
+                        EntityToBlittable.ConvertEntityToBlittable(configuration,
                             new DocumentConventions(),
                             context)));
                 }
@@ -112,7 +112,7 @@ namespace FastTests.Client.Subscriptions
                     Criteria = new SubscriptionCriteria<User>()
                     {
                         Script = "reta   fsd",
-                        IsVersioned = true
+                        IncludeRevisions = true
                     }
                 });
 

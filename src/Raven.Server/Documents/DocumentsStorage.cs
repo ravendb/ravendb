@@ -7,7 +7,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Server.Documents.Versioning;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -138,7 +138,7 @@ namespace Raven.Server.Documents
                 IsGlobal = true,
                 Name = AllTombstonesEtagsSlice
             });
-            TombstonesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef()
+            TombstonesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = (int)TombstoneTable.DeletedEtag,
                 IsGlobal = false,
@@ -164,7 +164,7 @@ namespace Raven.Server.Documents
 
         public StorageEnvironment Environment { get; private set; }
 
-        public VersioningStorage VersioningStorage;
+        public RevisionsStorage RevisionsStorage;
         public ConflictsStorage ConflictsStorage;
         public AttachmentsStorage AttachmentsStorage;
         public IdentitiesStorage Identities;
@@ -253,7 +253,7 @@ namespace Raven.Server.Documents
 
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
 
-                    VersioningStorage = new VersioningStorage(_documentDatabase);
+                    RevisionsStorage = new RevisionsStorage(_documentDatabase);
                     Identities = new IdentitiesStorage(_documentDatabase, tx);
                     ConflictsStorage = new ConflictsStorage(_documentDatabase, tx);
                     AttachmentsStorage = new AttachmentsStorage(_documentDatabase, tx);
@@ -297,12 +297,6 @@ namespace Raven.Server.Documents
             return changeVector;
         }
 
-        public void SetDatabaseChangeVector(DocumentsOperationContext context, Dictionary<Guid, long> changeVector)
-        {
-            var tree = context.Transaction.InnerTransaction.ReadTree(GlobalChangeVectorSlice);
-            ChangeVectorUtils.WriteChangeVectorTo(context, changeVector, tree);
-        }
-
         public void SetDatabaseChangeVector(DocumentsOperationContext context, ChangeVectorEntry[] changeVector)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(GlobalChangeVectorSlice);
@@ -326,7 +320,7 @@ namespace Raven.Server.Documents
 
         public static long ReadLastRevisionsEtag(Transaction tx)
         {
-            return ReadLastEtagFrom(tx, VersioningStorage.AllRevisionsEtagsSlice);
+            return ReadLastEtagFrom(tx, RevisionsStorage.AllRevisionsEtagsSlice);
         }
 
         public static long ReadLastAttachmentsEtag(Transaction tx)
@@ -885,6 +879,10 @@ namespace Raven.Server.Documents
                 result.Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
                 result.LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr);
             }
+            else if (result.Type == DocumentTombstone.TombstoneType.Revision)
+            {
+                result.Collection = TableValueToString(context, (int)TombstoneTable.Collection, ref tvr);
+            }
 
             return result;
         }
@@ -903,10 +901,9 @@ namespace Raven.Server.Documents
             long? expectedEtag,
             long? lastModifiedTicks = null,
             ChangeVectorEntry[] changeVector = null,
-            LazyStringValue collection = null)
+            CollectionName collectionName = null, 
+            NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
         {
-            var collectionName = collection != null ? new CollectionName(collection) : null;
-
             if (ConflictsStorage.ConflictsCount != 0)
             {
                 var result = ConflictsStorage.DeleteConflicts(context, lowerId, expectedEtag, changeVector);
@@ -994,10 +991,19 @@ namespace Raven.Server.Documents
                 }
 
                 if (collectionName.IsSystem == false &&
-                    _documentDatabase.DocumentsStorage.VersioningStorage.Configuration != null)
+                    (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                 {
-                    _documentDatabase.DocumentsStorage.VersioningStorage.Delete(context, id, lowerId, collectionName, changeVector, modifiedTicks, doc.NonPersistentFlags);
+                    var revisionsStorage = _documentDatabase.DocumentsStorage.RevisionsStorage;
+                    if (revisionsStorage.Configuration != null &&
+                        (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
+                    {
+                        if (revisionsStorage.GetRevisionsConfiguration(collectionName.Name).Active)
+                        {
+                            revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector, modifiedTicks, doc.NonPersistentFlags);
+                        }
+                    }
                 }
+
                 table.Delete(doc.StorageId);
 
                 if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
@@ -1133,23 +1139,21 @@ namespace Raven.Server.Documents
 
             fixed (ChangeVectorEntry* pChangeVector = changeVector)
             {
+                var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
+                    collectionName.GetTableName(CollectionTableType.Tombstones));
                 using (Slice.From(context.Allocator, collectionName.Name, out Slice collectionSlice))
+                using (table.Allocate(out TableValueBuilder tvb))
                 {
-                    var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
-                        collectionName.GetTableName(CollectionTableType.Tombstones));
-                    using (table.Allocate(out TableValueBuilder tvb))
-                    {
-                        tvb.Add(lowerId);
-                        tvb.Add(Bits.SwapBytes(newEtag));
-                        tvb.Add(Bits.SwapBytes(documentEtag));
-                        tvb.Add(context.GetTransactionMarker());
-                        tvb.Add((byte)DocumentTombstone.TombstoneType.Document);
-                        tvb.Add(collectionSlice);
-                        tvb.Add((int)flags);
-                        tvb.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
-                        tvb.Add(lastModifiedTicks);
-                        table.Insert(tvb);
-                    }
+                    tvb.Add(lowerId);
+                    tvb.Add(Bits.SwapBytes(newEtag));
+                    tvb.Add(Bits.SwapBytes(documentEtag));
+                    tvb.Add(context.GetTransactionMarker());
+                    tvb.Add((byte)DocumentTombstone.TombstoneType.Document);
+                    tvb.Add(collectionSlice);
+                    tvb.Add((int)flags);
+                    tvb.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
+                    tvb.Add(lastModifiedTicks);
+                    table.Insert(tvb);
                 }
             }
             return (newEtag, changeVector);
@@ -1251,7 +1255,8 @@ namespace Raven.Server.Documents
             var fst = context.Transaction.InnerTransaction.FixedTreeFor(fstIndex.Name, sizeof(long));
             return fst.NumberOfEntries;
         }
-
+        
+        
         public class CollectionStats
         {
             public string Name;
@@ -1307,7 +1312,8 @@ namespace Raven.Server.Documents
         {
             string tableName;
 
-            if (collection == AttachmentsStorage.AttachmentsTombstones)
+            if (collection == AttachmentsStorage.AttachmentsTombstones || 
+                collection == RevisionsStorage.RevisionsTombstones)
             {
                 tableName = collection;
             }
@@ -1333,6 +1339,7 @@ namespace Raven.Server.Documents
         public IEnumerable<string> GetTombstoneCollections(Transaction transaction)
         {
             yield return AttachmentsStorage.AttachmentsTombstones;
+            yield return RevisionsStorage.RevisionsTombstones;
 
             using (var it = transaction.LowLevelTransaction.RootObjects.Iterate(false))
             {

@@ -32,17 +32,17 @@ namespace Raven.Server.Web.System
             switch (status)
             {
                 case null:
-                case AuthenticationStatus.None:
-                case AuthenticationStatus.NoCertificateProvided:
-                case AuthenticationStatus.UnfamiliarCertificate:
+                case RavenServer.AuthenticationStatus.None:
+                case RavenServer.AuthenticationStatus.NoCertificateProvided:
+                case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
                     if (Server.Configuration.Security.AuthenticationEnabled == false)
                         return true;
 
                     Server.Router.UnlikelyFailAuthorization(HttpContext, dbName, null);
                     return false;
-                case AuthenticationStatus.ServerAdmin:
+                case RavenServer.AuthenticationStatus.ServerAdmin:
                     return true;
-                case AuthenticationStatus.Allowed:
+                case RavenServer.AuthenticationStatus.Allowed:
                     if (dbName != null && feature.CanAccess(dbName) == false)
                     {
                         Server.Router.UnlikelyFailAuthorization(HttpContext, dbName, null);
@@ -57,7 +57,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private static void ThrowInvalidAuthStatus(AuthenticationStatus? status)
+        private static void ThrowInvalidAuthStatus(RavenServer.AuthenticationStatus? status)
         {
             throw new ArgumentOutOfRangeException("Unknown authentication status: " + status);
         }
@@ -65,10 +65,6 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases", "GET", RequiredAuthorization = AuthorizationStatus.ValidUser)]
         public Task Databases()
         {
-            var dbName = GetQueryStringValue("info");
-            if (dbName != null)
-                return DbInfo(dbName);
-
             var namesOnly = GetBoolValueQueryString("namesOnly", required: false) ?? false;
 
 
@@ -174,29 +170,6 @@ namespace Raven.Server.Web.System
             return url;
         }
 
-        private Task DbInfo(string dbName)
-        {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                context.OpenReadTransaction();
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    var dbId = Constants.Documents.Prefix + dbName;
-                    using (var dbRecord = ServerStore.Cluster.Read(context, dbId, out long etag))
-                    {
-                        if (dbRecord == null)
-                        {
-                            HttpContext.Response.Headers.Remove("Content-Type");
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            return Task.CompletedTask;
-                        }
-                        WriteDatabaseInfo(dbName, dbRecord, context, writer);
-                    }
-                    return Task.CompletedTask;
-                }
-            }
-        }
-
         private void WriteDatabaseInfo(string databaseName, BlittableJsonReaderObject dbRecordBlittable,
             TransactionOperationContext context, BlittableJsonTextWriter writer)
         {
@@ -238,6 +211,7 @@ namespace Raven.Server.Web.System
                         Url = url
                     };
                     nodesTopology.Members.Add(GetNodeId(node));
+                    nodesTopology.Status[member] = new DbGroupNodeStatus { LastStatus = "Ok" };
                 }
                 foreach (var promotable in topology.Promotables)
                 {
@@ -250,6 +224,17 @@ namespace Raven.Server.Web.System
                     };
                     var promotableTask = new PromotableTask(promotable, url, databaseName);
                     nodesTopology.Promotables.Add(GetNodeId(node, topology.WhoseTaskIsIt(promotableTask, ServerStore.IsPassive())));
+
+                    var nodeStatus = new DbGroupNodeStatus();
+                    if (topology.PromotablesStatus.TryGetValue(promotable, out var status))
+                    {
+                        nodeStatus.LastStatus = status;
+                    }
+                    if (topology.DemotionReasons.TryGetValue(promotable, out var reason))
+                    {
+                        nodeStatus.LastError = reason;
+                    }
+                    nodesTopology.Status[promotable] = nodeStatus;
                 }
             }
 
@@ -282,7 +267,7 @@ namespace Raven.Server.Web.System
                 IndexingErrors = db?.IndexStore.GetIndexes().Sum(index => index.GetErrorCount()) ?? 0,
 
                 DocumentsCount = db?.DocumentsStorage.GetNumberOfDocuments() ?? 0,
-                HasVersioningConfiguration = db?.DocumentsStorage.VersioningStorage.Configuration != null,
+                HasRevisionsConfiguration = db?.DocumentsStorage.RevisionsStorage.Configuration != null,
                 HasExpirationConfiguration = db?.ExpiredDocumentsCleaner != null,
                 IndexesCount = db?.IndexStore.GetIndexes().Count() ?? 0,
                 IndexingStatus = indexingStatus,

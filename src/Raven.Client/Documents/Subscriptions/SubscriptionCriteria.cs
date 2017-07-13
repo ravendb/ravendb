@@ -20,11 +20,78 @@ namespace Raven.Client.Documents.Subscriptions
 
         public string Collection { get;  set; }
         public string Script { get; set; }
-        public bool IsVersioned { get; set; }
+        public bool IncludeRevisions { get; set; }
     }
 
     public class SubscriptionCriteria<T>
     {
+        private class LinqMethodsSupport : JavascriptConversionExtension
+        {
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                var methodCallExpression = context.Node as MethodCallExpression;
+                var methodName = methodCallExpression?
+                    .Method.Name;
+
+                if (methodName == null)
+                    return;
+
+                string newName;
+                switch (methodName)
+                {
+                    case "Any":
+                        newName = "some";
+                        break;
+                    case "All":
+                        newName = "every";
+                        break;
+                    case "Select":
+                        newName = "map";
+                        break;
+                    case "Where":
+                        newName = "filter";
+                        break;
+                    case "Contains":
+                        newName = "indexOf";
+                        break;
+                    default:
+                        return;
+
+                }
+                var javascriptWriter = context.GetWriter();
+
+                var obj = methodCallExpression.Arguments[0] as MemberExpression;
+                if (obj == null)
+                {
+                    if (methodCallExpression.Arguments[0] is MethodCallExpression innerMethodCall)
+                    {
+                        context.PreventDefault();
+                        context.Visitor.Visit(innerMethodCall);
+                        javascriptWriter.Write($".{newName}");
+                    }
+                    else return;
+                }
+                else
+                {
+                    context.PreventDefault();
+                    javascriptWriter.Write($"this.{obj.Member.Name}.{newName}");
+                }
+
+                if (methodCallExpression.Arguments.Count < 2)
+                    return;
+
+                javascriptWriter.Write("(");
+                context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                javascriptWriter.Write(")");
+
+                if (newName == "indexOf")
+                {
+                    javascriptWriter.Write(">=0");
+                }
+            }
+        }
+
+
         private class SubscriptionCriteriaConvertor : JavascriptConversionExtension
         {
             public ParameterExpression Parameter;
@@ -46,8 +113,14 @@ namespace Raven.Client.Documents.Subscriptions
                         javascriptWriter.Write(node.Member.Name);
                         return;
                     }
-
-                    context.Visitor.Visit(node.Expression as MemberExpression);
+                    if (node.Expression is MemberExpression member)
+                    {
+                        context.Visitor.Visit(member);
+                    }
+                    else
+                    {
+                        context.Visitor.Visit(node.Expression);
+                    }
                     javascriptWriter.Write(".");
                     javascriptWriter.Write(node.Member.Name);
                 }
@@ -59,8 +132,10 @@ namespace Raven.Client.Documents.Subscriptions
         {
             var script = predicate.CompileToJavascript(
                 new JavascriptCompilationOptions(
-                    JsCompilationFlags.BodyOnly, 
-                    new SubscriptionCriteriaConvertor { Parameter = predicate.Parameters[0] }));
+                    JsCompilationFlags.BodyOnly,
+                    new LinqMethodsSupport(),
+                    new SubscriptionCriteriaConvertor { Parameter = predicate.Parameters[0] }
+                    ));
             Script = $"return {script};";
         }
         
@@ -70,7 +145,7 @@ namespace Raven.Client.Documents.Subscriptions
         }
         
         public string Script { get; set; }
-        public bool? IsVersioned { get; set; }
+        public bool? IncludeRevisions { get; set; }
     }
     
     
@@ -79,12 +154,12 @@ namespace Raven.Client.Documents.Subscriptions
         public ChangeVectorEntry[] ChangeVector { get; set; }
         public string Collection { get; set; }
         public string Script { get; set; }
-        public bool IsVersioned { get; set; }
+        public bool IncludeRevisions { get; set; }
     }
 
     public class SubscriptionCreationOptions
     {
-        public const string DefaultVersioningScript = "return {Current:this.Current, Previous:this.Previous};";
+        public const string DefaultRevisionsScript = "return {Current:this.Current, Previous:this.Previous};";
         public string Name { get; set; }
         public SubscriptionCriteria Criteria { get; set; }
         public ChangeVectorEntry[] ChangeVector { get; set; }
@@ -101,12 +176,12 @@ namespace Raven.Client.Documents.Subscriptions
         public SubscriptionCriteria CreateOptions(DocumentConventions conventions)
         {
             var tType = typeof(T);
-            var isVersioned = tType.IsConstructedGenericType && tType.GetGenericTypeDefinition() == typeof(Versioned<>);
+            var includeRevisions = tType.IsConstructedGenericType && tType.GetGenericTypeDefinition() == typeof(Revision<>);
 
-            return new SubscriptionCriteria(conventions.GetCollectionName(isVersioned ? tType.GenericTypeArguments[0] : typeof(T)))
+            return new SubscriptionCriteria(conventions.GetCollectionName(includeRevisions ? tType.GenericTypeArguments[0] : typeof(T)))
             {
-                Script = Criteria?.Script ?? (isVersioned ? SubscriptionCreationOptions.DefaultVersioningScript : null),
-                IsVersioned =  isVersioned || (Criteria?.IsVersioned ?? false) 
+                Script = Criteria?.Script ?? (includeRevisions ? SubscriptionCreationOptions.DefaultRevisionsScript : null),
+                IncludeRevisions =  includeRevisions || (Criteria?.IncludeRevisions ?? false) 
             };
 
         }
@@ -116,7 +191,7 @@ namespace Raven.Client.Documents.Subscriptions
         public ChangeVectorEntry[] ChangeVector { get; set; }
     }
 
-    public class Versioned<T> where T : class
+    public class Revision<T> where T : class
     {
         public T Previous;
         public T Current;

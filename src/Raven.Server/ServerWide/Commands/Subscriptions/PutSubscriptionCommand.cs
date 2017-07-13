@@ -26,7 +26,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
         }
 
-        public unsafe override void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive)
+        public override unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive)
         {
             var subscriptionId = SubscriptionId ?? index;
             SubscriptionName = string.IsNullOrEmpty(SubscriptionName) ? subscriptionId.ToString() : SubscriptionName;
@@ -73,7 +73,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             {
                 [nameof(SubscriptionCriteria.Collection)] = Criteria.Collection,
                 [nameof(SubscriptionCriteria.Script)] = Criteria.Script,
-                [nameof(SubscriptionCriteria.IsVersioned)] = Criteria.IsVersioned
+                [nameof(SubscriptionCriteria.IncludeRevisions)] = Criteria.IncludeRevisions
             };
             json[nameof(InitialChangeVector)] = InitialChangeVector?.ToJson();
             json[nameof(SubscriptionName)] = SubscriptionName;

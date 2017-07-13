@@ -84,11 +84,11 @@ namespace Raven.Server.Smuggler.Documents
 
         public IEnumerable<DocumentItem> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions)
         {
-            var versioningStorage = _database.DocumentsStorage.VersioningStorage;
-            if (versioningStorage.Configuration == null)
+            var revisionsStorage = _database.DocumentsStorage.RevisionsStorage;
+            if (revisionsStorage.Configuration == null)
                 yield break;
 
-            var documents = versioningStorage.GetRevisionsFrom(_context, _startDocumentEtag, int.MaxValue);
+            var documents = revisionsStorage.GetRevisionsFrom(_context, _startDocumentEtag, int.MaxValue);
             foreach (var document in documents)
             {
                 yield return new DocumentItem
@@ -98,11 +98,11 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public Stream GetAttachmentStream(LazyStringValue hash)
+        public Stream GetAttachmentStream(LazyStringValue hash, out string tag)
         {
             using (Slice.External(_context.Allocator, hash, out Slice hashSlice))
             {
-                return _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(_context, hashSlice);
+                return _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(_context, hashSlice, out tag);
             }
         }
 

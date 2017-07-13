@@ -188,10 +188,11 @@ namespace Raven.Server.Rachis
 
             foreach (var voter in _voters)
             {
-                dic[voter.Tag] = new NodeStatus
+                var nodeStatus = new NodeStatus { Connected = voter.Status.Equals("Connected") };
+                if (nodeStatus.Connected == false)
                 {
-                    ConnectionStatus = voter.Status
-                };
+                    nodeStatus.ErrorDetails = voter.Status;
+                }
             }
            
             return dic;

@@ -17,8 +17,8 @@ class createDefaultSettingsCommand extends commandBase {
             tasksToWatch.push(this.updateQuotasSettings());
         }
         /* TODO
-        if (_.includes(this.bundles, "Versioning")) {
-            tasksToWatch.push(this.saveVersioningConfiguration());
+        if (_.includes(this.bundles, "Revisions")) {
+            tasksToWatch.push(this.saveRevisionsConfiguration());
         }*/
 
         if (tasksToWatch.length > 0) {
@@ -57,9 +57,9 @@ class createDefaultSettingsCommand extends commandBase {
     }
 
     /* TODO
-    private createDefaultVersioningSettings(): Array<versioningEntry> {
+    private createDefaultRevisionsSettings(): Array<revisionsEntry> {
         return [
-            new versioningEntry({
+            new revisionsEntry({
                 Id: "DefaultConfiguration",
                 MaxRevisions: 5,
                 Exclude: false,
@@ -70,18 +70,18 @@ class createDefaultSettingsCommand extends commandBase {
     }*/
 
     /*TODO
-    private saveVersioningConfiguration(): JQueryPromise<any> {
+    private saveRevisionsConfiguration(): JQueryPromise<any> {
 
         var saveTask = $.Deferred();
-        this.hasGlobalVersioningSettings().fail(() => saveTask.fail())
+        this.hasGlobalRevisionsSettings().fail(() => saveTask.fail())
             .done((has: boolean) => {
                 if (has) {
                     // use global settings - nothing to do 
                     saveTask.resolve();
                 } else {
-                    var entries: Array<versioningEntryDto> = this.createDefaultVersioningSettings()
-                        .map((ve: versioningEntry) => ve.toDto(true));
-                    new saveVersioningCommand(this.db, entries).execute()
+                    var entries: Array<revisionsEntryDto> = this.createDefaultRevisionsSettings()
+                        .map((ve: revisionsEntry) => ve.toDto(true));
+                    new saveRevisionsCommand(this.db, entries).execute()
                         .done(() => saveTask.resolve())
                         .fail(() => saveTask.reject());
                 }

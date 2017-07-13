@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Expiration
             {
                 var msg = "Cannot enable expired documents cleaner as the configuration record is not valid.";
                 database.NotificationCenter.Add(AlertRaised.Create($"Expiration error in {database.Name}", msg,
-                    AlertType.VersioningConfigurationNotValid, NotificationSeverity.Error, database.Name));
+                    AlertType.RevisionsConfigurationNotValid, NotificationSeverity.Error, database.Name));
 
                 var logger = LoggingSource.Instance.GetLogger<ExpiredDocumentsCleaner>(database.Name);
                 if (logger.IsOperationsEnabled)

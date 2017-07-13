@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
-using System.ServiceModel;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,7 +22,6 @@ using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
-using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Rachis;
 using Raven.Server.NotificationCenter.Notifications;
@@ -179,12 +177,7 @@ namespace Raven.Server.ServerWide
                             }
                             foreach (var node in nodesChanges.addedValues)
                             {
-                                var task = ClusterMaintenanceSupervisor.AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key)).ContinueWith(t =>
-                                {
-                                    if (Logger.IsInfoEnabled)
-                                        Logger.Info($"ClusterMaintenanceSupervisor() => Failed to add to cluster node key = {node.Key}", t.Exception);
-                                }, TaskContinuationOptions.OnlyOnFaulted);
-                                GC.KeepAlive(task);
+                                ClusterMaintenanceSupervisor.AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key));
                             }
 
                             var leaderChanged = _engine.WaitForLeaveState(RachisConsensus.State.Leader);
@@ -479,7 +472,7 @@ namespace Raven.Server.ServerWide
                     {
                         nodesStatuses = new Dictionary<string, NodeStatus>
                         {
-                            [leaderTag] = new NodeStatus {ConnectionStatus = "Connected"}
+                            [leaderTag] = new NodeStatus { Connected = true } 
                         };
                     }
                     break;
@@ -742,7 +735,7 @@ namespace Raven.Server.ServerWide
         {
             var deleteTaskCommand = 
                 taskType == OngoingTaskType.Subscription ? 
-                    (CommandBase)new DeleteSubscriptionCommand(dbName){SubscriptionName = taskName } : 
+                    (CommandBase)new DeleteSubscriptionCommand(dbName, taskName): 
                     new DeleteOngoingTaskCommand(taskId, taskType, dbName);
 
             return SendToLeaderAsync(deleteTaskCommand);
@@ -842,10 +835,10 @@ namespace Raven.Server.ServerWide
             return etlType;
         }
 
-        public Task<(long, object)> ModifyDatabaseVersioning(JsonOperationContext context, string name, BlittableJsonReaderObject configurationJson)
+        public Task<(long, object)> ModifyDatabaseRevisions(JsonOperationContext context, string name, BlittableJsonReaderObject configurationJson)
         {
-            var editVersioning = new EditVersioningCommand(JsonDeserializationCluster.VersioningConfiguration(configurationJson), name);
-            return SendToLeaderAsync(editVersioning);
+            var editRevisions = new EditRevisionsConfigurationCommand(JsonDeserializationCluster.RevisionsConfiguration(configurationJson), name);
+            return SendToLeaderAsync(editRevisions);
         }
 
         public async Task<(long, object)> AddConnectionString(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject connectionString)
@@ -1137,7 +1130,7 @@ namespace Raven.Server.ServerWide
                     {
                         await Task.WhenAny(logChange, timeoutTask);
                         if (logChange.IsCompleted == false)
-                            ThrowTimeoutException();
+                            ThrowTimeoutException(cmd);
 
                         continue;
                     }
@@ -1155,7 +1148,7 @@ namespace Raven.Server.ServerWide
 
                 await Task.WhenAny(logChange, timeoutTask);
                 if (logChange.IsCompleted == false)
-                    ThrowTimeoutException();
+                    ThrowTimeoutException(cmd);
             }
         }
 
@@ -1165,9 +1158,9 @@ namespace Raven.Server.ServerWide
                                             "Passive nodes aren't members of a cluster and require admin action (such as creating a db) to indicate that this node should create its own cluster");
         }
 
-        private static void ThrowTimeoutException()
+        private void ThrowTimeoutException(CommandBase cmd)
         {
-            throw new TimeoutException("Could not send command to leader because there is no leader, and we timed out waiting for one");
+            throw new TimeoutException($"Could not send command {cmd.GetType().FullName} from {NodeTag} to leader because there is no leader, and we timed out waiting for one after {Engine.OperationTimeout}");
         }
 
         private async Task<(long Etag, object Result)> SendToNodeAsync(string engineLeaderTag, CommandBase cmd)

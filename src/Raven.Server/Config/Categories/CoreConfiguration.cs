@@ -36,7 +36,7 @@ namespace Raven.Server.Config.Categories
         public bool RunInMemory { get; set; }
 
         [Description("The directory for the RavenDB resource. You can use the ~/ prefix to refer to RavenDB's base directory.")]
-        [DefaultValue(@"~/{pluralizedResourceType}/{name}")]
+        [DefaultValue(@"~/Databases/{name}")]
         [ConfigurationEntry("DataDir")]
         public PathSetting DataDirectory { get; set; }
 
@@ -44,7 +44,6 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(5)]
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("DatabaseOperationTimeoutInMin")]
-        [LegacyConfigurationEntry("Raven/DatabaseOperationTimeout")]
         public TimeSetting DatabaseOperationTimeout { get; set; }
 
         [Description("Indicates if we should throw an exception if any index could not be opened")]

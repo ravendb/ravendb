@@ -62,7 +62,8 @@ namespace Raven.Server
             if (_server.Configuration.Security.AuthenticationRequiredForPublicNetworks == false)
                 return true;
             var url = _server.Configuration.Core.ServerUrl.ToLowerInvariant();
-            var uri = new Uri(url);
+            if(Uri.TryCreate(url, UriKind.Absolute, out var uri) == false)
+                throw new UriFormatException("Unable to parse URL - " + url);
             //url isn't set to localhost 
             return uri.IsLoopback || uri.Host == "localhost.fiddler";
         }

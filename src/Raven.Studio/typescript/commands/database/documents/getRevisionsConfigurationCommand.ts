@@ -2,18 +2,18 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
-class getVersioningCommand extends commandBase {
+class getRevisionsConfigurationCommand extends commandBase {
 
     constructor(private db: database) {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Client.Server.Versioning.VersioningConfiguration> {
+    execute(): JQueryPromise<Raven.Client.Server.Revisions.RevisionsConfiguration> {
 
-        const deferred = $.Deferred<Raven.Client.Server.Versioning.VersioningConfiguration>();
-        const url = endpoints.databases.versioning.versioningConfig;
+        const deferred = $.Deferred<Raven.Client.Server.Revisions.RevisionsConfiguration>();
+        const url = endpoints.databases.revisions.revisionsConfig;
         this.query(url, null, this.db)
-            .done((versioningConfig: Raven.Client.Server.Versioning.VersioningConfiguration) => deferred.resolve(versioningConfig))
+            .done((revisionsConfig: Raven.Client.Server.Revisions.RevisionsConfiguration) => deferred.resolve(revisionsConfig))
             .fail((xhr: JQueryXHR) => {
                 if (xhr.status === 404) {
                     deferred.resolve(null);
@@ -27,4 +27,4 @@ class getVersioningCommand extends commandBase {
     }
 }
 
-export = getVersioningCommand;
+export = getRevisionsConfigurationCommand;

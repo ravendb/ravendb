@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Transformers;
@@ -25,6 +26,7 @@ namespace Raven.Server.Smuggler.Documents.Data
     public interface INewDocumentActions
     {
         DocumentsOperationContext GetContextForNewDocument();
+        Stream GetTempStream();
     }
 
     public interface IIndexActions : IDisposable

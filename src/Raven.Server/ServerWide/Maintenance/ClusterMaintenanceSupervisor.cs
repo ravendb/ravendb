@@ -40,15 +40,13 @@ namespace Raven.Server.ServerWide.Maintenance
             _leaderClusterTag = leaderClusterTag;
             _term = term;
             Config = server.Configuration.Cluster;
-            _server = server;
         }
 
-        public async Task AddToCluster(string clusterTag, string url)
+        public void AddToCluster(string clusterTag, string url)
         {
-            var connectionInfo = await ReplicationUtils.GetTcpInfoAsync(url, null, "Supervisor", _server.RavenServer.ServerCertificateHolder.Certificate);
             var clusterNode = new ClusterNode(clusterTag, url, _contextPool, this, _cts.Token);
             _clusterNodes[clusterTag] = clusterNode;
-            var task = clusterNode.StartListening(connectionInfo);
+            var task = clusterNode.StartListening();
             GC.KeepAlive(task); // we are explicitly not waiting on this task
         }
 
@@ -141,16 +139,28 @@ namespace Raven.Server.ServerWide.Maintenance
                 _log = LoggingSource.Instance.GetLogger<ClusterNode>(clusterTag);
             }
 
-            public Task StartListening(TcpConnectionInfo tcpConnection)
+            public async Task StartListening()
             {
-                return ListenToMaintenanceWorker(tcpConnection);
+                await ListenToMaintenanceWorker();
             }
 
-            private async Task ListenToMaintenanceWorker(TcpConnectionInfo tcpConnection)
+            private async Task ListenToMaintenanceWorker()
             {
                 bool needToWait = false;
                 var onErrorDelayTime = _parent.Config.OnErrorDelayTime.AsTimeSpan;
                 var receiveFromWorkerTimeout = _parent.Config.ReceiveFromWorkerTimeout.AsTimeSpan;
+
+                TcpConnectionInfo tcpConnection = null;
+                try
+                {
+                    tcpConnection = await ReplicationUtils.GetTcpInfoAsync(Url, null, "Supervisor", 
+                        _parent._server.RavenServer.ServerCertificateHolder.Certificate);
+                }
+                catch (Exception e)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info($"ClusterMaintenanceSupervisor() => Failed to add to cluster node key = {ClusterTag}", e);
+                }
 
                 while (_token.IsCancellationRequested == false)
                 {
@@ -170,6 +180,13 @@ namespace Raven.Server.ServerWide.Maintenance
                                     _parent._server.RavenServer.ServerCertificateHolder.Certificate);
                             }
                         }
+
+                        if (tcpConnection == null)
+                        {
+                            needToWait = true;
+                            continue;
+                        }
+
                         using (var connection = await ConnectToClientNodeAsync(tcpConnection))
                         {
                             while (_token.IsCancellationRequested == false)
@@ -183,7 +200,7 @@ namespace Raven.Server.ServerWide.Maintenance
                                     {
                                         if (_log.IsInfoEnabled)
                                         {
-                                            _log.Info($"Timeout occurred while collection info from {ClusterTag}");
+                                            _log.Info($"Timeout occurred while collecting info from {ClusterTag}");
                                         }
                                         ReceivedReport = new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>(),
                                             ClusterNodeStatusReport.ReportStatus.Timeout,
@@ -220,7 +237,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     {
                         if (_log.IsInfoEnabled)
                         {
-                            _log.Info($"Exception was thrown while collection info from {ClusterTag}", e);
+                            _log.Info($"Exception was thrown while collecting info from {ClusterTag}", e);
                         }
                         ReceivedReport = new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>(),
                             ClusterNodeStatusReport.ReportStatus.Error,

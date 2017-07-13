@@ -8,7 +8,7 @@ namespace Raven.Server.Documents
         None = 0,
 
         Artificial = 0x1,
-        Versioned = 0x2,
+        HasRevisions = 0x2,
         DeleteRevision = 0x4,
         Reserved2 = 0x8,
 
@@ -26,10 +26,11 @@ namespace Raven.Server.Documents
         None = 0,
 
         LegacyRevision = 0x1,
-        LegacyVersioned = 0x2,
+        LegacyHasRevisions = 0x2,
         FromSmuggler = 0x4,
         FromReplication = 0x8,
         ByAttachmentUpdate = 0x10,
-        ResolveAttachmentsConflict = 0x20
+        ResolveAttachmentsConflict = 0x20,
+        FromRevision = 0x40,
     }
 }

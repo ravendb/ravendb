@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Documents.Versioning;
+using FastTests.Server.Documents.Revisions;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Server;
@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Server.Replication
 {
-    public class ReplicationWithVersioning : ReplicationTestsBase
+    public class ReplicationWithRevisions : ReplicationTestsBase
     {
         [Fact]
         public async Task CanReplicateRevisions()
@@ -20,8 +20,8 @@ namespace SlowTests.Server.Replication
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, master.Database);
-                await VersioningHelper.SetupVersioning(Server.ServerStore, slave.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, master.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, slave.Database);
                 await SetupReplicationAsync(master, slave);
 
                 using (var session = master.OpenAsyncSession())
@@ -42,7 +42,7 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
-        public async Task CreateVersionsAndReplicateThemAll()
+        public async Task CreateRevisionsAndReplicateThemAll()
         {
             var company = new Company {Name = "Company Name"};
             var company2 = new Company {Name = "Company Name2"};
@@ -52,8 +52,8 @@ namespace SlowTests.Server.Replication
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, master.Database);
-                await VersioningHelper.SetupVersioning(Server.ServerStore, slave.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, master.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, slave.Database);
 
                 using (var session = master.OpenAsyncSession())
                 {
@@ -87,7 +87,7 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
-        public async Task ReplicateVersionsIgnoringConflicts()
+        public async Task ReplicateRevisionsIgnoringConflicts()
         {
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
@@ -103,7 +103,7 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
-        public async Task CreateConflictAndResolveItIncreaseTheVersion()
+        public async Task CreateConflictAndResolveItIncreaseTheRevisions()
         {
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
@@ -137,8 +137,8 @@ namespace SlowTests.Server.Replication
             var user = new User { Name = "Name" };
             var user2 = new User { Name = "Name2" };
             
-            await VersioningHelper.SetupVersioning(Server.ServerStore, storeA.Database);
-            await VersioningHelper.SetupVersioning(Server.ServerStore, storeB.Database);
+            await RevisionsHelper.SetupRevisions(Server.ServerStore, storeA.Database);
+            await RevisionsHelper.SetupRevisions(Server.ServerStore, storeB.Database);
 
             using (var session = storeA.OpenAsyncSession())
             {
@@ -163,9 +163,9 @@ namespace SlowTests.Server.Replication
             using (var storeB = GetDocumentStore())
             using (var storeC = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, storeA.Database);
-                await VersioningHelper.SetupVersioning(Server.ServerStore, storeB.Database);
-                await VersioningHelper.SetupVersioning(Server.ServerStore, storeC.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, storeA.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, storeB.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, storeC.Database);
 
                 await SetupReplicationAsync(storeA, storeB);
 

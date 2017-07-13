@@ -17,8 +17,11 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         // for serialization
         private DeleteSubscriptionCommand():base(null){}
 
-        public DeleteSubscriptionCommand(string databaseName) : base(databaseName)
+        public DeleteSubscriptionCommand(string databaseName, string subscriptionName) : base(databaseName)
         {
+            if (string.IsNullOrEmpty(subscriptionName))
+                throw new ArgumentNullException(nameof(subscriptionName));
+            SubscriptionName = subscriptionName;
         }
 
 

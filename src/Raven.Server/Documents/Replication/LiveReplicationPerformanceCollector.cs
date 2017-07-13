@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Replication;
-using Raven.Server.Json;
 using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Json;
@@ -114,9 +113,7 @@ namespace Raven.Server.Documents.Replication
                 var performance = incoming.Performance;
 
                 var itemsToSend = new List<IncomingReplicationStatsAggregator>(performance.Count);
-
-                IncomingReplicationStatsAggregator stat;
-                while (performance.TryTake(out stat))
+                while (performance.TryTake(out IncomingReplicationStatsAggregator stat))
                     itemsToSend.Add(stat);
 
                 var latestStats = handler.GetLatestReplicationPerformance();
@@ -134,9 +131,7 @@ namespace Raven.Server.Documents.Replication
                 var performance = outgoing.Performance;
 
                 var itemsToSend = new List<OutgoingReplicationStatsAggregator>(performance.Count);
-
-                OutgoingReplicationStatsAggregator stat;
-                while (performance.TryTake(out stat))
+                while (performance.TryTake(out OutgoingReplicationStatsAggregator stat))
                     itemsToSend.Add(stat);
 
                 var latestStats = handler.GetLatestReplicationPerformance();
@@ -151,8 +146,7 @@ namespace Raven.Server.Documents.Replication
 
         private void OutgoingHandlerRemoved(OutgoingReplicationHandler handler)
         {
-            ReplicationHandlerAndPerformanceStatsList<OutgoingReplicationHandler, OutgoingReplicationStatsAggregator> stats;
-            if (_outgoing.TryRemove(handler, out stats))
+            if (_outgoing.TryRemove(handler, out var stats))
                 stats.Handler.DocumentsSend -= OutgoingDocumentsSend;
         }
 
@@ -168,8 +162,7 @@ namespace Raven.Server.Documents.Replication
 
         private void OutgoingDocumentsSend(OutgoingReplicationHandler handler)
         {
-            ReplicationHandlerAndPerformanceStatsList<OutgoingReplicationHandler, OutgoingReplicationStatsAggregator> stats;
-            if (_outgoing.TryGetValue(handler, out stats) == false)
+            if (_outgoing.TryGetValue(handler, out var stats) == false)
             {
                 // possible?
                 return;
@@ -182,8 +175,7 @@ namespace Raven.Server.Documents.Replication
 
         private void IncomingHandlerRemoved(string id)
         {
-            ReplicationHandlerAndPerformanceStatsList<IncomingReplicationHandler, IncomingReplicationStatsAggregator> stats;
-            if (_incoming.TryRemove(id, out stats))
+            if (_incoming.TryRemove(id, out var stats))
                 stats.Handler.DocumentsReceived -= IncomingDocumentsReceived;
         }
 
@@ -199,8 +191,7 @@ namespace Raven.Server.Documents.Replication
 
         private void IncomingDocumentsReceived(IncomingReplicationHandler handler)
         {
-            ReplicationHandlerAndPerformanceStatsList<IncomingReplicationHandler, IncomingReplicationStatsAggregator> stats;
-            if (_incoming.TryGetValue(handler.ConnectionInfo.SourceDatabaseId, out stats) == false)
+            if (_incoming.TryGetValue(handler.ConnectionInfo.SourceDatabaseId, out var stats) == false)
             {
                 // possible?
                 return;

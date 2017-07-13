@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="Versioning.cs" company="Hibernating Rhinos LTD">
+// <copyright file="Revisions.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -14,9 +14,9 @@ using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace FastTests.Server.Documents.Versioning
+namespace FastTests.Server.Documents.Revisions
 {
-    public class VersioningReplication : ReplicationTestsBase
+    public class RevisionsReplication : ReplicationTestsBase
     {
         private void WaitForMarker(DocumentStore store1, DocumentStore store2)
         {
@@ -36,8 +36,8 @@ namespace FastTests.Server.Documents.Versioning
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store1.Database);
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store2.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
                 await SetupReplicationAsync(store1, store2);
 
                 using (var session = store1.OpenAsyncSession())
@@ -63,14 +63,14 @@ namespace FastTests.Server.Documents.Versioning
         }
 
         [Fact]
-        public async Task CanCheckIfDocumentIsVersioned()
+        public async Task CanCheckIfDocumentHasRevisions()
         {
             var company = new Company { Name = "Company Name" };
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store1.Database);
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store2.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
                 await SetupReplicationAsync(store1, store2);
 
                 using (var session = store1.OpenAsyncSession())
@@ -84,7 +84,7 @@ namespace FastTests.Server.Documents.Versioning
                     var company3 = await session.LoadAsync<Company>(company.Id);
                     var metadata = session.Advanced.GetMetadataFor(company3);
 
-                    Assert.Equal((DocumentFlags.Versioned | DocumentFlags.FromReplication).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.FromReplication).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
                 }
             }
         }
@@ -96,8 +96,8 @@ namespace FastTests.Server.Documents.Versioning
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store1.Database);
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store2.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
                 await SetupReplicationAsync(store1, store2);
 
                 using (var session = store1.OpenAsyncSession())
@@ -128,8 +128,8 @@ namespace FastTests.Server.Documents.Versioning
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store1.Database);
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store2.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
                 await SetupReplicationAsync(store1, store2);
 
                 using (var session = store1.OpenAsyncSession())
@@ -171,8 +171,8 @@ namespace FastTests.Server.Documents.Versioning
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store1.Database, false);
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store2.Database, false);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, false);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database, false);
                 await SetupReplicationAsync(store1, store2);
 
                 var deletedRevisions = await store1.Commands().GetRevisionsBinEntriesAsync(long.MaxValue);
@@ -227,16 +227,16 @@ namespace FastTests.Server.Documents.Versioning
                 dynamic revisions = await store2.Commands().GetRevisionsForAsync(id, metadataOnly: true);
                 Assert.Equal(4, revisions.Count);
                 Assert.Equal(DocumentFlags.DeleteRevision.ToString(), revisions[0][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
-                Assert.Equal((DocumentFlags.Versioned | DocumentFlags.Revision | DocumentFlags.FromReplication).ToString(), revisions[1][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
+                Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.FromReplication).ToString(), revisions[1][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
                 Assert.Equal(DocumentFlags.DeleteRevision.ToString(), revisions[2][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
-                Assert.Equal((DocumentFlags.Versioned | DocumentFlags.Revision | DocumentFlags.FromReplication).ToString(), revisions[3][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
+                Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.FromReplication).ToString(), revisions[3][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
 
-                await store1.Admin.SendAsync(new Versioning.DeleteRevisionsOperation(id, "users/not/exists"));
+                await store1.Admin.SendAsync(new RevisionsTests.DeleteRevisionsOperation(id, "users/not/exists"));
                 WaitForMarker(store1, store2);
 
                 statistics = store2.Admin.Send(new GetStatisticsOperation());
                 Assert.Equal(useSession ? 3 : 2, statistics.CountOfDocuments);
-                Assert.Equal(4, statistics.CountOfRevisionDocuments); // This is not correct. Should be zero. See: RavenDB-7543
+                Assert.Equal(0, statistics.CountOfRevisionDocuments); 
             }
         }
 

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Documents.Versioning;
+using FastTests.Server.Documents.Revisions;
 using FastTests.Server.Replication;
 using Orders;
 using Raven.Client;
@@ -466,13 +466,13 @@ namespace SlowTests.Client.Attachments
         }
 
         [Fact]
-        public async Task AttachmentsVersioningReplication()
+        public async Task AttachmentsRevisionsReplication()
         {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store1.Database, false, 4);
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store2.Database, false, 4);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, false, 4);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database, false, 4);
 
                 using (var session = store1.OpenSession())
                 {
@@ -614,7 +614,7 @@ namespace SlowTests.Client.Attachments
         private static void AssertNoRevisionAttachment(User revision, IDocumentSession session, bool isDeleteRevision = false)
         {
             var metadata = session.Advanced.GetMetadataFor(revision);
-            var flags = DocumentFlags.Versioned | DocumentFlags.Revision | DocumentFlags.FromReplication;
+            var flags = DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.FromReplication;
             if (isDeleteRevision)
                 flags = DocumentFlags.DeleteRevision;
             Assert.Equal(flags.ToString(), metadata[Constants.Documents.Metadata.Flags]);
@@ -624,7 +624,7 @@ namespace SlowTests.Client.Attachments
         private static void AssertRevisionAttachments(string[] names, int expectedCount, User revision, IDocumentSession session)
         {
             var metadata = session.Advanced.GetMetadataFor(revision);
-            Assert.Equal((DocumentFlags.Versioned | DocumentFlags.Revision | DocumentFlags.HasAttachments | DocumentFlags.FromReplication).ToString(), metadata[Constants.Documents.Metadata.Flags]);
+            Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.HasAttachments | DocumentFlags.FromReplication).ToString(), metadata[Constants.Documents.Metadata.Flags]);
             var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
             Assert.Equal(expectedCount, attachments.Length);
 
@@ -669,14 +669,6 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal(name, attachment.Details.Name);
                     if (name == names[0])
                     {
-                        if (expectedCount == 1)
-                            Assert.Equal(4, attachment.Details.Etag);
-                        else if (expectedCount == 2)
-                            Assert.Equal(10, attachment.Details.Etag);
-                        else if (expectedCount == 3)
-                            Assert.Equal(19, attachment.Details.Etag);
-                        else
-                            throw new ArgumentOutOfRangeException(nameof(i));
                         Assert.Equal(new byte[] { 1, 2, 3 }, readBuffer.Take(3));
                         Assert.Equal("image/png", attachment.Details.ContentType);
                         Assert.Equal(3, attachmentStream.Position);
@@ -684,12 +676,6 @@ namespace SlowTests.Client.Attachments
                     }
                     else if (name == names[1])
                     {
-                        if (expectedCount == 2)
-                            Assert.Equal(9, attachment.Details.Etag);
-                        else if (expectedCount == 3)
-                            Assert.Equal(17, attachment.Details.Etag);
-                        else
-                            throw new ArgumentOutOfRangeException(nameof(i));
                         Assert.Equal(new byte[] { 10, 20, 30, 40, 50 }, readBuffer.Take(5));
                         Assert.Equal("ImGgE/jPeG", attachment.Details.ContentType);
                         Assert.Equal(5, attachmentStream.Position);
@@ -697,10 +683,6 @@ namespace SlowTests.Client.Attachments
                     }
                     else if (name == names[2])
                     {
-                        if (expectedCount == 3)
-                            Assert.Equal(18, attachment.Details.Etag);
-                        else
-                            throw new ArgumentOutOfRangeException(nameof(i));
                         Assert.Equal(new byte[] { 1, 2, 3, 4, 5 }, readBuffer.Take(5));
                         Assert.Equal("", attachment.Details.ContentType);
                         Assert.Equal(5, attachmentStream.Position);

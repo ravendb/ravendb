@@ -7,7 +7,7 @@ using Raven.Client.Documents.Transformers;
 using Raven.Client.Server.ETL;
 using Raven.Client.Server.Expiration;
 using Raven.Client.Server.PeriodicBackup;
-using Raven.Client.Server.Versioning;
+using Raven.Client.Server.Revisions;
 
 namespace Raven.Client.Server
 {
@@ -53,7 +53,7 @@ namespace Raven.Client.Server
         //todo: see how we can protect this
         public Dictionary<string, string> SecuredSettings { get; set; }
 
-        public VersioningConfiguration Versioning { get; set; }
+        public RevisionsConfiguration Revisions { get; set; }
 
         public ExpirationConfiguration Expiration { get; set; }
 

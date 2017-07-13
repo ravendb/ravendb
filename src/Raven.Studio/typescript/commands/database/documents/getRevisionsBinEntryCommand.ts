@@ -22,7 +22,7 @@ class getRevisionsBinEntryCommand extends commandBase {
                 resultEtag: this.extractEtag(xhr)
             } as pagedResult<document>;
         };
-        const url = endpoints.databases.versioning.revisionsBin + this.urlEncodeArgs(args);
+        const url = endpoints.databases.revisions.revisionsBin + this.urlEncodeArgs(args);
         return this.query(url, null, this.database, resultsSelector);
     }
 

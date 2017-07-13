@@ -115,6 +115,7 @@ namespace Raven.Server.Documents.Replication
             var node = Destination as InternalReplication;
             return node?.NodeTag;
         }
+
         private void ReplicateToDestination()
         {
             NativeMemory.EnsureRegistered();
@@ -201,6 +202,14 @@ namespace Raven.Server.Documents.Replication
                         {
                             while (true)
                             {
+#if DEBUG
+                                if (_parent.DebugWaitAndRunReplicationOnce != null)
+                                {
+                                    _parent.DebugWaitAndRunReplicationOnce.WaitAsync().Wait(_cts.Token);
+                                    _parent.DebugWaitAndRunReplicationOnce.Reset();
+                                }
+#endif
+
                                 var sp = Stopwatch.StartNew();
                                 var stats = _lastStats = new OutgoingReplicationStatsAggregator(_parent.GetNextReplicationStatsId(), _lastStats);
                                 AddReplicationPerformance(stats);
@@ -225,7 +234,7 @@ namespace Raven.Server.Documents.Replication
                                         }
                                         catch (OperationCanceledException)
                                         {
-                                            //cancelation is not an actual error,
+                                            //cancellation is not an actual error,
                                             //it is a "notification" that we need to cancel current operation
                                             throw;
                                         }
@@ -407,7 +416,6 @@ namespace Raven.Server.Documents.Replication
             private readonly DocumentDatabase _database;
             private readonly ReplicationMessageReply _replicationBatchReply;
             private  Guid _dbid;
-            private long _currentEtagOnSibling;
 
             public UpdateSiblingCurrentEtag(DocumentDatabase database,ReplicationMessageReply replicationBatchReply)
             {
@@ -420,17 +428,7 @@ namespace Raven.Server.Documents.Replication
                 if (Guid.TryParse(_replicationBatchReply.DatabaseId, out _dbid) == false)
                     return false;
 
-
-                for (int i = 0; i < _replicationBatchReply.ChangeVector.Length; i++)
-                {
-                    if (_replicationBatchReply.ChangeVector[i].DbId == _dbid)
-                    {
-                        _currentEtagOnSibling = _replicationBatchReply.ChangeVector[i].Etag;
-                        break;
-                    }
-                }
-
-                return _currentEtagOnSibling > 0;
+                return _replicationBatchReply.CurrentEtag > 0;
             }
 
             public override int Execute(DocumentsOperationContext context)
@@ -444,25 +442,11 @@ namespace Raven.Server.Documents.Replication
                 if (status != ConflictsStorage.ConflictStatus.AlreadyMerged)
                     return 0;
 
-                var length = context.LastDatabaseChangeVector.Length;
-                for (var i = 0; i < length; i++)
-                {
-                    if(_dbid  != context.LastDatabaseChangeVector[i].DbId)
-                        continue;
 
-                    context.LastDatabaseChangeVector[i].Etag = Math.Max(context.LastDatabaseChangeVector[i].Etag,
-                        _currentEtagOnSibling);
-                    return 1;
-                }
-
-                Array.Resize(ref context.LastDatabaseChangeVector, length + 1);
-                context.LastDatabaseChangeVector[length] = new ChangeVectorEntry
-                {
-                    DbId = _dbid,
-                    Etag = _currentEtagOnSibling
-                };
-                return 1;
+                return context.UpdateLastDatabaseChangeVector(_dbid, _replicationBatchReply.CurrentEtag) ? 1 : 0;
             }
+
+            
         }
         
         private void UpdateDestinationChangeVectorHeartbeat(ReplicationMessageReply replicationBatchReply)

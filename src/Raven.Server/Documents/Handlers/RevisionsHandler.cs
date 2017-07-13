@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="VersioningHandler.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="RevisionsHandler.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -8,7 +8,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Exceptions.Versioning;
+using Raven.Client.Documents.Exceptions.Revisions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
@@ -19,30 +19,30 @@ using Voron;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class VersioningHandler : DatabaseRequestHandler
+    public class RevisionsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/versioning/config", "GET")]
-        public Task GetVersioningConfig()
+        [RavenAction("/databases/*/revisions-config", "GET")]
+        public Task GetRevisionsConfig()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var databaseRecord = Server.ServerStore.Cluster.ReadDatabase(context, Database.Name);
-                var versioningConfig = databaseRecord?.Versioning;
-                if (versioningConfig != null)
+                var revisionsConfig = databaseRecord?.Revisions;
+                if (revisionsConfig != null)
                 {
-                    var versioningCollection = new DynamicJsonValue();
-                    foreach (var collection in versioningConfig.Collections)
+                    var revisionsCollection = new DynamicJsonValue();
+                    foreach (var collection in revisionsConfig.Collections)
                     {
-                        versioningCollection[collection.Key] = collection.Value.ToJson();
+                        revisionsCollection[collection.Key] = collection.Value.ToJson();
                     }
 
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         context.Write(writer, new DynamicJsonValue
                         {
-                            [nameof(versioningConfig.Default)] = versioningConfig.Default?.ToJson(),
-                            [nameof(versioningConfig.Collections)] = versioningCollection
+                            [nameof(revisionsConfig.Default)] = revisionsConfig.Default?.ToJson(),
+                            [nameof(revisionsConfig.Collections)] = revisionsCollection
                         });
                     }
                 }
@@ -57,9 +57,9 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/revisions", "GET")]
         public Task GetRevisionsFor()
         {
-            var versioningStorage = Database.DocumentsStorage.VersioningStorage;
-            if (versioningStorage.Configuration == null)
-                throw new VersioningDisabledException();
+            var revisionsStorage = Database.DocumentsStorage.RevisionsStorage;
+            if (revisionsStorage.Configuration == null)
+                throw new RevisionsDisabledException();
 
             var etag = GetLongQueryString("etag", required: false);
 
@@ -75,8 +75,8 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var versioningStorage = Database.DocumentsStorage.VersioningStorage;
-                var revision = versioningStorage.GetRevisionsFrom(context, etag, 1).FirstOrDefault();
+                var revisionsStorage = Database.DocumentsStorage.RevisionsStorage;
+                var revision = revisionsStorage.GetRevisionsFrom(context, etag, 1).FirstOrDefault();
 
                 if (revision != null)
                 {
@@ -105,12 +105,12 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var versioningStorage = Database.DocumentsStorage.VersioningStorage;
+                var revisionsStorage = Database.DocumentsStorage.RevisionsStorage;
 
                 var sw = Stopwatch.StartNew();
                 var start = GetStart();
                 var pageSize = GetPageSize();
-                var revisions = versioningStorage.GetRevisions(context, id, start, pageSize);
+                var revisions = revisionsStorage.GetRevisions(context, id, start, pageSize);
 
                 var actualEtag = revisions.Revisions.Length == 0 ? -1 : revisions.Revisions[0].Etag;
 
@@ -145,9 +145,9 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/revisions/bin", "GET", "/databases/*/revisions/bin?etag={long.MaxValue}&pageSize=25")]
         public Task GetRevisionsBin()
         {
-            var versioningStorage = Database.DocumentsStorage.VersioningStorage;
-            if (versioningStorage.Configuration == null)
-                throw new VersioningDisabledException();
+            var revisionsStorage = Database.DocumentsStorage.RevisionsStorage;
+            if (revisionsStorage.Configuration == null)
+                throw new RevisionsDisabledException();
 
             var sw = Stopwatch.StartNew();
             var etag = GetLongQueryString("etag", false) ?? long.MaxValue;
@@ -155,7 +155,7 @@ namespace Raven.Server.Documents.Handlers
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
-            using (versioningStorage.GetLatestRevisionsBinEntryEtag(context, etag, out Slice revisionsBinEntryKey, out long actualEtag))
+            using (revisionsStorage.GetLatestRevisionsBinEntryEtag(context, etag, out Slice revisionsBinEntryKey, out long actualEtag))
             {
                 if (GetLongFromHeaders("If-None-Match") == actualEtag)
                 {
@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteStartObject();
 
                     writer.WritePropertyName("Results");
-                    var revisions = versioningStorage.GetRevisionsBinEntries(context, revisionsBinEntryKey, pageSize);
+                    var revisions = revisionsStorage.GetRevisionsBinEntries(context, revisionsBinEntryKey, pageSize);
                     writer.WriteDocuments(context, revisions, false, out count);
 
                     writer.WriteEndObject();

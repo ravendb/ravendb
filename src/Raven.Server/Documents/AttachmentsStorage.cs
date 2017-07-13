@@ -9,9 +9,7 @@ using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
@@ -20,7 +18,6 @@ using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Sparrow.Platform;
 using Sparrow.Utils;
 using static Raven.Server.Documents.DocumentsStorage;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
@@ -419,7 +416,7 @@ namespace Raven.Server.Documents
 
         public void PutAttachmentStream(DocumentsOperationContext context, Slice key, Slice base64Hash, Stream stream)
         {
-            Debug.Assert(stream.Position == 0);
+            stream.Position = 0; // We might retry a merged command, so it is a safe place to reset the position here to zero.
 
             var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
             var existingStream = tree.ReadStream(base64Hash);
@@ -543,6 +540,13 @@ namespace Raven.Server.Documents
         public Stream GetAttachmentStream(DocumentsOperationContext context, Slice hashSlice)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
+            return tree.ReadStream(hashSlice);
+        }
+
+        public Stream GetAttachmentStream(DocumentsOperationContext context, Slice hashSlice, out string tag)
+        {
+            var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
+            tag = tree.GetStreamTag(hashSlice);
             return tree.ReadStream(hashSlice);
         }
 
@@ -923,40 +927,12 @@ namespace Raven.Server.Documents
             }
         }
 
-        public ReleaseTempFile GetTempFile(out Stream file, string prefix = null)
+        public StreamsTempFile GetTempFile(string prefix)
         {
-            var name = $"attachment.{Guid.NewGuid():N}.put";
-            if (prefix != null)
-                name = prefix + name;
+            var name = $"attachment.{Guid.NewGuid():N}.{prefix}";
             var tempPath = _documentsStorage.Environment.Options.DataPager.Options.TempPath.Combine(name);
 
-            if (_documentDatabase.DocumentsStorage.Environment.Options.EncryptionEnabled)
-                file = new TempCryptoStream(tempPath.FullPath);
-            else
-                file = new FileStream(tempPath.FullPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose | FileOptions.SequentialScan);
-
-            return new ReleaseTempFile(tempPath.FullPath, file);
-        }
-
-        public struct ReleaseTempFile : IDisposable
-        {
-            private readonly string _tempFile;
-            private readonly Stream _file;
-
-            public ReleaseTempFile(string tempFile, Stream file)
-            {
-                _tempFile = tempFile;
-                _file = file;
-            }
-
-            public void Dispose()
-            {
-                _file.Dispose();
-
-                // Linux does not clean the file, so we should clean it manually
-                if (PlatformDetails.RunningOnPosix)
-                    IOExtensions.DeleteFile(_tempFile);
-            }
+            return new StreamsTempFile(tempPath.FullPath, _documentDatabase);
         }
 
 #if DEBUG

@@ -175,6 +175,11 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
 
+            public Stream GetTempStream()
+            {
+                throw new NotSupportedException();
+            }
+
             private void WriteUniqueAttachmentStreams(Document document, SmugglerProgressBase.CountsWithLastEtag progress)
             {
                 if ((document.Flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments ||
@@ -199,9 +204,9 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (_attachmentStreamsAlreadyExported.Add(hash))
                     {
-                        using (var stream = _source.GetAttachmentStream(hash))
+                        using (var stream = _source.GetAttachmentStream(hash, out string tag))
                         {
-                            WriteAttachmentStream(hash, stream);
+                            WriteAttachmentStream(hash, stream, tag);
                         }
                     }
                 }
@@ -213,7 +218,7 @@ namespace Raven.Server.Smuggler.Documents
                 return _context;
             }
 
-            private void WriteAttachmentStream(LazyStringValue hash, Stream stream)
+            private void WriteAttachmentStream(LazyStringValue hash, Stream stream, string tag)
             {
                 if (First == false)
                     Writer.WriteComma();
@@ -231,6 +236,10 @@ namespace Raven.Server.Smuggler.Documents
 
                 Writer.WritePropertyName(nameof(AttachmentName.Size));
                 Writer.WriteInteger(stream.Length);
+                Writer.WriteComma();
+
+                Writer.WritePropertyName(nameof(DocumentItem.AttachmentStream.Tag));
+                Writer.WriteString(tag);
 
                 Writer.WriteEndObject();
 

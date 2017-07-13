@@ -125,12 +125,17 @@ namespace Raven.Server.Rachis
                 {
                     var status = new NodeStatus
                     {
-                        ConnectionStatus = kvp.Value.Status,
+                        Connected = kvp.Value.Status.Equals("Connected"),
                         LastMatchingIndex = kvp.Value.FollowerMatchIndex,
                         LastReply = kvp.Value.LastReplyFromFollower,
                         LastSent = kvp.Value.LastSendToFollower,
                         LastSentMessage = kvp.Value.LastSendMsg
                     };
+
+                    if (status.Connected == false)
+                    {
+                        status.ErrorDetails = kvp.Value.Status;
+                    }
 
                     dict[kvp.Key] = status;
                 }

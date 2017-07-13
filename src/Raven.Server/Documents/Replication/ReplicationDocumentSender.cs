@@ -76,6 +76,7 @@ namespace Raven.Server.Documents.Replication
                         return _attachmentRead;
                     case ReplicationBatchItem.ReplicationItemType.DocumentTombstone:
                     case ReplicationBatchItem.ReplicationItemType.AttachmentTombstone:
+                    case ReplicationBatchItem.ReplicationItemType.RevisionTombstone:
                         return _tombstoneRead;
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -132,8 +133,8 @@ namespace Raven.Server.Documents.Replication
             var docs = _parent._database.DocumentsStorage.GetDocumentsFrom(ctx, etag + 1);
             var tombs = _parent._database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1);
             var conflicts = _parent._database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(ctx, etag + 1);
-            var versioningStorage = _parent._database.DocumentsStorage.VersioningStorage;
-            var revisions = versioningStorage.Configuration != null ? versioningStorage.GetRevisionsFrom(ctx, etag + 1, int.MaxValue).Select(ReplicationBatchItem.From) : null;
+            var revisionsStorage = _parent._database.DocumentsStorage.RevisionsStorage;
+            var revisions = revisionsStorage.Configuration != null ? revisionsStorage.GetRevisionsFrom(ctx, etag + 1, int.MaxValue).Select(ReplicationBatchItem.From) : null;
             var attachments = _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsFrom(ctx, etag + 1);
 
             using (var docsIt = docs.GetEnumerator())
@@ -373,6 +374,13 @@ namespace Raven.Server.Documents.Replication
                 return;
             }
 
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.RevisionTombstone)
+            {
+                WriteRevisionTombstoneToServer(item);
+                stats.RecordRevisionTombstoneOutput();
+                return;
+            }
+
             if (item.Type == ReplicationBatchItem.ReplicationItemType.DocumentTombstone)
             {
                 WriteDocumentToServer(item);
@@ -564,6 +572,51 @@ namespace Raven.Server.Documents.Replication
                 tempBufferPos += sizeof(int);
                 Memory.Copy(pTemp + tempBufferPos, item.Id.Buffer, item.Id.Size);
                 tempBufferPos += item.Id.Size;
+
+                _stream.Write(_tempBuffer, 0, tempBufferPos);
+            }
+        }
+
+        private unsafe void WriteRevisionTombstoneToServer(ReplicationBatchItem item)
+        {
+            var changeVectorSize = item.ChangeVector.Length * sizeof(ChangeVectorEntry);
+            var requiredSize = sizeof(byte) + // type
+                               sizeof(int) + // # of change vectors
+                               changeVectorSize +
+                               sizeof(short) + // transaction marker
+                               sizeof(int) + // size of key
+                               item.Id.Size +
+                               sizeof(int) + // size of collection
+                               item.Collection.Size;
+
+            if (requiredSize > _tempBuffer.Length)
+                ThrowTooManyChangeVectorEntries(item);
+
+            fixed (byte* pTemp = _tempBuffer)
+            {
+                var tempBufferPos = 0;
+                pTemp[tempBufferPos++] = (byte)item.Type;
+
+                fixed (ChangeVectorEntry* pChangeVectorEntries = item.ChangeVector)
+                {
+                    *(int*)(pTemp + tempBufferPos) = item.ChangeVector.Length;
+                    tempBufferPos += sizeof(int);
+                    Memory.Copy(pTemp + tempBufferPos, (byte*)pChangeVectorEntries, changeVectorSize);
+                    tempBufferPos += changeVectorSize;
+                }
+
+                *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
+                tempBufferPos += sizeof(short);
+
+                *(int*)(pTemp + tempBufferPos) = item.Id.Size;
+                tempBufferPos += sizeof(int);
+                Memory.Copy(pTemp + tempBufferPos, item.Id.Buffer, item.Id.Size);
+                tempBufferPos += item.Id.Size;
+
+                *(int*)(pTemp + tempBufferPos) = item.Collection.Size;
+                tempBufferPos += sizeof(int);
+                Memory.Copy(pTemp + tempBufferPos, item.Collection.Buffer, item.Collection.Size);
+                tempBufferPos += item.Collection.Size;
 
                 _stream.Write(_tempBuffer, 0, tempBufferPos);
             }

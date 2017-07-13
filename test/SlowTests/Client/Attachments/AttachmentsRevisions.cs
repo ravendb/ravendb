@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Documents.Versioning;
+using FastTests.Server.Documents.Revisions;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
@@ -15,14 +15,14 @@ using Xunit;
 
 namespace SlowTests.Client.Attachments
 {
-    public class AttachmentsVersioning : RavenTestBase
+    public class AttachmentsRevisions : RavenTestBase
     {
         [Fact]
         public async Task PutAttachments()
         {
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database, false, 4);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, false, 4);
                 var names = CreateDocumentWithAttachments(store);
                 AssertRevisions(store, names, (session, revisions) =>
                 {
@@ -162,7 +162,7 @@ namespace SlowTests.Client.Attachments
         private static void AssertNoRevisionAttachment(User revision, IDocumentSession session, bool isDeleteRevision = false)
         {
             var metadata = session.Advanced.GetMetadataFor(revision);
-            var flags = DocumentFlags.Versioned | DocumentFlags.Revision;
+            var flags = DocumentFlags.HasRevisions | DocumentFlags.Revision;
             if (isDeleteRevision)
                 flags = DocumentFlags.DeleteRevision;
             Assert.Equal(flags.ToString(), metadata[Constants.Documents.Metadata.Flags]);
@@ -172,7 +172,7 @@ namespace SlowTests.Client.Attachments
         private static void AssertRevisionAttachments(string[] names, int expectedCount, User revision, IDocumentSession session)
         {
             var metadata = session.Advanced.GetMetadataFor(revision);
-            Assert.Equal((DocumentFlags.Versioned | DocumentFlags.Revision | DocumentFlags.HasAttachments).ToString(), metadata[Constants.Documents.Metadata.Flags]);
+            Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.HasAttachments).ToString(), metadata[Constants.Documents.Metadata.Flags]);
             var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
             Assert.Equal(expectedCount, attachments.Length);
 

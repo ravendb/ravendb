@@ -24,6 +24,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Replication
@@ -37,6 +38,10 @@ namespace Raven.Server.Documents.Replication
 
         public event Action<OutgoingReplicationHandler> OutgoingReplicationAdded;
         public event Action<OutgoingReplicationHandler> OutgoingReplicationRemoved;
+
+#if DEBUG
+        public AsyncManualResetEvent DebugWaitAndRunReplicationOnce;
+#endif
 
         public readonly DocumentDatabase Database;
         private volatile bool _isInitialized;

@@ -345,8 +345,10 @@ namespace Raven.Server.Smuggler.Documents
                         if (attachments == null)
                             attachments = new List<DocumentItem.AttachmentStream>();
 
-                        var attachment = new DocumentItem.AttachmentStream();
-                        attachment.FileDispose = _database.DocumentsStorage.AttachmentsStorage.GetTempFile(out attachment.File, "smuggler-");
+                        var attachment = new DocumentItem.AttachmentStream
+                        {
+                            Stream = actions.GetTempStream()
+                        };
                         ProcessAttachmentStream(context, data, ref attachment);
                         attachments.Add(attachment);
                         continue;
@@ -373,10 +375,11 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private unsafe void ProcessAttachmentStream(DocumentsOperationContext context, BlittableJsonReaderObject data, ref DocumentItem.AttachmentStream attachment)
+        public unsafe void ProcessAttachmentStream(DocumentsOperationContext context, BlittableJsonReaderObject data, ref DocumentItem.AttachmentStream attachment)
         {
             if (data.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
-                data.TryGet(nameof(AttachmentName.Size), out long size) == false)
+                data.TryGet(nameof(AttachmentName.Size), out long size) == false ||
+                data.TryGet(nameof(DocumentItem.AttachmentStream.Tag), out LazyStringValue tag) == false)
                 throw new ArgumentException($"Data of attachment stream is not valid: {data}");
 
             if (_writeBuffer == null)
@@ -384,12 +387,13 @@ namespace Raven.Server.Smuggler.Documents
 
             attachment.Data = data;
             attachment.Base64HashDispose = Slice.External(context.Allocator, hash, out attachment.Base64Hash);
+            attachment.TagDispose = Slice.External(context.Allocator, tag, out attachment.Tag);
 
             while (size > 0)
             {
                 var sizeToRead = (int)Math.Min(_writeBuffer.Length, size);
                 var read = _parser.Copy(_writeBuffer.Pointer, sizeToRead);
-                attachment.File.Write(_writeBuffer.Buffer.Array, _writeBuffer.Buffer.Offset, read.bytesRead);
+                attachment.Stream.Write(_writeBuffer.Buffer.Array, _writeBuffer.Buffer.Offset, read.bytesRead);
                 if (read.done == false)
                 {
                     var read2 = _stream.Read(_buffer.Buffer.Array, _buffer.Buffer.Offset, _buffer.Length);
@@ -400,7 +404,6 @@ namespace Raven.Server.Smuggler.Documents
                 }
                 size -= read.bytesRead;
             }
-            attachment.File.Position = 0;
         }
 
         private BlittableJsonDocumentBuilder CreateBuilder(JsonOperationContext context, BlittableMetadataModifier modifier)

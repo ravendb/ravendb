@@ -1,12 +1,12 @@
 ﻿using System.Threading.Tasks;
-using FastTests.Client.Attachments;
+using FastTests;
 using SlowTests.Client.Attachments;
 using Tests.Infrastructure;
 using Xunit;
 
 namespace StressTests.Client.Attachments
 {
-    public class AttachmentsSessionAsyncStress
+    public class AttachmentsSessionAsyncStress : NoDisposalNeeded
     {
         [NightlyBuildTheory]
         [InlineData(100_000)]

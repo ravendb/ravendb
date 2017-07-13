@@ -21,7 +21,7 @@ class getRevisionsBinDocumentMetadataCommand extends commandBase {
             'metadata-only': true
         }
 
-        const url = endpoints.databases.versioning.revisions + this.urlEncodeArgs(args);
+        const url = endpoints.databases.revisions.revisions + this.urlEncodeArgs(args);
 
         return this.query(url, null, this.db, (results: resultsWithTotalCountDto<documentDto>) => {
             if (results.Results.length) {

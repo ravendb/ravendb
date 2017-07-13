@@ -128,22 +128,22 @@ namespace Raven.Server.Routing
                     switch (feature?.Status)
                     {
                         case null:
-                        case AuthenticationStatus.NoCertificateProvided:
-                        case AuthenticationStatus.None:
-                        case AuthenticationStatus.UnfamiliarCertificate:
+                        case RavenServer.AuthenticationStatus.NoCertificateProvided:
+                        case RavenServer.AuthenticationStatus.None:
+                        case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
                             UnlikelyFailAuthorization(context, database?.Name, feature);
                             return false;
-                        case AuthenticationStatus.Allowed:
+                        case RavenServer.AuthenticationStatus.Allowed:
                             if (route.AuthorizationStatus == AuthorizationStatus.ServerAdmin)
-                                goto case AuthenticationStatus.None;
+                                goto case RavenServer.AuthenticationStatus.None;
 
                             if (database == null)
                                 return true;
                             if (feature.CanAccess(database.Name))
                                 return true;
 
-                            goto case AuthenticationStatus.None;
-                        case AuthenticationStatus.ServerAdmin:
+                            goto case RavenServer.AuthenticationStatus.None;
+                        case RavenServer.AuthenticationStatus.ServerAdmin:
                             return true;
                         default:
                             throw new ArgumentOutOfRangeException();
@@ -162,19 +162,19 @@ namespace Raven.Server.Routing
         public void UnlikelyFailAuthorization(HttpContext context, string database, RavenServer.AuthenticateConnection feature)
         {
             string message;
-            if (feature == null || feature.Status == AuthenticationStatus.NoCertificateProvided)
+            if (feature == null || feature.Status == RavenServer.AuthenticationStatus.NoCertificateProvided)
             {
                 message = "This server requires client certificate for authentication, but none was provided by the client";
             }
-            else if (feature.Status == AuthenticationStatus.UnfamiliarCertificate)
+            else if (feature.Status == RavenServer.AuthenticationStatus.UnfamiliarCertificate)
             {
                 message = "The provided client certificate " + feature.Certificate + " is not on the allowed list of certificates that can access this server";
             }
-            else if (feature.Status == AuthenticationStatus.Allowed)
+            else if (feature.Status == RavenServer.AuthenticationStatus.Allowed)
             {
                 message = "The provided client certificate " + feature.Certificate + " is not authorized to access " + (database ?? "the server");
             }
-            else if (feature.Status == AuthenticationStatus.ServerAdmin)
+            else if (feature.Status == RavenServer.AuthenticationStatus.ServerAdmin)
             {
                 message = "The provided client certificate " + feature.Certificate + " does not have ServerAdmin level to access " + (database ?? "the server");
             }
