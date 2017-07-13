@@ -260,51 +260,38 @@ namespace Raven.Server.Documents.Queries
                         if (whereField.Type == ValueTokenType.Parameter)
                             result.Where.Add(fieldName, GetParameterValueAndType(singleValueToken, ref propertyDetails));
                         else
-                        {
-                            string value;
-                            switch (singleValueToken.Type)
-                            {
-                                case ValueTokenType.String:
-                                    value = QueryExpression.Extract(Parsed.QueryText, singleValueToken.TokenStart + 1, singleValueToken.TokenLength - 2, singleValueToken.EscapeChars);
-                                    break;
-                                default:
-                                    value = QueryExpression.Extract(Parsed.QueryText, singleValueToken);
-                                    break;
-                            }
-
-                            result.Where.Add(fieldName, (value, singleValueToken.Type));
-                        }
+                            result.Where.Add(fieldName, (ExtractTokenValue(singleValueToken), singleValueToken.Type));
                     }
                     else
                     {
-                        if (whereField.Type == ValueTokenType.Parameter)
+                        var values = new List<string>(whereField.Values.Count);
+                        ValueTokenType? valuesType = null;
+
+                        foreach (var item in whereField.Values)
                         {
-                            var values = new List<string>(whereField.Values.Count);
-                            ValueTokenType? valuesType = null;
+                            string value;
+                            ValueTokenType type;
 
-                            foreach (var item in whereField.Values)
+                            if (whereField.Type == ValueTokenType.Parameter)
+                                (value, type) = GetParameterValueAndType(item, ref propertyDetails);
+                            else
+                                (value, type) = (ExtractTokenValue(item), item.Type);
+
+                            if (valuesType != null && valuesType.Value != type && TryHandleIncompatibleTypes(ref valuesType, ref type) == false)
                             {
-                                var valueTypePair = GetParameterValueAndType(item, ref propertyDetails);
-
-                                values.Add(valueTypePair.Value);
-
-                                if (valuesType == null)
-                                    valuesType = valueTypePair.Type;
+                                if (whereField.Type == ValueTokenType.Parameter)
+                                    ThrowIncompatibleTypesInQueryParameters(fieldName, whereField.Values.Select(x => GetParameterValueAndType(x, ref propertyDetails)));
                                 else
-                                {
-                                    if (valuesType.Value != valueTypePair.Type && TryHandleIncompatibleTypes(ref valuesType, valueTypePair.Type) == false)
-                                        ThrowIncompatibleTypesInQueryParameters(fieldName, whereField.Values.Select(x => GetParameterValueAndType(x, ref propertyDetails)));
-                                }
+                                    ThrowIncompatibleTypesOfVariables(fieldName, whereField.Values.Select(x => (ExtractTokenValue(x), x.Type)));
                             }
 
-                            Debug.Assert(valuesType != null);
+                            valuesType = type;
+                            values.Add(value);
+                        }
 
-                            result.Where.Add(fieldName, values, valuesType.Value);
-                        }
-                        else
-                        {
-                            throw new NotImplementedException("TODO arek - support non parametrized queries that WHERE clause has multiple fields e.g. WHERE Age BETWEEN 30 AND 35");
-                        }
+                        Debug.Assert(valuesType != null);
+
+                        result.Where.Add(fieldName, values, valuesType.Value);
                     }
                 }
             }
@@ -320,6 +307,21 @@ namespace Raven.Server.Documents.Queries
             }
 
             return result;
+        }
+
+        private string ExtractTokenValue(ValueToken singleValueToken)
+        {
+            string value;
+            switch (singleValueToken.Type)
+            {
+                case ValueTokenType.String:
+                    value = QueryExpression.Extract(Parsed.QueryText, singleValueToken.TokenStart + 1, singleValueToken.TokenLength - 2, singleValueToken.EscapeChars);
+                    break;
+                default:
+                    value = QueryExpression.Extract(Parsed.QueryText, singleValueToken);
+                    break;
+            }
+            return value;
         }
 
         private (string Value, ValueTokenType Type) GetParameterValueAndType(ValueToken valueToken, ref BlittableJsonReaderObject.PropertyDetails propertyDetails)
@@ -396,8 +398,10 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private static bool TryHandleIncompatibleTypes(ref ValueTokenType? valuesType, ValueTokenType type)
+        private static bool TryHandleIncompatibleTypes(ref ValueTokenType? valuesType, ref ValueTokenType type)
         {
+            Debug.Assert(valuesType != null);
+
             if (valuesType.Value == ValueTokenType.Long && type == ValueTokenType.Double)
             {
                 valuesType = ValueTokenType.Double;
@@ -405,7 +409,10 @@ namespace Raven.Server.Documents.Queries
             }
 
             if (valuesType.Value == ValueTokenType.Double && type == ValueTokenType.Long)
+            {
+                type = ValueTokenType.Double;
                 return true;
+            }
 
             return false;
         }
@@ -413,6 +420,12 @@ namespace Raven.Server.Documents.Queries
         private static void ThrowIncompatibleTypesInQueryParameters(string fieldName, IEnumerable<(string Value, ValueTokenType Type)> parameters)
         {
             throw new InvalidOperationException($"Incompatible types of parameters in WHERE clause on '{fieldName}' field: " +
+                                                $"{string.Join(",", parameters.Select(x => $"{x.Value}({x.Type})"))}");
+        }
+
+        private static void ThrowIncompatibleTypesOfVariables(string fieldName, IEnumerable<(string Value, ValueTokenType Type)> parameters)
+        {
+            throw new InvalidOperationException($"Incompatible types of variables in WHERE clause on '{fieldName}' field: " +
                                                 $"{string.Join(",", parameters.Select(x => $"{x.Value}({x.Type})"))}");
         }
     }
