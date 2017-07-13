@@ -1,7 +1,12 @@
 using System;
+using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using DotNetCross.Memory;
 using Sparrow.Global;
+using Sparrow.Platform;
+using Sparrow.Platform.Posix;
 
 namespace Sparrow
 {
@@ -227,5 +232,61 @@ namespace Sparrow
             Finish:
             ;
         }
+
+        public static int ttt = 0;
+
+        public static bool PosixCheckForResidencyInRam(IntPtr addr, long length)
+        {
+            var isResidentInRam = true;
+            if (++ttt % 2 == 0)
+            {
+                Console.WriteLine("Touch");
+                for (long i = 0; i < length; i++)
+                {
+                    var p = addr.ToPointer();
+                    var pp = *((byte*)p + i);
+                    
+                        File.AppendAllText(@"/home/lili/tmppp", pp.ToString());
+                    
+                }
+            }
+            else
+            {
+                Console.WriteLine("Dont touch");
+            }
+            Console.Out.Flush();
+
+            var sp = Stopwatch.StartNew();
+
+            Debug.Assert(addr.ToInt64() % Syscall.PageSize == 0);
+            var vecSize = (length + Syscall.PageSize - 1) / Syscall.PageSize;
+            var vec = Marshal.AllocHGlobal((int)vecSize);
+            if (Syscall.mincore(addr.ToPointer(), new IntPtr(length), (char*)vec.ToPointer()) != 0)
+            {
+                Console.WriteLine("ERROR: mincore exited with " + Marshal.GetLastWin32Error());
+                Console.Out.Flush();
+            }
+
+            for (var i = 0; i < vecSize; i++)
+            {
+                if ((*((byte*)vec.ToPointer() + i) & 1) == 0)
+                    continue;
+
+                isResidentInRam = false;
+                break;
+            }
+
+            Console.WriteLine(sp.ElapsedMilliseconds);
+            Console.Out.Flush();
+
+            if (isResidentInRam)
+            {
+                Console.WriteLine("Not resident");
+                Console.Out.Flush();
+            }
+            return isResidentInRam;
+        }
+
+       
     }
 }

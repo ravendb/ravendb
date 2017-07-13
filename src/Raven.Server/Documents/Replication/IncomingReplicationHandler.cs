@@ -18,6 +18,7 @@ using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.TcpHandlers;
+using Sparrow.Platform;
 using Sparrow.Utils;
 using Voron;
 using ThreadState = System.Threading.ThreadState;

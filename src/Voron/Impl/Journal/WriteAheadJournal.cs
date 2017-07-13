@@ -16,6 +16,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Compression;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Utils;
 using Voron.Data;
 using Voron.Exceptions;

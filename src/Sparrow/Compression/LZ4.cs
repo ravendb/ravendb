@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using Sparrow.Binary;
 using System.Runtime.CompilerServices;
 using DotNetCross.Memory;
+using Sparrow.Platform;
 
 namespace Sparrow.Compression
 {

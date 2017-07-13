@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Sparrow.Compression;
+using Sparrow.Platform;
 using Sparrow.Utils;
 using Voron.Global;
 using Voron.Impl.Paging;

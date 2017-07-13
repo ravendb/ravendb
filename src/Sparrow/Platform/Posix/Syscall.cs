@@ -1,15 +1,26 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Security;
 using Voron.Platform.Posix;
+// ReSharper disable InconsistentNaming
 
 namespace Sparrow.Platform.Posix
 {
     public static unsafe class Syscall
     {
         internal const string LIBC_6 = "libc";
+
+        private static long? _pageSize;
+        public static long PageSize
+        {
+            get
+            {
+                if (_pageSize == null)
+                    _pageSize = sysconf(PerPlatformValues.SysconfNames._SC_PAGESIZE);
+                return _pageSize.Value;
+            }
+        }
 
         [DllImport(LIBC_6, EntryPoint = "memcpy", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode, SetLastError = false)]
         [SecurityCritical]
@@ -60,7 +71,7 @@ namespace Sparrow.Platform.Posix
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern IntPtr pread(int fd, IntPtr buf, UIntPtr count, UIntPtr offset);
 
-        public static unsafe long pread(int fd, void* buf, ulong count, long offset)
+        public static long pread(int fd, void* buf, ulong count, long offset)
         {
             return (long) pread(fd, (IntPtr) buf, (UIntPtr) count, (UIntPtr) offset);
         }
@@ -100,7 +111,12 @@ namespace Sparrow.Platform.Posix
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern void free(IntPtr ptr);
-        
+
+        // int mincore(void *addr, size_t length, unsigned char *vec);
+        // The vec argument must point to an array containing at least (length+PAGE_SIZE-1) / PAGE_SIZE bytes
+        [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int mincore(void* addr, IntPtr length, char* vec);
+
         // getpid(2)
         //    pid_t getpid(void);
         [DllImport(LIBC_6, SetLastError = true)]
@@ -158,7 +174,7 @@ namespace Sparrow.Platform.Posix
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern IntPtr read(int fd, IntPtr buf, UIntPtr count);
 
-        public static unsafe long read(int fd, void* buf, ulong count)
+        public static long read(int fd, void* buf, ulong count)
         {
             return (long) read(fd, (IntPtr) buf, (UIntPtr) count);
         }
@@ -191,7 +207,7 @@ namespace Sparrow.Platform.Posix
 
         public static long sysconf(int name)
         {
-            return sysconf(name, (Errno) 0);
+            return sysconf(name, 0);
         }
 
 
@@ -237,7 +253,7 @@ namespace Sparrow.Platform.Posix
                         if (pwrite(fd, &b, 1, size - 1) != 1)
                         {
                             var err = Marshal.GetLastWin32Error();
-                            Syscall.ThrowLastError(err, "Failed to pwrite in order to fallocate where fallocate is not supported for " + file);
+                            ThrowLastError(err, "Failed to pwrite in order to fallocate where fallocate is not supported for " + file);
                         }
                         return 0;
                 }
@@ -272,7 +288,7 @@ namespace Sparrow.Platform.Posix
             if (CheckSyncDirectoryAllowed(file) && SyncDirectory(file) == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                Syscall.ThrowLastError(err, "FSync dir " + file);
+                ThrowLastError(err, "FSync dir " + file);
             }
         }
 
@@ -311,13 +327,13 @@ namespace Sparrow.Platform.Posix
         public static int SyncDirectory(string file)
         {
             var dir = Path.GetDirectoryName(file);
-            var fd = Syscall.open(dir, 0, 0);
+            var fd = open(dir, 0, 0);
             if (fd == -1)
                 return -1;
-            var fsyncRc = Syscall.FSync(fd);
+            var fsyncRc = FSync(fd);
             if (fsyncRc == -1)
                 return -1;
-            return Syscall.close(fd);
+            return close(fd);
         }
     }
     [Flags]
