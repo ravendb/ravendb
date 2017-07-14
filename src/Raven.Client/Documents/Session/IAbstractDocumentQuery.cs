@@ -345,13 +345,11 @@ namespace Raven.Client.Documents.Session
 
         void GroupBy(string fieldName, params string[] fieldNames);
 
-        void GroupByKey(string fieldName = null, string projectedName = null);
+        void GroupByKey(string fieldName, string projectedName = null);
 
         void GroupBySum(string fieldName, string projectedName = null);
 
         void GroupByCount(string projectedName = null);
-
-        int CountOfGroupBy { get; }
 
         void WhereTrue();
     }

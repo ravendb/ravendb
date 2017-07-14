@@ -2,7 +2,7 @@ namespace Raven.Client.Documents.Session
 {
     public interface IGroupByDocumentQuery<T>
     {
-        IGroupByDocumentQuery<T> SelectKey(params GroupByField[] fields);
+        IGroupByDocumentQuery<T> SelectKey(string projectedName = null);
 
         IDocumentQuery<T> SelectSum(GroupByField field, params GroupByField[] fields);
 
@@ -11,7 +11,7 @@ namespace Raven.Client.Documents.Session
 
     public interface IAsyncGroupByDocumentQuery<T>
     {
-        IAsyncGroupByDocumentQuery<T> SelectKey(params GroupByField[] fields);
+        IAsyncGroupByDocumentQuery<T> SelectKey(string projectedName = null);
 
         IAsyncDocumentQuery<T> SelectSum(GroupByField field, params GroupByField[] fields);
 

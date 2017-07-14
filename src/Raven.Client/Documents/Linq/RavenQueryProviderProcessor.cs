@@ -1530,9 +1530,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     if ("Key".Equals(name, StringComparison.Ordinal))
                     {
-                        if (_documentQuery.CountOfGroupBy > 1)
-                            throw new NotSupportedException("Cannot specify composite key of GroupBy directly in Select statement. Specify each field of the key separately.");
-
                         var projectedName = ExtractProjectedName(fieldMember);
 
                         _documentQuery.GroupByKey(null, projectedName);

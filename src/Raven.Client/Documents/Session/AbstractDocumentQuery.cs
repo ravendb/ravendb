@@ -580,9 +580,6 @@ namespace Raven.Client.Documents.Session
 
         public void GroupByKey(string fieldName = null, string projectedName = null)
         {
-            if (fieldName != null)
-                fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
-
             SelectTokens.AddLast(GroupByKeyToken.Create(fieldName, projectedName));
         }
 
@@ -597,8 +594,6 @@ namespace Raven.Client.Documents.Session
         {
             SelectTokens.AddLast(GroupByCountToken.Create(projectedName));
         }
-
-        public int CountOfGroupBy => GroupByTokens.Count;
 
         public void WhereTrue()
         {

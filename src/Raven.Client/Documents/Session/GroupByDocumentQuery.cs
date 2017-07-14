@@ -18,17 +18,9 @@ namespace Raven.Client.Documents.Session
             _query = query;
         }
 
-        public IGroupByDocumentQuery<T> SelectKey(params GroupByField[] fields)
+        public IGroupByDocumentQuery<T> SelectKey(string projectedName = null)
         {
-            if (fields == null || fields.Length == 0)
-            {
-                _query.GroupByKey();
-                return this;
-            }
-
-            foreach (var field in fields)
-                _query.GroupByKey(field.FieldName, field.ProjectedName);
-
+            _query.GroupByKey(null, projectedName);
             return this;
         }
 
@@ -64,17 +56,9 @@ namespace Raven.Client.Documents.Session
             _query = query;
         }
 
-        public IAsyncGroupByDocumentQuery<T> SelectKey(params GroupByField[] fields)
+        public IAsyncGroupByDocumentQuery<T> SelectKey(string projectedName = null)
         {
-            if (fields == null || fields.Length == 0)
-            {
-                _query.GroupByKey();
-                return this;
-            }
-
-            foreach (var field in fields)
-                _query.GroupByKey(field.FieldName, field.ProjectedName);
-
+            _query.GroupByCount(projectedName);
             return this;
         }
 

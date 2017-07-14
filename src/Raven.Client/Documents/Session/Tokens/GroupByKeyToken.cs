@@ -20,15 +20,9 @@ namespace Raven.Client.Documents.Session.Tokens
 
         public override void WriteTo(StringBuilder writer)
         {
-            writer
-                .Append("key(");
+            writer.Append(_fieldName ?? "key()");
 
-            if (_fieldName != null)
-                writer.Append(_fieldName);
-
-            writer.Append(")");
-
-            if (_projectedName == null || _fieldName == _projectedName)
+            if (_projectedName == null || _projectedName == _fieldName)
                 return;
 
             writer
