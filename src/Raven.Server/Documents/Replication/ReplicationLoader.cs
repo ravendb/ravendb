@@ -39,9 +39,7 @@ namespace Raven.Server.Documents.Replication
         public event Action<OutgoingReplicationHandler> OutgoingReplicationAdded;
         public event Action<OutgoingReplicationHandler> OutgoingReplicationRemoved;
 
-#if DEBUG
-        public AsyncManualResetEvent DebugWaitAndRunReplicationOnce;
-#endif
+        internal AsyncManualResetEvent DebugWaitAndRunReplicationOnce;
 
         public readonly DocumentDatabase Database;
         private volatile bool _isInitialized;

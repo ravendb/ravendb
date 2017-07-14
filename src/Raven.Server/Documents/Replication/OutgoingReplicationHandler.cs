@@ -208,13 +208,11 @@ namespace Raven.Server.Documents.Replication
                         {
                             while (true)
                             {
-#if DEBUG
                                 if (_parent.DebugWaitAndRunReplicationOnce != null)
                                 {
                                     _parent.DebugWaitAndRunReplicationOnce.WaitAsync().Wait(_cts.Token);
                                     _parent.DebugWaitAndRunReplicationOnce.Reset();
                                 }
-#endif
 
                                 var sp = Stopwatch.StartNew();
                                 var stats = _lastStats = new OutgoingReplicationStatsAggregator(_parent.GetNextReplicationStatsId(), _lastStats);
