@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Queries.Parse
             if (string.IsNullOrWhiteSpace(query.Query))
                 yield break;
 
-            var q = QueryBuilder.BuildQuery(query.Parsed, query.Fields.Where, QueryAnalyzer);
+            var q = QueryBuilder.BuildQuery(query.Metadata, query.QueryParameters, QueryAnalyzer);
             var termQuery = q as TermQuery;
             if (termQuery != null)
             {

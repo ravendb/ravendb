@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 
 using Lucene.Net.Documents;
@@ -11,7 +10,6 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Queries;
 using Raven.Client.Util;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors;
@@ -77,7 +75,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var docsToGet = pageSize;
             var position = query.Start;
 
-            var luceneQuery = GetLuceneQuery(query.Parsed, query.Fields.Where, _analyzer);
+            var luceneQuery = GetLuceneQuery(query.Metadata, query.QueryParameters, _analyzer);
             var sort = GetSort(query);
             var returnedResults = 0;
 
@@ -231,7 +229,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 var noSortingCollector = new NonSortingCollector(Math.Abs(pageSize + start));
 
                 _searcher.Search(documentQuery, noSortingCollector, _state);
-                
+
                 return noSortingCollector.ToTopDocs();
             }
 
@@ -271,10 +269,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             return false;
         }
-        
+
         private Sort GetSort(IndexQueryServerSide query)
         {
-            var orderByFields = query.Fields.OrderBy;
+            var orderByFields = query.Metadata.OrderBy;
 
             if (orderByFields == null)
                 return null;
@@ -309,7 +307,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         sort.Add(new RandomSortField(Guid.NewGuid().ToString()));
                     else
                         sort.Add(new RandomSortField(customFieldName));
-                    
+
                     continue;
                 }
 

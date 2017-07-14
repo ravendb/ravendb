@@ -108,29 +108,20 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var fields = new Dictionary<string, DynamicQueryMappingItem>();
             var sorting = new Dictionary<string, DynamicSortInfo>();
 
-            if (query.Fields.Where != null)
+            foreach (var field in query.Metadata.Fields)
+                AddField(field.Key, field.Value);
+
+            void AddField(string fieldName, ValueTokenType valueType)
             {
-                foreach (var field in query.Fields.Where.SingleValueFields)
+                if (fieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+                    return;
+
+                fields[fieldName] = new DynamicQueryMappingItem(fieldName, FieldMapReduceOperation.None);
+
+                switch (valueType)
                 {
-                    AddField(field.Key, field.Value.ValueType);
-                }
-
-                foreach (var field in query.Fields.Where.MultipleValuesFields)
-                {
-                    AddField(field.Key, field.Value.ValueType);
-                }
-
-                void AddField(string fieldName, ValueTokenType valueType)
-                {
-                    if (fieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
-                        return;
-
-                    fields[fieldName] = new DynamicQueryMappingItem(fieldName, FieldMapReduceOperation.None);
-
-                    switch (valueType)
-                    {
-                        case ValueTokenType.Double:
-                        case ValueTokenType.Long:
+                    case ValueTokenType.Double:
+                    case ValueTokenType.Long:
                         {
                             if (fieldName == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
                                 return;
@@ -143,16 +134,15 @@ namespace Raven.Server.Documents.Queries.Dynamic
                                 Name = fieldName,
                                 FieldType = SortOptions.Numeric
                             });
-                            
+
                             break;
                         }
-                    }
                 }
             }
 
-            if (query.Fields.OrderBy != null)
+            if (query.Metadata.OrderBy != null)
             {
-                foreach (var field in query.Fields.OrderBy)
+                foreach (var field in query.Metadata.OrderBy)
                 {
                     var fieldName = field.Name;
 
@@ -189,18 +179,18 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 }
             }
 
-            
-            
+
+
             // dynamic map-reduce query
-            
+
             //result.IsMapReduce = true;
-            
-            
- //                dynamicMapFields = query.DynamicMapReduceFields.Where(x => x.IsGroupBy == false).Select(x => new DynamicQueryMappingItem(x.Name, x.OperationType));
-//
-//                result.GroupByFields = query.DynamicMapReduceFields.Where(x => x.IsGroupBy).Select(x => x.Name).ToArray();
-//
-//                numericFields = null;
+
+
+            //                dynamicMapFields = query.DynamicMapReduceFields.Where(x => x.IsGroupBy == false).Select(x => new DynamicQueryMappingItem(x.Name, x.OperationType));
+            //
+            //                result.GroupByFields = query.DynamicMapReduceFields.Where(x => x.IsGroupBy).Select(x => x.Name).ToArray();
+            //
+            //                numericFields = null;
 
             // TODO arek - get rid of linq
             result.MapFields = fields.Values

@@ -1792,7 +1792,7 @@ namespace Raven.Server.Documents.Indexes
 
                             var isStale = IsStale(documentsContext, indexContext, query.CutoffEtag);
 
-                            
+
                             if (WillResultBeAcceptable(isStale, query, wait) == false)
                             {
                                 documentsContext.CloseTransaction();
@@ -1807,7 +1807,7 @@ namespace Raven.Server.Documents.Indexes
                                 await wait.WaitForIndexingAsync(frozenAwaiter).ConfigureAwait(false);
                                 continue;
                             }
-                            
+
 
                             FillFacetedQueryResult(result, IsStale(documentsContext, indexContext), facetSetupEtag,
                                 documentsContext, indexContext);
@@ -2048,22 +2048,19 @@ namespace Raven.Server.Documents.Indexes
 
         private void AssertQueryDoesNotContainFieldsThatAreNotIndexed(IndexQueryServerSide query)
         {
-            if (query.Fields.Where != null)
+            foreach (var field in query.Metadata.AllFieldNames)
             {
-                foreach (var field in query.Fields.Where.AllFieldNames)
-                {
-                    var f = field;
+                var f = field;
 
-                    if (IndexPersistence.ContainsField(f) == false &&
-                        IndexPersistence.ContainsField("_") == false)
-                        // the catch all field name means that we have dynamic fields names
-                        throw new ArgumentException($"The field '{f}' is not indexed, cannot query on fields that are not indexed");
-                }
+                if (IndexPersistence.ContainsField(f) == false &&
+                    IndexPersistence.ContainsField("_") == false)
+                    // the catch all field name means that we have dynamic fields names
+                    throw new ArgumentException($"The field '{f}' is not indexed, cannot query on fields that are not indexed");
             }
 
-            if (query.Fields.OrderBy != null)
+            if (query.Metadata.OrderBy != null)
             {
-                foreach (var sortedField in query.Fields.OrderBy)
+                foreach (var sortedField in query.Metadata.OrderBy)
                 {
                     var f = sortedField.Name;
                     if (f == Constants.Documents.Indexing.Fields.IndexFieldScoreName)

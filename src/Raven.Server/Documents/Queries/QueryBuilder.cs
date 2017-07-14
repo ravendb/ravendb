@@ -10,6 +10,7 @@ using Raven.Server.Documents.Queries.Parse;
 using Raven.Server.Utils;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Indexes;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -25,11 +26,11 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException("TODO arek - remove me");
         }
 
-        public static Lucene.Net.Search.Query BuildQuery(Parser.Query query, WhereFields whereFields, Analyzer analyzer)
+        public static Lucene.Net.Search.Query BuildQuery(QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
         {
             using (CultureHelper.EnsureInvariantCulture())
             {
-                var node = ToLuceneNode(query.QueryText, query.Where, whereFields);
+                var node = ToLuceneNode(metadata.Query, metadata.Query.Where, metadata, parameters);
 
                 var luceneQuery = node.ToQuery(new LuceneASTQueryConfiguration
                 {
@@ -42,7 +43,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private static LuceneASTNodeBase ToLuceneNode(string query, QueryExpression expression, WhereFields whereFields)
+        private static LuceneASTNodeBase ToLuceneNode(Parser.Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters)
         {
             if (expression == null)
                 return new AllDocumentsLuceneASTNode();
@@ -51,14 +52,14 @@ namespace Raven.Server.Documents.Queries
             {
                 throw new NotImplementedException("OperatorType.Field");
 
-//                return new FieldLuceneASTNode()
-//                {
-//                    FieldName = new FieldName(QueryExpression.Extract(query, expression.Field)),
-//                    Node = new TermLuceneASTNode()
-//                    {
-//                        Term = QueryExpression.Extract(query, expression.Value ?? expression.First),
-//                    }
-//                };
+                //                return new FieldLuceneASTNode()
+                //                {
+                //                    FieldName = new FieldName(QueryExpression.Extract(query, expression.Field)),
+                //                    Node = new TermLuceneASTNode()
+                //                    {
+                //                        Term = QueryExpression.Extract(query, expression.Value ?? expression.First),
+                //                    }
+                //                };
             }
 
             switch (expression.Type)
@@ -69,13 +70,14 @@ namespace Raven.Server.Documents.Queries
                 case OperatorType.LessThenEqual:
                 case OperatorType.GreaterThenEqual:
                     {
-                        var fieldName = QueryExpression.Extract(query, expression.Field);
-                        var (value, valueType) = whereFields.SingleValueFields[fieldName];
+                        var fieldName = QueryExpression.Extract(query.QueryText, expression.Field);
+                        var (value, valueType) = GetValue(fieldName, query, metadata, parameters, expression.Value);
+
                         var (luceneFieldName, fieldType) = GetLuceneField(fieldName, valueType);
 
                         if (expression.Type == OperatorType.Equal && fieldType == FieldName.FieldType.String)
                         {
-                            return new FieldLuceneASTNode()
+                            return new FieldLuceneASTNode
                             {
                                 FieldName = new FieldName(luceneFieldName, fieldType),
                                 Node = CreateTermNode(value, valueType)
@@ -115,7 +117,7 @@ namespace Raven.Server.Documents.Queries
                                 break;
                         }
 
-                        return new FieldLuceneASTNode()
+                        return new FieldLuceneASTNode
                         {
                             FieldName = new FieldName(luceneFieldName, fieldType),
                             Node = rangeNode
@@ -123,50 +125,49 @@ namespace Raven.Server.Documents.Queries
                     }
                 case OperatorType.Between:
                     {
-                        var fieldName = QueryExpression.Extract(query, expression.Field);
-                        
-                        var (values, valuesType) = whereFields.MultipleValuesFields[fieldName];
+                        var fieldName = QueryExpression.Extract(query.QueryText, expression.Field);
+                        var (valueFirst, valueFirstType) = GetValue(fieldName, query, metadata, parameters, expression.First);
+                        var (valueSecond, valueSecondType) = GetValue(fieldName, query, metadata, parameters, expression.Second);
 
-                        var (luceneFieldName, fieldType) = GetLuceneField(fieldName, valuesType);
+                        var (luceneFieldName, fieldType) = GetLuceneField(fieldName, valueFirstType);
 
-                        return new FieldLuceneASTNode()
+                        return new FieldLuceneASTNode
                         {
                             FieldName = new FieldName(luceneFieldName, fieldType),
-                            Node = new RangeLuceneASTNode()
+                            Node = new RangeLuceneASTNode
                             {
                                 InclusiveMin = true,
                                 InclusiveMax = true,
-                                RangeMin = CreateTermNode(values[0], valuesType),
-                                RangeMax = CreateTermNode(values[1], valuesType)
+                                RangeMin = CreateTermNode(valueFirst, valueFirstType),
+                                RangeMax = CreateTermNode(valueSecond, valueSecondType)
                             }
                         };
                     }
                 case OperatorType.In:
-                {
-                    var fieldName = QueryExpression.Extract(query, expression.Field);
-
-                    var (values, valuesType) = whereFields.MultipleValuesFields[fieldName];
-
-                    var luceneFieldName = GetLuceneField(fieldName, valuesType).LuceneFieldName;
-
-                    var matches = new List<TermLuceneASTNode>(values.Count);
-
-                    for (int i = 0; i < values.Count; i++)
                     {
-                        matches.Add(CreateTermNode(values[i], valuesType));
+                        var fieldName = QueryExpression.Extract(query.QueryText, expression.Field);
+
+                        var matches = new List<TermLuceneASTNode>(expression.Values.Count);
+                        foreach (var valueToken in expression.Values)
+                        {
+                            var (value, valueType) = GetValue(fieldName, query, metadata, parameters, valueToken);
+
+                            matches.Add(CreateTermNode(value, valueType));
+                        }
+
+                        var luceneFieldName = GetLuceneField(fieldName, metadata.Fields[fieldName]).LuceneFieldName;
+
+                        return new MethodLuceneASTNode($"@in<{luceneFieldName}>", matches)
+                        {
+                            FieldName = luceneFieldName,
+                            MethodName = "in"
+                        };
                     }
-
-                    return new MethodLuceneASTNode($"@in<{luceneFieldName}>", matches)
-                    {
-                        FieldName = luceneFieldName,
-                        MethodName = "in"
-                    };
-                }
                 case OperatorType.And:
-                    return new OperatorLuceneASTNode(ToLuceneNode(query, expression.Left, whereFields), ToLuceneNode(query, expression.Right, whereFields), OperatorLuceneASTNode.Operator.AND,
+                    return new OperatorLuceneASTNode(ToLuceneNode(query, expression.Left, metadata, parameters), ToLuceneNode(query, expression.Right, metadata, parameters), OperatorLuceneASTNode.Operator.AND,
                         true);
                 case OperatorType.Or:
-                    return new OperatorLuceneASTNode(ToLuceneNode(query, expression.Left, whereFields), ToLuceneNode(query, expression.Right, whereFields), OperatorLuceneASTNode.Operator.OR,
+                    return new OperatorLuceneASTNode(ToLuceneNode(query, expression.Left, metadata, parameters), ToLuceneNode(query, expression.Right, metadata, parameters), OperatorLuceneASTNode.Operator.OR,
                         true);
                 case OperatorType.AndNot:
                 case OperatorType.OrNot:
@@ -201,6 +202,31 @@ namespace Raven.Server.Documents.Queries
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+        }
+
+        private static (string Value, ValueTokenType Type) GetValue(string fieldName, Parser.Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, ValueToken value)
+        {
+            var valueOrParameterName = QueryExpression.Extract(query.QueryText, value);
+
+            if (value.Type == ValueTokenType.Parameter)
+            {
+                var expectedValueType = metadata.Fields[fieldName];
+
+                if (parameters == null)
+                    throw new InvalidOperationException();
+
+                if (parameters.TryGetMember(valueOrParameterName, out var parameterValue) == false)
+                    throw new InvalidOperationException();
+
+                var parameterValueType = GetValueTokenType(parameterValue);
+
+                if (expectedValueType != parameterValueType)
+                    throw new InvalidOperationException();
+
+                return (parameterValue.ToString(), parameterValueType); // TODO [ppekrol] avoid ToString()
+            }
+
+            return (valueOrParameterName, value.Type);
         }
 
         private static (string LuceneFieldName, FieldName.FieldType LuceneFieldType) GetLuceneField(string fieldName, ValueTokenType valueType)
@@ -239,7 +265,7 @@ namespace Raven.Server.Documents.Queries
                     throw new NotImplementedException("expression.Value.Type:" + valueType);
                 default:
                     TermLuceneASTNode.TermType type;
-                   
+
                     switch (valueType)
                     {
                         case ValueTokenType.String:
@@ -338,18 +364,18 @@ namespace Raven.Server.Documents.Queries
                     case '~':
                     case ':':
                     case '\\':
-                    {
-                        if (buffer == null)
                         {
-                            // allocate builder with headroom
-                            buffer = new StringBuilder(length * 2);
+                            if (buffer == null)
+                            {
+                                // allocate builder with headroom
+                                buffer = new StringBuilder(length * 2);
+                            }
+                            // append any leading substring
+                            buffer.Append(term, start, i - start - 1);
+                            buffer.Append(ch);
+                            start = i + 1;
+                            break;
                         }
-                        // append any leading substring
-                        buffer.Append(term, start, i - start - 1);
-                        buffer.Append(ch);
-                        start = i + 1;
-                        break;
-                    }
                 }
             }
 
@@ -368,6 +394,26 @@ namespace Raven.Server.Documents.Queries
             }
 
             return buffer.ToString();
+        }
+
+        public static ValueTokenType GetValueTokenType(object parameterValue)
+        {
+            if (parameterValue == null)
+                return ValueTokenType.String;
+
+            if (parameterValue is LazyStringValue || parameterValue is LazyCompressedStringValue)
+                return ValueTokenType.String;
+
+            if (parameterValue is LazyNumberValue)
+                return ValueTokenType.Double; // TODO [ppekrol] is this correct?
+
+            if (parameterValue is long)
+                return ValueTokenType.Long;
+
+            if (parameterValue is bool)
+                return (bool)parameterValue ? ValueTokenType.True : ValueTokenType.False;
+
+            throw new NotImplementedException();
         }
 
         private static void ThrowUnhandledValueTokenType(ValueTokenType type)

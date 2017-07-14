@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _searcher = searcher;
             _retriever = retriever;
             _state = state;
-            _isSortingQuery = query.Fields.OrderBy != null;
+            _isSortingQuery = query.Metadata.OrderBy != null;
 
             if (_fieldsToFetch.IsDistinct)
                 _alreadySeenProjections = new HashSet<ulong>();

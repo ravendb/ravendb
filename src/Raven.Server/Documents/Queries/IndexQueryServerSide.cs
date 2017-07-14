@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Queries;
@@ -34,15 +33,7 @@ namespace Raven.Server.Documents.Queries
         public IndexQueryServerSide(string query)
         {
             Query = EscapingHelper.UnescapeLongDataString(query);
-
-            var qp = new QueryParser();
-            qp.Init(query);
-
-            Parsed = qp.Parse();
         }
-
-        [JsonIgnore]
-        public Query Parsed { get; private set; }
 
         public static IndexQueryServerSide Create(BlittableJsonReaderObject json)
         {
@@ -54,10 +45,7 @@ namespace Raven.Server.Documents.Queries
             if (string.IsNullOrWhiteSpace(result.Query))
                 throw new InvalidOperationException($"Index query does not contain '{nameof(Query)}' field.");
 
-            var parser = new QueryParser();
-            parser.Init(result.Query);
-
-            result.Parsed = parser.Parse();
+            result.Metadata = new QueryMetadata(result.Query, result.QueryParameters);
             return result;
         }
 
@@ -149,159 +137,29 @@ namespace Raven.Server.Documents.Queries
             if (transformerParameters != null)
                 result.TransformerParameters = context.ReadObject(transformerParameters, "transformer/parameters");
 
+            result.Metadata = new QueryMetadata(result.Query, null);
             return result;
         }
 
-        public bool IsDynamic => Parsed.From.Index == false;
+        public bool IsDynamic => Metadata.Query.From.Index == false;
 
         public string GetCollection()
         {
-            var fromToken = Parsed.From.From;
-            return QueryExpression.Extract(Parsed.QueryText, fromToken);
+            var fromToken = Metadata.Query.From.From;
+            return QueryExpression.Extract(Metadata.Query.QueryText, fromToken);
         }
 
         public string GetIndex()
         {
             if (_indexName == null)
             {
-                var fromToken = Parsed.From.From;
-                _indexName = QueryExpression.Extract(Parsed.QueryText, fromToken.TokenStart + 1, fromToken.TokenLength - 2, fromToken.EscapeChars);
+                var fromToken = Metadata.Query.From.From;
+                _indexName = QueryExpression.Extract(Metadata.Query.QueryText, fromToken.TokenStart + 1, fromToken.TokenLength - 2, fromToken.EscapeChars);
             }
 
             return _indexName;
         }
 
-        private QueryFields _fields;
-
-        public QueryFields Fields
-        {
-            get
-            {
-                if (_fields != null)
-                    return _fields;
-
-                return _fields = RetrieveFields();
-            }
-        }
-
-        private QueryFields RetrieveFields()
-        {
-            var result = new QueryFields();
-
-            if (Parsed.Where != null)
-            {
-                result.Where = new WhereFields();
-
-                foreach (var whereField in GetWhereTokens(Parsed.Where))
-                {
-                    if (whereField.SingleValue != null)
-                    {
-                        var valueAndType = whereField.GetSingleValueAndType(Parsed.QueryText, QueryParameters);
-
-                        result.Where.Add(whereField.ExtractFieldName(Parsed.QueryText), valueAndType);
-                    }
-                    else
-                    {
-                        var (values, type) = whereField.GetValuesAndType(Parsed.QueryText, QueryParameters);
-
-                        result.Where.Add(whereField.ExtractFieldName(Parsed.QueryText), values, type);
-                    }
-                }
-            }
-
-            if (Parsed.OrderBy != null)
-            {
-                result.OrderBy = new List<(string Name, OrderByFieldType OrderingType, bool Ascending)>();
-
-                foreach (var fieldInfo in Parsed.OrderBy)
-                {
-                    result.OrderBy.Add((QueryExpression.Extract(Parsed.QueryText, fieldInfo.Field), fieldInfo.FieldType, fieldInfo.Ascending));
-                }
-            }
-
-            return result;
-        }
-
-        private IEnumerable<WhereFieldTokens> GetWhereTokens(QueryExpression whereExpression)
-        {
-            if (whereExpression.Field == null)
-            {
-                foreach (var field in GetWhereTokens(whereExpression.Left))
-                {
-                    yield return field;
-                }
-
-                foreach (var field in GetWhereTokens(whereExpression.Right))
-                {
-                    yield return field;
-                }
-            }
-
-            switch (whereExpression.Type)
-            {
-                case OperatorType.Method:
-                    throw new NotImplementedException();
-                default:
-                    foreach (var fieldValueToken in GetFieldValueTokens(whereExpression))
-                    {
-                        yield return fieldValueToken;
-                    }
-                    yield break;
-            }
-        }
-
-        private IEnumerable<WhereFieldTokens> GetFieldValueTokens(QueryExpression expression)
-        {
-            Debug.Assert(expression.Field != null);
-
-            switch (expression.Type)
-            {
-                case OperatorType.Equal:
-                case OperatorType.LessThen:
-                case OperatorType.GreaterThen:
-                case OperatorType.LessThenEqual:
-                case OperatorType.GreaterThenEqual:
-                    var value = expression.Value ?? expression.First;
-                    yield return new WhereFieldTokens(expression.Field, value.Type, value, null, expression.Type);
-                    yield break;
-                case OperatorType.Between:
-                    if (expression.First.Type != expression.Second.Type)
-                        ThrowIncompatibleTypesOfVariables(expression.Field, expression.First, expression.Second);
-
-                    yield return new WhereFieldTokens(expression.Field, expression.First.Type, null, new List<ValueToken>(2) { expression.First, expression.Second }, expression.Type);
-                    yield break;
-                case OperatorType.In:
-                    for (int i = 0; i < expression.Values.Count - 1; i++)
-                    {
-                        if (expression.Values[i] != expression.Values[i + 1])
-                            ThrowIncompatibleTypesOfVariables(expression.Field, expression.Values.ToArray());
-                    }
-
-                    yield return new WhereFieldTokens(expression.Field, expression.Values[0].Type, null, expression.Values, expression.Type);
-                    yield break;
-                default:
-                    throw new ArgumentException(expression.Type.ToString());
-            }
-        }
-
-        //private static void ThrowIncompatibleTypesInQueryParameters(string fieldName, IEnumerable<(string Value, ValueTokenType Type)> parameters)
-        //{
-        //    throw new InvalidOperationException($"Incompatible types of parameters in WHERE clause on '{fieldName}' field: " +
-        //                                        $"{string.Join(",", parameters.Select(x => $"{x.Value}({x.Type})"))}");
-        //}
-
-        //private static void ThrowIncompatibleTypesOfVariables(string fieldName, IEnumerable<ValueToken> parameters)
-        //{
-        //    throw new InvalidOperationException($"Incompatible types of variables in WHERE clause on '{fieldName}' field: " +
-        //                                        $"{string.Join(",", parameters.Select(x => $"{x.Value}({x.Type})"))}");
-        //}
-
-        private void ThrowIncompatibleTypesOfVariables(FieldToken fieldName, params ValueToken[] valueTokens)
-        {
-            throw new InvalidOperationException($"Incompatible types of variables in WHERE clause");
-            //TODO arek
-            //throw new InvalidOperationException($"Incompatible types of variables in WHERE clause on '{ExtractFieldName(fieldName)}' field: " +
-            //                                    $"{string.Join(",", valueTokens.Select(x => $"{ExtractTokenValue(x)}({x.Type})"))}");
-        }
+        public QueryMetadata Metadata { get; private set; }
     }
 }
