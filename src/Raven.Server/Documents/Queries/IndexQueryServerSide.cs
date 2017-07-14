@@ -241,57 +241,25 @@ namespace Raven.Server.Documents.Queries
 
         private QueryFields RetrieveFields()
         {
-            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-
             var result = new QueryFields();
 
             if (Parsed.Where != null)
             {
                 result.Where = new WhereFields();
 
-                foreach (var whereField in GetFieldValueTokens(Parsed.Where))
+                foreach (var whereField in GetWhereTokens(Parsed.Where))
                 {
-                    var fieldName = QueryExpression.Extract(Parsed.QueryText, whereField.Field);
-
                     if (whereField.SingleValue != null)
                     {
-                        var singleValueToken = whereField.SingleValue;
+                        var valueAndType = whereField.GetSingleValueAndType(Parsed.QueryText, QueryParameters);
 
-                        if (whereField.Type == ValueTokenType.Parameter)
-                            result.Where.Add(fieldName, GetParameterValueAndType(singleValueToken, ref propertyDetails));
-                        else
-                            result.Where.Add(fieldName, (ExtractTokenValue(singleValueToken), singleValueToken.Type));
+                        result.Where.Add(whereField.ExtractFieldName(Parsed.QueryText), valueAndType);
                     }
                     else
                     {
-                        var values = new List<string>(whereField.Values.Count);
-                        ValueTokenType? valuesType = null;
+                        var (values, type) = whereField.GetValuesAndType(Parsed.QueryText, QueryParameters);
 
-                        foreach (var item in whereField.Values)
-                        {
-                            string value;
-                            ValueTokenType type;
-
-                            if (whereField.Type == ValueTokenType.Parameter)
-                                (value, type) = GetParameterValueAndType(item, ref propertyDetails);
-                            else
-                                (value, type) = (ExtractTokenValue(item), item.Type);
-
-                            if (valuesType != null && valuesType.Value != type && TryHandleIncompatibleTypes(ref valuesType, ref type) == false)
-                            {
-                                if (whereField.Type == ValueTokenType.Parameter)
-                                    ThrowIncompatibleTypesInQueryParameters(fieldName, whereField.Values.Select(x => GetParameterValueAndType(x, ref propertyDetails)));
-                                else
-                                    ThrowIncompatibleTypesOfVariables(fieldName, whereField.Values.Select(x => (ExtractTokenValue(x), x.Type)));
-                            }
-
-                            valuesType = type;
-                            values.Add(value);
-                        }
-
-                        Debug.Assert(valuesType != null);
-
-                        result.Where.Add(fieldName, values, valuesType.Value);
+                        result.Where.Add(whereField.ExtractFieldName(Parsed.QueryText), values, type);
                     }
                 }
             }
@@ -309,119 +277,86 @@ namespace Raven.Server.Documents.Queries
             return result;
         }
 
-        private string ExtractTokenValue(ValueToken singleValueToken)
+        private IEnumerable<WhereFieldTokens> GetWhereTokens(QueryExpression whereExpression)
         {
-            string value;
-            switch (singleValueToken.Type)
+            if (whereExpression.Field == null)
             {
-                case ValueTokenType.String:
-                    value = QueryExpression.Extract(Parsed.QueryText, singleValueToken.TokenStart + 1, singleValueToken.TokenLength - 2, singleValueToken.EscapeChars);
-                    break;
-                default:
-                    value = QueryExpression.Extract(Parsed.QueryText, singleValueToken);
-                    break;
-            }
-            return value;
-        }
-
-        private (string Value, ValueTokenType Type) GetParameterValueAndType(ValueToken valueToken, ref BlittableJsonReaderObject.PropertyDetails propertyDetails)
-        {
-            var parameterName = QueryExpression.Extract(Parsed.QueryText, valueToken);
-
-            var index = QueryParameters.GetPropertyIndex(parameterName);
-
-            QueryParameters.GetPropertyByIndex(index, ref propertyDetails);
-
-            switch (propertyDetails.Token)
-            {
-                case BlittableJsonToken.Integer:
-                    return (propertyDetails.Value.ToString(), ValueTokenType.Long);
-                case BlittableJsonToken.LazyNumber:
-                    return (propertyDetails.Value.ToString(), ValueTokenType.Double);
-                case BlittableJsonToken.String:
-                case BlittableJsonToken.CompressedString:
-                    return (propertyDetails.Value.ToString(), ValueTokenType.String);
-                case BlittableJsonToken.Boolean:
-                    var booleanValue = (bool)propertyDetails.Value;
-
-                    if (booleanValue)
-                        return (null, ValueTokenType.True);
-                    else
-                        return (null, ValueTokenType.False);
-                case BlittableJsonToken.Null:
-                    return (null, ValueTokenType.Null);
-                default:
-                    throw new ArgumentException($"Unhandled token: {propertyDetails.Token}");
-            }
-        }
-
-        private IEnumerable<(FieldToken Field, ValueTokenType Type, ValueToken SingleValue, List<ValueToken> Values)> GetFieldValueTokens(QueryExpression expression)
-        {
-            if (expression.Field != null)
-            {
-                switch (expression.Type)
+                foreach (var field in GetWhereTokens(whereExpression.Left))
                 {
-                    case OperatorType.Equal:
-                    case OperatorType.LessThen:
-                    case OperatorType.GreaterThen:
-                    case OperatorType.LessThenEqual:
-                    case OperatorType.GreaterThenEqual:
-                        var value = expression.Value ?? expression.First;
-                        yield return (expression.Field, value.Type, value, null);
-                        yield break;
-                    case OperatorType.Between:
-                        // TODO arek - can queries have some values parametrized while not all of them?
-                        yield return (expression.Field, expression.First.Type, null, new List<ValueToken>(2) { expression.First, expression.Second });
-                        yield break;
-                    case OperatorType.In:
-                        // TODO arek - expression.Values[0].Type
-                        yield return (expression.Field, expression.Values[0].Type, null, expression.Values);
-                        yield break;
-                    default:
-                        throw new ArgumentException(expression.Type.ToString());
+                    yield return field;
+                }
+
+                foreach (var field in GetWhereTokens(whereExpression.Right))
+                {
+                    yield return field;
                 }
             }
 
-            foreach (var field in GetFieldValueTokens(expression.Left))
+            switch (whereExpression.Type)
             {
-                yield return field;
-            }
-
-            foreach (var field in GetFieldValueTokens(expression.Right))
-            {
-                yield return field;
+                case OperatorType.Method:
+                    throw new NotImplementedException();
+                default:
+                    foreach (var fieldValueToken in GetFieldValueTokens(whereExpression))
+                    {
+                        yield return fieldValueToken;
+                    }
+                    yield break;
             }
         }
 
-        private static bool TryHandleIncompatibleTypes(ref ValueTokenType? valuesType, ref ValueTokenType type)
+        private IEnumerable<WhereFieldTokens> GetFieldValueTokens(QueryExpression expression)
         {
-            Debug.Assert(valuesType != null);
+            Debug.Assert(expression.Field != null);
 
-            if (valuesType.Value == ValueTokenType.Long && type == ValueTokenType.Double)
+            switch (expression.Type)
             {
-                valuesType = ValueTokenType.Double;
-                return true;
-            }
+                case OperatorType.Equal:
+                case OperatorType.LessThen:
+                case OperatorType.GreaterThen:
+                case OperatorType.LessThenEqual:
+                case OperatorType.GreaterThenEqual:
+                    var value = expression.Value ?? expression.First;
+                    yield return new WhereFieldTokens(expression.Field, value.Type, value, null, expression.Type);
+                    yield break;
+                case OperatorType.Between:
+                    if (expression.First.Type != expression.Second.Type)
+                        ThrowIncompatibleTypesOfVariables(expression.Field, expression.First, expression.Second);
 
-            if (valuesType.Value == ValueTokenType.Double && type == ValueTokenType.Long)
-            {
-                type = ValueTokenType.Double;
-                return true;
-            }
+                    yield return new WhereFieldTokens(expression.Field, expression.First.Type, null, new List<ValueToken>(2) { expression.First, expression.Second }, expression.Type);
+                    yield break;
+                case OperatorType.In:
+                    for (int i = 0; i < expression.Values.Count - 1; i++)
+                    {
+                        if (expression.Values[i] != expression.Values[i + 1])
+                            ThrowIncompatibleTypesOfVariables(expression.Field, expression.Values.ToArray());
+                    }
 
-            return false;
+                    yield return new WhereFieldTokens(expression.Field, expression.Values[0].Type, null, expression.Values, expression.Type);
+                    yield break;
+                default:
+                    throw new ArgumentException(expression.Type.ToString());
+            }
         }
 
-        private static void ThrowIncompatibleTypesInQueryParameters(string fieldName, IEnumerable<(string Value, ValueTokenType Type)> parameters)
-        {
-            throw new InvalidOperationException($"Incompatible types of parameters in WHERE clause on '{fieldName}' field: " +
-                                                $"{string.Join(",", parameters.Select(x => $"{x.Value}({x.Type})"))}");
-        }
+        //private static void ThrowIncompatibleTypesInQueryParameters(string fieldName, IEnumerable<(string Value, ValueTokenType Type)> parameters)
+        //{
+        //    throw new InvalidOperationException($"Incompatible types of parameters in WHERE clause on '{fieldName}' field: " +
+        //                                        $"{string.Join(",", parameters.Select(x => $"{x.Value}({x.Type})"))}");
+        //}
 
-        private static void ThrowIncompatibleTypesOfVariables(string fieldName, IEnumerable<(string Value, ValueTokenType Type)> parameters)
+        //private static void ThrowIncompatibleTypesOfVariables(string fieldName, IEnumerable<ValueToken> parameters)
+        //{
+        //    throw new InvalidOperationException($"Incompatible types of variables in WHERE clause on '{fieldName}' field: " +
+        //                                        $"{string.Join(",", parameters.Select(x => $"{x.Value}({x.Type})"))}");
+        //}
+
+        private void ThrowIncompatibleTypesOfVariables(FieldToken fieldName, params ValueToken[] valueTokens)
         {
-            throw new InvalidOperationException($"Incompatible types of variables in WHERE clause on '{fieldName}' field: " +
-                                                $"{string.Join(",", parameters.Select(x => $"{x.Value}({x.Type})"))}");
+            throw new InvalidOperationException($"Incompatible types of variables in WHERE clause");
+            //TODO arek
+            //throw new InvalidOperationException($"Incompatible types of variables in WHERE clause on '{ExtractFieldName(fieldName)}' field: " +
+            //                                    $"{string.Join(",", valueTokens.Select(x => $"{ExtractTokenValue(x)}({x.Type})"))}");
         }
     }
 }
