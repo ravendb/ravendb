@@ -1,6 +1,5 @@
 ﻿using System;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
@@ -19,6 +18,8 @@ using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Faceted;
+using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Studio;
 using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.ServerWide.Maintenance;
@@ -95,5 +96,11 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, RestoreSettings> RestoreSettings = GenerateJsonDeserializationRoutine<RestoreSettings>();
 
         public static readonly Func<BlittableJsonReaderObject, ClientConfiguration> ClientConfiguration = GenerateJsonDeserializationRoutine<ClientConfiguration>();
+
+        public static readonly Func<BlittableJsonReaderObject, IndexQueryServerSide> IndexQuery = GenerateJsonDeserializationRoutine<IndexQueryServerSide>();
+
+        public static readonly Func<BlittableJsonReaderObject, MoreLikeThisQueryServerSide> MoreLikeThisQuery = GenerateJsonDeserializationRoutine<MoreLikeThisQueryServerSide>();
+
+        public static readonly Func<BlittableJsonReaderObject, FacetQueryServerSide> FacetQuery = GenerateJsonDeserializationRoutine<FacetQueryServerSide>();
     }
 }

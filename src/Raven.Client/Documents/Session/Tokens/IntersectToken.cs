@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 
 namespace Raven.Client.Documents.Session.Tokens
 {
@@ -12,7 +13,8 @@ namespace Raven.Client.Documents.Session.Tokens
 
         public override void WriteTo(StringBuilder writer)
         {
-            writer.Append("INTERSECT");
+            throw new NotImplementedException("Support new syntax: intersect(..., ..., ...)");
+            //writer.Append("INTERSECT");
         }
     }
 }

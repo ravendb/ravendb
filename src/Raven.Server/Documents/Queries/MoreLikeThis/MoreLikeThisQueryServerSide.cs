@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Transformers;
+using Raven.Server.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -14,94 +14,8 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
     {
         public static MoreLikeThisQueryServerSide Create(BlittableJsonReaderObject json)
         {
-            var result = new MoreLikeThisQueryServerSide();
-
-            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-            foreach (var propertyIndex in json.GetPropertiesByInsertionOrder())
-            {
-                json.GetPropertyByIndex(propertyIndex, ref propertyDetails);
-
-                switch (propertyDetails.Name)
-                {
-                    case nameof(MinimumWordLength):
-                        if (propertyDetails.Value != null)
-                            result.MinimumWordLength = (int)(long)propertyDetails.Value;
-                        break;
-                    case nameof(MinimumTermFrequency):
-                        if (propertyDetails.Value != null)
-                            result.MinimumTermFrequency = (int)(long)propertyDetails.Value;
-                        break;
-                    case nameof(MinimumDocumentFrequency):
-                        if (propertyDetails.Value != null)
-                            result.MinimumDocumentFrequency = (int)(long)propertyDetails.Value;
-                        break;
-                    case nameof(MaximumDocumentFrequency):
-                        if (propertyDetails.Value != null)
-                            result.MaximumDocumentFrequency = (int)(long)propertyDetails.Value;
-                        break;
-                    case nameof(MaximumQueryTerms):
-                        if (propertyDetails.Value != null)
-                            result.MaximumQueryTerms = (int)(long)propertyDetails.Value;
-                        break;
-                    case nameof(MaximumNumberOfTokensParsed):
-                        if (propertyDetails.Value != null)
-                            result.MaximumNumberOfTokensParsed = (int)(long)propertyDetails.Value;
-                        break;
-                    case nameof(MaximumDocumentFrequencyPercentage):
-                        if (propertyDetails.Value != null)
-                            result.MaximumDocumentFrequencyPercentage = (int)(long)propertyDetails.Value;
-                        break;
-                    case nameof(StopWordsDocumentId):
-                            result.StopWordsDocumentId = propertyDetails.Value?.ToString();
-                        break;
-                    case nameof(IndexName):
-                        result.IndexName = propertyDetails.Value?.ToString();
-                        break;
-                    case nameof(DocumentId):
-                        result.DocumentId = propertyDetails.Value?.ToString();
-                        break;
-                    case nameof(PageSize):
-                        result.PageSize = (int)(long)propertyDetails.Value;
-                        break;
-                    case nameof(Transformer):
-                        result.Transformer = propertyDetails.Value?.ToString();
-                        break;
-                    case nameof(AdditionalQuery):
-                        result.AdditionalQuery = propertyDetails.Value?.ToString();
-                        break;
-                    case nameof(Boost):
-                        if (propertyDetails.Value != null)
-                            result.Boost = (bool)propertyDetails.Value;
-                        break;
-                    case nameof(BoostFactor):
-                        if (propertyDetails.Value != null)
-                            result.BoostFactor = ((LazyNumberValue)propertyDetails.Value).ToSingle(CultureInfo.InvariantCulture);
-                        break;
-                    case nameof(Includes):
-                        var includesArray = propertyDetails.Value as BlittableJsonReaderArray;
-                        if (includesArray == null || includesArray.Length == 0)
-                            continue;
-
-                        result.Includes = new string[includesArray.Length];
-                        for (var i = 0; i < includesArray.Length; i++)
-                            result.Includes[i] = includesArray.GetStringByIndex(i);
-                        break;
-                    case nameof(Fields):
-                        var fieldsArray = propertyDetails.Value as BlittableJsonReaderArray;
-                        if (fieldsArray == null || fieldsArray.Length == 0)
-                            continue;
-
-                        result.Fields = new string[fieldsArray.Length];
-                        for (var i = 0; i < fieldsArray.Length; i++)
-                            result.Fields[i] = fieldsArray.GetStringByIndex(i);
-                        break;
-                    case nameof(TransformerParameters):
-                        result.TransformerParameters = (BlittableJsonReaderObject)propertyDetails.Value;
-                        break;
-                }
-            }
-
-            return result;
+            // add basic validation here like in IndexQueryServerSide
+            return JsonDeserializationServer.MoreLikeThisQuery(json);
         }
 
         public static MoreLikeThisQueryServerSide Create(HttpContext httpContext, int pageSize, JsonOperationContext context)

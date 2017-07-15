@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Session
         /// <returns></returns>
         public IDocumentQuery<T> DocumentQuery<T>(string indexName, bool isMapReduce = false)
         {
-            return new DocumentQuery<T>(this, indexName, FieldsToFetchToken.Empty, isMapReduce);
+            return new DocumentQuery<T>(this, indexName, fieldsToFetchToken: null, isMapReduce: isMapReduce);
         }
 
         /// <summary>

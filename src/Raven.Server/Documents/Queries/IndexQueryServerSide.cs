@@ -7,6 +7,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
 using Raven.Server.Documents.Queries.Parser;
+using Raven.Server.Json;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -40,79 +41,20 @@ namespace Raven.Server.Documents.Queries
             Parsed = qp.Parse();
         }
 
+        [JsonIgnore]
         public Query Parsed { get; private set; }
 
         public static IndexQueryServerSide Create(BlittableJsonReaderObject json)
         {
-            if (json.TryGet(nameof(Query), out string query) == false || string.IsNullOrWhiteSpace(query))
+            var result = JsonDeserializationServer.IndexQuery(json);
+
+            if (string.IsNullOrWhiteSpace(result.Query))
                 throw new InvalidOperationException($"Index query does not contain '{nameof(Query)}' field.");
 
-            var result = new IndexQueryServerSide(query);
+            var parser = new QueryParser();
+            parser.Init(result.Query);
 
-            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-            foreach (var propertyIndex in json.GetPropertiesByInsertionOrder())
-            {
-                json.GetPropertyByIndex(propertyIndex, ref propertyDetails);
-
-                switch (propertyDetails.Name)
-                {
-                    case nameof(Query):
-                        continue;
-                    case nameof(AllowMultipleIndexEntriesForSameDocumentToResultTransformer):
-                        result.AllowMultipleIndexEntriesForSameDocumentToResultTransformer = (bool)propertyDetails.Value;
-                        break;
-                    case nameof(CutoffEtag):
-                        result.CutoffEtag = (long?)propertyDetails.Value;
-                        break;
-                    case nameof(DisableCaching):
-                        result.DisableCaching = (bool)propertyDetails.Value;
-                        break;
-                    case nameof(ExplainScores):
-                        result.ExplainScores = (bool)propertyDetails.Value;
-                        break;
-                    case nameof(PageSize):
-                        result.PageSize = (int)(long)propertyDetails.Value;
-                        break;
-                    case nameof(Start):
-                        result.Start = (int)(long)propertyDetails.Value;
-                        break;
-                    case nameof(ShowTimings):
-                        result.ShowTimings = (bool)propertyDetails.Value;
-                        break;
-                    case nameof(SkipDuplicateChecking):
-                        result.SkipDuplicateChecking = (bool)propertyDetails.Value;
-                        break;
-                    case nameof(Transformer):
-                        result.Transformer = propertyDetails.Value?.ToString();
-                        break;
-                    case nameof(WaitForNonStaleResultsTimeout):
-                        if (propertyDetails.Value != null)
-                            result.WaitForNonStaleResultsTimeout = TimeSpan.Parse(propertyDetails.Value.ToString());
-                        break;
-                    case nameof(WaitForNonStaleResults):
-                        result.WaitForNonStaleResults = (bool)propertyDetails.Value;
-                        break;
-                    case nameof(WaitForNonStaleResultsAsOfNow):
-                        result.WaitForNonStaleResultsAsOfNow = (bool)propertyDetails.Value;
-                        break;
-                    case nameof(Includes):
-                        var includesArray = propertyDetails.Value as BlittableJsonReaderArray;
-                        if (includesArray == null || includesArray.Length == 0)
-                            continue;
-
-                        result.Includes = new string[includesArray.Length];
-                        for (var i = 0; i < includesArray.Length; i++)
-                            result.Includes[i] = includesArray.GetStringByIndex(i);
-                        break;
-                    case nameof(QueryParameters):
-                        result.QueryParameters = (BlittableJsonReaderObject)propertyDetails.Value;
-                        break;
-                    case nameof(TransformerParameters):
-                        result.TransformerParameters = (BlittableJsonReaderObject)propertyDetails.Value;
-                        break;
-                }
-            }
-
+            result.Parsed = parser.Parse();
             return result;
         }
 

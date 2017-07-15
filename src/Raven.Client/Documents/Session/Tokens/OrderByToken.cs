@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 
 namespace Raven.Client.Documents.Session.Tokens
 {
@@ -29,8 +30,15 @@ namespace Raven.Client.Documents.Session.Tokens
         {
             writer.Append(_fieldName);
 
-            if (_ordering != OrderingType.String)
-                writer.Append($" AS {_ordering.ToString().ToLowerInvariant()}");
+            switch (_ordering)
+            {
+                case OrderingType.Long:
+                    writer.Append(" AS long");
+                    break;
+                case OrderingType.Double:
+                    writer.Append(" AS double");
+                    break;
+            }
 
             writer.Append(_descending ? " DESC" : " ASC");
         }

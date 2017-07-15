@@ -14,8 +14,6 @@ namespace Raven.Client.Documents.Session.Tokens
             Projections = projections;
         }
 
-        public static FieldsToFetchToken Empty = new FieldsToFetchToken(new string[0], new string[0]);
-
         public static FieldsToFetchToken Create(string[] fieldsToFetch, string[] projections)
         {
             if (fieldsToFetch == null || fieldsToFetch.Length == 0)

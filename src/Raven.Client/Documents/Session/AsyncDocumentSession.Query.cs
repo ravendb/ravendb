@@ -65,7 +65,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>(string index, bool isMapReduce)
         {
-            return new AsyncDocumentQuery<T>(this, index, FieldsToFetchToken.Empty, isMapReduce);
+            return new AsyncDocumentQuery<T>(this, index, fieldsToFetchToken: null, isMapReduce: isMapReduce);
         }
 
         /// <summary>
@@ -75,7 +75,7 @@ namespace Raven.Client.Documents.Session
         {
             var indexName = CreateDynamicIndexName<T>();
 
-            return new AsyncDocumentQuery<T>(this, indexName, FieldsToFetchToken.Empty, false);
+            return new AsyncDocumentQuery<T>(this, indexName, fieldsToFetchToken: null, isMapReduce: false);
         }
 
         public RavenQueryInspector<S> CreateRavenQueryInspector<S>()

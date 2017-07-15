@@ -38,10 +38,18 @@ namespace Raven.Client.Documents.Commands.MultiGet
                     using (var writer = new BlittableJsonTextWriter(_context, stream))
                     {
                         writer.WriteStartObject();
-                        writer.WriteArray(_context, "Requests", _commands, (w, c, command) =>
+
+                        var first = true;
+                        writer.WritePropertyName("Requests");
+                        writer.WriteStartArray();
+                        foreach (var command in _commands)
                         {
+                            if (first == false)
+                                writer.WriteComma();
+
+                            first = false;
                             var cacheKey = GetCacheKey(command, out string _);
-                            using (_cache.Get(c, cacheKey, out long cachedEtag, out var _))
+                            using (_cache.Get(_context, cacheKey, out long cachedEtag, out var _))
                             {
                                 var headers = new DynamicJsonValue();
                     if (cachedChangeVector != null)
@@ -50,44 +58,47 @@ namespace Raven.Client.Documents.Commands.MultiGet
                                 foreach (var header in command.Headers)
                                     headers[header.Key] = header.Value;
 
-                                w.WriteStartObject();
+                                writer.WriteStartObject();
 
-                                w.WritePropertyName(nameof(GetRequest.Url));
-                                w.WriteString($"/databases/{node.Database}{command.Url}");
-                                w.WriteComma();
+                                writer.WritePropertyName(nameof(GetRequest.Url));
+                                writer.WriteString($"/databases/{node.Database}{command.Url}");
+                                writer.WriteComma();
 
-                                w.WritePropertyName(nameof(GetRequest.Query));
-                                w.WriteString(command.Query);
-                                w.WriteComma();
+                                writer.WritePropertyName(nameof(GetRequest.Query));
+                                writer.WriteString(command.Query);
+                                writer.WriteComma();
 
-                                w.WritePropertyName(nameof(GetRequest.Method));
-                                w.WriteString(command.Method.Method);
-                                w.WriteComma();
+                                writer.WritePropertyName(nameof(GetRequest.Method));
+                                writer.WriteString(command.Method.Method);
+                                writer.WriteComma();
 
-                                w.WritePropertyName(nameof(GetRequest.Headers));
-                                w.WriteStartObject();
-                                var first = true;
+                                writer.WritePropertyName(nameof(GetRequest.Headers));
+                                writer.WriteStartObject();
+                                var firstInner = true;
                                 foreach (var kvp in command.Headers)
                                 {
-                                    if (first == false)
-                                        w.WriteComma();
+                                    if (firstInner == false)
+                                        writer.WriteComma();
 
-                                    first = false;
-                                    w.WritePropertyName(kvp.Key);
-                                    w.WriteString(kvp.Value);
+                                    firstInner = false;
+                                    writer.WritePropertyName(kvp.Key);
+                                    writer.WriteString(kvp.Value);
                                 }
-                                w.WriteEndObject();
-                                w.WriteComma();
+                                writer.WriteEndObject();
+                                writer.WriteComma();
 
-                                w.WritePropertyName(nameof(GetRequest.Content));
+                                writer.WritePropertyName(nameof(GetRequest.Content));
                                 if (command.Content != null)
-                                    command.Content.WriteContent(w, c);
+                                    command.Content.WriteContent(writer, _context);
                                 else
-                                    w.WriteNull();
+                                    writer.WriteNull();
 
-                                w.WriteEndObject();
+                                writer.WriteEndObject();
                             }
-                        });
+                        }
+                        writer.WriteEndArray();
+
+                        writer.WriteEndObject();
                     }
                 })
             };
