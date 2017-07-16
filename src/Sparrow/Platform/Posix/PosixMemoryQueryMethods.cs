@@ -9,6 +9,9 @@ namespace Sparrow.Platform.Posix
     {
         public static bool WillCauseHardPageFault(byte* addr, long length)
         {
+            if (length > int.MaxValue)
+                return true; // truelly big sizes are not going to be handled
+
             Debug.Assert(new IntPtr(addr).ToInt64() % Syscall.PageSize == 0);
 
             var vecSize = (int)((length + Syscall.PageSize - 1) / Syscall.PageSize);
@@ -28,7 +31,6 @@ namespace Sparrow.Platform.Posix
 
             try
             {
-                
                 if (Syscall.mincore(addr, new IntPtr(length), pVec) != 0)
                     throw new MemoryInfoException($"Failed to mincore addr: {new IntPtr(addr).ToInt64()}, with length: {length}. Last Error = {Marshal.GetLastWin32Error()}");
 
