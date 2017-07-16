@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Server.Operations.Certificates;
@@ -30,16 +31,10 @@ namespace Raven.Server.Web.Authentication
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
                 var certificateJson = ctx.ReadForDisk(RequestBodyStream(), "certificate-generation");
+                
+                ValidateCertificate(certificateJson, out var friendlyName, out var password, out var serverAdmin, out var permissions);
 
-                if (certificateJson.TryGet("Name", out string friendlyName) == false)
-                    throw new ArgumentException("'Name' is a required field when generating a new certificate");
-
-                certificateJson.TryGet("Password", out string password); // okay to be null
-                certificateJson.TryGet("ServerAdmin", out bool serverAdmin); // okay to be null, default to false
-
-                if (certificateJson.TryGet("Permissions", out BlittableJsonReaderArray permissions) == false)
-                    throw new ArgumentException("'Permissions' is a required field when generating a new certificate");
-
+                // this creates a client certificate which is signed by the current server certificate
                 var certificate = CertificateUtils.CreateSelfSignedClientCertificate(friendlyName, Server.ServerCertificateHolder);
 
                 var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + certificate.Thumbprint,
@@ -47,7 +42,7 @@ namespace Raven.Server.Web.Authentication
                     {
                         // this does not include the private key, that is only for the client
                         Certificate = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
-                        Databases = new HashSet<string>(permissions.OfType<string>()),
+                        Databases = new HashSet<string>(permissions.Select(x => x?.ToString())),
                         ServerAdmin = serverAdmin,
                         Thumbprint = certificate.Thumbprint
                     }));
@@ -62,19 +57,18 @@ namespace Raven.Server.Web.Authentication
                 HttpContext.Response.Body.Write(pfx, 0, pfx.Length);
             }
         }
-
-        [RavenAction("/admin/certificates", "PUT", "/admin/certificates?name={certificate-name:string}", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
+        
+        [RavenAction("/admin/certificates", "PUT", "/admin/certificates", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public async Task Put()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
             // one of the first admin action is to create a certificate, so let
             // us also use that to indicate that we are the seed node
             ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (var certificateJson = ctx.ReadForDisk(RequestBodyStream(), "put-certificate"))
             {
-                var certificateJson = ctx.ReadForDisk(RequestBodyStream(), name);
-                
+                ValidateCertificate(certificateJson, out _, out _, out _, out _);
+
                 var certificateDefinition = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
                 var certificate = new X509Certificate2(Convert.FromBase64String(certificateDefinition.Certificate));
@@ -98,6 +92,8 @@ namespace Raven.Server.Web.Authentication
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
+                ServerStore.Cluster.DeleteLocalState(ctx, Constants.Certificates.Prefix + thumbprint);
+
                 var res = await ServerStore.DeleteValueInClusterAsync(Constants.Certificates.Prefix + thumbprint);
                 await ServerStore.Cluster.WaitForIndexNotification(res.Etag);
 
@@ -156,13 +152,50 @@ namespace Raven.Server.Web.Authentication
                 {
                     if (certificates != null)
                     {
-                        foreach(var cert in certificates)
+                        foreach (var cert in certificates)
                             cert.Item2?.Dispose();
                     }
                 }
             }
 
             return Task.CompletedTask;
+        }
+
+        private static void ValidateCertificate(
+            BlittableJsonReaderObject certificateJson, 
+            out string friendlyName, 
+            out string password, 
+            out bool serverAdmin, 
+            out BlittableJsonReaderArray permissions)
+        {
+            if (certificateJson.TryGet("Name", out friendlyName) == false)
+                throw new ArgumentException("'Name' is a required field when generating a new certificate");
+
+            if (string.IsNullOrWhiteSpace(friendlyName))
+                throw new ArgumentException("'Name' cannot be empty when generating a new certificate");
+
+            if (certificateJson.TryGet("Permissions", out permissions) == false)
+                throw new ArgumentException("'Permissions' is a required field when generating a new certificate");
+            
+            const string validDbNameChars = @"([A-Za-z0-9_\-\.]+)";
+            foreach (LazyStringValue dbName in permissions.Items)
+            {
+                if (string.IsNullOrWhiteSpace(dbName))
+                    throw new ArgumentNullException(nameof(permissions));
+
+                if (dbName.Length > Constants.Documents.MaxDatabaseNameLength)
+                    throw new InvalidOperationException($"Database name '{dbName}' exceeds {Constants.Documents.MaxDatabaseNameLength} characters.");
+
+                var result = Regex.Matches(dbName, validDbNameChars);
+                if (result.Count == 0 || result[0].Value != dbName)
+                {
+                    throw new InvalidOperationException(
+                        "Database name can only contain A-Z, a-z, \"_\", \".\" or \"-\" chars but was: '" + dbName + "'");
+                }
+            }
+
+            certificateJson.TryGet("Password", out password);
+            certificateJson.TryGet("ServerAdmin", out serverAdmin);
         }
     }
 }

@@ -28,19 +28,16 @@ namespace FastTests.Server.Authentication
         private string _serverCertPath;
         private void SetupServerAuthentication()
         {
-            //temporary workaround
-            _serverCertPath = "c:\\work\\temp\\iftah-pc.pfx"; 
-            //_serverCertPath = GenerateAndSaveSelfSignedCertificate();
+            _serverCertPath = GenerateAndSaveSelfSignedCertificate();
             DoNotReuseServer(new ConcurrentDictionary<string, string>
             {
                 [RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = _serverCertPath,
-                [RavenConfiguration.GetKey(x => x.Security.CertificatePassword)] = "1234",
                 [RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = "https://" + Environment.MachineName + ":8080",
                 [RavenConfiguration.GetKey(x => x.Security.AuthenticationEnabled)] = "True"
             });
         }
 
-        public X509Certificate2 GetClientCertificate(IEnumerable<string> permissions, bool serverAdmin = false)
+        public X509Certificate2 AskServerForClientCertificate(IEnumerable<string> permissions, bool serverAdmin = false)
         {
             var serverCertificate = new X509Certificate2(_serverCertPath);
             X509Certificate2 clientCertificate;
@@ -50,11 +47,11 @@ namespace FastTests.Server.Authentication
                 var requestExecutor = store.GetRequestExecutor();
                 using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new GetClientCertificateOperation("client certificate", permissions, serverAdmin, "1234")
+                    var command = new CreateClientCertificateOperation("client certificate", permissions, serverAdmin)
                         .GetCommand(store.Conventions, context);
 
                     requestExecutor.Execute(command, context);
-                    clientCertificate = new X509Certificate2(command.Result.RawData, "1234");
+                    clientCertificate = new X509Certificate2(command.Result.RawData);
                 }
             }
             return clientCertificate;
@@ -64,7 +61,7 @@ namespace FastTests.Server.Authentication
         public void CanGetDocWithValidPermission()
         {
             SetupServerAuthentication();
-            var clientCert = GetClientCertificate(new[] {"Northwind"});
+            var clientCert = AskServerForClientCertificate(new[] {"Northwind"});
 
             using (var store = GetDocumentStore(certificate: clientCert, modifyName:(s => "Northwind")))
             {
@@ -76,6 +73,40 @@ namespace FastTests.Server.Authentication
 
                 Assert.NotNull(test1Doc);
             }
+        }
+        
+        [Fact]
+        public void CannotGetDocWithInvalidPermission()
+        {
+            SetupServerAuthentication();
+            var clientCert = AskServerForClientCertificate(new[] {"Southwind"});
+
+            Assert.Throws<AuthorizationException>(() =>
+            {
+                using (var store = GetDocumentStore(certificate: clientCert, modifyName: (s => "Northwind")))
+                {
+                    StoreSampleDoc(store, "test/1");
+                    using (var session = store.OpenSession())
+                        session.Load<dynamic>("test/1");
+                }
+            });
+        }
+
+        [Fact]
+        public void CannotGetDocWithInvalidDbName()
+        {
+            SetupServerAuthentication();
+            var clientCert = AskServerForClientCertificate(new[] {"North?ind"});
+
+            Assert.Throws<InvalidOperationException>(() =>
+            {
+                using (var store = GetDocumentStore(certificate: clientCert, modifyName: (s => "Northwind")))
+                {
+                    StoreSampleDoc(store, "test/1");
+                    using (var session = store.OpenSession())
+                        session.Load<dynamic>("test/1");
+                }
+            });
         }  
 
         private static void StoreSampleDoc(DocumentStore store, string docName)

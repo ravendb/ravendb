@@ -37,6 +37,8 @@ using Sparrow.Logging;
 using System.Reflection;
 using System.Security.Claims;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
 using DasMulli.Win32.ServiceUtils;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
@@ -266,6 +268,8 @@ namespace Raven.Server
 
             public bool CanAccess(string db)
             {
+                if (Status == AuthenticationStatus.Expired)
+                    return false;
                 if (Status == AuthenticationStatus.ServerAdmin)
                     return true;
                 if (db == null)
@@ -328,8 +332,6 @@ namespace Raven.Server
                 featureCollection.Set<IHttpRequestFeature>(new DummyHttpRequestFeature());
                 old?.Invoke(featureCollection);
 
-                //TODO: What about expired certificate?
-
                 var tls = featureCollection.Get<ITlsConnectionFeature>();
                 var certificate = tls?.ClientCertificate;
                 var authenticationStatus = _server.AuthenticateConnectionCertificate(certificate);
@@ -350,6 +352,10 @@ namespace Raven.Server
             if (certificate == null)
             {
                 authenticationStatus.Status = AuthenticationStatus.NoCertificateProvided;
+            }
+            else if (certificate.NotAfter < DateTime.UtcNow) //iftah this is bad
+            {
+                authenticationStatus.Status = AuthenticationStatus.Expired;
             }
             else if (certificate.Equals(ServerCertificateHolder.Certificate))
             {
@@ -411,36 +417,59 @@ namespace Raven.Server
             try
             {
                 var rawData = File.ReadAllBytes(config.CertificatePath);
-                var store = new Pkcs12Store();
-                store.Load(new MemoryStream(rawData), config.CertificatePassword?.ToCharArray());
-                AsymmetricKeyEntry pk = null;
-                foreach (string alias in store.Aliases)
-                {
-                    pk = store.GetKey(alias);
-                    if (pk != null)
-                        break;
-                }
-
-                if (pk == null)
-                    throw new EncryptionException("Unable to find the private key in the provided certificate: " + config.CertificatePath);
-
-
 
                 var loadedCertificate = config.CertificatePassword == null
                     ? new X509Certificate2(rawData)
                     : new X509Certificate2(rawData, config.CertificatePassword);
 
+                ValidatePrivateKey(config, rawData, out var privateKey);
+
+                ValidateKeyUsages(config, loadedCertificate);
+
                 return new CertificateHolder
                 {
                     Certificate = loadedCertificate,
                     CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),
-                    PrivateKey = pk
+                    PrivateKey = privateKey
                 };
             }
             catch (Exception e)
             {
                 throw new InvalidOperationException($"Could not load certificate file {config.CertificatePath}, please check the path and password", e);
             }
+        }
+
+        private static void ValidatePrivateKey(SecurityConfiguration config, byte[] rawData, out AsymmetricKeyEntry pk)
+        {
+            var store = new Pkcs12Store();
+            store.Load(new MemoryStream(rawData), config.CertificatePassword?.ToCharArray() ?? Array.Empty<char>());
+            pk = null;
+            foreach (string alias in store.Aliases)
+            {
+                pk = store.GetKey(alias);
+                if (pk != null)
+                    break;
+            }
+
+            if (pk == null)
+                throw new EncryptionException("Unable to find the private key in the provided certificate: " + config.CertificatePath);
+        }
+
+        private static void ValidateKeyUsages(SecurityConfiguration config, X509Certificate2 loadedCertificate)
+        {
+            var supported = false;
+            foreach (var extension in loadedCertificate.Extensions)
+            {
+                if (extension.Oid.FriendlyName != "Enhanced Key Usage")
+                    continue;
+
+                var extenstionString = new AsnEncodedData(extension.Oid, extension.RawData).Format(false);
+
+                supported = extenstionString.Contains("Client Authentication") && extenstionString.Contains("Server Authentication");
+            }
+
+            if (supported == false)
+                throw new EncryptionException("Server certificate " + config.CertificatePath + " must be defined with the following 'Enhanced Key Usages': Client Authentication(1.3.6.1.5.5.7.3.2) & Server Authentication(1.3.6.1.5.5.7.3.1)");
         }
 
         public class TcpListenerStatus
@@ -853,6 +882,9 @@ namespace Raven.Server
 
             switch (auth.Status)
             {
+                case AuthenticationStatus.Expired:
+                    msg = "The certificate " + sslStream.RemoteCertificate + "is expired";
+                    return false;
                 case AuthenticationStatus.ServerAdmin:
                     msg = "Admin can do it all";
                     return true;
@@ -1025,6 +1057,7 @@ namespace Raven.Server
             UnfamiliarCertificate,
             Allowed,
             ServerAdmin,
+            Expired
         }
     }
 }

@@ -9,6 +9,8 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Security;
 using System.Reflection;
+using System.Security.Authentication;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -797,12 +799,34 @@ namespace Raven.Client.Http
                 httpMessageHandler.ServerCertificateCustomValidationCallback += OnServerCertificateCustomValidationCallback;
             }
             if (Certificate != null)
+            {
                 httpMessageHandler.ClientCertificates.Add(Certificate);
+                httpMessageHandler.SslProtocols = SslProtocols.Tls12;
+
+                ValidateClientKeyUsages(Certificate);
+            }
 
             return new HttpClient(httpMessageHandler)
             {
                 Timeout = GlobalHttpClientTimeout
             };
+        }
+
+        private static void ValidateClientKeyUsages(X509Certificate2 certificate)
+        {
+            var supported = false;
+            foreach (var extension in certificate.Extensions)
+            {
+                if (extension.Oid.FriendlyName != "Enhanced Key Usage")
+                    continue;
+
+                var extensionsString = new AsnEncodedData(extension.Oid, extension.RawData).Format(false);
+
+                supported = extensionsString.Contains("Client Authentication");
+            }
+
+            if (supported == false)
+                throw new InvalidOperationException("Client certificate " + certificate.FriendlyName + " must be defined with the following 'Enhanced Key Usage': Client Authentication (Oid 1.3.6.1.5.5.7.3.2)");
         }
 
         public static event Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool> ServerCertificateCustomValidationCallback;

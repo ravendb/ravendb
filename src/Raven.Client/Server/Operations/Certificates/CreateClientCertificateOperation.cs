@@ -10,14 +10,14 @@ using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations.Certificates
 {
-    public class GetClientCertificateOperation : IServerOperation<CertificateRawData>
+    public class CreateClientCertificateOperation : IServerOperation<CertificateRawData>
     {
         private readonly string _name;
         private readonly HashSet<string> _permissions;
         private readonly bool _serverAdmin;
         private readonly string _password;
 
-        public GetClientCertificateOperation(string name, IEnumerable<string> permissions, bool serverAdmin = false, string password = null)
+        public CreateClientCertificateOperation(string name, IEnumerable<string> permissions, bool serverAdmin = false, string password = null)
         {
             _name = name ?? throw new ArgumentNullException(nameof(name));
             _permissions = permissions != null ? new HashSet<string>(permissions) : throw new ArgumentNullException(nameof(permissions));
@@ -27,10 +27,10 @@ namespace Raven.Client.Server.Operations.Certificates
 
         public RavenCommand<CertificateRawData> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetClientCertificateCommand(context, _name, _permissions, _serverAdmin, _password);
+            return new CreateClientCertificateCommand(context, _name, _permissions, _serverAdmin, _password);
         }
 
-        private class GetClientCertificateCommand : RavenCommand<CertificateRawData>
+        private class CreateClientCertificateCommand : RavenCommand<CertificateRawData>
         {
             private readonly string _name;
             private readonly HashSet<string> _permissions;
@@ -38,13 +38,14 @@ namespace Raven.Client.Server.Operations.Certificates
             private readonly string _password;
             private readonly JsonOperationContext _context;
 
-            public GetClientCertificateCommand(JsonOperationContext context, string name, HashSet<string> permissions, bool serverAdmin = false, string password = null)
+            public CreateClientCertificateCommand(JsonOperationContext context, string name, HashSet<string> permissions, bool serverAdmin = false, string password = null)
             {
                 _name = name ?? throw new ArgumentNullException(nameof(name));
                 _context = context ?? throw new ArgumentNullException(nameof(context));
                 _permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
                 _serverAdmin = serverAdmin;
                 _password = password;
+                ResponseType = RavenCommandResponseType.Raw;
             }
 
             public override bool IsReadRequest => true;

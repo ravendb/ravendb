@@ -134,7 +134,8 @@ namespace Tests.Infrastructure
             var configuration = new RavenConfiguration(caller, ResourceType.Server);
             configuration.Initialize();
 
-            var rachis = new RachisConsensus<CountingStateMachine>(new RavenServer(configuration).ServerStore, seed);
+            var serverStore = new RavenServer(configuration).ServerStore;
+            var rachis = new RachisConsensus<CountingStateMachine>(serverStore, seed);
             var storageEnvironment = new StorageEnvironment(server);
             rachis.Initialize(storageEnvironment, configuration.Cluster,configuration.Core.ServerUrl);
             rachis.OnDispose += (sender, args) =>
@@ -143,7 +144,7 @@ namespace Tests.Infrastructure
             };
             if (bootstrap)
             {
-                rachis.Bootstrap(url);
+                rachis.Bootstrap(serverStore, url);
             }
 
             rachis.Url = url;

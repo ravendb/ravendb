@@ -1014,7 +1014,7 @@ namespace Raven.Server.ServerWide
 
         public void SecedeFromCluster()
         {
-            Engine.Bootstrap(NodeHttpServerUrl, forNewCluster: true);
+            Engine.Bootstrap(this, NodeHttpServerUrl, forNewCluster: true);
         }
 
         public Task<(long Etag, object Result)> WriteDatabaseRecordAsync(
@@ -1047,7 +1047,7 @@ namespace Raven.Server.ServerWide
         {
             if (_engine.CurrentState == RachisConsensus.State.Passive)
             {
-                _engine.Bootstrap(_ravenServer.ServerStore.NodeHttpServerUrl);
+                _engine.Bootstrap(this, _ravenServer.ServerStore.NodeHttpServerUrl);
             }
         }
 

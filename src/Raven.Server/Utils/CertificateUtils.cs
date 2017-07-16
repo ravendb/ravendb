@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using JetBrains.Annotations;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Generators;
@@ -24,19 +25,20 @@ namespace Raven.Server.Utils
         {
             AsymmetricKeyParameter caPrivateKey;
             CreateCertificateAuthorityCertificate(subjectName, out caPrivateKey);
-            return CreateSelfSignedCertificateBasedOnCertificateAuthorityPrivateKey(subjectName, issuerName, caPrivateKey);
+            return CreateSelfSignedCertificateBasedOnPrivateKey(subjectName, issuerName, caPrivateKey, false);
         }
 
         public static X509Certificate2 CreateSelfSignedClientCertificate(string subjectName, RavenServer.CertificateHolder certificateHolder)
         {
-            return CreateSelfSignedCertificateBasedOnCertificateAuthorityPrivateKey(
+            return CreateSelfSignedCertificateBasedOnPrivateKey(
                 subjectName, 
                 certificateHolder.Certificate.Subject, 
-                certificateHolder.PrivateKey.Key);
+                certificateHolder.PrivateKey.Key,
+                true);
         }
 
-        private static X509Certificate2 CreateSelfSignedCertificateBasedOnCertificateAuthorityPrivateKey(string subjectName, string issuerName, 
-            AsymmetricKeyParameter issuerPrivKey)
+        private static X509Certificate2 CreateSelfSignedCertificateBasedOnPrivateKey(string subjectName, string issuerName, 
+            AsymmetricKeyParameter issuerPrivKey, bool isClientCertificate)
         {
             const int keyStrength = 2048;
 
@@ -47,7 +49,12 @@ namespace Raven.Server.Utils
 
             // The Certificate Generator
             X509V3CertificateGenerator certificateGenerator = new X509V3CertificateGenerator();
-            certificateGenerator.AddExtension(X509Extensions.ExtendedKeyUsage.Id, true, new ExtendedKeyUsage(KeyPurposeID.IdKPServerAuth));
+
+            var extendedKeyUsage = isClientCertificate
+                ? new ExtendedKeyUsage(KeyPurposeID.IdKPClientAuth)
+                : new ExtendedKeyUsage(KeyPurposeID.IdKPServerAuth, KeyPurposeID.IdKPClientAuth);
+
+            certificateGenerator.AddExtension(X509Extensions.ExtendedKeyUsage.Id, true, extendedKeyUsage);
 
             // Serial Number
             BigInteger serialNumber = BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(Int64.MaxValue), random);
@@ -90,7 +97,7 @@ namespace Raven.Server.Utils
             return convertedCertificate;
         }
 
-        private static void CreateCertificateAuthorityCertificate(string subjectName, out AsymmetricKeyParameter CaPrivateKey)
+        private static void CreateCertificateAuthorityCertificate(string subjectName, [CanBeNull] out AsymmetricKeyParameter caPrivateKey)
         {
             const int keyStrength = 2048;
 
@@ -119,22 +126,21 @@ namespace Raven.Server.Utils
             certificateGenerator.SetNotAfter(notAfter);
 
             // Subject Public Key
-            AsymmetricCipherKeyPair subjectKeyPair;
-            KeyGenerationParameters keyGenerationParameters = new KeyGenerationParameters(random, keyStrength);
-            RsaKeyPairGenerator keyPairGenerator = new RsaKeyPairGenerator();
+            var keyGenerationParameters = new KeyGenerationParameters(random, keyStrength);
+            var keyPairGenerator = new RsaKeyPairGenerator();
             keyPairGenerator.Init(keyGenerationParameters);
-            subjectKeyPair = keyPairGenerator.GenerateKeyPair();
+            var subjectKeyPair = keyPairGenerator.GenerateKeyPair();
 
             certificateGenerator.SetPublicKey(subjectKeyPair.Public);
 
             // Generating the Certificate
-            AsymmetricCipherKeyPair issuerKeyPair = subjectKeyPair;
+            var issuerKeyPair = subjectKeyPair;
             ISignatureFactory signatureFactory = new Asn1SignatureFactory("SHA512WITHRSA", issuerKeyPair.Private, random);
 
             // selfsign certificate
-            Org.BouncyCastle.X509.X509Certificate certificate = certificateGenerator.Generate(signatureFactory);
+            X509Certificate certificate = certificateGenerator.Generate(signatureFactory);
 
-            CaPrivateKey = issuerKeyPair.Private;
+            caPrivateKey = issuerKeyPair.Private;
 
             return;
         }

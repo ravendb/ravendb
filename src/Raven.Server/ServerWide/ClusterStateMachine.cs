@@ -171,6 +171,8 @@ namespace Raven.Server.ServerWide
                         break;
                     case nameof(PutCertificateCommand):
                         PutValue<CertificateDefinition>(context, type, cmd, index, leader);
+                        cmd.TryGet(nameof(PutCertificateCommand.Name), out string key);
+                        DeleteLocalState(context, key);
                         break;
                     case nameof(PutClientConfigurationCommand):
                         PutValue<ClientConfiguration>(context, type, cmd, index, leader);
@@ -571,7 +573,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public void DeleteLocalState(TransactionOperationContext context, string key, BlittableJsonReaderObject value)
+        public void DeleteLocalState(TransactionOperationContext context, string key)
         {
             var localState = context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
             localState.Delete(key);
@@ -584,6 +586,24 @@ namespace Raven.Server.ServerWide
             if (read == null)
                 return null;
             return new BlittableJsonReaderObject(read.Reader.Base, read.Reader.Length, context);
+        }
+
+        public IEnumerable<string> GetCertificateKeysFromLocalState(TransactionOperationContext context)
+        {
+            var tree = context.Transaction.InnerTransaction.ReadTree(LocalNodeStateTreeName);
+            if (tree == null)
+                yield break;
+
+            using (var it = tree.Iterate(prefetch: false))
+            {
+                if (it.Seek(Slices.BeforeAllKeys) == false)
+                    yield break;
+                do
+                {
+                    yield return it.CurrentKey.ToString();
+
+                } while (it.MoveNext());
+            }
         }
 
         public IEnumerable<Tuple<string, BlittableJsonReaderObject>> ItemsStartingWith(TransactionOperationContext context, string prefix, int start, int take)

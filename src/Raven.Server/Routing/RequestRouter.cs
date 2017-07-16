@@ -129,6 +129,7 @@ namespace Raven.Server.Routing
                     {
                         case null:
                         case RavenServer.AuthenticationStatus.NoCertificateProvided:
+                        case RavenServer.AuthenticationStatus.Expired:
                         case RavenServer.AuthenticationStatus.None:
                         case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
                             UnlikelyFailAuthorization(context, database?.Name, feature);
@@ -177,6 +178,10 @@ namespace Raven.Server.Routing
             else if (feature.Status == RavenServer.AuthenticationStatus.ServerAdmin)
             {
                 message = "The provided client certificate " + feature.Certificate + " does not have ServerAdmin level to access " + (database ?? "the server");
+            }
+            else if (feature.Status == RavenServer.AuthenticationStatus.Expired)
+            {
+                message = "The provided client certificate " + feature.Certificate + " is expired";
             }
             else
             {

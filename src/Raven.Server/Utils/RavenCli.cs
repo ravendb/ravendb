@@ -481,10 +481,11 @@ namespace Raven.Server.Utils
                     Thumbprint = cert.Thumbprint
                 }.ToJson();
 
-                BlittableJsonReaderObject certificate = ctx.ReadObject(json, "Server/Certificate/Definition");
-                using (ctx.OpenWriteTransaction())
+                using (var certificate = ctx.ReadObject(json, "Server/Certificate/Definition"))
+                using (var tx = ctx.OpenWriteTransaction())
                 {
                     cli._server.ServerStore.Cluster.PutLocalState(ctx, certKey, certificate);
+                    tx.Commit();
                 }
             }
 

@@ -95,12 +95,6 @@ namespace Raven.Client.Http
 
             using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
             {
-                if (response.Content.Headers.ContentType.MediaType.Equals("binary/octet-stream"))
-                {
-                    SetResponseRaw(response, stream, context);
-                    return ResponseDisposeHandling.Automatic;
-                }
-
                 if (ResponseType == RavenCommandResponseType.Object)
                 {
                     var contentLength = response.Content.Headers.ContentLength;
