@@ -25,19 +25,19 @@ namespace Sparrow.Platform.Win32
         }
 
 
-        public static bool WillCauseHardPageFault(IntPtr addr, long length)
+        public static bool WillCauseHardPageFault(byte* addr, long length)
         {
             const int pagesize = 64 * Constants.Size.Kilobyte;
 
             var pages = length / pagesize;
             var wsInfo = new PPSAPI_WORKING_SET_EX_INFORMATION[pages];
             for (var i = 0; i < pages; i++)
-                wsInfo[i].VirtualAddress = (byte*)addr.ToPointer() + (i * pagesize);
+                wsInfo[i].VirtualAddress = addr + (i * pagesize);
 
             fixed (void* pWsInfo = wsInfo)
             {
                 if (QueryWorkingSetEx(GetCurrentProcess(), (byte*)pWsInfo, (uint)(sizeof(PPSAPI_WORKING_SET_EX_INFORMATION) * pages)) == false)
-                    throw new MemoryInfoException($"Failed to QueryWorkingSetEx addr: {addr.ToInt64()}, with length: {length}. processId = {GetCurrentProcess()}");
+                    throw new MemoryInfoException($"Failed to QueryWorkingSetEx addr: {new IntPtr(addr).ToInt64()}, with length: {length}. processId = {GetCurrentProcess()}");
 
             }
 

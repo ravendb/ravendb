@@ -7,23 +7,45 @@ namespace Sparrow.Platform.Posix
 {
     public static unsafe class PosixMemoryQueryMethods
     {
-        public static bool WillCauseHardPageFault(IntPtr addr, long length)
+        public static bool WillCauseHardPageFault(byte* addr, long length)
         {
-            Debug.Assert(addr.ToInt64() % Syscall.PageSize == 0);
+            Debug.Assert(new IntPtr(addr).ToInt64() % Syscall.PageSize == 0);
 
-            var vecSize = (length + Syscall.PageSize - 1) / Syscall.PageSize;
-            var vec = Marshal.AllocHGlobal((int)vecSize);
-            if (Syscall.mincore(addr.ToPointer(), new IntPtr(length), (char*)vec.ToPointer()) != 0)
-                throw new MemoryInfoException($"Failed to mincore addr: {addr.ToInt64()}, with length: {length}. Last Error = {Marshal.GetLastWin32Error()}");
+            var vecSize = (int)((length + Syscall.PageSize - 1) / Syscall.PageSize);
 
-            for (var i = 0; i < vecSize; i++)
+            IntPtr vec = IntPtr.Zero;
+            char* pVec;
+            if (vecSize > 4)
             {
-                if ((*((byte*)vec.ToPointer() + i) & 1) == 0)
-                    continue;
+                vec = Marshal.AllocHGlobal(vecSize);
+                pVec = (char *)vec.ToPointer();
+            }
+            else
+            {
+                void *p = stackalloc IntPtr[(int)length];
+                pVec = (char*)p;
+            }
 
+            try
+            {
+                
+                if (Syscall.mincore(addr, new IntPtr(length), pVec) != 0)
+                    throw new MemoryInfoException($"Failed to mincore addr: {new IntPtr(addr).ToInt64()}, with length: {length}. Last Error = {Marshal.GetLastWin32Error()}");
+
+                for (var i = 0; i < vecSize; i++)
+                {
+                    if ((*((byte*)pVec + i) & 1) == 0)
+                        continue;
+
+                    return true;
+                }
                 return false;
             }
-            return true;
+            finally
+            {
+                if (vec != IntPtr.Zero)
+                    Marshal.FreeHGlobal(vec);
+            }
         }
     }
 }
