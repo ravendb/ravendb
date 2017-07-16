@@ -17,6 +17,7 @@ using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
+using Voron.Platform.Win32;
 using Voron.Util;
 using Voron.Util.Settings;
 using static Voron.Platform.Win32.Win32NativeMethods;
@@ -228,6 +229,8 @@ namespace Voron.Platform.Win32
             if (allocationInfo == null)
                 return false;
 
+            allocationInfo.IsNotResidentInRam = !IsMemoryResident(allocationInfo);
+
             PagerState.Files = PagerState.Files.Concat(allocationInfo.MappedFile);
             PagerState.AllocationInfos = PagerState.AllocationInfos.Concat(allocationInfo);
 
@@ -240,12 +243,72 @@ namespace Voron.Platform.Win32
 
                 Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess, (UIntPtr)1, &entry, 0);
             }
+
             return true;
         }
 
+
+        public static int ttt = 0;
+
+        private static bool IsMemoryResident(PagerState.AllocationInfo allocationInfo)
+        {
+            if (++ttt % 2 == 0)
+            {
+                Console.WriteLine("Touch");
+                for (int i = 0; i < allocationInfo.Size; i++)
+                {
+                    var p = *(allocationInfo.BaseAddress + i);
+                }
+            }
+            else
+            {
+                Console.WriteLine("dont touch");
+            }
+            var sp = Stopwatch.StartNew();
+            try
+            {
+                const int pagesize = AllocationGranularity;
+                var pages = allocationInfo.Size / pagesize;
+                var wsInfo = new PPSAPI_WORKING_SET_EX_INFORMATION[pages];
+                for (var i = 0; i < pages; i++)
+                    wsInfo[i].VirtualAddress = allocationInfo.BaseAddress + (i * pagesize);
+
+                fixed (void* pWsInfo = wsInfo)
+                {
+                    if (Win32MemoryMapNativeMethods.QueryWorkingSetEx(GetCurrentProcess(), (byte*)pWsInfo, (uint)(sizeof(PPSAPI_WORKING_SET_EX_INFORMATION) * pages)) ==
+                        false)
+                    {
+                        Console.WriteLine("ADIADI:: Failed to QueryWorkingSetEx");
+                    }
+                }
+
+                for (int i = 0; i < pages; i++)
+                {
+                    var flag = wsInfo[i].VirtualAttributes & 0x00000001;
+                    if (flag == 0)
+                    {
+                        Console.WriteLine("a page is not valid");
+                        return false;
+                    }
+                }
+                return true;
+            }
+            finally
+            {
+                Console.WriteLine(sp.ElapsedMilliseconds);
+            }
+        }
+
+        struct PPSAPI_WORKING_SET_EX_INFORMATION
+        {
+            public byte* VirtualAddress;
+            public ulong VirtualAttributes;
+        }
+       
+
         private PagerState.AllocationInfo RemapViewOfFileAtAddress(long allocationSize, ulong offsetInFile, byte* baseAddress)
         {
-            var offset = new SplitValue { Value = offsetInFile };
+            var offset = new WindowsMemoryMapPager.SplitValue { Value = offsetInFile };
 
             var mmf = MemoryMappedFile.CreateFromFile(_fileStream, null, _fileStream.Length,
                 _memoryMappedFileAccess,

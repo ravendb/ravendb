@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Collections;
+using Sparrow.Platform;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Debugging;

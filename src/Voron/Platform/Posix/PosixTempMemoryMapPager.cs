@@ -1,6 +1,8 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using Sparrow;
 using Sparrow.Platform.Posix;
 using Sparrow.Utils;
 using Voron.Global;
@@ -46,7 +48,7 @@ namespace Voron.Platform.Posix
             }
             DeleteOnClose = true;
 
-            SysPageSize = Syscall.sysconf(PerPlatformValues.SysconfNames._SC_PAGESIZE);
+            SysPageSize = Syscall.PageSize;
 
             if (SysPageSize <= 0) // i.e. -1 because _SC_PAGESIZE defined differently on various platforms
             {
@@ -126,11 +128,15 @@ namespace Voron.Platform.Posix
                 Syscall.ThrowLastError(err, "mmap on " + FileName);
             }
             NativeMemory.RegisterFileMapping(FileName.FullPath, startingBaseAddressPtr, _totalAllocationSize);
+
+            bool isResidentInRam = Memory.PosixCheckForResidencyInRam(startingBaseAddressPtr, _totalAllocationSize);
+
             var allocationInfo = new PagerState.AllocationInfo
             {
                 BaseAddress = (byte*)startingBaseAddressPtr.ToPointer(),
                 Size = _totalAllocationSize,
-                MappedFile = null
+                MappedFile = null,
+                IsNotResidentInRam = !isResidentInRam
             };
 
             var newPager = new PagerState(this)

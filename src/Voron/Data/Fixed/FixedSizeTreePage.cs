@@ -1,5 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using Sparrow;
+using Sparrow.Platform;
 using Voron.Global;
 
 namespace Voron.Data.Fixed

@@ -7,6 +7,7 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Collections;
 using Sparrow.Json;
+using Sparrow.Platform;
 using Voron;
 using Voron.Data.BTrees;
 

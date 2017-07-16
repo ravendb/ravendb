@@ -38,7 +38,7 @@ namespace Voron.Platform.Posix
                 Syscall.ThrowLastError(err, "when opening " + file);
             }
 
-            SysPageSize = Syscall.sysconf(PerPlatformValues.SysconfNames._SC_PAGESIZE);
+            SysPageSize = Syscall.PageSize;
 
             if (SysPageSize <= 0) // i.e. -1 because _SC_PAGESIZE defined differently on various platforms
             {
@@ -117,6 +117,7 @@ namespace Voron.Platform.Posix
             }
 
             PagerState newPagerState = CreatePagerState();
+
             if (newPagerState == null)
             {
                 var errorMessage = string.Format(
@@ -154,11 +155,15 @@ namespace Voron.Platform.Posix
 
             NativeMemory.RegisterFileMapping(FileName.FullPath, startingBaseAddressPtr, fileSize);
 
+            bool isResidentInRam = Memory.PosixCheckForResidencyInRam(startingBaseAddressPtr, _totalAllocationSize);
+
+
             var allocationInfo = new PagerState.AllocationInfo
             {
                 BaseAddress = (byte*)startingBaseAddressPtr.ToPointer(),
                 Size = fileSize,
-                MappedFile = null
+                MappedFile = null,
+                IsNotResidentInRam = !isResidentInRam
             };
 
             var newPager = new PagerState(this)

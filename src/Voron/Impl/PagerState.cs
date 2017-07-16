@@ -18,6 +18,7 @@ namespace Voron.Impl
             public MemoryMappedFile MappedFile;
             public byte* BaseAddress;
             public long Size;
+            public bool IsNotResidentInRam { get; set; }
 
             public override string ToString()
             {

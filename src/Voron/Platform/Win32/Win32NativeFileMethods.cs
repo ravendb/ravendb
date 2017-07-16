@@ -6,6 +6,7 @@
 
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Security;
@@ -13,6 +14,8 @@ using System.Text;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
 using Voron.Exceptions;
+// ReSharper disable InconsistentNaming
+// ReSharper disable EnumUnderlyingTypeIsInt
 
 namespace Voron.Platform.Win32
 {
@@ -417,6 +420,14 @@ namespace Voron.Platform.Win32
             byte* lpBaseAddress);
 
 
+        [DllImport("psapi.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool QueryWorkingSetEx(IntPtr hProcess, byte* pv, uint cb);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern int VirtualQuery(byte *lpAddress, byte* lpBuffer, int dwLength);
+
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool FlushFileBuffers(SafeFileHandle hFile);
@@ -564,6 +575,7 @@ namespace Voron.Platform.Win32
         [DllImport("msvcrt.dll", EntryPoint = "memset", CallingConvention = CallingConvention.Cdecl,
              SetLastError = false)]
         [SecurityCritical]
+        // ReSharper disable once UnusedMember.Local
         private static extern IntPtr memset(byte* dest, int c, long count);
     }
 }

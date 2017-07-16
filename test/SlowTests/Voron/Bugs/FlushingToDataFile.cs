@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Sparrow;
+using Sparrow.Platform;
 using Voron;
 using Voron.Global;
 using Voron.Impl;
