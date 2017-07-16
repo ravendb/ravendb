@@ -28,7 +28,7 @@ class testSubscriptionTaskCommand extends commandBase {
             ChangeVector: this.subscriptionSettings.ChangeVectorEntry,
             Collection: this.subscriptionSettings.Collection,
             Script: this.subscriptionSettings.Script,
-            IsVersioned: this.subscriptionSettings.IsVersioned
+            IsVersioned: this.subscriptionSettings.IncludeRevisions
         };
 
         this.post(url, JSON.stringify(subscriptionToTest), this.db)
