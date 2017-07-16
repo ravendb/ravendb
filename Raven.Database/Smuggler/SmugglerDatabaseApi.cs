@@ -141,7 +141,8 @@ namespace Raven.Smuggler
             {
                 Url = connectionStringOptions.Url,
                 ApiKey = connectionStringOptions.ApiKey,
-                Credentials = credentials ?? CredentialCache.DefaultNetworkCredentials
+                Credentials = credentials ?? CredentialCache.DefaultNetworkCredentials,
+                AvoidCluster = true
             };
 
             s.Initialize();

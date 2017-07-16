@@ -129,7 +129,7 @@ namespace Raven.Client.Connection.Async
             this.requestExecuterGetter = requestExecuterGetter;
             this.requestTimeMetricGetter = requestTimeMetricGetter;
             requestExecuterSelector = new RequestExecuterSelector(() =>
-                requestExecuterGetter(this, databaseName, incrementReadStripe), convention);
+                requestExecuterGetter(this, databaseName, incrementReadStripe), convention, AvoidCluster);
 
             Lazy<Tuple<DateTime, Task>> val;
             try
@@ -189,7 +189,7 @@ namespace Raven.Client.Connection.Async
                 convention.UpdateFrom(topology.ClientConfiguration);
 
             executor = requestExecuterSelector.Select();
-            if (topology.ClusterInformation.IsInCluster)
+            if (AvoidCluster == false && topology.ClusterInformation.IsInCluster)
             {
                 var clusterAwareRequestExecuter = executor as ClusterAwareRequestExecuter;
                 //This should never happen.
@@ -2891,6 +2891,7 @@ namespace Raven.Client.Connection.Async
         private bool resolvingConflict;
         private bool resolvingConflictRetries;
 
+        public bool AvoidCluster { get; set; } = false;
         internal async Task<T> ExecuteWithReplication<T>(HttpMethod method, Func<OperationMetadata, IRequestTimeMetric, Task<T>> operation, CancellationToken token = default(CancellationToken))
         {
             var currentRequest = Interlocked.Increment(ref requestCount);

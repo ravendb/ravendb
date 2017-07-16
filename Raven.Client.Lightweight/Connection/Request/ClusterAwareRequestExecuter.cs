@@ -286,10 +286,7 @@ namespace Raven.Client.Connection.Request
             if(Log.IsDebugEnabled)
                 Log.Debug($"Faield executing operation on node {node.Url} number of remaining retries: {numberOfRetries}.");
 
-            //the value of the leader was changed since we took a snapshot of it and it is not null so we will try to run again without 
-            // considering this a failure
-            if(SetLeaderNodeToNullIfPrevIsTheSame(node) == false)
-                return await ExecuteWithinClusterInternalAsync(serverClient, method, operation, token, numberOfRetries, withClusterFailoverHeader).ConfigureAwait(false);
+            SetLeaderNodeToNullIfPrevIsTheSame(node);
             FailureCounters.IncrementFailureCount(node.Url);
 
             if (serverClient.convention.FailoverBehavior == FailoverBehavior.ReadFromLeaderWriteToLeaderWithFailovers
@@ -360,8 +357,13 @@ namespace Raven.Client.Connection.Request
             return false;
         }
 
-        private async Task<AsyncOperationResult<T>> TryClusterOperationAsync<T>(OperationMetadata node, Func<OperationMetadata, IRequestTimeMetric, Task<T>> operation, bool avoidThrowing, CancellationToken token)
+        private const int RedirectLimit = 2;
+        private async Task<AsyncOperationResult<T>> TryClusterOperationAsync<T>(OperationMetadata node, Func<OperationMetadata, IRequestTimeMetric, Task<T>> operation, bool avoidThrowing, CancellationToken token,int redirectLimit = RedirectLimit)
         {
+            if (redirectLimit == 0)
+            {
+                throw new InvalidOperationException($"Cluster is not reachable. Already got redirected {RedirectLimit} times.");
+            }
             Debug.Assert(node != null);
 
             token.ThrowIfCancellationRequested();
@@ -407,7 +409,7 @@ namespace Raven.Client.Connection.Request
                             SetLeaderNodeToKnownLeader(newLeaderNode);
                             if(Log.IsDebugEnabled)
                                 Log.Debug($"Redirecting to {redirectUrl} because {node.Url} responded with 302-redirect.");
-                            return await TryClusterOperationAsync(newLeaderNode, operation, avoidThrowing, token).ConfigureAwait(false);
+                            return await TryClusterOperationAsync(newLeaderNode, operation, avoidThrowing, token, redirectLimit-1).ConfigureAwait(false);
                         }
 
                         if (errorResponseException.StatusCode == HttpStatusCode.ExpectationFailed)

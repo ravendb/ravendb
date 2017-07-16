@@ -20,27 +20,29 @@ namespace Raven.Client.Connection.Request
         private IRequestExecuter clusterExecuter;
         private IRequestExecuter replicationAwareExecuter;
 
-        public RequestExecuterSelector(Func<IRequestExecuter> requestExecuterGetter, DocumentConvention convention)
+        private readonly bool avoidCluster;
+        public RequestExecuterSelector(Func<IRequestExecuter> requestExecuterGetter, DocumentConvention convention, bool avoidCluster = false)
         {
             this.requestExecuterGetter = requestExecuterGetter;
             this.convention = convention;
+            this.avoidCluster = avoidCluster;
         }
 
         public IRequestExecuter Select()
         {
-            if (convention.FailoverBehavior == FailoverBehavior.ReadFromLeaderWriteToLeader
+            if (avoidCluster == false &&
+                (convention.FailoverBehavior == FailoverBehavior.ReadFromLeaderWriteToLeader
                 || convention.FailoverBehavior == FailoverBehavior.ReadFromLeaderWriteToLeaderWithFailovers
                 || convention.FailoverBehavior == FailoverBehavior.ReadFromAllWriteToLeader
-                || convention.FailoverBehavior == FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers)
+                || convention.FailoverBehavior == FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers
+                )
+               )                
             {
                 // use cluster aware executer
                 return clusterExecuter ?? (clusterExecuter = requestExecuterGetter());
             }
-            else
-            {
-                // use replication aware executer
-                return replicationAwareExecuter ?? (replicationAwareExecuter = requestExecuterGetter());
-            }
+            // use replication aware executer
+            return replicationAwareExecuter ?? (replicationAwareExecuter = requestExecuterGetter());
         }
     }
 }
