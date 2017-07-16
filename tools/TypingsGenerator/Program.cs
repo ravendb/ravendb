@@ -233,6 +233,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OngoingTasksResult));
             scripter.AddType(typeof(OngoingTask));
             scripter.AddType(typeof(OngoingTaskSubscription));
+            scripter.AddType(typeof(SubscriptionTryout));
             scripter.AddType(typeof(SubscriptionState));
             scripter.AddType(typeof(SubscriptionCriteria));
             scripter.AddType(typeof(ChangeVectorEntry));
