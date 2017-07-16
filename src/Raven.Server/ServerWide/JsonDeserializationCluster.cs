@@ -92,6 +92,11 @@ namespace Raven.Server.ServerWide
             [nameof(DeleteOngoingTaskCommand)] = GenerateJsonDeserializationRoutine<DeleteOngoingTaskCommand>(),
             [nameof(AddRavenConnectionString)] = GenerateJsonDeserializationRoutine<AddRavenConnectionString>(),
             [nameof(AddSqlConnectionString)] = GenerateJsonDeserializationRoutine<AddSqlConnectionString>(),
+            [nameof(RemoveRavenConnectionString)] = GenerateJsonDeserializationRoutine<RemoveRavenConnectionString>(),
+            [nameof(RemoveSqlConnectionString)] = GenerateJsonDeserializationRoutine<RemoveSqlConnectionString>(),
+            [nameof(UpdateRavenConnectionString)] = GenerateJsonDeserializationRoutine<UpdateRavenConnectionString>(),
+            [nameof(UpdateSqlConnectionString)] = GenerateJsonDeserializationRoutine<UpdateSqlConnectionString>()
+
         };
     }
 }

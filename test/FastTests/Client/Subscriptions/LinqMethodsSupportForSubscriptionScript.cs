@@ -8,7 +8,7 @@ using Xunit;
 
 namespace FastTests.Client.Subscriptions
 {
-    public class LinqMethosSupportForSubscriptionScript : RavenTestBase
+    public class LinqMethodsSupportForSubscriptionScript : RavenTestBase
     {
         [Fact]
         public async Task CanHandleAny()

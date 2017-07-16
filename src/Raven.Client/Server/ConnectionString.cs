@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Server
 {
@@ -22,6 +23,14 @@ namespace Raven.Client.Server
         public abstract ConnectionStringType Type { get; }
 
         protected abstract void ValidateImpl(ref List<string> errors);
+
+        public virtual DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Name)] = Name
+            };
+        }
     }
 
     public enum ConnectionStringType

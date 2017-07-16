@@ -984,7 +984,7 @@ loadToOrders(orderData);
             });
         }
 
-        private static string GetConnectionString(DocumentStore store)
+        protected static string GetConnectionString(DocumentStore store)
         {
             return _masterDatabaseConnection.Value + $";Initial Catalog=SqlReplication-{store.Database};";
         }
