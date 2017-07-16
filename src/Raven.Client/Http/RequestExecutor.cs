@@ -507,7 +507,7 @@ namespace Raven.Client.Http
                 {
                     sp.Stop();
                     if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e).ConfigureAwait(false) == false)
-                        throw new AllTopologyNodesDownException($"Tried to send {command.GetType().Name} request to all configured nodes in the topology, all of them seem to be down or not responding.", _nodeSelector.Topology, e);
+                        throw new AllTopologyNodesDownException($"Tried to send {command.GetType().Name} request to all configured nodes in the topology, all of them seem to be down or not responding.", _nodeSelector?.Topology, e);
 
                     return;
                 }
@@ -619,7 +619,7 @@ namespace Raven.Client.Http
             switch (response.StatusCode)
             {
                 case HttpStatusCode.NotFound:
-                    _nodeSelector.OnFailedRequest(nodeIndex);
+                    _nodeSelector?.OnFailedRequest(nodeIndex);
                     if (command.ResponseType == RavenCommandResponseType.Empty)
                         return true;
                     else if (command.ResponseType == RavenCommandResponseType.Object)
@@ -747,7 +747,7 @@ namespace Raven.Client.Http
                     {
                         status.Dispose();
                     }
-                    _nodeSelector.RestoreNodeIndex(nodeStatus.NodeIndex);
+                    _nodeSelector?.RestoreNodeIndex(nodeStatus.NodeIndex);
                 }
             }
             catch (Exception e)
@@ -833,12 +833,16 @@ namespace Raven.Client.Http
             JsonOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var topology = _nodeSelector.Topology;
-                foreach (var node in topology.Nodes)
+                var topology = _nodeSelector?.Topology;
+
+                if (topology != null)
                 {
+                    foreach (var node in topology.Nodes)
+                    {
 #pragma warning disable 4014
-                    HandleUnauthorized(node, context, shouldThrow: false);
+                        HandleUnauthorized(node, context, shouldThrow: false);
 #pragma warning restore 4014
+                    }
                 }
             }
         }
