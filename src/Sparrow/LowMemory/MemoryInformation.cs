@@ -130,7 +130,7 @@ namespace Sparrow.LowMemory
             return CheckPageFileOnHdd.WindowsIsSwappingOnHddInsteadOfSsd();
         }
 
-        public static bool WillCauseHardPageFault(IntPtr addr, long length) => PlatformDetails.RunningOnPosix ? PosixMemoryQueryMethods.WillCauseHardPageFault(addr, length) : Win32MemoryQueryMethods.WillCauseHardPageFault(addr, length);
+        public static bool WillCauseHardPageFault(IntPtr addr, long length) => PlatformDetails.RunningOnPosix ? !PosixMemoryQueryMethods.WillCauseHardPageFault(addr, length) : !Win32MemoryQueryMethods.WillCauseHardPageFault(addr, length);
     }
 
     public struct MemoryInfoResult
