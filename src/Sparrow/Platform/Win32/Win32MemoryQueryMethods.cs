@@ -27,27 +27,38 @@ namespace Sparrow.Platform.Win32
 
         public static bool WillCauseHardPageFault(byte* addr, long length)
         {
+            if (length > int.MaxValue)
+                return true; // truelly big sizes are not going to be handled
+
             const int pagesize = 64 * Constants.Size.Kilobyte;
 
             var pages = length / pagesize;
-            var wsInfo = new PPSAPI_WORKING_SET_EX_INFORMATION[pages];
-            for (var i = 0; i < pages; i++)
-                wsInfo[i].VirtualAddress = addr + (i * pagesize);
 
-            fixed (void* pWsInfo = wsInfo)
+            PPSAPI_WORKING_SET_EX_INFORMATION* pWsInfo;
+            if (pages > 2)
             {
-                if (QueryWorkingSetEx(GetCurrentProcess(), (byte*)pWsInfo, (uint)(sizeof(PPSAPI_WORKING_SET_EX_INFORMATION) * pages)) == false)
-                    throw new MemoryInfoException($"Failed to QueryWorkingSetEx addr: {new IntPtr(addr).ToInt64()}, with length: {length}. processId = {GetCurrentProcess()}");
-
+                var wsInfo = Marshal.AllocHGlobal((int)(sizeof(PPSAPI_WORKING_SET_EX_INFORMATION)*pages));
+                pWsInfo = (PPSAPI_WORKING_SET_EX_INFORMATION *)wsInfo.ToPointer();
             }
+            else
+            {
+                var p = stackalloc PPSAPI_WORKING_SET_EX_INFORMATION[(int)pages];
+                pWsInfo = p;
+            }
+
+            for (var i = 0; i < pages; i++)
+                pWsInfo[i].VirtualAddress = addr + (i * pagesize);
+
+                if (QueryWorkingSetEx(GetCurrentProcess(), (byte *)pWsInfo, (uint)(sizeof(PPSAPI_WORKING_SET_EX_INFORMATION) * pages)) == false)
+                    throw new MemoryInfoException($"Failed to QueryWorkingSetEx addr: {new IntPtr(addr).ToInt64()}, with length: {length}. processId = {GetCurrentProcess()}");
 
             for (int i = 0; i < pages; i++)
             {
-                var flag = wsInfo[i].VirtualAttributes & 0x00000001;
+                var flag = pWsInfo[i].VirtualAttributes & 0x00000001;
                 if (flag == 0)
-                    return false;
+                    return true;
             }
-            return true;
+            return false;
         }
     }
 }
