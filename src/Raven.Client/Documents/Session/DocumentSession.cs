@@ -61,7 +61,7 @@ namespace Raven.Client.Documents.Session
                 if (command == null)
                     return;
 
-                RequestExecutor.Execute(command, Context);
+                RequestExecutor.Execute(command, Context, sessionId:_clientSessionId);
                 saveChangesOperation.SetResult(command.Result);
             }
         }
@@ -80,7 +80,7 @@ namespace Raven.Client.Documents.Session
                 return true;
 
             var command = new HeadDocumentCommand(id, null);
-            RequestExecutor.Execute(command, Context);
+            RequestExecutor.Execute(command, Context, sessionId:_clientSessionId);
 
             return command.Result != null;
         }
@@ -98,7 +98,7 @@ namespace Raven.Client.Documents.Session
             IncrementRequestCount();
 
             var command = new GetDocumentCommand(new[] { documentInfo.Id }, includes: null, transformer: null, transformerParameters: null, metadataOnly: false, context: Context);
-            RequestExecutor.Execute(command, Context);
+            RequestExecutor.Execute(command, Context, sessionId: _clientSessionId);
 
             RefreshInternal(entity, command, documentInfo);
         }
@@ -165,7 +165,7 @@ namespace Raven.Client.Documents.Session
             var requests = PendingLazyOperations.Select(x => x.CreateRequest()).ToList();
             var multiGetOperation = new MultiGetOperation(this);
             var multiGetCommand = multiGetOperation.CreateRequest(requests);
-            RequestExecutor.Execute(multiGetCommand, Context);
+            RequestExecutor.Execute(multiGetCommand, Context, sessionId: _clientSessionId);
             var responses = multiGetCommand.Result;
 
             for (var i = 0; i < PendingLazyOperations.Count; i++)

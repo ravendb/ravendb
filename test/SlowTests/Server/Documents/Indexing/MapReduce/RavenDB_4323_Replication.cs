@@ -57,7 +57,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 database.DocumentTombstoneCleaner.Subscribe(this);
                 database2.DocumentTombstoneCleaner.Subscribe(this);
 
-                var operation = await store1.Operations.SendAsync(new DeleteCollectionOperation("Invoices"));
+                var operation = await store1.Operations.SendAsyncAndFetchOperation(new DeleteCollectionOperation("Invoices"));
                 await operation.WaitForCompletionAsync();
                 using (var session = store1.OpenAsyncSession())
                 {

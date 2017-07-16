@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Raven.Client.Http
 {
@@ -6,5 +7,14 @@ namespace Raven.Client.Http
     {
         public long Etag;
         public List<ServerNode> Nodes;
+
+        public Topology Clone()
+        {
+            return new Topology
+            {
+                Etag = this.Etag,
+                Nodes = Nodes.ToList()
+            };
+        }
     }
 }

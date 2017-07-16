@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Session
             var operation = new GetRevisionOperation(this, id, start, pageSize);
 
             var command = operation.CreateRequest();
-            RequestExecutor.Execute(command, Context);
+            RequestExecutor.Execute(command, Context, sessionId: _clientSessionId);
             operation.SetResult(command.Result);
             return operation.Complete<T>();
         }

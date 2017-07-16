@@ -34,6 +34,9 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public abstract partial class InMemoryDocumentSessionOperations : IDisposable
     {
+        private static long _clientSessionIdCounter;
+        protected readonly long _clientSessionId = Interlocked.Increment(ref _clientSessionIdCounter);
+
         protected readonly RequestExecutor _requestExecutor;
         private readonly IDisposable _releaseOperationContext;
         private readonly JsonOperationContext _context;
@@ -997,6 +1000,8 @@ more responsive application.
             {
                 Context.Dispose();
             }
+
+			RequestExecutor.RetireSession(_clientSessionId);
         }
 
         /// <summary>
@@ -1017,7 +1022,6 @@ more responsive application.
             {
                 // nothing can be done here
             }
-
 #if DEBUG
             Debug.WriteLine("Disposing a session for finalizer! It should be disposed by calling session.Dispose()!");
 #endif
