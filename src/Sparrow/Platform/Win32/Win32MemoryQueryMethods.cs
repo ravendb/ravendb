@@ -34,10 +34,11 @@ namespace Sparrow.Platform.Win32
 
             var pages = length / pagesize;
 
+            IntPtr wsInfo = IntPtr.Zero;
             PPSAPI_WORKING_SET_EX_INFORMATION* pWsInfo;
             if (pages > 2)
             {
-                var wsInfo = Marshal.AllocHGlobal((int)(sizeof(PPSAPI_WORKING_SET_EX_INFORMATION)*pages));
+                wsInfo = Marshal.AllocHGlobal((int)(sizeof(PPSAPI_WORKING_SET_EX_INFORMATION)*pages));
                 pWsInfo = (PPSAPI_WORKING_SET_EX_INFORMATION *)wsInfo.ToPointer();
             }
             else
@@ -46,19 +47,28 @@ namespace Sparrow.Platform.Win32
                 pWsInfo = p;
             }
 
-            for (var i = 0; i < pages; i++)
-                pWsInfo[i].VirtualAddress = addr + (i * pagesize);
+            try
+            {
+                for (var i = 0; i < pages; i++)
+                    pWsInfo[i].VirtualAddress = addr + (i * pagesize);
 
                 if (QueryWorkingSetEx(GetCurrentProcess(), (byte *)pWsInfo, (uint)(sizeof(PPSAPI_WORKING_SET_EX_INFORMATION) * pages)) == false)
                     throw new MemoryInfoException($"Failed to QueryWorkingSetEx addr: {new IntPtr(addr).ToInt64()}, with length: {length}. processId = {GetCurrentProcess()}");
 
-            for (int i = 0; i < pages; i++)
-            {
-                var flag = pWsInfo[i].VirtualAttributes & 0x00000001;
-                if (flag == 0)
-                    return true;
+                for (int i = 0; i < pages; i++)
+                {
+                    var flag = pWsInfo[i].VirtualAttributes & 0x00000001;
+                    if (flag == 0)
+                        return true;
+                }
+                return false;
+
             }
-            return false;
+            finally 
+            {
+                if (wsInfo != IntPtr.Zero)
+                    Marshal.FreeHGlobal(wsInfo);
+            }
         }
     }
 }
