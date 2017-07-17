@@ -27,6 +27,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Server
             json[nameof(Topology)] = Topology.ToJson();
             json[nameof(Leader)] = Leader;
             json[nameof(NodeTag)] = NodeTag;
+            json[nameof(Status)] = DynamicJsonValue.Convert(Status);
 
             return json;
         }

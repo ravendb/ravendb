@@ -4,6 +4,8 @@ class clusterNode {
     tag = ko.observable<string>();
     serverUrl = ko.observable<string>();
     type = ko.observable<clusterNodeType>();
+    connected = ko.observable<boolean>();
+    errorDetails = ko.observable<string>();
 
     cssIcon = ko.pureComputed(() => {
         const type = this.type();
@@ -20,13 +22,17 @@ class clusterNode {
     updateWith(incoming: clusterNode) {
         this.tag(incoming.tag());
         this.type(incoming.type());
+        this.connected(incoming.connected());
+        this.errorDetails(incoming.errorDetails());
     }
 
-    static for(tag: string, serverUrl: string, type: clusterNodeType) {
+    static for(tag: string, serverUrl: string, type: clusterNodeType, connected: boolean, errorDetails?: string) {
         const node = new clusterNode();
         node.tag(tag);
         node.serverUrl(serverUrl);
         node.type(type);
+        node.connected(connected);
+        node.errorDetails(errorDetails);
         return node;
     }
 }

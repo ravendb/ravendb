@@ -933,6 +933,52 @@ namespace Raven.Server.ServerWide
             return await SendToLeaderAsync(command);
         }
 
+        public async Task<(long, object)> RemoveConnectionString(string databaseName, string connectionStringName , string type)
+        {
+            if (Enum.TryParse<ConnectionStringType>(type, true, out var connectionStringType) == false)
+                throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
+
+            UpdateDatabaseCommand command;
+
+            switch (connectionStringType)
+            {
+                case ConnectionStringType.Raven:
+                    command = new RemoveRavenConnectionString(connectionStringName, databaseName);
+                    break;
+                case ConnectionStringType.Sql:
+                    command = new RemoveSqlConnectionString(connectionStringName, databaseName);
+                    break;
+                default:
+                    throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
+            }
+
+            return await SendToLeaderAsync(command);
+        }
+
+        public async Task<(long, object)> UpdateConnectionString(string databaseName, string oldConnectionStringName, BlittableJsonReaderObject connectionString)
+        {
+            if (connectionString.TryGet(nameof(ConnectionString.Type), out string type) == false)
+                throw new InvalidOperationException($"Connection string must have {nameof(ConnectionString.Type)} field");
+
+            if (Enum.TryParse<ConnectionStringType>(type, true, out var connectionStringType) == false)
+                throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
+
+            UpdateDatabaseCommand command;
+            switch (connectionStringType)
+            {
+                case ConnectionStringType.Raven:
+                    command = new UpdateRavenConnectionString(oldConnectionStringName, JsonDeserializationCluster.RavenConnectionString(connectionString), databaseName);
+                    break;
+                case ConnectionStringType.Sql:
+                    command = new UpdateSqlConnectionString(oldConnectionStringName, JsonDeserializationCluster.SqlConnectionString(connectionString), databaseName);
+                    break;
+                default:
+                    throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
+            }
+
+            return await SendToLeaderAsync(command);
+        }
+
         public Guid GetServerId()
         {
             return _env.DbId;

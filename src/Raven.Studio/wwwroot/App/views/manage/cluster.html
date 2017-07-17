@@ -8,7 +8,8 @@
 
             <div class="scroll flex-grow" data-bind="foreach: topology().nodes">
                 <div class="panel destination-item">
-                    <div data-state-text="active" class="state state-success"></div>
+                    <div class="state" 
+                         data-bind="css: { 'state-success': connected, 'state-danger': !connected() }, attr: { 'data-state-text': connected() ? 'Active' : 'Error' } "></div>
                     <div class="padding padding-sm destination-info">
                         <div class="info-container">
                             <div class="flex-horizontal">
@@ -36,6 +37,9 @@
                             <div class="address">
                                 <h5>ADDRESS</h5>
                                 <a target="_blank" data-bind="attr: { href: serverUrl }"><small data-bind="text: serverUrl"></small></a>
+                            </div>
+                            <div class="text-danger" data-bind="text: errorDetails">
+                                
                             </div>
                         </div>
                         <div class="flex-separator"></div>
