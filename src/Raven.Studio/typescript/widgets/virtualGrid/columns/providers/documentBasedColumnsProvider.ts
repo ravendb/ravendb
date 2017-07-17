@@ -14,11 +14,16 @@ import app = require("durandal/app");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import documentMetadata = require("models/database/documents/documentMetadata");
 
+type columnOptionsDto = {
+    extraClass?: (item: document) => string;
+}
+
 type documentBasedColumnsProviderOpts = {
     showRowSelectionCheckbox?: boolean;
     enableInlinePreview?: boolean;
     showSelectAllCheckbox?: boolean;
     createHyperlinks?: boolean;
+    columnOptions?: columnOptionsDto;
 }
 
 class documentBasedColumnsProvider {
@@ -32,6 +37,7 @@ class documentBasedColumnsProvider {
     private readonly enableInlinePreview: boolean;
     private readonly createHyperlinks: boolean;
     private readonly showSelectAllCheckbox: boolean;
+    private readonly columnOptions: columnOptionsDto;
 
     private static readonly externalIdRegex = /^\w+\/\w+/ig;
 
@@ -43,6 +49,7 @@ class documentBasedColumnsProvider {
         this.enableInlinePreview = _.isBoolean(opts.enableInlinePreview) ? opts.enableInlinePreview : false;
         this.showSelectAllCheckbox = _.isBoolean(opts.showSelectAllCheckbox) ? opts.showSelectAllCheckbox : false;
         this.createHyperlinks = _.isBoolean(opts.createHyperlinks) ? opts.createHyperlinks : true;
+        this.columnOptions = opts.columnOptions;
     }
 
     findColumns(viewportWidth: number, results: pagedResult<document>): virtualColumn[] {
@@ -71,15 +78,15 @@ class documentBasedColumnsProvider {
         return initialColumns.concat(columnNames.map(p => {
             if (this.createHyperlinks) {
                 if (p === "__metadata") {
-                    return new hyperlinkColumn(this.gridController, (x: document) => x.getId(), x => appUrl.forEditDoc(x.getId(), this.db, x.__metadata.collection), "Id", columnWidth);
+                    return new hyperlinkColumn(this.gridController, (x: document) => x.getId(), x => appUrl.forEditDoc(x.getId(), this.db, x.__metadata.collection), "Id", columnWidth, this.columnOptions);
                 }
 
-                return new hyperlinkColumn(this.gridController, p, _.partial(this.findLink, _, p).bind(this), p, columnWidth);
+                return new hyperlinkColumn(this.gridController, p, _.partial(this.findLink, _, p).bind(this), p, columnWidth, this.columnOptions);
             } else {
                 if (p === "__metadata") {
-                    return new textColumn(this.gridController, (x: document) => x.getId(), "Id", columnWidth);
+                    return new textColumn(this.gridController, (x: document) => x.getId(), "Id", columnWidth, this.columnOptions);
                 }
-                return new textColumn(this.gridController, p, p, columnWidth);
+                return new textColumn(this.gridController, p, p, columnWidth, this.columnOptions);
             }
         }));
     }
