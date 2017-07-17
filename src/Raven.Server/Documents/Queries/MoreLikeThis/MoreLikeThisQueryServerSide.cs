@@ -14,8 +14,13 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
     {
         public static MoreLikeThisQueryServerSide Create(BlittableJsonReaderObject json)
         {
+            var result = JsonDeserializationServer.MoreLikeThisQuery(json);
+
             // add basic validation here like in IndexQueryServerSide
-            return JsonDeserializationServer.MoreLikeThisQuery(json);
+            if (result.PageSize == 0 && json.TryGet(nameof(PageSize), out int _) == false)
+                result.PageSize = int.MaxValue;
+            
+            return result;
         }
 
         public static MoreLikeThisQueryServerSide Create(HttpContext httpContext, int pageSize, JsonOperationContext context)

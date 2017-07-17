@@ -51,6 +51,9 @@ namespace Raven.Server.Documents.Queries.Faceted
         {
             var result = JsonDeserializationServer.FacetQuery(json);
 
+            if (result.PageSize == 0 && json.TryGet(nameof(PageSize), out int _) == false)
+                result.PageSize = int.MaxValue;
+
             if (string.IsNullOrWhiteSpace(result.Query))
                 throw new InvalidOperationException($"Facet query does not contain '{nameof(Query)}' field.");
 

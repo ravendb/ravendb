@@ -48,6 +48,9 @@ namespace Raven.Server.Documents.Queries
         {
             var result = JsonDeserializationServer.IndexQuery(json);
 
+            if (result.PageSize == 0 && json.TryGet(nameof(PageSize), out int _) == false)
+                result.PageSize = int.MaxValue;
+
             if (string.IsNullOrWhiteSpace(result.Query))
                 throw new InvalidOperationException($"Index query does not contain '{nameof(Query)}' field.");
 

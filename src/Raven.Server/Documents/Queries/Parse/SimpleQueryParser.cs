@@ -6,7 +6,7 @@ using Raven.Server.Documents.Queries.LuceneIntegration;
 
 namespace Raven.Server.Documents.Queries.Parse
 {
-    public class SimpleQueryParser
+    public class SimpleQueryParser // TODO arek - remove me
     {
         private static readonly Analyzer QueryAnalyzer = new RavenPerFieldAnalyzerWrapper(new KeywordAnalyzer());
 
