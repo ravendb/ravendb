@@ -6,10 +6,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Conventions;
@@ -29,10 +29,13 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Client.Server.PeriodicBackup;
+using Raven.Server.Config;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
+using Sparrow.LowMemory;
+using Voron.Platform.Win32;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Web.System
@@ -320,8 +323,6 @@ namespace Raven.Server.Web.System
         public Task GetPeriodicBackup()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
 
             var taskId = GetLongQueryString("taskId", required: true);
             if (taskId == 0)
@@ -338,6 +339,36 @@ namespace Raven.Server.Web.System
 
                 var databaseRecordBlittable = EntityToBlittable.ConvertEntityToBlittable(periodicBackup, DocumentConventions.Default, context);
                 context.Write(writer, databaseRecordBlittable);
+                writer.Flush();
+            }
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/admin/periodic-backup/drives-info", "GET", "/admin/periodic-backup/drives-info?name={databaseName:string}")]
+        public Task GetDrivesInfo()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var drivesInfo = new DrivesInfo();
+                var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out _);
+                var ravenConfiguration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(name, false, false, databaseRecord);
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    DrivesInfo.GetDrivesInfoForWindows(ravenConfiguration, drivesInfo);
+                }
+                else
+                {
+                    //TODO: implement for Linux/Mac
+                }
+                
+                var drivesInfoBlittable = EntityToBlittable.ConvertEntityToBlittable(drivesInfo, DocumentConventions.Default, context);
+                context.Write(writer, drivesInfoBlittable);
                 writer.Flush();
             }
 
@@ -365,6 +396,39 @@ namespace Raven.Server.Web.System
                                                     $"full backup cron expression: {fullBackupFrequency}, " +
                                                     $"incremental backup cron expression: {incrementalBackupFrequency}");
                     }
+
+                    readerObject.TryGet(nameof(PeriodicBackupConfiguration.LocalSettings), 
+                        out BlittableJsonReaderObject localSettings);
+
+                    if (localSettings == null)
+                        return;
+
+                    localSettings.TryGet(nameof(LocalSettings.Disabled), out bool disabled);
+                    if (disabled)
+                        return;
+
+                    localSettings.TryGet(nameof(LocalSettings.FolderPath), out string folderPath);
+                    if (string.IsNullOrWhiteSpace(folderPath))
+                        throw new ArgumentException("Backup directory cannot be null or empty");
+
+                    var originalFolderPath = folderPath;
+                    while (true)
+                    {
+                        var directoryInfo = new DirectoryInfo(folderPath);
+                        if (directoryInfo.Exists == false)
+                        {
+                            if (directoryInfo.Parent == null)
+                                throw new ArgumentException($"Path {originalFolderPath} cannot be accessed " +
+                                                            $"because '{folderPath}' doesn't exist");
+                            folderPath = directoryInfo.Parent.FullName;
+                            continue;
+                        }
+
+                        if (directoryInfo.Attributes.HasFlag(FileAttributes.ReadOnly))
+                            throw new ArgumentException($"Cannot write to directory path: {originalFolderPath}");
+
+                        break;
+                    }
                 },
                 fillJson: (json, readerObject, index) =>
                 {
@@ -380,8 +444,6 @@ namespace Raven.Server.Web.System
         public Task GetPeriodicBackupStatus()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
 
             var taskId = GetLongQueryString("taskId", required: true);
             if (taskId == 0)
@@ -420,21 +482,21 @@ namespace Raven.Server.Web.System
                         var s3Settings = JsonDeserializationClient.S3Settings(connectionInfo);
                         using (var awsClient = new RavenAwsS3Client(s3Settings.AwsAccessKey, s3Settings.AwsSecretKey, s3Settings.AwsRegionName))
                         {
-                            await awsClient.TestConncection();
+                            await awsClient.TestConnection();
                         }
                         break;
                     case PeriodicBackupTestConnectionType.Glacier:
                         var glacierSettings = JsonDeserializationClient.GlacierSettings(connectionInfo);
                         using (var galcierClient = new RavenAwsGlacierClient(glacierSettings.AwsAccessKey, glacierSettings.AwsSecretKey, glacierSettings.AwsRegionName))
                         {
-                            await galcierClient.TestConncection();
+                            await galcierClient.TestConnection();
                         }
                         break;
                     case PeriodicBackupTestConnectionType.Azure:
                         var azureSettings = JsonDeserializationClient.AzureSettings(connectionInfo);
                         using (var azureClient = new RavenAzureClient(azureSettings.AccountName, azureSettings.AccountKey, azureSettings.StorageContainer))
                         {
-                            await azureClient.TestConncection();
+                            await azureClient.TestConnection();
                         }
                         break;
                     case PeriodicBackupTestConnectionType.Local:
@@ -460,12 +522,12 @@ namespace Raven.Server.Web.System
                 {
                     // no folders in directory
                     // will scan the directory for backup files
-                    ScanDirectoryForMatchingFiles(restorePathJson.Path, restorePoints.List);
+                    Restore.FetchRestorePoints(restorePathJson.Path, restorePoints.List);
                 }
 
                 foreach (var directory in directories)
                 {
-                    ScanDirectoryForMatchingFiles(directory, restorePoints.List);
+                    Restore.FetchRestorePoints(directory, restorePoints.List);
                 }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -475,70 +537,6 @@ namespace Raven.Server.Web.System
                     writer.Flush();
                 }
             }
-        }
-
-        private static void ScanDirectoryForMatchingFiles(string directoryPath, List<RestorePoint> restorePoints)
-        {
-            var files = Directory.GetFiles(directoryPath)
-                .Where(filePath =>
-                {
-                    var extension = Path.GetExtension(filePath);
-                    return
-                        Constants.Documents.PeriodicBackup.IncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
-                        Constants.Documents.PeriodicBackup.FullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
-                        Constants.Documents.PeriodicBackup.SnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
-                })
-                .OrderBy(x => x);
-
-            var filesCount = 0;
-            var firstFile = true;
-            var snapshotRestore = false;
-            foreach (var filePath in files)
-            {
-                var extension = Path.GetExtension(filePath);
-                var isSnapshot = Constants.Documents.PeriodicBackup.SnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
-                if (firstFile)
-                {
-                    snapshotRestore = isSnapshot;
-                }
-                else if (isSnapshot)
-                {
-                    throw new InvalidOperationException($"Cannot have a snapshot backup file ({Path.GetFileName(filePath)}) after other backup files!");
-                }
-
-                firstFile = false;
-                filesCount++;
-
-                var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
-                var fileDate = TryExtractDateFromFileName(fileNameWithoutExtension);
-                restorePoints.Insert(0, new RestorePoint
-                {
-                    Key = fileDate,
-                    Details = new RestorePointDetails
-                    {
-                        Location = directoryPath,
-                        FileName = Path.GetFileName(filePath),
-                        IsSnapshotRestore = snapshotRestore,
-                        FilesToRestore = filesCount
-                    }
-                });
-            }
-        }
-
-        private static string TryExtractDateFromFileName(string fileName)
-        {
-            DateTime result;
-            if (DateTime.TryParseExact(
-                    fileName,
-                    PeriodicBackupRunner.DateTimeFormat,
-                    CultureInfo.InvariantCulture,
-                    DateTimeStyles.None,
-                    out result) == false)
-            {
-                return fileName;
-            }
-
-            return result.ToString("yyyy/MM/dd HH:mm");
         }
 
         [RavenAction("/admin/database-restore", "POST", "/admin/database-restore")]

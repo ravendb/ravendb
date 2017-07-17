@@ -39,7 +39,7 @@ class glacierSettings extends amazonSettings {
     }
 
     toDto(): Raven.Client.Server.PeriodicBackup.GlacierSettings {
-        const dto: any = super.toDto();
+        const dto = super.toDto() as Raven.Client.Server.PeriodicBackup.GlacierSettings;
         dto.VaultName = this.vaultName();
         return dto;
     }

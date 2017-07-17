@@ -16,9 +16,23 @@ class periodicBackupConfiguration {
     glacierSettings = ko.observable<glacierSettings>();
     azureSettings = ko.observable<azureSettings>();
 
+    fullBackupHumanReadable: KnockoutComputed<string>;
+    fullBackupParsingError = ko.observable<string>();
+    incrementalBackupHumanReadable: KnockoutComputed<string>;
+    incrementalBackupParsingError = ko.observable<string>();
     validationGroup: KnockoutValidationGroup;
-
     backupOptions = ["Backup", "Snapshot"];
+
+    allBackupFrequencyOptions = [
+        { label: "Every 3 days at 03:00 AM", value: "0 3 */3 * *", full: true, incremental: false },
+        { label: "At 08:05 on Sunday", value: "5 8 * * Sun", full: true, incremental: false },
+        { label: "At 11:00 PM, Monday through Friday", value: "0 23 ? * MON-FRI", full: true, incremental: false },
+        { label: "At 03:30 AM, on the last day of the month", value: "30 3 L * ?", full: true, incremental: false },
+        { label: "At 10:15 AM, on the last Saturday of the month", value: "15 10 ? * 6L", full: true, incremental: false },
+        { label: "Every 10 minutes", value: "*/10 * * * *", full: false, incremental: true },
+        { label: "Every 6 hours", value: "0 */6 * * *", full: false, incremental: true },
+        { label: "At 15 minutes past the hour, every 3 hours", value: "15 */3 * * *", full: false, incremental: true }
+    ];
 
     constructor(dto: Raven.Client.Server.PeriodicBackup.PeriodicBackupConfiguration) {
         this.taskId(dto.TaskId);
@@ -32,7 +46,56 @@ class periodicBackupConfiguration {
         this.glacierSettings(!dto.GlacierSettings ? glacierSettings.empty() : new glacierSettings(dto.GlacierSettings));
         this.azureSettings(!dto.AzureSettings ? azureSettings.empty() : new azureSettings(dto.AzureSettings));
 
+        this.fullBackupHumanReadable = ko.pureComputed(() => {
+            return periodicBackupConfiguration.getHumanReadable(
+                this.fullBackupFrequency,
+                this.fullBackupParsingError);
+        });
+
+        this.incrementalBackupHumanReadable = ko.pureComputed(() => {
+            return periodicBackupConfiguration.getHumanReadable(
+                this.incrementalBackupFrequency,
+                this.incrementalBackupParsingError);
+        });
+
         this.initValidation();
+    }
+
+    private static getHumanReadable(backupFrequency: KnockoutObservable<string>,
+        backupParsingError: KnockoutObservable<string>): string {
+        const currentBackupFrequency = backupFrequency();
+        if (!currentBackupFrequency) {
+            backupParsingError(null);
+            return null;
+        }
+
+        const backupFrequencySplitted = currentBackupFrequency.trim().replace(/ +(?= )/g, "").split(" ");
+        if (backupFrequencySplitted.length < 5) {
+            backupParsingError(`Expression has only ${backupFrequencySplitted.length} part` +
+                `${backupFrequencySplitted.length === 1 ? "" : "s"}. ` + 
+                "Exactly 5 parts are required!");
+            return null;
+        }
+        else if (backupFrequencySplitted.length > 5) {
+            backupParsingError(`Expression has ${backupFrequencySplitted.length} part` +
+                `${backupFrequencySplitted.length === 1 ? "" : "s"}. ` +
+                "Exactly 5 parts are required!");
+            return null;
+        }
+
+        try {
+            const result = cRonstrue.toString(currentBackupFrequency.toUpperCase());
+            if (result.includes("undefined")) {
+                backupParsingError("Invalid cron expression!");
+                return null;
+            }
+
+            backupParsingError(null);
+            return result;
+        } catch (error) {
+            backupParsingError(error);
+            return null;
+        }
     }
 
     initValidation() {
@@ -43,12 +106,14 @@ class periodicBackupConfiguration {
         this.fullBackupFrequency.extend({
             validation: [
                 {
-                    validator: (fullBackupFrequency: string) => this.areBothEmpty(fullBackupFrequency, this.incrementalBackupFrequency()) === false,
+                    validator: (fullBackupFrequency: string) =>
+                        !(periodicBackupConfiguration.isEmpty(fullBackupFrequency) && periodicBackupConfiguration.isEmpty(this.incrementalBackupFrequency())),
                     message: "Full and incremental backup cannot be both empty"
                 },
                 {
-                    validator: (fullBackupFrequency: string) => (this.isEmpty(this.incrementalBackupFrequency()) && this.validateCronExpressionFormat(fullBackupFrequency)) === false,
-                    message: "Wrong cron expression format"
+                    validator: (_: string) => !this.fullBackupParsingError(),
+                    message: `{0}`,
+                    params: this.fullBackupParsingError
                 }
             ]
         });
@@ -56,12 +121,14 @@ class periodicBackupConfiguration {
         this.incrementalBackupFrequency.extend({
             validation: [
                 {
-                    validator: (incrementalBackupFrequency: string) => this.areBothEmpty(incrementalBackupFrequency, this.fullBackupFrequency()) === false,
+                    validator: (incrementalBackupFrequency: string) =>
+                        !(periodicBackupConfiguration.isEmpty(incrementalBackupFrequency) && periodicBackupConfiguration.isEmpty(this.fullBackupFrequency())),
                     message: "Full and incremental backup cannot be both empty"
                 },
                 {
-                    validator: (incrementalBackupFrequency: string) => (this.isEmpty(this.fullBackupFrequency()) && this.validateCronExpressionFormat(incrementalBackupFrequency)) === false,
-                    message: "Wrong cron expression format"
+                    validator: (_: string) => !this.incrementalBackupParsingError(),
+                    message: `{0}`,
+                    params: this.incrementalBackupParsingError
                 }
             ]
         });
@@ -73,11 +140,7 @@ class periodicBackupConfiguration {
         });
     }
 
-    areBothEmpty(str1: string, str2: string): boolean {
-        return this.isEmpty(str1) && this.isEmpty(str2);
-    }
-
-    isEmpty(str: string): boolean {
+    private static isEmpty(str: string): boolean {
         if (!str) {
             return true;
         }
@@ -89,13 +152,37 @@ class periodicBackupConfiguration {
         return false;
     }
 
-    validateCronExpressionFormat(cronExpression: string): boolean {
-
-        return false;
-    }
-
     useBackupType(backupType: Raven.Client.Server.PeriodicBackup.BackupType) {
         this.backupType(backupType);
+    }
+
+    createBackupFrequencyAutoCompleter(isFull: boolean) {
+        return ko.pureComputed(() => {
+            let key = isFull ? this.fullBackupFrequency() : this.incrementalBackupFrequency();
+
+            const options = this.allBackupFrequencyOptions
+                .filter(x => isFull ? x.full : x.incremental)
+                .map(x => {
+                    return {
+                        label: x.label,
+                        value: x.value
+                    }
+                });
+
+            if (key) {
+                key = key.toLowerCase();
+                return options.filter(x => x.value.toLowerCase().includes(key));
+            } else {
+                return options;
+            }
+        });
+    }
+
+    useCronExprssion(isFull: boolean, option: { label: string, value: string }) {
+        const selectedOptionObservable = isFull ?
+            this.fullBackupFrequency :
+            this.incrementalBackupFrequency;
+        selectedOptionObservable(option.value);
     }
 
     toDto(): Raven.Client.Server.PeriodicBackup.PeriodicBackupConfiguration {

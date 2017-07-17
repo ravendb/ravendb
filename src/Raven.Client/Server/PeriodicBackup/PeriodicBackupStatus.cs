@@ -27,6 +27,8 @@ namespace Raven.Client.Server.PeriodicBackup
 
         public long? DurationInMs { get; set; }
 
+        public long Version { get; set; }
+
         public DynamicJsonValue ToJson()
         {
             var json = new DynamicJsonValue();
@@ -47,6 +49,7 @@ namespace Raven.Client.Server.PeriodicBackup
             json[nameof(UploadToAzure)] = UploadToAzure?.ToJson();
             json[nameof(LastEtag)] = LastEtag;
             json[nameof(DurationInMs)] = DurationInMs;
+            json[nameof(Version)] = Version;
         }
 
         public static string GenerateItemName(string databaseName, long taskId)

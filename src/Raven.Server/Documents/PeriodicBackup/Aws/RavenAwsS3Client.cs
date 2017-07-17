@@ -98,13 +98,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             if (bucketName == null)
                 return "s3.amazonaws.com";
 
-            if (AwsRegion == "us-east-1")
+            if (AwsRegion == DefaultRegion)
                 return $"{bucketName}.s3.amazonaws.com";
 
             return $"{bucketName}.s3-{AwsRegion}.amazonaws.com";
         }
 
-        public async Task TestConncection()
+        public async Task TestConnection()
         {
             var url = GetUrl(null);
             var now = SystemTime.UtcNow;

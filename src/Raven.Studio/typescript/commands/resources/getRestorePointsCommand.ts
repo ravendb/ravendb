@@ -9,10 +9,10 @@ class getRestorePointsCommand extends commandBase {
 
     execute(): JQueryPromise<Raven.Server.Documents.PeriodicBackup.RestorePoints> {
         const url = endpoints.global.adminDatabases.adminGetRestorePoints;
-        var args = {
+        const args = {
             Path: this.path
-        }
-        return this.post(url, JSON.stringify(args), null, { dataType: undefined })
+        };
+        return this.post(url, JSON.stringify(args))
             .fail((response: JQueryXHR) => this.reportError(`Failed to get restore points for path: ${this.path}`,
                 response.responseText, response.statusText));
     }

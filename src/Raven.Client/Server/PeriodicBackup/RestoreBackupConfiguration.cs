@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace Raven.Client.Server.PeriodicBackup
 {
     public class RestoreBackupConfiguration
@@ -19,9 +17,5 @@ namespace Raven.Client.Server.PeriodicBackup
         public string TempPath { get; set; }
 
         public string EncryptionKey { get; set; }
-
-        public int ReplicationFactor { get; set; }
-
-        public List<string> TopologyMembers { get; set; }
     }
 }

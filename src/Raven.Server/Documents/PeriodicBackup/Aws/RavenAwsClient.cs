@@ -22,24 +22,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         public const string DefaultRegion = "us-east-1";
 
-        private static readonly HashSet<string> AwsRegionNames = new HashSet<string>
-        {
-            "us-east-1",
-            "us-east-2",
-            "us-west-1",
-            "us-west-2",
-            "ca-central-1",
-            "eu-west-1",
-            "eu-central-1",
-            "ap-northeast-1",
-            "ap-northeast-2",
-            "ap-southeast-1",
-            "ap-southeast-2",
-            "ap-south-1",
-            "sa-east-1",
-            "us-gov-west-1"
-        };
-
         private readonly string _awsAccessKey;
         private readonly byte[] _awsSecretKey;
 
@@ -48,8 +30,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         protected RavenAwsClient(string awsAccessKey, string awsSecretKey, string awsRegionName)
         {
             awsRegionName = awsRegionName.ToLower();
-            if (AwsRegionNames.Contains(awsRegionName) == false)
-                throw new InvalidOperationException("Given endpoint is invalid: " + awsRegionName);
 
             _awsAccessKey = awsAccessKey;
             _awsSecretKey = Encoding.UTF8.GetBytes("AWS4" + awsSecretKey);

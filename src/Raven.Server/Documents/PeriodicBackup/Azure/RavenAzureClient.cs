@@ -413,7 +413,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             return new Blob(data, headers);
         }
 
-        public async Task TestConncection()
+        public async Task TestConnection()
         {
             var url = _baseServerUrl + "?comp=list&maxresults=1";
 

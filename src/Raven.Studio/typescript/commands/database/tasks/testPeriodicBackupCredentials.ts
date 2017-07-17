@@ -5,7 +5,7 @@ import endpoints = require("endpoints");
 class testPeriodicBackupCredentials extends commandBase {
     constructor(private db: database,
         private type: Raven.Server.Documents.PeriodicBackup.PeriodicBackupTestConnectionType,
-        private connectionConfiguration: any) {
+        private connectionConfiguration: Raven.Client.Server.PeriodicBackup.BackupSettings) {
         super();
     }
  
@@ -16,20 +16,10 @@ class testPeriodicBackupCredentials extends commandBase {
                 type: this.type
             });
 
-        const task = $.Deferred<any>();
-
-        this.post(url, JSON.stringify(this.connectionConfiguration))
-            .done(() => {
-                this.reportSuccess(`Connection to ${this.type} was successful`);
-                task.resolve();
-            })
-            .fail(response => {
-                this.reportError(`Connection to ${this.type} failed`,
-                    response.responseText, response.statusText);
-                task.reject(response);
-            });
-
-        return task;
+        return this.post(url, JSON.stringify(this.connectionConfiguration))
+            .done(() => this.reportSuccess(`Connection to ${this.type} was successful`))
+            .fail(response => this.reportError(`Connection to ${this.type} failed`,
+                    response.responseText, response.statusText));
     }
 }
 

@@ -9,23 +9,19 @@ class savePeriodicBackupConfigurationCommand extends commandBase {
  
     execute(): JQueryPromise<Raven.Client.Server.Operations.ModifyOngoingTaskResult> {
         const url = endpoints.global.adminDatabases.adminPeriodicBackupUpdate + this.urlEncodeArgs({ name: this.db.name });
-        const updatePeriodicBackupTask = $.Deferred<Raven.Client.Server.Operations.ModifyOngoingTaskResult>();
 
         const isNewTask = this.configuration.TaskId === 0;
-        this.post(url, JSON.stringify(this.configuration))
+        return this.post(url, JSON.stringify(this.configuration))
             .done((results: Raven.Client.Server.Operations.ModifyOngoingTaskResult) => {
-                var taskTypeText = isNewTask ? "created" : "updated";
+                const taskTypeText = isNewTask ? "created" : "updated";
                 this.reportSuccess(`Succefully ${taskTypeText} backup configuration with task ID: ${results.TaskId}`);
-                updatePeriodicBackupTask.resolve(results);
             })
             .fail(response => {
-                var taskText = isNewTask ? "new task" : this.configuration.TaskId;
-                this.reportError(`Failed to save the periodic backup configuration for task: ${taskText}`,
-                    response.responseText, response.statusText);
-                updatePeriodicBackupTask.reject(response);
+                const errorMessage = isNewTask ?
+                    "Failed to save a new perioidc backup task" :
+                    `Failed to save a periodic backup task with id ${this.configuration.TaskId}`;
+                this.reportError(errorMessage, response.responseText, response.statusText);
             });
-
-        return updatePeriodicBackupTask;
     }
 }
 

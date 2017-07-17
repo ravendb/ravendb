@@ -16,7 +16,7 @@ abstract class backupSettings {
     }
 
     validate(action: () => boolean): boolean {
-        if (this.enabled() === false)
+        if (!this.enabled())
             return true;
 
         return action();

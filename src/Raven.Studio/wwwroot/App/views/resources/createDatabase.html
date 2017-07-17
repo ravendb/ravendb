@@ -16,13 +16,12 @@
                             <input type="text" id="resourceName" data-bind="textInput: databaseModel.name" autofocus class="form-control" placeholder="Enter database name">
                         </div>
                         
-                        <div class="form-group" data-bind="visible: databaseModel.isFromBackup, validationElement: databaseModel.backupsDirectory">
+                        <div class="form-group" data-bind="visible: databaseModel.isFromBackup, validationElement: databaseModel.backupDirectory">
                             <h3>BACKUP DIRECTORY</h3>
                             <div class="input-group">
-                                <input type="text" id="backupsDirectory" data-bind="textInput: databaseModel.backupsDirectory, hasFocus: databaseModel.isFocusOnBackupDirectory" class="form-control" placeholder="Enter backup directory path">
-                                <!--<button type="button" class="input-group-addon" data-bind="click: _.partial($root.loadRestorePoints), disable: databaseModel.isLoadingRestorePoints, style: { color: databaseModel.restorePoints().length == 0 < 0 ? 'aqua' : '' }">
-                                    <i  data-bind="css: { 'icon-export': !databaseModel.isLoadingRestorePoints(), 'btn-spinner': databaseModel.isLoadingRestorePoints }" title="Get restore points"></i>
-                                </button>-->
+                                <input type="text" id="backupDirectory" 
+                                       data-bind="textInput: databaseModel.backupDirectory, hasFocus: databaseModel.isFocusOnBackupDirectory, disable: databaseModel.spinners.fetchingRestorePoints()" 
+                                       class="form-control" placeholder="Enter backup directory path">
                             </div>
                         </div>
                         
@@ -30,7 +29,8 @@
                             <h3>RESTORE POINT</h3>
                             <div data-bind="validationElement: databaseModel.selectedRestorePoint, validationOptions: { insertMessages: false }">
                                 <div class="dropdown btn-block">
-                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" data-bind="disable: databaseModel.restorePoints().length == 0, attr: { title: databaseModel.restorePoints().length == 0 ? 'No restore points in selected directory' : '' }">
+                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" 
+                                            data-bind="disable: databaseModel.restorePoints().length == 0, attr: { title: databaseModel.restorePoints().length == 0 ? 'No restore points in selected directory' : '' }, , disable: databaseModel.spinners.fetchingRestorePoints()">
                                         <span data-bind="text: databaseModel.restorePoints().length == 0 ? 'Select backup directory' : (!databaseModel.selectedRestorePoint() ? 'Select restore point..' : databaseModel.selectedRestorePoint()), textinput: databaseModel.selectedRestorePoint"></span>
                                         <span class="caret"></span>
                                     </button>
@@ -129,10 +129,10 @@
     <h3>Replication configuration</h3>
     <div data-bind="with: databaseModel.replication">
         <div class="form-group" style="min-height: 62px">
-            <div class="input-group" data-bind="css: { 'has-warning': ($root.databaseModel.isFromBackup == false && $root.showReplicationFactorWarning()) }, validationElement: replicationFactor">
+            <div class="input-group" data-bind="css: { 'has-warning': (!$root.databaseModel.isFromBackup && $root.showReplicationFactorWarning()) }, validationElement: replicationFactor">
                 <span class="input-group-addon">Replication factor</span>
                 <input type="number" min="0" data-bind="numericInput: replicationFactor, disable: $root.databaseModel.isFromBackup || $root.disableReplicationFactorInput" class="form-control">
-                <div class="help-block" data-bind="visible: $root.databaseModel.isFromBackup == false && $root.showReplicationFactorWarning">
+                <div class="help-block" data-bind="visible: !$root.databaseModel.isFromBackup && $root.showReplicationFactorWarning">
                     With replication factor set to 1 data won't be replicated.
                 </div>
                 <div class="help-block" data-bind="visible: $root.databaseModel.isFromBackup">

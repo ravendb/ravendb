@@ -347,7 +347,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 // restore the database with a different name
                 const string databaseName = "restored_database";
-                var restoreConfiguration = new RestoreBackupConfiguraion
+                var restoreConfiguration = new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(_backupPath).First(),
                     DatabaseName = databaseName
@@ -418,7 +418,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 // restore the database with a different name
                 const string restoredDatabaseName = "restored_database_snapshot";
-                var restoreConfiguration = new RestoreBackupConfiguraion
+                var restoreConfiguration = new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(_backupPath).First(),
                     DatabaseName = restoredDatabaseName
@@ -448,7 +448,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
             {
-                var restoreConfiguration = new RestoreBackupConfiguraion();
+                var restoreConfiguration = new RestoreBackupConfiguration();
 
                 var restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 var e = Assert.Throws<RavenException>(() => store.Admin.Server.Send(restoreBackupTask));

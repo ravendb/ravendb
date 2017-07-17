@@ -81,7 +81,7 @@ class azureSettings extends backupSettings {
     }
 
     toDto(): Raven.Client.Server.PeriodicBackup.AzureSettings {
-        const dto: any = super.toDto();
+        const dto = super.toDto() as Raven.Client.Server.PeriodicBackup.AzureSettings;
         dto.StorageContainer = this.storageContainer();
         dto.RemoteFolderName = this.remoteFolderName();
         dto.AccountName = this.accountName();

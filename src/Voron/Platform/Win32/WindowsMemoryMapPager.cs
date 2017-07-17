@@ -136,7 +136,7 @@ namespace Voron.Platform.Win32
             SetPagerState(CreatePagerState());
         }
 
-        private uint GetPhysicalDriveId(string drive)
+        public static uint GetPhysicalDriveId(string drive)
         {
             var sdn = new StorageDeviceNumber();
 

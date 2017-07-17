@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 .First();
         }
 
-        public async Task TestConncection()
+        public async Task TestConnection()
         {
             var url = $"{GetUrl(null)}/-/vaults&limit=1";
 

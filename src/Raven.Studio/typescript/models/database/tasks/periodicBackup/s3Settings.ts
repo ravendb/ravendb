@@ -24,23 +24,27 @@ class s3Settings extends amazonSettings {
             - not be formatted as an IP address (e.g., 192.168.5.4).
         */
 
-        var ipRegExp = /^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$/;
+        const ipRegExp = /^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$/;
         this.bucketName.extend({
             validation: [
                 {
-                    validator: (bucketName: string) => this.validate(() => !!bucketName && bucketName.length >= 4 && bucketName.length <= 62),
+                    validator: (bucketName: string) => this.validate(() =>
+                        !!bucketName && bucketName.length >= 4 && bucketName.length <= 62),
                     message: "Bucket name must be at least 3 characters long and no more than 63"
                 },
                 {
-                    validator: (bucketName: string) => this.validate(() => !!bucketName && bucketName[0] !== "."),
+                    validator: (bucketName: string) => this.validate(() =>
+                        !!bucketName && bucketName[0] !== "."),
                     message: "Bucket name cannot start with a period (.)"
                 },
                 {
-                    validator: (bucketName: string) => this.validate(() => !!bucketName && bucketName[bucketName.length - 1] !== "."),
+                    validator: (bucketName: string) => this.validate(() =>
+                        !!bucketName && bucketName[bucketName.length - 1] !== "."),
                     message: "Bucket name cannot end with a period (.)"
                 },
                 {
-                    validator: (bucketName: string) => this.validate(() => !!bucketName && !!bucketName && bucketName.indexOf("..") === -1),
+                    validator: (bucketName: string) => this.validate(() =>
+                        !!bucketName && !!bucketName && !bucketName.includes("..")),
                     message: "There can be only one period between labels"
                 },
                 {
@@ -67,15 +71,15 @@ class s3Settings extends amazonSettings {
 
     validateS3BucketName(bucketName: string): boolean {
         const labels = bucketName.split(".");
-        var labelRegExp = /^[a-z0-9-]+$/;
-        var validLabel = (label: string) => {
+        const labelRegExp = /^[a-z0-9-]+$/;
+        const validLabel = (label: string) => {
             if (label == null || label.length === 0) {
                 return false;
             }
-            if (labelRegExp.test(label) === false) {
+            if (!labelRegExp.test(label)) {
                 return false;
             }
-            if (label[0] === "-" || label[label.length - 1] === "-") {
+            if (label.startsWith("-") || label.endsWith("-")) {
                 return false;
             }
 
@@ -90,7 +94,7 @@ class s3Settings extends amazonSettings {
     }
 
     toDto(): Raven.Client.Server.PeriodicBackup.S3Settings {
-        const dto: any = super.toDto();
+        const dto = super.toDto() as Raven.Client.Server.PeriodicBackup.S3Settings;
         dto.BucketName = this.bucketName();
         dto.RemoteFolderName = this.remoteFolderName();
         return dto;

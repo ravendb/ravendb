@@ -330,7 +330,7 @@ namespace Sparrow.LowMemory
         private static extern bool DeviceIoControl(IntPtr hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, ref VOLUME_DISK_EXTENTS lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
 
         //method for disk extents
-        private static uint? GetPhysicalDriveNumber(string driveLetter)
+        public static uint? GetPhysicalDriveNumber(string driveLetter)
         {
             var sDrive = "\\\\.\\" + driveLetter + ":";
 

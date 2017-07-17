@@ -95,6 +95,12 @@ interface DirtyFlag {
     forceDirty(): void;
 }
 
+interface Cronstrue {
+    toString(string: string): string;
+}
+
+declare var cRonstrue: Cronstrue;
+
 interface Spinner {
     stop() :void;
     spin(): Spinner;
