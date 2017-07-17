@@ -69,16 +69,18 @@ namespace Raven.Server.Documents.Replication
 
         public event Action<OutgoingReplicationHandler> SuccessfulTwoWaysCommunication;
         public readonly ReplicationNode Destination;
+        private readonly bool _external;
 
         private readonly ConcurrentQueue<OutgoingReplicationStatsAggregator> _lastReplicationStats = new ConcurrentQueue<OutgoingReplicationStatsAggregator>();
 
         private OutgoingReplicationStatsAggregator _lastStats;
 
-        public OutgoingReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node)
+        public OutgoingReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, bool external)
         {
             _parent = parent;
             _database = database;
             Destination = node;
+            _external = external;
             _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
 
             _database.Changes.OnDocumentChange += OnDocumentChange;
@@ -473,14 +475,16 @@ namespace Raven.Server.Documents.Replication
                 _destinationLastKnownChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
             }
 
-           
-            var update = new UpdateSiblingCurrentEtag(_database, replicationBatchReply);
-            if (update.InitAndValidate())
+            if (_external == false)
             {
-                // we intentionally not waiting here, there is nothing that depends on the timing on this, since this 
-                // is purely adviosry. We just want to have the information up to date at some point, and we won't 
-                // miss anything much if this isn't there.
-                _database.TxMerger.Enqueue(update).IgnoreUnobservedExceptions();
+                var update = new UpdateSiblingCurrentEtag(_database, replicationBatchReply);
+                if (update.InitAndValidate())
+                {
+                    // we intentionally not waiting here, there is nothing that depends on the timing on this, since this 
+                    // is purely adviosry. We just want to have the information up to date at some point, and we won't 
+                    // miss anything much if this isn't there.
+                    _database.TxMerger.Enqueue(update).IgnoreUnobservedExceptions();
+                }
             }
 
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
