@@ -193,10 +193,18 @@ class editSubscriptionTask extends viewModelBase {
 
         grid.withEvaluationContext(this.customFunctionsContext);
 
+        const extraClassProvider = (item: documentObject) => {
+            //TODO: if item has error return appropriate css class
+            return "";
+        }
+
         const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, this.editedSubscription().collections().map(x => x.name), {
             showRowSelectionCheckbox: false,
             showSelectAllCheckbox: false,
-            enableInlinePreview: true
+            enableInlinePreview: true,
+            columnOptions: {
+                extraClass: extraClassProvider
+            }
         });
 
         this.columnsSelector.init(grid,
