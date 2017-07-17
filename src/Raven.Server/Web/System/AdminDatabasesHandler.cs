@@ -20,6 +20,7 @@ using Raven.Client.Server;
 using Raven.Client.Server.Commands;
 using Raven.Client.Server.ETL;
 using Raven.Client.Server.Operations;
+using Raven.Client.Server.Operations.ConnectionStrings;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -799,6 +800,98 @@ namespace Raven.Server.Web.System
         public async Task AddConnectionString()
         {
             await DatabaseConfigurations((_, databaseName, connectionString) => ServerStore.AddConnectionString(_, databaseName, connectionString), "add-connection-string");
+        }
+
+        [RavenAction("/admin/connection-strings/remove", "DELETE", "/admin/connection-strings/remove?name={databaseName:string}&connectionString={connectionStringName:string}&type={[sql|raven]:string}")]
+        public async Task RemoveConnectionString()
+        {
+            var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+            var connectionStringName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("connectionString");
+            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+            ServerStore.EnsureNotPassive();
+
+            var (index, _) = await ServerStore.RemoveConnectionString(dbName, connectionStringName, type);
+            await ServerStore.Cluster.WaitForIndexNotification(index);
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(ModifyOngoingTaskResult.RaftCommandIndex)] = index
+                    });
+                    writer.Flush();
+                }
+            }
+        }
+
+        [RavenAction("/admin/connection-strings/update", "PUT", "/admin/connection-strings/update?name={databaseName:string}&oldName={oldConnectionStringName:string}")]
+        public async Task UpdateConnectionString()
+        {
+            var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+            var oldName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("oldName");
+
+            ServerStore.EnsureNotPassive();
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var connectionString = await context.ReadForMemoryAsync(RequestBodyStream(), "read-update-connection-string");
+
+                var (index, _) = await ServerStore.UpdateConnectionString(dbName, oldName, connectionString);         
+                await ServerStore.Cluster.WaitForIndexNotification(index);
+                
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    var json = new DynamicJsonValue
+                    {
+                        ["RaftCommandIndex"] = index
+                    };
+                    context.Write(writer, json);
+                    writer.Flush();
+                }
+            }
+        }
+
+        [RavenAction("/admin/connection-strings/get", "GET", "/admin/connection-strings/get?name={databaseName:string}")]
+        public Task GetConnectionStrings()
+        {
+            var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            ServerStore.EnsureNotPassive();
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                DatabaseRecord record;
+                using (context.OpenReadTransaction())
+                {
+                    record = ServerStore.Cluster.ReadDatabase(context, dbName);
+                }
+                var ravenConnectionString = record.RavenConnectionStrings;
+                var sqlConnectionstring = record.SqlConnectionStrings;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    var result = new GetConnectionStringsResult
+                    {
+                        RavenConnectionStrings = ravenConnectionString,
+                        SqlConnectionStrings = sqlConnectionstring
+                    };
+                    context.Write(writer, result.ToJson());
+                    writer.Flush();
+                }
+            }
+
+            return Task.CompletedTask;
         }
     }
 }

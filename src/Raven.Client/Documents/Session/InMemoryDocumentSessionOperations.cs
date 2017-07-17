@@ -43,6 +43,7 @@ namespace Raven.Client.Documents.Session
         private readonly int _hash = Interlocked.Increment(ref _instancesCounter);
         protected bool GenerateDocumentIdsOnStore = true;
         private BatchOptions _saveChangesOptions;
+        private bool _isDisposed;
 
         /// <summary>
         /// The session id 
@@ -988,9 +989,24 @@ more responsive application.
 
         private void Dispose(bool isDisposing)
         {
-            if (isDisposing)
+            if (_isDisposed)
+                return;
+
+            _isDisposed = true;
+
+            if (isDisposing && RunningOn.FinalizerThread == false)
+            {
                 GC.SuppressFinalize(this);
-            _releaseOperationContext.Dispose();
+
+                _releaseOperationContext.Dispose();
+            }
+            else
+            {
+                // when we are disposed from the finalizer then we have to dispose the context immediately instead of returning it to the pool because
+                // the finalizer of ArenaMemoryAllocator could be already called so we cannot return such context to the pool (RavenDB-7571)
+
+                Context.Dispose();
+            }
         }
 
         /// <summary>

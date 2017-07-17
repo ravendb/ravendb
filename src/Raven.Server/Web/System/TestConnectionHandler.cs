@@ -38,12 +38,10 @@ namespace Raven.Server.Web.System
             }
             catch (Exception e)
             {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest; 
-
                 result = new DynamicJsonValue
                 {
-                    ["Success"] = false,
-                    ["Error"] = $"An exception was thrown while trying to connect to {url} : {e}",
+                    [nameof(NodeConnectionTestResult.Success)] = false,
+                    [nameof(NodeConnectionTestResult.Error)] = $"An exception was thrown while trying to connect to {url} : {e}",
                 };
             }
 
@@ -105,5 +103,11 @@ namespace Raven.Server.Web.System
             writer.WriteEndObject();
             writer.Flush();
         }
+    }
+
+    public class NodeConnectionTestResult
+    {
+        public bool Success;
+        public string Error;
     }
 }

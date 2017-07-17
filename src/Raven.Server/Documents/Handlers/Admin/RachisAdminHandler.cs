@@ -167,6 +167,8 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/admin/cluster/add-node", "OPTIONS", "/admin/cluster/add-node?url={nodeUrl:string}", RequiredAuthorization = AuthorizationStatus.ValidUser)]
         [RavenAction("/admin/cluster/remove-node", "OPTIONS", "/admin/cluster/remove-node?nodeTag={nodeTag:string}", RequiredAuthorization = AuthorizationStatus.ValidUser)]
         [RavenAction("/admin/cluster/reelect", "OPTIONS", "/admin/cluster/reelect", RequiredAuthorization = AuthorizationStatus.ValidUser)]
+        [RavenAction("/admin/cluster/timeout", "OPTIONS", "/admin/cluster/timeout", RequiredAuthorization = AuthorizationStatus.ValidUser)]
+        
         public Task AllowPreflightRequest()
         {
             SetupCORSHeaders();
@@ -229,6 +231,16 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
             RedirectToLeader();
         }
+        
+        [RavenAction("/admin/cluster/timeout", "POST", "/admin/cluster/timeout")]
+        public Task TimeoutNow()
+        {
+            SetupCORSHeaders();
+
+            Server.ServerStore.Engine.Timeout.ExecuteTimeoutBehavior();
+            return Task.CompletedTask;
+        }
+
 
         [RavenAction("/admin/cluster/reelect", "POST", "/admin/cluster/reelect", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public Task EnforceReelection()

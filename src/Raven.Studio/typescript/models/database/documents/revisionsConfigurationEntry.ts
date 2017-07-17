@@ -61,6 +61,7 @@ class revisionsConfigurationEntry {
     private initValidation() {
         this.collection.extend({
             required: true
+            // TODO: add validation if collection doesn't exist, because user can input any text..  
         });
 
         this.minimumRevisionsToKeep.extend({
