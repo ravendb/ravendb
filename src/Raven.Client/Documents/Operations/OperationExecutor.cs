@@ -28,33 +28,33 @@ namespace Raven.Client.Documents.Operations
             return new OperationExecutor(_store, databaseName);
         }
 
-        public void Send(IOperation operation)
+        public void Send(IOperation operation, long? sessionId = null)
         {
-            AsyncHelpers.RunSync(() => SendAsync(operation));
+            AsyncHelpers.RunSync(() => SendAsync(operation, sessionId: sessionId));
         }
 
-        public TResult Send<TResult>(IOperation<TResult> operation)
+        public TResult Send<TResult>(IOperation<TResult> operation, long? sessionId = null)
         {
-            return AsyncHelpers.RunSync(() => SendAsync(operation));
+            return AsyncHelpers.RunSync(() => SendAsync(operation, sessionId:sessionId));
         }
 
-        public Task SendAsync(IOperation operation, CancellationToken token = default(CancellationToken))
+        public Task SendAsync(IOperation operation, CancellationToken token = default(CancellationToken), long? sessionId = null)
         {
             using (GetContext(out JsonOperationContext context))
             {
                 var command = operation.GetCommand(_store, _requestExecutor.Conventions, context, _requestExecutor.Cache);
 
-                return _requestExecutor.ExecuteAsync(command, context, token);
+                return _requestExecutor.ExecuteAsync(command, context, token, sessionId);
             }
         }
 
-        public async Task<TResult> SendAsync<TResult>(IOperation<TResult> operation, CancellationToken token = default(CancellationToken))
+        public async Task<TResult> SendAsync<TResult>(IOperation<TResult> operation, CancellationToken token = default(CancellationToken), long? sessionId = null)
         {
             using (GetContext(out JsonOperationContext context))
             {
                 var command = operation.GetCommand(_store, _requestExecutor.Conventions, context, _requestExecutor.Cache);
 
-                await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
+                await _requestExecutor.ExecuteAsync(command, context, token, sessionId).ConfigureAwait(false);
 
                 return command.Result;
             }

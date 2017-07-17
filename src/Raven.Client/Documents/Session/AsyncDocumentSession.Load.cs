@@ -110,7 +110,7 @@ namespace Raven.Client.Documents.Session
             var command = loadOperation.CreateRequest();
             if (command != null)
             {
-                await RequestExecutor.ExecuteAsync(command, Context, token).ConfigureAwait(false);
+                await RequestExecutor.ExecuteAsync(command, Context, token, sessionId: _clientSessionId).ConfigureAwait(false);
                 loadOperation.SetResult(command.Result);
             }
 
@@ -136,7 +136,7 @@ namespace Raven.Client.Documents.Session
             var command = loadOperation.CreateRequest();
             if (command != null)
             {
-                await RequestExecutor.ExecuteAsync(command, Context, token).ConfigureAwait(false);
+                await RequestExecutor.ExecuteAsync(command, Context, token, sessionId: _clientSessionId).ConfigureAwait(false);
                 loadOperation.SetResult(command.Result);
             }
 
@@ -160,7 +160,7 @@ namespace Raven.Client.Documents.Session
             var command = operation.CreateRequest();
             if (command != null)
             {
-                await RequestExecutor.ExecuteAsync(command, Context, token).ConfigureAwait(false);
+                await RequestExecutor.ExecuteAsync(command, Context, token, sessionId: _clientSessionId).ConfigureAwait(false);
                 if(stream != null)
                     Context.Write(stream, command.Result.Results.Parent);
                 else
@@ -225,7 +225,7 @@ namespace Raven.Client.Documents.Session
             var command = operation.CreateRequest();
             if (command != null)
             {
-                await RequestExecutor.ExecuteAsync(command, Context, token).ConfigureAwait(false);
+                await RequestExecutor.ExecuteAsync(command, Context, token, sessionId: _clientSessionId).ConfigureAwait(false);
 
                 if (stream != null)
                     Context.Write(stream, command.Result.Results.Parent);
@@ -244,7 +244,7 @@ namespace Raven.Client.Documents.Session
             var command = operation.CreateRequest();
             if (command != null)
             {
-                await RequestExecutor.ExecuteAsync(command, Context, token).ConfigureAwait(false);
+                await RequestExecutor.ExecuteAsync(command, Context, token, sessionId: _clientSessionId).ConfigureAwait(false);
 
                 if (stream != null)
                     Context.Write(stream, command.Result.Results.Parent);

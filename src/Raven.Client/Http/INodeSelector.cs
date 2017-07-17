@@ -6,11 +6,14 @@ namespace Raven.Client.Http
     {
         Topology Topology { get; }
         int GetCurrentNodeIndex();
-        void OnSucceededRequest();
+        INodeSelector HandleRequestWithoutSessionId();
+        INodeSelector AdvanceToNextNodeAndFetchInstance();
         void OnFailedRequest(int nodeIndex);
         bool OnUpdateTopology(Topology topology, bool forceUpdate = false);
         ServerNode GetCurrentNode();
         void RestoreNodeIndex(int nodeIndex);
+
+        INodeSelector CloneForNewSession();
 
         event Action<int> NodeSwitch;
     }

@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Session
 
             if (command != null)
             {
-                RequestExecutor.Execute(command, Context);
+                RequestExecutor.Execute(command, Context, sessionId: _clientSessionId);
                 loadOperation.SetResult(command.Result);
             }
 
@@ -121,7 +121,7 @@ namespace Raven.Client.Documents.Session
             var command = operation.CreateRequest();
             if (command != null)
             {
-                RequestExecutor.Execute(command, Context);
+                RequestExecutor.Execute(command, Context, sessionId: _clientSessionId);
                 if(stream!=null)
                     Context.Write(stream, command.Result.Results.Parent);
                 else
@@ -138,7 +138,7 @@ namespace Raven.Client.Documents.Session
             var command = loadOperation.CreateRequest();
             if (command != null)
             {
-                RequestExecutor.Execute(command, Context);
+                RequestExecutor.Execute(command, Context, sessionId: _clientSessionId);
                 loadOperation.SetResult(command.Result);
             }
 
@@ -161,7 +161,7 @@ namespace Raven.Client.Documents.Session
             var command = operation.CreateRequest();
             if (command != null)
             {
-                RequestExecutor.Execute(command, Context);
+                RequestExecutor.Execute(command, Context, sessionId: _clientSessionId);
 
                 if(stream != null)
                     Context.Write(stream, command.Result.Results.Parent);
@@ -187,7 +187,7 @@ namespace Raven.Client.Documents.Session
             var command = loadTransformerOperation.CreateRequest();
             if (command != null)
             {
-                RequestExecutor.Execute(command, Context);
+                RequestExecutor.Execute(command, Context, sessionId: _clientSessionId);
                 loadTransformerOperation.SetResult(command.Result);
             }
 
@@ -241,7 +241,7 @@ namespace Raven.Client.Documents.Session
             var command = operation.CreateRequest();
             if (command != null)
             {
-                RequestExecutor.Execute(command, Context);
+                RequestExecutor.Execute(command, Context, sessionId: _clientSessionId);
 
                 if (stream != null)
                     Context.Write(stream, command.Result.Results.Parent);

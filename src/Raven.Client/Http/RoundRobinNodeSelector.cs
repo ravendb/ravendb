@@ -6,13 +6,20 @@
         {
         }
 
-        public override void OnSucceededRequest()
-        {
-            var topology = _topology;
-            if (topology.Nodes.Count == 0)
-                ThrowEmptyTopology();
+        public override INodeSelector HandleRequestWithoutSessionId() => AdvanceToNextNodeAndFetchInstance();
 
-            AtomicAdvanceNodeIndex();
+        public override INodeSelector CloneForNewSession()
+        {
+            //prevent race condition where _topology has already changed but _currentNodeIndex has not yet changed
+            lock (_cloneForNewSessionSync)
+            {
+                var nodeSelector = new RoundRobinNodeSelector(_topology.Clone())
+                {
+                    _currentNodeIndex = GetCurrentNodeIndex()
+                };
+
+                return nodeSelector.AdvanceToNextNodeAndFetchInstance();
+            }
         }
     }
 }

@@ -9,7 +9,7 @@ namespace Raven.Client.Http
 
         public Topology Topology => _topology;
 
-        private int _currentNodeIndex;
+        protected int _currentNodeIndex;
 
         public FailoverNodeSelector(Topology topology)
         {
@@ -21,19 +21,11 @@ namespace Raven.Client.Http
             return Volatile.Read(ref _currentNodeIndex);
         }
 
-        public virtual void OnSucceededRequest()
-        {
-            //nothing to do here in this type of selector
-        }
+        public virtual INodeSelector HandleRequestWithoutSessionId() => this;       
 
-        public  void OnFailedRequest(int nodeIndex)
-        {
-            if (Topology.Nodes.Count == 0)
-                ThrowEmptyTopology();
+        public void OnFailedRequest(int nodeIndex) => AdvanceToNextNodeAndFetchInstance();
 
-            AtomicAdvanceNodeIndex();
-        }
-
+        protected readonly object _cloneForNewSessionSync = new object();
         public bool OnUpdateTopology(Topology topology, bool forceUpdate = false)
         {
             if (topology == null)
@@ -45,15 +37,18 @@ namespace Raven.Client.Http
                 if (oldTopology.Etag >= topology.Etag && forceUpdate == false)
                     return false;
 
-                if (forceUpdate == false)
+                lock (_cloneForNewSessionSync)
                 {
-                    Interlocked.Exchange(ref _currentNodeIndex, 0);
-                }
+                    if (forceUpdate == false)
+                    {
+                        Interlocked.Exchange(ref _currentNodeIndex, 0);
+                    }
 
-                var changed = Interlocked.CompareExchange<Topology>(ref _topology, topology, oldTopology);
-                if (changed == oldTopology)
-                    return true;
-                oldTopology = changed;
+                    var changed = Interlocked.CompareExchange(ref _topology, topology, oldTopology);
+                    if (changed == oldTopology)
+                        return true;
+                    oldTopology = changed;
+                }
             } while (true);
         }
 
@@ -76,17 +71,35 @@ namespace Raven.Client.Http
             }
         }
 
+        public virtual INodeSelector CloneForNewSession()
+        {
+            //prevent race condition where _topology has already changed but _currentNodeIndex has not yet changed
+            lock (_cloneForNewSessionSync)
+            {
+                return new FailoverNodeSelector(_topology.Clone())
+                {
+                    _currentNodeIndex = GetCurrentNodeIndex()
+                };
+            }
+        }
+
         public event Action<int> NodeSwitch;
 
         private readonly object _nodeIncrementSyncObj = new object();
-        protected void AtomicAdvanceNodeIndex()
+
+        public INodeSelector AdvanceToNextNodeAndFetchInstance()
         {
             lock (_nodeIncrementSyncObj)
             {
+                if (Topology.Nodes.Count == 0)
+                    ThrowEmptyTopology();
+
                 var nextIndex = _currentNodeIndex + 1;
                 _currentNodeIndex = nextIndex < Topology.Nodes.Count ? nextIndex : 0;
 
                 NodeSwitch?.Invoke(_currentNodeIndex);
+
+                return this;
             }
         }
 
