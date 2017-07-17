@@ -21,6 +21,7 @@ type columnOptionsDto = {
 type documentBasedColumnsProviderOpts = {
     showRowSelectionCheckbox?: boolean;
     enableInlinePreview?: boolean;
+    customInlinePreview?: (doc: document) => void;
     showSelectAllCheckbox?: boolean;
     createHyperlinks?: boolean;
     columnOptions?: columnOptionsDto;
@@ -38,6 +39,7 @@ class documentBasedColumnsProvider {
     private readonly createHyperlinks: boolean;
     private readonly showSelectAllCheckbox: boolean;
     private readonly columnOptions: columnOptionsDto;
+    private readonly customInlinePreview: (doc: document) => void;
 
     private static readonly externalIdRegex = /^\w+\/\w+/ig;
 
@@ -50,6 +52,7 @@ class documentBasedColumnsProvider {
         this.showSelectAllCheckbox = _.isBoolean(opts.showSelectAllCheckbox) ? opts.showSelectAllCheckbox : false;
         this.createHyperlinks = _.isBoolean(opts.createHyperlinks) ? opts.createHyperlinks : true;
         this.columnOptions = opts.columnOptions;
+        this.customInlinePreview = opts.customInlinePreview || documentBasedColumnsProvider.showPreview;
     }
 
     findColumns(viewportWidth: number, results: pagedResult<document>): virtualColumn[] {
@@ -63,7 +66,7 @@ class documentBasedColumnsProvider {
         }
 
         if (this.enableInlinePreview) {
-            const previewColumn = new actionColumn<document>(this.gridController, (doc: document) => this.showPreview(doc), "Preview", `<i class="icon-preview"></i>`, "70px",
+            const previewColumn = new actionColumn<document>(this.gridController, this.customInlinePreview, "Preview", `<i class="icon-preview"></i>`, "70px",
             {
                 title: () => 'Show item preview'
             });
@@ -91,7 +94,7 @@ class documentBasedColumnsProvider {
         }));
     }
 
-    private showPreview(doc: document) {
+    static showPreview(doc: document) {
         const docDto = doc.toDto(true);
         if ("@metadata" in docDto) {
             const metaDto = docDto["@metadata"];

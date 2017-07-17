@@ -39,6 +39,7 @@ import generalUtils = require("common/generalUtils");
 import customFunctions = require("models/database/documents/customFunctions");
 import evaluationContextHelper = require("common/helpers/evaluationContextHelper");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
+import getDocumentsPreviewCommand = require("commands/database/documents/getDocumentsPreviewCommand");
 
 type fetcherType = (skip: number, take: number, previewCols: string[], fullCols: string[]) => JQueryPromise<pagedResult<document>>;
 
@@ -466,7 +467,9 @@ class patch extends viewModelBase {
         this.documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, this.collections().map(x => x.name), {
             showRowSelectionCheckbox: false,
             showSelectAllCheckbox: false,
-            createHyperlinks: false
+            createHyperlinks: false,
+            customInlinePreview: (doc: document) => this.showPreview(doc),
+            enableInlinePreview: true
         });
 
         const fakeFetcher: fetcherType = () => $.Deferred<pagedResult<document>>().resolve({
@@ -512,6 +515,24 @@ class patch extends viewModelBase {
         });
 
         this.fetcher.subscribe(() => grid.reset());
+    }
+
+    private showPreview(doc: document) {
+        // if document doesn't have all properties fetch them and then display preview
+
+        const meta = doc.__metadata as any;
+        const hasCollapsedFields = meta[getDocumentsPreviewCommand.ObjectStubsKey] || meta[getDocumentsPreviewCommand.ArrayStubsKey] || meta[getDocumentsPreviewCommand.TrimmedValueKey];
+
+        if (hasCollapsedFields) {
+            new getDocumentWithMetadataCommand(doc.getId(), this.activeDatabase(), true)
+                .execute()
+                .done((fullDocument: document) => {
+                    documentBasedColumnsProvider.showPreview(fullDocument);
+                });
+        } else {
+            // document has all properties - fallback to default method
+            documentBasedColumnsProvider.showPreview(doc);
+        }
     }
 
     usePatchOption(option: patchOption) {
