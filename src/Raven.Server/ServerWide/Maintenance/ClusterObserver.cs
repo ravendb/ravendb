@@ -205,9 +205,9 @@ namespace Raven.Server.ServerWide.Maintenance
                             reason = "Demoted because it had no DatabaseStatusReport";
                         }
 
-                        if (nodeStats?.LastError?.Message != null)
+                        if (nodeStats?.LastError != null)
                         {
-                            reason += $". {nodeStats.LastError.Message}";
+                            reason += $". {nodeStats.LastError}";
                         }
 
                         topology.DemotionReasons[member] = reason;
