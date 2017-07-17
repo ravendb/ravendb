@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Queries
 
         public string ExtractFieldName(string queryText)
         {
-            return QueryExpression.Extract(queryText, (FieldToken)Field);
+            return QueryExpression.Extract(queryText, Field);
         }
 
         private static string ExtractTokenValue(ValueToken valueToken, string queryText)
@@ -60,30 +60,118 @@ namespace Raven.Server.Documents.Queries
 
                 queryParameters.GetPropertyByIndex(index, ref propertyDetails);
 
-                switch (propertyDetails.Token)
-                {
-                    case BlittableJsonToken.Integer:
-                        return (propertyDetails.Value.ToString(), ValueTokenType.Long);
-                    case BlittableJsonToken.LazyNumber:
-                        return (propertyDetails.Value.ToString(), ValueTokenType.Double);
-                    case BlittableJsonToken.String:
-                    case BlittableJsonToken.CompressedString:
-                        return (propertyDetails.Value.ToString(), ValueTokenType.String);
-                    case BlittableJsonToken.Boolean:
-                        var booleanValue = (bool)propertyDetails.Value;
-
-                        if (booleanValue)
-                            return (null, ValueTokenType.True);
-                        else
-                            return (null, ValueTokenType.False);
-                    case BlittableJsonToken.Null:
-                        return (null, ValueTokenType.Null);
-                    default:
-                        throw new ArgumentException($"Unhandled token: {propertyDetails.Token}");
-                }
+                return GetValueAndTypeFromJson(propertyDetails);
             }
 
             return (ExtractTokenValue(valueToken, queryText), Type);
+        }
+
+        private (List<string>, ValueTokenType) ExtractInParameters(ValueToken valueToken, string queryText, BlittableJsonReaderObject queryParameters)
+        {
+            Debug.Assert(Type == ValueTokenType.Parameter);
+
+            var property = new BlittableJsonReaderObject.PropertyDetails();
+
+            var parameterName = QueryExpression.Extract(queryText, valueToken);
+
+            var index = queryParameters.GetPropertyIndex(parameterName);
+
+            queryParameters.GetPropertyByIndex(index, ref property);
+
+            switch (property.Token)
+            {
+                case BlittableJsonToken.StartArray:
+                case BlittableJsonToken.StartArray | BlittableJsonToken.OffsetSizeByte:
+                case BlittableJsonToken.StartArray | BlittableJsonToken.OffsetSizeShort:
+                    if (Operator != OperatorType.In)
+                        throw new InvalidOperationException("Array parameter is supported only as a parameter of IN operator");
+
+                    return GetFlatValuesFromJsonArray((BlittableJsonReaderArray)property.Value);
+                default:
+                    var valueType = GetValueAndTypeFromJson(property);
+                    return (new List<string>{valueType.Value}, valueType.Type);
+            }
+        }
+
+        private static (string Value, ValueTokenType Type) GetValueAndTypeFromJson(BlittableJsonReaderObject.PropertyDetails property)
+        {
+            switch (property.Token)
+            {
+                case BlittableJsonToken.Integer:
+                    return (property.Value.ToString(), ValueTokenType.Long);
+                case BlittableJsonToken.LazyNumber:
+                    return (property.Value.ToString(), ValueTokenType.Double);
+                case BlittableJsonToken.String:
+                case BlittableJsonToken.CompressedString:
+                    return (property.Value.ToString(), ValueTokenType.String);
+                case BlittableJsonToken.Boolean:
+                    var booleanValue = (bool)property.Value;
+
+                    if (booleanValue)
+                        return (null, ValueTokenType.True);
+                    else
+                        return (null, ValueTokenType.False);
+                case BlittableJsonToken.Null:
+                    return (null, ValueTokenType.Null);
+                default:
+                    throw new ArgumentException($"Unhandled token: {property.Token}");
+            }
+        }
+
+        private (List<string> Values, ValueTokenType Type) GetFlatValuesFromJsonArray(BlittableJsonReaderArray array)
+        {
+            var values = new List<string>(array.Length);
+
+            ValueTokenType? type = null;
+
+            for (int i = 0; i < array.Length; i++)
+            {
+                var item = array[i];
+                ValueTokenType itemType;
+
+                if (item is long)
+                {
+                    itemType = ValueTokenType.Long;
+                    values.Add(item.ToString());
+                }
+                else if (item is LazyNumberValue)
+                {
+                    itemType = ValueTokenType.Double;
+                    values.Add(item.ToString());
+                }
+                else if (item is LazyStringValue || item is LazyCompressedStringValue)
+                {
+                    itemType = ValueTokenType.String;
+                    values.Add(item.ToString());
+                }
+                else if (item is bool boolValue)
+                {
+                    itemType =boolValue ? ValueTokenType.True : ValueTokenType.False;
+                    values.Add(item.ToString());
+                }
+                else if (item is null)
+                {
+                    itemType = ValueTokenType.String;
+                    values.Add(null);
+                }
+                else if (item is BlittableJsonReaderArray nestedArray)
+                {
+                    var (arrayItems, arrayItemsType) = GetFlatValuesFromJsonArray(nestedArray);
+                    itemType = arrayItemsType;
+                    values.AddRange(arrayItems);
+                }
+                else
+                    throw new ArgumentException($"Unhandled array value type: {item.GetType().FullName}");
+
+                if (type != null && type.Value != itemType)
+                    throw new ArgumentException("ThrowIncompatibleTypesOfVariables"); // TODO arek
+
+                type = itemType;
+            }
+
+            Debug.Assert(type != null);
+
+            return (values, type.Value);
         }
 
         public (List<string>, ValueTokenType) GetValuesAndType(string queryText, BlittableJsonReaderObject queryParameters)
@@ -93,7 +181,6 @@ namespace Raven.Server.Documents.Queries
 
             foreach (var item in Values)
             {
-                string value;
                 ValueTokenType type;
 
                 if (Type == ValueTokenType.Parameter)
@@ -101,12 +188,15 @@ namespace Raven.Server.Documents.Queries
                     switch (Operator)
                     {
                         case OperatorType.In:
-                            throw new NotImplementedException("TODO arek");
+                            var (inValues, inValuesType) = ExtractInParameters(item, queryText, queryParameters);
+                            values.AddRange(inValues);
+                            type = inValuesType;
+                            break;
                         default:
+                            string value;
                             (value, type) = ExtractValueAndType(item, queryText, queryParameters);
                             values.Add(value);
                             break;
-
                     }
                 }
                 else
