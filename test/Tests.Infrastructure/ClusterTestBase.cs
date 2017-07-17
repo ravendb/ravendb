@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -380,14 +381,15 @@ namespace Tests.Infrastructure
                     { RavenConfiguration.GetKey(x => x.Core.ServerUrl), serverUrl }
                 };
 
-                if (useSsl)
+                // TODO iftah
+                /*if (useSsl)
                 {
-                    var certificatePath = GenerateAndSaveSelfSignedCertificate();
                     serverUrl = serverUrl.Replace("http:", "https:");
-
-                    customSettings[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = certificatePath;
                     customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = serverUrl;
-                }
+                    var defaultServer = GetNewServer(customSettings);
+
+                    SetupAuthenticationInTest(out _, new string[0], customSettings, true, serverUrl, false, defaultServer);
+                }*/
 
                 var server = GetNewServer(customSettings, runInMemory: shouldRunInMemory);
                 Servers.Add(server);

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Server.Config;
@@ -17,20 +18,18 @@ namespace SlowTests.Server.Replication
         [InlineData(true)]
         public async Task Master_master_replication_from_etag_zero_without_conflict_should_work(bool useSsl)
         {
-            if (useSsl)
-            {
-                var tempPath = GenerateAndSaveSelfSignedCertificate();
-                DoNotReuseServer(new ConcurrentDictionary<string, string>
-                {
-                    [RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = tempPath,
-                    [RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = "https://127.0.0.1:0"
-                });
-            }
-
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
+
+            X509Certificate2 certificate = null;
+            if (useSsl)
+            {
+                SetupAuthenticationInTest(out certificate, new[] { dbName1, dbName2 });
+            }
+
+            
+            using (var store1 = GetDocumentStore(certificate: certificate, modifyName: s => dbName1))
+            using (var store2 = GetDocumentStore(certificate: certificate, modifyName: s => dbName2))
             {
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);

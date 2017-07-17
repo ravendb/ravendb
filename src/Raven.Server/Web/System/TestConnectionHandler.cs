@@ -17,11 +17,10 @@ namespace Raven.Server.Web.System
 {
     public class TestConnectionHandler : RequestHandler
     {
-        [RavenAction("/admin/test-connection", "GET", "/admin/test-connection?url={serverUrl:string}&api={apiKey:string}")]
+        [RavenAction("/admin/test-connection", "GET", "/admin/test-connection?url={serverUrl:string}")]
         public async Task TestConnection()
         {
             var url = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
-            var api = GetStringQueryString("api", false);
             DynamicJsonValue result;
 
             try

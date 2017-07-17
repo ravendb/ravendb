@@ -39,6 +39,7 @@ namespace Raven.Server.ServerWide.Maintenance
         {
             _leaderClusterTag = leaderClusterTag;
             _term = term;
+            _server = server;
             Config = server.Configuration.Cluster;
         }
 

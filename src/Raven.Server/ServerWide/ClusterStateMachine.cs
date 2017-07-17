@@ -171,8 +171,9 @@ namespace Raven.Server.ServerWide
                         break;
                     case nameof(PutCertificateCommand):
                         PutValue<CertificateDefinition>(context, type, cmd, index, leader);
-                        cmd.TryGet(nameof(PutCertificateCommand.Name), out string key);
-                        DeleteLocalState(context, key);
+                        // Once the certificate is in the cluster, no need to keep it locally so we delete it.
+                        if (cmd.TryGet(nameof(PutCertificateCommand.Name), out string key)) //TODO iftah, also when install snapshot
+                            DeleteLocalState(context, key);
                         break;
                     case nameof(PutClientConfigurationCommand):
                         PutValue<ClientConfiguration>(context, type, cmd, index, leader);

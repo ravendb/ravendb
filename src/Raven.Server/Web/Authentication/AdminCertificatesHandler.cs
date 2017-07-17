@@ -42,7 +42,7 @@ namespace Raven.Server.Web.Authentication
                     {
                         // this does not include the private key, that is only for the client
                         Certificate = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
-                        Databases = new HashSet<string>(permissions.Select(x => x?.ToString())),
+                        Permissions = new HashSet<string>(permissions.Select(x => x?.ToString())),
                         ServerAdmin = serverAdmin,
                         Thumbprint = certificate.Thumbprint
                     }));
@@ -67,7 +67,7 @@ namespace Raven.Server.Web.Authentication
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var certificateJson = ctx.ReadForDisk(RequestBodyStream(), "put-certificate"))
             {
-                ValidateCertificate(certificateJson, out _, out _, out _, out _);
+                ValidatePermissions(certificateJson, out _, out _);
 
                 var certificateDefinition = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
@@ -173,11 +173,24 @@ namespace Raven.Server.Web.Authentication
 
             if (string.IsNullOrWhiteSpace(friendlyName))
                 throw new ArgumentException("'Name' cannot be empty when generating a new certificate");
+            
+            certificateJson.TryGet("Password", out password); //can be null
+
+            ValidatePermissions(certificateJson, out permissions, out serverAdmin);
+        }
+
+        private static void ValidatePermissions(BlittableJsonReaderObject certificateJson, out BlittableJsonReaderArray permissions, out bool serverAdmin)
+        {
+            certificateJson.TryGet("ServerAdmin", out serverAdmin); //can be null, default is false
 
             if (certificateJson.TryGet("Permissions", out permissions) == false)
                 throw new ArgumentException("'Permissions' is a required field when generating a new certificate");
-            
+
             const string validDbNameChars = @"([A-Za-z0-9_\-\.]+)";
+
+            if (permissions.Items.Count() > 0 && serverAdmin == true)
+                throw new ArgumentException("Certificate contains non empty 'Permissions' but 'serverAdmin' is set to true. Server Admin has access to everything so 'permissions' must be empty.");
+
             foreach (LazyStringValue dbName in permissions.Items)
             {
                 if (string.IsNullOrWhiteSpace(dbName))
@@ -193,9 +206,6 @@ namespace Raven.Server.Web.Authentication
                         "Database name can only contain A-Z, a-z, \"_\", \".\" or \"-\" chars but was: '" + dbName + "'");
                 }
             }
-
-            certificateJson.TryGet("Password", out password);
-            certificateJson.TryGet("ServerAdmin", out serverAdmin);
         }
     }
 }

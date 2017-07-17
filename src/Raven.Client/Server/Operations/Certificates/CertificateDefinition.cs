@@ -9,7 +9,7 @@ namespace Raven.Client.Server.Operations.Certificates
         public string Certificate;
         public bool ServerAdmin;
         public string Thumbprint;
-        public HashSet<string> Databases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> Permissions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         public DynamicJsonValue ToJson()
         {
@@ -18,7 +18,7 @@ namespace Raven.Client.Server.Operations.Certificates
                 [nameof(Certificate)] = Certificate,
                 [nameof(Thumbprint)] = Thumbprint,
                 [nameof(ServerAdmin)] = ServerAdmin,
-                [nameof(Databases)] = Databases
+                [nameof(Permissions)] = Permissions
             };
         }
     }

@@ -476,7 +476,7 @@ namespace Raven.Server.Utils
                 {
                     // this does not include the private key, that is only for the client
                     Certificate = Convert.ToBase64String(cert.Export(X509ContentType.Cert)),
-                    Databases = null,
+                    Permissions = null,
                     ServerAdmin = true,
                     Thumbprint = cert.Thumbprint
                 }.ToJson();

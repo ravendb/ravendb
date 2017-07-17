@@ -129,7 +129,7 @@ namespace Raven.Server
 
                 if (Configuration.Security.CertificatePath != null)
                 {
-                    ServerCertificateHolder = LoadCertificate(Configuration.Security);
+                    ServerCertificateHolder = LoadCertificate(Configuration.Security.CertificatePath, Configuration.Security.CertificatePassword);
                     kestrelOptions += options =>
                     {
                         var filterOptions = new HttpsConnectionFilterOptions
@@ -353,7 +353,7 @@ namespace Raven.Server
             {
                 authenticationStatus.Status = AuthenticationStatus.NoCertificateProvided;
             }
-            else if (certificate.NotAfter < DateTime.UtcNow) //iftah this is bad
+            else if (certificate.NotAfter < DateTime.UtcNow)
             {
                 authenticationStatus.Status = AuthenticationStatus.Expired;
             }
@@ -387,7 +387,7 @@ namespace Raven.Server
                         else
                         {
                             authenticationStatus.Status = AuthenticationStatus.Allowed;
-                            foreach (var database in definition.Databases)
+                            foreach (var database in definition.Permissions)
                             {
                                 authenticationStatus.AuthorizedDatabases.Add(database);
                             }
@@ -412,19 +412,21 @@ namespace Raven.Server
             public AsymmetricKeyEntry PrivateKey;
         }
 
-        private static CertificateHolder LoadCertificate(SecurityConfiguration config)
+        public static CertificateHolder LoadCertificate(string certificatePath, string certificatePassword)
         {
             try
             {
-                var rawData = File.ReadAllBytes(config.CertificatePath);
+                var rawData = File.ReadAllBytes(certificatePath);
 
-                var loadedCertificate = config.CertificatePassword == null
+                var loadedCertificate = certificatePassword == null
                     ? new X509Certificate2(rawData)
-                    : new X509Certificate2(rawData, config.CertificatePassword);
+                    : new X509Certificate2(rawData, certificatePassword);
 
-                ValidatePrivateKey(config, rawData, out var privateKey);
+                ValidateExpiration(certificatePath, loadedCertificate);
 
-                ValidateKeyUsages(config, loadedCertificate);
+                ValidatePrivateKey(certificatePath, certificatePassword, rawData, out var privateKey);
+
+                ValidateKeyUsages(certificatePath, loadedCertificate);
 
                 return new CertificateHolder
                 {
@@ -435,14 +437,20 @@ namespace Raven.Server
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Could not load certificate file {config.CertificatePath}, please check the path and password", e);
+                throw new InvalidOperationException($"Could not load certificate file {certificatePath}, please check the path and password", e);
             }
         }
 
-        private static void ValidatePrivateKey(SecurityConfiguration config, byte[] rawData, out AsymmetricKeyEntry pk)
+        private static void ValidateExpiration(string certificatePath, X509Certificate2 loadedCertificate)
+        {
+            if (loadedCertificate.NotAfter < DateTime.UtcNow)
+                throw new EncryptionException($"The provided certificate {certificatePath} is expired! " + loadedCertificate);
+        }
+
+        private static void ValidatePrivateKey(string certificatePath, string certificatePassword, byte[] rawData, out AsymmetricKeyEntry pk)
         {
             var store = new Pkcs12Store();
-            store.Load(new MemoryStream(rawData), config.CertificatePassword?.ToCharArray() ?? Array.Empty<char>());
+            store.Load(new MemoryStream(rawData), certificatePassword?.ToCharArray() ?? Array.Empty<char>());
             pk = null;
             foreach (string alias in store.Aliases)
             {
@@ -452,24 +460,24 @@ namespace Raven.Server
             }
 
             if (pk == null)
-                throw new EncryptionException("Unable to find the private key in the provided certificate: " + config.CertificatePath);
+                throw new EncryptionException("Unable to find the private key in the provided certificate: " + certificatePath);
         }
 
-        private static void ValidateKeyUsages(SecurityConfiguration config, X509Certificate2 loadedCertificate)
+        private static void ValidateKeyUsages(string certificatePath, X509Certificate2 loadedCertificate)
         {
             var supported = false;
             foreach (var extension in loadedCertificate.Extensions)
             {
-                if (extension.Oid.FriendlyName != "Enhanced Key Usage")
+                if (extension.Oid.Value != "2.5.29.37") //Enhanced Key Usage extension
                     continue;
 
-                var extenstionString = new AsnEncodedData(extension.Oid, extension.RawData).Format(false);
+                var extensionString = new AsnEncodedData(extension.Oid, extension.RawData).Format(false);
 
-                supported = extenstionString.Contains("Client Authentication") && extenstionString.Contains("Server Authentication");
+                supported = extensionString.Contains("1.3.6.1.5.5.7.3.2") && extensionString.Contains("1.3.6.1.5.5.7.3.1"); // Client Authentication & Server Authentication
             }
 
             if (supported == false)
-                throw new EncryptionException("Server certificate " + config.CertificatePath + " must be defined with the following 'Enhanced Key Usages': Client Authentication(1.3.6.1.5.5.7.3.2) & Server Authentication(1.3.6.1.5.5.7.3.1)");
+                throw new EncryptionException("Server certificate " + certificatePath + " must be defined with the following 'Enhanced Key Usages': Client Authentication (Oid 1.3.6.1.5.5.7.3.2) & Server Authentication (Oid 1.3.6.1.5.5.7.3.1)");
         }
 
         public class TcpListenerStatus
@@ -878,7 +886,7 @@ namespace Raven.Server
                 return false;
             }
 
-            var auth = AuthenticateConnectionCertificate((X509Certificate2)sslStream.RemoteCertificate);
+            var auth = AuthenticateConnectionCertificate((X509Certificate2)sslStream.LocalCertificate);
 
             switch (auth.Status)
             {

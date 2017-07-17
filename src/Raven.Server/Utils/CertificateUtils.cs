@@ -25,20 +25,31 @@ namespace Raven.Server.Utils
         {
             AsymmetricKeyParameter caPrivateKey;
             CreateCertificateAuthorityCertificate(subjectName, out caPrivateKey);
-            return CreateSelfSignedCertificateBasedOnPrivateKey(subjectName, issuerName, caPrivateKey, false);
+            return CreateSelfSignedCertificateBasedOnPrivateKey(subjectName, issuerName, caPrivateKey, false, 1);
         }
-
+        
         public static X509Certificate2 CreateSelfSignedClientCertificate(string subjectName, RavenServer.CertificateHolder certificateHolder)
         {
             return CreateSelfSignedCertificateBasedOnPrivateKey(
                 subjectName, 
                 certificateHolder.Certificate.Subject, 
                 certificateHolder.PrivateKey.Key,
-                true);
+                true, 
+                5);
+        }
+
+        public static X509Certificate2 CreateSelfSignedExpiredClientCertificate(string subjectName, RavenServer.CertificateHolder certificateHolder)
+        {
+            return CreateSelfSignedCertificateBasedOnPrivateKey(
+                subjectName, 
+                certificateHolder.Certificate.Subject, 
+                certificateHolder.PrivateKey.Key,
+                true, 
+                -1);
         }
 
         private static X509Certificate2 CreateSelfSignedCertificateBasedOnPrivateKey(string subjectName, string issuerName, 
-            AsymmetricKeyParameter issuerPrivKey, bool isClientCertificate)
+            AsymmetricKeyParameter issuerPrivKey, bool isClientCertificate, int yearsUntilExpiration)
         {
             const int keyStrength = 2048;
 
@@ -68,7 +79,7 @@ namespace Raven.Server.Utils
 
             // Valid For
             DateTime notBefore = DateTime.UtcNow.Date;
-            DateTime notAfter = notBefore.AddYears(5);
+            DateTime notAfter = notBefore.AddYears(yearsUntilExpiration);
             certificateGenerator.SetNotBefore(notBefore);
             certificateGenerator.SetNotAfter(notAfter);
 

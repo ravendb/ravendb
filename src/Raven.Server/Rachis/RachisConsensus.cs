@@ -1311,17 +1311,26 @@ namespace Raven.Server.Rachis
 
                 SwitchToSingleLeader(ctx);
 
-                // If there are trusted certificates in the local state, we will register them in the cluster now
-                foreach (var localCertKey in serverStore.Cluster.GetCertificateKeysFromLocalState(ctx))
+                tx.Commit();
+            }
+
+            // We put a certificate in the local state to tell the server who to trust, and this is done before
+            // the cluster exists (otherwise the server won't be able to receive initial requests). Only when we 
+            // create the cluster, we register those local certificates in the cluster.
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            {
+                using (ctx.OpenReadTransaction())
                 {
-                    using (var localCertificate = serverStore.Cluster.GetLocalState(ctx, localCertKey))
+                    foreach (var localCertKey in serverStore.Cluster.GetCertificateKeysFromLocalState(ctx))
                     {
-                        var certificateDefinition = JsonDeserializationServer.CertificateDefinition(localCertificate);
-                        serverStore.PutValueInClusterAsync(new PutCertificateCommand(localCertKey, certificateDefinition));
+                        // If there are trusted certificates in the local state, we will register them in the cluster now
+                        using (var localCertificate = serverStore.Cluster.GetLocalState(ctx, localCertKey))
+                        {
+                            var certificateDefinition = JsonDeserializationServer.CertificateDefinition(localCertificate);
+                            serverStore.PutValueInClusterAsync(new PutCertificateCommand(localCertKey, certificateDefinition));
+                        }
                     }
                 }
-
-                tx.Commit();
             }
         }
 

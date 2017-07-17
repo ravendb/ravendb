@@ -65,7 +65,7 @@ namespace Raven.Client.Documents
 
             var expectedCert = new X509Certificate2(Convert.FromBase64String(info.Certificate));
             var sslStream = new SslStream(stream, false, (sender, actualCert, chain, errors) => expectedCert.Equals(actualCert));
-            await sslStream.AuthenticateAsClientAsync("RavenDB", null, SslProtocols.Tls12, false).ConfigureAwait(false);
+            await sslStream.AuthenticateAsClientAsync(new Uri(info.Url).Host, null, SslProtocols.Tls12, false).ConfigureAwait(false);
             stream = sslStream;
             return stream;
         }
