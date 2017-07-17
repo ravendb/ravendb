@@ -11,11 +11,10 @@ namespace Raven.Client.Documents.Queries.Facets
 {
     public class FacetQuery : FacetQuery<Dictionary<string, object>>
     {
-        public static FacetQuery Create(string indexName, IndexQueryBase<Dictionary<string, object>> query, string facetSetupDoc, List<Facet> facets, int start, int? pageSize, DocumentConventions conventions)
+        public static FacetQuery Create(IndexQueryBase<Dictionary<string, object>> query, string facetSetupDoc, List<Facet> facets, int start, int? pageSize, DocumentConventions conventions)
         {
             var result = new FacetQuery
             {
-                IndexName = indexName,
                 CutoffEtag = query.CutoffEtag,
                 Query = query.Query,
                 WaitForNonStaleResults = query.WaitForNonStaleResults,
@@ -42,11 +41,6 @@ namespace Raven.Client.Documents.Queries.Facets
         public string DefaultField { get; set; }
 
         public bool IsDistinct { get; set; }
-
-        /// <summary>
-        /// Index name to run facet query on.
-        /// </summary>
-        public string IndexName { get; set; }
 
         /// <summary>
         /// Id of a facet setup document that can be found in database containing facets (mutually exclusive with Facets).

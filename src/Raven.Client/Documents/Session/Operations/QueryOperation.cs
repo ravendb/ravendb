@@ -18,6 +18,7 @@ namespace Raven.Client.Documents.Session.Operations
     {
         private readonly InMemoryDocumentSessionOperations _session;
         private readonly string _indexName;
+        private readonly string _collectionName;
         private readonly IndexQuery _indexQuery;
         private readonly bool _waitForNonStaleResults;
         private readonly bool _metadataOnly;
@@ -32,13 +33,14 @@ namespace Raven.Client.Documents.Session.Operations
 
         public QueryResult CurrentQueryResults => _currentQueryResults;
 
-        public QueryOperation(InMemoryDocumentSessionOperations session, string indexName, IndexQuery indexQuery,
+        public QueryOperation(InMemoryDocumentSessionOperations session, string indexName, string collectionName, IndexQuery indexQuery,
                               string[] projectionFields, bool waitForNonStaleResults, TimeSpan? timeout,
                               Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults,
                               HashSet<string> includes, bool disableEntitiesTracking, bool metadataOnly = false, bool indexEntriesOnly = false)
         {
             _session = session;
             _indexName = indexName;
+            _collectionName = collectionName;
             _indexQuery = indexQuery;
             _waitForNonStaleResults = waitForNonStaleResults;
             _timeout = timeout;
@@ -73,8 +75,7 @@ namespace Raven.Client.Documents.Session.Operations
         private void AssertNotQueryById()
         {
             // this applies to dynamic indexes only
-            if (!_indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(_indexName, "dynamic", StringComparison.OrdinalIgnoreCase))
+            if (_collectionName != null)
                 return;
 
             var match = IdOnly.Match(_indexQuery.Query);

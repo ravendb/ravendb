@@ -8,10 +8,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Client.Queries;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
 using Xunit;
@@ -65,10 +67,12 @@ namespace SlowTests.MailingList
 
                     var result = query.ToList();
 
+                    var indexQuery = GetIndexQuery(query);
+
                     var facetResults = session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(new FacetQuery()
                     {
-                        IndexName = "PropertiesSearchIndex",
-                        Query = query.ToString(),
+                        Query = indexQuery.Query,
+                        QueryParameters = indexQuery.QueryParameters,
                         FacetSetupDoc = "facets/PropertySearchingFacets"
                     }))[0];
 
@@ -80,6 +84,13 @@ namespace SlowTests.MailingList
                 }
             }
         }
+
+        private static IndexQuery GetIndexQuery<T>(IQueryable<T> queryable)
+        {
+            var inspector = (IRavenQueryInspector)queryable;
+            return inspector.GetIndexQuery(isAsync: false);
+        }
+
         private class SearchingViewModel
         {
 

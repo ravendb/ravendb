@@ -247,13 +247,11 @@ namespace SlowTests.Core.Commands
                     {
                         var multiFacetResults = session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(new FacetQuery()
                         {
-                            IndexName = index.IndexName,
-                            Query = "Cost:{NULL TO 200}",
+                            Query = $"FROM INDEX '{index.IndexName}' WHERE Cost < 200",
                             FacetSetupDoc = "facets/CameraFacets"
-                        }, new FacetQuery()
+                        }, new FacetQuery
                         {
-                            IndexName = index.IndexName,
-                            Query = "Megapixels:{NULL TO 3}",
+                            Query = $"FROM INDEX '{index.IndexName}' WHERE Megapixels < 3",
                             FacetSetupDoc = "facets/CameraFacets"
                         }));
 

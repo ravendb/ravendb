@@ -69,7 +69,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
                                 writer.WriteComma();
 
                                 writer.WritePropertyName(nameof(GetRequest.Method));
-                                writer.WriteString(command.Method.Method);
+                                writer.WriteString(command.Method?.Method);
                                 writer.WriteComma();
 
                                 writer.WritePropertyName(nameof(GetRequest.Headers));

@@ -20,16 +20,6 @@ namespace Raven.Client.Documents.Session
     public interface IRavenQueryInspector
     {
         /// <summary>
-        /// Get the name of the index being queried
-        /// </summary>
-        string IndexQueried { get; }
-
-        /// <summary>
-        /// Get the name of the index being queried in async queries
-        /// </summary>
-        string AsyncIndexQueried { get; }
-
-        /// <summary>
         /// The query session
         /// </summary>
         InMemoryDocumentSessionOperations Session { get; }

@@ -32,6 +32,7 @@ namespace Raven.Client.Documents.Linq
         private QueryStatistics _queryStats;
         private QueryHighlightings _highlightings;
         private string _indexName;
+        private string _collectionName;
         private InMemoryDocumentSessionOperations _session;
         private bool _isMapReduce;
 
@@ -44,6 +45,7 @@ namespace Raven.Client.Documents.Linq
             QueryStatistics queryStats,
             QueryHighlightings highlightings,
             string indexName,
+            string collectionName,
             Expression expression,
             InMemoryDocumentSessionOperations session,
             bool isMapReduce)
@@ -52,6 +54,7 @@ namespace Raven.Client.Documents.Linq
             _queryStats = queryStats;
             _highlightings = highlightings;
             _indexName = indexName;
+            _collectionName = collectionName;
             _session = session;
             _isMapReduce = isMapReduce;
             _provider.AfterQueryExecuted(AfterQueryExecuted);
@@ -201,7 +204,7 @@ namespace Raven.Client.Documents.Linq
         public virtual FacetedQueryResult GetFacets(string facetSetupDoc, int start, int? pageSize)
         {
             var q = GetIndexQuery(false);
-            var query = FacetQuery.Create(_indexName, q, facetSetupDoc, null, start, pageSize, Session.Conventions);
+            var query = FacetQuery.Create(q, facetSetupDoc, null, start, pageSize, Session.Conventions);
 
             var command = new GetFacetsCommand(_session.Conventions, _session.Context, query);
             _session.RequestExecutor.Execute(command, _session.Context);
@@ -211,7 +214,7 @@ namespace Raven.Client.Documents.Linq
         public virtual FacetedQueryResult GetFacets(List<Facet> facets, int start, int? pageSize)
         {
             var q = GetIndexQuery(false);
-            var query = FacetQuery.Create(_indexName, q, null, facets, start, pageSize, Session.Conventions);
+            var query = FacetQuery.Create(q, null, facets, start, pageSize, Session.Conventions);
             var command = new GetFacetsCommand(_session.Conventions, _session.Context, query);
             _session.RequestExecutor.Execute(command, _session.Context);
             return command.Result;
@@ -220,7 +223,7 @@ namespace Raven.Client.Documents.Linq
         public virtual async Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery();
-            var query = FacetQuery.Create(_indexName, q, facetSetupDoc, null, start, pageSize, Session.Conventions);
+            var query = FacetQuery.Create(q, facetSetupDoc, null, start, pageSize, Session.Conventions);
 
             var command = new GetFacetsCommand(_session.Conventions, _session.Context, query);
             await _session.RequestExecutor.ExecuteAsync(command, _session.Context, token).ConfigureAwait(false);
@@ -231,7 +234,7 @@ namespace Raven.Client.Documents.Linq
         public virtual async Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int start, int? pageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery();
-            var query = FacetQuery.Create(_indexName, q, null, facets, start, pageSize, Session.Conventions);
+            var query = FacetQuery.Create(q, null, facets, start, pageSize, Session.Conventions);
 
             var command = new GetFacetsCommand(_session.Conventions, _session.Context, query);
             await _session.RequestExecutor.ExecuteAsync(command, _session.Context, token).ConfigureAwait(false);
@@ -241,37 +244,9 @@ namespace Raven.Client.Documents.Linq
 
         private RavenQueryProviderProcessor<T> GetRavenQueryProvider()
         {
-            return new RavenQueryProviderProcessor<T>(_provider.QueryGenerator, _provider.CustomizeQuery, null, null, _indexName,
+            return new RavenQueryProviderProcessor<T>(_provider.QueryGenerator, _provider.CustomizeQuery, null, null, _indexName, _collectionName,
                                                       new HashSet<string>(), new List<RenamedField>(), _isMapReduce,
                                                       _provider.ResultTransformer, _provider.TransformerParameters, OriginalQueryType);
-        }
-
-        /// <summary>
-        /// Get the name of the index being queried
-        /// </summary>
-        public string IndexQueried
-        {
-            get
-            {
-                var ravenQueryProvider = new RavenQueryProviderProcessor<T>(_provider.QueryGenerator, null, null, null, _indexName, new HashSet<string>(), new List<RenamedField>(), _isMapReduce,
-                    _provider.ResultTransformer, _provider.TransformerParameters, OriginalQueryType);
-                var documentQuery = ravenQueryProvider.GetDocumentQueryFor(_expression);
-                return documentQuery.IndexName;
-            }
-        }
-
-        /// <summary>
-        /// Get the name of the index being queried asynchronously
-        /// </summary>
-        public string AsyncIndexQueried
-        {
-            get
-            {
-                var ravenQueryProvider = new RavenQueryProviderProcessor<T>(_provider.QueryGenerator, null, null, null, _indexName, new HashSet<string>(), new List<RenamedField>(), _isMapReduce,
-                    _provider.ResultTransformer, _provider.TransformerParameters, OriginalQueryType);
-                var documentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(_expression);
-                return documentQuery.IndexName;
-            }
         }
 
         public InMemoryDocumentSessionOperations Session => _session;
@@ -281,7 +256,7 @@ namespace Raven.Client.Documents.Linq
         ///</summary>
         public KeyValuePair<string, object> GetLastEqualityTerm(bool isAsync = false)
         {
-            var ravenQueryProvider = new RavenQueryProviderProcessor<T>(_provider.QueryGenerator, null, null, null, _indexName, new HashSet<string>(),
+            var ravenQueryProvider = new RavenQueryProviderProcessor<T>(_provider.QueryGenerator, null, null, null, _indexName, _collectionName, new HashSet<string>(),
                 new List<RenamedField>(), _isMapReduce, _provider.ResultTransformer, _provider.TransformerParameters, OriginalQueryType);
 
             if (isAsync)

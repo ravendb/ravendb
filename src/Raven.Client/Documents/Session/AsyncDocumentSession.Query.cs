@@ -1,50 +1,40 @@
 using System;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
-using Raven.Client.Documents.Session.Tokens;
 
 namespace Raven.Client.Documents.Session
 {
     public partial class AsyncDocumentSession
     {
-        /// <summary>
-        /// Dynamically queries RavenDB using LINQ
-        /// </summary>
-        /// <typeparam name="T">The result of the query</typeparam>
-        public IRavenQueryable<T> Query<T>()
-        {
-            string indexName = CreateDynamicIndexName<T>();
-
-            return Query<T>(indexName);
-        }
-
         public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
         {
             var indexCreator = new TIndexCreator();
-            return Query<T>(indexCreator.IndexName, indexCreator.IsMapReduce);
+            return Query<T>(indexCreator.IndexName, null, indexCreator.IsMapReduce);
         }
 
-        public IRavenQueryable<T> Query<T>(string indexName, bool isMapReduce = false)
+        public IRavenQueryable<T> Query<T>(string indexName = null, string collectionName = null, bool isMapReduce = false)
         {
+            var isIndex = string.IsNullOrWhiteSpace(indexName) == false;
+            var isCollection = string.IsNullOrWhiteSpace(collectionName) == false;
+
+            if (isIndex && isCollection)
+                throw new InvalidOperationException($"Parameters '{nameof(indexName)}' and '{nameof(collectionName)}' are mutually exclusive. Please specify only one of them.");
+
+            if (isIndex == false && isCollection == false)
+                collectionName = Conventions.GetCollectionName(typeof(T));
+
             var ravenQueryStatistics = new QueryStatistics();
             var highlightings = new QueryHighlightings();
             var ravenQueryInspector = new RavenQueryInspector<T>();
-            var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, isMapReduce);
+            var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, collectionName, ravenQueryStatistics, highlightings, isMapReduce);
             ravenQueryInspector.Init(ravenQueryProvider,
                 ravenQueryStatistics,
                 highlightings,
                 indexName,
+                collectionName,
                 null,
                 this, isMapReduce);
             return ravenQueryInspector;
-        }
-
-        /// <summary>
-        /// Create a new query for <typeparam name="T"/>
-        /// </summary>
-        public IAsyncDocumentQuery<T> AsyncQuery<T>(string indexName, bool isMapReduce = false)
-        {
-            return AsyncDocumentQuery<T>(indexName, isMapReduce);
         }
 
         /// <summary>
@@ -57,25 +47,24 @@ namespace Raven.Client.Documents.Session
         {
             var index = new TIndexCreator();
 
-            return AsyncDocumentQuery<T>(index.IndexName, index.IsMapReduce);
+            return AsyncDocumentQuery<T>(index.IndexName, null, index.IsMapReduce);
         }
 
         /// <summary>
-        /// Query the specified index using Lucene syntax
+        ///     Query the specified index using Lucene syntax
         /// </summary>
-        public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>(string index, bool isMapReduce)
+        public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>(string indexName = null, string collectionName = null, bool isMapReduce = false)
         {
-            return new AsyncDocumentQuery<T>(this, index, fieldsToFetchToken: null, isMapReduce: isMapReduce);
-        }
+            var isIndex = string.IsNullOrWhiteSpace(indexName) == false;
+            var isCollection = string.IsNullOrWhiteSpace(collectionName) == false;
 
-        /// <summary>
-        /// Dynamically query RavenDB using Lucene syntax
-        /// </summary>
-        public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>()
-        {
-            var indexName = CreateDynamicIndexName<T>();
+            if (isIndex && isCollection)
+                throw new InvalidOperationException($"Parameters '{nameof(indexName)}' and '{nameof(collectionName)}' are mutually exclusive. Please specify only one of them.");
 
-            return new AsyncDocumentQuery<T>(this, indexName, fieldsToFetchToken: null, isMapReduce: false);
+            if (isIndex == false && isCollection == false)
+                collectionName = Conventions.GetCollectionName(typeof(T));
+
+            return new AsyncDocumentQuery<T>(this, indexName, collectionName, fieldsToFetchToken: null, isMapReduce: isMapReduce);
         }
 
         public RavenQueryInspector<S> CreateRavenQueryInspector<S>()
@@ -86,9 +75,17 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Create a new query for <typeparam name="T"/>
         /// </summary>
-        IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName, bool isMapReduce)
+        IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName, string collectionName, bool isMapReduce)
         {
             throw new NotSupportedException("You can't query sync from an async session");
+        }
+
+        /// <summary>
+        /// Create a new query for <typeparam name="T"/>
+        /// </summary>
+        IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName, string collectionName, bool isMapReduce)
+        {
+            return AsyncDocumentQuery<T>(indexName, collectionName, isMapReduce);
         }
     }
 }

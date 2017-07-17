@@ -26,8 +26,8 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
         /// </summary>
-        public DocumentQuery(InMemoryDocumentSessionOperations session, string indexName, FieldsToFetchToken fieldsToFetchToken, bool isMapReduce)
-            : base(session, indexName, fieldsToFetchToken, isMapReduce)
+        public DocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string collectionName, FieldsToFetchToken fieldsToFetchToken, bool isMapReduce)
+            : base(session, indexName, collectionName, fieldsToFetchToken, isMapReduce)
         {
         }
 
@@ -1001,7 +1001,7 @@ namespace Raven.Client.Documents.Session
         public FacetedQueryResult GetFacets(string facetSetupDoc, int facetStart, int? facetPageSize)
         {
             var q = GetIndexQuery();
-            var query = FacetQuery.Create(IndexName, q, facetSetupDoc, null, facetStart, facetPageSize, Conventions);
+            var query = FacetQuery.Create(q, facetSetupDoc, null, facetStart, facetPageSize, Conventions);
 
             var command = new GetFacetsCommand(Conventions, TheSession.Context, query);
             TheSession.RequestExecutor.Execute(command, TheSession.Context);
@@ -1012,7 +1012,7 @@ namespace Raven.Client.Documents.Session
         public FacetedQueryResult GetFacets(List<Facet> facets, int facetStart, int? facetPageSize)
         {
             var q = GetIndexQuery();
-            var query = FacetQuery.Create(IndexName, q, null, facets, facetStart, facetPageSize, Conventions);
+            var query = FacetQuery.Create(q, null, facets, facetStart, facetPageSize, Conventions);
 
             var command = new GetFacetsCommand(Conventions, TheSession.Context, query);
             TheSession.RequestExecutor.Execute(command, TheSession.Context);
@@ -1023,7 +1023,7 @@ namespace Raven.Client.Documents.Session
         public Lazy<FacetedQueryResult> GetFacetsLazy(string facetSetupDoc, int facetStart, int? facetPageSize)
         {
             var q = GetIndexQuery();
-            var query = FacetQuery.Create(IndexName, q, facetSetupDoc, null, facetStart, facetPageSize, Conventions);
+            var query = FacetQuery.Create(q, facetSetupDoc, null, facetStart, facetPageSize, Conventions);
 
             var lazyFacetsOperation = new LazyFacetsOperation(Conventions, query);
             return ((DocumentSession)TheSession).AddLazyOperation(lazyFacetsOperation, (Action<FacetedQueryResult>)null);
@@ -1032,7 +1032,7 @@ namespace Raven.Client.Documents.Session
         public Lazy<FacetedQueryResult> GetFacetsLazy(List<Facet> facets, int facetStart, int? facetPageSize)
         {
             var q = GetIndexQuery();
-            var query = FacetQuery.Create(IndexName, q, null, facets, facetStart, facetPageSize, Conventions);
+            var query = FacetQuery.Create(q, null, facets, facetStart, facetPageSize, Conventions);
 
             var lazyFacetsOperation = new LazyFacetsOperation(Conventions, query);
             return ((DocumentSession)TheSession).AddLazyOperation(lazyFacetsOperation, (Action<FacetedQueryResult>)null);
@@ -1120,6 +1120,7 @@ namespace Raven.Client.Documents.Session
             var query = new DocumentQuery<TResult>(
                 TheSession,
                 IndexName,
+                CollectionName,
                 null,
                 IsMapReduce)
             {

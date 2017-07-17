@@ -145,8 +145,7 @@ namespace SlowTests.Bugs.Caching
                 {
                     await session.Advanced.DocumentStore.Operations.SendAsync(new GetMultiFacetsOperation(new FacetQuery()
                     {
-                        Query = "Name:Johnny",
-                        IndexName = "PersonsIndex",
+                        Query = "FROM INDEX 'PersonsIndex' WHERE Name = 'Johnny'",
                         Start = 0,
                         PageSize = 16,
                         Facets = new List<Facet>
@@ -162,8 +161,7 @@ namespace SlowTests.Bugs.Caching
 
                     await session.Advanced.DocumentStore.Operations.SendAsync(new GetMultiFacetsOperation(new FacetQuery()
                     {
-                        Query = "Name:Johnny",
-                        IndexName = "PersonsIndex",
+                        Query = "FROM INDEX 'PersonsIndex' WHERE Name = 'Johnny'",
                         Start = 0,
                         PageSize = 16,
                         Facets = new List<Facet>

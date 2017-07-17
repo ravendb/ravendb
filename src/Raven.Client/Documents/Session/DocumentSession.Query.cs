@@ -25,61 +25,60 @@ namespace Raven.Client.Documents.Session
         public IDocumentQuery<T> DocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
         {
             var index = new TIndexCreator();
-            return DocumentQuery<T>(index.IndexName, index.IsMapReduce);
+            return DocumentQuery<T>(index.IndexName, null, index.IsMapReduce);
         }
 
         /// <summary>
         /// Query the specified index using Lucene syntax
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="indexName">Name of the index.</param>
-        /// <param name="isMapReduce">Indicates if index is a map-reduce index.</param>
-        /// <returns></returns>
-        public IDocumentQuery<T> DocumentQuery<T>(string indexName, bool isMapReduce = false)
-        {
-            return new DocumentQuery<T>(this, indexName, fieldsToFetchToken: null, isMapReduce: isMapReduce);
-        }
-
-        /// <summary>
-        /// Dynamically query RavenDB using Lucene syntax
-        /// </summary>
-        public IDocumentQuery<T> DocumentQuery<T>()
-        {
-            var indexName = CreateDynamicIndexName<T>();
-            return Advanced.DocumentQuery<T>(indexName);
-        }
-
-        /// <summary>
-        /// Query RavenDB dynamically using LINQ
-        /// </summary>
-        /// <typeparam name="T">The result of the query</typeparam>
-        public IRavenQueryable<T> Query<T>()
-        {
-            var indexName = CreateDynamicIndexName<T>();
-
-            return Query<T>(indexName);
-        }
-
-        /// <summary>
-        /// Queries the specified index using Linq.
-        /// </summary>
-        /// <typeparam name="T">The result of the query</typeparam>
-        /// <param name="indexName">Name of the index.</param>
+        /// <param name="indexName">Name of the index (mutually exclusive with collectionName)</param>
+        /// <param name="collectionName">Name of the collection (mutually exclusive with indexName)</param>
         /// <param name="isMapReduce">Whether we are querying a map/reduce index (modify how we treat identifier properties)</param>
-        public IRavenQueryable<T> Query<T>(string indexName, bool isMapReduce = false)
+        public IDocumentQuery<T> DocumentQuery<T>(string indexName = null, string collectionName = null, bool isMapReduce = false)
         {
+            var isIndex = string.IsNullOrWhiteSpace(indexName) == false;
+            var isCollection = string.IsNullOrWhiteSpace(collectionName) == false;
+
+            if (isIndex && isCollection)
+                throw new InvalidOperationException($"Parameters '{nameof(indexName)}' and '{nameof(collectionName)}' are mutually exclusive. Please specify only one of them.");
+
+            if (isIndex == false && isCollection == false)
+                collectionName = Conventions.GetCollectionName(typeof(T));
+
+            return new DocumentQuery<T>(this, indexName, collectionName, fieldsToFetchToken: null, isMapReduce: isMapReduce);
+        }
+
+        /// <summary>
+        ///     Queries the specified index using Linq.
+        /// </summary>
+        /// <typeparam name="T">The result of the query</typeparam>
+        /// <param name="indexName">Name of the index (mutually exclusive with collectionName)</param>
+        /// <param name="collectionName">Name of the collection (mutually exclusive with indexName)</param>
+        /// <param name="isMapReduce">Whether we are querying a map/reduce index (modify how we treat identifier properties)</param>
+        public IRavenQueryable<T> Query<T>(string indexName = null, string collectionName = null, bool isMapReduce = false)
+        {
+            var isIndex = string.IsNullOrWhiteSpace(indexName) == false;
+            var isCollection = string.IsNullOrWhiteSpace(collectionName) == false;
+
+            if (isIndex && isCollection)
+                throw new InvalidOperationException($"Parameters '{nameof(indexName)}' and '{nameof(collectionName)}' are mutually exclusive. Please specify only one of them.");
+
+            if (isIndex == false && isCollection == false)
+                collectionName = Conventions.GetCollectionName(typeof(T));
+
             var ravenQueryStatistics = new QueryStatistics();
             var highlightings = new QueryHighlightings();
-            var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, isMapReduce);
+            var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, collectionName, ravenQueryStatistics, highlightings, isMapReduce);
             var inspector = new RavenQueryInspector<T>();
-            inspector.Init(ravenQueryProvider, ravenQueryStatistics, highlightings, indexName, null, this, isMapReduce);
+            inspector.Init(ravenQueryProvider, ravenQueryStatistics, highlightings, indexName, collectionName, null, this, isMapReduce);
             return inspector;
         }
 
         /// <summary>
         /// Create a new query for <typeparam name="T"/>
         /// </summary>
-        public IAsyncDocumentQuery<T> AsyncQuery<T>(string indexName, bool isMapReduce)
+        public IAsyncDocumentQuery<T> AsyncQuery<T>(string indexName, string collectionName, bool isMapReduce)
         {
             throw new NotSupportedException();
         }
@@ -98,15 +97,15 @@ namespace Raven.Client.Documents.Session
         public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
         {
             var indexCreator = new TIndexCreator();
-            return Query<T>(indexCreator.IndexName, indexCreator.IsMapReduce);
+            return Query<T>(indexCreator.IndexName, null, indexCreator.IsMapReduce);
         }
 
         /// <summary>
         /// Create a new query for <typeparam name="T"/>
         /// </summary>
-        IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName, bool isMapReduce)
+        IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName, string collectionName, bool isMapReduce)
         {
-            return Advanced.DocumentQuery<T>(indexName, isMapReduce);
+            return Advanced.DocumentQuery<T>(indexName, collectionName, isMapReduce);
         }
     }
 }

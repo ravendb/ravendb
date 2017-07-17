@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Queries
                 query.Facets = facetSetup.Facets;
             }
 
-            return ExecuteFacetedQuery(query.IndexName, query, facetsEtag.Value, existingResultEtag, token);
+            return ExecuteFacetedQuery(null, query, facetsEtag.Value, existingResultEtag, token);
         }
 
         private async Task<FacetedQueryResult> ExecuteFacetedQuery(string indexName, FacetQueryServerSide query, long facetsEtag, long? existingResultEtag, OperationCancelToken token)

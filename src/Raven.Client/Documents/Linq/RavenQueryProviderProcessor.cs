@@ -50,6 +50,8 @@ namespace Raven.Client.Documents.Linq
         /// </summary>
         protected readonly string IndexName;
 
+        private readonly string _collectionName;
+
         /// <summary>
         /// Gets the current path in the case of expressions within collections
         /// </summary>
@@ -63,6 +65,7 @@ namespace Raven.Client.Documents.Linq
         /// <param name="afterQueryExecuted">Executed after the query run, allow access to the query results</param>
         /// <param name="afterStreamExecuted">Executed after the stream run, allow access to the stream results</param>
         /// <param name="indexName">The name of the index the query is executed against.</param>
+        /// <param name="collectionName">The name of the collection the query is executed against.</param>
         /// <param name="fieldsToFetch">The fields to fetch in this query</param>
         /// <param name="fieldsTRename">The fields to rename for the results of this query</param>
         /// <param name="isMapReduce"></param>
@@ -70,7 +73,7 @@ namespace Raven.Client.Documents.Linq
         /// <param name="transformerParameters"></param>
         /// /// <param name ="originalType" >the original type of the query if TransformWith is called otherwise null</param>
         public RavenQueryProviderProcessor(IDocumentQueryGenerator queryGenerator, Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted,
-             Action<object> afterStreamExecuted, string indexName, HashSet<string> fieldsToFetch, List<RenamedField> fieldsTRename, bool isMapReduce, string resultsTransformer,
+             Action<object> afterStreamExecuted, string indexName, string collectionName, HashSet<string> fieldsToFetch, List<RenamedField> fieldsTRename, bool isMapReduce, string resultsTransformer,
              Dictionary<string, object> transformerParameters, Type originalType)
         {
             FieldsToFetch = fieldsToFetch;
@@ -78,6 +81,7 @@ namespace Raven.Client.Documents.Linq
             _newExpressionType = typeof(T);
             QueryGenerator = queryGenerator;
             IndexName = indexName;
+            _collectionName = collectionName;
             _isMapReduce = isMapReduce;
             _afterQueryExecuted = afterQueryExecuted;
             _afterStreamExecuted = afterStreamExecuted;
@@ -1289,7 +1293,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                                  expression.Method.Name.EndsWith("Descending"));
                     break;
                 case "GroupBy":
-                    if (_documentQuery.IndexName.StartsWith("dynamic/") == false)
+                    if (_documentQuery.CollectionName == null)
                         throw new NotSupportedException("GroupBy method is only supported in dynamic map-reduce queries");
 
                     if (expression.Arguments.Count == 5) // GroupBy(x => keySelector, x => elementSelector, x => resultSelector, IEqualityComparer)
@@ -1793,7 +1797,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         /// <value>The lucene query.</value>
         public IDocumentQuery<T> GetDocumentQueryFor(Expression expression)
         {
-            var q = QueryGenerator.Query<T>(IndexName, _isMapReduce);
+            var q = QueryGenerator.Query<T>(IndexName, _collectionName, _isMapReduce);
             q.SetTransformerParameters(_transformerParameters);
 
             _documentQuery = (IAbstractDocumentQuery<T>)q;
@@ -1821,7 +1825,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         /// <value>The lucene query.</value>
         public IAsyncDocumentQuery<T> GetDocumentQueryForAsync(Expression expression)
         {
-            var q = QueryGenerator.AsyncQuery<T>(IndexName, _isMapReduce);
+            var q = QueryGenerator.AsyncQuery<T>(IndexName, _collectionName, _isMapReduce);
 
             _documentQuery = (IAbstractDocumentQuery<T>)q;
             _documentQuery.SetTransformer(_resultsTransformer);
@@ -1849,7 +1853,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         /// <value>The lucene query.</value>
         public IAsyncDocumentQuery<T> GetAsyncDocumentQueryFor(Expression expression)
         {
-            var asyncDocumentQuery = QueryGenerator.AsyncQuery<T>(IndexName, _isMapReduce);
+            var asyncDocumentQuery = QueryGenerator.AsyncQuery<T>(IndexName, _collectionName, _isMapReduce);
             asyncDocumentQuery.SetTransformer(_resultsTransformer);
             asyncDocumentQuery.SetTransformerParameters(_transformerParameters);
             _documentQuery = (IAbstractDocumentQuery<T>)asyncDocumentQuery;

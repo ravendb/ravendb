@@ -5,32 +5,28 @@ namespace Raven.Client.Documents.Session.Tokens
 {
     public class FromToken : QueryToken
     {
-        private bool? _isDynamic;
+        public string CollectionName { get; }
 
         public string IndexName { get; }
 
-        public bool IsDynamic
-        {
-            get
-            {
-                if (_isDynamic.HasValue == false)
-                    _isDynamic = IndexName.StartsWith(Constants.Documents.Querying.DynamicQueryPrefix, StringComparison.OrdinalIgnoreCase);
+        public bool IsDynamic { get; }
 
-                return _isDynamic.Value;
-            }
-        }
-
-        private FromToken(string indexName)
+        private FromToken(string indexName, string collectionName)
         {
+            CollectionName = collectionName;
             IndexName = indexName;
+            IsDynamic = CollectionName != null;
         }
 
-        public static FromToken Create(string indexName)
+        public static FromToken Create(string indexName, string collectionName)
         {
-            if (indexName == null)
-                throw new ArgumentNullException(nameof(indexName));
+            if (indexName == null && collectionName == null)
+                throw new NotSupportedException();
 
-            return new FromToken(indexName);
+            if (indexName != null && collectionName != null)
+                throw new NotSupportedException();
+
+            return new FromToken(indexName, collectionName);
         }
 
         public override void WriteTo(StringBuilder writer)
@@ -39,9 +35,8 @@ namespace Raven.Client.Documents.Session.Tokens
             {
                 writer
                     .Append("FROM ")
-                    .Append(IndexName.Substring(Constants.Documents.Querying.DynamicQueryPrefix.Length));
+                    .Append(CollectionName);
 
-                // TODO [ppekrol] add hints for auto-index
                 return;
             }
 

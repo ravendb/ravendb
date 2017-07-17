@@ -1142,16 +1142,6 @@ more responsive application.
             return EntityToBlittable.ConvertToEntity(entityType, id, document);
         }
 
-        public string CreateDynamicIndexName<T>()
-        {
-            var indexName = "dynamic";
-            if (typeof(T) != typeof(object))
-            {
-                indexName += "/" + Conventions.GetCollectionName(typeof(T));
-            }
-            return indexName;
-        }
-
         public bool CheckIfIdAlreadyIncluded(string[] ids, KeyValuePair<string, Type>[] includes)
         {
             return CheckIfIdAlreadyIncluded(ids, includes.Select(x => x.Key));

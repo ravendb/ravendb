@@ -27,6 +27,7 @@ namespace Raven.Client.Documents.Linq
         private Action<object> _afterStreamExecuted;
         private Action<IDocumentQueryCustomization> _customizeQuery;
         private readonly string _indexName;
+        private string _collectionName;
         private readonly IDocumentQueryGenerator _queryGenerator;
         private readonly QueryStatistics _queryStatistics;
         private readonly QueryHighlightings _highlightings;
@@ -39,9 +40,9 @@ namespace Raven.Client.Documents.Linq
         public RavenQueryProvider(
             IDocumentQueryGenerator queryGenerator,
             string indexName,
+            string collectionName,
             QueryStatistics queryStatistics,
-            QueryHighlightings highlightings
-           ,
+            QueryHighlightings highlightings,
             bool isMapReduce
 )
         {
@@ -50,6 +51,7 @@ namespace Raven.Client.Documents.Linq
 
             _queryGenerator = queryGenerator;
             _indexName = indexName;
+            _collectionName = collectionName;
             _queryStatistics = queryStatistics;
             _highlightings = highlightings;
             _isMapReduce = isMapReduce;
@@ -60,6 +62,12 @@ namespace Raven.Client.Documents.Linq
         /// </summary>
         /// <value>The name of the index.</value>
         public string IndexName => _indexName;
+
+        /// <summary>
+        /// Gets the name of the collection.
+        /// </summary>
+        /// <value>The name of the collection.</value>
+        public string CollectionName => _collectionName;
 
         /// <summary>
         /// Get the query generator
@@ -113,7 +121,7 @@ namespace Raven.Client.Documents.Linq
             if (typeof(T) == typeof(TS))
                 return this;
 
-            var ravenQueryProvider = new RavenQueryProvider<TS>(_queryGenerator, _indexName, _queryStatistics, _highlightings, _isMapReduce)
+            var ravenQueryProvider = new RavenQueryProvider<TS>(_queryGenerator, _indexName, _collectionName, _queryStatistics, _highlightings, _isMapReduce)
             {
                 ResultTransformer = ResultTransformer
             };
@@ -142,8 +150,7 @@ namespace Raven.Client.Documents.Linq
         {
             var a = _queryGenerator.CreateRavenQueryInspector<TS>();
 
-            a.Init(this, _queryStatistics, _highlightings, _indexName, expression, (InMemoryDocumentSessionOperations)_queryGenerator
-                                              , _isMapReduce);
+            a.Init(this, _queryStatistics, _highlightings, _indexName, _collectionName, expression, (InMemoryDocumentSessionOperations)_queryGenerator, _isMapReduce);
 
             return a;
         }
@@ -156,7 +163,7 @@ namespace Raven.Client.Documents.Linq
                 var queryInspectorGenericType = typeof(RavenQueryInspector<>).MakeGenericType(elementType);
                 var args = new object[]
                 {
-                    this, _queryStatistics, _highlightings, _indexName, expression, _queryGenerator, _isMapReduce
+                    this, _queryStatistics, _highlightings, _indexName, _collectionName, expression, _queryGenerator, _isMapReduce
                 };
                 var queryInspectorInstance = Activator.CreateInstance(queryInspectorGenericType);
                 var methodInfo = queryInspectorGenericType.GetMethod("Init");
@@ -329,7 +336,7 @@ namespace Raven.Client.Documents.Linq
 
         protected virtual RavenQueryProviderProcessor<TS> GetQueryProviderProcessor<TS>()
         {
-            return new RavenQueryProviderProcessor<TS>(_queryGenerator, _customizeQuery, _afterQueryExecuted, _afterStreamExecuted, _indexName,
+            return new RavenQueryProviderProcessor<TS>(_queryGenerator, _customizeQuery, _afterQueryExecuted, _afterStreamExecuted, _indexName, _collectionName,
                 FieldsToFetch,
                 FieldsToRename,
                 _isMapReduce, ResultTransformer, _transformerParameters, OriginalQueryType);

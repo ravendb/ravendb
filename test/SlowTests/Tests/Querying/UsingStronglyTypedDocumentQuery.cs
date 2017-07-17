@@ -10,7 +10,7 @@ namespace SlowTests.Tests.Querying
     {
         private static IDocumentQuery<IndexedUser> CreateUserQuery()
         {
-            return new DocumentQuery<IndexedUser>(null, "IndexName", null, false);
+            return new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false);
         }
 
         [Fact]

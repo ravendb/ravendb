@@ -62,6 +62,8 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public string IndexName { get; }
 
+        public string CollectionName { get; }
+
         protected Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> TransformResultsFunc;
 
         private int _currentClauseDepth;
@@ -218,6 +220,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         protected AbstractDocumentQuery(InMemoryDocumentSessionOperations session,
                                      string indexName,
+                                     string collectionName,
                                      FieldsToFetchToken fieldsToFetchToken,
                                      bool isMapReduce)
         {
@@ -225,11 +228,12 @@ namespace Raven.Client.Documents.Session
             FieldsToFetch = fieldsToFetchToken?.FieldsToFetch;
             IsMapReduce = isMapReduce;
             IndexName = indexName;
+            CollectionName = collectionName;
 
             if (fieldsToFetchToken != null)
                 SelectTokens.AddLast(fieldsToFetchToken);
 
-            FromToken = FromToken.Create(indexName);
+            FromToken = FromToken.Create(indexName, collectionName);
 
             TheSession = session;
             AfterQueryExecuted(UpdateStatsAndHighlightings);
@@ -464,6 +468,7 @@ namespace Raven.Client.Documents.Session
 
             return new QueryOperation(TheSession,
                 IndexName,
+                CollectionName,
                 indexQuery,
                 ProjectionFields,
                 TheWaitForNonStaleResults,

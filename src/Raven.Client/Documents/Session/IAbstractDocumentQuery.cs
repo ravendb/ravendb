@@ -12,6 +12,8 @@ namespace Raven.Client.Documents.Session
     {
         string IndexName { get; }
 
+        string CollectionName { get; }
+
         /// <summary>
         /// Gets the document convention from the query session
         /// </summary>

@@ -104,7 +104,7 @@ namespace Raven.Client.Documents
         {
             var ravenQueryInspector = (IRavenQueryInspector)queryable;
             var q = ravenQueryInspector.GetIndexQuery(false);
-            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, facetSetupDoc, null, start, pageSize, ravenQueryInspector.Session.Conventions);
+            var query = FacetQuery.Create(q, facetSetupDoc, null, start, pageSize, ravenQueryInspector.Session.Conventions);
 
             return query;
         }
@@ -144,7 +144,7 @@ namespace Raven.Client.Documents
 
             var ravenQueryInspector = (IRavenQueryInspector)queryable;
             var q = ravenQueryInspector.GetIndexQuery(false);
-            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, null, facetsList, start, pageSize, ravenQueryInspector.Session.Conventions);
+            var query = FacetQuery.Create(q, null, facetsList, start, pageSize, ravenQueryInspector.Session.Conventions);
 
             return query;
         }
@@ -192,7 +192,7 @@ namespace Raven.Client.Documents
         {
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
             var q = ravenQueryInspector.GetIndexQuery(isAsync: false);
-            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, facetSetupDoc, null, start, pageSize, ravenQueryInspector.Session.Conventions);
+            var query = FacetQuery.Create(q, facetSetupDoc, null, start, pageSize, ravenQueryInspector.Session.Conventions);
             var lazyOperation = new LazyFacetsOperation(ravenQueryInspector.Session.Conventions, query);
 
             var documentSession = ((DocumentSession)ravenQueryInspector.Session);
@@ -212,7 +212,7 @@ namespace Raven.Client.Documents
         {
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
             var q = ravenQueryInspector.GetIndexQuery(true);
-            var query = FacetQuery.Create(ravenQueryInspector.AsyncIndexQueried, q, facetSetupDoc, null, start, pageSize, ravenQueryInspector.Session.Conventions);
+            var query = FacetQuery.Create(q, facetSetupDoc, null, start, pageSize, ravenQueryInspector.Session.Conventions);
             var lazyOperation = new LazyFacetsOperation(ravenQueryInspector.Session.Conventions, query);
 
             var documentSession = ((AsyncDocumentSession)ravenQueryInspector.Session);
@@ -231,7 +231,7 @@ namespace Raven.Client.Documents
 
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
             var q = ravenQueryInspector.GetIndexQuery(isAsync: false);
-            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, null, facetsList, start, pageSize, ravenQueryInspector.Session.Conventions);
+            var query = FacetQuery.Create(q, null, facetsList, start, pageSize, ravenQueryInspector.Session.Conventions);
             var lazyOperation = new LazyFacetsOperation(ravenQueryInspector.Session.Conventions, query);
 
             var documentSession = ((DocumentSession)ravenQueryInspector.Session);
@@ -249,7 +249,7 @@ namespace Raven.Client.Documents
         {
             var indexQuery = query.GetIndexQuery();
             var documentQuery = ((DocumentQuery<T>)query);
-            var facetQuery = FacetQuery.Create(documentQuery.IndexName, indexQuery, facetSetupDoc, null, start, pageSize, documentQuery.Conventions);
+            var facetQuery = FacetQuery.Create(indexQuery, facetSetupDoc, null, start, pageSize, documentQuery.Conventions);
             var lazyOperation = new LazyFacetsOperation(documentQuery.Conventions, facetQuery);
 
             var documentSession = ((DocumentSession)documentQuery.Session);
@@ -272,7 +272,7 @@ namespace Raven.Client.Documents
 
             var indexQuery = query.GetIndexQuery();
             var documentQuery = (DocumentQuery<T>)query;
-            var facetQuery = FacetQuery.Create(documentQuery.IndexName, indexQuery, null, facetsList, start, pageSize, documentQuery.Conventions);
+            var facetQuery = FacetQuery.Create(indexQuery, null, facetsList, start, pageSize, documentQuery.Conventions);
             var lazyOperation = new LazyFacetsOperation(documentQuery.Conventions, facetQuery);
 
             var documentSession = ((DocumentSession)documentQuery.Session);
