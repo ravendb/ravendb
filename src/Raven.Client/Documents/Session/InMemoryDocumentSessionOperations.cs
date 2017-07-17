@@ -989,8 +989,14 @@ more responsive application.
         private void Dispose(bool isDisposing)
         {
             if (isDisposing)
+            {
                 GC.SuppressFinalize(this);
-            _releaseOperationContext.Dispose();
+                _releaseOperationContext.Dispose();
+            }
+            else
+            {
+                Context.Dispose();
+            }
         }
 
         /// <summary>

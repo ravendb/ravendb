@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Server.ETL
 {
@@ -12,6 +13,13 @@ namespace Raven.Client.Server.ETL
         {
             if (string.IsNullOrEmpty(ConnectionString))
                 errors.Add($"{nameof(ConnectionString)} cannot be empty");
+        }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(ConnectionString)] = ConnectionString;
+            return json;
         }
     }
 }
