@@ -14,15 +14,22 @@ class clusterTopology {
 
         const topologyDto = dto.Topology;
 
-        const members = this.mapNodes("Member", topologyDto.Members);
-        const promotables = this.mapNodes("Promotable", topologyDto.Promotables);
-        const watchers = this.mapNodes("Watcher", topologyDto.Watchers);
+        const members = this.mapNodes("Member", topologyDto.Members, dto.Status);
+        const promotables = this.mapNodes("Promotable", topologyDto.Promotables, dto.Status);
+        const watchers = this.mapNodes("Watcher", topologyDto.Watchers, dto.Status);
 
         this.nodes(_.concat<clusterNode>(members, promotables, watchers));
     }
 
-    private mapNodes(type: clusterNodeType, dict: System.Collections.Generic.Dictionary<string, string>): Array<clusterNode> {
-        return _.map(dict, (v, k) => clusterNode.for(k, v, type));
+    private mapNodes(type: clusterNodeType, dict: System.Collections.Generic.Dictionary<string, string>,
+        status: { [key: string]: Raven.Client.Http.NodeStatus; }): Array<clusterNode> {
+        return _.map(dict, (v, k) => {
+            // node statuses are available for all nodes except current
+            const nodeStatus = status ? status[k] : null;
+            const connected = nodeStatus ? nodeStatus.Connected : true;
+            const errorDetails = connected ? null : nodeStatus.ErrorDetails;
+            return clusterNode.for(k, v, type, connected, errorDetails);
+        });
     }
 
     updateWith(incomingChanges: clusterTopologyDto) {
@@ -30,9 +37,9 @@ class clusterTopology {
 
         const existingNodes = this.nodes();
         const newNodes = _.concat<clusterNode>(
-            this.mapNodes("Member", newTopology.Members),
-            this.mapNodes("Promotable", newTopology.Promotables),
-            this.mapNodes("Watcher", newTopology.Watchers)
+            this.mapNodes("Member", newTopology.Members, incomingChanges.Status),
+            this.mapNodes("Promotable", newTopology.Promotables, incomingChanges.Status),
+            this.mapNodes("Watcher", newTopology.Watchers, incomingChanges.Status)
         );
         const newServerUrls = new Set(newNodes.map(x => x.serverUrl()));
 

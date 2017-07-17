@@ -297,6 +297,7 @@ interface clusterTopologyDto {
     Topology: Raven.Client.Http.ClusterTopology;
     Leader: string;
     NodeTag: string;
+    Status: { [key: string]: Raven.Client.Http.NodeStatus; };
 }
 
 type clusterNodeType = "Member" | "Promotable" | "Watcher";

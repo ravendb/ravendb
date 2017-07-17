@@ -39,12 +39,10 @@ namespace Raven.Server.Web.System
             }
             catch (Exception e)
             {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest; 
-
                 result = new DynamicJsonValue
                 {
-                    ["Success"] = false,
-                    ["Error"] = $"An exception was thrown while trying to connect to {url} : {e}",
+                    [nameof(NodeConnectionTestResult.Success)] = false,
+                    [nameof(NodeConnectionTestResult.Error)] = $"An exception was thrown while trying to connect to {url} : {e.Message}",
                 };
             }
 
@@ -79,12 +77,11 @@ namespace Raven.Server.Web.System
                     {
                         case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                            result["Success"] = true;
+                            result[nameof(NodeConnectionTestResult.Success)] = true;
                             break;
                         default:
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                            result["Success"] = false;
-                            result["Error"] = $"Connection to {tcpConnectionInfo.Url} failed because of bad credentials. AuthorizationStatus: {headerResponse.Status}";
+                            result[nameof(NodeConnectionTestResult.Success)] = false;
+                            result[nameof(NodeConnectionTestResult.Error)] = $"Connection to {tcpConnectionInfo.Url} failed because of bad credentials. AuthorizationStatus: {headerResponse.Status}";
                             break;
                     }
                 }
@@ -108,5 +105,11 @@ namespace Raven.Server.Web.System
             writer.WriteEndObject();
             writer.Flush();
         }
+    }
+
+    public class NodeConnectionTestResult
+    {
+        public bool Success;
+        public string Error;
     }
 }

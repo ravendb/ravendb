@@ -34,7 +34,8 @@ function getManageServerMenuItem() {
             title: "Add Cluster Node",
             nav: false,
             dynamicHash: appUrl.forAddClusterNode,
-            enabled: canReadOrWrite
+            enabled: canReadOrWrite,
+            itemRouteToHighlight: 'admin/settings/cluster'
         }),
         new leafMenuItem({
             route: 'admin/settings/adminJsConsole',
