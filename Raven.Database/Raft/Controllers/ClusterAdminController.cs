@@ -150,7 +150,7 @@ namespace Raven.Database.Raft.Controllers
             }
             oldClusterManager?.Dispose();
 
-            var newClusterManager = ClusterManagerFactory.Create(SystemDatabase, DatabasesLandlord);
+            var newClusterManager = ClusterManagerFactory.Create(SystemDatabase, DatabasesLandlord, nullifyLastAppliedIndex: true);
 
             if (string.IsNullOrEmpty(id))
                 newClusterManager.InitializeTopology(isPartOfExistingCluster: true);
@@ -159,7 +159,7 @@ namespace Raven.Database.Raft.Controllers
                 newClusterManager.InitializeEmptyTopologyWithId(Guid.Parse(id));
             }
 
-            ((Reference<ClusterManager>)Configuration.Properties[typeof(ClusterManager)]).Value = newClusterManager;
+            ((Reference<ClusterManager>) Configuration.Properties[typeof(ClusterManager)]).Value = newClusterManager;
             return GetEmptyMessage(HttpStatusCode.NoContent);
         }
 
@@ -167,7 +167,7 @@ namespace Raven.Database.Raft.Controllers
         {
             //making sure nobody contact us while we change the persistent state.
             ClusterManager oldClusterManager = ((Reference<ClusterManager>) Configuration.Properties[typeof(ClusterManager)]).Value;
-            Configuration.Properties[typeof(ClusterManager)] = new Reference<ClusterManager>();
+            ((Reference<ClusterManager>) Configuration.Properties[typeof(ClusterManager)]).Value = null;
             return oldClusterManager;
         }
 

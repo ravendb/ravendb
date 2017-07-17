@@ -223,7 +223,7 @@ namespace Raven.Database.Raft
             Engine.PersistentState.SetCurrentTopology(tcc.Requested, 0);
             Engine.StartTopologyChange(tcc);
             Engine.CommitTopologyChange(tcc);
-
+            
             if (isPartOfExistingCluster || forceCandidateState)
                 Engine.ForceCandidateState();
             else
