@@ -151,25 +151,23 @@ namespace Raven.Tests.Raft
         public void CanInitializeNewClusterOnNodeBeingPartOfExistingClusterAndTakeOverNodeFromIt()
         {
             var nodes = CreateRaftCluster(3);
-
-            var selectedNode = 0;
+            var selectedNode = 2;
 
             var nodeClient = nodes[selectedNode];
             var nodeServer = servers[selectedNode];
-            var nodeRaftEngine = nodeServer.Options.ClusterManager.Value.Engine;
+            var nodeRaftEngine = nodeServer.Options.ClusterManager;
 
-            var oldClusterId = nodeRaftEngine.CurrentTopology.TopologyId;
-
+            var oldClusterId = nodeRaftEngine.Value.Engine.CurrentTopology.TopologyId;
             // initialize new single node cluster
             nodeClient.DatabaseCommands.ForSystemDatabase().CreateRequest("/admin/cluster/initialize-new-cluster", new HttpMethod("PATCH")).ExecuteRequest();
+         
+            Assert.True(nodeRaftEngine.Value.Engine.WaitForLeader());
 
-            Assert.True(nodeRaftEngine.WaitForLeader());
-
-            var newClusterId = nodeRaftEngine.CurrentTopology.TopologyId;
+            var newClusterId = nodeRaftEngine.Value.Engine.CurrentTopology.TopologyId;
 
             Assert.NotEqual(oldClusterId, newClusterId);
-            Assert.Equal(1, nodeRaftEngine.CurrentTopology.AllNodes.Count());
-            Assert.Contains(nodeRaftEngine.Name, nodeRaftEngine.CurrentTopology.AllNodeNames);
+            Assert.Equal(1, nodeRaftEngine.Value.Engine.CurrentTopology.AllNodes.Count());
+            Assert.Contains(nodeRaftEngine.Value.Engine.Name, nodeRaftEngine.Value.Engine.CurrentTopology.AllNodeNames);
 
             var nextNodeInNewCluster = 1;
             var nextNodeClient = nodes[nextNodeInNewCluster];
@@ -180,8 +178,8 @@ namespace Raven.Tests.Raft
                 .WriteWithObjectAsync(newNodeRaftEngine.Options.SelfConnection).Wait();
 
             // ensure that cluster contains two nodes
-            Assert.True(SpinWait.SpinUntil(() => nodeRaftEngine.CurrentTopology.Contains(newNodeRaftEngine.Name), TimeSpan.FromSeconds(30)));
-            Assert.True(SpinWait.SpinUntil(() => newNodeRaftEngine.CurrentTopology.Contains(nodeRaftEngine.Name), TimeSpan.FromSeconds(30)));
+            Assert.True(SpinWait.SpinUntil(() => nodeRaftEngine.Value.Engine.CurrentTopology.Contains(newNodeRaftEngine.Name), TimeSpan.FromSeconds(30)));
+            Assert.True(SpinWait.SpinUntil(() => newNodeRaftEngine.CurrentTopology.Contains(nodeRaftEngine.Value.Engine.Name), TimeSpan.FromSeconds(30)));
 
             // verify that database is 
             nodeClient.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument

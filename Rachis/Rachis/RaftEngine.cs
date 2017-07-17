@@ -71,12 +71,7 @@ namespace Rachis
             }
         }
 
-    
-        public long CommitIndex
-        {
-            get { return StateMachine.LastAppliedIndex; }
-            
-        }
+        public long CommitIndex => StateMachine.LastAppliedIndex;
 
         public RaftEngineState State
         {
@@ -107,7 +102,6 @@ namespace Rachis
 
         private readonly Task _eventLoopTask;
 
-        private long _commitIndex;
         private string _currentLeader;
 
         private Task _snapshottingTask;
@@ -173,8 +167,7 @@ namespace Rachis
             {
                 SetState(RaftEngineState.Follower);
             }
-
-            _commitIndex = StateMachine.LastAppliedIndex;            
+        
             _eventLoopTask = Task.Factory.StartNew(EventLoop, TaskCreationOptions.LongRunning);
         }
 
@@ -527,13 +520,13 @@ namespace Rachis
             var leaderStateBehavior = StateBehavior as LeaderStateBehavior;
             if (leaderStateBehavior == null || leaderStateBehavior.State != RaftEngineState.Leader)
                 throw new NotLeadingException("Command can be appended only on leader node. This node behavior type is " +
-                                                    StateBehavior.GetType().Name)
+                                              StateBehavior.GetType().Name)
                 {
                     CurrentLeader = CurrentLeader
                 };
+        
 
-
-            leaderStateBehavior.AppendCommand(command);
+        leaderStateBehavior.AppendCommand(command);
         }
 
         public void ApplyCommits(long from, long to)
