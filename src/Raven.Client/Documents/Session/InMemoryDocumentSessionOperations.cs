@@ -43,6 +43,7 @@ namespace Raven.Client.Documents.Session
         private readonly int _hash = Interlocked.Increment(ref _instancesCounter);
         protected bool GenerateDocumentIdsOnStore = true;
         private BatchOptions _saveChangesOptions;
+        private bool _isDisposed;
 
         /// <summary>
         /// The session id 
@@ -988,9 +989,15 @@ more responsive application.
 
         private void Dispose(bool isDisposing)
         {
-            if (isDisposing)
+            if (_isDisposed)
+                return;
+
+            _isDisposed = true;
+
+            if (isDisposing && RunningOn.FinalizerThread == false)
             {
                 GC.SuppressFinalize(this);
+
                 _releaseOperationContext.Dispose();
             }
             else
