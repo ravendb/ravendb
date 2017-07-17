@@ -25,7 +25,7 @@ namespace Raven.Server.Web.System
         public Task Databases()
         {
             // if Studio requested information about single resource - handle it
-            var dbName = GetStringQueryString("info");
+            var dbName = GetStringQueryString("info", false);
             if (dbName != null)
                 return DbInfo(dbName);
 
