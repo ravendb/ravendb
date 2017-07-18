@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Session
             var streamOperation = new StreamOperation(this);
             var command = streamOperation.CreateRequest(query.IndexName, query.GetIndexQuery());
 
-            RequestExecutor.Execute(command, Context);
+            RequestExecutor.Execute(command, Context, sessionId: _clientSessionId);
             using (var result = streamOperation.SetResult(command.Result))
             {
                 return YieldResults(query, result, command.UsedTransformer);
@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Session
             var streamOperation = new StreamOperation(this, stats);
             var command = streamOperation.CreateRequest(query.IndexName, query.GetIndexQuery());
 
-            RequestExecutor.Execute(command, Context);
+            RequestExecutor.Execute(command, Context, sessionId: _clientSessionId);
             using (var result = streamOperation.SetResult(command.Result))
             {
                 streamQueryStats = stats;
@@ -81,7 +81,7 @@ namespace Raven.Client.Documents.Session
             var streamOperation = new StreamOperation(this);
             var command = streamOperation.CreateRequest(query.IndexName, query.GetIndexQuery());
 
-            RequestExecutor.Execute(command, Context);
+            RequestExecutor.Execute(command, Context, sessionId: _clientSessionId);
 
             using (command.Result.Response)
             using (command.Result.Stream)
@@ -154,7 +154,7 @@ namespace Raven.Client.Documents.Session
             var streamOperation = new StreamOperation(this);
             var command = streamOperation.CreateRequest(fromEtag, startsWith, matches, start, pageSize, null, startAfter, transformer,
                 transformerParameters);
-            RequestExecutor.Execute(command, Context);
+            RequestExecutor.Execute(command, Context, sessionId: _clientSessionId);
             using (var result = streamOperation.SetResult(command.Result))
             {
                 while (result.MoveNext())

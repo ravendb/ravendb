@@ -47,11 +47,11 @@ namespace SlowTests.Client.Attachments
                         var saveChangesOperation = new BatchOperation(session);
                         using (var command = saveChangesOperation.CreateRequest())
                         {
-                            var currentNode = await session.RequestExecutor.GetCurrentNode();
+                            var (currentIndex, currentNode) = await session.RequestExecutor.GetCurrentNode();
                             var currentServer = Servers.Single(x => x.ServerStore.NodeTag == currentNode.ClusterTag);
                             stream.Position++;// simulating that we already started to call this and we need to reset
                             DisposeServerAndWaitForFinishOfDisposal(currentServer);
-                            var task = session.RequestExecutor.ExecuteAsync(currentNode, session.Context, command);
+                            var task = session.RequestExecutor.ExecuteAsync(currentNode, currentIndex, session.Context, command);
                             await task;
                             saveChangesOperation.SetResult(command.Result);
                         }
@@ -66,11 +66,12 @@ namespace SlowTests.Client.Attachments
                         var command = new PutAttachmentOperation("users/1", "File", stream, "application/pdf")
                             .GetCommand(store, store.Conventions, context, requestExecutor.Cache);
 
-                        var currentNode = await requestExecutor.GetCurrentNode();
+                        var (currentIndex, currentNode) = await requestExecutor.GetCurrentNode();
                         var currentServer = Servers.Single(x => x.ServerStore.NodeTag == currentNode.ClusterTag);
+                        
                         stream.Position++;// simulating that we already started to call this and we need to reset
                         DisposeServerAndWaitForFinishOfDisposal(currentServer);
-                        var task = requestExecutor.ExecuteAsync(currentNode, context, command);
+                        var task = requestExecutor.ExecuteAsync(currentNode, currentIndex, context, command);
 
                         await task;
                         var attachment = command.Result;

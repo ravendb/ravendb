@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
@@ -72,7 +73,7 @@ namespace SlowTests.Cluster
                     ClusterTag = leader.ServerStore.NodeTag,
                     Database = databaseName,
                     Url = leader.WebUrls[0]
-                }, 5000);
+                },  5000);
 
                 //wait until all nodes in database cluster are members (and not promotables)
                 //GetTopologyCommand -> does not retrieve promotables
@@ -107,7 +108,7 @@ namespace SlowTests.Cluster
                     {
                         // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
                         session.Query<User>().Where(u => u.Name.StartsWith("Ja")).ToList();
-                        usedUrls.Add((await leaderRequestExecutor.GetCurrentNode()).Url.ToLower());
+                        usedUrls.Add((await leaderRequestExecutor.GetCurrentNode()).Item2.Url.ToLower());
                     }
                 }
 
@@ -185,59 +186,29 @@ namespace SlowTests.Cluster
                         leader.ServerStore.Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan);
                 }
 
-                DisposeServerAndWaitForFinishOfDisposal(followers[0]);
-
-                //make sure we have updated topology --> more deterministic test
-                await MakeSureToUpdateTopologyAsync(leaderRequestExecutor, databaseName, leader);
-
-                var succeededRequests = new List<string>();
-                var failedRequests = new HashSet<(string, HttpRequestException)>();
-                leaderRequestExecutor.SucceededRequest += url => succeededRequests.Add(url);
-                leaderRequestExecutor.FailedRequest += (url, e) => failedRequests.Add((url, e));
-
-                //do query enough times to 100% hit all nodes in the cluster,
-                //so we can hit the offline node several times
-                for (var i = 0; i < 20; i++)
+                var requestExecutor = RequestExecutor.Create(follower1.Urls, databaseName, null, follower1.Conventions);
+                do //make sure there are three nodes in the topology
                 {
-                    leaderRequestExecutor.Cache.Clear(); //make sure we do not use request cache
-                    using (var session = leaderStore.OpenSession())
+                    await Task.Delay(100);
+                } while (requestExecutor.TopologyNodes == null);
+
+                DisposeServerAndWaitForFinishOfDisposal(leader);
+            
+                var failedRequests = new HashSet<(string, HttpRequestException)>();
+
+                requestExecutor.FailedRequest += (url, e) => failedRequests.Add((url, e));
+
+
+
+                using (var tmpContext = JsonOperationContext.ShortTermSingleUse())
+                {
+                    for (var sessionId = 0; sessionId < 5; sessionId++)
                     {
-                        // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
-                        session.Query<User>().Where(u => u.Name.StartsWith("Ja")).ToList();
+                        requestExecutor.Cache.Clear(); //make sure we do not use request cache
+                        await requestExecutor.ExecuteAsync(new GetStatisticsCommand(), tmpContext, CancellationToken.None, sessionId);
                     }
                 }
-
-                //count only query requests -> discard requests such as update topology
-                //this may or maynot fail, depending on cluster -> if the test
-                //is slow enough, the topology will get updated to have only two nodes
-                bool IsQueryUrl(string url) => url.Contains("/databases/") && url.Contains("/queries/dynamic/");
-
-                var queryRequests = succeededRequests.Where(IsQueryUrl).ToList();
-                var distinctRequests = queryRequests.Distinct().ToList();
-
-                Assert.Equal(2, distinctRequests.Count);
-
-                //since we are doing round robin, we should hit each endpoint at least twice
-                Assert.True(queryRequests.Count(requestUrl => requestUrl.Equals(distinctRequests[0])) > 1);
-                Assert.True(queryRequests.Count(requestUrl => requestUrl.Equals(distinctRequests[1])) > 1);
-
-                //we do query enough times to hit the offline endpoint at least once
-                Assert.True(failedRequests.Count(x => IsQueryUrl(x.Item1)) >= 1);
             }
-        }
-
-        private async Task MakeSureToUpdateTopologyAsync(RequestExecutor requestExecutor, string databaseName, RavenServer server)
-        {
-            var hasSucceded = false;
-            while (!hasSucceded)
-            {
-                hasSucceded = await requestExecutor.UpdateTopologyAsync(new ServerNode
-                {
-                    ClusterTag = server.ServerStore.NodeTag,
-                    Database = databaseName,
-                    Url = server.WebUrls[0]
-                }, 5000);
-            }
-        }
+        }     
     }
 }

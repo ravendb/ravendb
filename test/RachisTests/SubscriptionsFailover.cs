@@ -374,7 +374,7 @@ namespace RachisTests
                     {
                         Url = store.Urls[0],
                         Database = defaultDatabase,
-                    }, Timeout.Infinite));
+                    },  Timeout.Infinite));
                 nodes = store.GetRequestExecutor().TopologyNodes;
             }
             var rnd = new Random(1);
