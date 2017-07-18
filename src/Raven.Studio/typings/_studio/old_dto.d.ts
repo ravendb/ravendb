@@ -208,10 +208,6 @@ interface compactStatusDto {
     State: string;
 }
 
-interface serverSmugglingDto {
-    
-}
-
 interface commandData {
     CommandText: string;
     Params:{Id:string;Value:any}[];

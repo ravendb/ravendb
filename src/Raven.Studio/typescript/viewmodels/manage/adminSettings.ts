@@ -48,7 +48,6 @@ class adminSettings extends viewModelBase {
         var isGlobalAdmin = accessHelper.isGlobalAdmin();
 
         var clusterRoute = { route: 'cluster', moduleId: "viewmodels/manage/cluster", title: "Cluster", nav: true, hash: appUrl.forCluster(), enabled: canReadOrWrite };
-        var serverSmuggling = { route: "serverSmuggling", moduleId: "viewmodels/manage/serverSmuggling", title: "Server Smuggling", nav: true, hash: appUrl.forServerSmugging(), enabled: isGlobalAdmin };
         var backupRoute = { route: 'backup', moduleId: 'viewmodels/manage/backup', title: 'Backup', nav: true, hash: appUrl.forBackup(), enabled: isGlobalAdmin };
         var compactRoute = { route: 'compact', moduleId: 'viewmodels/manage/compact', title: 'Compact', nav: true, hash: appUrl.forCompact(), enabled: isGlobalAdmin };
         var restoreRoute = { route: 'restore', moduleId: 'viewmodels/manage/restore', title: 'Restore', nav: true, hash: appUrl.forRestore(), enabled: isGlobalAdmin };
@@ -65,7 +64,6 @@ class adminSettings extends viewModelBase {
 
         var routes = [
             clusterRoute,
-            serverSmuggling,
             backupRoute,
             compactRoute,
             restoreRoute,
