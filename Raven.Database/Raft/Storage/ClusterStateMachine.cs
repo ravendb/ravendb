@@ -42,7 +42,7 @@ namespace Raven.Database.Raft.Storage
 
         internal RaftEngine RaftEngine { get; set; }
 
-        public ClusterStateMachine(DocumentDatabase systemDatabase, DatabasesLandlord databasesLandlord, bool nullifyLastAppliedIndex = false)
+        public ClusterStateMachine(DocumentDatabase systemDatabase, DatabasesLandlord databasesLandlord)
         {
             if (systemDatabase == null)
                 throw new ArgumentNullException("systemDatabase");
@@ -51,7 +51,7 @@ namespace Raven.Database.Raft.Storage
 
             database = systemDatabase;
 
-            LastAppliedIndex = nullifyLastAppliedIndex == false ? ReadLastAppliedIndex() : 0;
+            LastAppliedIndex = ReadLastAppliedIndex();
 
             handlers.Add(typeof(ClusterConfigurationUpdateCommand), new ClusterConfigurationUpdateCommandHandler(systemDatabase, databasesLandlord));
             handlers.Add(typeof(DatabaseDeletedCommand), new DatabaseDeletedCommandHandler(systemDatabase, databasesLandlord));

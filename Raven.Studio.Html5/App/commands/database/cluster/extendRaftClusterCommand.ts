@@ -4,7 +4,7 @@ import database = require("models/resources/database");
 class extendRaftClusterCommand extends commandBase {
 
 
-    constructor(private db: database, private connectionInfo: nodeConnectionInfoDto, private create: boolean, private force: boolean) {
+    constructor(private db: database, private connectionInfo: nodeConnectionInfoDto, private create: boolean) {
         super();
     }
 
@@ -17,10 +17,6 @@ class extendRaftClusterCommand extends commandBase {
         } else {
 
             var url = "/admin/cluster/join";
-
-            if (this.force) {
-                url += "?force=true";
-            }
 
             return this.post(url, ko.toJSON(this.connectionInfo), this.db, { dataType: undefined })
                 .done(() => this.reportSuccess("Server was added to cluster."))
