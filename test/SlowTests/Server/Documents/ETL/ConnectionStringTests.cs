@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.Server.Documents.ETL
 {
-    public class ConnectionStringTests : SqlEtlTests
+    public class ConnectionStringTests : EtlTestBase
     {
         [Fact]
         public void CanAddAndRemoveConnectionStrings()
@@ -26,7 +26,7 @@ namespace SlowTests.Server.Documents.ETL
                 var sqlConnectionString = new SqlConnectionString
                 {
                     Name = "SqlConnectionString",
-                    ConnectionString = GetConnectionString(store),
+                    ConnectionString = SqlEtlTests.GetConnectionString(store),
                 };
 
                 store.Admin.Server.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString, store.Database));
@@ -78,7 +78,7 @@ namespace SlowTests.Server.Documents.ETL
                 var sqlConnectionString = new SqlConnectionString
                 {
                     Name = "SqlConnectionString",
-                    ConnectionString = GetConnectionString(store),
+                    ConnectionString = SqlEtlTests.GetConnectionString(store),
                 };
 
                 store.Admin.Server.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString, store.Database));
@@ -126,7 +126,7 @@ namespace SlowTests.Server.Documents.ETL
                     var sqlConnectionStr = new SqlConnectionString
                     {
                         Name = $"SqlConnectionString{i}",
-                        ConnectionString = GetConnectionString(store)
+                        ConnectionString = SqlEtlTests.GetConnectionString(store)
                     };
 
                     ravenConnectionStrings.Add(ravenConnectionStr);

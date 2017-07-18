@@ -13,9 +13,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {   
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Cluster.ClusterModesForRequestExecutorTest())   
+                using (var test = new SlowTests.Issues.RavenDB_7322())   
                 {
-                    test.Round_robin_load_balancing_should_work().Wait();
+                    test.TestClassesShouldNotInheritFromOtherTestClassesToNotMultiplyTests();
                 }
             }
         }
