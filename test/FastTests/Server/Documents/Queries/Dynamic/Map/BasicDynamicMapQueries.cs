@@ -78,17 +78,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                     Assert.Equal(1, users.Count);
                     Assert.Equal("Bar", users[0].Name);
 
-                    users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Age >= 50.0 && x.Age <= 60).ToList();
 
-                    Assert.Equal(1, users.Count);
-                    Assert.Equal("Bar", users[0].Name);
-
-                    users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Age >= 30 && x.Age <= 40.1).ToList();
-
-                    Assert.Equal(1, users.Count);
-                    Assert.Equal("Foo", users[0].Name);
-
-                    users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Age >= 30.1 && x.Age <= 40).ToList();
+                    users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Age >= 30.1 && x.Age <= 40.0).ToList();
 
                     Assert.Equal(1, users.Count);
                     Assert.Equal("Foo", users[0].Name);
