@@ -38,15 +38,6 @@ function getManageServerMenuItem() {
         }),
         /* TODO
         new leafMenuItem({
-            route: "admin/settings/serverSmuggling",
-            moduleId: "viewmodels/manage/serverSmuggling",
-            title: "Server Smuggling",
-            nav: true,
-            css: 'icon-server-smugling',
-            dynamicHash: appUrl.forServerSmugging,
-            enabled: accessHelper.isGlobalAdmin
-        }),
-        new leafMenuItem({
             route: 'admin/settings/backup',
             moduleId: 'viewmodels/manage/backup',
             title: 'Backup',
