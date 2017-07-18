@@ -20,14 +20,14 @@ namespace Raven.Server.Utils
             HashSet<string> includedIds)
         {
             var indexOfPrefixStart = includePath.IndexOfAny(PrefixSeparatorChar, 0);
-            var indexOfSuffixStart = includePath.IndexOfAny(SuffixSeparatorChar, 0);
 
             StringSegment pathSegment;
             StringSegment? addition = null;
 
-            if (indexOfSuffixStart != -1)
+            if (HasSuffixSeparator(includePath, out var indexOfSuffixStart))
             {
                 addition = includePath.SubSegment(indexOfSuffixStart + 1);
+
                 if (!addition.Value[addition.Value.Length - 1].Equals(']') ||
                     ((addition.Value.Length >= 4) &&
                      !addition.Value.SubSegment(0, 4).Equals(SuffixStart)))
@@ -95,6 +95,28 @@ namespace Raven.Server.Utils
                 }
                 includedIds.Add(BlittableValueToString(value));
             }
+        }
+
+        private static bool HasSuffixSeparator(StringSegment includePath, out int indexOfPrefixStart)
+        {
+            indexOfPrefixStart = includePath.IndexOfLast(SuffixSeparatorChar);
+
+            if (indexOfPrefixStart == -1)
+                return false;
+
+            if (includePath.Length >= indexOfPrefixStart + BlittableJsonTraverser.CollectionSeparator.Length)
+            {
+                if (includePath[indexOfPrefixStart] == BlittableJsonTraverser.CollectionSeparator[0] &&
+                    includePath[indexOfPrefixStart + 1] == BlittableJsonTraverser.CollectionSeparator[1] &&
+                    includePath[indexOfPrefixStart + 2] == BlittableJsonTraverser.CollectionSeparator[2])
+                {
+                     // []. means collection
+
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static string HandleSuffixValue(object val, StringSegment suffixSegment)

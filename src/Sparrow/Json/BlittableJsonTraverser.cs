@@ -9,7 +9,8 @@ namespace Sparrow.Json
         public static BlittableJsonTraverser Default = new BlittableJsonTraverser();
 
         private const char PropertySeparator = '.';
-        private const char CollectionSeparator = '[';
+        private const char CollectionSeparatorStart = '[';
+        public static readonly char[] CollectionSeparator = { CollectionSeparatorStart, ']', PropertySeparator };
 
         public static readonly char[] PropertySeparators =
         {
@@ -19,7 +20,7 @@ namespace Sparrow.Json
         private readonly char[] _separators =
         {
             PropertySeparator,
-            CollectionSeparator
+            CollectionSeparatorStart
         };
 
         public BlittableJsonTraverser(char[] nonDefaultSeparators = null)
@@ -78,8 +79,8 @@ namespace Sparrow.Json
                     leftPath = pathSegment;
                     result = reader;
                     return false;
-                case CollectionSeparator:
-                    leftPath = path.SubSegment(indexOfFirstSeparator + 3);
+                case CollectionSeparatorStart:
+                    leftPath = path.SubSegment(indexOfFirstSeparator + CollectionSeparator.Length);
 
                     var collectionInnerArray = reader as BlittableJsonReaderArray;
                     if (collectionInnerArray != null)
@@ -136,7 +137,7 @@ namespace Sparrow.Json
                             case PropertySeparator:
                                 subSegment = pathSegment.SubSegment(indexOfFirstSeparatorInSubIndex + 1);
                                 break;
-                            case CollectionSeparator:
+                            case CollectionSeparatorStart:
                                 subSegment = pathSegment.SubSegment(indexOfFirstSeparatorInSubIndex + 3);
                                 break;
                             default:
