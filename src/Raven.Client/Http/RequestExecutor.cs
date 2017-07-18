@@ -201,7 +201,7 @@ namespace Raven.Client.Http
                 {
                     var command = new GetClientConfigurationOperation.GetClientConfigurationCommand();
 
-                    var (currentIndex, currentNode) = ChooseNodeForRequest(null);
+                    var (currentIndex, currentNode) = ChooseNodeForRequest(command,0);
                     await ExecuteAsync(currentNode, currentIndex, context, command, shouldRetry: false).ConfigureAwait(false);
 
                     var result = command.Result;
@@ -293,24 +293,24 @@ namespace Raven.Client.Http
 
             if (topologyUpdate != null && topologyUpdate.Status == TaskStatus.RanToCompletion || _disableTopologyUpdates)
             {                
-                var (nodeIndex, chosenNode) = ChooseNodeForRequest(sessionId ?? 0);
+                var (nodeIndex, chosenNode) = ChooseNodeForRequest(command,sessionId ?? 0);
                 return ExecuteAsync(chosenNode, nodeIndex, context, command, token, sessionId: sessionId);
             }
 
             return UnlikelyExecuteAsync(command, context, token, topologyUpdate, sessionId);
         }
 
-        public (int currentIndex, ServerNode currentNode) ChooseNodeForRequest(int? sessionId)
+        public (int currentIndex, ServerNode currentNode) ChooseNodeForRequest<TResult>(RavenCommand<TResult>  cmd,int sessionId)
         {
+            if(cmd.IsReadRequest == false)
+                return _nodeSelector.GetPreferredNode();
+            
             switch (_readBalanceBehavior)
             {
                 case ReadBalanceBehavior.None:
                     return _nodeSelector.GetPreferredNode();
                 case ReadBalanceBehavior.RoundRobin:
-                    if(sessionId == null)
-                        goto case ReadBalanceBehavior.None;
-                    
-                    return _nodeSelector.GetNodeBySessionId(sessionId.Value);                
+                    return _nodeSelector.GetNodeBySessionId(sessionId);                
                 case ReadBalanceBehavior.FastestNode:
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -351,7 +351,7 @@ namespace Raven.Client.Http
                 throw;
             }
 
-            var (currentIndex, currentNode) = _nodeSelector.GetNodeBySessionId(sessionId ?? 0);
+            var (currentIndex, currentNode) = ChooseNodeForRequest(command,sessionId ?? 0);
             await ExecuteAsync(currentNode, currentIndex, context, command, token, true, sessionId).ConfigureAwait(false);
         }
 
