@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Sparrow.Collections;
 
@@ -7,42 +9,51 @@ namespace Raven.Abstractions.Logging
     public class LoggerExecutionWrapper : ILog
     {
         public const string FailedToGenerateLogMessage = "Failed to generate log message";
-        private readonly ILog logger;
-        private readonly string loggerName;
-        private readonly ConcurrentSet<Target> targets;
+        private readonly ILog _logger;
+        private readonly string _loggerName;
+        private IReadOnlyList<Target> _targets;
+        private readonly object _targetsUpdateSyncObj = new object();
 
-        public LoggerExecutionWrapper(ILog logger, string loggerName, ConcurrentSet<Target> targets)
+        public LoggerExecutionWrapper(ILog logger, string loggerName, IReadOnlyList<Target> targets)
         {
-            this.logger = logger;
-            this.loggerName = loggerName;
-            this.targets = targets;
+            this._logger = logger;
+            this._loggerName = loggerName;
+            this._targets = targets;
         }
 
         public ILog WrappedLogger
         {
-            get { return logger; }
+            get { return _logger; }
         }
 
         #region ILog Members
 
         public bool IsInfoEnabled
         {
-            get { return LogManager.EnableDebugLogForTargets || logger.IsInfoEnabled; }
+            get { return LogManager.EnableDebugLogForTargets || _logger.IsInfoEnabled; }
         }
 
         public bool IsDebugEnabled
         {
-            get { return LogManager.EnableDebugLogForTargets || logger.IsDebugEnabled; }
+            get { return LogManager.EnableDebugLogForTargets || _logger.IsDebugEnabled; }
         }
 
         public bool IsWarnEnabled
         {
-            get { return LogManager.EnableDebugLogForTargets || logger.IsWarnEnabled; }
+            get { return LogManager.EnableDebugLogForTargets || _logger.IsWarnEnabled; }
+        }
+
+        public void HandleTargetsChange(IReadOnlyList<Target> targets)
+        {
+            lock (_targetsUpdateSyncObj)
+            {
+                _targets = targets;
+            }
         }
 
         public void Log(LogLevel logLevel, Func<string> messageFunc)
         {
-            if (logger.ShouldLog(logLevel))
+            if (_logger.ShouldLog(logLevel))
             {
             Func<string> wrappedMessageFunc = () =>
             {
@@ -56,16 +67,21 @@ namespace Raven.Abstractions.Logging
                 }
                 return null;
             };
-            logger.Log(logLevel, wrappedMessageFunc);
+            _logger.Log(logLevel, wrappedMessageFunc);
             }
 
-            if (targets.Count == 0)
-                return;
             var shouldLog = false;
-            // ReSharper disable once LoopCanBeConvertedToQuery - perf
-            foreach (var target in targets)
+            lock (_targetsUpdateSyncObj)
             {
-                shouldLog |= target.ShouldLog(logger, logLevel);
+                if (_targets.Count == 0)
+                    return;
+                
+                // ReSharper disable once ForCanBeConvertedToForeach
+                for (var i = 0; i < _targets.Count; i++)
+                {
+                    var target = _targets[i];
+                    shouldLog |= target.ShouldLog(_logger, logLevel);
+                }
             }
             if (shouldLog == false)
                 return;
@@ -87,7 +103,7 @@ namespace Raven.Abstractions.Logging
             var databaseName = Constants.SystemDatabase;
 #endif
 
-            foreach (var target in targets)
+            foreach (var target in _targets)
             {
                 target.Write(new LogEventInfo
                 {
@@ -95,7 +111,7 @@ namespace Raven.Abstractions.Logging
                     Exception = null,
                     FormattedMessage = formattedMessage,
                     Level = logLevel,
-                    LoggerName = loggerName,
+                    LoggerName = _loggerName,
                     TimeStamp = SystemTime.UtcNow,
                 });
             }
@@ -116,15 +132,15 @@ namespace Raven.Abstractions.Logging
                 }
                 return null;
             };
-            logger.Log(logLevel, wrappedMessageFunc, exception);
-            foreach (var target in targets)
+            _logger.Log(logLevel, wrappedMessageFunc, exception);
+            foreach (var target in _targets)
             {
                 target.Write(new LogEventInfo
                 {
                     Exception = exception,
                     FormattedMessage = wrappedMessageFunc(),
                     Level = logLevel,
-                    LoggerName = loggerName,
+                    LoggerName = _loggerName,
                     TimeStamp = SystemTime.UtcNow,
                 });
             }
@@ -132,7 +148,7 @@ namespace Raven.Abstractions.Logging
 
         public bool ShouldLog(LogLevel logLevel)
         {
-            return logger.ShouldLog(logLevel);
+            return _logger.ShouldLog(logLevel);
         }
 
 #endregion

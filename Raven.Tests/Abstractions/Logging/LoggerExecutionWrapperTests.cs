@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Raven.Abstractions.Logging;
 using Raven.Tests.Common;
 using Sparrow.Collections;
@@ -14,7 +15,7 @@ namespace Raven.Tests.Abstractions.Logging
         public LoggerExecutionWrapperTests()
         {
             fakeLogger = new FakeLogger();
-            sut = new LoggerExecutionWrapper(fakeLogger, "name", new ConcurrentSet<Target>());
+            sut = new LoggerExecutionWrapper(fakeLogger, "name", new List<Target>());
         }
 
         [Fact]
