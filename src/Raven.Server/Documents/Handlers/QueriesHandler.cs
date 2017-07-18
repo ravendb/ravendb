@@ -157,7 +157,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteDocumentQueryResult(context, result, metadataOnly, out numberOfResults);
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({indexQuery.GetIndex()})", HttpContext, numberOfResults, indexQuery.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
+            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({indexQuery.Metadata.IndexName})", HttpContext, numberOfResults, indexQuery.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
         }
 
         private async Task<IndexQueryServerSide> GetIndexQuery(JsonOperationContext context, HttpMethod method)
@@ -278,7 +278,7 @@ namespace Raven.Server.Documents.Handlers
             var reader = context.Read(RequestBodyStream(), "queries/delete");
             var query = IndexQueryServerSide.Create(reader);
 
-            ExecuteQueryOperation(query.GetIndex(), (runner, options, onProgress, token) => runner.ExecuteDeleteQuery(query, options, context, onProgress, token),
+            ExecuteQueryOperation(query.Metadata.IndexName, (runner, options, onProgress, token) => runner.ExecuteDeleteQuery(query, options, context, onProgress, token),
                 context, returnContextToPool, Operations.Operations.OperationType.DeleteByIndex);
             return Task.CompletedTask;
 
@@ -300,7 +300,7 @@ namespace Raven.Server.Documents.Handlers
             var patch = PatchRequest.Parse(patchJson);
             var query = IndexQueryServerSide.Create(queryJson);
 
-            ExecuteQueryOperation(query.GetIndex(), (runner, options, onProgress, token) => runner.ExecutePatchQuery(query, options, patch, context, onProgress, token),
+            ExecuteQueryOperation(query.Metadata.IndexName, (runner, options, onProgress, token) => runner.ExecutePatchQuery(query, options, patch, context, onProgress, token),
                 context, returnContextToPool, Operations.Operations.OperationType.UpdateByIndex);
             return Task.CompletedTask;
         }

@@ -14,10 +14,24 @@ namespace Raven.Server.Documents.Queries
             qp.Init(query);
             Query = qp.Parse();
 
+            IsDynamic = Query.From.Index == false;
+
+            var fromToken = Query.From.From;
+            if (IsDynamic)
+                CollectionName = QueryExpression.Extract(Query.QueryText, fromToken);
+            else
+                IndexName = QueryExpression.Extract(Query.QueryText, fromToken.TokenStart + 1, fromToken.TokenLength - 2, fromToken.EscapeChars);
+
             Build(parameters);
         }
 
-        public Query Query;
+        public readonly bool IsDynamic;
+
+        public readonly string CollectionName;
+
+        public readonly string IndexName;
+
+        public readonly Query Query;
 
         public readonly HashSet<string> AllFieldNames = new HashSet<string>();
 
@@ -74,16 +88,31 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
+        private void FillFieldAndParameter(BlittableJsonReaderObject parameters, string fieldName, ValueToken value)
+        {
+            AddField(fieldName, GetValueTokenType(parameters, value, unwrapArrays: false));
+        }
+
         private void FillFieldAndParameters(BlittableJsonReaderObject parameters, string fieldName, List<ValueToken> values)
         {
+            if (values.Count == 0)
+                return;
+
+            var previousType = ValueTokenType.Null;
             for (var i = 0; i < values.Count; i++)
             {
                 var value = values[i];
                 if (i > 0 && value.Type != values[i - 1].Type)
                     ThrowIncompatibleTypesOfVariables(fieldName, values.ToArray());
 
-                FillFieldAndParameter(parameters, fieldName, value);
+                var valueType = GetValueTokenType(parameters, value, unwrapArrays: true);
+                if (i > 0 && previousType != valueType)
+                    ThrowIncompatibleTypesOfParameters(fieldName, values.ToArray());
+
+                previousType = valueType;
             }
+
+            AddField(fieldName, previousType);
         }
 
         private void FillFieldAndParameters(BlittableJsonReaderObject parameters, string fieldName, ValueToken firstValue, ValueToken secondValue)
@@ -91,11 +120,16 @@ namespace Raven.Server.Documents.Queries
             if (firstValue.Type != secondValue.Type)
                 ThrowIncompatibleTypesOfVariables(fieldName, firstValue, secondValue);
 
-            FillFieldAndParameter(parameters, fieldName, firstValue);
-            FillFieldAndParameter(parameters, fieldName, secondValue);
+            var valueType1 = GetValueTokenType(parameters, firstValue, unwrapArrays: false);
+            var valueType2 = GetValueTokenType(parameters, secondValue, unwrapArrays: false);
+
+            if (valueType1 != valueType2)
+                ThrowIncompatibleTypesOfParameters(fieldName, firstValue, secondValue);
+
+            AddField(fieldName, valueType1);
         }
 
-        private void FillFieldAndParameter(BlittableJsonReaderObject parameters, string fieldName, ValueToken value)
+        private ValueTokenType GetValueTokenType(BlittableJsonReaderObject parameters, ValueToken value, bool unwrapArrays)
         {
             var valueType = value.Type;
 
@@ -109,15 +143,23 @@ namespace Raven.Server.Documents.Queries
                 if (parameters.TryGetMember(parameterName, out var parameterValue) == false)
                     throw new InvalidOperationException();
 
-                valueType = QueryBuilder.GetValueTokenType(parameterValue);
+                valueType = QueryBuilder.GetValueTokenType(parameterValue, unwrapArrays);
             }
 
-            AddField(fieldName, valueType);
+            return valueType;
         }
 
         private static void ThrowIncompatibleTypesOfVariables(string fieldName, params ValueToken[] valueTokens)
         {
             throw new InvalidOperationException("Incompatible types of variables in WHERE clause");
+            //TODO arek
+            //throw new InvalidOperationException($"Incompatible types of variables in WHERE clause on '{ExtractFieldName(fieldName)}' field: " +
+            //                                    $"{string.Join(",", valueTokens.Select(x => $"{ExtractTokenValue(x)}({x.Type})"))}");
+        }
+
+        private static void ThrowIncompatibleTypesOfParameters(string fieldName, params ValueToken[] valueTokens)
+        {
+            throw new InvalidOperationException("Incompatible types of parameters in WHERE clause");
             //TODO arek
             //throw new InvalidOperationException($"Incompatible types of variables in WHERE clause on '{ExtractFieldName(fieldName)}' field: " +
             //                                    $"{string.Join(",", valueTokens.Select(x => $"{ExtractTokenValue(x)}({x.Type})"))}");

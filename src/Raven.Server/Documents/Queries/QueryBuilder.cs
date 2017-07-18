@@ -150,9 +150,8 @@ namespace Raven.Server.Documents.Queries
                         var matches = new List<TermLuceneASTNode>(expression.Values.Count);
                         foreach (var valueToken in expression.Values)
                         {
-                            var (value, valueType) = GetValue(fieldName, query, metadata, parameters, valueToken);
-
-                            matches.Add(CreateTermNode(value, valueType));
+                            foreach (var (value, valueType) in GetValues(fieldName, query, metadata, parameters, valueToken))
+                                matches.Add(CreateTermNode(value, valueType));
                         }
 
                         var luceneFieldName = GetLuceneField(fieldName, metadata.Fields[fieldName]).LuceneFieldName;
@@ -204,6 +203,44 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
+        private static IEnumerable<(string Value, ValueTokenType Type)> GetValues(string fieldName, Parser.Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, ValueToken value)
+        {
+            var valueOrParameterName = QueryExpression.Extract(query.QueryText, value);
+
+            if (value.Type == ValueTokenType.Parameter)
+            {
+                var expectedValueType = metadata.Fields[fieldName];
+
+                if (parameters == null)
+                    throw new InvalidOperationException();
+
+                if (parameters.TryGetMember(valueOrParameterName, out var parameterValue) == false)
+                    throw new InvalidOperationException();
+
+                var array = parameterValue as BlittableJsonReaderArray;
+                if (array != null)
+                {
+                    foreach (var item in UnwrapArray(array))
+                    {
+                        if (expectedValueType != item.Type)
+                            throw new InvalidOperationException();
+
+                        yield return item;
+                    }
+
+                    yield break;
+                }
+
+                var parameterValueType = GetValueTokenType(parameterValue);
+                if (expectedValueType != parameterValueType)
+                    throw new InvalidOperationException();
+
+                yield return (parameterValue.ToString(), parameterValueType);
+            }
+
+            yield return (valueOrParameterName, value.Type);
+        }
+
         private static (string Value, ValueTokenType Type) GetValue(string fieldName, Parser.Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, ValueToken value)
         {
             var valueOrParameterName = QueryExpression.Extract(query.QueryText, value);
@@ -249,6 +286,23 @@ namespace Raven.Server.Documents.Queries
             Debug.Assert(false);
 
             return (null, FieldName.FieldType.String);
+        }
+
+        private static IEnumerable<(string Value, ValueTokenType Type)> UnwrapArray(BlittableJsonReaderArray array)
+        {
+            foreach (var item in array)
+            {
+                var innerArray = item as BlittableJsonReaderArray;
+                if (innerArray != null)
+                {
+                    foreach (var innerItem in UnwrapArray(innerArray))
+                        yield return innerItem;
+
+                    continue;
+                }
+
+                yield return (item.ToString(), GetValueTokenType(item));
+            }
         }
 
         private static TermLuceneASTNode CreateTermNode(string value, ValueTokenType valueType)
@@ -396,7 +450,7 @@ namespace Raven.Server.Documents.Queries
             return buffer.ToString();
         }
 
-        public static ValueTokenType GetValueTokenType(object parameterValue)
+        public static ValueTokenType GetValueTokenType(object parameterValue, bool unwrapArrays = false)
         {
             if (parameterValue == null)
                 return ValueTokenType.String;
@@ -405,13 +459,25 @@ namespace Raven.Server.Documents.Queries
                 return ValueTokenType.String;
 
             if (parameterValue is LazyNumberValue)
-                return ValueTokenType.Double; // TODO [ppekrol] is this correct?
+                return ValueTokenType.Double;
 
             if (parameterValue is long)
                 return ValueTokenType.Long;
 
             if (parameterValue is bool)
                 return (bool)parameterValue ? ValueTokenType.True : ValueTokenType.False;
+
+            if (unwrapArrays)
+            {
+                var array = parameterValue as BlittableJsonReaderArray;
+                if (array != null)
+                {
+                    if (array.Length == 0) // TODO [ppekrol]
+                        throw new InvalidOperationException();
+
+                    return GetValueTokenType(array[0], unwrapArrays: true);
+                }
+            }
 
             throw new NotImplementedException();
         }

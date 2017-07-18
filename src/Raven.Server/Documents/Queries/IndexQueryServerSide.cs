@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
-using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Json;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -15,8 +14,6 @@ namespace Raven.Server.Documents.Queries
 {
     public class IndexQueryServerSide : IndexQuery<BlittableJsonReaderObject>
     {
-        private string _indexName;
-
         public string[] FieldsToFetch { get; set; }
 
         public QueryOperator DefaultOperator { get; set; }
@@ -141,25 +138,7 @@ namespace Raven.Server.Documents.Queries
             return result;
         }
 
-        public bool IsDynamic => Metadata.Query.From.Index == false;
-
-        public string GetCollection()
-        {
-            var fromToken = Metadata.Query.From.From;
-            return QueryExpression.Extract(Metadata.Query.QueryText, fromToken);
-        }
-
-        public string GetIndex()
-        {
-            if (_indexName == null)
-            {
-                var fromToken = Metadata.Query.From.From;
-                _indexName = QueryExpression.Extract(Metadata.Query.QueryText, fromToken.TokenStart + 1, fromToken.TokenLength - 2, fromToken.EscapeChars);
-            }
-
-            return _indexName;
-        }
-
+        [JsonIgnore]
         public QueryMetadata Metadata { get; private set; }
     }
 }

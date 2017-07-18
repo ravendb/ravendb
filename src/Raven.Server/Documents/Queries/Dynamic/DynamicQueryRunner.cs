@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var index = tuple.Index;
 
             if (index == null)
-                IndexDoesNotExistException.ThrowFor(query.GetCollection());
+                IndexDoesNotExistException.ThrowFor(query.Metadata.CollectionName);
 
             if (existingResultEtag.HasValue)
             {
@@ -183,7 +183,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         private async Task<(Index Index, string Collection)> MatchIndex(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound)
         {
-            var collection = query.GetCollection();
+            var collection = query.Metadata.CollectionName;
 
             var map = DynamicQueryMapping.Create(query);
 

@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
             var result = new DynamicQueryMapping
             {
-                ForCollection = query.GetCollection()
+                ForCollection = query.Metadata.CollectionName
             };
 
             var fields = new Dictionary<string, DynamicQueryMappingItem>();
