@@ -104,7 +104,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
-                topology.Members[ServerStore.NodeTag] = ServerStore.NodeHttpServerUrl;
                 var blit = EntityToBlittable.ConvertEntityToBlittable(topology, DocumentConventions.Default, context);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -254,6 +253,71 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
             RedirectToLeader();
             return Task.CompletedTask;
+        }
+
+        /* Promote a non-voter to a promotable */         
+        [RavenAction("/admin/cluster/promote", "POST", "/admin/cluster/promote?nodeTag={nodeTag:string}")]
+        public async Task PromoteNode()
+        {
+            if (ServerStore.LeaderTag == null)
+                return;
+            
+            if (ServerStore.IsLeader() == false)
+            {
+                RedirectToLeader();
+                return;
+            }
+
+            var nodeTag = GetStringQueryString("nodeTag");
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var topology = ServerStore.GetClusterTopology(context);
+                if (topology.Watchers.ContainsKey(nodeTag) == false)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to promote node {nodeTag} beacuse {nodeTag} is not a watcher in the cluster topology");
+                }
+
+                var url = topology.GetUrlFromTag(nodeTag);
+                await ServerStore.Engine.ModifyTopologyAsync(nodeTag, url, Leader.TopologyModification.Promotable);
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+            }
+        }
+
+        /* Demote a voter (member/promotable) node to a non-voter  */
+        [RavenAction("/admin/cluster/demote", "POST", "/admin/cluster/demote?nodeTag={nodeTag:string}")]
+        public async Task DemoteNode()
+        {
+            if (ServerStore.LeaderTag == null)            
+                return;           
+            if (ServerStore.IsLeader() == false)
+            {
+                RedirectToLeader();
+                return;
+            }
+
+            var nodeTag = GetStringQueryString("nodeTag");
+            if (nodeTag == ServerStore.LeaderTag)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to demote node {nodeTag} beacuse {nodeTag} is the current leader in the cluster topology. In order to demote {nodeTag} perform a Step-Down first");
+            }
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var topology = ServerStore.GetClusterTopology(context);
+                if (topology.Promotables.ContainsKey(nodeTag) == false && topology.Members.ContainsKey(nodeTag) == false)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to demote node {nodeTag} beacuse {nodeTag} is not a voter in the cluster topology");
+                }
+
+                var url = topology.GetUrlFromTag(nodeTag);
+                await ServerStore.Engine.ModifyTopologyAsync(nodeTag, url, Leader.TopologyModification.NonVoter);
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+            }           
         }
 
         private void RedirectToLeader()
