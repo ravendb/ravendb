@@ -2,7 +2,7 @@
   "profiles": {
     "Raven.Server": {
       "commandName": "Project",
-      "commandLineArgs": "--ServerUrl=https://0.0.0.0:8080 --Security.CertificatePassword=1234 --Security.CertificatePath=C:\\work\\temp\\iftah-pc.pfx --Security.Authentication.Enabled=True --Security.Authentication.RequiredForPublicNetworks=True"
+      "commandLineArgs": "--ServerUrl=http://0.0.0.0:8080 --Security.Authentication.Enabled=False --Security.Authentication.RequiredForPublicNetworks=False"
     }
   }
 }
