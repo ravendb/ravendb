@@ -6,6 +6,7 @@
 
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
@@ -60,14 +61,14 @@ namespace SlowTests.SlowTests.Bugs
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
 
-                await (await store.Operations.SendAsyncAndFetchOperation(new PatchByIndexOperation(
+                await (await store.Operations.SendAsync(new PatchByIndexOperation(
                     stats.IndexName,
                     new IndexQuery() { Query = string.Empty },
                     new PatchRequest
                     {
                         Script = "this.FullName = this.FirstName + ' ' + this.LastName;"
                     }
-                )))
+                ),CancellationToken.None))
                 .WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                 using (var db = store.OpenAsyncSession())

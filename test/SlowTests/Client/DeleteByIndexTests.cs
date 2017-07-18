@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
@@ -71,7 +72,8 @@ namespace SlowTests.Client
                     indexName = stats.IndexName;
                 }
 
-                var operation = await store.Operations.SendAsyncAndFetchOperation(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
+                var operation = await store.Operations.SendAsync(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }),
+                    CancellationToken.None);
 
                 await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
