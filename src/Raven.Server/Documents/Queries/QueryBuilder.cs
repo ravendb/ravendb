@@ -203,7 +203,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private static IEnumerable<(string Value, ValueTokenType Type)> GetValues(string fieldName, Parser.Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, ValueToken value)
+        public static IEnumerable<(string Value, ValueTokenType Type)> GetValues(string fieldName, Parser.Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, ValueToken value)
         {
             var valueOrParameterName = QueryExpression.Extract(query.QueryText, value);
 
@@ -241,7 +241,7 @@ namespace Raven.Server.Documents.Queries
             yield return (valueOrParameterName, value.Type);
         }
 
-        private static (string Value, ValueTokenType Type) GetValue(string fieldName, Parser.Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, ValueToken value)
+        public static (string Value, ValueTokenType Type) GetValue(string fieldName, Parser.Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, ValueToken value)
         {
             var valueOrParameterName = QueryExpression.Extract(query.QueryText, value);
 

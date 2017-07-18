@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Queries.Parser
         {
             if (SkipWhitespace(skipWhitespace) == false)
                 return false;
-            if (char.IsLetter(_q[_pos]) == false)
+            if (char.IsLetter(_q[_pos]) == false && _q[_pos] != '_')
                 return false;
             TokenStart = _pos;
             _pos++;

@@ -458,5 +458,28 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 }
             }
         }
+
+        [Fact]
+        public void Collection_query()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Fitzchak" }, "users/1");
+                    session.Store(new User { Name = "Arek" }, "users/2");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == "users/2").ToList();
+
+                    Assert.Equal(1, users.Count);
+                    Assert.Equal("Arek", users[0].Name);
+                }
+            }
+        }
     }
 }
