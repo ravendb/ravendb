@@ -53,10 +53,10 @@ namespace Raven.Server.Web.System
         }
 
 
-        private static async Task<Stream> ConnectAndGetNetworkStreamAsync(TcpConnectionInfo tcpConnectionInfo, TcpClient tcpClient)
+        private async Task<Stream> ConnectAndGetNetworkStreamAsync(TcpConnectionInfo tcpConnectionInfo, TcpClient tcpClient)
         {
             await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, tcpClient, null);
-            return await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo);
+            return await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, Server.ServerCertificateHolder.Certificate);
         }
 
         private async Task<DynamicJsonValue> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo, TcpClient tcpClient)
@@ -72,22 +72,18 @@ namespace Raven.Server.Web.System
                 {
                     var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(responseJson);
 
-                    if(headerResponse.AuthorizationSuccessful)
+                    if(headerResponse.AuthorizationSuccessful == false)
                     {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                         result["Success"] = false;
                         result["Error"] = $"Connection to {tcpConnectionInfo.Url} failed because of authorization failure: {headerResponse.Message}";
-                        
                     }
                     else
                     {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                         result["Success"] = true;
                     }
                 }
 
             }
-
             return result;
         }
 

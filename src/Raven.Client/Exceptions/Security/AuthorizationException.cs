@@ -16,10 +16,5 @@ namespace Raven.Client.Exceptions.Security
         public AuthorizationException(string message, Exception inner) : base(message, inner)
         {
         }
-
-        public static AuthorizationException Forbidden(string url)
-        {
-            return new AuthorizationException($"Forbidden access to {url}. Make sure you're using the correct certificate.");
-        }
     }
 }

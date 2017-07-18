@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.BulkInsert;
@@ -27,6 +28,8 @@ namespace Raven.Client.Documents
     /// </summary>
     public interface IDocumentStore : IDisposalNotification
     {
+        X509Certificate2 Certificate { get; }
+
         /// <summary>
         /// Store events
         /// </summary>

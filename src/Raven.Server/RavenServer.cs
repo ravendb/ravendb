@@ -268,7 +268,7 @@ namespace Raven.Server
 
             public bool CanAccess(string db)
             {
-                if (Status == AuthenticationStatus.Expired)
+                if (Status == AuthenticationStatus.Expired || Status == AuthenticationStatus.NotYetValid)
                     return false;
                 if (Status == AuthenticationStatus.ServerAdmin)
                     return true;
@@ -356,6 +356,10 @@ namespace Raven.Server
             else if (certificate.NotAfter < DateTime.UtcNow)
             {
                 authenticationStatus.Status = AuthenticationStatus.Expired;
+            }
+            else if (certificate.NotBefore > DateTime.UtcNow)
+            {
+                authenticationStatus.Status = AuthenticationStatus.NotYetValid;
             }
             else if (certificate.Equals(ServerCertificateHolder.Certificate))
             {
@@ -852,17 +856,14 @@ namespace Raven.Server
             if (ServerCertificateHolder.Certificate != null)
             {
                 var sslStream = new SslStream(stream, false, (sender, certificate, chain, errors) =>
-                {
-                    return errors == SslPolicyErrors.None ||
-                           // it is fine that the client doesn't have a cert, we just care that they
-                           // are connecting to us securely. At any rate, we'll ensure that if certificate
-                           // is required, we'll validate that it is one of the expected ones on the server
-                           // and that the client is authorized to do so. 
-                           // Otherwise, we'll generate an error, but we'll do that at a higher level then
-                           // SSL, because that generate a nicer error for the user to read then just aborted
-                           // connection because SSL negotation failed.
-                           errors == SslPolicyErrors.RemoteCertificateNotAvailable;
-                });
+                    // it is fine that the client doesn't have a cert, we just care that they
+                    // are connecting to us securely. At any rate, we'll ensure that if certificate
+                    // is required, we'll validate that it is one of the expected ones on the server
+                    // and that the client is authorized to do so. 
+                    // Otherwise, we'll generate an error, but we'll do that at a higher level then
+                    // SSL, because that generate a nicer error for the user to read then just aborted
+                    // connection because SSL negotation failed.
+                        true);
                 stream = sslStream;
 
                 await sslStream.AuthenticateAsServerAsync(ServerCertificateHolder.Certificate, true, SslProtocols.Tls12, false);
@@ -886,12 +887,16 @@ namespace Raven.Server
                 return false;
             }
 
-            var auth = AuthenticateConnectionCertificate((X509Certificate2)sslStream.LocalCertificate);
+            var certificate = (X509Certificate2)sslStream.RemoteCertificate;
+            var auth = AuthenticateConnectionCertificate(certificate);
 
             switch (auth.Status)
             {
                 case AuthenticationStatus.Expired:
-                    msg = "The certificate " + sslStream.RemoteCertificate + "is expired";
+                    msg = "The provided client certificate " + certificate.FriendlyName + " is expired on " + certificate.NotAfter;
+                    return false;
+                case AuthenticationStatus.NotYetValid:
+                    msg = "The provided client certificate " + certificate.FriendlyName + " is not yet valid because it starts on " + certificate.NotBefore;
                     return false;
                 case AuthenticationStatus.ServerAdmin:
                     msg = "Admin can do it all";
@@ -901,14 +906,14 @@ namespace Raven.Server
                     {
                         case TcpConnectionHeaderMessage.OperationTypes.Cluster:
                         case TcpConnectionHeaderMessage.OperationTypes.Heartbeats:
-                            msg = header.Operation + " is a server wide operation and the certificate " + sslStream.RemoteCertificate + "is not ServerAdmin";
+                            msg = header.Operation + " is a server wide operation and the certificate " + certificate.FriendlyName + "is not ServerAdmin";
                             return false;
                         case TcpConnectionHeaderMessage.OperationTypes.BulkInsert:
                         case TcpConnectionHeaderMessage.OperationTypes.Subscription:
                         case TcpConnectionHeaderMessage.OperationTypes.Replication:
                             if (auth.CanAccess(header.DatabaseName))
                                 return true;
-                            msg = "The certificate " + sslStream.RemoteCertificate + " does not allow access to " + header.DatabaseName;
+                            msg = "The certificate " + certificate.FriendlyName + " does not allow access to " + header.DatabaseName;
                             return false;
                         default:
                             throw new InvalidOperationException("Unknown operation " + header.Operation);
@@ -1065,7 +1070,8 @@ namespace Raven.Server
             UnfamiliarCertificate,
             Allowed,
             ServerAdmin,
-            Expired
+            Expired,
+            NotYetValid
         }
     }
 }

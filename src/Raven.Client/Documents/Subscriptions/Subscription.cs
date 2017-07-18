@@ -325,7 +325,7 @@ namespace Raven.Client.Documents.Subscriptions
                 _tcpClient.SendBufferSize = 32 * 1024;
                 _tcpClient.ReceiveBufferSize = 4096;
                 _stream = _tcpClient.GetStream();
-                _stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient, command.Result).ConfigureAwait(false);
+                _stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient,command.Result, _store.Certificate).ConfigureAwait(false);
 
                 var databaseName = _dbName ?? _store.Database;
                 var header = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(new TcpConnectionHeaderMessage
@@ -343,7 +343,7 @@ namespace Raven.Client.Documents.Subscriptions
                 {
                     var reply = JsonDeserializationClient.TcpConnectionHeaderResponse(response);
                     if (reply.AuthorizationSuccessful == false)
-                        throw AuthorizationException.Forbidden($"Cannot access database {databaseName} because " + reply.Message);
+                        throw new AuthorizationException($"Cannot access database {databaseName} because " + reply.Message);
                 }
                 await _stream.WriteAsync(options, 0, options.Length).ConfigureAwait(false);
 

@@ -142,7 +142,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     TcpUtils.ConnectSocketAsync(connectionInfo, _tcpClient, _log)
                         .Wait(CancellationToken);
-                    var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, connectionInfo);
+                    var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, connectionInfo, _parent._server.RavenServer.ServerCertificateHolder.Certificate);
 
                     wrapSsl.Wait(CancellationToken);
 

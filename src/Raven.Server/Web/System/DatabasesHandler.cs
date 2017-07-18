@@ -36,6 +36,7 @@ namespace Raven.Server.Web.System
                 case RavenServer.AuthenticationStatus.NoCertificateProvided:
                 case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
                 case RavenServer.AuthenticationStatus.Expired:
+                case RavenServer.AuthenticationStatus.NotYetValid:
                     if (Server.Configuration.Security.AuthenticationEnabled == false)
                         return true;
 

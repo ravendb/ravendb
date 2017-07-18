@@ -754,7 +754,7 @@ namespace Raven.Server.ServerWide
             try
             {
                 await tcpClient.ConnectAsync(tcpInfo.Host, tcpInfo.Port);
-                stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info);
+                stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info, this._parent.ClusterCertificate);
 
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out JsonOperationContext context))
                 {
@@ -774,7 +774,7 @@ namespace Raven.Server.ServerWide
                         var reply = JsonDeserializationServer.TcpConnectionHeaderResponse(response);
                         if(reply.AuthorizationSuccessful == false)
                         {
-                            throw AuthorizationException.Forbidden(reply.Message);
+                            throw new AuthorizationException("Unable to access " + url + " because " + reply.Message);
                         }
                     }
                 }
