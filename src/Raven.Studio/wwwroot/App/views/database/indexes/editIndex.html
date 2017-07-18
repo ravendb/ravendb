@@ -91,6 +91,19 @@
                             <i class="icon-plus"></i><span>Add reduction</span>
                         </button>
                     </div>
+                    <div class="flex-horizontal margin-bottom">
+                        <div class="input-group flex-grow" data-bind="visible: editedIndex().hasReduce">
+                            <div class="input-group-addon">
+                                <div class="checkbox checkbox-inline">
+                                    <input id="checkbox1" class="styled" type="checkbox">
+                                    <label for="checkbox1">
+                                        Output reduce to collection
+                                    </label>
+                                </div>
+                            </div>
+                            <input type="text" class="form-control flex-grow" data-bind="textInput: editedIndex().outputReduceToCollection">
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="tabs">
