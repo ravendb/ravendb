@@ -15,6 +15,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.MoreLikeThis;
+using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Sorting;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
@@ -25,6 +26,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron.Impl;
+using Query = Lucene.Net.Search.Query;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
@@ -281,22 +283,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             foreach (var field in orderByFields)
             {
-                var sortOptions = SortOptions.String;
-
                 if (field.Name == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
                 {
                     sort.Add(SortField.FIELD_SCORE);
-                    continue;
-                }
-
-                if (InvariantCompare.IsPrefix(field.Name, Constants.Documents.Indexing.Fields.AlphaNumericFieldName, CompareOptions.None))
-                {
-                    var customFieldName = SortFieldHelper.ExtractName(field.Name);
-                    if (customFieldName.IsNullOrWhiteSpace())
-                        throw new InvalidOperationException("Alphanumeric sort: cannot figure out what field to sort on!");
-
-                    var anSort = new AlphaNumericComparatorSource();
-                    sort.Add(new SortField(customFieldName, anSort, field.Ascending == false));
                     continue;
                 }
 
@@ -311,10 +300,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     continue;
                 }
 
+                var sortOptions = SortOptions.String;
+
                 switch (field.OrderingType)
                 {
-                    case Queries.Parser.OrderByFieldType.Long:
-                    case Queries.Parser.OrderByFieldType.Double:
+                    case OrderByFieldType.AlphaNumeric:
+                        var anSort = new AlphaNumericComparatorSource();
+                        sort.Add(new SortField(field.Name, anSort, field.Ascending == false));
+                        continue;
+                    case OrderByFieldType.Long:
+                    case OrderByFieldType.Double:
                         sortOptions = SortOptions.Numeric;
                         break;
                 }

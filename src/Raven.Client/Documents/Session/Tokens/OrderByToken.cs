@@ -38,6 +38,9 @@ namespace Raven.Client.Documents.Session.Tokens
                 case OrderingType.Double:
                     writer.Append(" AS double");
                     break;
+                case OrderingType.AlphaNumeric:
+                    writer.Append(" AS alphaNumeric");
+                    break;
             }
 
             writer.Append(_descending ? " DESC" : " ASC");

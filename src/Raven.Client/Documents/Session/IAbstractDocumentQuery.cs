@@ -38,11 +38,6 @@ namespace Raven.Client.Documents.Session
         IEnumerable<string> GetProjectionFields();
 
         /// <summary>
-        /// Order the search results in alphanumeric order
-        /// </summary>
-        void AlphaNumericOrdering(string fieldName, bool descending = false);
-
-        /// <summary>
         /// Order the search results randomly
         /// </summary>
         void RandomOrdering();

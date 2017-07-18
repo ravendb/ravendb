@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Queries
 
         public static IndexQueryServerSide Create(BlittableJsonReaderObject json)
         {
-            var result = JsonDeserializationServer.IndexQuery(json);
+             var result = JsonDeserializationServer.IndexQuery(json);
 
             if (result.PageSize == 0 && json.TryGet(nameof(PageSize), out int _) == false)
                 result.PageSize = int.MaxValue;

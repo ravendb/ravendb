@@ -153,9 +153,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         fieldName.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
                         continue;
 
-                    if (InvariantCompare.IsPrefix(fieldName, Constants.Documents.Indexing.Fields.AlphaNumericFieldName, CompareOptions.None))
-                        fieldName = SortFieldHelper.ExtractName(fieldName);
-
                     if (sorting.TryGetValue(fieldName, out var existingSort) == false)
                     {
                         sorting[field.Name] = new DynamicSortInfo()
@@ -214,6 +211,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 case OrderByFieldType.Long:
                 case OrderByFieldType.Double:
                     return SortOptions.Numeric;
+                case OrderByFieldType.AlphaNumeric:
+                    return SortOptions.AlphaNumeric;
                 default:
                     throw new ArgumentException(ordering.ToString());
             }

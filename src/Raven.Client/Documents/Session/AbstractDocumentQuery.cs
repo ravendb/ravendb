@@ -497,15 +497,6 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        /// Order the search results in alphanumeric order
-        /// </summary>
-        public void AlphaNumericOrdering(string fieldName, bool descending)
-        {
-            fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
-            AddOrder(Constants.Documents.Indexing.Fields.AlphaNumericFieldName + ";" + fieldName, descending);
-        }
-
-        /// <summary>
         /// Order the search results randomly
         /// </summary>
         public void RandomOrdering()
@@ -648,6 +639,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name = "fieldName">Name of the field.</param>
         /// <param name = "descending">if set to <c>true</c> [descending].</param>
+        /// <param name = "ordering">ordering type.</param>
         public void AddOrder(string fieldName, bool descending, OrderingType ordering = OrderingType.String)
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
@@ -1439,27 +1431,15 @@ If you really want to do in memory filtering on the data returned from the query
             RootTypes.Add(type);
         }
 
-        IDocumentQueryCustomization IDocumentQueryCustomization.AddOrder(string fieldName, bool descending)
+        IDocumentQueryCustomization IDocumentQueryCustomization.AddOrder(string fieldName, bool descending, OrderingType ordering)
         {
-            AddOrder(fieldName, descending);
+            AddOrder(fieldName, descending, ordering);
             return this;
         }
 
-        IDocumentQueryCustomization IDocumentQueryCustomization.AddOrder<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending)
+        IDocumentQueryCustomization IDocumentQueryCustomization.AddOrder<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending, OrderingType ordering)
         {
-            AddOrder(GetMemberQueryPath(propertySelector.Body), descending);
-            return this;
-        }
-
-        IDocumentQueryCustomization IDocumentQueryCustomization.AlphaNumericOrdering(string fieldName, bool descending)
-        {
-            AlphaNumericOrdering(fieldName, descending);
-            return this;
-        }
-
-        IDocumentQueryCustomization IDocumentQueryCustomization.AlphaNumericOrdering<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending)
-        {
-            AlphaNumericOrdering(GetMemberQueryPath(propertySelector.Body), descending);
+            AddOrder(GetMemberQueryPath(propertySelector.Body), descending, ordering);
             return this;
         }
 

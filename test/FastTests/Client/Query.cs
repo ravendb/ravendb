@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -81,7 +82,7 @@ namespace FastTests.Client
                     try
                     {
                         queryResult = newSession.Query<DogsIndex.Result, DogsIndex>()
-                            .Customize(x => x.AlphaNumericOrdering<Dog>(d => d.Name))
+                            .Customize(x => x.AddOrder<Dog>(d => d.Name, ordering: OrderingType.AlphaNumeric))
                             .Customize(x => x.WaitForNonStaleResults())
                             .Where(x => x.Age > 2)
                             .ToList();

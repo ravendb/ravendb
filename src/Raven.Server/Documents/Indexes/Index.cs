@@ -2070,13 +2070,6 @@ namespace Raven.Server.Documents.Indexes
                         f.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
                         continue;
 
-                    if (f.StartsWith(Constants.Documents.Indexing.Fields.AlphaNumericFieldName))
-                    {
-                        f = SortFieldHelper.ExtractName(f);
-                        if (string.IsNullOrEmpty(f))
-                            throw new ArgumentException("Alpha numeric sorting requires a field name");
-                    }
-
                     if (IndexPersistence.ContainsField(f) == false &&
                         f.StartsWith(Constants.Documents.Indexing.Fields.DistanceFieldName) == false &&
                         IndexPersistence.ContainsField("_") == false)

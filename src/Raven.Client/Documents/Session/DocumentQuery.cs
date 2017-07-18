@@ -126,9 +126,10 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="descending">if set to <c>true</c> [descending].</param>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.AddOrder(string fieldName, bool descending)
+        /// <param name="ordering">Ordering type.</param>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.AddOrder(string fieldName, bool descending, OrderingType ordering)
         {
-            AddOrder(fieldName, descending);
+            AddOrder(fieldName, descending, ordering);
             return this;
         }
 
@@ -137,9 +138,10 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name = "propertySelector">Property selector for the field.</param>
         /// <param name = "descending">if set to <c>true</c> [descending].</param>
-        public IDocumentQuery<T> AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending)
+        /// <param name="ordering">Ordering type.</param>
+        public IDocumentQuery<T> AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending, OrderingType ordering)
         {
-            AddOrder(GetMemberQueryPath(propertySelector.Body), descending);
+            AddOrder(GetMemberQueryPath(propertySelector.Body), descending, ordering);
             return this;
         }
 
@@ -624,19 +626,6 @@ namespace Raven.Client.Documents.Session
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Proximity(int proximity)
         {
             Proximity(proximity);
-            return this;
-        }
-
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.AlphaNumericOrdering(string fieldName, bool descending)
-        {
-            AlphaNumericOrdering(fieldName, descending);
-            return this;
-        }
-
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.AlphaNumericOrdering<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending)
-        {
-            var fieldName = GetMemberQueryPath(propertySelector);
-            AlphaNumericOrdering(fieldName, descending);
             return this;
         }
 

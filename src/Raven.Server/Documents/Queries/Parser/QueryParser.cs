@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Queries.Parser
         private static readonly string[] BinaryOperators = {"OR", "AND"};
         private static readonly string[] StaticValues = {"true", "false", "null"};
         private static readonly string[] OrderByOptions = {"ASC", "DESC", "ASCENDING", "DESCENDING"};
-        private static readonly string[] OrderByAsOptions = { "string", "long", "double" };
+        private static readonly string[] OrderByAsOptions = { "string", "long", "double", "alphaNumeric" };
 
 
         private int _depth;
@@ -93,6 +93,9 @@ namespace Raven.Server.Documents.Queries.Parser
                             break;
                         case "double":
                             type = OrderByFieldType.Double;
+                            break;
+                        case "alphaNumeric":
+                            type = OrderByFieldType.AlphaNumeric;
                             break;
                     }
                 }

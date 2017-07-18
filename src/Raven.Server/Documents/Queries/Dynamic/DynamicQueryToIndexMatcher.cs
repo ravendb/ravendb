@@ -161,8 +161,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 var sortFieldName = index.Type.IsAuto() ? sortInfo.Name : sortInfo.NormalizedName;
 
-                if (sortFieldName.StartsWith(Constants.Documents.Indexing.Fields.AlphaNumericFieldName) ||
-                    sortFieldName.StartsWith(Constants.Documents.Indexing.Fields.RandomFieldName) ||
+                if (sortFieldName.StartsWith(Constants.Documents.Indexing.Fields.RandomFieldName) ||
                     sortFieldName.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
                 {
                     sortFieldName = SortFieldHelper.ExtractName(sortFieldName);

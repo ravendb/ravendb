@@ -9,6 +9,7 @@ namespace Raven.Client.Documents.Session
         String,
         Long,
         Double,
+        AlphaNumeric
     }
 
     public static class OrderingUtil

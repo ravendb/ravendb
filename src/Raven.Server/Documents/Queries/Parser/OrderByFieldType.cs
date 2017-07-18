@@ -6,5 +6,6 @@
         String,
         Long,
         Double,
+        AlphaNumeric
     }
 }

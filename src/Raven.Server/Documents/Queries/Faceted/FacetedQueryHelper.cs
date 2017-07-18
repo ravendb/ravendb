@@ -57,6 +57,7 @@ namespace Raven.Server.Documents.Queries.Faceted
                 case SortOptions.None:
                 case SortOptions.String:
                 case SortOptions.StringVal:
+                case SortOptions.AlphaNumeric:
                     //case SortOptions.Custom: // TODO [arek]
                     return text;
                 case SortOptions.Numeric:

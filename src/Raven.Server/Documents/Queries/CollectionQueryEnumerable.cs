@@ -46,10 +46,6 @@ namespace Raven.Server.Documents.Queries
 
         private class Enumerator : IEnumerator<Document>
         {
-            private static readonly char[] InSeparator = { ',' };
-            private static readonly string InPrefix = $"@in<{Constants.Documents.Indexing.Fields.DocumentIdFieldName}>:";
-            private static readonly string EqualPrefix = $"{Constants.Documents.Indexing.Fields.DocumentIdFieldName}:";
-
             private readonly DocumentsStorage _documents;
             private readonly FieldsToFetch _fieldsToFetch;
             private readonly DocumentsOperationContext _context;

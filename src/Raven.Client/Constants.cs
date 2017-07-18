@@ -149,9 +149,7 @@ namespace Raven.Client
                     private Fields()
                     {
                     }
-
-                    public const string AlphaNumericFieldName = "__alphaNumeric";
-
+                    
                     public const string RandomFieldName = "__random";
 
                     public const string CustomSortFieldName = "__customSort";

@@ -29,6 +29,8 @@ namespace Raven.Client.Documents.Indexes
         /// This is typically slower than {@link #STRING}, which
         /// uses ordinals to do the sorting. 
         /// </summary>
-        StringVal = 11
+        StringVal = 11,
+
+        AlphaNumeric = 255
     }
 }

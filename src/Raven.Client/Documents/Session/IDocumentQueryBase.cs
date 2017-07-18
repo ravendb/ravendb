@@ -35,14 +35,16 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="descending">if set to <c>true</c> [descending].</param>
-        TSelf AddOrder(string fieldName, bool descending = false);
+        /// <param name="ordering">ordering type.</param>
+        TSelf AddOrder(string fieldName, bool descending = false, OrderingType ordering = OrderingType.String);
 
         /// <summary>
         ///     Adds an ordering for a specific field to the query
         /// </summary>
         /// <param name="propertySelector">Property selector for the field.</param>
         /// <param name="descending">if set to <c>true</c> [descending].</param>
-        TSelf AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending = false);
+        /// <param name="ordering">Ordering type.</param>
+        TSelf AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending = false, OrderingType ordering = OrderingType.String);
 
         /// <summary>
         ///     Callback to get the results of the query
@@ -322,21 +324,6 @@ If you really want to do in memory filtering on the data returned from the query
         ///     http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Proximity%20Searches
         /// </remarks>
         TSelf Proximity(int proximity);
-
-        /// <summary>
-        ///		Order the search results in alphanumeric order
-        ///		<param name="fieldName">The order by field name.</param>
-        ///		<param name="descending">if set to <c>true</c> [descending].</param>
-        /// </summary>
-        TSelf AlphaNumericOrdering(string fieldName, bool descending = false);
-
-        /// <summary>
-        ///		Order the search results in alphanumeric order
-        ///		<typeparam name="TResult">The type of the object that holds the property that you want to order by.</typeparam>
-        ///		<param name="propertySelector">Property selector for the field.</param>
-        ///		<param name="descending">if set to <c>true</c> [descending].</param>
-        /// </summary>
-        TSelf AlphaNumericOrdering<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending = false);
 
         /// <summary>
         ///     Order the search results randomly

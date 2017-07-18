@@ -389,19 +389,6 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AlphaNumericOrdering(string fieldName, bool descending)
-        {
-            AlphaNumericOrdering(fieldName, descending);
-            return this;
-        }
-
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AlphaNumericOrdering<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending)
-        {
-            var fieldName = GetMemberQueryPath(propertySelector);
-            AlphaNumericOrdering(fieldName, descending);
-            return this;
-        }
-
         /// <summary>
         /// Order the search results randomly
         /// </summary>
@@ -748,9 +735,10 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="descending">if set to <c>true</c> [descending].</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AddOrder(string fieldName, bool descending)
+        /// <param name="ordering">Ordering type.</param>
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AddOrder(string fieldName, bool descending, OrderingType ordering)
         {
-            AddOrder(fieldName, descending);
+            AddOrder(fieldName, descending, ordering);
             return this;
         }
 
@@ -777,7 +765,8 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name = "propertySelector">Property selector for the field.</param>
         /// <param name = "descending">if set to <c>true</c> [descending].</param>
-        public IAsyncDocumentQuery<T> AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending)
+        /// <param name = "ordering">Ordering type.</param>
+        public IAsyncDocumentQuery<T> AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending, OrderingType ordering)
         {
             AddOrder(GetMemberQueryPath(propertySelector.Body), descending);
             return this;
