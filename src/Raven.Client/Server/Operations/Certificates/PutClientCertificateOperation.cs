@@ -13,39 +13,35 @@ namespace Raven.Client.Server.Operations.Certificates
 {
     public class PutClientCertificateOperation : IServerOperation
     {
-        private readonly string _certificateBase64;
+        private readonly X509Certificate2 _certificate;
         private readonly HashSet<string> _permissions;
         private readonly bool _serverAdmin;
-        private readonly string _password;
 
-        public PutClientCertificateOperation(string certificateBase64, IEnumerable<string> permissions, bool serverAdmin = false, string password = null)
+        public PutClientCertificateOperation(X509Certificate2 certificate, IEnumerable<string> permissions, bool serverAdmin = false)
         {
-            _certificateBase64 = certificateBase64 ?? throw new ArgumentNullException(nameof(_certificateBase64));
+            _certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));
             _permissions = permissions != null ? new HashSet<string>(permissions) : throw new ArgumentNullException(nameof(permissions));
             _serverAdmin = serverAdmin;
-            _password = password;
         }
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new PutClientCertificateCommand(context, _certificateBase64, _permissions, _serverAdmin, _password);
+            return new PutClientCertificateCommand(context, _certificate, _permissions, _serverAdmin);
         }
 
         private class PutClientCertificateCommand : RavenCommand
         {
-            private readonly string _certificateBase64;
+            private readonly X509Certificate2 _certificate;
             private readonly HashSet<string> _permissions;
             private readonly bool _serverAdmin;
-            private readonly string _password;
             private readonly JsonOperationContext _context;
 
-            public PutClientCertificateCommand(JsonOperationContext context, string certificateBase64, HashSet<string> permissions, bool serverAdmin = false, string password = null)
+            public PutClientCertificateCommand(JsonOperationContext context, X509Certificate2 certificate, HashSet<string> permissions, bool serverAdmin = false)
             {
-                _certificateBase64 = certificateBase64 ?? throw new ArgumentNullException(nameof(certificateBase64));
+                _certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));
                 _context = context ?? throw new ArgumentNullException(nameof(context));
                 _permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
                 _serverAdmin = serverAdmin;
-                _password = password;
             }
 
             public override bool IsReadRequest => false;
@@ -64,19 +60,11 @@ namespace Raven.Client.Server.Operations.Certificates
                             writer.WriteStartObject();
 
                             writer.WritePropertyName("Certificate");
-                            writer.WriteString(_certificateBase64);
+                            writer.WriteString(Convert.ToBase64String(_certificate.Export(X509ContentType.Cert)));
                             writer.WriteComma();
                             writer.WritePropertyName("ServerAdmin");
                             writer.WriteBool(_serverAdmin);
                             writer.WriteComma();
-
-                            if (_password != null)
-                            {
-                                writer.WritePropertyName("Password");
-                                writer.WriteString(_password.ToString());
-                                writer.WriteComma();
-                            }
-
                             writer.WritePropertyName("Permissions");
                             writer.WriteStartArray();
                             bool first = true;

@@ -437,14 +437,14 @@ namespace FastTests
             var serverCertificate = new X509Certificate2(serverCertPath);
             var serverCertificateHolder = RavenServer.LoadCertificate(serverCertPath, null);
 
-            var clientCertificate = CertificateUtils.CreateSelfSignedClientCertificate("RavenTests", serverCertificateHolder);
+            var clientCertificate = CertificateUtils.CreateSelfSignedClientCertificate("RavenTestsClient", serverCertificateHolder);
 
             using (var store = GetDocumentStore(certificate: serverCertificate, defaultServer: defaultServer))
             {
                 var requestExecutor = store.GetRequestExecutor();
                 using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new PutClientCertificateOperation(Convert.ToBase64String(clientCertificate.Export(X509ContentType.Cert)), permissions, serverAdmin)
+                    var command = new PutClientCertificateOperation(clientCertificate, permissions, serverAdmin)
                         .GetCommand(store.Conventions, context);
 
                     requestExecutor.Execute(command, context);

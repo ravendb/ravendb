@@ -23,16 +23,6 @@ declare module "jszip-utils" {
 declare var Favico: any;
 
 ///
-/// Forge
-///
-
-declare var forge: any;
-
-declare module "forge" {
-    export = forge;
-}
-
-///
 /// jQuery: 
 ///   - selectpicker 
 ///   - multiselect

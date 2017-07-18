@@ -334,7 +334,7 @@ namespace Raven.Server.Rachis
                 }
                 try
                 {
-                    _engine.SwitchToCandidateState("An error occured during leadership - " + e);
+                    _engine.SwitchToCandidateState("An error occurred during leadership - " + e);
                 }
                 catch (Exception e2)
                 {

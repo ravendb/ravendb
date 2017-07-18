@@ -187,10 +187,7 @@ namespace Raven.Server.Web.Authentication
                 throw new ArgumentException("'Permissions' is a required field when generating a new certificate");
 
             const string validDbNameChars = @"([A-Za-z0-9_\-\.]+)";
-
-            if (permissions.Items.Count() > 0 && serverAdmin == true)
-                throw new ArgumentException("Certificate contains non empty 'Permissions' but 'serverAdmin' is set to true. Server Admin has access to everything so 'permissions' must be empty.");
-
+            
             foreach (LazyStringValue dbName in permissions.Items)
             {
                 if (string.IsNullOrWhiteSpace(dbName))

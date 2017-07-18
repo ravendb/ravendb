@@ -42,7 +42,7 @@ namespace FastTests.Server.Authentication
                 var requestExecutor = store.GetRequestExecutor();
                 using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new PutClientCertificateOperation(Convert.ToBase64String(clientCertificate.Export(X509ContentType.Cert)), permissions, serverAdmin)
+                    var command = new PutClientCertificateOperation(clientCertificate, permissions, serverAdmin)
                         .GetCommand(store.Conventions, context);
 
                     requestExecutor.Execute(command, context);

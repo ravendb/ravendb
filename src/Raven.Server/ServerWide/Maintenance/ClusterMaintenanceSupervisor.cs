@@ -257,7 +257,7 @@ namespace Raven.Server.ServerWide.Maintenance
             private async Task<Stream> ConnectAndGetNetworkStreamAsync(TcpConnectionInfo tcpConnectionInfo)
             {
                 await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, _tcpClient, _log);
-                return await TcpUtils.WrapStreamWithSslAsync(_tcpClient, tcpConnectionInfo);
+                return await TcpUtils.WrapStreamWithSslAsync(_tcpClient, tcpConnectionInfo, _parent._server.RavenServer.ServerCertificateHolder.Certificate);
             }
 
             private async Task<Stream> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo)

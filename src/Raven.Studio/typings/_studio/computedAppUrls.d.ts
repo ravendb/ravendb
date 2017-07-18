@@ -3,8 +3,6 @@ interface computedAppUrls {
     adminSettings: KnockoutComputed<string>;
     adminSettingsCluster: KnockoutComputed<string>;
 
-    hasApiKey: KnockoutComputed<string>;
-
     databases: KnockoutComputed<string>;
     manageDatabaseGroup: KnockoutComputed<string>;
     documents: KnockoutComputed<string>;

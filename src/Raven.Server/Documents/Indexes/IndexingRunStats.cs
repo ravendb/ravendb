@@ -61,17 +61,17 @@ namespace Raven.Server.Documents.Indexes
 
         public void AddUnexpectedError(Exception exception)
         {
-            AddError(null, $"Unexpected exception occured: {exception}", "Critical");
+            AddError(null, $"Unexpected exception occurred: {exception}", "Critical");
         }
 
         public void AddCriticalError(Exception exception)
         {
-            AddError(null, $"Critical exception occured: {exception}", "Critical");
+            AddError(null, $"Critical exception occurred: {exception}", "Critical");
         }
 
         public void AddMemoryError(OutOfMemoryException oome)
         {
-            AddError(null, $"Memory exception occured: {oome}", "Memory");
+            AddError(null, $"Memory exception occurred: {oome}", "Memory");
         }
 
         private void AddError(string key, string message, string action)

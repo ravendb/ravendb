@@ -130,6 +130,7 @@ namespace Raven.Server.Routing
                         case null:
                         case RavenServer.AuthenticationStatus.NoCertificateProvided:
                         case RavenServer.AuthenticationStatus.Expired:
+                        case RavenServer.AuthenticationStatus.NotYetValid:
                         case RavenServer.AuthenticationStatus.None:
                         case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
                             UnlikelyFailAuthorization(context, database?.Name, feature);
@@ -163,29 +164,33 @@ namespace Raven.Server.Routing
         public void UnlikelyFailAuthorization(HttpContext context, string database, RavenServer.AuthenticateConnection feature)
         {
             string message;
-            if (feature == null || feature.Status == RavenServer.AuthenticationStatus.NoCertificateProvided)
+            if (feature == null || feature.Status == RavenServer.AuthenticationStatus.None || feature.Status == RavenServer.AuthenticationStatus.NoCertificateProvided)
             {
                 message = "This server requires client certificate for authentication, but none was provided by the client";
             }
             else if (feature.Status == RavenServer.AuthenticationStatus.UnfamiliarCertificate)
             {
-                message = "The provided client certificate " + feature.Certificate + " is not on the allowed list of certificates that can access this server";
+                message = "The provided client certificate " + feature.Certificate.FriendlyName + " is not on the allowed list of certificates that can access this server";
             }
             else if (feature.Status == RavenServer.AuthenticationStatus.Allowed)
             {
-                message = "The provided client certificate " + feature.Certificate + " is not authorized to access " + (database ?? "the server");
+                message = "The provided client certificate " + feature.Certificate.FriendlyName + " is not authorized to access " + (database ?? "the server");
             }
             else if (feature.Status == RavenServer.AuthenticationStatus.ServerAdmin)
             {
-                message = "The provided client certificate " + feature.Certificate + " does not have ServerAdmin level to access " + (database ?? "the server");
+                message = "The provided client certificate " + feature.Certificate.FriendlyName + " does not have ServerAdmin level to access " + (database ?? "the server");
             }
             else if (feature.Status == RavenServer.AuthenticationStatus.Expired)
             {
-                message = "The provided client certificate " + feature.Certificate + " is expired";
+                message = "The provided client certificate " + feature.Certificate.FriendlyName + " is expired on " + feature.Certificate.NotAfter;
+            }
+            else if (feature.Status == RavenServer.AuthenticationStatus.NotYetValid)
+            {
+                message = "The provided client certificate " + feature.Certificate.FriendlyName + " is not yet valid because it starts on " + feature.Certificate.NotBefore;
             }
             else
             {
-                message = "Access to this server was denied, but the reason why is confidential, you should never see this message";
+                message = "Access to this server was denied, but the reason why is confidential, you did not see this message and your memory will self destruct in 5 seconds.";
             }
             context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
