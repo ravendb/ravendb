@@ -26,6 +26,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
     constructor(dto: Raven.Client.Documents.Subscriptions.SubscriptionState) {
         super(dto);
 
+        dto.Criteria.Script = dto.Criteria.Script || ""; 
         this.editViewUpdate(dto);
         this.editViewInitializeObservables(); 
         this.editViewInitValidation();
