@@ -102,7 +102,7 @@ namespace Raven.Server.Rachis
         public void StepDown()
         {
             if (_voters.Count == 0)
-                throw new InvalidOperationException("Cannot step down when I'm the only voter int he cluster");
+                throw new InvalidOperationException("Cannot step down when I'm the only voter in the cluster");
             var nextLeader = _voters.Values.OrderByDescending(x => x.FollowerMatchIndex).ThenByDescending(x => x.LastReplyFromFollower).First();
             if (_engine.Log.IsInfoEnabled)
             {

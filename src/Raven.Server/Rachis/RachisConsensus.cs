@@ -1330,7 +1330,7 @@ namespace Raven.Server.Rachis
             return ModifyTopologyAsync(nodeTag, null, Leader.TopologyModification.Remove);
         }
 
-        private async Task ModifyTopologyAsync(string nodeTag, string nodeUrl, Leader.TopologyModification modification, byte[] publicKey = null, bool validateNotInTopology = false)
+        public async Task ModifyTopologyAsync(string nodeTag, string nodeUrl, Leader.TopologyModification modification, byte[] publicKey = null, bool validateNotInTopology = false)
         {
             var leader = _currentLeader;
             if (leader == null)
