@@ -1309,6 +1309,54 @@ pre {
         background-color: @gray-dark;
     }
 
+
+
+    .panel-name {
+        margin-left: 0;
+
+        h3 {
+            margin: 0;
+            font-weight: normal;
+        }
+
+        .specs {
+            font-size: 13px;
+            line-height: 16px;
+            opacity: .8;
+            font-weight: bold;
+        }
+    }
+
+    .panel-checkbox {
+        align-self: flex-start;
+        margin-right: 0 !important;
+    }
+
+    .panel-addon {
+        border-top: 1px solid darken(@gray-darker,4%);
+        background-color: darken(@gray-darker,3%);
+
+
+        .property {
+            margin-right: @grid-gutter-width/2;
+            line-height: 15px;
+
+            h4 {
+                margin: 0;
+            }
+
+            h6 {
+                font-size: 10px;
+                margin-top: 0;
+                margin-bottom: 5px;
+                opacity: .5;
+                text-transform: uppercase;
+                letter-spacing: .4pt;
+                word-spacing: 2pt;
+            }
+        }
+    }
+
     .panel-heading {
         .right-action-button {
             display: inline;
@@ -1405,7 +1453,7 @@ pre {
 
     &:before {
         color: @gray-lighter;
-        font-size: 12px;
+        font-size: 10px;
         -moz-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
         -webkit-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
         -o-transform: rotate(-90deg) translateX(-50%) translateY(-50%);

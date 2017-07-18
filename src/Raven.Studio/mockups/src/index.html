@@ -10,7 +10,7 @@
         {{> topbar }}
 
         <div class="prime-container">
-            {{> menu }} 
+            {{> menu }}
 
             <div class="content-container">
                 <div class="content-margin">
@@ -143,6 +143,85 @@
                                         </strong>
                                     </p>
                                     <p>To add text add <strong class="text-info">"data-state"</strong> attibute</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h2>Panel state example</h2>
+
+                    <div class="panel panel-state">
+                        <div class="flex-vertical">
+                            <div class="state state-success" data-state-text="success"></div>
+                            <div class="padding flex-horizontal">
+                                <div class="checkbox panel-checkbox">
+                                    <input type="checkbox" class="styled">
+                                    <label></label>
+                                </div>
+                                <div class="flex-grow panel-name">
+                                    <h3>
+                                        <a href="#">
+                                            <span data-bind="text: taskName">Item-name</span>
+                                        </a>
+                                    </h3>
+                                    <div class="specs">test@<a href="#">http://0.0.0.0:8080</a></div>
+                                </div>
+                                <div class="node">
+                                    <i class="icon-cluster-node"></i>
+                                    A
+                                </div>
+                                <div class="actions">
+                                    <div class="btn-group">
+                                        <button type="button" class="btn dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                            <!--set-size-->
+                                            <span data-bind="text: badgeText">Enabled</span><span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a href="#" data-bind="click: $root.confirmEnableOngoingTask"><span>Enable</span></a></li>
+                                            <li><a href="#" data-bind="click: $root.confirmDisableOngoingTask"><span>Disable</span></a></li>
+                                        </ul>
+                                    </div>
+                                    <button class="btn btn-default" data-bind="click: editTask" title="Edit task"><i class="icon-edit"></i></button>
+                                    <button class="btn btn-danger" data-bind="click: $root.confirmRemoveOngoingTask" title="Delete task"><i class="icon-trash"></i></button>
+                                </div>
+                            </div>
+                            <div class="panel-addon">
+                                <div class="padding flex-horizontal">
+                                    <div class="property">
+                                        <h6>PROPERTY TITLE</h6>
+                                        <h4>Property Value</h4>
+                                    </div>
+                                    <div class="property">
+                                        <h6>PROPERTY TITLE</h6>
+                                        <h4>Property Value</h4>
+                                    </div>
+                                    <div class="property">
+                                        <h6>PROPERTY TITLE</h6>
+                                        <h4>Property Value</h4>
+                                    </div>
+                                    <div class="property">
+                                        <div class="dropdown">
+                                            <button class="btn dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown">
+                                                Dropdown
+                                                <span class="caret"></span>
+                                            </button>
+                                            <ul class="dropdown-menu" >
+                                                <li><a href="#">Action</a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="property">
+                                        <h6>Dropdown</h6>
+                                        <div class="dropdown">
+                                            <button class="btn btn-xs dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown">
+                                                Dropdown
+                                                <span class="caret"></span>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li><a href="#">Action</a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
