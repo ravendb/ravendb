@@ -821,7 +821,7 @@ this.Value = another.Value;
                         .ToListAsync();
                 }
 
-                var operation = await store.Operations.SendAsync(new PatchByIndexOperation("TestIndex",
+                var operation = await store.Operations.SendAsyncAndFetchOperation(new PatchByIndexOperation("TestIndex",
                     new IndexQuery() { Query = "Value:1" },
                     new PatchRequest { Script = @"PutDocument('NewItem/3', {'CopiedValue': this.Value });" }));
                 await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
