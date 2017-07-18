@@ -455,9 +455,9 @@ namespace Raven.Database.Raft
             }
         }
 
-        public async Task SendInitializeNewClusterForAsync(NodeConnectionInfo node, Guid? clusterId = null)
+        public async Task SendInitializeNewClusterForAsync(NodeConnectionInfo node)
         {
-            var url = node.GetAbsoluteUri() + "admin/cluster/initialize-new-cluster" + (clusterId.HasValue ? "?id=" + clusterId.Value : string.Empty);
+            var url = node.GetAbsoluteUri() + "admin/cluster/initialize-new-cluster";
 
             using (var request = CreateRequest(node, url, HttpMethods.Patch))
             {

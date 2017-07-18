@@ -140,24 +140,14 @@ namespace Raven.Database.Raft.Controllers
         }
 
         [HttpPatch]
-        [RavenRoute("admin/cluster/initialize-new-cluster/{*id}")]
-        public HttpResponseMessage InitializeNewCluster(string id)
+        [RavenRoute("admin/cluster/initialize-new-cluster")]
+        public HttpResponseMessage InitializeNewCluster()
         {
             var oldClusterManager = SetClusterManagerToNullAndGetOldValue();
-            if (id != null)
-            {
-                oldClusterManager.CleanupAllClusteringData(SystemDatabase);
-            }
             oldClusterManager?.Dispose();
 
             var newClusterManager = ClusterManagerFactory.Create(SystemDatabase, DatabasesLandlord, nullifyLastAppliedIndex: true);
-
-            if (string.IsNullOrEmpty(id))
-                newClusterManager.InitializeTopology(isPartOfExistingCluster: true);
-            else
-            {
-                newClusterManager.InitializeEmptyTopologyWithId(Guid.Parse(id));
-            }
+            newClusterManager.InitializeTopology(isPartOfExistingCluster: true);
 
             ((Reference<ClusterManager>) Configuration.Properties[typeof(ClusterManager)]).Value = newClusterManager;
             return GetEmptyMessage(HttpStatusCode.NoContent);
@@ -200,30 +190,19 @@ namespace Raven.Database.Raft.Controllers
             if (nodeConnectionInfo.Name == null)
                 nodeConnectionInfo.Name = RaftHelper.GetNodeName(await ClusterManager.Client.GetDatabaseId(nodeConnectionInfo).ConfigureAwait(false));
 
-            bool forced;
-            bool.TryParse(GetQueryStringValue("force"), out forced);
-
             var topology = ClusterManager.Engine.CurrentTopology;
-
-            CanJoinResult canJoinResult = CanJoinResult.CanJoin;
-            if (forced == false)
-            {
-                canJoinResult = await ClusterManager.Client.SendCanJoinAsync(nodeConnectionInfo).ConfigureAwait(false);
-                switch (canJoinResult)
-                {
-                    case CanJoinResult.IsNonEmpty:
-                        return GetMessageWithString("Can't join node to cluster. Node is not empty", HttpStatusCode.BadRequest);
-                    case CanJoinResult.InAnotherCluster:
-                        return GetMessageWithString("Can't join node to cluster. Node is in different cluster", HttpStatusCode.BadRequest);
-                    case CanJoinResult.AlreadyJoined:
-                        return GetEmptyMessage(HttpStatusCode.NotModified);
-                }
-            }
-            else
-            {
-                await ClusterManager.Client.SendInitializeNewClusterForAsync(nodeConnectionInfo, topology.TopologyId).ConfigureAwait(false);
-            }
             
+            var canJoinResult = await ClusterManager.Client.SendCanJoinAsync(nodeConnectionInfo).ConfigureAwait(false);
+            switch (canJoinResult)
+            {
+                case CanJoinResult.IsNonEmpty:
+                    return GetMessageWithString("Can't join node to cluster. Node is not empty", HttpStatusCode.BadRequest);
+                case CanJoinResult.InAnotherCluster:
+                    return GetMessageWithString("Can't join node to cluster. Node is in different cluster", HttpStatusCode.BadRequest);
+                case CanJoinResult.AlreadyJoined:
+                    return GetEmptyMessage(HttpStatusCode.NotModified);
+            }
+
             if (topology.Contains(nodeConnectionInfo.Name))
                 return GetEmptyMessage(HttpStatusCode.NotModified);
             //overriding user request since we know that this node can only join as non voter            
