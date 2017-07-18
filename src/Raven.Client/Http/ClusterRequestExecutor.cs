@@ -41,7 +41,7 @@ namespace Raven.Client.Http
             ValidateUrls(new[] { url }, certificate);
             var executor = new ClusterRequestExecutor(certificate, DocumentConventions.Default)
             {
-                _nodeSelector = new FailoverNodeSelector(new Topology
+                _nodeSelector = new NodeSelector(new Topology
                 {
                     Etag = -1,
                     Nodes = new List<ServerNode>
@@ -70,12 +70,12 @@ namespace Raven.Client.Http
             return executor;
         }
 
-        protected override Task PerformHealthCheck(ServerNode serverNode, JsonOperationContext context)
+        protected override Task PerformHealthCheck(ServerNode serverNode, int nodeIndex, JsonOperationContext context)
         {
-            return ExecuteAsync(serverNode, context, new GetTcpInfoCommand("health-check"), shouldRetry: false);
+            return ExecuteAsync(serverNode, nodeIndex, context, new GetTcpInfoCommand("health-check"), shouldRetry: false);
         }
 
-        public override async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout)
+        public override async Task<bool> UpdateTopologyAsync(ServerNode node, int? nodeIndex, int timeout)
         {
             if (_disposed)
                 return false;
@@ -90,14 +90,12 @@ namespace Raven.Client.Http
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     var command = new GetClusterTopologyCommand();
-
-                    await ExecuteAsync(node, context, command, shouldRetry: false).ConfigureAwait(false);
+                    await ExecuteAsync(node, nodeIndex, context, command, shouldRetry: false).ConfigureAwait(false);
 
                     var serverHash = ServerHash.GetServerHash(node.Url);
                     ClusterTopologyLocalCache.TrySavingTopologyToLocalCache(serverHash, command.Result, context);
 
                     var results = command.Result;
-
                     var newTopology = new Topology
                     {
                         Nodes = new List<ServerNode>(
@@ -109,15 +107,15 @@ namespace Raven.Client.Http
                             }
                         )
                     };
+
                     if (_nodeSelector == null)
                     {
-                        _nodeSelector = new FailoverNodeSelector(newTopology);
+                        _nodeSelector = new NodeSelector(newTopology);
                     }
                     else if (_nodeSelector.OnUpdateTopology(newTopology))
                     {
                         DisposeAllFailedNodesTimers();
                     }
-
                 }
             }
             finally
@@ -127,7 +125,7 @@ namespace Raven.Client.Http
             return true;
         }
 
-        protected override Task UpdateClientConfigurationAsync()
+        protected override Task UpdateClientConfigurationAsync(int? sessionId)
         {
             return Task.CompletedTask;
         }
@@ -146,7 +144,7 @@ namespace Raven.Client.Http
             if (cachedTopology == null)
                 return false;
 
-            _nodeSelector = new FailoverNodeSelector(new Topology
+            _nodeSelector = new NodeSelector(new Topology
             {
                 Nodes = new List<ServerNode>(
                     from member in cachedTopology.Topology.Members

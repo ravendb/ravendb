@@ -9,13 +9,12 @@ namespace Raven.Client.Documents.Operations
     {
         public Operation Send(IOperation<OperationIdResult> operation)
         {
-            return AsyncHelpers.RunSync(() => SendAsync(operation));
+            return AsyncHelpers.RunSync(() => SendAsyncAndFetchOperation(operation));
         }
 
-        public async Task<Operation> SendAsync(IOperation<OperationIdResult> operation, CancellationToken token = default(CancellationToken))
+        public async Task<Operation> SendAsyncAndFetchOperation(IOperation<OperationIdResult> operation, CancellationToken token = default(CancellationToken))
         {
-            JsonOperationContext context;
-            using (GetContext(out context))
+            using (GetContext(out JsonOperationContext context))
             {
                 var command = operation.GetCommand(_store, _requestExecutor.Conventions, context, _requestExecutor.Cache);
 
