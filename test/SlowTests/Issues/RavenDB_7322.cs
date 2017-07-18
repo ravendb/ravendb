@@ -17,6 +17,7 @@ namespace SlowTests.Issues
         {
             var classes = from assembly in GetAssemblies(typeof(RavenDB_7322).GetTypeInfo().Assembly)
                           from test in assembly.GetTypes()
+                          where test.GetTypeInfo().IsAbstract == false
                           where test.GetMethods().Any(x => x.GetCustomAttributes(typeof(FactAttribute), true).Count() != 0 || x.GetCustomAttributes(typeof(TheoryAttribute), true).Count() != 0)
                           select test;
 

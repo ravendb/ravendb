@@ -14,7 +14,7 @@ using Xunit;
 namespace SlowTests.Server.Documents.ETL
 {
     [Trait("Category", "ETL")]
-    public class EtlTestBase : RavenTestBase
+    public abstract class EtlTestBase : RavenTestBase
     {
         protected static AddEtlOperationResult AddEtl<T>(DocumentStore src, EtlConfiguration<T> configuration, T connectionString) where T : ConnectionString
         {
