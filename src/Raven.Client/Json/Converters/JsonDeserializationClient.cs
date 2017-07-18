@@ -138,8 +138,6 @@ namespace Raven.Client.Json.Converters
 
         internal static readonly Func<BlittableJsonReaderObject, AddConnectionStringResult> AddConnectionStringResult = GenerateJsonDeserializationRoutine<AddConnectionStringResult>();
 
-        internal static readonly Func<BlittableJsonReaderObject, UpdateConnectionStringResult> UpdateConnectionStringResult = GenerateJsonDeserializationRoutine<UpdateConnectionStringResult>();
-
         internal static readonly Func<BlittableJsonReaderObject, RemoveConnectionStringResult> RemoveConnectionStringResult = GenerateJsonDeserializationRoutine<RemoveConnectionStringResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, GetConnectionStringsResult> GetConnectionStringsResult = GenerateJsonDeserializationRoutine<GetConnectionStringsResult>();

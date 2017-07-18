@@ -161,8 +161,6 @@ namespace Raven.Server.ServerWide
                     case nameof(AddSqlConnectionString):
                     case nameof(RemoveRavenConnectionString):
                     case nameof(RemoveSqlConnectionString):
-                    case nameof(UpdateRavenConnectionString):
-                    case nameof(UpdateSqlConnectionString):
                         UpdateDatabase(context, type, cmd, index, leader);
                         break;
                     case nameof(UpdatePeriodicBackupStatusCommand):
