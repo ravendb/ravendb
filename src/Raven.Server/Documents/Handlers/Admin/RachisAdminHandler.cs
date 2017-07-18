@@ -282,15 +282,10 @@ namespace Raven.Server.Documents.Handlers.Admin
             using (context.OpenReadTransaction())
             {
                 var topology = ServerStore.GetClusterTopology(context);
-                if (topology.AllNodes.ContainsKey(nodeTag) == false)
-                {
-                    throw new InvalidOperationException(
-                        $"Failed to promote node {nodeTag} beacuse {nodeTag} is not a part of the cluster topology");
-                }
                 if (topology.Watchers.ContainsKey(nodeTag) == false)
                 {
                     throw new InvalidOperationException(
-                        $"Failed to promote node {nodeTag} beacuse {nodeTag} is already a voter in the cluster topology");
+                        $"Failed to promote node {nodeTag} beacuse {nodeTag} is not a watcher in the cluster topology");
                 }
 
                 var url = topology.GetUrlFromTag(nodeTag);
@@ -315,27 +310,18 @@ namespace Raven.Server.Documents.Handlers.Admin
             var nodeTag = GetStringQueryString("nodeTag");
             if (nodeTag == ServerStore.LeaderTag)
             {
-                //the node to be demoted is the current leader so it needs to step down first
-                ServerStore.Engine.CurrentLeader.StepDown();
-                await ServerStore.WaitForState(RachisConsensus.State.Follower);
-
-                RedirectToLeader();
-                return;
+                throw new InvalidOperationException(
+                    $"Failed to demote node {nodeTag} beacuse {nodeTag} is the current leader in the cluster topology. In order to demote {nodeTag} perform a Step-Down first");
             }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var topology = ServerStore.GetClusterTopology(context);
-                if (topology.AllNodes.ContainsKey(nodeTag) == false)
+                if (topology.Promotables.ContainsKey(nodeTag) == false && topology.Members.ContainsKey(nodeTag) == false)
                 {
                     throw new InvalidOperationException(
-                        $"Failed to demote node {nodeTag} beacuse {nodeTag} is not a part of the cluster topology");
-                }
-                if (topology.Watchers.ContainsKey(nodeTag))
-                {
-                    throw new InvalidOperationException(
-                        $"Failed to demote node {nodeTag} beacuse {nodeTag} is already a Watcher (non-voter) in the cluster topology");
+                        $"Failed to demote node {nodeTag} beacuse {nodeTag} is not a voter in the cluster topology");
                 }
 
                 var url = topology.GetUrlFromTag(nodeTag);
