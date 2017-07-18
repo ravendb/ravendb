@@ -10,7 +10,7 @@ class getDatabaseCommand extends commandBase {
     execute(): JQueryPromise<Raven.Client.Server.Operations.DatabaseInfo> {
         const url = endpoints.global.databases.databases;
         const args = {
-            info: this.dbName
+            name: this.dbName
         };
 
         return this.query<Raven.Client.Server.Operations.DatabaseInfo>(url, args);
