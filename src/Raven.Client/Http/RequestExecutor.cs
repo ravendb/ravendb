@@ -970,7 +970,21 @@ namespace Raven.Client.Http
             }
         }
 
-        public async Task<(int, ServerNode)> GetCurrentNode()
+        public async Task<(int, ServerNode)> GetPreferredNode()
+        {
+            await EnsureNodeSelector().ConfigureAwait(false);
+
+            return _nodeSelector.GetPreferredNode();
+        }
+        
+        public async Task<(int Index, ServerNode Node)> GetNodeBySessionId(int sessionId)
+        {
+            await EnsureNodeSelector().ConfigureAwait(false);
+
+            return _nodeSelector.GetNodeBySessionId(sessionId);
+        }
+
+        private async Task EnsureNodeSelector()
         {
             if (_firstTopologyUpdate.Status != TaskStatus.RanToCompletion)
                 await _firstTopologyUpdate.ConfigureAwait(false);
@@ -983,8 +997,6 @@ namespace Raven.Client.Http
                     Etag = TopologyEtag
                 });
             }
-
-            return _nodeSelector.GetPreferredNode();
         }
     }
 }

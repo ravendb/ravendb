@@ -347,7 +347,7 @@ namespace Raven.Client.Documents.Changes
         {
             try
             {
-                await _requestExecutor.GetCurrentNode().ConfigureAwait(false); ;
+                await _requestExecutor.GetPreferredNode().ConfigureAwait(false); ;
             }
             catch (OperationCanceledException)
             {

@@ -74,6 +74,24 @@ namespace Raven.Client.Documents.Session
 
         public IDictionary<string, object> ExternalState => _externalState ?? (_externalState = new Dictionary<string, object>());
 
+        public async Task<ServerNode> GetCurrentSessionNode()
+        {
+            (int Index, ServerNode Node) result;
+            switch (this._documentStore.Conventions.ReadBalanceBehavior)
+            {
+                case ReadBalanceBehavior.None:
+                    result = await _requestExecutor.GetPreferredNode().ConfigureAwait(false);
+                    break;
+                case ReadBalanceBehavior.RoundRobin:
+                    result = await _requestExecutor.GetNodeBySessionId(_clientSessionId).ConfigureAwait(false);
+                    break;
+                case ReadBalanceBehavior.FastestNode:
+                default:
+                    throw new ArgumentOutOfRangeException(_documentStore.Conventions.ReadBalanceBehavior.ToString());
+            }
+            return result.Node;
+        }
+
         /// <summary>
         /// Translate between an ID and its associated entity
         /// </summary>

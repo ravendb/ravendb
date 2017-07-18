@@ -108,7 +108,7 @@ namespace SlowTests.Cluster
                     {
                         // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
                         session.Query<User>().Where(u => u.Name.StartsWith("Ja")).ToList();
-                        usedUrls.Add((await leaderRequestExecutor.GetCurrentNode()).Item2.Url.ToLower());
+                        usedUrls.Add((await session.Advanced.GetCurrentSessionNode()).Url.ToLower());
                     }
                 }
 
