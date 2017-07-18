@@ -72,7 +72,7 @@ namespace Voron
                         _log.Info($"Starting desired sync with {_maybeNeedToSync.Count:#,#} items to sync after {millisecondsTimeout:#,#} ms with no activity");
                     }
 
-                    // sync after 5 seconds if no flushing occured, or if there has been a LOT of
+                    // sync after 5 seconds if no flushing occurred, or if there has been a LOT of
                     // writes that we would like to run
                     SyncDesiredEnvironments();
                     continue;

@@ -3,7 +3,6 @@ import ongoingTask = require("models/database/tasks/ongoingTaskModel");
 
 class ongoingTaskETLModel extends ongoingTask {
 
-    apiKey = ko.observable<string>();
     destinationDB = ko.observable<string>();
     destinationURL = ko.observable<string>();
     destDBText: KnockoutComputed<string>;

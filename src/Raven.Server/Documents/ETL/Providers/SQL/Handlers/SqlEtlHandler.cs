@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest; // Bad Request
 
                 if (Logger.IsInfoEnabled)
-                    Logger.Info("Error occured during sql replication connection test", ex);
+                    Logger.Info("Error occurred during sql replication connection test", ex);
 
                 JsonOperationContext context;
                 using (ContextPool.AllocateOperationContext(out context))

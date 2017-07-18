@@ -47,7 +47,6 @@ class editExternalReplicationTask extends viewModelBase {
             this.editedExternalReplication().taskName,
             this.editedExternalReplication().destinationURL,
             this.editedExternalReplication().destinationDB,
-            this.editedExternalReplication().apiKey
         ], false, jsonUtil.newLineNormalizingHashFunction);
 
         this.isSaveEnabled = ko.pureComputed(() => {

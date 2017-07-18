@@ -3,8 +3,6 @@
 import messagePublisher = require("common/messagePublisher");
 import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
-import oauthContext = require("common/oauthContext");
-import forge = require("forge");
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
 
 /// Commands encapsulate a read or write operation to the database and support progress notifications and common AJAX related functionality.
@@ -12,7 +10,6 @@ class commandBase {
 
     // TODO: better place for this?
     static ravenClientVersion = '4.0.0.0';
-    private oauthHandler = new oauthHandler(); //TODO: consider static handler?
 
     execute<T>(): JQueryPromise<T> {
         throw new Error("Execute must be overridden.");
@@ -92,8 +89,6 @@ class commandBase {
     }
 
     protected ajax<T>(relativeUrl: string, args: any, method: string, db?: database, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<T> {
-        var originalArguments = arguments;
-
         const requestExecution = protractedCommandsDetector.instance.requestStarted(4000, timeToAlert);
 
         // ContentType:
@@ -104,10 +99,10 @@ class commandBase {
         // 
         // So, for GETs, we issue text/plain requests, which skip the OPTIONS
         // request and goes straight for the GET request.
-        var contentType = method === "GET" ?
+        const contentType = method === "GET" ?
             "text/plain; charset=utf-8" :
             "application/json; charset=utf-8";
-        var defaultOptions = {
+        const defaultOptions = {
             url: appUrl.forDatabaseQuery(db) + relativeUrl,
             data: args,
             dataType: "json",
@@ -132,25 +127,9 @@ class commandBase {
         };
         
         if (options) {
-            for (var prop in options) {
+            for (let prop in options) {
                 (<any>defaultOptions)[prop] = (<any>options)[prop];
             }
-        }
-
-        if (oauthContext.apiKey()) { //TODO: move to oauth handler!
-            if (!defaultOptions.headers) {
-                var newHeaders: any = {};
-                defaultOptions.headers = newHeaders;
-            }
-            defaultOptions.headers["Has-Api-Key"] = "True"; 
-        }
-
-        if (oauthContext.authHeader()) { //TODO: move to oauth handler
-            if (!defaultOptions.headers) {
-                var newHeaders: any = {};
-                defaultOptions.headers = newHeaders;
-            }
-            defaultOptions.headers["Authorization"] = oauthContext.authHeader();
         }
 
         var ajaxTask = $.Deferred();
@@ -168,8 +147,6 @@ class commandBase {
                 if (currentDb != null && currentDb.name === dbBeingUpdated) {
                     router.navigate(appUrl.forUpgrade(new database(dbBeingUpdated, false, []))); //TODO: use database manger to get this database!
                 }*/
-            } else if (request.status === ResponseCodes.PreconditionFailed && oauthContext.apiKey()) {
-                this.oauthHandler.handleOAuth(ajaxTask, request, () => this.retryOriginalRequest(ajaxTask, originalArguments));
             } else {
                 ajaxTask.reject(request, status, error);
             }
@@ -195,14 +172,6 @@ class commandBase {
         return etag;
     }
 
-    private retryOriginalRequest(task: JQueryDeferred<any>, orignalArguments: IArguments) {
-        this.ajax.apply(this, orignalArguments).done((results: any, status: any, xhr: any) => {
-            task.resolve(results, status, xhr);
-        }).fail((request: any, status: any, error: any) => {
-            task.reject(request, status, error);
-        });
-    }
-
     reportInfo(title: string, details?: string) {
         messagePublisher.reportInfo(title, details);
     }
@@ -217,102 +186,6 @@ class commandBase {
 
     reportWarning(title: string, details?: string, httpStatusText?: string) {
         messagePublisher.reportWarning(title, details, httpStatusText);
-    }
-}
-
-class oauthHandler {
-    handleOAuth(task: JQueryDeferred<any>, request: JQueryXHR, retry: Function) {
-        var oauthSource = request.getResponseHeader('OAuth-Source');
-
-        // issue request to oauth source endpoint to get RSA exponent and modulus
-        $.ajax({
-            type: 'POST',
-            url: oauthSource,
-            headers: {
-                grant_type: 'client_credentials'
-            }
-        }).fail((request, status, error) => {
-            if (request.status !== ResponseCodes.PreconditionFailed) {
-                task.reject(request, status, error);
-            } else {
-                var wwwAuth: string = request.getResponseHeader('WWW-Authenticate');
-                var tokens = wwwAuth.split(',');
-                var authRequest: any = {};
-                tokens.forEach(token => {
-                    var eqPos = token.indexOf("=");
-                    var kv = [token.substring(0, eqPos), token.substring(eqPos + 1)];
-                    var m = kv[0].match(/[a-zA-Z]+$/g);
-                    if (m) {
-                        authRequest[m[0]] = kv[1];
-                    } else {
-                        authRequest[kv[0]] = kv[1];
-                    }
-                });
-
-                // form oauth request
-
-                var data = this.objectToString({
-                    exponent: authRequest.exponent,
-                    modulus: authRequest.modulus,
-                    data: this.encryptAsymmetric(authRequest.exponent, authRequest.modulus, this.objectToString({
-                        "api key name": oauthContext.apiKeyName(),
-                        "challenge": authRequest.challenge,
-                        "response": this.prepareResponse(authRequest.challenge)
-                    }))
-                });
-
-                $.ajax({
-                    type: 'POST',
-                    url: oauthSource,
-                    data: data,
-                    headers: {
-                        grant_type: 'client_credentials'
-                    }
-                }).done(results => {
-                    var resultsAsString = JSON.stringify(results, null, 0);
-                    oauthContext.authHeader("Bearer " + resultsAsString.replace(/(\r\n|\n|\r)/gm, ""));
-                    retry();
-                }).fail((request, status, error) => {
-                    task.reject(request, status, error);
-                });
-            }
-        });
-    }
-
-    objectToString(input: any) {
-        return $.map(input, (value, key) => key + "=" + value).join(',');
-    }
-
-    prepareResponse(challenge: string) {
-        var input = challenge + ";" + oauthContext.apiKeySecret();
-        var md = forge.md.sha1.create();
-        md.update(input);
-        return forge.util.encode64(md.digest().getBytes());
-    }
-
-    encryptAsymmetric(exponent: any, modulus: any, data: any) {
-        var e = this.base64ToBigInt(exponent);
-        var n = this.base64ToBigInt(modulus);
-        var rsa = forge.pki.rsa;
-        var publicKey = rsa.setPublicKey(n, e);
-
-        var key = forge.random.getBytesSync(32);
-        var iv = forge.random.getBytesSync(16);
-
-        var keyAndIvEncrypted = publicKey.encrypt(key + iv, 'RSA-OAEP');
-
-        var cipher = forge.cipher.createCipher('AES-CBC', key);
-        cipher.start({ iv: iv });
-        cipher.update(forge.util.createBuffer(data));
-        cipher.finish();
-        var encrypted = cipher.output;
-        return forge.util.encode64(keyAndIvEncrypted + encrypted.data);
-    }
-
-    base64ToBigInt(input: any) {
-        input = forge.util.decode64(input);
-        var hex = forge.util.bytesToHex(input);
-        return new forge.jsbn.BigInteger(hex, 16);
     }
 }
 
