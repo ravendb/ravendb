@@ -132,14 +132,14 @@ class cluster extends viewModelBase {
         });
     }
 
-    addAnotherServerToCluster(forcedAdd: boolean) {
+    addAnotherServerToCluster() {
         eventsCollector.default.reportEvent("cluster", "add-server");
         var newNode = nodeConnectionInfo.empty();
         var dialog = new editNodeConnectionInfoDialog(newNode, false);
         dialog
             .onExit()
             .done(nci => {
-            new extendRaftClusterCommand(appUrl.getSystemDatabase(), nci.toDto(), false, forcedAdd)
+            new extendRaftClusterCommand(appUrl.getSystemDatabase(), nci.toDto(), false)
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500));
         });
@@ -168,7 +168,7 @@ class cluster extends viewModelBase {
         dialog
             .onExit()
             .done(nci => {
-            new extendRaftClusterCommand(appUrl.getSystemDatabase(), nci.toDto(), true, false)
+            new extendRaftClusterCommand(appUrl.getSystemDatabase(), nci.toDto(), true)
                 .execute()
                 .done(() => {
                     shell.clusterMode(true);

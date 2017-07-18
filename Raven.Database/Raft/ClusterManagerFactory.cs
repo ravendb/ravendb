@@ -62,7 +62,7 @@ namespace Raven.Database.Raft
 
             var shortOperationsTimeout = TimeSpan.FromMilliseconds(1.5 * Math.Max(configuration.Cluster.ElectionTimeout, configuration.Cluster.HeartbeatTimeout));
             var transport = new HttpTransport(nodeConnectionInfo.Name, shortOperationsTimeout, systemDatabase.WorkContext.CancellationToken);
-            var stateMachine = new ClusterStateMachine(systemDatabase, databasesLandlord, nullifyLastAppliedIndex: nullifyLastAppliedIndex);
+            var stateMachine = new ClusterStateMachine(systemDatabase, databasesLandlord);
             var raftEngineOptions = new RaftEngineOptions(nodeConnectionInfo, options, transport, stateMachine)
             {
                 ElectionTimeout = configuration.Cluster.ElectionTimeout,
