@@ -13,9 +13,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {   
                 Console.WriteLine(i);
-                using (var test = new ClusterModesForRequestExecutorTest())   
+                using (var test = new SlowTests.Server.Replication.ReplicationWithRevisions())   
                 {
-                    test.Round_robin_load_balancing_with_failing_node_should_work().Wait();
+                    test.ReplicateRevisionsIgnoringConflicts().Wait();
                 }
             }
         }
