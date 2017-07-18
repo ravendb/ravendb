@@ -71,7 +71,7 @@ namespace SlowTests.Client
                     indexName = stats.IndexName;
                 }
 
-                var operation = await store.Operations.SendAsync(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
+                var operation = await store.Operations.SendAsyncAndFetchOperation(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
 
                 await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 

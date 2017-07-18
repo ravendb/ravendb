@@ -23,7 +23,7 @@ namespace SlowTests.Server.Basic
                     await session.SaveChangesAsync();
                 }
 
-                var operation = await store.Operations.SendAsync(new DeleteCollectionOperation("Users"));
+                var operation = await store.Operations.SendAsyncAndFetchOperation(new DeleteCollectionOperation("Users"));
                 await operation.WaitForCompletionAsync();
 
                 var stats = await store.Admin.SendAsync(new GetStatisticsOperation());

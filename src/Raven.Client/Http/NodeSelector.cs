@@ -3,15 +3,15 @@ using System.Threading;
 
 namespace Raven.Client.Http
 {
-    public class FailoverNodeSelector : INodeSelector
+    public class NodeSelector
     {
         protected Topology _topology;
 
         public Topology Topology => _topology;
 
-        private int _currentNodeIndex;
+        protected int _currentNodeIndex;
 
-        public FailoverNodeSelector(Topology topology)
+        public NodeSelector(Topology topology)
         {
             _topology = topology;
         }
@@ -21,18 +21,7 @@ namespace Raven.Client.Http
             return Volatile.Read(ref _currentNodeIndex);
         }
 
-        public virtual void OnSucceededRequest()
-        {
-            //nothing to do here in this type of selector
-        }
-
-        public  void OnFailedRequest(int nodeIndex)
-        {
-            if (Topology.Nodes.Count == 0)
-                ThrowEmptyTopology();
-
-            AtomicAdvanceNodeIndex();
-        }
+        public void OnFailedRequest(int nodeIndex, int? sessionId) => AdvanceToNextNode(sessionId);
 
         public bool OnUpdateTopology(Topology topology, bool forceUpdate = false)
         {
@@ -50,18 +39,25 @@ namespace Raven.Client.Http
                     Interlocked.Exchange(ref _currentNodeIndex, 0);
                 }
 
-                var changed = Interlocked.CompareExchange<Topology>(ref _topology, topology, oldTopology);
+                var changed = Interlocked.CompareExchange(ref _topology, topology, oldTopology);
                 if (changed == oldTopology)
                     return true;
                 oldTopology = changed;
             } while (true);
         }
 
-        public ServerNode GetCurrentNode()
+        public (int, ServerNode) GetCurrentNode()
         {
             if (Topology.Nodes.Count == 0)
                 ThrowEmptyTopology();
-            return Topology.Nodes[_currentNodeIndex];
+
+            return (Volatile.Read(ref _currentNodeIndex),Topology.Nodes[_currentNodeIndex]);
+        }
+
+        public (int,ServerNode) GetNodeBySessionId(int sessionId)
+        {
+            var index = sessionId % Topology.Nodes.Count;
+            return (index,Topology.Nodes[index]);
         }
 
         public void RestoreNodeIndex(int nodeIndex)
@@ -79,12 +75,20 @@ namespace Raven.Client.Http
         public event Action<int> NodeSwitch;
 
         private readonly object _nodeIncrementSyncObj = new object();
-        protected void AtomicAdvanceNodeIndex()
+        public void AdvanceToNextNode(int? sessionId)
         {
             lock (_nodeIncrementSyncObj)
             {
-                var nextIndex = _currentNodeIndex + 1;
-                _currentNodeIndex = nextIndex < Topology.Nodes.Count ? nextIndex : 0;
+                if (Topology.Nodes.Count == 0)
+                    ThrowEmptyTopology();
+
+                int nextIndex;
+                var sessionIndex = sessionId ?? 0 % Topology.Nodes.Count;
+                do
+                {
+                    nextIndex = _currentNodeIndex + 1;
+                    _currentNodeIndex = nextIndex < Topology.Nodes.Count ? nextIndex : 0;
+                } while (nextIndex == sessionIndex);
 
                 NodeSwitch?.Invoke(_currentNodeIndex);
             }

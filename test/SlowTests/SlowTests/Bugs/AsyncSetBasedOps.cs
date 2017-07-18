@@ -60,7 +60,7 @@ namespace SlowTests.SlowTests.Bugs
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
 
-                await (await store.Operations.SendAsync(new PatchByIndexOperation(
+                await (await store.Operations.SendAsyncAndFetchOperation(new PatchByIndexOperation(
                     stats.IndexName,
                     new IndexQuery() { Query = string.Empty },
                     new PatchRequest

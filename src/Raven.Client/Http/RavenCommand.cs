@@ -39,6 +39,8 @@ namespace Raven.Client.Http
 
         public HttpStatusCode StatusCode;
 
+        public bool DidRetryAfterInternalServerError { get; internal set; }
+
         public RavenCommandResponseType ResponseType { get; protected set; }
 
         public TimeSpan? Timeout { get; protected set; }

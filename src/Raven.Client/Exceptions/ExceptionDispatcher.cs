@@ -26,6 +26,8 @@ namespace Raven.Client.Exceptions
             public string Error { get; set; }
         }
 
+        public static Exception Get(ExceptionSchema schema, HttpStatusCode code) => Get(schema.Message, schema.Error, schema.Type, code);
+
         public static Exception Get(string message, string error, string typeAsString, HttpStatusCode code)
         {
             if (code == HttpStatusCode.Conflict)
