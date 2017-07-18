@@ -123,7 +123,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/studio/$", "GET", NoAuthorizationRequired = true)]
+        [RavenAction("/studio/$", "GET", RequiredAuthorization = AuthorizationStatus.UnauthenticatedClients)]
         public async Task GetStudioFile()
         {
             var fileName = new StringSegment(

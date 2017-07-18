@@ -796,10 +796,10 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/connection-strings/add", "PUT", "/admin/connection-strings/add?name={databaseName:string}&type={[sql|raven]:string}")]
-        public async Task AddConnectionString()
+        [RavenAction("/admin/connection-strings/put", "PUT", "/admin/connection-strings/put?name={databaseName:string}&type={[sql|raven]:string}")]
+        public async Task PutConnectionString()
         {
-            await DatabaseConfigurations((_, databaseName, connectionString) => ServerStore.AddConnectionString(_, databaseName, connectionString), "add-connection-string");
+            await DatabaseConfigurations((_, databaseName, connectionString) => ServerStore.PutConnectionString(_, databaseName, connectionString), "put-connection-string");
         }
 
         [RavenAction("/admin/connection-strings/remove", "DELETE", "/admin/connection-strings/remove?name={databaseName:string}&connectionString={connectionStringName:string}&type={[sql|raven]:string}")]
@@ -824,36 +824,6 @@ namespace Raven.Server.Web.System
                     {
                         [nameof(ModifyOngoingTaskResult.RaftCommandIndex)] = index
                     });
-                    writer.Flush();
-                }
-            }
-        }
-
-        [RavenAction("/admin/connection-strings/update", "PUT", "/admin/connection-strings/update?name={databaseName:string}&oldName={oldConnectionStringName:string}")]
-        public async Task UpdateConnectionString()
-        {
-            var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-            var oldName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("oldName");
-
-            ServerStore.EnsureNotPassive();
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var connectionString = await context.ReadForMemoryAsync(RequestBodyStream(), "read-update-connection-string");
-
-                var (index, _) = await ServerStore.UpdateConnectionString(dbName, oldName, connectionString);         
-                await ServerStore.Cluster.WaitForIndexNotification(index);
-                
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    var json = new DynamicJsonValue
-                    {
-                        ["RaftCommandIndex"] = index
-                    };
-                    context.Write(writer, json);
                     writer.Flush();
                 }
             }

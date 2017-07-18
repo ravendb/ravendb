@@ -1,6 +1,6 @@
 ﻿using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Transformers;
-using Raven.Client.Server.Operations.ApiKeys;
+using Raven.Client.Server.Operations.Certificates;
 
 namespace Raven.Client.Documents.Operations
 {
@@ -33,7 +33,11 @@ namespace Raven.Client.Documents.Operations
     {
     }
 
-    internal class GetApiKeysResponse : ResultsResponse<NamedApiKeyDefinition>
+    internal class GetCertificatesResponse : ResultsResponse<CertificateDefinition>
+    {
+    }
+
+    internal class GetClientCertificatesResponse : ResultsResponse<CertificateRawData>
     {
     }
 }

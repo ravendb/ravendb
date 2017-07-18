@@ -1,5 +1,8 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Server.Commercial;
+using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Sparrow.Json;
@@ -8,9 +11,10 @@ namespace Raven.Server.Web.Studio
 {
     public class LicenseHandler : RequestHandler
     {
-        [RavenAction("/license/status", "GET")]
+        [RavenAction("/license/status", "GET", RequiredAuthorization = AuthorizationStatus.ValidUser)]
         public Task Status()
         {
+        
             using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -19,8 +23,8 @@ namespace Raven.Server.Web.Studio
 
             return Task.CompletedTask;
         }
-
-        [RavenAction("/license/registration", "POST")]
+ 
+        [RavenAction("/admin/license/registration", "POST", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public async Task Register()
         {
             UserRegistrationInfo userInfo;
@@ -36,7 +40,7 @@ namespace Raven.Server.Web.Studio
             NoContentStatus();
         }
 
-        [RavenAction("/license/activate", "POST")]
+        [RavenAction("/admin/license/activate", "POST", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public Task Activate()
         {
             License license;

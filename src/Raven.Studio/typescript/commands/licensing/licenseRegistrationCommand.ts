@@ -8,7 +8,7 @@ class licenseRegistrationCommand extends commandBase {
     }
 
     execute(): JQueryPromise<void> {
-        const url = endpoints.global.license.licenseRegistration;
+        const url = endpoints.global.license.adminLicenseRegistration;
 
         return this.post(url, JSON.stringify(this.registrationData), null, { dataType: undefined })
             .fail((response: JQueryXHR) => {

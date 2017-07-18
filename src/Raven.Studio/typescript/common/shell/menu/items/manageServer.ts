@@ -9,16 +9,6 @@ export = getManageServerMenuItem;
 function getManageServerMenuItem() {
     let canReadOrWrite = settingsAccessAuthorizer.canReadOrWrite;
     var items: menuItem[] = [
-        /* TODO
-        new leafMenuItem({
-            route: ['admin/settings', 'admin/settings/apiKeys'],
-            moduleId: 'viewmodels/manage/apiKeys',
-            title: 'API Keys',
-            nav: true,
-            css: 'icon-api-keys',
-            dynamicHash: appUrl.forApiKeys,
-            enabled: canReadOrWrite
-        }),*/
         new leafMenuItem({
             route: 'admin/settings/cluster',
             moduleId: "viewmodels/manage/cluster",
@@ -47,15 +37,6 @@ function getManageServerMenuItem() {
             enabled: accessHelper.isGlobalAdmin
         }),
         /* TODO
-        new leafMenuItem({
-            route: "admin/settings/serverSmuggling",
-            moduleId: "viewmodels/manage/serverSmuggling",
-            title: "Server Smuggling",
-            nav: true,
-            css: 'icon-server-smugling',
-            dynamicHash: appUrl.forServerSmugging,
-            enabled: accessHelper.isGlobalAdmin
-        }),
         new leafMenuItem({
             route: 'admin/settings/backup',
             moduleId: 'viewmodels/manage/backup',

@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -15,6 +17,7 @@ using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
+using Raven.Client.Server.Operations.Certificates;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
@@ -80,13 +83,13 @@ namespace FastTests
             string path = null,
             Action<DatabaseRecord> modifyDatabaseRecord = null,
             Func<string, string> modifyName = null,
-            string apiKey = null,
             bool ignoreDisabledDatabase = false,
             int replicationFactor = 1,
             RavenServer defaultServer = null,
             bool waitForDatabasesToBeCreated = false,
             bool deleteDatabaseWhenDisposed = true,
-            bool createDatabase = true)
+            bool createDatabase = true,
+            X509Certificate2 certificate = null)
         {
             try
             {
@@ -132,7 +135,7 @@ namespace FastTests
                     {
                         Urls = UseFiddler(defaultServer.WebUrls),
                         Database = name,
-                        ApiKey = apiKey
+                        Certificate = certificate
                     };
                     ModifyStore(store);
                     store.Initialize();
@@ -182,7 +185,8 @@ namespace FastTests
                                 continue;
                             }
 
-                            server.Configuration.Security.AuthenticationEnabled = false;
+                            server.Configuration.Security.AuthenticationEnabled = certificate != null;
+
                             if (deleteDatabaseWhenDisposed)
                             {
                                 DeleteDatabaseResult result;
@@ -426,6 +430,80 @@ namespace FastTests
             foreach (var store in CreatedStores)
                 exceptionAggregator.Execute(store.Dispose);
             CreatedStores.Clear();
+        }
+
+        protected X509Certificate2 CreateAndPutClientCertificate(string serverCertPath, IEnumerable<string> permissions, bool serverAdmin = false, RavenServer defaultServer = null)
+        {
+            var serverCertificate = new X509Certificate2(serverCertPath);
+            var serverCertificateHolder = RavenServer.LoadCertificate(serverCertPath, null);
+
+            var clientCertificate = CertificateUtils.CreateSelfSignedClientCertificate("RavenTestsClient", serverCertificateHolder);
+
+            using (var store = GetDocumentStore(certificate: serverCertificate, defaultServer: defaultServer))
+            {
+                var requestExecutor = store.GetRequestExecutor();
+                using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    var command = new PutClientCertificateOperation(clientCertificate, permissions, serverAdmin)
+                        .GetCommand(store.Conventions, context);
+
+                    requestExecutor.Execute(command, context);
+                }
+            }
+            return clientCertificate;
+        }
+
+        protected X509Certificate2 AskServerForClientCertificate(string serverCertPath, IEnumerable<string> permissions, bool serverAdmin = false)
+        {
+            var serverCertificate = new X509Certificate2(serverCertPath);
+            X509Certificate2 clientCertificate;
+
+            using (var store = GetDocumentStore(certificate: serverCertificate))
+            {
+                var requestExecutor = store.GetRequestExecutor();
+                using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    var command = new CreateClientCertificateOperation("client certificate", permissions, serverAdmin)
+                        .GetCommand(store.Conventions, context);
+
+                    requestExecutor.Execute(command, context);
+                    clientCertificate = new X509Certificate2(command.Result.RawData);
+                }
+            }
+            return clientCertificate;
+        }
+
+        protected string SetupServerAuthentication(
+            IDictionary<string, string> customSettings = null, 
+            string serverUrl = null, 
+            bool doNotReuseServer = true)
+        {
+            var serverCertPath = GenerateAndSaveSelfSignedCertificate();
+
+            if (customSettings == null)
+                customSettings = new ConcurrentDictionary<string, string>();
+            
+            customSettings[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = serverCertPath;
+            customSettings[RavenConfiguration.GetKey(x => x.Security.AuthenticationEnabled)] = "True";
+            customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = serverUrl ?? "https://" + Environment.MachineName + ":8080";
+            
+            if (doNotReuseServer)
+                DoNotReuseServer(customSettings);
+
+            return serverCertPath;
+        }
+
+        protected void SetupAuthenticationInTest(
+            out X509Certificate2 clientCertificate, 
+            IEnumerable<string> permissions, 
+            IDictionary<string, string> customSettings = null, 
+            bool serverAdmin = false, 
+            string serverUrl = null, 
+            bool doNotReuseServer = true, 
+            RavenServer defaultServer = null)
+        {
+            var serverCertPath = SetupServerAuthentication(customSettings, serverUrl, doNotReuseServer);
+            clientCertificate = CreateAndPutClientCertificate(serverCertPath, permissions, serverAdmin, defaultServer);
         }
     }
 }

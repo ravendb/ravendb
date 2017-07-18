@@ -6,17 +6,14 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.MoreLikeThis;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
-using Raven.Client.Http.OAuth;
 using Raven.Client.Server;
 using Raven.Client.Server.Commands;
 using Raven.Client.Server.ETL;
 using Raven.Client.Server.Operations;
-using Raven.Client.Server.Operations.Configuration;
 using Raven.Client.Server.Operations.ConnectionStrings;
 using Raven.Client.Server.Operations.ETL;
 using Raven.Client.Server.PeriodicBackup;
@@ -44,8 +41,6 @@ namespace Raven.Client.Json.Converters
         public static readonly Func<BlittableJsonReaderObject, QueryResult> QueryResult = GenerateJsonDeserializationRoutine<QueryResult>();
 
         public static readonly Func<BlittableJsonReaderObject, MoreLikeThisQueryResult> MoreLikeThisQueryResult = GenerateJsonDeserializationRoutine<MoreLikeThisQueryResult>();
-
-        public static readonly Func<BlittableJsonReaderObject, AuthenticatorChallenge> AuthenticatorChallenge = GenerateJsonDeserializationRoutine<AuthenticatorChallenge>();
 
         public static readonly Func<BlittableJsonReaderObject, Topology> Topology = GenerateJsonDeserializationRoutine<Topology>();
 
@@ -107,7 +102,9 @@ namespace Raven.Client.Json.Converters
 
         public static readonly Func<BlittableJsonReaderObject, PatchResult> PatchResult = GenerateJsonDeserializationRoutine<PatchResult>();
 
-        public static readonly Func<BlittableJsonReaderObject, GetApiKeysResponse> GetApiKeysResponse = GenerateJsonDeserializationRoutine<GetApiKeysResponse>();
+        public static readonly Func<BlittableJsonReaderObject, GetCertificatesResponse> GetCertificatesResponse = GenerateJsonDeserializationRoutine<GetCertificatesResponse>();
+
+        public static readonly Func<BlittableJsonReaderObject, GetClientCertificatesResponse> GetClientCertificatesResponse = GenerateJsonDeserializationRoutine<GetClientCertificatesResponse>();
 
         public static readonly Func<BlittableJsonReaderObject, BuildNumber> BuildNumber = GenerateJsonDeserializationRoutine<BuildNumber>();
 
@@ -139,9 +136,7 @@ namespace Raven.Client.Json.Converters
 
         internal static readonly Func<BlittableJsonReaderObject, EtlProcessState> EtlProcessState = GenerateJsonDeserializationRoutine<EtlProcessState>();
 
-        internal static readonly Func<BlittableJsonReaderObject, AddConnectionStringResult> AddConnectionStringResult = GenerateJsonDeserializationRoutine<AddConnectionStringResult>();
-
-        internal static readonly Func<BlittableJsonReaderObject, UpdateConnectionStringResult> UpdateConnectionStringResult = GenerateJsonDeserializationRoutine<UpdateConnectionStringResult>();
+        internal static readonly Func<BlittableJsonReaderObject, PutConnectionStringResult> PutConnectionStringResult = GenerateJsonDeserializationRoutine<PutConnectionStringResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, RemoveConnectionStringResult> RemoveConnectionStringResult = GenerateJsonDeserializationRoutine<RemoveConnectionStringResult>();
 

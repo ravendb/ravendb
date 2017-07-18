@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
@@ -12,7 +13,6 @@ using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
-using Raven.Client.Http.OAuth;
 using Raven.Client.Server;
 using Raven.Client.Server.Tcp;
 using Raven.Client.Util;
@@ -39,7 +39,6 @@ namespace Raven.Server.Documents.Replication
         private readonly Logger _log;
         private readonly AsyncManualResetEvent _waitForChanges = new AsyncManualResetEvent();
         private readonly CancellationTokenSource _cts;
-        private readonly ApiKeyAuthenticator _authenticator = new ApiKeyAuthenticator();
         private Thread _sendingThread;
         internal readonly ReplicationLoader _parent;
         internal long _lastSentDocumentEtag;
@@ -112,13 +111,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         public string OutgoingReplicationThreadName => $"Outgoing replication {FromToString}";
-
-        private string GetApiKey()
-        {
-            var watcher = Destination as ExternalReplication;
-            return watcher == null ? _parent.GetClusterApiKey() : watcher.ApiKey;
-        }
-
+        
         public string GetNode()
         {
             var node = Destination as InternalReplication;
@@ -130,7 +123,8 @@ namespace Raven.Server.Documents.Replication
             NativeMemory.EnsureRegistered();
             try
             {
-                var connectionInfo = ReplicationUtils.GetTcpInfo(Destination.Url, GetNode(), GetApiKey(), "Replication");
+                var connectionInfo = ReplicationUtils.GetTcpInfo(Destination.Url, GetNode(), "Replication", 
+                    _parent._server.RavenServer.ServerCertificateHolder.Certificate);
 
                 if (_log.IsInfoEnabled)
                     _log.Info($"Will replicate to {Destination.FromString()} via {connectionInfo.Url}");
@@ -150,7 +144,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     TcpUtils.ConnectSocketAsync(connectionInfo, _tcpClient, _log)
                         .Wait(CancellationToken);
-                    var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, connectionInfo);
+                    var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, connectionInfo, _parent._server.RavenServer.ServerCertificateHolder.Certificate);
 
                     wrapSsl.Wait(CancellationToken);
 
@@ -324,14 +318,10 @@ namespace Raven.Server.Documents.Replication
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
             using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
             {
-                //send initial connection information               
-                var token = AsyncHelpers.RunSync(() => _authenticator.GetAuthenticationTokenAsync(GetApiKey(), Destination.Url, documentsContext));
-
                 documentsContext.Write(writer, new DynamicJsonValue
                 {
                     [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database,// _parent.Database.Name,
                     [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
-                    [nameof(TcpConnectionHeaderMessage.AuthorizationToken)] = token,
                     [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = _parent._server.NodeTag,
                 });
                 writer.Flush();
@@ -371,13 +361,9 @@ namespace Raven.Server.Documents.Replication
                     ThrowConnectionClosed();
                 }
                 var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(replicationTcpConnectReplyMessage.Document);
-                switch (headerResponse.Status)
+                if(headerResponse.AuthorizationSuccessful == false)
                 {
-                    case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
-                        //All good nothing to do
-                        break;
-                    default:
-                        throw new UnauthorizedAccessException($"{Destination.FromString()} replied with failure {headerResponse.Status}");
+                    throw new UnauthorizedAccessException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
                 }
             }
         }

@@ -4,12 +4,13 @@ using System.Threading.Tasks;
 using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Routing;
+using Raven.Server.Web;
 
 namespace Raven.Server.NotificationCenter.Handlers
 {
-    public class ServerNotificationCenterHandler : AdminRequestHandler
+    public class ServerNotificationCenterHandler : RequestHandler
     {
-        [RavenAction("/notification-center/watch", "GET")]
+        [RavenAction("/notification-center/watch", "GET", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public async Task Get()
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())

@@ -57,7 +57,7 @@ namespace Raven.Client.Documents
             }
         }
         
-        internal static async Task<Stream> WrapStreamWithSslAsync(TcpClient tcpClient, TcpConnectionInfo info)
+        internal static async Task<Stream> WrapStreamWithSslAsync(TcpClient tcpClient, TcpConnectionInfo info, X509Certificate2 storeCertificate)
         {
             Stream stream = tcpClient.GetStream();
             if (info.Certificate == null)
@@ -65,7 +65,8 @@ namespace Raven.Client.Documents
 
             var expectedCert = new X509Certificate2(Convert.FromBase64String(info.Certificate));
             var sslStream = new SslStream(stream, false, (sender, actualCert, chain, errors) => expectedCert.Equals(actualCert));
-            await sslStream.AuthenticateAsClientAsync("RavenDB", null, SslProtocols.Tls12, false).ConfigureAwait(false);
+
+            await sslStream.AuthenticateAsClientAsync(new Uri(info.Url).Host, new X509CertificateCollection(new X509Certificate[]{storeCertificate}), SslProtocols.Tls12, false).ConfigureAwait(false);
             stream = sslStream;
             return stream;
         }

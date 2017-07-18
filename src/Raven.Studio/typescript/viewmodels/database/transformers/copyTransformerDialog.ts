@@ -87,7 +87,7 @@ class copyTransformerDialog extends dialogViewModelBase {
                                 });
                         } else {
                             // Some other error occurred while checking for duplicate transformer. Error out.
-                            messagePublisher.reportError("Cannot paste transformer, error occured.", error);
+                            messagePublisher.reportError("Cannot paste transformer, error occurred.", error);
                         }
                     });
             }

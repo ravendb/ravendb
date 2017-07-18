@@ -12,7 +12,7 @@ using Raven.Client;
 using Raven.Client.Documents.Exceptions.Patching;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Server.Operations;
-using Raven.Client.Server.Operations.ApiKeys;
+using Raven.Client.Server.Operations.Certificates;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

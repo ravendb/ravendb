@@ -13,7 +13,7 @@ class getClusterTopologyCommand extends commandBase {
         const args = {
             url: window.location.origin
         };
-        const url = endpoints.global.rachisAdmin.adminClusterTopology;
+        const url = endpoints.global.rachisAdmin.clusterTopology;
 
         return this.query(url, args["url"] ? args : null, null, dto => new clusterTopology(dto));
     }

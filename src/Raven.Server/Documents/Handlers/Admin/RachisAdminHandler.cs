@@ -11,14 +11,15 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
-    public class RachisAdminHandler : AdminRequestHandler
+    public class RachisAdminHandler : RequestHandler
     {
-        [RavenAction("/rachis/send", "POST", "/rachis/send")]
+        [RavenAction("/rachis/send", "POST", "/rachis/send", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public async Task ApplyCommand()
         {
             TransactionOperationContext context;
@@ -42,7 +43,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        [RavenAction("/admin/cluster/log", "GET", "/admin/cluster/log")]
+        [RavenAction("/admin/cluster/log", "GET", "/admin/cluster/log", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public Task GetLogs()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -55,7 +56,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/cluster/node-info", "GET", "/admin/cluster/node-info")]
+        [RavenAction("/cluster/node-info", "GET", "/cluster/node-info", RequiredAuthorization = AuthorizationStatus.ValidUser)]
         public Task GetNodeInfo()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -66,7 +67,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     json[nameof(NodeInfo.NodeTag)] = ServerStore.NodeTag;
                     json[nameof(NodeInfo.TopologyId)] = ServerStore.GetClusterTopology(context).TopologyId;
-                    json[nameof(NodeInfo.PublicKey)] = Convert.ToBase64String(ServerStore.SignPublicKey);
                     json[nameof(ServerStore.ClusterStatus)] = ServerStore.ClusterStatus();
                 }
                 context.Write(writer, json);
@@ -75,14 +75,13 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/cluster/topology", "GET", "/admin/cluster/topology")]
+        [RavenAction("/cluster/topology", "GET", "/cluster/topology", RequiredAuthorization = AuthorizationStatus.ValidUser)]
         public Task GetClusterTopology()
         {
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-
                 var topology = ServerStore.GetClusterTopology(context);
                 var nodeTag = ServerStore.NodeTag;
 
@@ -90,28 +89,21 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     var tag = ServerStore.NodeTag ?? "A";
                     var serverUrl = ServerStore.NodeHttpServerUrl;
-                    var publicKey = ServerStore.SignPublicKey;
 
                     topology = new ClusterTopology(
                         "dummy",
-                        null,
                         new Dictionary<string, string>
                         {
                             [tag] = serverUrl
                         },
                         new Dictionary<string, string>(),
                         new Dictionary<string, string>(),
-                        new Dictionary<string, string>
-                        {
-                            [tag] = Convert.ToBase64String(publicKey)
-                        },
                         tag
                     );
                     nodeTag = tag;
                 }
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
-                topology.Members[ServerStore.NodeTag] = ServerStore.NodeHttpServerUrl;
                 var blit = EntityToBlittable.ConvertEntityToBlittable(topology, DocumentConventions.Default, context);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -140,7 +132,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/cluster/maintenance-stats", "GET", "/cluster/maintenance-stats")]
+        [RavenAction("/admin/cluster/maintenance-stats", "GET", "/cluster/maintenance-stats", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public Task ClusterMaintenanceStats()
         {
             if (ServerStore.LeaderTag == null)
@@ -171,10 +163,11 @@ namespace Raven.Server.Documents.Handlers.Admin
             HttpContext.Response.Headers.Add("Access-Control-Max-Age", "86400");
         }
 
-        [RavenAction("/admin/cluster/add-node", "OPTIONS", "/admin/cluster/add-node?url={nodeUrl:string}")]
-        [RavenAction("/admin/cluster/remove-node", "OPTIONS", "/admin/cluster/remove-node?nodeTag={nodeTag:string}")]
-        [RavenAction("/admin/cluster/reelect", "OPTIONS", "/admin/cluster/reelect")]
-        [RavenAction("/admin/cluster/timeout", "OPTIONS", "/admin/cluster/timeout")]
+        [RavenAction("/admin/cluster/add-node", "OPTIONS", "/admin/cluster/add-node?url={nodeUrl:string}", RequiredAuthorization = AuthorizationStatus.ValidUser)]
+        [RavenAction("/admin/cluster/remove-node", "OPTIONS", "/admin/cluster/remove-node?nodeTag={nodeTag:string}", RequiredAuthorization = AuthorizationStatus.ValidUser)]
+        [RavenAction("/admin/cluster/reelect", "OPTIONS", "/admin/cluster/reelect", RequiredAuthorization = AuthorizationStatus.ValidUser)]
+        [RavenAction("/admin/cluster/timeout", "OPTIONS", "/admin/cluster/timeout", RequiredAuthorization = AuthorizationStatus.ValidUser)]
+        
         public Task AllowPreflightRequest()
         {
             SetupCORSHeaders();
@@ -182,7 +175,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/cluster/add-node", "POST", "/admin/cluster/add-node?url={nodeUrl:string}")]
+        [RavenAction("/admin/cluster/add-node", "POST", "/admin/cluster/add-node?url={nodeUrl:string}", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public async Task AddNode()
         {
             SetupCORSHeaders();
@@ -193,17 +186,14 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 {
-                    string apiKey;
                     string topologyId;
                     using (ctx.OpenReadTransaction())
                     {
                         var clusterTopology = ServerStore.GetClusterTopology(ctx);
-                        apiKey = clusterTopology.ApiKey;
                         topologyId = clusterTopology.TopologyId;
                     }
-                    using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(serverUrl, apiKey))
+                    using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(serverUrl, Server.ServerCertificateHolder.Certificate))
                     {
-                        requestExecutor.ClusterToken = ServerStore.GetClusterTokenForNode(ctx);
                         var infoCmd = new GetNodeInfoCommand();
                         await requestExecutor.ExecuteAsync(infoCmd, ctx);
                         var nodeInfo = infoCmd.Result;
@@ -216,7 +206,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                         var nodeTag = nodeInfo.NodeTag == "?" 
                             ? null : nodeInfo.NodeTag;
-                        await ServerStore.AddNodeToClusterAsync(serverUrl, Convert.FromBase64String(nodeInfo.PublicKey), nodeTag, validateNotInTopology:false);
+                        await ServerStore.AddNodeToClusterAsync(serverUrl, nodeTag, validateNotInTopology:false);
                         NoContentStatus();
                         return;
                     }
@@ -225,7 +215,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             RedirectToLeader();
         }
 
-        [RavenAction("/admin/cluster/remove-node", "DELETE", "/admin/cluster/remove-node?nodeTag={nodeTag:string}")]
+        [RavenAction("/admin/cluster/remove-node", "DELETE", "/admin/cluster/remove-node?nodeTag={nodeTag:string}", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public async Task DeleteNode()
         {
             SetupCORSHeaders();
@@ -251,7 +241,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
 
-        [RavenAction("/admin/cluster/reelect", "POST", "/admin/cluster/reelect")]
+        [RavenAction("/admin/cluster/reelect", "POST", "/admin/cluster/reelect", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public Task EnforceReelection()
         {
             SetupCORSHeaders();
@@ -263,6 +253,71 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
             RedirectToLeader();
             return Task.CompletedTask;
+        }
+
+        /* Promote a non-voter to a promotable */         
+        [RavenAction("/admin/cluster/promote", "POST", "/admin/cluster/promote?nodeTag={nodeTag:string}")]
+        public async Task PromoteNode()
+        {
+            if (ServerStore.LeaderTag == null)
+                return;
+            
+            if (ServerStore.IsLeader() == false)
+            {
+                RedirectToLeader();
+                return;
+            }
+
+            var nodeTag = GetStringQueryString("nodeTag");
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var topology = ServerStore.GetClusterTopology(context);
+                if (topology.Watchers.ContainsKey(nodeTag) == false)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to promote node {nodeTag} beacuse {nodeTag} is not a watcher in the cluster topology");
+                }
+
+                var url = topology.GetUrlFromTag(nodeTag);
+                await ServerStore.Engine.ModifyTopologyAsync(nodeTag, url, Leader.TopologyModification.Promotable);
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+            }
+        }
+
+        /* Demote a voter (member/promotable) node to a non-voter  */
+        [RavenAction("/admin/cluster/demote", "POST", "/admin/cluster/demote?nodeTag={nodeTag:string}")]
+        public async Task DemoteNode()
+        {
+            if (ServerStore.LeaderTag == null)            
+                return;           
+            if (ServerStore.IsLeader() == false)
+            {
+                RedirectToLeader();
+                return;
+            }
+
+            var nodeTag = GetStringQueryString("nodeTag");
+            if (nodeTag == ServerStore.LeaderTag)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to demote node {nodeTag} beacuse {nodeTag} is the current leader in the cluster topology. In order to demote {nodeTag} perform a Step-Down first");
+            }
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var topology = ServerStore.GetClusterTopology(context);
+                if (topology.Promotables.ContainsKey(nodeTag) == false && topology.Members.ContainsKey(nodeTag) == false)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to demote node {nodeTag} beacuse {nodeTag} is not a voter in the cluster topology");
+                }
+
+                var url = topology.GetUrlFromTag(nodeTag);
+                await ServerStore.Engine.ModifyTopologyAsync(nodeTag, url, Leader.TopologyModification.NonVoter);
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+            }           
         }
 
         private void RedirectToLeader()

@@ -369,7 +369,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             }
                             catch (Exception e)
                             {
-                                result.AddError($"Error occured during export. Exception: {e.Message}");
+                                result.AddError($"Error occurred during export. Exception: {e.Message}");
                                 throw;
                             }
 

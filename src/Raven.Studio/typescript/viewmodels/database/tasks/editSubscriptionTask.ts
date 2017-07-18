@@ -25,10 +25,8 @@ class editSubscriptionTask extends viewModelBase {
     isSaveEnabled: KnockoutComputed<boolean>;
     isAddingNewSubscriptionTask = ko.observable<boolean>(true);
 
-    canOpenTestArea: KnockoutComputed<boolean>; 
-    canRunTest: KnockoutComputed<boolean>; 
     enableTestArea = ko.observable<boolean>(false);
-    testResultsLimit = ko.observable<number>();
+    testResultsLimit = ko.observable<number>(10);
 
     private gridController = ko.observable<virtualGridController<any>>();
     private customFunctionsContext: object;
@@ -36,6 +34,11 @@ class editSubscriptionTask extends viewModelBase {
     fetcher = ko.observable<fetcherType>();
     private columnPreview = new columnPreviewPlugin<documentObject>();
     dirtyResult = ko.observable<boolean>(false);
+    isFirstRun = true;
+
+    spinners = {
+        globalToggleDisable: ko.observable<boolean>(false)
+    }
 
     constructor() {
         super();
@@ -90,21 +93,14 @@ class editSubscriptionTask extends viewModelBase {
         this.isSaveEnabled = ko.pureComputed(() => {
             return this.dirtyFlag().isDirty();
         });   
-
-        this.canOpenTestArea = ko.pureComputed(() => {
-            return this.isValid(this.editedSubscription().validationGroup);
-        });
-
-        this.canRunTest = ko.pureComputed(() => {
-                return this.isValid(this.editedSubscription().validationGroup) && this.testResultsLimit() >= 1;
-        });
     }
 
     attached() {
         super.attached();
 
-        const jsCode = Prism.highlight("if (this.Votes < 10)\r\n" +
-            "return;\r\n" +
+        const jsCode = Prism.highlight(
+            "if (this.Votes < 10)\r\n" +
+            "  return;\r\n" +
             "var customer = LoadDocument(this.CustomerId);\r\n" +
             "return {\r\n" +
             "   Issue: this.Issue,\r\n" +
@@ -112,6 +108,7 @@ class editSubscriptionTask extends viewModelBase {
             "   Customer: {\r\n" +
             "        Name: customer.Name,\r\n" +
             "        Email: customer.Email\r\n" +
+            "   }\r\n" + 
             "};",
             (Prism.languages as any).javascript);
             
@@ -131,7 +128,6 @@ class editSubscriptionTask extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
         document.getElementById('taskName').focus(); 
-        document.getElementById("toggle-transform-script").click();
     }
 
     saveSubscription() {
@@ -162,8 +158,8 @@ class editSubscriptionTask extends viewModelBase {
         this.goToOngoingTasksView();
     }
 
-    useCollection(collectionToUse: collection) {
-        this.editedSubscription().collection(collectionToUse.name);
+    useCollection(collectionToUse: string) {
+        this.editedSubscription().collection(collectionToUse);
     }
 
     setStartingPointType(startingPointType: subscriptionStartType) {
@@ -184,66 +180,85 @@ class editSubscriptionTask extends viewModelBase {
     }
 
     runTest() {
-        this.columnsSelector.reset();
-        const fetcherMethod = (s: number, t: number) => this.fetchTestDocuments(s, t);
-
-        this.fetcher(fetcherMethod);
-
-        const grid = this.gridController();
-
-        grid.withEvaluationContext(this.customFunctionsContext);
-
-        const extraClassProvider = (item: documentObject) => {
-            //TODO: if item has error return appropriate css class
-            return "";
+        if (!this.isValid(this.editedSubscription().validationGroup) || this.testResultsLimit() < 1) {
+            return;
         }
 
-        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, this.editedSubscription().collections().map(x => x.name), {
-            showRowSelectionCheckbox: false,
-            showSelectAllCheckbox: false,
-            enableInlinePreview: true,
-            columnOptions: {
-                extraClass: extraClassProvider
+        this.columnsSelector.reset();
+
+        const fetcherMethod = (s: number, t: number) => this.fetchTestDocuments(s, t);
+        this.fetcher(fetcherMethod);
+
+        if (this.isFirstRun) {
+            const grid = this.gridController();
+            grid.withEvaluationContext(this.customFunctionsContext);
+        }
+
+        if (this.isFirstRun) {
+            const extraClassProvider = (item: documentObject) => {
+                //TODO: if item has error return appropriate css class
+                return "";
             }
-        });
-
-        this.columnsSelector.init(grid,
-            fetcherMethod,
-            (w, r) => documentsProvider.findColumns(w, r),
-            (results: pagedResult<documentObject>) => documentBasedColumnsProvider.extractUniquePropertyNames(results));
-
-        grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
-
-        grid.headerVisible(true);
-
-        this.columnPreview.install("virtual-grid", ".tooltip", (doc: documentObject, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
-            if (column instanceof textColumn) {
-                const value = column.getCellValue(doc);
-                if (!_.isUndefined(value)) {
-                    const json = JSON.stringify(value, null, 4);
-                    const html = Prism.highlight(json, (Prism.languages as any).javascript);
-                    onValue(html);
+            const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.gridController(), this.editedSubscription().collections().map(x => x.name), {
+                showRowSelectionCheckbox: false,
+                showSelectAllCheckbox: false,
+                enableInlinePreview: true,
+                columnOptions: {
+                    extraClass: extraClassProvider
                 }
-            }
-        });
+            });
+         
+            this.columnsSelector.init(this.gridController(),
+                fetcherMethod,
+                (w, r) => documentsProvider.findColumns(w, r),
+                (results: pagedResult<documentObject>) => documentBasedColumnsProvider.extractUniquePropertyNames(results));
 
-        this.fetcher.subscribe(() => grid.reset());
+            const grid = this.gridController();
+            grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
+
+            grid.headerVisible(true);
+
+            this.columnPreview.install("virtual-grid", ".tooltip", (doc: documentObject, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
+                if (column instanceof textColumn) {
+                    const value = column.getCellValue(doc);
+                    if (!_.isUndefined(value)) {
+                        const json = JSON.stringify(value, null, 4);
+                        const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                        onValue(html);
+                    }
+                }
+            });
+
+            this.fetcher.subscribe(() => grid.reset());
+        }
+
+        this.isFirstRun = false;
     }
 
     private fetchTestDocuments(start: number, take: number): JQueryPromise<pagedResult<documentObject>> {
         const dtoDataFromUI = this.editedSubscription().dataFromUI();
         const resultsLimit = this.testResultsLimit() || 1;
 
+        this.spinners.globalToggleDisable(true);
+
         return new testSubscriptionTaskCommand(this.activeDatabase(), dtoDataFromUI, resultsLimit)
-            .execute();
+            .execute()
+            .always(() => this.spinners.globalToggleDisable(false));
     }
 
     toggleTestArea() {
-        this.enableTestArea(!this.enableTestArea());
-
+        // 1. Test area is closed and we want to open it
         if (!this.enableTestArea()) {
+            if (this.isValid(this.editedSubscription().validationGroup)) {
+                this.enableTestArea(true);
+                this.runTest();
+            }
+            else return;
+        }
+        else {
+            // 2. Test area is open and we want to close it
+            this.enableTestArea(false);
             this.columnsSelector.reset();
-            this.fetcher((s: number, t: number) => this.fetchTestDocuments(s, t));
         }
     }
 }

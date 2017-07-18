@@ -14,20 +14,20 @@ namespace Raven.Traffic
 {
     public class TrafficToolConfiguration
     {
-        public RavenConnectionStringOptions ConnectionString { get; private set; }
         public string ResourceName { get; set; }
         public TrafficToolMode Mode { get; set; }
         public string RecordFilePath { get; set; }
         public TimeSpan Timeout { get; set; }
-        public string ApiKey { get; set; }
         public bool IsCompressed { get; set; }
         public bool PrintOutput { get; set; }
         public int? AmountConstraint { get; set; }
         public TimeSpan? DurationConstraint { get; set; }
 
+        public List<string> Urls { get; set; }
+        public string Database { get; set; }
+
         public TrafficToolConfiguration()
         {
-            ConnectionString = new RavenConnectionStringOptions();
             IsCompressed = false;
             Timeout = TimeSpan.MinValue;
             PrintOutput = true;
@@ -79,7 +79,6 @@ namespace Raven.Traffic
             options.Add("compressed", OptionCategory.TrafficRecordReplay, "Work with compressed json outpu/input", x => { config.IsCompressed = true; });
             options.Add("noOutput", OptionCategory.TrafficRecordReplay, "Suppress console progress output", value => config.PrintOutput = false);
             options.Add("timeout:", OptionCategory.TrafficRecordReplay, "The timeout to use for requests(seconds)", s => config.Timeout = TimeSpan.FromSeconds(int.Parse(s)));
-            options.Add("key|api-key|apikey:", OptionCategory.TrafficRecordReplay, "The API-key to use, when using OAuth.", value => config.ApiKey = value);
             return options;
         }
 
@@ -129,9 +128,9 @@ namespace Raven.Traffic
                     config = null;
                     return TrafficArgsProcessStatus.InvalidMode;
             }
-
-            config.ConnectionString.Urls = new List<string> { args[1] };
-            config.ConnectionString.Database = args[2];
+            
+            config.Urls = new List<string> { args[1] };
+            config.Database = args[2];
             config.ResourceName = args[2];
             config.RecordFilePath = args[3];
             InitOptionsSetObject(config).Parse(args);

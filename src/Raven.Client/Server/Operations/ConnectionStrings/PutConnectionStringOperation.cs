@@ -8,35 +8,31 @@ using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations.ConnectionStrings
 {
-    public class UpdateConnectionStringOperation<T> : IServerOperation<UpdateConnectionStringResult> where T : ConnectionString
+    public class PutConnectionStringOperation<T> : IServerOperation<PutConnectionStringResult> where T : ConnectionString
     {
         private readonly T _connectionString;
-        private readonly string _oldConnectionStringName;
         private readonly string _databaseName;
 
-        public UpdateConnectionStringOperation(T connectionString, string oldConnectionStringName,  string databaseName)
+        public PutConnectionStringOperation(T connectionString, string databaseName)
         {
             _connectionString = connectionString;
-            _oldConnectionStringName = oldConnectionStringName;
             _databaseName = databaseName;
         }
 
-        public RavenCommand<UpdateConnectionStringResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<PutConnectionStringResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new UpdateConnectionStringCommand(_connectionString, _databaseName, _oldConnectionStringName, context);
+            return new PutConnectionStringCommand(_connectionString, _databaseName, context);
         }
 
-        public class UpdateConnectionStringCommand : RavenCommand<UpdateConnectionStringResult>
+        public class PutConnectionStringCommand : RavenCommand<PutConnectionStringResult>
         {
             private readonly T _connectionString;
-            private readonly string _oldConnectionStringName;
             private readonly string _databaseName;
             private readonly JsonOperationContext _context;
 
-            public UpdateConnectionStringCommand(T connectionString, string databaseName, string oldConnectionStringName, JsonOperationContext context)
+            public PutConnectionStringCommand(T connectionString, string databaseName, JsonOperationContext context)
             {
                 _connectionString = connectionString;
-                _oldConnectionStringName = oldConnectionStringName;
                 _databaseName = databaseName;
                 _context = context;
             }
@@ -45,15 +41,15 @@ namespace Raven.Client.Server.Operations.ConnectionStrings
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/connection-strings/update?name={_databaseName}&oldName={_oldConnectionStringName}";
+                url = $"{node.Url}/admin/connection-strings/put?name={_databaseName}";
 
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var connectionStringBlittable = EntityToBlittable.ConvertEntityToBlittable(_connectionString, DocumentConventions.Default, _context);
-                        _context.Write(stream, connectionStringBlittable);
+                        var config = EntityToBlittable.ConvertEntityToBlittable(_connectionString, DocumentConventions.Default, _context);
+                        _context.Write(stream, config);
                     })
                 };
 
@@ -65,12 +61,12 @@ namespace Raven.Client.Server.Operations.ConnectionStrings
                 if (response == null)
                     ThrowInvalidResponse();
 
-                Result = JsonDeserializationClient.UpdateConnectionStringResult(response);
+                Result = JsonDeserializationClient.PutConnectionStringResult(response);
             }
         }
     }
 
-    public class UpdateConnectionStringResult
+    public class PutConnectionStringResult
     {
         public long? ETag { get; set; }
     }

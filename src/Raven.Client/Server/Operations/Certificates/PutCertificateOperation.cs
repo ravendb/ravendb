@@ -6,52 +6,52 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
 
-namespace Raven.Client.Server.Operations.ApiKeys
+namespace Raven.Client.Server.Operations.Certificates
 {
-    public class PutApiKeyOperation : IServerOperation
+    public class PutCertificateOperation : IServerOperation
     {
         private readonly string _name;
-        private readonly ApiKeyDefinition _apiKey;
+        private readonly CertificateDefinition _certificate;
 
-        public PutApiKeyOperation(string name, ApiKeyDefinition apiKey)
+        public PutCertificateOperation(string name, CertificateDefinition certificate)
         {
             _name = name ?? throw new ArgumentNullException(nameof(name));
-            _apiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
+            _certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));
         }
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new PutApiKeyCommand(conventions, context, _name, _apiKey);
+            return new PutCertificateCommand(conventions, context, _name, _certificate);
         }
 
-        private class PutApiKeyCommand : RavenCommand
+        private class PutCertificateCommand : RavenCommand
         {
             private readonly JsonOperationContext _context;
             private readonly string _name;
-            private readonly BlittableJsonReaderObject _apiKey;
+            private readonly BlittableJsonReaderObject _certificate;
 
-            public PutApiKeyCommand(DocumentConventions conventions, JsonOperationContext context, string name, ApiKeyDefinition apiKey)
+            public PutCertificateCommand(DocumentConventions conventions, JsonOperationContext context, string name, CertificateDefinition certificate)
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));
-                if (apiKey == null)
-                    throw new ArgumentNullException(nameof(apiKey));
+                if (certificate == null)
+                    throw new ArgumentNullException(nameof(certificate));
 
                 _context = context ?? throw new ArgumentNullException(nameof(context));
                 _name = name ?? throw new ArgumentNullException(nameof(name));
-                _apiKey = EntityToBlittable.ConvertEntityToBlittable(apiKey, conventions, context);
+                _certificate = EntityToBlittable.ConvertEntityToBlittable(certificate, conventions, context);
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/api-keys?name=" + Uri.EscapeDataString(_name);
+                url = $"{node.Url}/admin/certificates?name=" + Uri.EscapeDataString(_name);
 
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        _context.Write(stream, _apiKey);
+                        _context.Write(stream, _certificate);
                     })
                 };
             }

@@ -4,7 +4,6 @@ import appUrl = require("common/appUrl");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import router = require("plugins/router");
 import changeSubscription = require("common/changeSubscription");
-import oauthContext = require("common/oauthContext");
 import changesContext = require("common/changesContext");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import document = require("models/database/documents/document");
@@ -70,13 +69,10 @@ class viewModelBase {
         // create this ko.computed once to avoid creation and subscribing every 50 ms - thus creating memory leak.
         const adminArea = this.appUrls.isAreaActive("admin");
 
-        oauthContext.enterApiKeyTask.done(() => {
-            if (isShell || adminArea())
-                return;
-
+        if (!isShell && !adminArea()) {
             this.changesContext
                 .afterChangesApiConnected(() => this.afterClientApiConnected());
-        });
+        }
 
         this.postboxSubscriptions = this.createPostboxSubscriptions();
         this.modelPollingStart();

@@ -17,8 +17,8 @@ namespace Raven.Client.Server.Operations
         {
             _store = store;
             _requestExecutor = _store.Conventions.DisableTopologyUpdates 
-                ? ClusterRequestExecutor.CreateForSingleNode(_store.Urls[0], _store.ApiKey) 
-                : ClusterRequestExecutor.Create(_store.Urls, _store.ApiKey);
+                ? ClusterRequestExecutor.CreateForSingleNode(_store.Urls[0], _store.Certificate) 
+                : ClusterRequestExecutor.Create(_store.Urls, _store.Certificate);
         }
 
         public void Send(IServerOperation operation)

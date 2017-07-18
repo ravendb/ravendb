@@ -5,27 +5,27 @@ using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
 
-namespace Raven.Client.Server.Operations.ApiKeys
+namespace Raven.Client.Server.Operations.Certificates
 {
-    public class GetApiKeyOperation : IServerOperation<NamedApiKeyDefinition>
+    public class GetCertificateOperation : IServerOperation<CertificateDefinition>
     {
         private readonly string _name;
 
-        public GetApiKeyOperation(string name)
+        public GetCertificateOperation(string name)
         {
             _name = name ?? throw new ArgumentNullException(nameof(name));
         }
 
-        public RavenCommand<NamedApiKeyDefinition> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<CertificateDefinition> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetApiKeyCommand(_name);
+            return new GetCertificateCommand(_name);
         }
 
-        private class GetApiKeyCommand : RavenCommand<NamedApiKeyDefinition>
+        private class GetCertificateCommand : RavenCommand<CertificateDefinition>
         {
             private readonly string _name;
 
-            public GetApiKeyCommand(string name)
+            public GetCertificateCommand(string name)
             {
                 _name = name ?? throw new ArgumentNullException(nameof(name));
             }
@@ -34,7 +34,7 @@ namespace Raven.Client.Server.Operations.ApiKeys
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/api-keys?name=" + Uri.EscapeDataString(_name);
+                url = $"{node.Url}/admin/certificates?name=" + Uri.EscapeDataString(_name);
 
                 var request = new HttpRequestMessage
                 {
@@ -49,7 +49,7 @@ namespace Raven.Client.Server.Operations.ApiKeys
                 if (response == null)
                     return;
 
-                var results = JsonDeserializationClient.GetApiKeysResponse(response).Results;
+                var results = JsonDeserializationClient.GetCertificatesResponse(response).Results;
 
                 if (results.Length != 1)
                     ThrowInvalidResponse();

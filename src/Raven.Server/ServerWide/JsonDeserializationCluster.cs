@@ -75,7 +75,7 @@ namespace Raven.Server.ServerWide
             [nameof(ToggleTaskStateCommand)] = GenerateJsonDeserializationRoutine<ToggleTaskStateCommand>(),
             [nameof(AddDatabaseCommand)] = GenerateJsonDeserializationRoutine<AddDatabaseCommand>(),
             [nameof(DeleteValueCommand)] = GenerateJsonDeserializationRoutine<DeleteValueCommand>(),
-            [nameof(PutApiKeyCommand)] = GenerateJsonDeserializationRoutine<PutApiKeyCommand>(),
+            [nameof(PutCertificateCommand)] = GenerateJsonDeserializationRoutine<PutCertificateCommand>(),
             [nameof(PutClientConfigurationCommand)] = GenerateJsonDeserializationRoutine<PutClientConfigurationCommand>(),
             [nameof(RemoveNodeFromDatabaseCommand)] = GenerateJsonDeserializationRoutine<RemoveNodeFromDatabaseCommand>(),
             [nameof(AcknowledgeSubscriptionBatchCommand)] = GenerateJsonDeserializationRoutine<AcknowledgeSubscriptionBatchCommand>(),
@@ -90,13 +90,10 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateSqlEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateSqlEtlCommand>(),
             [nameof(UpdateEtlProcessStateCommand)] = GenerateJsonDeserializationRoutine<UpdateEtlProcessStateCommand>(),
             [nameof(DeleteOngoingTaskCommand)] = GenerateJsonDeserializationRoutine<DeleteOngoingTaskCommand>(),
-            [nameof(AddRavenConnectionString)] = GenerateJsonDeserializationRoutine<AddRavenConnectionString>(),
-            [nameof(AddSqlConnectionString)] = GenerateJsonDeserializationRoutine<AddSqlConnectionString>(),
+            [nameof(PutRavenConnectionString)] = GenerateJsonDeserializationRoutine<PutRavenConnectionString>(),
+            [nameof(PutSqlConnectionString)] = GenerateJsonDeserializationRoutine<PutSqlConnectionString>(),
             [nameof(RemoveRavenConnectionString)] = GenerateJsonDeserializationRoutine<RemoveRavenConnectionString>(),
-            [nameof(RemoveSqlConnectionString)] = GenerateJsonDeserializationRoutine<RemoveSqlConnectionString>(),
-            [nameof(UpdateRavenConnectionString)] = GenerateJsonDeserializationRoutine<UpdateRavenConnectionString>(),
-            [nameof(UpdateSqlConnectionString)] = GenerateJsonDeserializationRoutine<UpdateSqlConnectionString>()
-
+            [nameof(RemoveSqlConnectionString)] = GenerateJsonDeserializationRoutine<RemoveSqlConnectionString>()
         };
     }
 }

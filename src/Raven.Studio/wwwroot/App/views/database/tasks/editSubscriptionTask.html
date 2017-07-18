@@ -15,7 +15,7 @@
                         <i class="icon-cancel"></i>
                         <span>Cancel</span>
                     </button>
-                    <button class="btn btn-info pull-right" data-bind="click: toggleTestArea, visible: !enableTestArea(), enable: canOpenTestArea" title="Test this subscription definition">
+                    <button class="btn btn-info pull-right" data-bind="click: toggleTestArea, visible: !enableTestArea()" title="Test this subscription definition">
                         <i class="icon-rocket"></i>
                         <span>Test Subscription</span>
                     </button>
@@ -37,12 +37,16 @@
                         </div>
                         <div class="row flex-row margin-bottom">
                             <label class="control-label col-xs-12 col-sm-6 col-lg-4">Collection</label>
-                            <div class=" col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: collection, validationOptions: { insertMessages: false }">
+                            <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: collection, validationOptions: { insertMessages: false }">
                                 <div class="dropdown btn-block">
-                                    <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown" data-bind="textInput: collection, attr: { disabled: !$root.isAddingNewSubscriptionTask() }" placeholder="Select a collection">
+                                    <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown" 
+                                           data-bind="textInput: collection, attr: { disabled: !$root.isAddingNewSubscriptionTask(), id: 'collectionNameInput' }"  
+                                           placeholder="Select a collection">
                                     <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                    <ul class="dropdown-menu max-height" data-bind="foreach: collections">
-                                        <li><a href="#" data-bind="text: name, click: _.partial($root.useCollection, $data)"></a></li>  <!-- TODO: autoComplete collection name -->
+                                    <ul class="dropdown-menu max-height" data-bind="foreach: createCollectionNameAutocompleter($data), autoComplete: '#' + 'collectionNameInput'">
+                                        <li data-bind="click: _.partial($root.useCollection, $data)">
+                                            <a href="#" data-bind="text: $data"></a>
+                                        </li>  
                                     </ul>
                                 </div>
                                 <span class="help-block" data-bind="validationMessage: collection"></span>
@@ -56,18 +60,17 @@
                                 <label for="include-revisions">Include Revisions</label>
                             </div>
                             <div class="help-block" data-bind="validationMessage: includeRevisions"></div>
-                            <div class="toggle collapsed" data-toggle="collapse" data-target="#collapseTransformScript" aria-expanded="false">
-                                <input id="toggle-transform-script" type="checkbox">
-                                <label for="toggle-transform-script">
-                                    Apply Transform Script&nbsp&nbsp;<i class="icon-info text-info" id="scriptInfo"></i>
-                                </label>
+                            <div class="toggle">
+                                <input id="toggle-transform-script" type="checkbox" data-bind="checked: applyScript">
+                                <label for="toggle-transform-script">Apply Transform Script&nbsp;&nbsp;<i class="icon-info text-info" id="scriptInfo"></i></label>
                             </div>
-                            <div class="collapse" id="collapseTransformScript" aria-expanded="false">
-                                <!-- TODO : ace editor, add validations ? -->
+                            <div id="collapseTransformScript" data-bind="collapse: applyScript">
+                                <!--TODO : ace editor, add script validations - see issue 7795-->
                                 <pre class="form-control margin-top" placeholder="Enter transform script"
-                                     data-bind="aceEditor: { code: script, lang:'ace/mode/javascript' }" style="height: 160px;"></pre>
-                                <div>
-                                    <div class="help-block"></div>
+                                     data-bind="aceEditor: { code: script, lang:'ace/mode/javascript' },  validationElement: script," style="height: 160px;">
+                                </pre>
+                                <div data-bind="validationElement: script">
+                                    <div class="help-block" data-bind="validationMessage: script"></div>
                                 </div>
                             </div>
                         </div>
@@ -121,16 +124,17 @@
                                 <div class="input-group">
                                     <div class="input-group-addon">Results limit</div>
                                     <input type="number" min="1" class="form-control" placeholder="Set number of documents to fetch" title="Set number of documents to fetch" data-bind="textInput: testResultsLimit" />
-                                    <!-- TODO: what is the maximum number here ? -->
                                 </div>
                             </div>
                             <div>
-                                <button class="btn btn-info" data-bind="enable: canRunTest, click: runTest"><i class="icon-rocket"></i><span>Run Test</span></button>
+                                <button class="btn btn-info" data-bind="click: runTest, css: { 'btn-spinner': spinners.globalToggleDisable }, disbale: spinners.globalToggleDisable" title="Run test with current settings">
+                                    <i class="icon-rocket"></i><span>Run Test</span>
+                                </button> 
                             </div>
                         </div>
                     </div>
                     
-                    <!-- TODO: implement display button -->
+                    <!-- TODO: 1. implement display button 2. Fix the flex-window classes in this div - see RavenDb-7793 -->
                     
                     <div class="flex-window-scroll">
                         <div class="objects-list-container" style="height: 600px"> <!-- TODO: height shouldn't be hardcoded, need to modify classes.. -->

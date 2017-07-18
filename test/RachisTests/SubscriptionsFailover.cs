@@ -236,7 +236,7 @@ namespace RachisTests
 
                 subscription.AfterAcknowledgment += async b =>
                 {
-                    AsyncHelpers.RunSync(continueMre.WaitAsync);
+                    await continueMre.WaitAsync();
 
                     try
                     {
@@ -248,7 +248,7 @@ namespace RachisTests
                         }
 
 
-                        AsyncHelpers.RunSync(continueMre.WaitAsync);
+                        await continueMre.WaitAsync();
                     }
                     catch (Exception)
                     {
@@ -471,7 +471,7 @@ namespace RachisTests
                     }
                 }
             });
-            subscription.AfterAcknowledgment += async b =>
+            subscription.AfterAcknowledgment +=  b =>
             {
 
                 try
@@ -486,7 +486,7 @@ namespace RachisTests
 
 
                 }
-                
+                return Task.CompletedTask;
             };
 
             await Task.WhenAny(task, Task.Delay(_reasonableWaitTime)).ConfigureAwait(false);

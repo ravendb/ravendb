@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Http;
@@ -21,15 +23,57 @@ namespace Raven.Server.Web.System
 {
     public class DatabasesHandler : RequestHandler
     {
-        [RavenAction("/databases", "GET")]
+
+        private bool TryGetAllowedDbs(string dbName, out HashSet<string> dbs)
+        {
+            dbs = null;
+            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            var status = feature?.Status;
+            switch (status)
+            {
+                case null:
+                case RavenServer.AuthenticationStatus.None:
+                case RavenServer.AuthenticationStatus.NoCertificateProvided:
+                case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
+                case RavenServer.AuthenticationStatus.Expired:
+                case RavenServer.AuthenticationStatus.NotYetValid:
+                    if (Server.Configuration.Security.AuthenticationEnabled == false)
+                        return true;
+
+                    Server.Router.UnlikelyFailAuthorization(HttpContext, dbName, null);
+                    return false;
+                case RavenServer.AuthenticationStatus.ServerAdmin:
+                    return true;
+                case RavenServer.AuthenticationStatus.Allowed:
+                    if (dbName != null && feature.CanAccess(dbName) == false)
+                    {
+                        Server.Router.UnlikelyFailAuthorization(HttpContext, dbName, null);
+                        return false;
+                    }
+
+                    dbs = feature.AuthorizedDatabases;
+                    return true;
+                default:
+                    ThrowInvalidAuthStatus(status);
+                    return false;
+            }
+        }
+
+        private static void ThrowInvalidAuthStatus(RavenServer.AuthenticationStatus? status)
+        {
+            throw new ArgumentOutOfRangeException("Unknown authentication status: " + status);
+        }
+
+        [RavenAction("/databases", "GET", RequiredAuthorization = AuthorizationStatus.ValidUser)]
         public Task Databases()
         {
             // if Studio requested information about single resource - handle it
-            var dbName = GetStringQueryString("info", false);
+            var dbName = GetStringQueryString("name", false);
             if (dbName != null)
                 return DbInfo(dbName);
 
             var namesOnly = GetBoolValueQueryString("namesOnly", required: false) ?? false;
+
 
             //TODO: fill all required information (see: RavenDB-5438) - return Raven.Client.Data.DatabasesInfo
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -40,6 +84,15 @@ namespace Raven.Server.Web.System
                     writer.WriteStartObject();
 
                     var items = ServerStore.Cluster.ItemsStartingWith(context, Constants.Documents.Prefix, GetStart(), GetPageSize());
+
+                    if (TryGetAllowedDbs(null, out var allowedDbs) == false)
+                        return Task.CompletedTask;
+
+                    if (allowedDbs != null)
+                    {
+                        items = items.Where(item => allowedDbs.Contains(item.Item1));
+                    }
+
                     writer.WriteArray(context, nameof(DatabasesInfo.Databases), items, (w, c, dbDoc) =>
                     {
                         var databaseName = dbDoc.Item1.Substring(Constants.Documents.Prefix.Length);
@@ -58,7 +111,7 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/topology", "GET", "/topology?name={databaseName:string}")]
+        [RavenAction("/topology", "GET", "/topology?name={databaseName:string}", RequiredAuthorization = AuthorizationStatus.ValidUser)]
         public Task GetTopology()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -69,6 +122,11 @@ namespace Raven.Server.Web.System
                 using (context.OpenReadTransaction())
                 using (var dbBlit = ServerStore.Cluster.Read(context, dbId, out long _))
                 {
+
+                    if (TryGetAllowedDbs(name, out var _) == false)
+                        return Task.CompletedTask;
+
+
                     if (dbBlit == null)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;

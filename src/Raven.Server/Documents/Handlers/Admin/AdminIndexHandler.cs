@@ -9,9 +9,9 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
-    public class AdminIndexHandler : AdminDatabaseRequestHandler
+    public class AdminIndexHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/indexes/compact", "POST")]
+        [RavenAction("/databases/*/admin/indexes/compact", "POST", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public Task Compact()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/admin/indexes/stop", "POST")]
+        [RavenAction("/databases/*/admin/indexes/stop", "POST", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public Task Stop()
         {
             var types = HttpContext.Request.Query["type"];
@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return NoContent();
         }
 
-        [RavenAction("/databases/*/admin/indexes/start", "POST")]
+        [RavenAction("/databases/*/admin/indexes/start", "POST", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public Task Start()
         {
             var types = HttpContext.Request.Query["type"];
@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return NoContent();
         }
 
-        [RavenAction("/databases/*/admin/indexes/enable", "POST")]
+        [RavenAction("/databases/*/admin/indexes/enable", "POST", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public Task Enable()
         {
             var name = GetStringQueryString("name");
@@ -142,7 +142,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return NoContent();
         }
 
-        [RavenAction("/databases/*/admin/indexes/disable", "POST")]
+        [RavenAction("/databases/*/admin/indexes/disable", "POST", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public Task Disable()
         {
             var name = GetStringQueryString("name");

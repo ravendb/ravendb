@@ -21,7 +21,7 @@ namespace SlowTests.Server.Documents.ETL
                     Url = "http://127.0.0.1:8080",
                     Database = "Northwind",
                 };
-                store.Admin.Server.Send(new AddConnectionStringOperation<RavenConnectionString>(ravenConnectionString, store.Database));
+                store.Admin.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionString, store.Database));
 
                 var sqlConnectionString = new SqlConnectionString
                 {
@@ -29,7 +29,7 @@ namespace SlowTests.Server.Documents.ETL
                     ConnectionString = GetConnectionString(store),
                 };
 
-                store.Admin.Server.Send(new AddConnectionStringOperation<SqlConnectionString>(sqlConnectionString, store.Database));
+                store.Admin.Server.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString, store.Database));
 
                 DatabaseRecord record;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -73,7 +73,7 @@ namespace SlowTests.Server.Documents.ETL
                     Url = "http://127.0.0.1:8080",
                     Database = "Northwind",
                 };
-                store.Admin.Server.Send(new AddConnectionStringOperation<RavenConnectionString>(ravenConnectionString, store.Database));
+                store.Admin.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionString, store.Database));
 
                 var sqlConnectionString = new SqlConnectionString
                 {
@@ -81,16 +81,16 @@ namespace SlowTests.Server.Documents.ETL
                     ConnectionString = GetConnectionString(store),
                 };
 
-                store.Admin.Server.Send(new AddConnectionStringOperation<SqlConnectionString>(sqlConnectionString, store.Database));
+                store.Admin.Server.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString, store.Database));
 
                 //update url
                 ravenConnectionString.Url = "http://127.0.0.1:8081";
-                store.Admin.Server.Send(new UpdateConnectionStringOperation<RavenConnectionString>(ravenConnectionString, ravenConnectionString.Name, store.Database));
+                store.Admin.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionString, store.Database));
                 
-                //update name
-                var oldSqlName = sqlConnectionString.Name;
+                //update name : need to remove the old entry
+                store.Admin.Server.Send(new RemoveConnectionStringOperation<SqlConnectionString>(sqlConnectionString, store.Database));
                 sqlConnectionString.Name = "New-Name";
-                store.Admin.Server.Send(new UpdateConnectionStringOperation<SqlConnectionString>(sqlConnectionString, oldSqlName, store.Database));
+                store.Admin.Server.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString, store.Database));
 
                 DatabaseRecord record;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -132,8 +132,8 @@ namespace SlowTests.Server.Documents.ETL
                     ravenConnectionStrings.Add(ravenConnectionStr);
                     sqlConnectionStrings.Add(sqlConnectionStr);
 
-                    store.Admin.Server.Send(new AddConnectionStringOperation<RavenConnectionString>(ravenConnectionStr, store.Database));
-                    store.Admin.Server.Send(new AddConnectionStringOperation<SqlConnectionString>(sqlConnectionStr, store.Database));
+                    store.Admin.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionStr, store.Database));
+                    store.Admin.Server.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionStr, store.Database));
                 }
 
                 var result = store.Admin.Server.Send(new GetConnectionStringsOperation(store.Database));

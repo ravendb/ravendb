@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Security;
-using Raven.Client.Server.Operations.ApiKeys;
+using Raven.Client.Server.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_7275 : RavenTestBase
+    /*public class RavenDB_7275 : RavenTestBase
     {
         private readonly ApiKeyDefinition _apiKey = new ApiKeyDefinition
         {
@@ -38,8 +38,8 @@ namespace SlowTests.Issues
                     Server.Configuration.Security.AuthenticationEnabled = false;
                     _apiKey.ResourcesAccessMode[store.Database] = accessMode;
 
-                    store.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
-                    var doc = store.Admin.Server.Send(new GetApiKeyOperation("super"));
+                    store.Admin.Server.Send(new PutCertificateOperation("super", _apiKey));
+                    var doc = store.Admin.Server.Send(new GetCertificateOperation("super"));
                     Assert.NotNull(doc);
 
                     Server.Configuration.Security.AuthenticationEnabled = true;
@@ -62,8 +62,8 @@ namespace SlowTests.Issues
                     Server.Configuration.Security.AuthenticationEnabled = false;
                     _apiKey.ResourcesAccessMode[store.Database] = accessMode;
 
-                    store.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
-                    var doc = store.Admin.Server.Send(new GetApiKeyOperation("super"));
+                    store.Admin.Server.Send(new PutCertificateOperation("super", _apiKey));
+                    var doc = store.Admin.Server.Send(new GetCertificateOperation("super"));
                     Assert.NotNull(doc);
 
                    Server.Configuration.Security.AuthenticationEnabled = true;
@@ -103,8 +103,8 @@ namespace SlowTests.Issues
                     var subscriptionId = await store.Subscriptions.CreateAsync(
                         new SubscriptionCreationOptions<User>());
 
-                    store.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
-                    var doc = store.Admin.Server.Send(new GetApiKeyOperation("super"));
+                    store.Admin.Server.Send(new PutCertificateOperation("super", _apiKey));
+                    var doc = store.Admin.Server.Send(new GetCertificateOperation("super"));
                     Assert.NotNull(doc);
 
                      Server.Configuration.Security.AuthenticationEnabled = true;
@@ -133,8 +133,8 @@ namespace SlowTests.Issues
                     var subscriptionId = await store.Subscriptions.CreateAsync(
                         new SubscriptionCreationOptions<User>());
 
-                    store.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
-                    var doc = store.Admin.Server.Send(new GetApiKeyOperation("super"));
+                    store.Admin.Server.Send(new PutCertificateOperation("super", _apiKey));
+                    var doc = store.Admin.Server.Send(new GetCertificateOperation("super"));
                     Assert.NotNull(doc);
 
                     Server.Configuration.Security.AuthenticationEnabled = true;
@@ -154,5 +154,5 @@ namespace SlowTests.Issues
                 }
             }
         }
-    }
+    }*/
 }

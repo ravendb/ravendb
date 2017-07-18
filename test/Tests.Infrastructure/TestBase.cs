@@ -21,7 +21,6 @@ using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Utils;
-using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests
@@ -110,7 +109,7 @@ namespace FastTests
                 if (_selfSignedCertFileName != null)
                     return _selfSignedCertFileName;
 
-                var selfCertificate = CertificateUtils.CreateSelfSignedCertificate(Environment.MachineName, "ReplicationBasicTestsSlow");
+                var selfCertificate = CertificateUtils.CreateSelfSignedCertificate(Environment.MachineName, "RavenTestsServer");
                 RequestExecutor.ServerCertificateCustomValidationCallback += (message, certificate2, arg3, arg4) => true;
                 var tempFileName = Path.GetTempFileName();
                 byte[] certData = selfCertificate.Export(X509ContentType.Pfx);

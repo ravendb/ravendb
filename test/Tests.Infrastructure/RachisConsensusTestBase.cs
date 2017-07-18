@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Server;
@@ -44,8 +45,6 @@ namespace Tests.Infrastructure
 
         protected int LongWaitTime = 15000; //under stress the thread pool may take time to schedule the task to complete the set of the TCS
 
-        protected readonly byte[] DummyPublicKey = new byte[0]; // Only used in tests when there is no instance of a RavenServer (the server generates and stores the keys)
-
         protected async Task<RachisConsensus<CountingStateMachine>> CreateNetworkAndGetLeader(int nodeCount, [CallerMemberName] string caller = null)
         {
             var initialCount = RachisConsensuses.Count;
@@ -63,7 +62,7 @@ namespace Tests.Infrastructure
                     continue;
                 }
                 var follower = RachisConsensuses[i + initialCount];
-                await leader.AddToClusterAsync(follower.Url, publicKey: DummyPublicKey); 
+                await leader.AddToClusterAsync(follower.Url); 
                 await follower.WaitForTopology(Leader.TopologyModification.Voter);
             }
             var currentState = RachisConsensuses[leaderIndex + initialCount].CurrentState;
@@ -135,7 +134,8 @@ namespace Tests.Infrastructure
             var configuration = new RavenConfiguration(caller, ResourceType.Server);
             configuration.Initialize();
 
-            var rachis = new RachisConsensus<CountingStateMachine>(new RavenServer(configuration).ServerStore, seed);
+            var serverStore = new RavenServer(configuration).ServerStore;
+            var rachis = new RachisConsensus<CountingStateMachine>(serverStore, seed);
             var storageEnvironment = new StorageEnvironment(server);
             rachis.Initialize(storageEnvironment, configuration.Cluster,configuration.Core.ServerUrl);
             rachis.OnDispose += (sender, args) =>
@@ -144,7 +144,7 @@ namespace Tests.Infrastructure
             };
             if (bootstrap)
             {
-                rachis.Bootstrap(url, DummyPublicKey);
+                rachis.Bootstrap(serverStore, url);
             }
 
             rachis.Url = url;
@@ -309,7 +309,7 @@ namespace Tests.Infrastructure
                 return slice.ToString() == "values";
             }
 
-            public override async Task<Stream> ConnectToPeer(string url, string apiKey)
+            public override async Task<Stream> ConnectToPeer(string url, X509Certificate2 certificate)
             {
                 var tcpInfo = new Uri(url);
                 var tcpClient = new TcpClient();
