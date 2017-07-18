@@ -27,6 +27,7 @@ class editSubscriptionTask extends viewModelBase {
 
     enableTestArea = ko.observable<boolean>(false);
     testResultsLimit = ko.observable<number>(10);
+    isFetchingDocuments = ko.observable<boolean>(false);
 
     private gridController = ko.observable<virtualGridController<any>>();
     private customFunctionsContext: object;
@@ -181,6 +182,7 @@ class editSubscriptionTask extends viewModelBase {
         }
 
         this.columnsSelector.reset();
+
         const fetcherMethod = (s: number, t: number) => this.fetchTestDocuments(s, t);
         this.fetcher(fetcherMethod);
 
@@ -189,26 +191,25 @@ class editSubscriptionTask extends viewModelBase {
             grid.withEvaluationContext(this.customFunctionsContext);
         }
 
-        const extraClassProvider = (item: documentObject) => {
-            //TODO: if item has error return appropriate css class
-            return "";
-        }
-
-        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.gridController(), this.editedSubscription().collections().map(x => x.name), {
-            showRowSelectionCheckbox: false,
-            showSelectAllCheckbox: false,
-            enableInlinePreview: true,
-            columnOptions: {
-                extraClass: extraClassProvider
-            }
-        });
-
-        this.columnsSelector.init(this.gridController(),
-            fetcherMethod,
-            (w, r) => documentsProvider.findColumns(w, r),
-            (results: pagedResult<documentObject>) => documentBasedColumnsProvider.extractUniquePropertyNames(results));
-
         if (this.isFirstRun) {
+            const extraClassProvider = (item: documentObject) => {
+                //TODO: if item has error return appropriate css class
+                return "";
+            }
+            const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.gridController(), this.editedSubscription().collections().map(x => x.name), {
+                showRowSelectionCheckbox: false,
+                showSelectAllCheckbox: false,
+                enableInlinePreview: true,
+                columnOptions: {
+                    extraClass: extraClassProvider
+                }
+            });
+         
+            this.columnsSelector.init(this.gridController(),
+                fetcherMethod,
+                (w, r) => documentsProvider.findColumns(w, r),
+                (results: pagedResult<documentObject>) => documentBasedColumnsProvider.extractUniquePropertyNames(results));
+
             const grid = this.gridController();
             grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
 
@@ -235,8 +236,11 @@ class editSubscriptionTask extends viewModelBase {
         const dtoDataFromUI = this.editedSubscription().dataFromUI();
         const resultsLimit = this.testResultsLimit() || 1;
 
+        this.isFetchingDocuments(true);
+
         return new testSubscriptionTaskCommand(this.activeDatabase(), dtoDataFromUI, resultsLimit)
-            .execute();
+            .execute()
+            .always(() => this.isFetchingDocuments(false));
     }
 
     toggleTestArea() {
