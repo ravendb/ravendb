@@ -8,29 +8,29 @@ using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations.ConnectionStrings
 {
-    public class AddConnectionStringOperation<T> : IServerOperation<AddConnectionStringResult> where T : ConnectionString
+    public class PutConnectionStringOperation<T> : IServerOperation<PutConnectionStringResult> where T : ConnectionString
     {
         private readonly T _connectionString;
         private readonly string _databaseName;
 
-        public AddConnectionStringOperation(T connectionString, string databaseName)
+        public PutConnectionStringOperation(T connectionString, string databaseName)
         {
             _connectionString = connectionString;
             _databaseName = databaseName;
         }
 
-        public RavenCommand<AddConnectionStringResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<PutConnectionStringResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new AddConnectionStringCommand(_connectionString, _databaseName, context);
+            return new PutConnectionStringCommand(_connectionString, _databaseName, context);
         }
 
-        public class AddConnectionStringCommand : RavenCommand<AddConnectionStringResult>
+        public class PutConnectionStringCommand : RavenCommand<PutConnectionStringResult>
         {
             private readonly T _connectionString;
             private readonly string _databaseName;
             private readonly JsonOperationContext _context;
 
-            public AddConnectionStringCommand(T connectionString, string databaseName, JsonOperationContext context)
+            public PutConnectionStringCommand(T connectionString, string databaseName, JsonOperationContext context)
             {
                 _connectionString = connectionString;
                 _databaseName = databaseName;
@@ -41,7 +41,7 @@ namespace Raven.Client.Server.Operations.ConnectionStrings
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/connection-strings/add?name={_databaseName}";
+                url = $"{node.Url}/admin/connection-strings/put?name={_databaseName}";
 
                 var request = new HttpRequestMessage
                 {
@@ -61,12 +61,12 @@ namespace Raven.Client.Server.Operations.ConnectionStrings
                 if (response == null)
                     ThrowInvalidResponse();
 
-                Result = JsonDeserializationClient.AddConnectionStringResult(response);
+                Result = JsonDeserializationClient.PutConnectionStringResult(response);
             }
         }
     }
 
-    public class AddConnectionStringResult
+    public class PutConnectionStringResult
     {
         public long? ETag { get; set; }
     }

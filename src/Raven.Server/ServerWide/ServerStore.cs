@@ -841,7 +841,7 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(editRevisions);
         }
 
-        public async Task<(long, object)> AddConnectionString(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject connectionString)
+        public async Task<(long, object)> PutConnectionString(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject connectionString)
         {
             if (connectionString.TryGet(nameof(ConnectionString.Type), out string type) == false)
                 throw new InvalidOperationException($"Connection string must have {nameof(ConnectionString.Type)} field");
@@ -854,10 +854,10 @@ namespace Raven.Server.ServerWide
             switch (connectionStringType)
             {
                 case ConnectionStringType.Raven:
-                    command = new AddRavenConnectionString(JsonDeserializationCluster.RavenConnectionString(connectionString), databaseName);
+                    command = new PutRavenConnectionString(JsonDeserializationCluster.RavenConnectionString(connectionString), databaseName);
                     break;
                 case ConnectionStringType.Sql:
-                    command = new AddSqlConnectionString(JsonDeserializationCluster.SqlConnectionString(connectionString), databaseName);
+                    command = new PutSqlConnectionString(JsonDeserializationCluster.SqlConnectionString(connectionString), databaseName);
                     break;
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");

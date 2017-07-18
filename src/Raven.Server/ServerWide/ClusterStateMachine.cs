@@ -157,8 +157,8 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdateRavenEtlCommand):
                     case nameof(UpdateSqlEtlCommand):
                     case nameof(DeleteOngoingTaskCommand):
-                    case nameof(AddRavenConnectionString):
-                    case nameof(AddSqlConnectionString):
+                    case nameof(PutRavenConnectionString):
+                    case nameof(PutSqlConnectionString):
                     case nameof(RemoveRavenConnectionString):
                     case nameof(RemoveSqlConnectionString):
                         UpdateDatabase(context, type, cmd, index, leader);

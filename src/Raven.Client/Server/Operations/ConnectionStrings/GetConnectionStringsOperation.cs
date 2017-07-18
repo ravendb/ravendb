@@ -20,14 +20,14 @@ namespace Raven.Client.Server.Operations.ConnectionStrings
 
         public RavenCommand<GetConnectionStringsResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new AddConnectionStringCommand(_databaseName);
+            return new GetConnectionStringCommand(_databaseName);
         }
 
-        public class AddConnectionStringCommand : RavenCommand<GetConnectionStringsResult>
+        public class GetConnectionStringCommand : RavenCommand<GetConnectionStringsResult>
         {
             private readonly string _databaseName;
 
-            public AddConnectionStringCommand(string databaseName)
+            public GetConnectionStringCommand(string databaseName)
             {
                 _databaseName = databaseName;
             }

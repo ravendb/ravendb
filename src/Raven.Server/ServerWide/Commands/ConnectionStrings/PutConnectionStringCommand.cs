@@ -5,16 +5,16 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 {
-    public abstract class AddConnectionStringCommand<T> : UpdateDatabaseCommand where T : ConnectionString
+    public abstract class PutConnectionStringCommand<T> : UpdateDatabaseCommand where T : ConnectionString
     {
         public T ConnectionString { get; protected set; }
 
-        protected AddConnectionStringCommand() : base(null)
+        protected PutConnectionStringCommand() : base(null)
         {
             // for deserialization
         }
 
-        protected AddConnectionStringCommand(T connectionString, string databaseName) : base(databaseName)
+        protected PutConnectionStringCommand(T connectionString, string databaseName) : base(databaseName)
         {
             ConnectionString = connectionString;
         }
@@ -25,14 +25,14 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         }
     }
 
-    public class AddRavenConnectionString : AddConnectionStringCommand<RavenConnectionString>
+    public class PutRavenConnectionString : PutConnectionStringCommand<RavenConnectionString>
     {
-        protected AddRavenConnectionString()
+        protected PutRavenConnectionString()
         {
             // for deserialization
         }
 
-        public AddRavenConnectionString(RavenConnectionString connectionString, string databaseName) : base(connectionString, databaseName)
+        public PutRavenConnectionString(RavenConnectionString connectionString, string databaseName) : base(connectionString, databaseName)
         {
             
         }
@@ -44,14 +44,14 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         }
     }
 
-    public class AddSqlConnectionString : AddConnectionStringCommand<SqlConnectionString>
+    public class PutSqlConnectionString : PutConnectionStringCommand<SqlConnectionString>
     {
-        protected AddSqlConnectionString()
+        protected PutSqlConnectionString()
         {
             // for deserialization
         }
 
-        public AddSqlConnectionString(SqlConnectionString connectionString, string databaseName) : base(connectionString, databaseName)
+        public PutSqlConnectionString(SqlConnectionString connectionString, string databaseName) : base(connectionString, databaseName)
         {
 
         }
