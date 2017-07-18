@@ -85,12 +85,12 @@ namespace SlowTests.Server.Documents.ETL
 
                 //update url
                 ravenConnectionString.Url = "http://127.0.0.1:8081";
-                store.Admin.Server.Send(new UpdateConnectionStringOperation<RavenConnectionString>(ravenConnectionString, ravenConnectionString.Name, store.Database));
+                store.Admin.Server.Send(new AddConnectionStringOperation<RavenConnectionString>(ravenConnectionString, store.Database));
                 
-                //update name
-                var oldSqlName = sqlConnectionString.Name;
+                //update name : need to remove the old entry
+                store.Admin.Server.Send(new RemoveConnectionStringOperation<SqlConnectionString>(sqlConnectionString, store.Database));
                 sqlConnectionString.Name = "New-Name";
-                store.Admin.Server.Send(new UpdateConnectionStringOperation<SqlConnectionString>(sqlConnectionString, oldSqlName, store.Database));
+                store.Admin.Server.Send(new AddConnectionStringOperation<SqlConnectionString>(sqlConnectionString, store.Database));
 
                 DatabaseRecord record;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

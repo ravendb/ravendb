@@ -829,36 +829,6 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/connection-strings/update", "PUT", "/admin/connection-strings/update?name={databaseName:string}&oldName={oldConnectionStringName:string}")]
-        public async Task UpdateConnectionString()
-        {
-            var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-            var oldName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("oldName");
-
-            ServerStore.EnsureNotPassive();
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var connectionString = await context.ReadForMemoryAsync(RequestBodyStream(), "read-update-connection-string");
-
-                var (index, _) = await ServerStore.UpdateConnectionString(dbName, oldName, connectionString);         
-                await ServerStore.Cluster.WaitForIndexNotification(index);
-                
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    var json = new DynamicJsonValue
-                    {
-                        ["RaftCommandIndex"] = index
-                    };
-                    context.Write(writer, json);
-                    writer.Flush();
-                }
-            }
-        }
-
         [RavenAction("/admin/connection-strings/get", "GET", "/admin/connection-strings/get?name={databaseName:string}")]
         public Task GetConnectionStrings()
         {
