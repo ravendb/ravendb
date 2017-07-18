@@ -34,8 +34,10 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public abstract partial class InMemoryDocumentSessionOperations : IDisposable
     {
+        [ThreadStatic]
         private static int _clientSessionIdCounter;
-        protected readonly int _clientSessionId = Interlocked.Increment(ref _clientSessionIdCounter);
+
+        protected readonly int _clientSessionId = ++_clientSessionIdCounter;
 
         protected readonly RequestExecutor _requestExecutor;
         private readonly IDisposable _releaseOperationContext;
