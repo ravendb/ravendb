@@ -319,7 +319,6 @@ interface feedbackSavedSettingsDto {
 
 interface externalReplicationDataFromUI {
     TaskName: string;
-    ApiKey: string; 
     DestinationDB: string;
     DestinationURL: string;
 } 

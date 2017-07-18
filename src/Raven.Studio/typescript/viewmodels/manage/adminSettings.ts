@@ -47,7 +47,6 @@ class adminSettings extends viewModelBase {
         var canReadOrWrite = settingsAccessAuthorizer.canReadOrWrite();
         var isGlobalAdmin = accessHelper.isGlobalAdmin();
 
-        var apiKeyRoute = { route: ['', 'apiKeys'], moduleId: 'viewmodels/manage/apiKeys', title: 'API Keys', nav: true, hash: appUrl.forApiKeys(), enabled: canReadOrWrite };
         var clusterRoute = { route: 'cluster', moduleId: "viewmodels/manage/cluster", title: "Cluster", nav: true, hash: appUrl.forCluster(), enabled: canReadOrWrite };
         var serverSmuggling = { route: "serverSmuggling", moduleId: "viewmodels/manage/serverSmuggling", title: "Server Smuggling", nav: true, hash: appUrl.forServerSmugging(), enabled: isGlobalAdmin };
         var backupRoute = { route: 'backup', moduleId: 'viewmodels/manage/backup', title: 'Backup', nav: true, hash: appUrl.forBackup(), enabled: isGlobalAdmin };
@@ -65,7 +64,6 @@ class adminSettings extends viewModelBase {
         var hotSpareRoute = { route: 'hotSpare', moduleId: 'viewmodels/manage/hotSpare', title: 'Hot Spare', nav: true, hash: appUrl.forHotSpare(), enabled: isGlobalAdmin };
 
         var routes = [
-            apiKeyRoute,
             clusterRoute,
             serverSmuggling,
             backupRoute,

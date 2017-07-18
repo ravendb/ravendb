@@ -53,18 +53,6 @@ class extensions {
             message: "Url format expected: 'http(s)://hostName:portNumber'"
         };  
 
-        // Validate that the Api Key is the following format: xxxxx/xxxxx (e.g. abCD123/efGh456)
-        (ko.validation.rules as any)['validApiKey'] = {
-            validator: (apiKey: string) => {
-                if (apiKey) {
-                    const apiKeyRegex = /^([\da-z]+)\/([\da-z]+)$/;
-                    return (apiKeyRegex.test(apiKey));
-                }
-                return true;
-            },
-            message: "Api Key format expected: 2 strings separated by a slash, i.e. xxxxx/xxxxx"
-        };
-
         (ko.validation.rules as any)['validDatabaseName'] = {
             validator: (val: string) => !extensions.validateDatabaseName(val),
             message: (params: any, databaseName: KnockoutObservable<string>) => {

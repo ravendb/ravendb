@@ -139,7 +139,6 @@ class serverSmuggling extends viewModelBase {/* TODO
 
     saveIntoLocalStorage() {
         var json = this.getJson();
-        json.TargetServer.ApiKey = undefined;
         json.TargetServer.Password = undefined;
         serverSmugglingLocalStorage.setValue(json);
     }

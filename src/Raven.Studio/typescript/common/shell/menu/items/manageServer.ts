@@ -9,16 +9,6 @@ export = getManageServerMenuItem;
 function getManageServerMenuItem() {
     let canReadOrWrite = settingsAccessAuthorizer.canReadOrWrite;
     var items: menuItem[] = [
-        /* TODO
-        new leafMenuItem({
-            route: ['admin/settings', 'admin/settings/apiKeys'],
-            moduleId: 'viewmodels/manage/apiKeys',
-            title: 'API Keys',
-            nav: true,
-            css: 'icon-api-keys',
-            dynamicHash: appUrl.forApiKeys,
-            enabled: canReadOrWrite
-        }),*/
         new leafMenuItem({
             route: 'admin/settings/cluster',
             moduleId: "viewmodels/manage/cluster",
