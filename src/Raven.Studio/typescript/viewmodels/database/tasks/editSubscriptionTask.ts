@@ -27,7 +27,6 @@ class editSubscriptionTask extends viewModelBase {
 
     enableTestArea = ko.observable<boolean>(false);
     testResultsLimit = ko.observable<number>(10);
-    isFetchingDocuments = ko.observable<boolean>(false);
 
     private gridController = ko.observable<virtualGridController<any>>();
     private customFunctionsContext: object;
@@ -36,6 +35,10 @@ class editSubscriptionTask extends viewModelBase {
     private columnPreview = new columnPreviewPlugin<documentObject>();
     dirtyResult = ko.observable<boolean>(false);
     isFirstRun = true;
+
+    spinners = {
+        globalToggleDisable: ko.observable<boolean>(false)
+    }
 
     constructor() {
         super();
@@ -236,11 +239,11 @@ class editSubscriptionTask extends viewModelBase {
         const dtoDataFromUI = this.editedSubscription().dataFromUI();
         const resultsLimit = this.testResultsLimit() || 1;
 
-        this.isFetchingDocuments(true);
+        this.spinners.globalToggleDisable(true);
 
         return new testSubscriptionTaskCommand(this.activeDatabase(), dtoDataFromUI, resultsLimit)
             .execute()
-            .always(() => this.isFetchingDocuments(false));
+            .always(() => this.spinners.globalToggleDisable(false));
     }
 
     toggleTestArea() {
