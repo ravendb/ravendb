@@ -19,13 +19,6 @@ interface logNotificationDto {
 
 }
 
-interface apiKeyDto extends documentDto {
-    Name: string;
-    Secret: string;
-    Enabled: boolean;
-    Databases: Array<databaseAccessDto>;
-}
-
 interface serverBuildVersionDto {
     BuildVersion: number;
     ProductVersion: string;
@@ -122,7 +115,6 @@ interface replicationDestinationDto {
     Username: string;
     Password: string;
     Domain: string;
-    ApiKey: string;
     Database: string;
     IgnoredClient: boolean;
     Disabled: boolean;
@@ -150,12 +142,6 @@ interface environmentColorDto {
 
 interface replicationConfigDto {
     DocumentConflictResolution: string;    
-}
-
-interface databaseAccessDto {
-    Admin: boolean;
-    TenantId: string;
-    ReadOnly: boolean;
 }
 
 interface storedPatchDto extends patchDto {

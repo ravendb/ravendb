@@ -4,10 +4,6 @@ import collection = require("models/database/documents/collection");
 class replicationDestination {
     /* TODO
     url = ko.observable<string>();
-    username = ko.observable<string>();
-    password = ko.observable<string>();
-    domain = ko.observable<string>();
-    apiKey = ko.observable<string>();
     database = ko.observable<string>();
     ignoredClient = ko.observable<boolean>();
     disabled = ko.observable<boolean>();
@@ -31,58 +27,12 @@ class replicationDestination {
     isValid = ko.computed(() => this.url() != null && this.url().length > 0);
 
 
-    // data members for the ui
-    isUserCredentials = ko.observable<boolean>(false);
-    isApiKeyCredentials = ko.observable<boolean>(false);
-    credentialsType = ko.computed(() => {
-        if (this.isUserCredentials()) {
-            return "user";
-        } else if (this.isApiKeyCredentials()) {
-            return "api-key";
-        } else {
-            return "none";
-        }
-    });
-
-    clearApiKeyCredentials() {
-        this.apiKey(null);
-    }
-
-    clearUserCredentials() {
-        this.username(null);
-        this.password(null);
-        this.domain(null);
-    }
-
-    useUserCredentials() {
-        this.isUserCredentials(true);
-        this.isApiKeyCredentials(false);
-        this.clearApiKeyCredentials();
-    }
-
-    useApiKeyCredentials() {
-        this.isApiKeyCredentials(true);
-        this.isUserCredentials(false);
-        this.clearUserCredentials();
-    }
-
-    useNoCredentials() {
-        this.isUserCredentials(false);
-        this.isApiKeyCredentials(false);
-        this.clearUserCredentials();
-        this.clearApiKeyCredentials();
-    }
-
     toggleIsAdvancedShows(item: any, event: JQueryEventObject) {
         $(event.target).next().toggle();
     }
 
     constructor(dto: Raven.Client.Documents.Replication.ReplicationDestination) {
         this.url(dto.Url);
-        this.username(dto.Username);
-        this.password(dto.Password);
-        this.domain(dto.Domain);
-        this.apiKey(dto.ApiKey);
         this.database(dto.Database);
         this.ignoredClient(dto.IgnoredClient);
         this.disabled(dto.Disabled);
@@ -91,12 +41,6 @@ class replicationDestination {
         this.withScripts(this.specifiedCollections().filter(x => typeof (x.script()) !== "undefined").map(x => x.collection()));
 
         this.enableReplicateOnlyFromCollections = ko.observable<boolean>(this.specifiedCollections().length > 0);
-
-        if (this.username()) {
-            this.isUserCredentials(true);
-        } else if (this.apiKey()) {
-            this.isApiKeyCredentials(true);
-        }
     }
 
     mapSpecifiedCollections(input: dictionary<string>) {
@@ -137,10 +81,6 @@ class replicationDestination {
     static empty(databaseName: string): replicationDestination {
         return new replicationDestination({
             Url: location.protocol + "//" + location.host,
-            Username: null,
-            Password: null,
-            Domain: null,
-            ApiKey: null,
             
             Database: databaseName,
             IgnoredClient: false,
@@ -169,10 +109,6 @@ class replicationDestination {
     toDto(): Raven.Client.Documents.Replication.ReplicationDestination {
         return {
             Url: this.prepareUrl(),
-            Username: this.username(),
-            Password: this.password(),
-            Domain: this.domain(),
-            ApiKey: this.apiKey(),
             Database: this.database(),
             IgnoredClient: this.ignoredClient(),
             Disabled: this.disabled(),

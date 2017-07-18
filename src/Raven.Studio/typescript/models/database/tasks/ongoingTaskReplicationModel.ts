@@ -8,7 +8,6 @@ class ongoingTaskReplicationModel extends ongoingTask {
 
     editUrl: KnockoutComputed<string>; 
 
-    apiKey = ko.observable<string>();
     destinationDB = ko.observable<string>();
     destinationURL = ko.observable<string>();
   
@@ -42,8 +41,7 @@ class ongoingTaskReplicationModel extends ongoingTask {
         return {
             TaskName: this.taskName(),
             DestinationURL: this.destinationURL(),
-            DestinationDB: this.destinationDB(),
-            ApiKey: this.apiKey()
+            DestinationDB: this.destinationDB()
         };
     }
 
@@ -64,15 +62,9 @@ class ongoingTaskReplicationModel extends ongoingTask {
             validUrl: true
         });
 
-        this.apiKey.extend({
-            required: false,
-            validApiKey: true
-        });
-
         this.validationGroup = ko.validatedObservable({
             destinationDB: this.destinationDB,
             destinationURL: this.destinationURL,
-            apiKey: this.apiKey,
             taskName: this.taskName
         });
     }
