@@ -21,6 +21,7 @@ namespace Raven.Server.Documents.Queries
             {
                 Visit(expression.Left, parameters);
                 Visit(expression.Right, parameters);
+                return;
             }
 
             Debug.Assert(expression.Field != null);
@@ -39,6 +40,9 @@ namespace Raven.Server.Documents.Queries
                     return;
                 case OperatorType.In:
                     VisitFieldTokens(QueryExpression.Extract(_queryText, expression.Field), expression.Values, parameters);
+                    return;
+                case OperatorType.Method:
+                    VisitMethodTokens(expression, parameters);
                     return;
                 default:
                     throw new ArgumentException(expression.Type.ToString());
@@ -71,5 +75,6 @@ namespace Raven.Server.Documents.Queries
 
         public abstract void VisitFieldTokens(string fieldName, List<ValueToken> values, BlittableJsonReaderObject parameters);
 
+        public abstract void VisitMethodTokens(QueryExpression expression, BlittableJsonReaderObject parameters);
     }
 }

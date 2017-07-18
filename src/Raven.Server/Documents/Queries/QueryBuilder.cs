@@ -11,6 +11,7 @@ using Raven.Server.Utils;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Indexes;
 using Sparrow.Json;
+using Query = Raven.Server.Documents.Queries.Parser.Query;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -43,7 +44,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private static LuceneASTNodeBase ToLuceneNode(Parser.Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters)
+        private static LuceneASTNodeBase ToLuceneNode(Parser.Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string boost = null)
         {
             if (expression == null)
                 return new AllDocumentsLuceneASTNode();
@@ -171,6 +172,19 @@ namespace Raven.Server.Documents.Queries
                 case OperatorType.AndNot:
                 case OperatorType.OrNot:
                 case OperatorType.Method:
+                    var methodName = QueryExpression.Extract(query.QueryText, expression.Field);
+                    var methodType = GetMethodType(methodName);
+
+                    switch (methodType)
+                    {
+                        case MethodType.Search:
+                            return HandleSearch(query, expression, metadata, parameters, boost);
+                        case MethodType.Boost:
+                            return HandleBoost(query, expression, metadata, parameters);
+                        default:
+                            throw new NotSupportedException($"Method '{methodType}' is not supported.");
+                    }
+
                     throw new NotImplementedException("Type: " + expression.Type);
                 //writer.WritePropertyName("Method");
                 //WriteValue(query, writer, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
@@ -200,6 +214,66 @@ namespace Raven.Server.Documents.Queries
                 //break;
                 default:
                     throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        private static LuceneASTNodeBase HandleBoost(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters)
+        {
+            var boost = QueryExpression.Extract(query.QueryText, (ValueToken)expression.Arguments[1]);
+            expression = (QueryExpression)expression.Arguments[0];
+
+            return ToLuceneNode(query, expression, metadata, parameters, boost);
+        }
+
+        private static LuceneASTNodeBase HandleSearch(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string boost)
+        {
+            var fieldName = QueryExpression.Extract(query.QueryText, (FieldToken)expression.Arguments[0]);
+            var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
+
+            LuceneASTNodeBase node;
+            var values = value.Split(' ');
+
+            if (values.Length == 1)
+                node = CreateNode(CreateTermNode(values[0], valueType), null, boost);
+            else
+            {
+                LuceneASTNodeBase left = null;
+                for (var i = values.Length - 2; i >= 0; i--)
+                {
+                    var v = values[i];
+
+                    if (left == null)
+                    {
+                        left = CreateTermNode(v, valueType);
+                        continue;
+                    }
+
+                    left = CreateNode(CreateTermNode(v, valueType), left, null);
+                }
+
+                node = CreateNode(left, CreateTermNode(values[values.Length - 1], valueType), boost);
+            }
+
+            return new FieldLuceneASTNode
+            {
+                FieldName = new FieldName(fieldName),
+                Node = node
+            };
+
+            LuceneASTNodeBase CreateNode(LuceneASTNodeBase left, LuceneASTNodeBase right, string boostValue)
+            {
+                var result = right == null 
+                    ? left 
+                    : new OperatorLuceneASTNode(left, right, OperatorLuceneASTNode.Operator.OR, isDefaultOperatorAnd: false);
+
+                if (boostValue == null)
+                    return result;
+
+                return new ParenthesistLuceneASTNode
+                {
+                    Boost = boost,
+                    Node = result
+                };
             }
         }
 
@@ -310,7 +384,7 @@ namespace Raven.Server.Documents.Queries
             switch (valueType)
             {
                 case ValueTokenType.Null:
-                    return new TermLuceneASTNode()
+                    return new TermLuceneASTNode
                     {
                         Type = TermLuceneASTNode.TermType.Null
                     };
@@ -337,10 +411,10 @@ namespace Raven.Server.Documents.Queries
                             //break;
                     }
 
-                    return new TermLuceneASTNode()
+                    return new TermLuceneASTNode
                     {
                         Term = value,
-                        Type = type,
+                        Type = type
                     };
             }
         }
@@ -482,9 +556,26 @@ namespace Raven.Server.Documents.Queries
             throw new NotImplementedException();
         }
 
+        private static MethodType GetMethodType(string methodName)
+        {
+            if (string.Equals(methodName, "search", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Search;
+
+            if (string.Equals(methodName, "boost", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Boost;
+
+            throw new NotSupportedException($"Method '{methodName}' is not supported.");
+        }
+
         private static void ThrowUnhandledValueTokenType(ValueTokenType type)
         {
             throw new NotSupportedException($"Unhandled toke type: {type}");
+        }
+
+        private enum MethodType
+        {
+            Search,
+            Boost
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Linq;
 using Raven.Server.Documents.Queries.Parser;
 using Sparrow.Json;
 
@@ -38,6 +38,11 @@ namespace Raven.Server.Documents.Queries
         public readonly Dictionary<string, ValueTokenType> Fields = new Dictionary<string, ValueTokenType>(StringComparer.OrdinalIgnoreCase);
 
         public List<(string Name, OrderByFieldType OrderingType, bool Ascending)> OrderBy;
+
+        public void AddEmptyField(string fieldName)
+        {
+            AllFieldNames.Add(fieldName);
+        }
 
         public void AddField(string fieldName, ValueTokenType value)
         {
@@ -119,6 +124,47 @@ namespace Raven.Server.Documents.Queries
                     var valueType = GetValueTokenType(parameters, value, unwrapArrays: true);
                     if (i > 0 && previousType != valueType)
                         ThrowIncompatibleTypesOfParameters(fieldName, values.ToArray());
+
+                    previousType = valueType;
+                }
+
+                _metadata.AddField(fieldName, previousType);
+            }
+
+            public override void VisitMethodTokens(QueryExpression expression, BlittableJsonReaderObject parameters)
+            {
+                var arguments = expression.Arguments;
+                if (arguments.Count == 0)
+                    return;
+
+                var firstArgument = arguments[0];
+                var firstArgumentAsExpression = firstArgument as QueryExpression;
+                if (firstArgumentAsExpression != null)
+                {
+                    VisitMethodTokens(firstArgumentAsExpression, parameters);
+                    return;
+                }
+
+                var firstArgumentAsField = (FieldToken)firstArgument;
+                var fieldName = QueryExpression.Extract(_metadata.Query.QueryText, firstArgumentAsField);
+
+                if (arguments.Count == 1)
+                {
+                    _metadata.AddEmptyField(fieldName);
+                    return;
+                }
+
+                var previousType = ValueTokenType.Null;
+                for (var i = 1; i < arguments.Count; i++)
+                {
+                    var value = (ValueToken)arguments[i];
+                    if (i > 1 && value.Type != previousType)
+                        ThrowIncompatibleTypesOfVariables(fieldName, arguments.Skip(1).Cast<ValueToken>().ToArray());
+
+                    var valueType = GetValueTokenType(parameters, value, unwrapArrays: false);
+
+                    if (i > 1 && previousType != valueType)
+                        ThrowIncompatibleTypesOfParameters(fieldName, arguments.Skip(1).Cast<ValueToken>().ToArray());
 
                     previousType = valueType;
                 }

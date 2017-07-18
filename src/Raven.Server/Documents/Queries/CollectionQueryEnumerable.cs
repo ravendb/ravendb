@@ -333,6 +333,11 @@ namespace Raven.Server.Documents.Queries
                     }
                 }
 
+                public override void VisitMethodTokens(QueryExpression expression, BlittableJsonReaderObject parameters)
+                {
+                    throw new NotSupportedException();
+                }
+
                 private void AddId(string id)
                 {
                     Slice key;
