@@ -93,3 +93,10 @@ _NCrunch_RavenDB/
 # DNX
 *project.lock.json
 artifacts/
+/.idea/.idea.RavenDB/.idea/.name
+/.idea/.idea.RavenDB/.idea/contentModel.xml
+/.idea/.idea.RavenDB/.idea/modules.xml
+/.idea/.idea.RavenDB/.idea/vcs.xml
+/.idea/.idea.RavenDB/.idea/workspace.xml
+/.idea/.idea.RavenDB/riderModule.iml
+/.idea/config/applicationhost.config
