@@ -196,9 +196,9 @@ class extensions {
 
         ko.bindingHandlers["collapse"] = {
             init: (element: any, valueAccessor: KnockoutObservable<boolean>) => {
-                var value = valueAccessor();
-                var valueUnwrapped = ko.unwrap(value);
-                var $element = $(element);
+                const value = valueAccessor();
+                const valueUnwrapped = ko.unwrap(value);
+                const $element = $(element);
                 $element
                     .addClass('collapse')
                     .collapse({
@@ -206,10 +206,21 @@ class extensions {
                     });
             },
 
-            update: (element: any, valueAccessor: KnockoutObservable<boolean>) => {
-                var value = valueAccessor();
-                var valueUnwrapped = ko.unwrap(value);
-                $(element).collapse(valueUnwrapped ? "show" : "hide");
+            update: (element: any, valueAccessor: () => KnockoutObservable<boolean>) => {
+                const value = valueAccessor();
+                const valueUnwrapped = ko.unwrap(value);
+
+                const action = valueUnwrapped ? "show" : "hide";
+
+                const transitioning = $(element).data('bs.collapse').transitioning;
+
+                if (!transitioning) {
+                    // if there isn't any other animation in progress - proceed
+                    $(element).collapse(action);
+                } else if (ko.isObservable(value)) {
+                    // have we another animation in progress - try to recover this state by reseting checkbox
+                    value(!value());
+                }
             }
         };
 
