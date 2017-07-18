@@ -78,7 +78,7 @@ namespace RachisTests.DatabaseCluster
                     Url = "http://127.0.0.1:8080",
                     Database = "Northwind",
                 };
-                store.Admin.Server.Send(new AddConnectionStringOperation<RavenConnectionString>(ravenConnectionString, store.Database));
+                store.Admin.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionString, store.Database));
 
                 etlConfiguration = new RavenEtlConfiguration()
                 {

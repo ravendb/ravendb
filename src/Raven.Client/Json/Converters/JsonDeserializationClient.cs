@@ -136,7 +136,7 @@ namespace Raven.Client.Json.Converters
 
         internal static readonly Func<BlittableJsonReaderObject, EtlProcessState> EtlProcessState = GenerateJsonDeserializationRoutine<EtlProcessState>();
 
-        internal static readonly Func<BlittableJsonReaderObject, AddConnectionStringResult> AddConnectionStringResult = GenerateJsonDeserializationRoutine<AddConnectionStringResult>();
+        internal static readonly Func<BlittableJsonReaderObject, PutConnectionStringResult> PutConnectionStringResult = GenerateJsonDeserializationRoutine<PutConnectionStringResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, RemoveConnectionStringResult> RemoveConnectionStringResult = GenerateJsonDeserializationRoutine<RemoveConnectionStringResult>();
 

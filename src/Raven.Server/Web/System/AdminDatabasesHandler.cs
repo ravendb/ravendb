@@ -796,10 +796,10 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/connection-strings/add", "PUT", "/admin/connection-strings/add?name={databaseName:string}&type={[sql|raven]:string}")]
-        public async Task AddConnectionString()
+        [RavenAction("/admin/connection-strings/put", "PUT", "/admin/connection-strings/put?name={databaseName:string}&type={[sql|raven]:string}")]
+        public async Task PutConnectionString()
         {
-            await DatabaseConfigurations((_, databaseName, connectionString) => ServerStore.AddConnectionString(_, databaseName, connectionString), "add-connection-string");
+            await DatabaseConfigurations((_, databaseName, connectionString) => ServerStore.PutConnectionString(_, databaseName, connectionString), "put-connection-string");
         }
 
         [RavenAction("/admin/connection-strings/remove", "DELETE", "/admin/connection-strings/remove?name={databaseName:string}&connectionString={connectionStringName:string}&type={[sql|raven]:string}")]
