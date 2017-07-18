@@ -32,6 +32,8 @@ namespace Raven.Abstractions.Logging
             set { currentLogManager = value; }
         }
 
+        private static event Action<IReadOnlyList<Target>> TargetsChange;
+
         public static ILog GetLogger(Type type)
         {
             return GetLogger(type.FullName);
@@ -42,16 +44,30 @@ namespace Raven.Abstractions.Logging
         public static ILog GetLogger(string name)
         {
             ILogManager logManager = CurrentLogManager;
+            LoggerExecutionWrapper executionWrapper;
             if (logManager == null)
-                return new LoggerExecutionWrapper(new NoOpLogger(), name, Targets);
+            {
+                executionWrapper = new LoggerExecutionWrapper(new NoOpLogger(), name, Targets.ToList());
+                TargetsChange += executionWrapper.HandleTargetsChange;
+
+                return executionWrapper;
+            }
 
             // This can throw in a case of invalid NLog.config file.
             var log = logManager.GetLogger(name);
 
             if (log  == null)
-                return new LoggerExecutionWrapper(new NoOpLogger(), name, Targets);
+            {
+                executionWrapper = new LoggerExecutionWrapper(new NoOpLogger(), name, Targets.ToList());
+                TargetsChange += executionWrapper.HandleTargetsChange;
 
-            return new LoggerExecutionWrapper(log, name, Targets);
+                return executionWrapper;
+            }
+
+            executionWrapper = new LoggerExecutionWrapper(log, name, Targets.ToList());
+            TargetsChange += executionWrapper.HandleTargetsChange;
+
+            return executionWrapper;
         }
 
         private static ILogManager ResolveExternalLogManager()
@@ -73,6 +89,7 @@ namespace Raven.Abstractions.Logging
                 return;
 
             Targets.Add(new T());
+            OnTargetsChange(Targets.ToList());
         }
 
         public static T GetTarget<T>() where T : Target
@@ -133,6 +150,11 @@ namespace Raven.Abstractions.Logging
                 default:
                     return true;
             }
+        }
+
+        private static void OnTargetsChange(IReadOnlyList<Target> obj)
+        {
+            TargetsChange?.Invoke(obj);
         }
     }
 
