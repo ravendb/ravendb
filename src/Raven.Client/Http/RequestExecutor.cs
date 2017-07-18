@@ -74,7 +74,7 @@ namespace Raven.Client.Http
                 if (_nodeSelector == null)
                     return null;
 
-                var (_, currentNode) = _nodeSelector.GetCurrentNode();
+                var (_, currentNode) = _nodeSelector.GetPreferredNode();
 
                 return currentNode?.Url;
             }
@@ -305,9 +305,12 @@ namespace Raven.Client.Http
             switch (_readBalanceBehavior)
             {
                 case ReadBalanceBehavior.None:
-                    return _nodeSelector.GetCurrentNode();
+                    return _nodeSelector.GetPreferredNode();
                 case ReadBalanceBehavior.RoundRobin:
-                    return _nodeSelector.GetNodeBySessionId(sessionId ?? 0);                
+                    if(sessionId == null)
+                        goto case ReadBalanceBehavior.None;
+                    
+                    return _nodeSelector.GetNodeBySessionId(sessionId.Value);                
                 case ReadBalanceBehavior.FastestNode:
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -358,7 +361,7 @@ namespace Raven.Client.Http
             if (time - _lastReturnedResponse <= TimeSpan.FromMinutes(5))
                 return;
 
-            var (_, serverNode) = _nodeSelector.GetCurrentNode();
+            var (_, serverNode) = _nodeSelector.GetPreferredNode();
             GC.KeepAlive(Task.Run(async () =>
             {
                 try
@@ -664,11 +667,6 @@ namespace Raven.Client.Http
             switch (response.StatusCode)
             {
                 case HttpStatusCode.NotFound:
-                    if (nodeIndex.HasValue)
-                    {
-                        _nodeSelector?.OnFailedRequest(nodeIndex.Value, sessionId);
-                    }
-
                     if (command.ResponseType == RavenCommandResponseType.Empty)
                         return true;
                     else if (command.ResponseType == RavenCommandResponseType.Object)
@@ -733,9 +731,9 @@ namespace Raven.Client.Http
             if (_nodeSelector == null)
                 return false;
 
-            _nodeSelector.OnFailedRequest(nodeIndex.Value,sessionId);
+            _nodeSelector.OnFailedRequest(nodeIndex.Value);
 
-            var (currentIndex, currentNode) = _nodeSelector.GetCurrentNode();
+            var (currentIndex, currentNode) = _nodeSelector.GetPreferredNode();
             if (command.FailedNodes.ContainsKey(currentNode))
             {
                 return false; //we tried all the nodes...nothing left to do
@@ -986,7 +984,7 @@ namespace Raven.Client.Http
                 });
             }
 
-            return _nodeSelector.GetCurrentNode();
+            return _nodeSelector.GetPreferredNode();
         }
     }
 }

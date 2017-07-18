@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 
 namespace Raven.Client.Http
@@ -7,16 +8,17 @@ namespace Raven.Client.Http
     {
         private class NodeSelectorState
         {
-            public int CurrentNodeIndex;
-            public Topology Topology;
+            public readonly Topology Topology;
+            public readonly int CurrentNodeIndex;
+            public readonly List<ServerNode> Nodes;
+            public readonly int[] Failures; 
 
-            public NodeSelectorState Clone()
+            public NodeSelectorState(int currentNodeIndex, Topology topology)
             {
-                return new NodeSelectorState
-                {
-                    CurrentNodeIndex = this.CurrentNodeIndex,
-                    Topology = this.Topology
-                };
+                Topology = topology;
+                CurrentNodeIndex = currentNodeIndex;
+                Nodes = topology.Nodes;
+                Failures = new int[topology.Nodes.Count];
             }
         }        
 
@@ -26,15 +28,17 @@ namespace Raven.Client.Http
 
         public NodeSelector(Topology topology)
         {
-            _state = new NodeSelectorState
-            {
-                Topology = topology
-            };
+            _state = new NodeSelectorState(0, topology);
         }
 
-        public int GetCurrentNodeIndex() => _state.CurrentNodeIndex;
+        public void OnFailedRequest(int nodeIndex)
+        {
+            var state = _state;
+            if (nodeIndex < 0 || nodeIndex >= state.Failures.Length)
+                return; // probably already changed
 
-        public void OnFailedRequest(int nodeIndex, int? sessionId) => AdvanceToNextNode(sessionId);
+            Interlocked.Increment(ref state.Failures[nodeIndex]);
+        }
 
         public bool OnUpdateTopology(Topology topology, bool forceUpdate = false)
         {
@@ -44,58 +48,65 @@ namespace Raven.Client.Http
             if (_state.Topology.Etag >= topology.Etag && forceUpdate == false)
                 return false;
 
-            var state = new NodeSelectorState
-            {
-                Topology = topology
-            };
+            var state = new NodeSelectorState(0, topology);
 
             Interlocked.Exchange(ref _state, state);
 
             return true;
         }
 
-        public (int currentIndex, ServerNode currentNode) GetCurrentNode()
+        public (int Index, ServerNode Node) GetPreferredNode()
         {
             var state = _state;
-            return (currentIndex: state.CurrentNodeIndex,
-                    currentNode: state.Topology.Nodes[state.CurrentNodeIndex]);
+            for (int i = 0; i < state.Failures.Length; i++)
+            {
+                if (state.Failures[i] == 0)
+                    return (i, state.Nodes[i]);
+            }
+
+            return UnlikelyEveryoneFaultedChoice(state);
         }
 
-        public (int currentIndex, ServerNode currentNode) GetNodeBySessionId(int sessionId)
+        private static ValueTuple<int, ServerNode> UnlikelyEveryoneFaultedChoice(NodeSelectorState state)
+        {
+            // if there are all marked as failed, we'll chose the first
+            // one so the user will get an error (or recover :-) );
+            return (0, state.Nodes[0]);
+        }
+
+        public (int Index, ServerNode Node) GetNodeBySessionId(int sessionId)
         {
             var state = _state;
             var index = sessionId % state.Topology.Nodes.Count;
-            return (currentIndex: index,
-                    currentNode: state.Topology.Nodes[index]);
+
+            for (int i = index; i < state.Failures.Length; i++)
+            {
+                if (state.Failures[i] == 0)
+                    return (i, state.Nodes[i]);
+            }
+
+            for (int i = 0; i < index; i++)
+            {
+                if (state.Failures[i] == 0)
+                    return (i, state.Nodes[i]);
+            }
+            
+            return UnlikelyEveryoneFaultedChoice(state);
         }
 
-        public void RestoreNodeIndex(int nodeIndex) => _state.CurrentNodeIndex = nodeIndex;
-
-        public event Action<int> NodeSwitch;
-
-        public void AdvanceToNextNode(int? sessionId)
+        public void RestoreNodeIndex(int nodeIndex)
         {
             var state = _state;
-            if (state.Topology.Nodes.Count == 0)
-                ThrowEmptyTopology();
+            if (state.CurrentNodeIndex < nodeIndex)
+                return; // nothing to do
 
-            int nextIndex;
-            var sessionIndex = (sessionId ?? 0) % state.Topology.Nodes.Count;
-            do
-            {
-                nextIndex = state.CurrentNodeIndex + 1;
-                state.CurrentNodeIndex = nextIndex < Topology.Nodes.Count ? nextIndex : 0;
-            } while (nextIndex == sessionIndex);
-
-            NodeSwitch?.Invoke(state.CurrentNodeIndex);
-
-            Interlocked.Exchange(ref _state, state);
+            var stateFailure = state.Failures[nodeIndex];
+            Interlocked.Add(ref state.Failures[nodeIndex], -stateFailure);// zero it
         }
 
         protected static void ThrowEmptyTopology()
         {
             throw new InvalidOperationException("Empty database topology, this shouldn't happen.");
         }
-
     }
 }
