@@ -174,7 +174,7 @@ namespace Raven.Server.ServerWide
                     case nameof(PutCertificateCommand):
                         PutValue<CertificateDefinition>(context, type, cmd, index, leader);
                         // Once the certificate is in the cluster, no need to keep it locally so we delete it.
-                        if (cmd.TryGet(nameof(PutCertificateCommand.Name), out string key)) //TODO iftah, also when install snapshot
+                        if (cmd.TryGet(nameof(PutCertificateCommand.Name), out string key))
                             DeleteLocalState(context, key);
                         break;
                     case nameof(PutClientConfigurationCommand):
@@ -786,7 +786,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public override void OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex)
+        public override void OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, ServerStore serverStore)
         {
             var listOfDatabaseName = GetDatabaseNames(context).ToList();
             //There is potentially a lot of work to be done here so we are responding to the change on a separate task.
@@ -799,6 +799,16 @@ namespace Raven.Server.ServerWide
                     foreach (var db in listOfDatabaseName)
                         onDatabaseChanged.Invoke(this, (db, lastIncludedIndex, "SnapshotInstalled"));
                 }, null);
+            }
+
+            // If there are trusted certificates in the local state, we will register them in the cluster now
+            foreach (var localCertKey in GetCertificateKeysFromLocalState(context))
+            {
+                using (var localCertificate = GetLocalState(context, localCertKey))
+                {
+                    var certificateDefinition = JsonDeserializationServer.CertificateDefinition(localCertificate);
+                    serverStore.PutValueInClusterAsync(new PutCertificateCommand(localCertKey, certificateDefinition));
+                }
             }
         }
     }
