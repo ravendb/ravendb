@@ -470,7 +470,7 @@ namespace Raven.Server.Documents.Revisions
                 var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, RevisionsTombstonesSlice);
 
                 if (table.VerifyKeyExists(keySlice))
-                    return; // revisions (and revisions tombstones) are immutable, we can safely ignore this 
+                    return; // revisions (and revisions tombstones)On are immutable, we can safely ignore this 
                 
                 using (Slice.From(context.Allocator, collectionName.Name, out Slice collectionSlice))
                 using (table.Allocate(out TableValueBuilder tvb))
