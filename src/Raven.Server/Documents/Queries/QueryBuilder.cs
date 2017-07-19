@@ -175,6 +175,8 @@ namespace Raven.Server.Documents.Queries
                             return HandleStartsWith(query, expression, metadata, parameters, boost);
                         case MethodType.EndsWith:
                             return HandleEndsWith(query, expression, metadata, parameters, boost);
+                        case MethodType.Lucene:
+                            return HandleLucene(query, expression, metadata, parameters);
                         default:
                             throw new NotSupportedException($"Method '{methodType}' is not supported.");
                     }
@@ -211,6 +213,17 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
+        private static LuceneASTNodeBase HandleLucene(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters)
+        {
+            var fieldName = QueryExpression.Extract(query.QueryText, (FieldToken)expression.Arguments[0]);
+            var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
+
+            var parser = new LuceneQueryParser();
+            parser.Parse($"{fieldName}:{value}");
+
+            return parser.LuceneAST;
+        }
+
         private static LuceneASTNodeBase HandleStartsWith(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string boost)
         {
             var fieldName = QueryExpression.Extract(query.QueryText, (FieldToken)expression.Arguments[0]);
@@ -221,11 +234,7 @@ namespace Raven.Server.Documents.Queries
             else
                 value += "*";
 
-            return CreateFieldNode(fieldName, FieldName.FieldType.String, new TermLuceneASTNode
-            {
-                Term = value,
-                Type = TermLuceneASTNode.TermType.PrefixTerm
-            });
+            return CreateFieldNode(fieldName, FieldName.FieldType.String, CreateTermNodeWithBoost(value, TermLuceneASTNode.TermType.PrefixTerm, boost));
         }
 
         private static LuceneASTNodeBase HandleEndsWith(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string boost)
@@ -233,15 +242,11 @@ namespace Raven.Server.Documents.Queries
             var fieldName = QueryExpression.Extract(query.QueryText, (FieldToken)expression.Arguments[0]);
             var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
 
-            value = string.IsNullOrEmpty(value) 
-                ? "*" 
+            value = string.IsNullOrEmpty(value)
+                ? "*"
                 : value.Insert(0, "*");
 
-            return CreateFieldNode(fieldName, FieldName.FieldType.String, new TermLuceneASTNode
-            {
-                Term = value,
-                Type = TermLuceneASTNode.TermType.WildCardTerm
-            });
+            return CreateFieldNode(fieldName, FieldName.FieldType.String, CreateTermNodeWithBoost(value, TermLuceneASTNode.TermType.WildCardTerm, boost));
         }
 
         private static LuceneASTNodeBase HandleBoost(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters)
@@ -419,6 +424,24 @@ namespace Raven.Server.Documents.Queries
             return new FieldLuceneASTNode
             {
                 FieldName = new FieldName(fieldName, fieldType),
+                Node = node
+            };
+        }
+
+        private static LuceneASTNodeBase CreateTermNodeWithBoost(string value, TermLuceneASTNode.TermType termType, string boost)
+        {
+            var node = new TermLuceneASTNode
+            {
+                Term = value,
+                Type = termType
+            };
+
+            if (boost == null)
+                return node;
+
+            return new ParenthesisLuceneASTNode
+            {
+                Boost = boost,
                 Node = node
             };
         }
@@ -614,6 +637,9 @@ namespace Raven.Server.Documents.Queries
             if (string.Equals(methodName, "endsWith", StringComparison.OrdinalIgnoreCase))
                 return MethodType.EndsWith;
 
+            if (string.Equals(methodName, "lucene", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Lucene;
+
             throw new NotSupportedException($"Method '{methodName}' is not supported.");
         }
 
@@ -627,7 +653,8 @@ namespace Raven.Server.Documents.Queries
             Search,
             Boost,
             StartsWith,
-            EndsWith
+            EndsWith,
+            Lucene
         }
     }
 }
