@@ -170,7 +170,7 @@ namespace Sparrow.Json
                     return Expression.Call(method, json, Expression.Constant(propertyName));
                 }
 
-                if (genericTypeDefinition == typeof(List<>))
+                if (genericTypeDefinition == typeof(List<>) || genericTypeDefinition == typeof(IReadOnlyList<>))
                 {
                     var valueType = propertyType.GenericTypeArguments[0];
                     var converterExpression = Expression.Constant(GetConverterFromCache(valueType));
