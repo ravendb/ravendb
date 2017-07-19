@@ -626,6 +626,23 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public IEnumerable<string> ItemKeysStartingWith(TransactionOperationContext context, string prefix, int start, int take)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+
+            var dbKey = prefix.ToLowerInvariant();
+            using (Slice.From(context.Allocator, dbKey, out Slice loweredPrefix))
+            {
+                foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, start))
+                {
+                    if (take-- <= 0)
+                        yield break;
+
+                    yield return GetCurrentItemKey(context, result.Value);
+                }
+            }
+        }
+
         public IEnumerable<string> GetDatabaseNames(TransactionOperationContext context, int start = 0, int take = int.MaxValue)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
@@ -801,13 +818,19 @@ namespace Raven.Server.ServerWide
                 }, null);
             }
 
-            // If there are trusted certificates in the local state, we will register them in the cluster now
-            foreach (var localCertKey in GetCertificateKeysFromLocalState(context))
+            // Lets read all the certificate keys from the cluster, and delete the matching ones from the local state
+            var clusterCertificateKeys = serverStore.Cluster.ItemKeysStartingWith(context, Constants.Certificates.Prefix, 0, int.MaxValue);
+
+            using (context.OpenWriteTransaction())
             {
-                using (var localCertificate = GetLocalState(context, localCertKey))
+                foreach (var key in clusterCertificateKeys)
                 {
-                    var certificateDefinition = JsonDeserializationServer.CertificateDefinition(localCertificate);
-                    serverStore.PutValueInClusterAsync(new PutCertificateCommand(localCertKey, certificateDefinition));
+                    using (var localCertificate = GetLocalState(context, key))
+                    {
+                        if (localCertificate == null)
+                            continue;
+                        DeleteLocalState(context, key);
+                    }
                 }
             }
         }
