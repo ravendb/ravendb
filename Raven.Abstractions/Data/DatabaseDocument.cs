@@ -56,6 +56,10 @@ namespace Raven.Abstractions.Data
 
         private static bool CompareTwoDictionaries(Dictionary<string, string> one, Dictionary<string, string> two)
         {
+            if (one == null && two == null)
+                return true;
+            if (one == null || two == null)
+                return false;
             return DictionaryContainsDictionary(one, two) && DictionaryContainsDictionary(two, one);
         }
 
