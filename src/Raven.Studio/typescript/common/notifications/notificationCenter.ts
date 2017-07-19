@@ -60,10 +60,18 @@ class notificationCenter {
     databaseOperationsWatch = new notificationCenterOperationsWatch();
 
     allNotifications: KnockoutComputed<abstractNotification[]>;
+    visibleNotifications: KnockoutComputed<abstractNotification[]>;
 
     totalItemsCount: KnockoutComputed<number>;
+    successItemsCount: KnockoutComputed<number>;
+    infoItemsCount: KnockoutComputed<number>;
+    warningItemsCount: KnockoutComputed<number>;
+    errorItemsCount: KnockoutComputed<number>;
+
     alertCountAnimation = ko.observable<boolean>();
     noNewNotifications: KnockoutComputed<boolean>;
+
+    severityFilter = ko.observable<Raven.Server.NotificationCenter.Notifications.NotificationSeverity>();
 
     detailsProviders = [] as Array<detailsProvider>;
     customOperationMerger = [] as Array<customOperationMerger>;
@@ -116,7 +124,26 @@ class notificationCenter {
             return _.sortBy(mergedNotifications, x => -1 * x.displayDate().unix());
         });
 
+        this.visibleNotifications = ko.pureComputed(() => {
+            const severity = this.severityFilter();
+            const allNotifications = this.allNotifications();
+            if (!severity) {
+                return allNotifications;
+            }
+
+            return allNotifications.filter(x => x.severity() === severity);
+        });
+
         this.totalItemsCount = ko.pureComputed(() => this.allNotifications().length);
+
+        const bySeverityCounter = (severity: Raven.Server.NotificationCenter.Notifications.NotificationSeverity) => {
+            return ko.pureComputed(() => this.allNotifications().filter(x => x.severity() === severity).length);
+        };
+
+        this.successItemsCount = bySeverityCounter("Success");
+        this.warningItemsCount = bySeverityCounter("Warning");
+        this.infoItemsCount = bySeverityCounter("Info");
+        this.errorItemsCount = bySeverityCounter("Error");
 
         this.totalItemsCount.subscribe((count: number) => {
             if (count) {
@@ -257,6 +284,10 @@ class notificationCenter {
             .done(() => this.removeNotificationFromNotificationCenter(notification));
     }
 
+    dismissAll() {
+        this.allNotifications().forEach(notification => this.dismiss(notification));
+    }
+
     dismiss(notification: abstractNotification) {
         if (notification instanceof recentError) {
             // local dismiss
@@ -334,6 +365,10 @@ class notificationCenter {
         return $(e.target).closest(".notification-center-container").length === 0
             && $(e.target).closest("#notification-toggle").length === 0
             && $(e.target).closest(".modal.in").length === 0;
+    }
+
+    filterBySeverity(severity: Raven.Server.NotificationCenter.Notifications.NotificationSeverity) {
+        this.severityFilter(severity);
     }
 }
 

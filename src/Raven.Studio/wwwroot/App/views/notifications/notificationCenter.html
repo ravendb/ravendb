@@ -7,21 +7,24 @@
 
     <div class="notification-actions flex-horizontal flex-stretch-items" data-bind="visible: !noNewNotifications()">
         <div class="flex-grow flex-horizontal flex-stretch-items">
-            <button class="notification-type-toggle active">All</button>
-            <button class="notification-type-toggle type-success">3</button>
-            <button class="notification-type-toggle type-info">1</button>
-            <button class="notification-type-toggle type-warning">5</button>
-            <button class="notification-type-toggle type-danger">800</button>
-
-            
+            <button data-bind="click: _.partial(filterBySeverity, null), css: { active: !severityFilter() }" 
+                    title="Show all notifications" class="notification-type-toggle active">All</button>
+            <button data-bind="click: _.partial(filterBySeverity, 'Success'), css: { active: severityFilter() === 'Success' }, text: successItemsCount" 
+                    title="Filter by severity: Success" class="notification-type-toggle type-success"></button>
+            <button data-bind="click: _.partial(filterBySeverity, 'Info'), css: { active: severityFilter() === 'Info' }, text: infoItemsCount" 
+                    title="Filter by severity: Info" class="notification-type-toggle type-info"></button>
+            <button data-bind="click: _.partial(filterBySeverity, 'Warning'), css: { active: severityFilter() === 'Warning' }, text: warningItemsCount" 
+                    title="Filter by severity: Warning" class="notification-type-toggle type-warning"></button>
+            <button data-bind="click: _.partial(filterBySeverity, 'Error'), css: { active: severityFilter() === 'Error' }, text: errorItemsCount" 
+                    title="Filter by severity: Error" class="notification-type-toggle type-danger"></button>
         </div>
         
-        <button class="dismiss">Dismiss all</button>
+        <button data-bind="click: dismissAll" class="dismiss">Dismiss all</button>
 
     </div>
 
-    <div class="notification-list scroll" data-bind="foreach: allNotifications">
-        <div data-bind="template: { name: type + '-template' }"></div>
+    <div class="notification-list scroll" data-bind="foreach: visibleNotifications">
+        <div data-bind="template: { name: type + '-template' }"></div>  
     </div>
 </div>
 
