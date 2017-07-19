@@ -16,15 +16,21 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
         {
             var result = JsonDeserializationServer.MoreLikeThisQuery(json);
 
-            // add basic validation here like in IndexQueryServerSide
             if (result.PageSize == 0 && json.TryGet(nameof(PageSize), out int _) == false)
                 result.PageSize = int.MaxValue;
-            
+
+
+            if (string.IsNullOrWhiteSpace(result.DocumentId))
+                throw new InvalidOperationException($"More like this query does not contain '{nameof(DocumentId)}' field.");
+
             return result;
         }
 
         public static MoreLikeThisQueryServerSide Create(HttpContext httpContext, int pageSize, JsonOperationContext context)
         {
+            if (httpContext.Request.Query.TryGetValue("docId", out var docId) == false || docId.Count == 0 || string.IsNullOrWhiteSpace(docId[0]))
+                throw new InvalidOperationException("Missing mandatory query string parameter 'docId'.");
+
             var result = new MoreLikeThisQueryServerSide
             {
                 // all defaults which need to have custom value
