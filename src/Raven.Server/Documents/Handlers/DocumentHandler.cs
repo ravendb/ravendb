@@ -361,11 +361,14 @@ namespace Raven.Server.Documents.Handlers
         public async Task Delete()
         {
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-            var etag = GetLongFromHeaders("If-Match");
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var changeVector = context.GetLazyString(GetStringQueryString("If-Match"));
 
-            var cmd = new DeleteDocumentCommand(id, etag, Database, catchConcurrencyErrors: true);
-            await Database.TxMerger.Enqueue(cmd);
-            cmd.ExceptionDispatchInfo?.Throw();
+                var cmd = new DeleteDocumentCommand(id, changeVector, Database, catchConcurrencyErrors: true);
+                await Database.TxMerger.Enqueue(cmd);
+                cmd.ExceptionDispatchInfo?.Throw();
+            }
 
             NoContentStatus();
         }
@@ -385,9 +388,9 @@ namespace Raven.Server.Documents.Handlers
                     id = clusterId;
                 }
 
-                var etag = GetLongFromHeaders("If-Match");
+                var changeVector = context.GetLazyString(GetStringQueryString("If-Match"));
 
-                var cmd = new MergedPutCommand(doc, id, etag, Database);
+                var cmd = new MergedPutCommand(doc, id, changeVector, Database);
 
                 await Database.TxMerger.Enqueue(cmd);
 
@@ -416,7 +419,6 @@ namespace Raven.Server.Documents.Handlers
         {
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
-            var etag = GetLongFromHeaders("If-Match");
             var isTest = GetBoolValueQueryString("test", required: false) ?? false;
             var debugMode = GetBoolValueQueryString("debug", required: false) ?? isTest;
             var skipPatchIfEtagMismatch = GetBoolValueQueryString("skipPatchIfEtagMismatch", required: false) ?? false;
@@ -435,7 +437,9 @@ namespace Raven.Server.Documents.Handlers
                 if (request.TryGet("PatchIfMissing", out patchIfMissingCmd) && patchIfMissingCmd != null)
                     patchIfMissing = PatchRequest.Parse(patchIfMissingCmd);
 
-                var command = Database.Patcher.GetPatchDocumentCommand(context, id, etag, patch, patchIfMissing, skipPatchIfEtagMismatch, debugMode, isTest);
+                var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
+
+                var command = Database.Patcher.GetPatchDocumentCommand(context, id, changeVector, patch, patchIfMissing, skipPatchIfEtagMismatch, debugMode, isTest);
 
                 if (isTest == false)
                     await Database.TxMerger.Enqueue(command);
@@ -543,18 +547,18 @@ namespace Raven.Server.Documents.Handlers
         private class MergedPutCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly string _id;
-            private readonly long? _expectedEtag;
+            private readonly LazyStringValue _expectedChangeVector;
             private readonly BlittableJsonReaderObject _document;
             private readonly DocumentDatabase _database;
 
             public ExceptionDispatchInfo ExceptionDispatchInfo;
             public DocumentsStorage.PutOperationResults PutResult;
 
-            public MergedPutCommand(BlittableJsonReaderObject doc, string id, long? etag, DocumentDatabase database)
+            public MergedPutCommand(BlittableJsonReaderObject doc, string id, LazyStringValue changeVector, DocumentDatabase database)
             {
                 _document = doc;
                 _id = id;
-                _expectedEtag = etag;
+                _expectedChangeVector = changeVector;
                 _database = database;
             }
 
@@ -562,7 +566,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 try
                 {
-                    PutResult = _database.DocumentsStorage.Put(context, _id, _expectedEtag, _document);
+                    PutResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _document);
                 }
                 catch (ConcurrencyException e)
                 {

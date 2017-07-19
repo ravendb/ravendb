@@ -361,7 +361,7 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             Data = data,
                             Id = modifier.Id,
-                            ChangeVector = modifier.ChangeVector?.ToString().ToChangeVector(),
+                            ChangeVector = modifier.ChangeVector,
                             Flags = modifier.Flags,
                             NonPersistentFlags = modifier.NonPersistentFlags,
                         },

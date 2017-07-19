@@ -100,27 +100,27 @@ namespace SlowTests.Tests.Faceted
 
                 var jsonFacets = JsonConvert.SerializeObject(facets);
 
-                long? firstEtag;
+                string firstChangeVector;
 
                 const string queryUrl = "/queries/CameraCost?query=Manufacturer%253A{0}&facetStart=0&facetPageSize=&op=facets";
 
                 var requestUrl = string.Format(queryUrl, "canon");
 
-                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformPost(store, requestUrl, jsonFacets, null, out firstEtag));
+                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformPost(store, requestUrl, jsonFacets, null, out firstChangeVector));
 
                 //second request should give 304 not modified
-                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformPost(store, requestUrl, jsonFacets, firstEtag, out firstEtag));
+                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformPost(store, requestUrl, jsonFacets, firstChangeVector, out firstChangeVector));
 
                 //change index etag by inserting new doc
                 InsertCameraData(store, GetCameras(1));
 
-                long? secondEtag;
+                string secondChangeVector;
 
                 //changing the index should give 200 OK
-                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformPost(store, requestUrl, jsonFacets, firstEtag, out secondEtag));
+                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformPost(store, requestUrl, jsonFacets, firstChangeVector, out secondChangeVector));
 
                 //next request should give 304 not modified
-                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformPost(store, requestUrl, jsonFacets, secondEtag, out secondEtag));
+                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformPost(store, requestUrl, jsonFacets, secondChangeVector, out secondChangeVector));
             }
         }
 

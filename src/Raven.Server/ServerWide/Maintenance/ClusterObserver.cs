@@ -11,6 +11,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.Utils;
 
@@ -259,8 +260,8 @@ namespace Raven.Server.ServerWide.Maintenance
                    promotableClusterStats.LastReport.TryGetValue(dbName, out var promotableDbStats) == false)
                     continue;
 
-                var status = ConflictsStorage.GetConflictStatus(mentorPrevDbStats.LastChangeVector.ToChangeVector(), promotableDbStats.LastChangeVector.ToChangeVector());
-                if (status == ConflictsStorage.ConflictStatus.AlreadyMerged)
+                var status = ChangeVectorUtils.GetConflictStatus(mentorPrevDbStats.LastChangeVector, promotableDbStats.LastChangeVector);
+                if (status == ConflictStatus.AlreadyMerged)
                 {
                     if (previousClusterStats.TryGetValue(promotable, out var promotablePrevClusterStats) == false ||
                         promotablePrevClusterStats.LastReport.TryGetValue(dbName, out var promotablePrevDbStats) == false)

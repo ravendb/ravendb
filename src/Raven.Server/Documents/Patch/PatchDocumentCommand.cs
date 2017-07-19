@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Patch
     public class PatchDocumentCommand : TransactionOperationsMerger.MergedTransactionCommand
     {
         private readonly string _id;
-        private readonly long? _expectedEtag;
+        private readonly LazyStringValue _expectedChangeVector;
         private readonly bool _skipPatchIfEtagMismatch;
         private readonly bool _debugMode;
 
@@ -26,14 +26,13 @@ namespace Raven.Server.Documents.Patch
 
         private DocumentPatcherBase.SingleScriptRun _run;
 
-        public PatchDocumentCommand(JsonOperationContext context, string id, long? expectedEtag, bool skipPatchIfEtagMismatch, bool debugMode, PatcherOperationScope scope,
-            DocumentPatcherBase.SingleScriptRun run, DocumentDatabase database, Logger logger, bool isTest, bool scriptIsPuttingDocument)
+        public PatchDocumentCommand(JsonOperationContext context, string id, LazyStringValue expectedChangeVector, bool skipPatchIfEtagMismatch, bool debugMode, PatcherOperationScope scope, DocumentPatcherBase.SingleScriptRun run, DocumentDatabase database, Logger logger, bool isTest, bool scriptIsPuttingDocument)
         {
             _externalContext = context;
             _scope = scope;
             _run = run;
             _id = id;
-            _expectedEtag = expectedEtag;
+            _expectedChangeVector = expectedChangeVector;
             _skipPatchIfEtagMismatch = skipPatchIfEtagMismatch;
             _debugMode = debugMode;
             _database = database;
@@ -50,9 +49,9 @@ namespace Raven.Server.Documents.Patch
         {
             var originalDocument = _database.DocumentsStorage.Get(context, _id);
 
-            if (_expectedEtag.HasValue)
+            if (_expectedChangeVector != null)
             {
-                if (originalDocument == null && _expectedEtag.Value != 0)
+                if (originalDocument == null)
                 {
                     if (_skipPatchIfEtagMismatch)
                     {
@@ -60,14 +59,14 @@ namespace Raven.Server.Documents.Patch
                         return 1;
                     }
 
-                    throw new ConcurrencyException($"Could not patch document '{_id}' because non current etag was used")
+                    throw new ConcurrencyException($"Could not patch document '{_id}' because non current change vector was used")
                     {
-                        ActualETag = 0,
-                        ExpectedETag = _expectedEtag.Value,
+                        ActualChangeVector = null,
+                        ExcpectedChangeVector = _expectedChangeVector,
                     };
                 }
 
-                if (originalDocument != null && originalDocument.Etag != _expectedEtag.Value)
+                if (originalDocument.ChangeVector.CompareTo(_expectedChangeVector) != 0)
                 {
                     if (_skipPatchIfEtagMismatch)
                     {
@@ -75,10 +74,10 @@ namespace Raven.Server.Documents.Patch
                         return 1;
                     }
 
-                    throw new ConcurrencyException($"Could not patch document '{_id}' because non current etag was used")
+                    throw new ConcurrencyException($"Could not patch document '{_id}' because non current change vector was used")
                     {
-                        ActualETag = originalDocument.Etag,
-                        ExpectedETag = _expectedEtag.Value
+                        ActualChangeVector = originalDocument.ChangeVector,
+                        ExcpectedChangeVector = _expectedChangeVector
                     };
                 }
             }
@@ -152,14 +151,14 @@ namespace Raven.Server.Documents.Patch
             else if (DocumentCompare.IsEqualTo(originalDocument.Data, modifiedDocument, tryMergeAttachmentsConflict: true) == DocumentCompareResult.NotEqual)
             {
                 if (_isTest == false || _scriptIsPuttingDocument)
-                    putResult = _database.DocumentsStorage.Put(context, originalDocument.Id, originalDocument.Etag, modifiedDocument, null, null, originalDocument.Flags);
+                    putResult = _database.DocumentsStorage.Put(context, originalDocument.Id, originalDocument.ChangeVector, modifiedDocument, null, null, originalDocument.Flags);
 
                 result.Status = PatchStatus.Patched;
             }
 
             if (putResult != null)
             {
-                result.Etag = putResult.Value.Etag;
+                result.ChangeVector = putResult.Value.ChangeVector;
                 result.Collection = putResult.Value.Collection.Name;
             }
 

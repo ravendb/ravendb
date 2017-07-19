@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Handlers
                 stats.CountOfTransformers = transformersCount;
                 var statsDatabaseChangeVector = Database.DocumentsStorage.GetDatabaseChangeVector(context);
                 
-                stats.DatabaseChangeVector = statsDatabaseChangeVector.ToJson();
+                stats.DatabaseChangeVector = statsDatabaseChangeVector;
                 stats.DatabaseId = Database.DocumentsStorage.Environment.DbId;
                 stats.Is64Bit = IntPtr.Size == sizeof(long);
                 stats.Pager = Database.DocumentsStorage.Environment.Options.DataPager.GetType().ToString();

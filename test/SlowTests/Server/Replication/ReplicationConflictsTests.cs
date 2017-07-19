@@ -10,9 +10,11 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.NotificationCenter;
+using Raven.Server.Utils;
 using Xunit;
 using Constants = Raven.Client.Constants;
 
@@ -35,22 +37,21 @@ namespace SlowTests.Server.Replication
         public void All_remote_etags_lower_than_local_should_return_AlreadyMerged_at_conflict_status()
         {
             var dbIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
-
             var local = new[]
             {
-                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10 },
-                new ChangeVectorEntry { DbId = dbIds[1], Etag = 11 },
-                new ChangeVectorEntry { DbId = dbIds[2], Etag = 12 },
+                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10, NodeTag = 0},
+                new ChangeVectorEntry { DbId = dbIds[1], Etag = 11, NodeTag = 1},
+                new ChangeVectorEntry { DbId = dbIds[2], Etag = 12, NodeTag = 2},
             };
 
             var remote = new[]
             {
-                new ChangeVectorEntry { DbId = dbIds[0], Etag = 1 },
-                new ChangeVectorEntry { DbId = dbIds[1], Etag = 2 },
-                new ChangeVectorEntry { DbId = dbIds[2], Etag = 3 },
+                new ChangeVectorEntry { DbId = dbIds[0], Etag = 1, NodeTag = 0 },
+                new ChangeVectorEntry { DbId = dbIds[1], Etag = 2, NodeTag = 1 },
+                new ChangeVectorEntry { DbId = dbIds[2], Etag = 3, NodeTag = 2 },
             };
 
-            Assert.Equal(ConflictsStorage.ConflictStatus.AlreadyMerged, ConflictsStorage.GetConflictStatus(remote, local));
+            Assert.Equal(ConflictStatus.AlreadyMerged, ChangeVectorUtils.GetConflictStatus(remote.ToJson(), local.ToJson()));
         }
 
         [Fact]
@@ -60,19 +61,19 @@ namespace SlowTests.Server.Replication
 
             var local = new[]
             {
-                new ChangeVectorEntry { DbId = dbIds[0], Etag = 1 },
-                new ChangeVectorEntry { DbId = dbIds[1], Etag = 2 },
-                new ChangeVectorEntry { DbId = dbIds[2], Etag = 3 },
+                new ChangeVectorEntry { DbId = dbIds[0], Etag = 1, NodeTag = 0 },
+                new ChangeVectorEntry { DbId = dbIds[1], Etag = 2, NodeTag = 1 },
+                new ChangeVectorEntry { DbId = dbIds[2], Etag = 3, NodeTag = 2 },
             };
 
             var remote = new[]
             {
-                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10 },
-                new ChangeVectorEntry { DbId = dbIds[1], Etag = 20 },
-                new ChangeVectorEntry { DbId = dbIds[2], Etag = 30 },
+                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10, NodeTag = 0 },
+                new ChangeVectorEntry { DbId = dbIds[1], Etag = 20, NodeTag = 1 },
+                new ChangeVectorEntry { DbId = dbIds[2], Etag = 30, NodeTag = 2 },
             };
 
-            Assert.Equal(ConflictsStorage.ConflictStatus.Update, ConflictsStorage.GetConflictStatus(remote, local));
+            Assert.Equal(ConflictStatus.Update, ChangeVectorUtils.GetConflictStatus(remote.ToJson(), local.ToJson()));
         }
 
         [Fact]
@@ -82,19 +83,19 @@ namespace SlowTests.Server.Replication
 
             var local = new[]
             {
-                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10 },
-                new ChangeVectorEntry { DbId = dbIds[1], Etag = 75 },
-                new ChangeVectorEntry { DbId = dbIds[2], Etag = 3 },
+                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10, NodeTag = 0 },
+                new ChangeVectorEntry { DbId = dbIds[1], Etag = 75, NodeTag = 1 },
+                new ChangeVectorEntry { DbId = dbIds[2], Etag = 3, NodeTag = 2 },
             };
 
             var remote = new[]
             {
-                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10 },
-                new ChangeVectorEntry { DbId = dbIds[1], Etag = 95 },
-                new ChangeVectorEntry { DbId = dbIds[2], Etag = 2 },
+                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10, NodeTag = 0 },
+                new ChangeVectorEntry { DbId = dbIds[1], Etag = 95, NodeTag = 1 },
+                new ChangeVectorEntry { DbId = dbIds[2], Etag = 2, NodeTag = 2 },
             };
 
-            Assert.Equal(ConflictsStorage.ConflictStatus.Conflict, ConflictsStorage.GetConflictStatus(remote, local));
+            Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote.ToJson(), local.ToJson()));
         }
 
         [Fact]
@@ -104,19 +105,19 @@ namespace SlowTests.Server.Replication
 
             var local = new[]
             {
-                new ChangeVectorEntry { DbId = dbIds[1], Etag = 75 },
-                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10 },
-                new ChangeVectorEntry { DbId = dbIds[2], Etag = 3 },
+                new ChangeVectorEntry { DbId = dbIds[1], Etag = 75, NodeTag = 0 },
+                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10, NodeTag = 1 },
+                new ChangeVectorEntry { DbId = dbIds[2], Etag = 3, NodeTag = 2 },
             };
 
             var remote = new[]
             {
-                new ChangeVectorEntry { DbId = dbIds[1], Etag = 95 },
-                new ChangeVectorEntry { DbId = dbIds[2], Etag = 2 },
-                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10 },
+                new ChangeVectorEntry { DbId = dbIds[1], Etag = 95, NodeTag = 0 },
+                new ChangeVectorEntry { DbId = dbIds[2], Etag = 2, NodeTag = 1 },
+                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10, NodeTag = 2 },
             };
 
-            Assert.Equal(ConflictsStorage.ConflictStatus.Conflict, ConflictsStorage.GetConflictStatus(remote, local));
+            Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote.ToJson(), local.ToJson()));
         }
 
         [Fact]
@@ -126,20 +127,20 @@ namespace SlowTests.Server.Replication
 
             var local = new[]
             {
-                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10 },
-                new ChangeVectorEntry { DbId = dbIds[1], Etag = 20 },
-                new ChangeVectorEntry { DbId = dbIds[2], Etag = 30 },
+                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10, NodeTag = 0 },
+                new ChangeVectorEntry { DbId = dbIds[1], Etag = 20, NodeTag = 1 },
+                new ChangeVectorEntry { DbId = dbIds[2], Etag = 30, NodeTag = 2 },
             };
 
             var remote = new[]
             {
-                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10 },
-                new ChangeVectorEntry { DbId = dbIds[1], Etag = 20 },
-                new ChangeVectorEntry { DbId = dbIds[2], Etag = 30 },
-                new ChangeVectorEntry { DbId = dbIds[2], Etag = 40 }
+                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10, NodeTag = 0 },
+                new ChangeVectorEntry { DbId = dbIds[1], Etag = 20, NodeTag = 1 },
+                new ChangeVectorEntry { DbId = dbIds[2], Etag = 30, NodeTag = 2 },
+                new ChangeVectorEntry { DbId = dbIds[2], Etag = 40, NodeTag = 2 }
             };
 
-            Assert.Equal(ConflictsStorage.ConflictStatus.Update, ConflictsStorage.GetConflictStatus(remote, local));
+            Assert.Equal(ConflictStatus.Update, ChangeVectorUtils.GetConflictStatus(remote.ToJson(), local.ToJson()));
         }
 
         [Fact]
@@ -148,15 +149,15 @@ namespace SlowTests.Server.Replication
             var dbIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid() };
             var local = new[]
             {
-                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10 },
+                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10, NodeTag = 0 },
             };
 
             var remote = new[]
             {
-                new ChangeVectorEntry { DbId = dbIds[1], Etag = 10 }
+                new ChangeVectorEntry { DbId = dbIds[1], Etag = 10, NodeTag = 0 }
             };
 
-            Assert.Equal(ConflictsStorage.ConflictStatus.Conflict, ConflictsStorage.GetConflictStatus(remote, local));
+            Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote.ToJson(), local.ToJson()));
         }
 
         [Fact]
@@ -166,20 +167,20 @@ namespace SlowTests.Server.Replication
 
             var local = new[]
             {
-                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10 },
-                new ChangeVectorEntry { DbId = dbIds[1], Etag = 20 },
-                new ChangeVectorEntry { DbId = dbIds[2], Etag = 30 },
-                new ChangeVectorEntry { DbId = dbIds[3], Etag = 40 }
+                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10, NodeTag = 0 },
+                new ChangeVectorEntry { DbId = dbIds[1], Etag = 20, NodeTag = 1 },
+                new ChangeVectorEntry { DbId = dbIds[2], Etag = 30, NodeTag = 2 },
+                new ChangeVectorEntry { DbId = dbIds[3], Etag = 40, NodeTag = 3 }
             };
 
             var remote = new[]
             {
-                new ChangeVectorEntry { DbId = dbIds[0], Etag = 1 },
-                new ChangeVectorEntry { DbId = dbIds[1], Etag = 2 },
-                new ChangeVectorEntry { DbId = dbIds[2], Etag = 3 }
+                new ChangeVectorEntry { DbId = dbIds[0], Etag = 1, NodeTag = 0 },
+                new ChangeVectorEntry { DbId = dbIds[1], Etag = 2, NodeTag = 1 },
+                new ChangeVectorEntry { DbId = dbIds[2], Etag = 3, NodeTag = 2 }
             };
 
-            Assert.Equal(ConflictsStorage.ConflictStatus.AlreadyMerged, ConflictsStorage.GetConflictStatus(remote, local));
+            Assert.Equal(ConflictStatus.AlreadyMerged, ChangeVectorUtils.GetConflictStatus(remote.ToJson(), local.ToJson()));
         }
 
         [Fact]
@@ -189,20 +190,20 @@ namespace SlowTests.Server.Replication
 
             var local = new[]
             {
-                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10 },
-                new ChangeVectorEntry { DbId = dbIds[1], Etag = 20 },
-                new ChangeVectorEntry { DbId = dbIds[2], Etag = 3000 },
-                new ChangeVectorEntry { DbId = dbIds[3], Etag = 40 }
+                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10, NodeTag = 0 },
+                new ChangeVectorEntry { DbId = dbIds[1], Etag = 20, NodeTag = 1 },
+                new ChangeVectorEntry { DbId = dbIds[2], Etag = 3000, NodeTag = 2 },
+                new ChangeVectorEntry { DbId = dbIds[3], Etag = 40, NodeTag = 3 }
             };
 
             var remote = new[]
             {
-                new ChangeVectorEntry { DbId = dbIds[0], Etag = 100 },
-                new ChangeVectorEntry { DbId = dbIds[1], Etag = 200 },
-                new ChangeVectorEntry { DbId = dbIds[2], Etag = 300 }
+                new ChangeVectorEntry { DbId = dbIds[0], Etag = 100, NodeTag = 0 },
+                new ChangeVectorEntry { DbId = dbIds[1], Etag = 200, NodeTag = 1 },
+                new ChangeVectorEntry { DbId = dbIds[2], Etag = 300, NodeTag = 2 }
             };
 
-            Assert.Equal(ConflictsStorage.ConflictStatus.Conflict, ConflictsStorage.GetConflictStatus(remote, local));
+            Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote.ToJson(), local.ToJson()));
         }
 
 
@@ -667,19 +668,17 @@ namespace SlowTests.Server.Replication
 
             var local = new[]
             {
-                new ChangeVectorEntry { DbId = dbIds[2], Etag = 95 },
-                new ChangeVectorEntry { DbId = dbIds[1], Etag = 2 },
-                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10 },
+                new ChangeVectorEntry { DbId = dbIds[2], Etag = 95, NodeTag = 2 },
+                new ChangeVectorEntry { DbId = dbIds[1], Etag = 2, NodeTag = 1 },
+                new ChangeVectorEntry { DbId = dbIds[0], Etag = 10, NodeTag = 0 },
             };
 
             var remote = new[]
             {
-                new ChangeVectorEntry { DbId = dbIds[0], Etag = 75 },
-
-                
+                new ChangeVectorEntry { DbId = dbIds[0], Etag = 75, NodeTag = 0 },
             };
 
-            Assert.Equal(ConflictsStorage.ConflictStatus.Conflict, ConflictsStorage.GetConflictStatus(remote, local));
+            Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote.ToJson(), local.ToJson()));
         }
 
         private class UserIndex : AbstractIndexCreationTask<User>

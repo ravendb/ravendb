@@ -11,6 +11,7 @@ using Raven.Client.Server;
 using Raven.Client.Server.Revisions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -222,7 +223,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         public void Put(DocumentsOperationContext context, string id, BlittableJsonReaderObject document,
-            DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, ChangeVectorEntry[] changeVector, long lastModifiedTicks,
+            DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, LazyStringValue changeVector, long lastModifiedTicks,
             RevisionsCollectionConfiguration configuration = null, CollectionName collectionName = null)
         {
             Debug.Assert(changeVector != null, "Change vector must be set");
@@ -239,82 +240,77 @@ namespace Raven.Server.Documents.Revisions
 
                 var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
 
-                fixed (ChangeVectorEntry* pChangeVector = changeVector)
+                // We want the revision's attachments to have a lower etag than the revision itself
+                if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments &&
+                    fromSmuggler == false)
                 {
-                    var changeVectorPtr = (byte*)pChangeVector;
-                    var changeVectorSize = sizeof(ChangeVectorEntry) * changeVector.Length;
-
-                    // We want the revision's attachments to have a lower etag than the revision itself
-                    if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments &&
-                        fromSmuggler == false)
+                    using (Slice.External(context.Allocator, changeVector, out Slice changeVectorSlice))
                     {
-                        using (Slice.External(context.Allocator, changeVectorPtr, changeVectorSize, out Slice changeVectorSlice))
+                        if (table.VerifyKeyExists(changeVectorSlice) == false)
                         {
-                            if (table.VerifyKeyExists(changeVectorSlice) == false)
-                            {
-                                _documentsStorage.AttachmentsStorage.RevisionAttachments(context, lowerId, changeVector);
-                            }
+                            _documentsStorage.AttachmentsStorage.RevisionAttachments(context, lowerId, changeVector);
                         }
                     }
+                }
 
-                    if (fromReplication)
+                if (fromReplication)
+                {
+                    void PutFromRevisionIfChangeVectorIsGreater()
                     {
-                        void PutFromRevisionIfChangeVectorIsGreater()
+                        bool hasDoc;
+                        TableValueReader tvr;
+                        try
                         {
-                            bool hasDoc;
-                            TableValueReader tvr;
-                            try
-                            {
-                                hasDoc = _documentsStorage.GetTableValueReaderForDocument(context, lowerId, out tvr);
-                            }
-                            catch (DocumentConflictException)
-                            {
-                                // Do not modify the document.
-                                return;
-                            }
-
-                            if (hasDoc == false)
-                            {
-                                PutFromRevision();
-                                return;
-                            }
-
-                            var docChangeVector = TableValueToChangeVector(ref tvr, (int)DocumentsTable.ChangeVector);
-                            if (changeVector.GreaterThan(docChangeVector))
-                                PutFromRevision();
-
-                            void PutFromRevision()
-                            {
-                                _documentsStorage.Put(context, id, null, document, lastModifiedTicks, changeVector,
-                                    flags & ~DocumentFlags.Revision, nonPersistentFlags | NonPersistentDocumentFlags.FromRevision);
-                            }
+                            hasDoc = _documentsStorage.GetTableValueReaderForDocument(context, lowerId, out tvr);
                         }
-
-                        PutFromRevisionIfChangeVectorIsGreater();
-                    }
-
-                    flags |= DocumentFlags.Revision;
-                    var data = context.ReadObject(document, id);
-                    var newEtag = _database.DocumentsStorage.GenerateNextEtag();
-                    var newEtagSwapBytes = Bits.SwapBytes(newEtag);
-
-                    using (table.Allocate(out TableValueBuilder tvb))
-                    {
-                        tvb.Add(changeVectorPtr, changeVectorSize);
-                        tvb.Add(lowerId);
-                        tvb.Add(SpecialChars.RecordSeparator);
-                        tvb.Add(newEtagSwapBytes);
-                        tvb.Add(idPtr);
-                        tvb.Add(data.BasePointer, data.Size);
-                        tvb.Add((int)flags);
-                        tvb.Add(newEtagSwapBytes);
-                        tvb.Add(lastModifiedTicks);
-                        tvb.Add(context.GetTransactionMarker());
-                        var isNew = table.Set(tvb);
-                        if (isNew == false)
-                            // It might be just an update from replication as we call this twice, both for the doc delete and for deleteRevision.
+                        catch (DocumentConflictException)
+                        {
+                            // Do not modify the document.
                             return;
+                        }
+
+                        if (hasDoc == false)
+                        {
+                            PutFromRevision();
+                            return;
+                        }
+
+                        var docChangeVector = TableValueToString(context, (int)DocumentsTable.ChangeVector, ref tvr);
+                        //if (changeVector.GreaterThan(docChangeVector))
+                        if (ChangeVectorUtils.GetConflictStatus(changeVector,docChangeVector) == ConflictStatus.Update)
+                            PutFromRevision();
+
+                        void PutFromRevision()
+                        {
+                            _documentsStorage.Put(context, id, null, document, lastModifiedTicks, changeVector,
+                                flags & ~DocumentFlags.Revision, nonPersistentFlags | NonPersistentDocumentFlags.FromRevision);
+                        }
                     }
+
+                    PutFromRevisionIfChangeVectorIsGreater();
+                }
+
+                flags |= DocumentFlags.Revision;
+                var data = context.ReadObject(document, id);
+                var newEtag = _database.DocumentsStorage.GenerateNextEtag();
+                var newEtagSwapBytes = Bits.SwapBytes(newEtag);
+
+                using (table.Allocate(out TableValueBuilder tvb))
+                {
+                    tvb.Add(changeVector.Buffer, changeVector.Size);
+                    tvb.Add(lowerId);
+                    tvb.Add(SpecialChars.RecordSeparator);
+                    tvb.Add(newEtagSwapBytes);
+                    tvb.Add(idPtr);
+                    tvb.Add(data.BasePointer, data.Size);
+                    tvb.Add((int)flags);
+                    tvb.Add(newEtagSwapBytes);
+                    tvb.Add(lastModifiedTicks);
+                    tvb.Add(context.GetTransactionMarker());
+                    var isNew = table.Set(tvb);
+                    if (isNew == false)
+                        // It might be just an update from replication as we call this twice, both for the doc delete and for deleteRevision.
+                        return;
                 }
 
                 if (configuration == null)
@@ -326,7 +322,7 @@ namespace Raven.Server.Documents.Revisions
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice lowerId, CollectionName collectionName, 
-            RevisionsCollectionConfiguration configuration, NonPersistentDocumentFlags nonPersistentFlags, ChangeVectorEntry[] changeVector)
+            RevisionsCollectionConfiguration configuration, NonPersistentDocumentFlags nonPersistentFlags, LazyStringValue changeVector)
         {
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
             {
@@ -339,7 +335,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         private void DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, CollectionName collectionName, 
-            RevisionsCollectionConfiguration configuration, long revisionsCount, NonPersistentDocumentFlags nonPersistentFlags, ChangeVectorEntry[] changeVector)
+            RevisionsCollectionConfiguration configuration, long revisionsCount, NonPersistentDocumentFlags nonPersistentFlags, LazyStringValue changeVector)
         {
             if ((nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) == NonPersistentDocumentFlags.FromSmuggler)
                 return;
@@ -414,7 +410,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         private long DeleteRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, CollectionName collectionName, 
-            long numberOfRevisionsToDelete, TimeSpan? minimumTimeToKeep, ChangeVectorEntry[] changeVector)
+            long numberOfRevisionsToDelete, TimeSpan? minimumTimeToKeep, LazyStringValue changeVector)
         {
             long maxEtagDeleted = 0;
 
@@ -445,7 +441,7 @@ namespace Raven.Server.Documents.Revisions
             return deletedRevisionsCount;
         }
 
-        public void DeleteRevision(DocumentsOperationContext context, Slice key, string collection, ChangeVectorEntry[] changeVector)
+        public void DeleteRevision(DocumentsOperationContext context, Slice key, string collection, LazyStringValue changeVector)
         {
             var collectionName = new CollectionName(collection);
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
@@ -459,27 +455,24 @@ namespace Raven.Server.Documents.Revisions
             table.Delete(tvr.Id);
         }
 
-        private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long revisionEtag, CollectionName collectionName, ChangeVectorEntry[] changeVector)
+        private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long revisionEtag, CollectionName collectionName, LazyStringValue changeVector)
         {
             var newEtag = _documentsStorage.GenerateNextEtag();
 
-            fixed (ChangeVectorEntry* pChangeVector = changeVector)
+            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, RevisionsTombstonesSlice);
+            using (Slice.From(context.Allocator, collectionName.Name, out Slice collectionSlice))
+            using (table.Allocate(out TableValueBuilder tvb))
             {
-                var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, RevisionsTombstonesSlice);
-                using (Slice.From(context.Allocator, collectionName.Name, out Slice collectionSlice))
-                using (table.Allocate(out TableValueBuilder tvb))
-                {
-                    tvb.Add(keySlice.Content.Ptr, keySlice.Size);
-                    tvb.Add(Bits.SwapBytes(newEtag));
-                    tvb.Add(Bits.SwapBytes(revisionEtag));
-                    tvb.Add(context.GetTransactionMarker());
-                    tvb.Add((byte)DocumentTombstone.TombstoneType.Revision);
-                    tvb.Add(collectionSlice);
-                    tvb.Add((int)DocumentFlags.None);
-                    tvb.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
-                    tvb.Add(null, 0);
-                    table.Insert(tvb);
-                }
+                tvb.Add(keySlice.Content.Ptr, keySlice.Size);
+                tvb.Add(Bits.SwapBytes(newEtag));
+                tvb.Add(Bits.SwapBytes(revisionEtag));
+                tvb.Add(context.GetTransactionMarker());
+                tvb.Add((byte)DocumentTombstone.TombstoneType.Revision);
+                tvb.Add(collectionSlice);
+                tvb.Add((int)DocumentFlags.None);
+                tvb.Add(changeVector.Buffer, changeVector.Size);
+                tvb.Add(null, 0);
+                table.Insert(tvb);
             }
         }
 
@@ -495,7 +488,7 @@ namespace Raven.Server.Documents.Revisions
             numbers.Delete(prefixedLowerId);
         }
 
-        public void Delete(DocumentsOperationContext context, string id, Slice lowerId, CollectionName collectionName, ChangeVectorEntry[] changeVector,
+        public void Delete(DocumentsOperationContext context, string id, Slice lowerId, CollectionName collectionName, LazyStringValue changeVector,
             long lastModifiedTicks, NonPersistentDocumentFlags nonPersistentFlags)
         {
             using (DocumentIdWorker.GetStringPreserveCase(context, id, out Slice idPtr))
@@ -511,7 +504,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public void Delete(DocumentsOperationContext context, string id, BlittableJsonReaderObject deleteRevisionDocument, ChangeVectorEntry[] changeVector,
+        public void Delete(DocumentsOperationContext context, string id, BlittableJsonReaderObject deleteRevisionDocument, LazyStringValue changeVector,
             long lastModifiedTicks, NonPersistentDocumentFlags nonPersistentFlags)
         {
             BlittableJsonReaderObject.AssertNoModifications(deleteRevisionDocument, id, assertChildren: true);
@@ -524,7 +517,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         private void Delete(DocumentsOperationContext context, Slice lowerId, Slice idSlice, string id, CollectionName collectionName, 
-            BlittableJsonReaderObject deleteRevisionDocument, ChangeVectorEntry[] changeVector, 
+            BlittableJsonReaderObject deleteRevisionDocument, LazyStringValue changeVector, 
             long lastModifiedTicks, NonPersistentDocumentFlags nonPersistentFlags)
         {
             Debug.Assert(changeVector != null, "Change vector must be set");
@@ -564,8 +557,9 @@ namespace Raven.Server.Documents.Revisions
                         return;
                     }
 
-                    var docChangeVector = TableValueToChangeVector(ref tvr, (int)DocumentsTable.ChangeVector);
-                    if (changeVector.GreaterThan(docChangeVector))
+                    var docChangeVector = TableValueToString(context, (int)DocumentsTable.ChangeVector, ref tvr);
+                    //if (changeVector.GreaterThan(docChangeVector))
+                    if (ChangeVectorUtils.GetConflictStatus(changeVector, docChangeVector) == ConflictStatus.Update)
                     {
                         _documentsStorage.Delete(context, lowerId, id, null, lastModifiedTicks, changeVector, collectionName,
                             nonPersistentFlags | NonPersistentDocumentFlags.FromRevision);
@@ -578,28 +572,22 @@ namespace Raven.Server.Documents.Revisions
             var newEtag = _database.DocumentsStorage.GenerateNextEtag();
             var newEtagSwapBytes = Bits.SwapBytes(newEtag);
 
-            fixed (ChangeVectorEntry* pChangeVector = changeVector)
+            using (table.Allocate(out TableValueBuilder tvb))
             {
-                var changeVectorPtr = (byte*)pChangeVector;
-                var changeVectorSize = sizeof(ChangeVectorEntry) * changeVector.Length;
-
-                using (table.Allocate(out TableValueBuilder tvb))
-                {
-                    tvb.Add(changeVectorPtr, changeVectorSize);
-                    tvb.Add(lowerId);
-                    tvb.Add(SpecialChars.RecordSeparator);
-                    tvb.Add(newEtagSwapBytes);
-                    tvb.Add(idSlice);
-                    tvb.Add(deleteRevisionDocument.BasePointer, deleteRevisionDocument.Size);
-                    tvb.Add((int)DocumentFlags.DeleteRevision);
-                    tvb.Add(newEtagSwapBytes);
-                    tvb.Add(lastModifiedTicks);
-                    tvb.Add(context.GetTransactionMarker());
-                    var isNew = table.Set(tvb);
-                    if (isNew == false)
-                        // It might be just an update from replication as we call this twice, both for the doc delete and for deleteRevision.
-                        return;
-                }
+                tvb.Add(changeVector.Buffer, changeVector.Size);
+                tvb.Add(lowerId);
+                tvb.Add(SpecialChars.RecordSeparator);
+                tvb.Add(newEtagSwapBytes);
+                tvb.Add(idSlice);
+                tvb.Add(deleteRevisionDocument.BasePointer, deleteRevisionDocument.Size);
+                tvb.Add((int)DocumentFlags.DeleteRevision);
+                tvb.Add(newEtagSwapBytes);
+                tvb.Add(lastModifiedTicks);
+                tvb.Add(context.GetTransactionMarker());
+                var isNew = table.Set(tvb);
+                if (isNew == false)
+                    // It might be just an update from replication as we call this twice, both for the doc delete and for deleteRevision.
+                    return;
             }
 
             DeleteOldRevisions(context, table, lowerId, collectionName, configuration, nonPersistentFlags, changeVector);
@@ -797,13 +785,8 @@ namespace Raven.Server.Documents.Revisions
             result.Data = new BlittableJsonReaderObject(ptr, size, context);
 
             ptr = tvr.Read((int)Columns.ChangeVector, out size);
-            var changeVectorCount = size / sizeof(ChangeVectorEntry);
-            result.ChangeVector = new ChangeVectorEntry[changeVectorCount];
-            for (var i = 0; i < changeVectorCount; i++)
-            {
-                result.ChangeVector[i] = ((ChangeVectorEntry*)ptr)[i];
-            }
-
+            result.ChangeVector = new LazyStringValue(null,ptr,size,context);
+            
             return result;
         }
 

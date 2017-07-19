@@ -1,8 +1,8 @@
 ﻿using System;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Util;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL
@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.ETL
             _notificationCenter = notificationCenter;
         }
 
-        public ChangeVectorEntry[] LastChangeVector { get; set; }
+        public LazyStringValue LastChangeVector { get; set; }
 
         public long LastProcessedEtag { get; set; }
 

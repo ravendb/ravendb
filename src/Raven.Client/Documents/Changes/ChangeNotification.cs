@@ -10,6 +10,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Changes
 {
+    //TODO: Add change vector?
     public class DocumentChange : DatabaseChange
     {
         /// <summary>

@@ -33,7 +33,7 @@ namespace FastTests.Client.Attachments
                 using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
                 {
                     var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[0], profileStream, "image/png"));
-                    Assert.Equal(2, result.Etag);
+                    Assert.True(result.ChangeVector.StartsWith("A:2"));
                     Assert.Equal(names[0], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("image/png", result.ContentType);
@@ -43,7 +43,7 @@ namespace FastTests.Client.Attachments
                 using (var backgroundStream = new MemoryStream(new byte[] {10, 20, 30, 40, 50}))
                 {
                     var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[1], backgroundStream, "ImGgE/jPeG"));
-                    Assert.Equal(4, result.Etag);
+                    Assert.True(result.ChangeVector.StartsWith("A:4"));
                     Assert.Equal(names[1], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("ImGgE/jPeG", result.ContentType);
@@ -53,7 +53,7 @@ namespace FastTests.Client.Attachments
                 using (var fileStream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
                 {
                     var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[2], fileStream, null));
-                    Assert.Equal(6, result.Etag);
+                    Assert.True(result.ChangeVector.StartsWith("A:6"));
                     Assert.Equal(names[2], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("", result.ContentType);
@@ -105,7 +105,7 @@ namespace FastTests.Client.Attachments
                         using (var attachment = session.Advanced.GetAttachment("users/1", name))
                         {
                             attachment.Stream.CopyTo(attachmentStream);
-                            Assert.Equal(2 + 2 * i, attachment.Details.Etag);
+                            Assert.True(attachment.Details.ChangeVector.StartsWith($"A:{2 + 2 * i}"));
                             Assert.Equal(name, attachment.Details.Name);
                             Assert.Equal(i == 0 ? 3 : 5, attachmentStream.Position);
                             if (i == 0)
@@ -234,7 +234,7 @@ namespace FastTests.Client.Attachments
                 using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
                 {
                     var result = store.Operations.Send(new PutAttachmentOperation("users/1", name, profileStream, name));
-                    Assert.Equal(2, result.Etag);
+                    Assert.True(result.ChangeVector.StartsWith("A:2"));
                     Assert.Equal(name, result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal(name, result.ContentType);
@@ -308,7 +308,7 @@ namespace FastTests.Client.Attachments
                     using (var attachment = session.Advanced.GetAttachment("users/1", "file1"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
-                        Assert.Equal(2, attachment.Details.Etag);
+                        Assert.True(attachment.Details.ChangeVector.StartsWith("A:2"));
                         Assert.Equal("file1", attachment.Details.Name);
                         Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Details.Hash);
                         Assert.Equal(3, attachmentStream.Position);
@@ -318,7 +318,7 @@ namespace FastTests.Client.Attachments
                     using (var attachment = session.Advanced.GetAttachment("users/1", "file3"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
-                        Assert.Equal(6, attachment.Details.Etag);
+                        Assert.True(attachment.Details.ChangeVector.StartsWith("A:6"));
                         Assert.Equal("file3", attachment.Details.Name);
                         Assert.Equal("NRQuixiqj+xvEokF6MdQq1u+uH1dk/gk2PLChJQ58Vo=", attachment.Details.Hash);
                         Assert.Equal(9, attachmentStream.Position);
@@ -369,7 +369,7 @@ namespace FastTests.Client.Attachments
                     using (var attachment = session.Advanced.GetAttachment("users/3", "file3"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
-                        Assert.Equal(8, attachment.Details.Etag);
+                        Assert.True(attachment.Details.ChangeVector.StartsWith("A:8"));
                         Assert.Equal("file3", attachment.Details.Name);
                         Assert.Equal("uuBtr5rVX6NAXzdW2DhuG04MGGyUzFzpS7TelHw3fJQ=", attachment.Details.Hash);
                         Assert.Equal(128 * 1024, attachmentStream.Position);
@@ -380,7 +380,7 @@ namespace FastTests.Client.Attachments
                     using (var attachment = session.Advanced.GetAttachment("users/1", "big-file"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
-                        Assert.Equal(10, attachment.Details.Etag);
+                        Assert.True(attachment.Details.ChangeVector.StartsWith("A:10"));
                         Assert.Equal("big-file", attachment.Details.Name);
                         Assert.Equal("zKHiLyLNRBZti9DYbzuqZ/EDWAFMgOXB+SwKvjPAINk=", attachment.Details.Hash);
                         Assert.Equal(999 * 1024, attachmentStream.Position);
@@ -668,7 +668,7 @@ namespace FastTests.Client.Attachments
                 using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
                     var result = store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "IMAGE/png"));
-                    Assert.Equal(2, result.Etag);
+                    Assert.True(result.ChangeVector.StartsWith("A:2"));
                     Assert.Equal("Profile", result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("IMAGE/png", result.ContentType);
@@ -678,7 +678,7 @@ namespace FastTests.Client.Attachments
 
                     profileStream.Position = 0;
                     result = store.Operations.Send(new PutAttachmentOperation("users/1", "PROFILE", profileStream, "image/PNG"));
-                    Assert.Equal(4, result.Etag);
+                    Assert.True(result.ChangeVector.StartsWith("A:4"));
                     Assert.Equal("PROFILE", result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("image/PNG", result.ContentType);

@@ -80,7 +80,7 @@ namespace FastTests.Client.Attachments
                         using (var attachment = session.Advanced.GetAttachment(user, name))
                         {
                             attachment.Stream.CopyTo(attachmentStream);
-                            Assert.Equal(2 + i, attachment.Details.Etag);
+                            Assert.True(attachment.Details.ChangeVector.StartsWith($"A:{2 + i}"));
                             Assert.Equal(name, attachment.Details.Name);
                             Assert.Equal(i == 0 ? 3 : 5, attachmentStream.Position);
                             if (i == 0)
@@ -290,7 +290,7 @@ namespace FastTests.Client.Attachments
                     using (var attachment = session.Advanced.GetAttachment("users/1", "file1"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
-                        Assert.Equal(2, attachment.Details.Etag);
+                        Assert.True(attachment.Details.ChangeVector.StartsWith("A:2"));
                         Assert.Equal("file1", attachment.Details.Name);
                         Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Details.Hash);
                         Assert.Equal(3, attachmentStream.Position);
@@ -304,7 +304,7 @@ namespace FastTests.Client.Attachments
                     using (var attachment = session.Advanced.GetAttachment(user, "file3"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
-                        Assert.Equal(4, attachment.Details.Etag);
+                        Assert.True(attachment.Details.ChangeVector.StartsWith("A:4"));
                         Assert.Equal("file3", attachment.Details.Name);
                         Assert.Equal("NRQuixiqj+xvEokF6MdQq1u+uH1dk/gk2PLChJQ58Vo=", attachment.Details.Hash);
                         Assert.Equal(9, attachmentStream.Position);

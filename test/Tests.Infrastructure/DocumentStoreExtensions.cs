@@ -131,12 +131,12 @@ namespace FastTests
                 await RequestExecutor.ExecuteAsync(command, Context);
             }
 
-            public long? Head(string id)
+            public string Head(string id)
             {
                 return AsyncHelpers.RunSync(() => HeadAsync(id));
             }
 
-            public async Task<long?> HeadAsync(string id)
+            public async Task<string> HeadAsync(string id)
             {
                 if (id == null)
                     throw new ArgumentNullException(nameof(id));

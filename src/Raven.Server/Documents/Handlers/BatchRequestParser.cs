@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Handlers
             public BlittableJsonReaderObject Document;
             public PatchRequest Patch;
             public PatchRequest PatchIfMissing;
-            public long? Etag;
+            public LazyStringValue ChangeVector;
             public bool IdPrefixed;
 
             public PatchDocumentCommand PatchCommand;
@@ -109,7 +109,7 @@ namespace Raven.Server.Documents.Handlers
 
                     if (commandData.Type == CommandType.PATCH)
                     {
-                        commandData.PatchCommand = database.Patcher.GetPatchDocumentCommand(ctx, commandData.Id, commandData.Etag, commandData.Patch,
+                        commandData.PatchCommand = database.Patcher.GetPatchDocumentCommand(ctx, commandData.Id, commandData.ChangeVector, commandData.Patch,
                             commandData.PatchIfMissing,
                             skipPatchIfEtagMismatch: false, debugMode: false);
                     }
@@ -295,21 +295,21 @@ namespace Raven.Server.Documents.Handlers
                         var patchIfMissing = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, token);
                         commandData.PatchIfMissing = PatchRequest.Parse(patchIfMissing);
                         break;
-                    case CommandPropertyName.Etag:
+                    case CommandPropertyName.ChangeVector:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
                         if (state.CurrentTokenType == JsonParserToken.Null)
                         {
-                            commandData.Etag = null;
+                            commandData.ChangeVector = null;
                         }
                         else
                         {
-                            if (state.CurrentTokenType != JsonParserToken.Integer)
+                            if (state.CurrentTokenType != JsonParserToken.String)
                             {
-                                ThrowUnexpectedToken(JsonParserToken.Integer, state);
+                                ThrowUnexpectedToken(JsonParserToken.String, state);
                             }
 
-                            commandData.Etag = state.Long;
+                            commandData.ChangeVector = GetLazyStringValue(ctx, state);
                         }
                         break;
                     case CommandPropertyName.IdPrefixed:
@@ -436,13 +436,17 @@ namespace Raven.Server.Documents.Handlers
             return Encoding.UTF8.GetString(state.StringBuffer, state.StringSize);
         }
 
+        private static unsafe LazyStringValue GetLazyStringValue(JsonOperationContext ctx,JsonParserState state)
+        {
+            return new LazyStringValue(null,state.StringBuffer, state.StringSize, ctx);
+        }
         private enum CommandPropertyName
         {
             NoSuchProperty,
             Type,
             Id,
             Document,
-            Etag,
+            ChangeVector,
             Patch,
             PatchIfMissing,
             IdPrefixed,
@@ -477,7 +481,7 @@ namespace Raven.Server.Documents.Handlers
                     if (*(int*)state.StringBuffer == 1701869908)
                         return CommandPropertyName.Type;
                     if (*(int*)state.StringBuffer == 1734440005)
-                        return CommandPropertyName.Etag;
+                        return CommandPropertyName.ChangeVector;
                     if (*(int*)state.StringBuffer == 1701667150)
                         return CommandPropertyName.Name;
                     return CommandPropertyName.NoSuchProperty;

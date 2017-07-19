@@ -162,6 +162,7 @@ namespace Raven.Server.Web.System
 
         private void WriteFileFromZip(string zipPath, string fileName)
         {
+            //TODO: need to change to change vector value?
             var etagValue = GetLongFromHeaders("If-None-Match") ?? 
                 GetLongFromHeaders("If-Match");
             var currentFileEtag = ZipLastChangedDate.GetOrAdd(

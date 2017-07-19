@@ -386,13 +386,12 @@ namespace Raven.Server.Documents.ETL
                     var didWork = false;
 
                     var state = GetProcessState();
-
+                    
                     var loadLastProcessedEtag = state.GetLastProcessedEtagForNode(_serverStore.NodeTag);
 
                     using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var statsAggregator = _lastStats = new EtlStatsAggregator(Interlocked.Increment(ref _statsId), _lastStats);
-
                         AddPerformanceStats(statsAggregator);
 
                         using (var stats = statsAggregator.CreateScope())
@@ -441,7 +440,7 @@ namespace Raven.Server.Documents.ETL
                     if (didWork)
                     {
                         var command = new UpdateEtlProcessStateCommand(Database.Name, Configuration.Name, Transformation.Name, Statistics.LastProcessedEtag,
-                            ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector.ToChangeVector()).ToJson(),
+                            ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector),
                             _serverStore.NodeTag);
 
                         var sendToLeaderTask = _serverStore.SendToLeaderAsync(command);
@@ -492,11 +491,11 @@ namespace Raven.Server.Documents.ETL
 
         private bool AlreadyLoadedByDifferentNode(ExtractedItem item, EtlProcessState state)
         {
-            var conflictStatus = ConflictsStorage.GetConflictStatus(
+            var conflictStatus = ChangeVectorUtils.GetConflictStatus(
                 remote: item.ChangeVector,
-                local: state.ChangeVector.ToChangeVector());
+                local: state.ChangeVector);
 
-            return conflictStatus == ConflictsStorage.ConflictStatus.AlreadyMerged;
+            return conflictStatus == ConflictStatus.AlreadyMerged;
         }
 
         protected void EnsureThreadAllocationStats()

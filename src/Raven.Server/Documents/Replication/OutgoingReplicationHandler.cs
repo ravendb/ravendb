@@ -42,13 +42,12 @@ namespace Raven.Server.Documents.Replication
         private readonly ApiKeyAuthenticator _authenticator = new ApiKeyAuthenticator();
         private Thread _sendingThread;
         internal readonly ReplicationLoader _parent;
-        internal long _lastSentDocumentEtag;
-        public long LastAcceptedDocumentEtag;
+        internal long _lastSentDocumentEtag;   
+        public long LastAcceptedDocumentEtag; // TODO: delete this?
 
         internal DateTime _lastDocumentSentTime;
 
-        internal readonly Dictionary<Guid, long> _destinationLastKnownChangeVector =
-            new Dictionary<Guid, long>();
+        internal LazyStringValue LastAcceptedChangeVector;
 
         internal string _destinationLastKnownChangeVectorAsString;
 
@@ -418,7 +417,7 @@ namespace Raven.Server.Documents.Replication
                 throw new InvalidOperationException(
                     "MessageType on replication response is null. This is likely is a symptom of an issue, and should be investigated.");
 
-            _destinationLastKnownChangeVector.Clear();
+            LastAcceptedChangeVector = null;
 
             UpdateDestinationChangeVectorHeartbeat(replicationBatchReply);
         }
@@ -448,14 +447,14 @@ namespace Raven.Server.Documents.Replication
                 if (context.LastDatabaseChangeVector == null)
                     context.LastDatabaseChangeVector = _database.DocumentsStorage.GetDatabaseChangeVector(context);
 
-                var status = ConflictsStorage.GetConflictStatus(_replicationBatchReply.ChangeVector,
+                var status = ChangeVectorUtils.GetConflictStatus(_replicationBatchReply.DatabaseChangeVector,
                     context.LastDatabaseChangeVector);
 
-                if (status != ConflictsStorage.ConflictStatus.AlreadyMerged)
+                if (status != ConflictStatus.AlreadyMerged)
                     return 0;
 
 
-                return context.UpdateLastDatabaseChangeVector(_dbid, _replicationBatchReply.CurrentEtag) ? 1 : 0;
+                return ChangeVectorUtils.TryUpdateChangeVector(_dbid, _replicationBatchReply.CurrentEtag,ref context.LastDatabaseChangeVector) ? 1 : 0;
             }
 
             
@@ -466,13 +465,7 @@ namespace Raven.Server.Documents.Replication
             _lastSentDocumentEtag = Math.Max(_lastSentDocumentEtag, replicationBatchReply.LastEtagAccepted);
             LastAcceptedDocumentEtag = replicationBatchReply.LastEtagAccepted;
 
-            _destinationLastKnownChangeVectorAsString = replicationBatchReply.ChangeVector.Format();
-
-            foreach (var changeVectorEntry in replicationBatchReply.ChangeVector)
-            {
-                _destinationLastKnownChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
-            }
-
+            LastAcceptedChangeVector = replicationBatchReply.DatabaseChangeVector;
            
             var update = new UpdateSiblingCurrentEtag(_database, replicationBatchReply);
             if (update.InitAndValidate())

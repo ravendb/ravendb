@@ -1,8 +1,7 @@
 ﻿using System;
-using System.IO;
 using System.Text;
-using System.Text.RegularExpressions;
 using Raven.Client.Extensions;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Replication.Messages
 {
@@ -20,7 +19,7 @@ namespace Raven.Client.Documents.Replication.Messages
         public string Exception { get; set; }
         public string Message { get; set; }
         public string MessageType { get; set; }
-        public ChangeVectorEntry[] ChangeVector { get; set; }
+        public LazyStringValue DatabaseChangeVector { get; set; }
         public string DatabaseId { get; set; }
         
         public long CurrentEtag { get; set; }

@@ -29,7 +29,7 @@ namespace Raven.Client.Http
 
         public unsafe class HttpCacheItem : IDisposable
         {
-            public long Etag;
+            public string ChangeVector;
             public byte* Ptr;
             public int Size;
             public DateTime LastServerUpdate;
@@ -84,7 +84,7 @@ namespace Raven.Client.Http
 
         private Task _cleanupTask;
 
-        public unsafe void Set(string url, long etag, BlittableJsonReaderObject result)
+        public unsafe void Set(string url, string changeVector, BlittableJsonReaderObject result)
         {
             var mem = _unmanagedBuffersPool.Allocate(result.Size);
             result.CopyTo(mem.Address);
@@ -103,7 +103,7 @@ namespace Raven.Client.Http
             var httpCacheItem = new HttpCacheItem
             {
                 Usages = 1,
-                Etag = etag,
+                ChangeVector = changeVector,
                 Ptr = mem.Address,
                 Size = result.Size,
                 Allocation = mem,
@@ -201,7 +201,7 @@ namespace Raven.Client.Http
             }
         }
 
-        public unsafe ReleaseCacheItem Get(JsonOperationContext context, string url, out long etag, out BlittableJsonReaderObject obj)
+        public unsafe ReleaseCacheItem Get(JsonOperationContext context, string url, out string changeVector, out BlittableJsonReaderObject obj)
         {
             HttpCacheItem item;
             if (_items.TryGetValue(url, out item))
@@ -212,15 +212,15 @@ namespace Raven.Client.Http
                     {
                         Item = item
                     };
-                    etag = item.Etag;
+                    changeVector = item.ChangeVector;
                     obj = new BlittableJsonReaderObject(item.Ptr, item.Size, context);
                     if (Logger.IsInfoEnabled)
-                        Logger.Info($"Url returned from the cache with etag: {etag}. {url}.");
+                        Logger.Info($"Url returned from the cache with etag: {changeVector}. {url}.");
                     return releaser;
                 }
             }
             obj = null;
-            etag = 0;
+            changeVector = null;
             return new ReleaseCacheItem();
         }
 

@@ -168,7 +168,7 @@ return out;
                 using (var session = store.OpenSession())
                 {
                     var doc = session.Load<User>("users/1");
-                    if (ConflictsStorage.GetConflictStatus(session.Advanced.GetChangeVectorFor(doc).ToChangeVector(),changeVector.ToChangeVector()) == ConflictsStorage.ConflictStatus.Update)
+                    if (ChangeVectorUtils.GetConflictStatus(session.Advanced.GetChangeVectorFor(doc),changeVector) == ConflictStatus.Update)
                         return true;
                 }
                 Thread.Sleep(10);

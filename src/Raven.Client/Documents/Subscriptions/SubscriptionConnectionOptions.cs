@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Subscriptions
         }
 
         public MessageType Type { get; set; }
-        public ChangeVectorEntry[] ChangeVector { get; set; }
+        public string ChangeVector { get; set; }
     }
 
     internal class SubscriptionConnectionServerMessage

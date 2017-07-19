@@ -121,11 +121,11 @@ namespace Raven.Client.Http
 
         protected virtual void CacheResponse(HttpCache cache, string url, HttpResponseMessage response, BlittableJsonReaderObject responseJson)
         {
-            var etag = response.GetEtagHeader();
-            if (etag.HasValue == false)
+            var changeVector = response.GetEtagHeader();
+            if (changeVector == null)
                 return;
 
-            cache.Set(url, etag.Value, responseJson);
+            cache.Set(url, changeVector, responseJson);
         }
 
         protected static void ThrowInvalidResponse()

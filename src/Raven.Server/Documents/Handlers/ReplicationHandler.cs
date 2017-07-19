@@ -115,7 +115,7 @@ namespace Raven.Server.Documents.Handlers
 
                     array.Add(new DynamicJsonValue
                     {
-                        [nameof(GetConflictsResult.Conflict.ChangeVector)] = conflict.ChangeVector.ToJson(),
+                        [nameof(GetConflictsResult.Conflict.ChangeVector)] = conflict.ChangeVector,
                         [nameof(GetConflictsResult.Conflict.Doc)] = conflict.Doc
                     });
                 }

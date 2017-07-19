@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using Raven.Client.Documents.Replication.Messages;
+using Sparrow.Utils;
 
 namespace Raven.Client.Util
 {
@@ -11,6 +13,26 @@ namespace Raven.Client.Util
             Tag,
             Etag,
             Whitespace,
+        }
+
+        public static long GetEtagByNode(string changeVector, string nodeTag)
+        {
+            var index = 0;
+            while (true)
+            {
+                index = changeVector.IndexOf(':', index);
+                if(index < 0)
+                    throw new InvalidDataException($"Etag for the node {nodeTag} was not found.");
+
+                var length = nodeTag.Length;
+                var lookBack = index - length - 1;
+                if (index - lookBack >= 0 && (changeVector[index - lookBack] == ' ' || changeVector[index - lookBack] == ','))
+                {
+                    var end = changeVector.IndexOf('-');
+                    long.TryParse(changeVector.Substring(index + 1, end),out var etag);
+                    return etag;
+                }
+            }
         }
 
         private static int ParseNodeTag(string changeVector, int start, int end)

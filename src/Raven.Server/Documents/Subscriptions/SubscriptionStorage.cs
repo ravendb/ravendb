@@ -79,13 +79,11 @@ namespace Raven.Server.Documents.Subscriptions
             return subscriptionState;
         }
 
-        public async Task AcknowledgeBatchProcessed(long id,string name, long lastEtag, ChangeVectorEntry[] changeVector)
+        public async Task AcknowledgeBatchProcessed(long id, string name, long lastEtag, LazyStringValue changeVector)
         {
-            var changeVectorForEtag = changeVector;
-
             var command = new AcknowledgeSubscriptionBatchCommand(_db.Name)
             {
-                ChangeVector = changeVectorForEtag.ToJson(),
+                ChangeVector = changeVector,
                 NodeTag = _serverStore.NodeTag,
                 SubscriptionId = id,
                 SubscriptionName = name,

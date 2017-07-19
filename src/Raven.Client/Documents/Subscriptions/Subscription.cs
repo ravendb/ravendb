@@ -39,11 +39,11 @@ namespace Raven.Client.Documents.Subscriptions
             private T _result;
             public string ExceptionMessage { get; internal set; }
             public string Id { get; internal set; }
-            public ChangeVectorEntry[] ChangeVector { get; internal set; }
+            public string ChangeVector { get; internal set; }
 
             private void ThrowItemProcessException()
             {
-                throw new InvalidOperationException($"Failed to process document {Id} with Change Vector {ChangeVector.ToJson()} because:{Environment.NewLine}{ExceptionMessage}");
+                throw new InvalidOperationException($"Failed to process document {Id} with Change Vector {ChangeVector} because:{Environment.NewLine}{ExceptionMessage}");
             }
 
             public T Result
@@ -104,11 +104,11 @@ namespace Raven.Client.Documents.Subscriptions
         }
 
 
-        internal ChangeVectorEntry[] Initialize(List<SubscriptionConnectionServerMessage> batch)
+        internal string Initialize(List<SubscriptionConnectionServerMessage> batch)
         {
             Items.Capacity = Math.Max(Items.Capacity, batch.Count);
             Items.Clear();
-            ChangeVectorEntry[] lastReceivedChangeVector = null;
+            string lastReceivedChangeVector = null;
 
             foreach (var item in batch)
             {
@@ -124,11 +124,11 @@ namespace Raven.Client.Documents.Subscriptions
                     changeVector == null)
                     ThrowRequired("@change-vector field");
                 else
-                    lastReceivedChangeVector = changeVector.ToChangeVector();
+                    lastReceivedChangeVector = changeVector;
 
                 if (_logger.IsInfoEnabled)
                 {
-                    _logger.Info($"Got {id} (change vector: [{string.Join(",", lastReceivedChangeVector.Select(x => $"{x.DbId.ToString()}:{x.Etag}"))}], size {curDoc.Size}");
+                    _logger.Info($"Got {id} (change vector: [{lastReceivedChangeVector}], size {curDoc.Size}");
                 }
 
                 var instance = default(T);
@@ -150,7 +150,7 @@ namespace Raven.Client.Documents.Subscriptions
 
                 Items.Add(new Item
                 {
-                    ChangeVector = changeVector.ToChangeVector(),
+                    ChangeVector = changeVector,
                     Id = id,
                     RawResult = curDoc,
                     RawMetadata = metadata,
@@ -595,7 +595,7 @@ namespace Raven.Client.Documents.Subscriptions
         }
 
 
-        private void SendAck(ChangeVectorEntry[] lastReceivedChangeVector, Stream networkStream)
+        private void SendAck(string lastReceivedChangeVector, Stream networkStream)
         {
             var ack = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(new SubscriptionConnectionClientMessage
             {

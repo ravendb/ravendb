@@ -400,8 +400,8 @@ namespace FastTests.Server.Documents
                     }
                 }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-
-                    Assert.Throws<ConcurrencyException>(() => _documentDatabase.DocumentsStorage.Put(ctx, "users/1", 1, doc));
+                    var changeVector = ctx.GetLazyString($"A:1-{Convert.ToBase64String(_documentDatabase.DocumentsStorage.Environment.DbId.ToByteArray())}");
+                    Assert.Throws<ConcurrencyException>(() => _documentDatabase.DocumentsStorage.Put(ctx, "users/1", changeVector, doc));
                 }
 
                 ctx.Transaction.Commit();
@@ -425,7 +425,8 @@ namespace FastTests.Server.Documents
                 }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     _documentDatabase.DocumentsStorage.Put(ctx, "users/1", null, doc);
-                    Assert.Throws<ConcurrencyException>(() => _documentDatabase.DocumentsStorage.Put(ctx, "users/1", 3, doc));
+                    var changeVector = ctx.GetLazyString($"A:3-{Convert.ToBase64String(_documentDatabase.DocumentsStorage.Environment.DbId.ToByteArray())}");
+                     Assert.Throws<ConcurrencyException>(() => _documentDatabase.DocumentsStorage.Put(ctx, "users/1", changeVector, doc));
                 }
 
                 ctx.Transaction.Commit();
@@ -449,7 +450,8 @@ namespace FastTests.Server.Documents
                 }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     _documentDatabase.DocumentsStorage.Put(ctx, "users/1", null, doc);
-                    Assert.Throws<ConcurrencyException>(() => _documentDatabase.DocumentsStorage.Delete(ctx, "users/1", 3));
+                    var changeVector = ctx.GetLazyString($"A:3-{Convert.ToBase64String(_documentDatabase.DocumentsStorage.Environment.DbId.ToByteArray())}");
+                    Assert.Throws<ConcurrencyException>(() => _documentDatabase.DocumentsStorage.Delete(ctx, "users/1", changeVector));
                 }
 
                 ctx.Transaction.Commit();
@@ -462,8 +464,8 @@ namespace FastTests.Server.Documents
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
-
-                Assert.Throws<ConcurrencyException>(() => _documentDatabase.DocumentsStorage.Delete(ctx, "users/1", 3));
+                var changeVector = ctx.GetLazyString($"A:3-{Convert.ToBase64String(_documentDatabase.DocumentsStorage.Environment.DbId.ToByteArray())}");
+                Assert.Throws<ConcurrencyException>(() => _documentDatabase.DocumentsStorage.Delete(ctx, "users/1", changeVector));
 
                 ctx.Transaction.Commit();
             }
@@ -486,7 +488,7 @@ namespace FastTests.Server.Documents
                 }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     _documentDatabase.DocumentsStorage.Put(ctx, "users/1", null, doc);
-                    Assert.Throws<ConcurrencyException>(() => _documentDatabase.DocumentsStorage.Put(ctx, "users/1", 0, doc));
+                    Assert.Throws<ConcurrencyException>(() => _documentDatabase.DocumentsStorage.Put(ctx, "users/1", null, doc));
                 }
 
                 ctx.Transaction.Commit();

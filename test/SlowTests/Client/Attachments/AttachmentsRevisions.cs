@@ -114,7 +114,7 @@ namespace SlowTests.Client.Attachments
             using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
             {
                 var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[0], profileStream, "image/png"));
-                Assert.Equal(3, result.Etag);
+                Assert.True(result.ChangeVector.StartsWith("A:3"));
                 Assert.Equal(names[0], result.Name);
                 Assert.Equal("users/1", result.DocumentId);
                 Assert.Equal("image/png", result.ContentType);
@@ -123,7 +123,7 @@ namespace SlowTests.Client.Attachments
             using (var backgroundStream = new MemoryStream(new byte[] {10, 20, 30, 40, 50}))
             {
                 var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[1], backgroundStream, "ImGgE/jPeG"));
-                Assert.Equal(7, result.Etag);
+                Assert.True(result.ChangeVector.StartsWith("A:7"));
                 Assert.Equal(names[1], result.Name);
                 Assert.Equal("users/1", result.DocumentId);
                 Assert.Equal("ImGgE/jPeG", result.ContentType);
@@ -132,7 +132,7 @@ namespace SlowTests.Client.Attachments
             using (var fileStream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
             {
                 var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[2], fileStream, null));
-                Assert.Equal(12, result.Etag);
+                Assert.True(result.ChangeVector.StartsWith("A:12"));
                 Assert.Equal(names[2], result.Name);
                 Assert.Equal("users/1", result.DocumentId);
                 Assert.Equal("", result.ContentType);
@@ -219,11 +219,11 @@ namespace SlowTests.Client.Attachments
                     if (name == names[0])
                     {
                         if (expectedCount == 1)
-                            Assert.Equal(5, attachment.Details.Etag);
+                            Assert.True(attachment.Details.ChangeVector.StartsWith("A:5"));
                         else if (expectedCount == 2)
-                            Assert.Equal(10, attachment.Details.Etag);
+                            Assert.True(attachment.Details.ChangeVector.StartsWith("A:10"));
                         else if (expectedCount == 3)
-                            Assert.Equal(16, attachment.Details.Etag);
+                            Assert.True(attachment.Details.ChangeVector.StartsWith("A:16"));
                         else
                             throw new ArgumentOutOfRangeException(nameof(i));
                         Assert.Equal(new byte[] {1, 2, 3}, readBuffer.Take(3));
@@ -234,9 +234,9 @@ namespace SlowTests.Client.Attachments
                     else if (name == names[1])
                     {
                         if (expectedCount == 2)
-                            Assert.Equal(9, attachment.Details.Etag);
+                            Assert.True(attachment.Details.ChangeVector.StartsWith("A:9"));
                         else if (expectedCount == 3)
-                            Assert.Equal(14, attachment.Details.Etag);
+                            Assert.True(attachment.Details.ChangeVector.StartsWith("A:14"));
                         else
                             throw new ArgumentOutOfRangeException(nameof(i));
                         Assert.Equal(new byte[] {10, 20, 30, 40, 50}, readBuffer.Take(5));
@@ -247,7 +247,7 @@ namespace SlowTests.Client.Attachments
                     else if (name == names[2])
                     {
                         if (expectedCount == 3)
-                            Assert.Equal(15, attachment.Details.Etag);
+                            Assert.True(attachment.Details.ChangeVector.StartsWith("A:15"));
                         else
                             throw new ArgumentOutOfRangeException(nameof(i));
                         Assert.Equal(new byte[] {1, 2, 3, 4, 5}, readBuffer.Take(5));

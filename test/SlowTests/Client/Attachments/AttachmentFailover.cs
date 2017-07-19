@@ -74,7 +74,7 @@ namespace SlowTests.Client.Attachments
 
                         await task;
                         var attachment = command.Result;
-                        Assert.Equal(2, attachment.Etag);
+                        Assert.True(attachment.ChangeVector.StartsWith("A:2"));
                         Assert.Equal("File", attachment.Name);
                         Assert.Equal(size, stream.Position);
                         Assert.Equal(size, attachment.Size);
@@ -88,7 +88,7 @@ namespace SlowTests.Client.Attachments
                 using (var attachment = session.Advanced.GetAttachment("users/1", "File"))
                 {
                     attachment.Stream.CopyTo(dummyStream);
-                    Assert.Equal(2, attachment.Details.Etag);
+                    Assert.True(attachment.Details.ChangeVector.StartsWith("A:2"));
                     Assert.Equal("File", attachment.Details.Name);
                     Assert.Equal(size, dummyStream.Position);
                     Assert.Equal(size, attachment.Details.Size);

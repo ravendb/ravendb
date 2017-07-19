@@ -423,9 +423,9 @@ namespace Raven.Client.Http
 
             var nodeIndex = _nodeSelector?.GetCurrentNodeIndex() ?? 0;
 
-            using (var cachedItem = GetFromCache(context, command, request, url, out long cachedEtag, out BlittableJsonReaderObject cachedValue))
+            using (var cachedItem = GetFromCache(context, command, request, url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue))
             {
-                if (cachedEtag != 0)
+                if (cachedChangeVector != null)
                 {
                     var aggressiveCacheOptions = AggressiveCaching.Value;
                     if (aggressiveCacheOptions != null && cachedItem.Age < aggressiveCacheOptions.Duration)
@@ -434,7 +434,7 @@ namespace Raven.Client.Http
                         return;
                     }
 
-                    request.Headers.TryAddWithoutValidation("If-None-Match", $"\"{cachedEtag}\"");
+                    request.Headers.TryAddWithoutValidation("If-None-Match", $"\"{cachedChangeVector}\"");
                 }
 
                 if (_disableClientConfigurationUpdates == false)
@@ -553,16 +553,16 @@ namespace Raven.Client.Http
             }
         }
 
-        private HttpCache.ReleaseCacheItem GetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, string url, out long cachedEtag, out BlittableJsonReaderObject cachedValue)
+        private HttpCache.ReleaseCacheItem GetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, string url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue)
         {
             if (command.IsReadRequest && command.ResponseType == RavenCommandResponseType.Object)
             {
                 if (request.Method != HttpMethod.Get)
                     url = request.Method + "-" + url;
-                return Cache.Get(context, url, out cachedEtag, out cachedValue);
+                return Cache.Get(context, url, out cachedChangeVector, out cachedValue);
             }
 
-            cachedEtag = 0;
+            cachedChangeVector = null;
             cachedValue = null;
             return new HttpCache.ReleaseCacheItem();
         }

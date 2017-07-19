@@ -2,6 +2,7 @@
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Stats;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Stats
 {
@@ -29,7 +30,7 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public long LastFilteredOutEtag => _stats.LastFilteredOutEtag;
 
-        public ChangeVectorEntry[] ChangeVector => _stats.ChangeVector;
+        public LazyStringValue ChangeVector => _stats.ChangeVector;
 
         public void RecordExtractedItem()
         {
@@ -46,7 +47,7 @@ namespace Raven.Server.Documents.ETL.Stats
             _stats.LastTransformedEtag = etag;
         }
 
-        public void RecordChangeVector(ChangeVectorEntry[] changeVector)
+        public void RecordChangeVector(LazyStringValue changeVector)
         {
             _stats.ChangeVector = ChangeVectorUtils.MergeVectors(_stats.ChangeVector, changeVector);
         }

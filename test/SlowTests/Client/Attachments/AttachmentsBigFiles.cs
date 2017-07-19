@@ -33,7 +33,7 @@ namespace SlowTests.Client.Attachments
                     using (var attachment = session.Advanced.GetAttachment(user, "big-file"))
                     {
                         attachment.Stream.CopyTo(bigStream);
-                        Assert.Equal(2, attachment.Details.Etag);
+                        Assert.True(attachment.Details.ChangeVector.StartsWith($"A:2"));
                         Assert.Equal("big-file", attachment.Details.Name);
                         Assert.Equal(hash, attachment.Details.Hash);
                         Assert.Equal(size, bigStream.Position);
@@ -59,7 +59,7 @@ namespace SlowTests.Client.Attachments
                 using (var bigStream = new BigDummyStream(size))
                 {
                     var result = store.Operations.Send(new PutAttachmentOperation("users/1", "huge-file", bigStream));
-                    Assert.Equal(2, result.Etag);
+                    Assert.True(result.ChangeVector.StartsWith($"A:2"));
                     Assert.Equal("huge-file", result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("", result.ContentType);
@@ -76,7 +76,7 @@ namespace SlowTests.Client.Attachments
                     using (var attachment = session.Advanced.GetAttachment(user, "huge-file"))
                     {
                         attachment.Stream.CopyTo(bigStream);
-                        Assert.Equal(2, attachment.Details.Etag);
+                        Assert.True(attachment.Details.ChangeVector.StartsWith($"A:2"));
                         Assert.Equal("huge-file", attachment.Details.Name);
                         Assert.Equal(hash, attachment.Details.Hash);
                         Assert.Equal(size, bigStream.Position);

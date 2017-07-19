@@ -1,4 +1,4 @@
-﻿using Raven.Client.Documents.Replication.Messages;
+﻿using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Stats
 {
@@ -16,6 +16,6 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public string BatchCompleteReason;
 
-        public ChangeVectorEntry[] ChangeVector = new ChangeVectorEntry[0];
+        public LazyStringValue ChangeVector;
     }
 }

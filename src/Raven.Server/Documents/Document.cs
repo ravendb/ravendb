@@ -23,7 +23,7 @@ namespace Raven.Server.Documents
         public long StorageId;
         public BlittableJsonReaderObject Data;
         public float? IndexScore;
-        public ChangeVectorEntry[] ChangeVector;
+        public LazyStringValue ChangeVector;
         public DateTime LastModified;
         public DocumentFlags Flags;
         public NonPersistentDocumentFlags NonPersistentFlags;
@@ -63,7 +63,7 @@ namespace Raven.Server.Documents
             }
             mutatedMetadata[Constants.Documents.Metadata.Id] = Id;
             if (ChangeVector != null)
-                mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector.ToJson();
+                mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector;
             if (Flags != DocumentFlags.None)
                 mutatedMetadata[Constants.Documents.Metadata.Flags] = Flags.ToString();
             if (IndexScore.HasValue)

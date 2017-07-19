@@ -22,7 +22,7 @@ namespace Raven.Server.Documents
         public LazyStringValue Collection;
         public DocumentFlags Flags;
 
-        public ChangeVectorEntry[] ChangeVector;
+        public LazyStringValue ChangeVector;
         public DateTime LastModified;
 
         #endregion
@@ -42,7 +42,7 @@ namespace Raven.Server.Documents
                 [nameof(Etag)] = Etag,
                 [nameof(DeletedEtag)] = DeletedEtag,
                 [nameof(Type)] = Type.ToString(),
-                [nameof(ChangeVector)] = ChangeVector.ToJson(),
+                [nameof(ChangeVector)] = ChangeVector
             };
 
             if (Type != TombstoneType.Attachment)

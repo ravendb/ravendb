@@ -330,7 +330,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 return new SubscriptionConnectionClientMessage
                 {
-                    ChangeVector = new ChangeVectorEntry[] { },
+                    ChangeVector = null,
                     Type = SubscriptionConnectionClientMessage.MessageType.DisposedNotification
                 };
             }
@@ -338,7 +338,7 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 return new SubscriptionConnectionClientMessage
                 {
-                    ChangeVector = new ChangeVectorEntry[] { },
+                    ChangeVector = null,
                     Type = SubscriptionConnectionClientMessage.MessageType.DisposedNotification
                 };
             }
@@ -360,7 +360,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 var replyFromClientTask = GetReplyFromClientAsync();
                 var startEtag = GetStartEtagForSubscription(docsContext, subscription);
 
-                ChangeVectorEntry[] lastChangeVector = null;
+                LazyStringValue lastChangeVector = null;
 
                 var patch = SetupFilterScript(subscription.Criteria);
                 var fetcher = new SubscriptionDocumentsFetcher(TcpConnection.DocumentDatabase,_options.MaxDocsPerBatch, SubscriptionId, TcpConnection.TcpClient.Client.RemoteEndPoint);
@@ -384,7 +384,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 startEtag = result.Doc.Etag;
                                 lastChangeVector = subscription.ChangeVector == null ? 
                                     result.Doc.ChangeVector : 
-                                    ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, subscription.ChangeVector.ToChangeVector());
+                                    ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, context.GetLazyString(subscription.ChangeVector));
                                 
                                 if (result.Doc.Data == null)
                                 {

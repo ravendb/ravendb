@@ -98,7 +98,7 @@ namespace Raven.Client.Documents.Operations
             public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
             {
                 var contentType = response.Content.Headers.TryGetValues("Content-Type", out IEnumerable<string> contentTypeVale) ? contentTypeVale.First() : null;
-                var etag = response.GetRequiredEtagHeader();
+                var changeVector = response.GetRequiredEtagHeader();
                 var hash = response.Headers.TryGetValues("Attachment-Hash", out IEnumerable<string> hashVal) ? hashVal.First() : null;
                 long size = 0;
                 if (response.Headers.TryGetValues("Attachment-Size", out IEnumerable<string> sizeVal))
@@ -110,7 +110,7 @@ namespace Raven.Client.Documents.Operations
                     Name = _name,
                     Hash = hash,
                     Size = size,
-                    Etag = etag,
+                    ChangeVector = changeVector,
                     DocumentId = _documentId,
                 };
 

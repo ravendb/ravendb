@@ -219,7 +219,7 @@ namespace SlowTests.Client.Attachments
                     using (var emptyStream = new MemoryStream(new byte[0]))
                     {
                         var result = store1.Operations.Send(new PutAttachmentOperation("users/1", "empty-file", emptyStream, "image/png"));
-                        Assert.Equal(3, result.Etag);
+                        Assert.True(result.ChangeVector.StartsWith("A:3"));
                         Assert.Equal("empty-file", result.Name);
                         Assert.Equal("users/1", result.DocumentId);
                         Assert.Equal("image/png", result.ContentType);
@@ -255,7 +255,7 @@ namespace SlowTests.Client.Attachments
                         using (var attachment = session.Advanced.GetAttachment("users/1", "empty-file"))
                         {
                             attachment.Stream.CopyTo(attachmentStream);
-                            Assert.Equal(1, attachment.Details.Etag);
+                            Assert.True(attachment.Details.ChangeVector.StartsWith("A:1"));
                             Assert.Equal("empty-file", attachment.Details.Name);
                             Assert.Equal(0, attachment.Details.Size);
                             Assert.Equal("DldRwCblQ7Loqy6wYJnaodHl30d3j3eH+qtFzfEv46g=", attachment.Details.Hash);
@@ -316,7 +316,7 @@ namespace SlowTests.Client.Attachments
                             using (var attachment = session.Advanced.GetAttachment("users/1", "big-file"))
                             {
                                 attachment.Stream.CopyTo(attachmentStream);
-                                Assert.Equal(2 + 20 * i, attachment.Details.Etag);
+                                Assert.True(attachment.Details.ChangeVector.StartsWith($"A:{2 + 20 * i}"));
                                 Assert.Equal("big-file", attachment.Details.Name);
                                 Assert.Equal("zKHiLyLNRBZti9DYbzuqZ/EDWAFMgOXB+SwKvjPAINk=", attachment.Details.Hash);
                                 Assert.Equal(999 * 1024, attachmentStream.Position);

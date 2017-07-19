@@ -18,6 +18,7 @@ using Raven.Client.Util;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Voron;
 using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Handlers
@@ -74,7 +75,7 @@ namespace Raven.Server.Documents.Handlers
             using (context.OpenReadTransaction())
             {
                 var type = AttachmentType.Document;
-                ChangeVectorEntry[] changeVector = null;
+                LazyStringValue changeVector = null;
                 if (isDocument == false)
                 {
                     var stream = TryGetRequestFormStream("ChangeVectorAndType") ?? RequestBodyStream();
@@ -87,7 +88,7 @@ namespace Raven.Server.Documents.Handlers
                     if (request.TryGet("ChangeVector", out string changeVectorString) == false)
                         throw new ArgumentException("The 'ChangeVector' field in the body request is mandatory");
 
-                    changeVector = changeVectorString.ToChangeVector();
+                    changeVector = context.GetLazyString(changeVectorString);
                 }
 
                 var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, type, changeVector);
@@ -159,12 +160,12 @@ namespace Raven.Server.Documents.Handlers
                 using (var stream = streamsTempFile.StartNewStream())
                 {
                     var hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, RequestBodyStream(), stream, Database.DatabaseShutdown);
-                    var etag = GetLongFromHeaders("If-Match");
+                    var changeVector = context.GetLazyString(GetStringQueryString("If-Match"));
 
                     var cmd = new MergedPutAttachmentCommand
                     {
                         Database = Database,
-                        ExpectedEtag = etag,
+                        ExpectedChangeVector = changeVector,
                         DocumentId = id,
                         Name = name,
                         Stream = stream,
@@ -182,8 +183,8 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName(nameof(AttachmentDetails.Etag));
-                    writer.WriteInteger(result.Etag);
+                    writer.WritePropertyName(nameof(AttachmentDetails.ChangeVector));
+                    writer.WriteString(result.ChangeVector);
                     writer.WriteComma();
 
                     writer.WritePropertyName(nameof(AttachmentDetails.Name));
@@ -218,12 +219,12 @@ namespace Raven.Server.Documents.Handlers
                 var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
                 var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-                var etag = GetLongFromHeaders("If-Match");
+                var changeVector = context.GetLazyString(GetStringQueryString("If-Match"));
 
                 var cmd = new MergedDeleteAttachmentCommand
                 {
                     Database = Database,
-                    ExpectedEtag = etag,
+                    ExpectedChangeVector = changeVector,
                     DocumentId = id,
                     Name = name,
                 };
@@ -238,7 +239,7 @@ namespace Raven.Server.Documents.Handlers
         {
             public string DocumentId;
             public string Name;
-            public long? ExpectedEtag;
+            public LazyStringValue ExpectedChangeVector;
             public DocumentDatabase Database;
             public ExceptionDispatchInfo ExceptionDispatchInfo;
             public AttachmentDetails Result;
@@ -251,7 +252,7 @@ namespace Raven.Server.Documents.Handlers
                 try
                 {
                     Result = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, DocumentId, Name, 
-                        ContentType, Hash, ExpectedEtag, Stream);
+                        ContentType, Hash, ExpectedChangeVector, Stream);
                 }
                 catch (ConcurrencyException e)
                 {
@@ -265,7 +266,7 @@ namespace Raven.Server.Documents.Handlers
         {
             public string DocumentId;
             public string Name;
-            public long? ExpectedEtag;
+            public LazyStringValue ExpectedChangeVector;
             public DocumentDatabase Database;
             public ExceptionDispatchInfo ExceptionDispatchInfo;
 
@@ -273,7 +274,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 try
                 {
-                    Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, DocumentId, Name, ExpectedEtag);
+                    Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, DocumentId, Name, ExpectedChangeVector);
                 }
                 catch (ConcurrencyException e)
                 {

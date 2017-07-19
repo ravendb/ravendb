@@ -24,17 +24,6 @@ namespace Raven.Server.Json
 {
     internal static class BlittableJsonTextWriterExtensions
     {
-        public static void WriteChangeVector(this BlittableJsonTextWriter writer, ChangeVectorEntry[] changeVector)
-        {
-            if (changeVector == null)
-            {
-                writer.WriteNull();
-                return;
-            }
-
-            writer.WriteString(changeVector.ToJson());
-        }
-
         public static void WritePerformanceStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<IndexPerformanceStats> stats)
         {
             writer.WriteStartObject();
@@ -1159,7 +1148,7 @@ namespace Raven.Server.Json
                 writer.WriteComma();
             }
             writer.WritePropertyName(Constants.Documents.Metadata.ChangeVector);
-            writer.WriteChangeVector(document.ChangeVector);
+            writer.WriteString(document.ChangeVector);
 
             if (document.Flags != DocumentFlags.None)
             {

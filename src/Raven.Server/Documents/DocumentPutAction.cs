@@ -29,10 +29,11 @@ namespace Raven.Server.Documents
             _documentDatabase = documentDatabase;
         }
 
-        public DocumentsStorage.PutOperationResults PutDocument(DocumentsOperationContext context, string id, long? expectedEtag,
+        public DocumentsStorage.PutOperationResults PutDocument(DocumentsOperationContext context, string id, 
+            LazyStringValue excpectedChangeVector,
             BlittableJsonReaderObject document,
             long? lastModifiedTicks = null,
-            ChangeVectorEntry[] changeVector = null,
+            LazyStringValue changeVector = null,
             DocumentFlags flags = DocumentFlags.None,
             NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
         {
@@ -71,18 +72,18 @@ namespace Raven.Server.Documents
                 BlittableJsonReaderObject oldDoc = null;
                 if (oldValue.Pointer == null)
                 {
-                    if (expectedEtag != null && expectedEtag != 0)
+                    if (excpectedChangeVector != null)
                     {
-                        ThrowConcurrentExceptionOnMissingDoc(id, expectedEtag.Value);
+                        ThrowConcurrentExceptionOnMissingDoc(id, excpectedChangeVector);
                     }
                 }
                 else
                 {
-                    if (expectedEtag != null)
+                    if (excpectedChangeVector != null)
                     {
-                        var oldEtag = DocumentsStorage.TableValueToEtag(1, ref oldValue);
-                        if (oldEtag != expectedEtag)
-                            ThrowConcurrentException(id, expectedEtag, oldEtag);
+                        var oldChangeVector = DocumentsStorage.TableValueToString(context, 4, ref oldValue);
+                        if (excpectedChangeVector.CompareTo(oldChangeVector) != 0)
+                            ThrowConcurrentException(id, excpectedChangeVector, oldChangeVector);
                     }
 
                     oldDoc = new BlittableJsonReaderObject(oldValue.Read((int)DocumentsStorage.DocumentsTable.Data, out int oldSize), oldSize, context);
@@ -102,7 +103,7 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                var result = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, document, changeVector, expectedEtag, flags, oldValue);
+                var result = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, document, changeVector, excpectedChangeVector, flags, oldValue);
                 changeVector = result.ChangeVector;
                 nonPersistentFlags |= result.NonPersistentFlags;
 
@@ -140,27 +141,24 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                fixed (ChangeVectorEntry* pChangeVector = changeVector)
+                using (table.Allocate(out TableValueBuilder tvb))
                 {
-                    using (table.Allocate(out TableValueBuilder tvb))
-                    {
-                        tvb.Add(lowerId);
-                        tvb.Add(Bits.SwapBytes(newEtag));
-                        tvb.Add(idPtr);
-                        tvb.Add(document.BasePointer, document.Size);
-                        tvb.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
-                        tvb.Add(modifiedTicks);
-                        tvb.Add((int)flags);
-                        tvb.Add(context.GetTransactionMarker());
+                    tvb.Add(lowerId);
+                    tvb.Add(Bits.SwapBytes(newEtag));
+                    tvb.Add(idPtr);
+                    tvb.Add(document.BasePointer, document.Size);
+                    tvb.Add(changeVector.Buffer, changeVector.Size);
+                    tvb.Add(modifiedTicks);
+                    tvb.Add((int)flags);
+                    tvb.Add(context.GetTransactionMarker());
 
-                        if (oldValue.Pointer == null)
-                        {
-                            table.Insert(tvb);
-                        }
-                        else
-                        {
-                            table.Update(oldValue.Id, tvb);
-                        }
+                    if (oldValue.Pointer == null)
+                    {
+                        table.Insert(tvb);
+                    }
+                    else
+                    {
+                        table.Update(oldValue.Id, tvb);
                     }
                 }
 
@@ -207,9 +205,9 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private (ChangeVectorEntry[] ChangeVector, NonPersistentDocumentFlags NonPersistentFlags) BuildChangeVectorAndResolveConflicts(
+        private (LazyStringValue ChangeVector, NonPersistentDocumentFlags NonPersistentFlags) BuildChangeVectorAndResolveConflicts(
             DocumentsOperationContext context, string id, Slice lowerId, long newEtag, 
-            BlittableJsonReaderObject document, ChangeVectorEntry[] changeVector, long? expectedEtag, DocumentFlags flags, TableValueReader oldValue)
+            BlittableJsonReaderObject document, LazyStringValue changeVector, LazyStringValue excpectedChangeVector, DocumentFlags flags, TableValueReader oldValue)
         {
             var nonPersistentFlags = NonPersistentDocumentFlags.None;
             var fromReplication = (flags & DocumentFlags.FromReplication) == DocumentFlags.FromReplication;
@@ -218,11 +216,9 @@ namespace Raven.Server.Documents
             {
                 // Since this document resolve the conflict we don't need to alter the change vector.
                 // This way we avoid another replication back to the source
-                if (_documentsStorage.ConflictsStorage.ShouldThrowConcurrencyExceptionOnConflict(context, lowerId, expectedEtag, out var currentMaxConflictEtag))
-                {
-                    _documentsStorage.ConflictsStorage.ThrowConcurrencyExceptionOnConflict(expectedEtag, currentMaxConflictEtag);
-                }
 
+                _documentsStorage.ConflictsStorage.ThrowConcurrencyExceptionOnConflictIfNeeded(context, lowerId, excpectedChangeVector);
+                
                 if (fromReplication)
                 {
                     nonPersistentFlags = _documentsStorage.ConflictsStorage.DeleteConflictsFor(context, id, document).NonPersistentFlags;
@@ -238,7 +234,7 @@ namespace Raven.Server.Documents
             if (changeVector != null)
                return (changeVector, nonPersistentFlags);
 
-            ChangeVectorEntry[] oldChangeVector;
+            LazyStringValue oldChangeVector;
             if (fromReplication == false)
             {
                 if(context.LastDatabaseChangeVector == null)
@@ -247,7 +243,7 @@ namespace Raven.Server.Documents
             }
             else
             {
-                oldChangeVector = oldValue.Pointer != null ? DocumentsStorage.TableValueToChangeVector(ref oldValue, (int)DocumentsStorage.DocumentsTable.ChangeVector) : null;
+                oldChangeVector = oldValue.Pointer != null ? DocumentsStorage.TableValueToString(context, (int)DocumentsStorage.DocumentsTable.ChangeVector, ref oldValue) : null;
             }
             changeVector = SetDocumentChangeVectorForLocalChange(context, lowerId, oldChangeVector, newEtag);
             return (changeVector, nonPersistentFlags);
@@ -375,12 +371,12 @@ namespace Raven.Server.Documents
             throw new ArgumentException("Context must be set with a valid transaction before calling " + caller, "context");
         }
 
-        private static void ThrowConcurrentExceptionOnMissingDoc(string id, long expectedEtag)
+        private static void ThrowConcurrentExceptionOnMissingDoc(string id, LazyStringValue excpectedChangeVector)
         {
             throw new ConcurrencyException(
-                $"Document {id} does not exist, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                $"Document {id} does not exist, but Put was called with etag {excpectedChangeVector}. Optimistic concurrency violation, transaction will be aborted.")
             {
-                ExpectedETag = expectedEtag
+                ExcpectedChangeVector = excpectedChangeVector
             };
         }
 
@@ -391,13 +387,13 @@ namespace Raven.Server.Documents
                 $"Delete it and recreate the document {id}.");
         }
 
-        private static void ThrowConcurrentException(string id, long? expectedEtag, long oldEtag)
+        private static void ThrowConcurrentException(string id, LazyStringValue expectedChangeVector, LazyStringValue oldChangeVector)
         {
             throw new ConcurrencyException(
-                $"Document {id} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                $"Document {id} has etag {oldChangeVector}, but Put was called with etag {expectedChangeVector}. Optimistic concurrency violation, transaction will be aborted.")
             {
-                ActualETag = oldEtag,
-                ExpectedETag = expectedEtag ?? -1
+                ActualChangeVector = oldChangeVector,
+                ExcpectedChangeVector = expectedChangeVector
             };
         }
 
@@ -410,12 +406,13 @@ namespace Raven.Server.Documents
             }
         }
 
-        private ChangeVectorEntry[] SetDocumentChangeVectorForLocalChange(
-            DocumentsOperationContext context, Slice lowerId,
-            ChangeVectorEntry[] oldChangeVector, long newEtag)
+        private LazyStringValue SetDocumentChangeVectorForLocalChange(DocumentsOperationContext context, Slice lowerId, LazyStringValue oldChangeVector, long newEtag)
         {
             if (oldChangeVector != null)
-                return ChangeVectorUtils.UpdateChangeVectorWithNewEtag(_documentsStorage.Environment.DbId, newEtag, oldChangeVector);
+            {
+                ChangeVectorUtils.TryUpdateChangeVector(_documentsStorage.Environment.DbId, newEtag, ref oldChangeVector);
+                return oldChangeVector;
+            }
 
             return _documentsStorage.ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, lowerId, newEtag);
         }
