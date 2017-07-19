@@ -3,18 +3,16 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
-
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Index;
-using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Raven.Client.Documents.Indexes;
 using Version = Lucene.Net.Util.Version;
 
-namespace Raven.Server.Documents.Queries.Parse
+namespace Raven.Server.Documents.Queries.Parser.Lucene
 {
-    public class RangeQueryParser : QueryParser
+    public class RangeQueryParser : global::Lucene.Net.QueryParsers.QueryParser
     {
         public static readonly Regex NumericRangeValue = new Regex(@"^[-\w\d.]+$", RegexOptions.Compiled);
         public static readonly Regex DateTimeValue = new Regex(@"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z?)", RegexOptions.Compiled);
@@ -48,11 +46,11 @@ namespace Raven.Server.Documents.Queries.Parse
                 queryStringBuilder.Insert(searchMatch.Index, replaceToken);
             }
             var tokenReplacement = queryStringBuilder.ToString();
-            var keyOfTokenReplacment = queryStringBuilder.ToString(1, queryStringBuilder.Length - 2);
-            _replacedTokens[Tuple.Create(fieldName, keyOfTokenReplacment)] = collection.Substring(1, collection.Length - 2);
+            var keyOfTokenReplacement = queryStringBuilder.ToString(1, queryStringBuilder.Length - 2);
+            _replacedTokens[Tuple.Create(fieldName, keyOfTokenReplacement)] = collection.Substring(1, collection.Length - 2);
             return tokenReplacement;
         }
-        protected override Query GetPrefixQuery(string field, string termStr)
+        protected override global::Lucene.Net.Search.Query GetPrefixQuery(string field, string termStr)
         {
             var fieldQuery = GetFieldQuery(field, termStr);
 
@@ -69,7 +67,7 @@ namespace Raven.Server.Documents.Queries.Parse
             return NewPrefixQuery(tq.Term);
         }
 
-        protected override Query GetWildcardQuery(string field, string termStr)
+        protected override global::Lucene.Net.Search.Query GetWildcardQuery(string field, string termStr)
         {
             if (termStr == "*")
             {
@@ -122,7 +120,7 @@ namespace Raven.Server.Documents.Queries.Parse
             return NewWildcardQuery(new Term(field, analyzedTerm));
         }
 
-        protected override Query GetFuzzyQuery(string field, string termStr, float minSimilarity)
+        protected override global::Lucene.Net.Search.Query GetFuzzyQuery(string field, string termStr, float minSimilarity)
         {
             var fieldQuery = GetFieldQuery(field, termStr);
 
@@ -130,7 +128,7 @@ namespace Raven.Server.Documents.Queries.Parse
             return NewFuzzyQuery(tq != null ? tq.Term : new Term(field, termStr), minSimilarity, FuzzyPrefixLength);
         }
 
-        protected override Query GetFieldQuery(string field, string queryText)
+        protected override global::Lucene.Net.Search.Query GetFieldQuery(string field, string queryText)
         {
             if (_replacedTokens.TryGetValue(Tuple.Create(field, queryText), out string value))
                 return new TermQuery(new Term(field, value));
@@ -171,7 +169,7 @@ namespace Raven.Server.Documents.Queries.Parse
         /// <param name="upper"></param>
         /// <param name="inclusive"></param>
         /// <returns></returns>
-        protected override Query GetRangeQuery(string field, string lower, string upper, bool inclusive)
+        protected override global::Lucene.Net.Search.Query GetRangeQuery(string field, string lower, string upper, bool inclusive)
         {
             bool minInclusive = inclusive;
             bool maxInclusive = inclusive;
